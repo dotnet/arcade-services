@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
@@ -417,11 +418,15 @@ internal class VmrDiffOperation : Operation
         var sourceMapping = sourceVersionDetails?.Source?.Mapping ??
             throw new DarcException($"Product repo {sourceRepo.Remote} is missing source tag in {VersionFiles.VersionDetailsXml}");
 
+        var exclusionFilters = (await GetExclusionFilters(vmrGitClient, vmrRepo, sourceMapping))
+            .Select(filter => new Regex(ConvertGlobToRegexPattern("/" + filter)))
+            .ToList();
+
         Queue<string?> directoriesToProcess = [];
         directoriesToProcess.Enqueue(null);
 
         Dictionary<string, string> fileDifferences = [];
-        string vmrMappingPath = $"{VmrInfo.SourcesDir}/{sourceMapping}";
+        string vmrMappingPath = VmrInfo.GetRelativeRepoSourcesPath(sourceMapping);
         var sourceManifest = SourceManifest.FromJson(
             await vmrGitClient.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceManifestPath, vmrRepo.Remote, vmrRepo.Ref));
 
@@ -430,44 +435,27 @@ internal class VmrDiffOperation : Operation
         {
             currentPath = directoriesToProcess.Dequeue();
 
-            var repoFiles = await sourceGitClient.LsTree(sourceRepo.Remote, sourceRepo.Ref, currentPath);
-            var vmrFiles = (await vmrGitClient.LsTree(vmrRepo.Remote, vmrRepo.Ref, $"{vmrMappingPath}{currentPath}"))
+            var repoFiles = await sourceGitClient.LsTreeAsync(sourceRepo.Remote, sourceRepo.Ref, currentPath);
+            var vmrFiles = (await vmrGitClient.LsTreeAsync(vmrRepo.Remote, vmrRepo.Ref, $"{vmrMappingPath}{currentPath}"))
                 .Select(item => item with { Path = item.Path.Substring(vmrMappingPath.Length) })
                 .ToList();
+
+            repoFiles = FilterExcludedFiles(repoFiles, exclusionFilters);
+            vmrFiles = FilterExcludedFiles(vmrFiles, exclusionFilters);
 
             // Blobs with the same content have the same sha, so we need to take that into consideration
             var filesOnlyInVmr = vmrFiles
                 .GroupBy(f => f.Sha)
                 .ToDictionary(group => group.Key, group => group.ToList());
 
-            foreach (var sourceFile in repoFiles)
-            {
-                if (TryFindFileInVmrAndUpdateFilesOnlyInVmr(sourceFile, filesOnlyInVmr))
-                {
-                    continue;
-                }
-
-                if (sourceFile.IsCommit())
-                {
-                    HandleSubmodule(sourceFile, sourceManifest, fileDifferences, filesOnlyInVmr, fromRepoDirection);
-                }
-                else if (sourceFile.IsBlob())
-                {
-                    RecordBlobDiff(sourceFile, vmrFiles, fileDifferences, fromRepoDirection);
-                }
-                else if (sourceFile.IsTree())
-                {
-                    if (vmrFiles.Any(vmr => vmr.Path == sourceFile.Path))
-                    {
-                        // the folder exists, but the contents of it changed
-                        directoriesToProcess.Enqueue(sourceFile.Path);
-                    }
-                    else
-                    {
-                        fileDifferences[sourceFile.Path] = $"- tree {sourceFile.Path}";
-                    }
-                }
-            }
+            ProcessRepoFiles(
+                repoFiles,
+                vmrFiles,
+                directoriesToProcess,
+                filesOnlyInVmr,
+                sourceManifest.Submodules,
+                fileDifferences,
+                fromRepoDirection);
 
             ProcessVmrOnlyFiles(filesOnlyInVmr, fileDifferences, directoriesToProcess, fromRepoDirection);
         }
@@ -476,6 +464,17 @@ internal class VmrDiffOperation : Operation
         {
             Console.WriteLine(difference);
         }
+    }
+
+    private async Task<IReadOnlyCollection<string>> GetExclusionFilters(IGitRepo vmrGitClient, Repo vmr, string mapping)
+    {
+        var sourceMappingsContent = await vmrGitClient.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceMappingsPath, vmr.Remote, vmr.Ref)
+            ?? throw new FileNotFoundException($"Failed to find {VmrInfo.DefaultRelativeSourceMappingsPath} in {vmr.Remote} at {vmr.Ref}");
+        var sourceMappings = _sourceMappingParser.ParseMappingsFromJson(sourceMappingsContent);
+        var sourceMapping = sourceMappings.FirstOrDefault(m => m.Name == mapping)
+            ?? throw new DarcException($"Mapping {mapping} not found in {VmrInfo.DefaultRelativeSourceMappingsPath}");
+
+        return sourceMapping.Exclude;
     }
 
     private void RecordBlobDiff(
@@ -492,6 +491,47 @@ internal class VmrDiffOperation : Operation
         else
         {
             fileDifferences[sourceFile.Path] = $"{GetDiffDirection(fromRepoDirection)} {sourceFile.Path}";
+        }
+    }
+
+    private void ProcessRepoFiles(
+        List<GitTreeItem> repoFiles,
+        List<GitTreeItem> vmrFiles,
+        Queue<string?> directoriesToProcess,
+        Dictionary<string, List<GitTreeItem>> filesOnlyInVmr,
+        IReadOnlyCollection<ISourceComponent> submodules,
+        Dictionary<string, string> fileDifferences,
+        bool fromRepoDirection)
+    {
+        foreach (var sourceFile in repoFiles)
+        {
+            if (TryFindFileInVmrAndUpdateFilesOnlyInVmr(sourceFile, filesOnlyInVmr))
+            {
+                continue;
+            }
+
+            if (sourceFile.IsCommit())
+            {
+                HandleSubmodule(sourceFile, submodules, fileDifferences, filesOnlyInVmr, fromRepoDirection);
+            }
+            else if (sourceFile.IsBlob())
+            {
+                RecordBlobDiff(sourceFile, vmrFiles, fileDifferences, fromRepoDirection);
+            }
+            else if (sourceFile.IsTree())
+            {
+                if (vmrFiles.Any(vmr => vmr.Path == sourceFile.Path))
+                {
+                    // the folder exists, but the contents of it changed
+                    directoriesToProcess.Enqueue(sourceFile.Path);
+                }
+                else
+                {
+                    // TODO: It's possible that the folder we're not looking into here has only files that are excluded by the filters,
+                    // and wouldn't actually appear in the final diff, but we don't know that because we just say it's missing.
+                    fileDifferences[sourceFile.Path] = $"- tree {sourceFile.Path}";
+                }
+            }
         }
     }
 
@@ -518,13 +558,13 @@ internal class VmrDiffOperation : Operation
 
     private void HandleSubmodule(
         GitTreeItem sourceFile,
-        SourceManifest sourceManifest,
+        IReadOnlyCollection<ISourceComponent> submodules,
         Dictionary<string, string> fileDifferences,
         Dictionary<string, List<GitTreeItem>> filesOnlyInVmr,
         bool fromRepoDirection)
     {
         // Submodules are a special case where we have to look into VMRs source manifest
-        var submodule = sourceManifest.Submodules.FirstOrDefault(s => s.Path.Contains(sourceFile.Path));
+        var submodule = submodules.FirstOrDefault(s => s.Path.Contains(sourceFile.Path));
         if (submodule == null)
         {
             fileDifferences[sourceFile.Path] = $"{GetDiffDirection(fromRepoDirection)} submodule {sourceFile.Path}";
@@ -566,6 +606,42 @@ internal class VmrDiffOperation : Operation
         }
 
         return true;
+    }
+
+    private List<GitTreeItem> FilterExcludedFiles(List<GitTreeItem> gitItems, List<Regex> regexes)
+        => gitItems.Where(item => !regexes.Any(regex => regex.IsMatch(item.Path))).ToList();
+
+    /// <summary>
+    /// Converts a single glob pattern to a regular expression pattern.
+    /// </summary>
+    /// <param name="globPattern">The glob pattern to convert.</param>
+    /// <returns>A regex pattern that matches the same files as the glob pattern.</returns>
+    private string ConvertGlobToRegexPattern(string globPattern)
+    {
+        if (string.IsNullOrWhiteSpace(globPattern))
+        {
+            throw new ArgumentException("Glob pattern cannot be null or whitespace.", nameof(globPattern));
+        }
+        
+        // Escape regex special characters first
+        string regexPattern = Regex.Escape(globPattern);
+        
+        // Replace the escaped glob special characters with their regex equivalents
+        
+        // **/ matches any number of directories
+        regexPattern = regexPattern.Replace(@"\*\*/", "(?:.*[/])?");
+        
+        // ** matches any number of characters including directory separators
+        regexPattern = regexPattern.Replace(@"\*\*", ".*");
+        
+        // * matches any number of characters except directory separators
+        regexPattern = regexPattern.Replace(@"\*", "[^/]*");
+        
+        // ? matches a single character except directory separators
+        regexPattern = regexPattern.Replace(@"\?", "[^/]");
+        
+        // Anchor the pattern
+        return $"^{regexPattern}$";
     }
 
     private char GetDiffDirection(bool fromRepoDirection) => fromRepoDirection ? '-' : '+';

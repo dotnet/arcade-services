@@ -55,6 +55,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     private readonly IAzureDevOpsTokenProvider _tokenProvider;
     private readonly ILogger _logger;
     private readonly JsonSerializerSettings _serializerSettings;
+    private readonly Dictionary<(string, string, string), string> _gitRefCommitCache;
 
     public AzureDevOpsClient(IAzureDevOpsTokenProvider tokenProvider, IProcessManager processManager, ILogger logger)
         : this(tokenProvider, processManager, logger, null)
@@ -71,6 +72,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             ContractResolver = new CamelCasePropertyNamesContractResolver(),
             NullValueHandling = NullValueHandling.Ignore
         };
+        _gitRefCommitCache = [];
     }
 
     public bool AllowRetries { get; set; } = true;
@@ -1556,35 +1558,22 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         await client.CreateThreadAsync(newCommentThread, repoName, id);
     }
 
-    public async Task<List<GitTreeItem>> LsTree(string uri, string gitRef, string path = null)
+    public async Task<List<GitTreeItem>> LsTreeAsync(string uri, string gitRef, string path = null)
     {
         _logger.LogInformation($"Getting tree contents from repo '{uri}', ref '{gitRef}', path '{path}'");
         
         (string accountName, string projectName, string repoName) = ParseRepoUri(uri);
         
         // First, we need to get the commit object to find the tree SHA
-        string commitSha;
+        string treeSha;
 
-        try
+        if (_gitRefCommitCache.TryGetValue((uri, gitRef, path), out var cachedSha))
         {
-            string fullRef = $"heads/{gitRef}";
-            
-            // Get the ref
-            JObject refResponse = await ExecuteAzureDevOpsAPIRequestAsync(
-                HttpMethod.Get,
-                accountName,
-                projectName,
-                $"_apis/git/repositories/{repoName}/refs?filter={Uri.EscapeDataString(fullRef)}",
-                _logger);
-
-            // Extract the commit SHA from the ref
-            var refs = refResponse["value"].ToObject<JArray>();
-            if (refs.Count == 0)
-            {
-                throw new DarcException($"Branch '{gitRef}' not found in repository '{repoName}'");
-            }
-            
-            commitSha = refs[0]["objectId"].ToString();
+            treeSha = cachedSha;
+        }
+        else
+        {
+            string commitSha = await GetCommitShaForGitRefAsync(accountName, projectName, repoName, gitRef);
 
             // Get the commit to find the tree SHA
             JObject commitResponse = await ExecuteAzureDevOpsAPIRequestAsync(
@@ -1595,46 +1584,46 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                 _logger);
 
             // Get the tree SHA from the commit
-            string treeSha = commitResponse["treeId"].ToString();
+            treeSha = commitResponse["treeId"].ToString();
 
             // If path is specified, we need to navigate to that tree
             if (!string.IsNullOrEmpty(path))
             {
                 treeSha = await GetTreeShaForPathAsync(accountName, projectName, repoName, treeSha, path);
             }
+        }
 
-            // Now get the contents of the tree
-            JObject treeResponse = await ExecuteAzureDevOpsAPIRequestAsync(
-                HttpMethod.Get,
-                accountName,
-                projectName,
-                $"_apis/git/repositories/{repoName}/trees/{treeSha}?recursive=false",
-                _logger);
+        // Now get the contents of the tree
+        JObject treeResponse = await ExecuteAzureDevOpsAPIRequestAsync(
+            HttpMethod.Get,
+            accountName,
+            projectName,
+            $"_apis/git/repositories/{repoName}/trees/{treeSha}?recursive=false",
+            _logger);
 
-            // Map the tree entries to the expected return format
-            var entries = treeResponse["treeEntries"].ToObject<JArray>();
-            List<GitTreeItem> result = [];
+        // Map the tree entries to the expected return format
+        var entries = treeResponse["treeEntries"].ToObject<JArray>();
+        List<GitTreeItem> result = [];
 
-            foreach (var entry in entries)
+        foreach (var entry in entries)
+        {
+            var objectType = entry["gitObjectType"].ToString().ToLowerInvariant();
+            var sha = entry["objectId"].ToString();
+            var treePath = $"{path}/{entry["relativePath"].ToString()}";
+
+            if (objectType == "tree")
             {
-                var objectType = entry["gitObjectType"].ToString().ToLowerInvariant();
-                var objectId = entry["objectId"].ToString();
-                var relativePath = entry["relativePath"].ToString();
-
-                result.Add(new GitTreeItem {
-                    Sha = objectId,
-                    Path = $"{path}/{relativePath}",
-                    Type = objectType
-                });
+                _gitRefCommitCache[(uri, gitRef, treePath)] = sha;
             }
 
-            return result;
+            result.Add(new GitTreeItem {
+                Sha = sha,
+                Path = treePath,
+                Type = objectType
+            });
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, $"Failed to get tree for {uri}, ref {gitRef}, path {path}");
-            throw new DarcException($"Failed to get tree for {uri}, ref {gitRef}, path {path}", ex);
-        }
+
+        return result;
     }
 
     /// <summary>
@@ -1675,5 +1664,96 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         }
 
         return currentTreeSha;
+    }
+
+    private async Task<string> GetCommitShaForGitRefAsync(
+        string accountName,
+        string projectName,
+        string repoName,
+        string gitRef)
+    {
+        string commitSha;
+
+        // Try to resolve the reference as a branch, commit, or tag
+        try
+        {
+            // Try as a branch first (most common case)
+            commitSha = await GetCommitShaFromBranchOrTagRefAsync(accountName, projectName, repoName, $"heads/{gitRef}");
+        }
+        catch
+        {
+            try
+            {
+                // Try as a tag
+                commitSha = await GetCommitShaFromBranchOrTagRefAsync(accountName, projectName, repoName, $"tags/{gitRef}");
+            }
+            catch
+            {
+                try
+                {
+                    commitSha = await GetCommitShaDirectAsync(accountName, projectName, repoName, gitRef);
+                }
+                catch (Exception ex)
+                {
+                    throw new ArgumentException($"Could not resolve '{gitRef}' as a branch, tag, or commit in repository '{repoName}'", ex);
+                }
+            }
+        }
+
+        return commitSha;
+    }
+
+    /// <summary>
+    /// Get a commit SHA from a branch reference
+    /// </summary>
+    private async Task<string> GetCommitShaFromBranchOrTagRefAsync(
+        string accountName,
+        string projectName,
+        string repoName,
+        string gitRef)
+    {        
+        // Get the ref
+        JObject refResponse = await ExecuteAzureDevOpsAPIRequestAsync(
+            HttpMethod.Get,
+            accountName,
+            projectName,
+            $"_apis/git/repositories/{repoName}/refs?filter={Uri.EscapeDataString(gitRef)}",
+            _logger);
+
+        // Extract the commit SHA from the ref
+        var refs = refResponse["value"].ToObject<JArray>();
+        if (refs.Count == 0)
+        {
+            throw new DarcException($"Branch '{gitRef}' not found in repository '{repoName}'");
+        }
+        
+        return refs[0]["objectId"].ToString();
+    }
+
+    /// <summary>
+    /// Get a commit SHA directly (for when the reference is itself a commit SHA or commit-ish)
+    /// </summary>
+    private async Task<string> GetCommitShaDirectAsync(
+        string accountName,
+        string projectName,
+        string repoName,
+        string commitSha)
+    {
+        try
+        {
+            // Try to get the commit directly
+            JObject commitResponse = await ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Get,
+                accountName,
+                projectName,
+                $"_apis/git/repositories/{repoName}/commits/{commitSha}",
+                _logger);
+
+            return commitResponse["commitId"].ToString();
+        }
+        catch (Exception ex)
+        {
+            throw new DarcException($"Failed to find commit '{commitSha}' in repository '{repoName}'", ex);
+        }
     }
 }

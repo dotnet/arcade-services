@@ -47,6 +47,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     private readonly JsonSerializerSettings _serializerSettings;
     private readonly string _userAgent = $"DarcLib-{DarcLibVersion}";
     private IGitHubClient? _lazyClient = null;
+    private readonly Dictionary<(string, string, string?), string> _gitRefCommitCache;
 
     static GitHubClient()
     {
@@ -80,6 +81,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             ContractResolver = new CamelCasePropertyNamesContractResolver(),
             NullValueHandling = NullValueHandling.Ignore
         };
+        _gitRefCommitCache = [];
     }
 
     public bool AllowRetries { get; set; } = true;
@@ -1235,25 +1237,35 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         await GetClient(owner, repo).Issue.Comment.Create(owner, repo, id, comment);
     }
 
-    public async Task<List<GitTreeItem>> LsTree(string uri, string branch, string? path = null)
+    public async Task<List<GitTreeItem>> LsTreeAsync(string uri, string gitRef, string? path = null)
     {
         var (owner, repo) = ParseRepoUri(uri);
         var client = GetClient(owner, repo);
 
-        // Get the tree object from the branch reference
+        // Get the tree object from the git reference
         string treeSha;
-            
-        // Get the SHA of the branch's head commit
-        var branchRef = await client.Git.Reference.Get(owner, repo, $"heads/{branch}");
-        var commit = await client.Git.Commit.Get(owner, repo, branchRef.Object.Sha);
-        treeSha = commit.Tree.Sha;
-            
-        // If a path is specified, navigate to that path
-        if (!string.IsNullOrEmpty(path))
+
+        // Check if we have the tree sha for the specific path cached
+        if (_gitRefCommitCache.TryGetValue((uri, gitRef, path), out var cachedSha))
         {
-            // Get the tree at the specified path
-            TreeResponse pathTree = await GetTreeForPathAsync(owner, repo, commit.Sha, path);
-            treeSha = pathTree.Sha;
+            treeSha = cachedSha;
+        }
+        else
+        {
+            // if not, traverse the git tree to the desired path to get the tree sha
+            string commitSha = await GetCommitShaForGitRefAsync(client, owner, repo, gitRef);
+
+            // Get the commit and its tree
+            var commit = await client.Git.Commit.Get(owner, repo, commitSha);
+            treeSha = commit.Tree.Sha;
+
+            // If a path is specified, navigate to that path
+            if (!string.IsNullOrEmpty(path))
+            {
+                // Get the tree at the specified path
+                TreeResponse pathTree = await GetTreeForPathAsync(owner, repo, commit.Sha, path);
+                treeSha = pathTree.Sha;
+            }
         }
 
         // Get the tree entries at the final location
@@ -1264,11 +1276,56 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             _logger.LogWarning("The git repository is too large for the GitHub API. Tree results are truncated.");
         }
 
-        return tree.Tree.Select(item => (
-            new GitTreeItem {
-                Path = $"{path}/{item.Path}",
+        List<GitTreeItem> gitTreeItems = [];
+        foreach (var item in tree.Tree)
+        {
+            var newPath = $"{path}/{item.Path}";
+            // if the item is a tree, save it's sha in the cache for future reference
+            if (item.Type == TreeType.Tree)
+            {
+                _gitRefCommitCache[(uri, gitRef, newPath)] = item.Sha;
+            }
+            gitTreeItems.Add(new GitTreeItem {
+                Path = newPath,
                 Sha = item.Sha,
-                Type = item.Type.Value.ToString() }))
-            .ToList();
+                Type = item.Type.Value.ToString()
+            });
+        }
+
+        return gitTreeItems;
+    }
+
+    private async Task<string> GetCommitShaForGitRefAsync(IGitHubClient client, string owner, string repo, string gitRef)
+    {
+        string commitSha;
+
+        // Determine the type of reference (branch, tag, commit)
+        try
+        {
+            // Try getting it as a branch reference first
+            commitSha = (await client.Git.Reference.Get(owner, repo, $"heads/{gitRef}")).Object.Sha;
+        }
+        catch (NotFoundException)
+        {
+            try
+            {
+                commitSha = (await client.Git.Commit.Get(owner, repo, gitRef)).Sha;
+            }
+            catch (NotFoundException)
+            {
+                try
+                {
+                    // Try getting it as a tag reference
+                    commitSha = (await client.Git.Reference.Get(owner, repo, $"tags/{gitRef}")).Object.Sha;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to resolve git reference: {Reference}", gitRef);
+                    throw new ArgumentException($"Could not resolve git reference '{gitRef}'.", nameof(gitRef), ex);
+                }
+            }
+        }
+
+        return commitSha;
     }
 }
