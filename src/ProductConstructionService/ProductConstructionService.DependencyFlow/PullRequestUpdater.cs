@@ -105,8 +105,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// </summary>
     /// <param name="subscriptionId">The id of the subscription the update comes from</param>
     /// <param name="buildId">The build that the updated assets came from</param>
-    /// <param name="sourceSha">The commit hash that built the assets</param>
-    /// <param name="assets">The list of assets</param>
     /// <remarks>
     ///     This function will queue updates if there is a pull request and it is currently not-updateable.
     ///     A pull request is considered "not-updateable" based on merge policies.
@@ -202,7 +200,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         if (isCodeFlow)
         {
-            await ProcessCodeFlowUpdateAsync(update, pr, prInfo, build);
+            await ProcessCodeFlowUpdateAsync(update, pr, prInfo, build, forceUpdate);
         }
         else 
         {
@@ -416,9 +414,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         IEnumerable<MergePolicyEvaluationResult> updatedMergePolicyResults = await _mergePolicyEvaluator.EvaluateAsync(prSummary, remote, policyDefinitions, cachedResults, prInfo.TargetBranchCommitSha);
 
-        MergePolicyEvaluationResults updatedResult = new MergePolicyEvaluationResults(Id.ToString(), updatedMergePolicyResults.ToImmutableList(), prInfo.TargetBranchCommitSha);
+        MergePolicyEvaluationResults updatedResult = new MergePolicyEvaluationResults(
+            updatedMergePolicyResults.ToImmutableList(),
+            prInfo.TargetBranchCommitSha);
 
         await _mergePolicyEvaluationState.SetAsync(updatedResult);
+
         await UpdateMergeStatusAsync(remote, pr.Url, updatedResult.Results);
 
         // As soon as one policy is actively failed, we enter a failed state.
@@ -990,7 +991,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         SubscriptionUpdateWorkItem update,
         InProgressPullRequest? pr,
         PullRequest? prInfo,
-        BuildDTO build)
+        BuildDTO build,
+        bool forceUpdate)
     {
         if (update.SourceSha == pr?.SourceSha)
         {
@@ -1034,7 +1036,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             if (isForwardFlow)
             {
-                codeFlowRes = await _vmrForwardFlower.FlowForwardAsync(subscription, build, prHeadBranch, cancellationToken: default);
+                codeFlowRes = await _vmrForwardFlower.FlowForwardAsync(
+                    subscription,
+                    build,
+                    prHeadBranch,
+                    skipMeaninglessUpdates: !forceUpdate,
+                    cancellationToken: default);
                 localRepoPath = _vmrInfo.VmrPath;
 
                 SourceManifest? sourceManifest = await remote.GetSourceManifestAsync(

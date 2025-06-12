@@ -197,6 +197,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
             applicationPath: null,
             includeAdditionalMappings: false,
+            ignoreLineEndings: false,
             cancellationToken);
 
         if (patches.Count == 0 || patches.All(p => _fileSystem.GetFileInfo(p.Path).Length == 0))
@@ -307,6 +308,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
             applicationPath: null,
             includeAdditionalMappings: false,
+            ignoreLineEndings: false,
             cancellationToken);
 
         _logger.LogInformation("Created {count} patch(es)", patches.Count);

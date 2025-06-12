@@ -22,10 +22,12 @@ internal interface IPcsVmrForwardFlower
     /// <param name="subscription">Subscription to flow</param>
     /// <param name="build">Build to flow</param>
     /// <param name="headBranch">Branch to flow to (or to create)</param>
+    /// <param name="skipMeaninglessUpdates">Skip creating PR if only insignificant changes are present</param>
     Task<CodeFlowResult> FlowForwardAsync(
         Subscription subscription,
         Build build,
         string headBranch,
+        bool skipMeaninglessUpdates,
         CancellationToken cancellationToken = default);
 }
 
@@ -43,11 +45,12 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         ILocalGitClient localGitClient,
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
+        ICodeflowChangeAnalyzer codeflowChangeAnalyzer,
         IProcessManager processManager,
         IFileSystem fileSystem,
         IBasicBarClient barClient,
         ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, vmrUpdater, dependencyTracker, vmrCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, processManager, fileSystem, barClient, logger)
+        : base(vmrInfo, sourceManifest, vmrUpdater, dependencyTracker, vmrCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, codeflowChangeAnalyzer, processManager, fileSystem, barClient, logger)
     {
         _repositoryCloneManager = repositoryCloneManager;
     }
@@ -56,6 +59,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         Subscription subscription,
         Build build,
         string headBranch,
+        bool skipMeaninglessUpdates,
         CancellationToken cancellationToken = default)
     {
         ILocalGitRepo sourceRepo = await _repositoryCloneManager.PrepareCloneAsync(
@@ -73,6 +77,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             headBranch,
             subscription.TargetRepository,
             discardPatches: true,
+            skipMeaninglessUpdates,
             cancellationToken);
     }
 
