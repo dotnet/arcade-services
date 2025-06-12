@@ -70,8 +70,16 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
 
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
-        ProcessExecutionResult result = await vmr.ExecuteGitCommand("diff", "--name-only", $"{targetBranch}..{headBranch}");
-        result.ThrowIfFailed($"Failed to get the list of changed files between {targetBranch} and {headBranch}");
+        // We find a common ancestor so that we can analyze the differences with the target branch
+        ProcessExecutionResult result = await vmr.ExecuteGitCommand("merge-base", targetBranch, headBranch);
+        result.ThrowIfFailed($"Failed to find a common ancestor for {targetBranch} and {headBranch}");
+
+        var commonAncestor = result.StandardOutput
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .First();
+
+        result = await vmr.ExecuteGitCommand("diff", "--name-only", $"{commonAncestor}..{headBranch}");
+        result.ThrowIfFailed($"Failed to get the list of changed files between {commonAncestor} and {headBranch}");
 
         string[] ignoredFiles =
         [
@@ -101,7 +109,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
             return false;
         }
 
-        return await CheckDiffForChanges(vmr, mappingName, headBranch, targetBranch, ignoredFiles);
+        return await CheckDiffForChanges(vmr, mappingName, headBranch, commonAncestor, ignoredFiles);
     }
 
     private async Task<bool> CheckDiffForChanges(

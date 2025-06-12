@@ -21,6 +21,7 @@ public class CodeflowChangeAnalyzerTests
     private const string TestMappingName = "test-repo";
     private const string TestHeadBranch = "feature-branch";
     private const string TestTargetBranch = "main";
+    private const string TestAncestorCommit = "ee69bb149b4824b93abb3d6b029aeacfa30d6207";
     private static readonly NativePath TestVmrPath = new("/path/to/vmr");
 
     private Mock<ILocalGitRepoFactory> _localGitRepoFactory = null!;
@@ -42,6 +43,14 @@ public class CodeflowChangeAnalyzerTests
         _localGitRepoFactory
             .Setup(x => x.Create(TestVmrPath))
             .Returns(_localGitRepo.Object);
+
+        _localGitRepo
+            .Setup(x => x.ExecuteGitCommand("merge-base", TestTargetBranch, TestHeadBranch))
+            .ReturnsAsync(new ProcessExecutionResult()
+            {
+                ExitCode = 0,
+                StandardOutput = TestAncestorCommit,
+            });
 
         _analyzer = new CodeflowChangeAnalyzer(
             _localGitRepoFactory.Object,
@@ -207,7 +216,7 @@ public class CodeflowChangeAnalyzerTests
         };
 
         _localGitRepo
-            .Setup(x => x.ExecuteGitCommand("diff", "--name-only", $"{TestTargetBranch}..{TestHeadBranch}"))
+            .Setup(x => x.ExecuteGitCommand("diff", "--name-only", $"{TestAncestorCommit}..{TestHeadBranch}"))
             .ReturnsAsync(result);
     }
 
@@ -224,7 +233,7 @@ public class CodeflowChangeAnalyzerTests
                 args.Length > 2 &&
                 args[0] == "diff" &&
                 args[1] == "-U0" &&
-                args[2] == $"{TestTargetBranch}..{TestHeadBranch}")))
+                args[2] == $"{TestAncestorCommit}..{TestHeadBranch}")))
             .ReturnsAsync(result);
     }
 
@@ -239,7 +248,7 @@ public class CodeflowChangeAnalyzerTests
             Source: new SourceDependency("https://github.com/dotnet/dotnet", "test-repo", "def456", 271018));
 
         _localGitRepo
-            .Setup(x => x.GetFileFromGitAsync("src/test-repo/eng/Version.Details.xml", TestTargetBranch, null))
+            .Setup(x => x.GetFileFromGitAsync("src/test-repo/eng/Version.Details.xml", TestAncestorCommit, null))
             .ReturnsAsync("<Dependencies><Source BarId=\"270662\" /></Dependencies>");
 
         _localGitRepo
