@@ -435,8 +435,8 @@ internal class VmrDiffOperation : Operation
         {
             currentPath = directoriesToProcess.Dequeue();
 
-            var repoFiles = await sourceGitClient.LsTree(sourceRepo.Remote, sourceRepo.Ref, currentPath);
-            var vmrFiles = (await vmrGitClient.LsTree(vmrRepo.Remote, vmrRepo.Ref, $"{vmrMappingPath}{currentPath}"))
+            var repoFiles = await sourceGitClient.LsTreeAsync(sourceRepo.Remote, sourceRepo.Ref, currentPath);
+            var vmrFiles = (await vmrGitClient.LsTreeAsync(vmrRepo.Remote, vmrRepo.Ref, $"{vmrMappingPath}{currentPath}"))
                 .Select(item => item with { Path = item.Path.Substring(vmrMappingPath.Length) })
                 .ToList();
 
@@ -448,34 +448,14 @@ internal class VmrDiffOperation : Operation
                 .GroupBy(f => f.Sha)
                 .ToDictionary(group => group.Key, group => group.ToList());
 
-            foreach (var sourceFile in repoFiles)
-            {
-                if (TryFindFileInVmrAndUpdateFilesOnlyInVmr(sourceFile, filesOnlyInVmr))
-                {
-                    continue;
-                }
-
-                if (sourceFile.IsCommit())
-                {
-                    HandleSubmodule(sourceFile, sourceManifest, fileDifferences, filesOnlyInVmr, fromRepoDirection);
-                }
-                else if (sourceFile.IsBlob())
-                {
-                    RecordBlobDiff(sourceFile, vmrFiles, fileDifferences, fromRepoDirection);
-                }
-                else if (sourceFile.IsTree())
-                {
-                    if (vmrFiles.Any(vmr => vmr.Path == sourceFile.Path))
-                    {
-                        // the folder exists, but the contents of it changed
-                        directoriesToProcess.Enqueue(sourceFile.Path);
-                    }
-                    else
-                    {
-                        fileDifferences[sourceFile.Path] = $"- tree {sourceFile.Path}";
-                    }
-                }
-            }
+            ProcessRepoFiles(
+                repoFiles,
+                vmrFiles,
+                directoriesToProcess,
+                filesOnlyInVmr,
+                sourceManifest.Submodules,
+                fileDifferences,
+                fromRepoDirection);
 
             ProcessVmrOnlyFiles(filesOnlyInVmr, fileDifferences, directoriesToProcess, fromRepoDirection);
         }
@@ -514,6 +494,47 @@ internal class VmrDiffOperation : Operation
         }
     }
 
+    private void ProcessRepoFiles(
+        List<GitTreeItem> repoFiles,
+        List<GitTreeItem> vmrFiles,
+        Queue<string?> directoriesToProcess,
+        Dictionary<string, List<GitTreeItem>> filesOnlyInVmr,
+        IReadOnlyCollection<ISourceComponent> submodules,
+        Dictionary<string, string> fileDifferences,
+        bool fromRepoDirection)
+    {
+        foreach (var sourceFile in repoFiles)
+        {
+            if (TryFindFileInVmrAndUpdateFilesOnlyInVmr(sourceFile, filesOnlyInVmr))
+            {
+                continue;
+            }
+
+            if (sourceFile.IsCommit())
+            {
+                HandleSubmodule(sourceFile, submodules, fileDifferences, filesOnlyInVmr, fromRepoDirection);
+            }
+            else if (sourceFile.IsBlob())
+            {
+                RecordBlobDiff(sourceFile, vmrFiles, fileDifferences, fromRepoDirection);
+            }
+            else if (sourceFile.IsTree())
+            {
+                if (vmrFiles.Any(vmr => vmr.Path == sourceFile.Path))
+                {
+                    // the folder exists, but the contents of it changed
+                    directoriesToProcess.Enqueue(sourceFile.Path);
+                }
+                else
+                {
+                    // TODO: It's possible that the folder we're not looking into here has only files that are excluded by the filters,
+                    // and wouldn't actually appear in the final diff, but we don't know that because we just say it's missing.
+                    fileDifferences[sourceFile.Path] = $"- tree {sourceFile.Path}";
+                }
+            }
+        }
+    }
+
     private void ProcessVmrOnlyFiles(
         Dictionary<string, List<GitTreeItem>> filesOnlyInVmr,
         Dictionary<string, string> fileDifferences,
@@ -537,13 +558,13 @@ internal class VmrDiffOperation : Operation
 
     private void HandleSubmodule(
         GitTreeItem sourceFile,
-        SourceManifest sourceManifest,
+        IReadOnlyCollection<ISourceComponent> submodules,
         Dictionary<string, string> fileDifferences,
         Dictionary<string, List<GitTreeItem>> filesOnlyInVmr,
         bool fromRepoDirection)
     {
         // Submodules are a special case where we have to look into VMRs source manifest
-        var submodule = sourceManifest.Submodules.FirstOrDefault(s => s.Path.Contains(sourceFile.Path));
+        var submodule = submodules.FirstOrDefault(s => s.Path.Contains(sourceFile.Path));
         if (submodule == null)
         {
             fileDifferences[sourceFile.Path] = $"{GetDiffDirection(fromRepoDirection)} submodule {sourceFile.Path}";
