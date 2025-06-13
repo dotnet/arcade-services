@@ -565,7 +565,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         {
             // If we don't find the previously applied build, we'll just use the previously flown sha to recreate the flow
             // We'll apply a new build on top of this one, so the source manifest will get updated anyway
-            previouslyAppliedBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastFlow.RepoSha, [], [], [], []);
+            previouslyAppliedBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastFlow.SourceSha, [], [], [], []);
         }
         else
         {
@@ -585,7 +585,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             cancellationToken);
         await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
-        (Codeflow lastLastFlow, _, _) = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
+        (Codeflow lastLastFlow, _, _) = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: lastFlow is Backflow);
 
         // Reconstruct the previous flow's branch
         await FlowCodeAsync(
