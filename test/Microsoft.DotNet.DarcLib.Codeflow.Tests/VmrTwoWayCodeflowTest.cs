@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -155,7 +154,7 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         // 2. Open a backflow PR
         var hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName);
         hadUpdates.ShouldHaveUpdates();
-        // We make another commit in the repo and add it to the PR branch (this is not in the diagram above)
+        // We make another commit in the vmr and add it to the PR branch (this is not in the diagram above)
         await GitOperations.Checkout(VmrPath, "main");
         await File.WriteAllTextAsync(_productRepoVmrPath / "1b.txt", "one again");
         await GitOperations.CommitAll(VmrPath, "1b.txt");

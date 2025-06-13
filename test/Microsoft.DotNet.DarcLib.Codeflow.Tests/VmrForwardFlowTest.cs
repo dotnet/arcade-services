@@ -200,5 +200,38 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
             skipMeaninglessUpdates: true);
         hadUpdates.ShouldNotHaveUpdates();
     }
+
+    [Test]
+    public async Task ForwardFlowPrChangesTest()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        const string forwardBranchName = nameof(ForwardFlowPrChangesTest) + "-ff";
+        const string forwardBranchName2 = nameof(ForwardFlowPrChangesTest) + "-ff2";
+
+        // Make a change in the repo and open a forward flow PR
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / "1a.txt", "one");
+        await GitOperations.CommitAll(ProductRepoPath, "1a.txt");
+
+        // Open a forward flow PR
+        var hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardBranchName);
+        hadUpdates.ShouldHaveUpdates();
+
+        // Make a change in the VMR forward flow PR
+        await GitOperations.Checkout(VmrPath, forwardBranchName);
+        await File.WriteAllTextAsync(VmrPath / VmrInfo.GetRelativeRepoSourcesPath(Constants.ProductRepoName) / "1a.txt", "one changed");
+        await GitOperations.CommitAll(VmrPath, "Change in the VMR forward flow PR");
+
+        // Merge the PR in the VMR
+        await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
+
+        // Make a new change in the product repo and forward flow
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / "1a.txt", "two");
+        await GitOperations.CommitAll(ProductRepoPath, "1a.txt");
+
+        hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardBranchName2);
+    }
 }
 
