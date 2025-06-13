@@ -1030,6 +1030,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         NativePath localRepoPath;
         CodeFlowResult codeFlowRes;
+        IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs;
         string? previousSourceSha; // is null in some edge cases like onboarding a new repository
 
         try
@@ -1050,6 +1051,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
                 previousSourceSha = sourceManifest?
                     .GetRepoVersion(subscription.TargetDirectory)?.CommitSha;
+
+                upstreamRepoDiffs = [];
             }
             else
             {
@@ -1061,6 +1064,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     subscription.TargetBranch);
 
                 previousSourceSha = sourceDependency?.Sha;
+
+                upstreamRepoDiffs = await ComputeRepoUpdatesAsync(previousSourceSha, build.Commit);
             }
         }
         catch (ConflictInPrBranchException conflictException)
@@ -1106,6 +1111,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 subscription,
                 prHeadBranch,
                 codeFlowRes.DependencyUpdates,
+                upstreamRepoDiffs,
                 isForwardFlow);
         }
         else if (pr != null)
@@ -1116,6 +1122,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 previousSourceSha,
                 subscription,
                 codeFlowRes.DependencyUpdates,
+                upstreamRepoDiffs,
                 isForwardFlow);
 
             _logger.LogInformation("Code flow update processed for pull request {prUrl}", pr.Url);
@@ -1142,6 +1149,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         string? previousSourceSha,
         SubscriptionDTO subscription,
         List<DependencyUpdate> newDependencyUpdates,
+        IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
         bool isForwardFlow)
     {
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
@@ -1167,6 +1175,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             build,
             previousSourceSha,
             pullRequest.RequiredUpdates,
+            upstreamRepoDiffs,
             prInfo?.Description,
             isForwardFlow: isForwardFlow);
 
@@ -1210,6 +1219,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         SubscriptionDTO subscription,
         string prBranch,
         List<DependencyUpdate> dependencyUpdates,
+        IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
         bool isForwardFlow)
     {
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
@@ -1223,6 +1233,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 build,
                 previousSourceSha,
                 requiredUpdates,
+                upstreamRepoDiffs,
                 currentDescription: null,
                 isForwardFlow: isForwardFlow);
 
@@ -1320,5 +1331,51 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);
     }
 
+    // <summary>
+    // Returns the commit-diffs in all product repositories between the last flow SHA and the current flow SHA.
+    // </summary>
+    private async Task<IReadOnlyCollection<UpstreamRepoDiff>> ComputeRepoUpdatesAsync(string? previousFlowSha, string currentFlowSha)
+    {
+        _logger.LogInformation("Computing repo updates between {LastFlowSha} and {CurrentFlowSha}", previousFlowSha, currentFlowSha);
+
+        if (string.IsNullOrEmpty(previousFlowSha))
+        {
+            _logger.LogWarning("Aborting repo diff calculation: previousFlowSha is null.");
+            return [];
+        }
+
+        string oldFileContents = await _gitClient.GetFileFromGitAsync(_vmrInfo.VmrPath, VmrInfo.DefaultRelativeSourceManifestPath, previousFlowSha)
+            ?? throw new DependencyFileNotFoundException($"Could not find {VmrInfo.DefaultRelativeSourceManifestPath} in {_vmrInfo.VmrPath} at commit {previousFlowSha}");
+
+        string newFileContents = await _gitClient.GetFileFromGitAsync(_vmrInfo.VmrPath, VmrInfo.DefaultRelativeSourceManifestPath, currentFlowSha)
+            ?? throw new DependencyFileNotFoundException($"Could not find {VmrInfo.DefaultRelativeSourceManifestPath} in {_vmrInfo.VmrPath} at commit {currentFlowSha}");
+
+        SourceManifest oldSrcManifest = SourceManifest.FromJson(oldFileContents);
+        SourceManifest newSrcManifest = SourceManifest.FromJson(newFileContents);
+
+        var oldRepos = oldSrcManifest.Repositories.ToDictionary(r => r.RemoteUri, r => r.CommitSha);
+        var newRepos = newSrcManifest.Repositories.ToDictionary(r => r.RemoteUri, r => r.CommitSha);
+
+        var allKeys = oldRepos.Keys.Union(newRepos.Keys);
+
+        var upstreamRepoDiffs = allKeys
+            .Select(key => new UpstreamRepoDiff(
+                key,
+                oldRepos.TryGetValue(key, out var oldSha) ? oldSha : null,
+                newRepos.TryGetValue(key, out var newSha) ? newSha : null))
+            .Where(x => x.OldCommitSha != x.NewCommitSha)
+            .ToList();
+
+        return upstreamRepoDiffs;
+        
+    }
     #endregion
 }
+
+// <summary>
+// Contains the old and new SHAs of an upstream repo (repo that the product repo depends on)
+// </summary>
+public record UpstreamRepoDiff(
+    string RepoUri,
+    string? OldCommitSha,
+    string? NewCommitSha);
