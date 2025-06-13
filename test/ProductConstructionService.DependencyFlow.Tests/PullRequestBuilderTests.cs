@@ -6,7 +6,6 @@ using FluentAssertions;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.Services.Common;
@@ -176,7 +175,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             [1]: {build.GitHubRepository}/compare/abc123...def456
             [marker]: <> (Start:Footer:CodeFlow PR)
             
-            ## Changes in other repos since the last backflow PR:
+            ## Associated changes in original repos:
             - https://github.com/foo/bar/compare/oldSha123...newSha789
             - https://github.com/foo/boz/compare/oldSha234...newSha678
             - https://github.com/foo/baz/compare/oldSha345...newSha567

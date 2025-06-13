@@ -310,7 +310,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
                 $"""
                 {FooterStartMarker}
 
-                ## Changes in other repos since the last backflow PR:
+                ## Associated changes in original repos:
                 {GenerateUpstreamRepoDiffs(upstreamRepoDiffs)}
                 {FooterEndMarker}
                 """;
