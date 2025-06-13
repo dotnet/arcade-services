@@ -129,12 +129,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             headBranchExisted,
             cancellationToken);
 
-        // We try to detect if the changes were meaningful and it's worth creating a new PR
-        if (skipMeaninglessUpdates && hasChanges && !headBranchExisted)
-        {
-            hasChanges &= await _codeflowChangeAnalyzer.ForwardFlowHasMeaningfulChangesAsync(mapping.Name, headBranch, targetBranch);
-        }
-
         IReadOnlyCollection<UnixPath>? conflictedFiles = null;
         if (hasChanges)
         {
@@ -149,6 +143,12 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 headBranch,
                 targetBranch,
                 cancellationToken);
+        }
+
+        // We try to detect if the changes were meaningful and it's worth creating a new PR
+        if (skipMeaninglessUpdates && hasChanges && !headBranchExisted)
+        {
+            hasChanges &= await _codeflowChangeAnalyzer.ForwardFlowHasMeaningfulChangesAsync(mapping.Name, headBranch, targetBranch);
         }
 
         return new CodeFlowResult(
