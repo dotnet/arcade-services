@@ -33,6 +33,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="targetVmrUri">URI of the VMR to update</param>
     /// <param name="discardPatches">Keep patch files?</param>
+    /// <param name="skipMeaninglessUpdates">Skip creating PR if only insignificant changes are present</param>
     /// <returns>CodeFlowResult containing information about the codeflow calculation</returns>
     Task<CodeFlowResult> FlowForwardAsync(
         string mapping,
@@ -43,6 +44,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
         string headBranch,
         string targetVmrUri,
         bool discardPatches = false,
+        bool skipMeaninglessUpdates = false,
         CancellationToken cancellationToken = default);
 }
 
@@ -55,6 +57,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly IVmrCloneManager _vmrCloneManager;
     private readonly ILocalGitClient _localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
+    private readonly ICodeflowChangeAnalyzer _codeflowChangeAnalyzer;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
     private readonly IBasicBarClient _barClient;
@@ -69,6 +72,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             ILocalGitClient localGitClient,
             ILocalGitRepoFactory localGitRepoFactory,
             IVersionDetailsParser versionDetailsParser,
+            ICodeflowChangeAnalyzer codeflowChangeAnalyzer,
             IProcessManager processManager,
             IFileSystem fileSystem,
             IBasicBarClient barClient,
@@ -82,6 +86,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         _vmrCloneManager = vmrCloneManager;
         _localGitClient = localGitClient;
         _localGitRepoFactory = localGitRepoFactory;
+        _codeflowChangeAnalyzer = codeflowChangeAnalyzer;
         _processManager = processManager;
         _fileSystem = fileSystem;
         _barClient = barClient;
@@ -97,6 +102,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string headBranch,
         string targetVmrUri,
         bool discardPatches = false,
+        bool skipMeaninglessUpdates = false,
         CancellationToken cancellationToken = default)
     {
         ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
@@ -107,7 +113,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         await sourceRepo.FetchAllAsync([mapping.DefaultRemote, repoInfo.RemoteUri], cancellationToken);
         await sourceRepo.CheckoutAsync(build.Commit);
 
-        (Codeflow lastFlow, _, ForwardFlow lastForwardFlow) = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
+        (Codeflow lastFlow, _, _) = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
         ForwardFlow currentFlow = new(build.Commit, lastFlow.VmrSha);
 
         bool hasChanges = await FlowCodeAsync(
@@ -139,9 +145,15 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 cancellationToken);
         }
 
+        // We try to detect if the changes were meaningful and it's worth creating a new PR
+        if (conflictedFiles != null && skipMeaninglessUpdates && hasChanges && !headBranchExisted)
+        {
+            hasChanges &= await _codeflowChangeAnalyzer.ForwardFlowHasMeaningfulChangesAsync(mapping.Name, headBranch, targetBranch);
+        }
+
         return new CodeFlowResult(
             hasChanges,
-            conflictedFiles ?? [], 
+            conflictedFiles ?? [],
             sourceRepo.Path,
             DependencyUpdates: []);
     }

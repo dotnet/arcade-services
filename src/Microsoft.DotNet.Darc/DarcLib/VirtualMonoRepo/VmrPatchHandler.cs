@@ -157,6 +157,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             repoPath,
             VmrInfo.SourcesDir / relativePath,
             includeAdditionalMappings,
+            ignoreLineEndings: false,
             cancellationToken));
 
         if (includeAdditionalMappings)
@@ -332,9 +333,20 @@ public class VmrPatchHandler : IVmrPatchHandler
         NativePath workingDir,
         UnixPath? applicationPath,
         bool includeAdditionalMappings,
-        CancellationToken cancellationToken)
+        bool ignoreLineEndings = false,
+        CancellationToken cancellationToken = default)
     {
-        var patch = await CreatePatch(patchName, sha1, sha2, path, filters, relativePaths, workingDir, applicationPath, cancellationToken);
+        var patch = await CreatePatch(
+            patchName,
+            sha1,
+            sha2,
+            path,
+            filters,
+            relativePaths,
+            workingDir,
+            applicationPath,
+            ignoreLineEndings,
+            cancellationToken);
 
         if (_fileSystem.GetFileInfo(patch.Path).Length < MaxPatchSize)
         {
@@ -374,6 +386,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 workingDir / dirName,
                 applicationPath == null ? new UnixPath(dirName) : applicationPath / dirName,
                 includeAdditionalMappings,
+                ignoreLineEndings: false,
                 cancellationToken));
         }
 
@@ -393,6 +406,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 true,
                 workingDir,
                 applicationPath,
+                ignoreLineEndings,
                 cancellationToken);
 
             if (_fileSystem.GetFileInfo(patch.Path).Length > MaxPatchSize)
@@ -416,6 +430,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         bool relativePaths,
         NativePath workingDir,
         UnixPath? applicationPath,
+        bool ignoreLineEndings,
         CancellationToken cancellationToken)
     {
         var args = new List<string>
@@ -426,6 +441,12 @@ public class VmrPatchHandler : IVmrPatchHandler
             "--output", // Store the diff in a .patch file
             patchName,
         };
+
+        if (ignoreLineEndings)
+        {
+            args.Add("--ignore-space-at-eol");
+            args.Add("--ignore-cr-at-eol");
+        }
 
         if (relativePaths)
         {
@@ -570,6 +591,7 @@ public class VmrPatchHandler : IVmrPatchHandler
                 contentDir,
                 destination != null ? new UnixPath(destination) : null,
                 includeAdditionalMappings: true,
+                ignoreLineEndings: false,
                 cancellationToken));
         }
 

@@ -16,7 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
+namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 
 [TestFixture]
 internal class VmrBackflowTest : VmrCodeFlowTests
@@ -457,8 +457,8 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         hadUpdates.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
-        string repoEngCommonFile = "a.txt";
-        string vmrEngCommonFile = "b.txt";
+        var repoEngCommonFile = "a.txt";
+        var vmrEngCommonFile = "b.txt";
         // create eng/common in the VMR in / and in /src/arcade
         Directory.CreateDirectory(VmrPath / DarcLib.Constants.CommonScriptFilesPath);
         await File.WriteAllTextAsync(VmrPath / DarcLib.Constants.CommonScriptFilesPath / repoEngCommonFile, "Not important");

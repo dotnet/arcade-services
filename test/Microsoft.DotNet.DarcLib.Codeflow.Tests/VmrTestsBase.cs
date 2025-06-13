@@ -21,7 +21,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
+namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 
 internal abstract class VmrTestsBase
 {
@@ -251,7 +251,8 @@ internal abstract class VmrTestsBase
         NativePath repoPath,
         string branch,
         Build? buildToFlow = null,
-        IReadOnlyCollection<string>? excludedAssets = null)
+        IReadOnlyCollection<string>? excludedAssets = null,
+        bool skipMeaninglessUpdates = false)
     {
         using var scope = ServiceProvider.CreateScope();
         var codeflower = scope.ServiceProvider.GetRequiredService<IVmrForwardFlower>();
@@ -264,6 +265,7 @@ internal abstract class VmrTestsBase
             branch,
             VmrPath,
             discardPatches: false,
+            skipMeaninglessUpdates,
             cancellationToken: _cancellationToken.Token);
 
         return codeFlowRes.HadUpdates;
