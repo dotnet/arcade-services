@@ -585,7 +585,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             cancellationToken);
         await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
-        (Codeflow lastLastFlow, _, _) = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: true);
+        (Codeflow lastLastFlow, _, _) = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
 
         // Reconstruct the previous flow's branch
         await FlowCodeAsync(
