@@ -4,7 +4,6 @@
 using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -42,9 +41,6 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrCloneManager _vmrCloneManager;
     private readonly IRepositoryCloneManager _repositoryCloneManager;
-    private readonly ILogger<VmrCodeFlower> _logger;
-    private readonly ILocalGitClient _localGitClient;
-    private readonly IVmrInfo _vmrInfo;
 
     public PcsVmrBackFlower(
             IVmrInfo vmrInfo,
@@ -67,9 +63,6 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         _dependencyTracker = dependencyTracker;
         _vmrCloneManager = vmrCloneManager;
         _repositoryCloneManager = repositoryCloneManager;
-        _localGitClient = localGitClient;
-        _vmrInfo = vmrInfo;
-        _logger = logger;
     }
 
     public async Task<CodeFlowResult> FlowBackAsync(
@@ -101,7 +94,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         return result with
         {
             // For already existing PRs, we want to always push the changes (even if only the <Source> tag changed)
-            HadUpdates = result.HadUpdates || headBranchExisted
+            HadUpdates = result.HadUpdates || headBranchExisted,
         };
     }
 

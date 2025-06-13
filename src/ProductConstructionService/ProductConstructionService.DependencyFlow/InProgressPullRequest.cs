@@ -3,7 +3,6 @@
 
 using System.Runtime.Serialization;
 using Maestro.MergePolicies;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 

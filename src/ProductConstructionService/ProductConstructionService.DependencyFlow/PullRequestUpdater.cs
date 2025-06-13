@@ -1346,30 +1346,26 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         SourceManifest oldSrcManifest = SourceManifest.FromJson(oldFileContents);
         SourceManifest newSrcManifest = SourceManifest.FromJson(newFileContents);
 
-        if (oldSrcManifest != null && newSrcManifest != null)
-        {
-            var oldRepos = oldSrcManifest.Repositories.ToDictionary(r => r.RemoteUri ?? r.Path, r => r.CommitSha);
-            var newRepos = newSrcManifest.Repositories.ToDictionary(r => r.RemoteUri ?? r.Path, r => r.CommitSha);
+        var oldRepos = oldSrcManifest.Repositories.ToDictionary(r => r.RemoteUri, r => r.CommitSha);
+        var newRepos = newSrcManifest.Repositories.ToDictionary(r => r.RemoteUri, r => r.CommitSha);
 
-            var allKeys = oldRepos.Keys.Union(newRepos.Keys);
+        var allKeys = oldRepos.Keys.Union(newRepos.Keys);
 
-            var upstreamRepoDiffs = allKeys
-                .Select(key => new UpstreamRepoDiff(
-                    key,
-                    oldRepos.TryGetValue(key, out var oldSha) ? oldSha : null,
-                    newRepos.TryGetValue(key, out var newSha) ? newSha : null
-                ))
-                .Where(x => x.OldCommitSha != x.NewCommitSha)
-                .ToList();
+        var upstreamRepoDiffs = allKeys
+            .Select(key => new UpstreamRepoDiff(
+                key,
+                oldRepos.TryGetValue(key, out var oldSha) ? oldSha : null,
+                newRepos.TryGetValue(key, out var newSha) ? newSha : null))
+            .Where(x => x.OldCommitSha != x.NewCommitSha)
+            .ToList();
 
-            UpstreamRepoDiff vmrDiff = new UpstreamRepoDiff(
-                _vmrInfo.VmrUri,
-                previousFlowSha,
-                currentFlowSha);
+        UpstreamRepoDiff vmrDiff = new UpstreamRepoDiff(
+            _vmrInfo.VmrUri,
+            previousFlowSha,
+            currentFlowSha);
 
-            return [vmrDiff, .. upstreamRepoDiffs];
-        }
-        return [];
+        return [vmrDiff, .. upstreamRepoDiffs];
+        
     }
     #endregion
 }
