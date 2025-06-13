@@ -66,6 +66,7 @@ public class CodeflowChangeAnalyzerTests
         // Arrange
         var gitDiffOutput =
             """
+            eng/common/build.ps1
             src/test-repo/Program.cs
             src/test-repo/Library.cs
             src/source-manifest.json
@@ -89,6 +90,7 @@ public class CodeflowChangeAnalyzerTests
         // Arrange
         var gitDiffOutput =
             """
+            eng/common/build.ps1
             src/source-manifest.json
             """;
 
@@ -107,6 +109,7 @@ public class CodeflowChangeAnalyzerTests
         // Arrange
         var gitDiffOutput =
             """
+            eng/common/build.ps1
             src/source-manifest.json
             src/test-repo/global.json
             src/test-repo/eng/Version.Details.xml
@@ -179,6 +182,7 @@ public class CodeflowChangeAnalyzerTests
         // Arrange
         var gitDiffOutput =
             """
+            eng/common/build.ps1
             src/source-manifest.json
             src/test-repo/global.json
             src/test-repo/eng/Version.Details.xml
