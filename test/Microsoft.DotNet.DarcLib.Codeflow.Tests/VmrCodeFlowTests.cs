@@ -114,29 +114,29 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
             })
             .ToList();
 
-    protected async Task<bool> ChangeRepoFileAndFlowIt(string newContent, string branchName)
+    protected async Task<CodeFlowResult> ChangeRepoFileAndFlowIt(string newContent, string branchName)
     {
         await GitOperations.Checkout(ProductRepoPath, "main");
         await File.WriteAllTextAsync(_productRepoFilePath, newContent);
         await GitOperations.CommitAll(ProductRepoPath, $"Changing a repo file to '{newContent}'");
 
-        var hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        var codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         CheckFileContents(_productRepoVmrFilePath, newContent);
         await GitOperations.CheckAllIsCommitted(VmrPath);
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
         await GitOperations.Checkout(ProductRepoPath, "main");
-        return hadUpdates;
+        return codeFlowResult;
     }
 
-    protected async Task<bool> ChangeVmrFileAndFlowIt(string newContent, string branchName)
+    protected async Task<CodeFlowResult> ChangeVmrFileAndFlowIt(string newContent, string branchName)
     {
         await GitOperations.Checkout(VmrPath, "main");
         await File.WriteAllTextAsync(_productRepoVmrPath / _productRepoFileName, newContent);
         await GitOperations.CommitAll(VmrPath, $"Changing a VMR file to '{newContent}'");
 
-        var hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        var codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         CheckFileContents(_productRepoFilePath, newContent);
-        return hadUpdates;
+        return codeFlowResult;
     }
 
     protected async Task VerifyDependenciesInRepo(NativePath repo, List<DependencyDetail> expectedDependencies)
@@ -199,15 +199,15 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
 
 internal static class BackFlowTestExtensions
 {
-    public static void ShouldHaveUpdates(this bool hadUpdates)
-        => VerifyUpdates(hadUpdates, true, "new code flow updates are expected");
+    public static void ShouldHaveUpdates(this CodeFlowResult codeFlowResult)
+        => VerifyUpdates(codeFlowResult, true, "new code flow updates are expected");
 
-    public static void ShouldNotHaveUpdates(this bool hadUpdates)
-        => VerifyUpdates(hadUpdates, false, "no updates are expected");
+    public static void ShouldNotHaveUpdates(this CodeFlowResult codeFlowResult)
+        => VerifyUpdates(codeFlowResult, false, "no updates are expected");
 
-    private static void VerifyUpdates(bool hadUpdates, bool expected, string message)
+    private static void VerifyUpdates(CodeFlowResult codeFlowResult, bool expected, string message)
     {
-        hadUpdates.Should().Be(expected, message);
+        codeFlowResult.HadUpdates.Should().Be(expected, message);
     }
 }
 
