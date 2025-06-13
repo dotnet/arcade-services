@@ -90,7 +90,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         string[] changedFiles = result.StandardOutput
             .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Where(file => !ignoredFiles.Contains(file))
-            .Where(file => !file.StartsWith(Constants.CommonScriptFilesPath)) // ignore eng/common files
+            .Where(file => !file.StartsWith(Constants.CommonScriptFilesPath, StringComparison.OrdinalIgnoreCase)) // ignore eng/common files
             .ToArray();
 
         // Version files (Version.Details.xml, Versions.props, global.json...)
