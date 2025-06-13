@@ -355,8 +355,8 @@ internal class PullRequestBuilder : IPullRequestBuilder
             - **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Commit**: [{build.Commit}]({build.GetCommitLink()})
+            - **Commit Diff**: {sourceDiffText}
             - **Branch**: {build.GetBranch()}
-            {(isForwardFlow ? $"- **Commit Diff**: {sourceDiffText}" : string.Empty)}
             {dependencyUpdateBlock}
             {GetEndMarker(subscriptionId)}
 

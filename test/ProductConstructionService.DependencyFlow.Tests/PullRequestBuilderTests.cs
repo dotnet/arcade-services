@@ -162,8 +162,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Build**: [{build.AzureDevOpsBuildNumber}](https://dev.azure.com/{build.AzureDevOpsAccount}/{build.AzureDevOpsProject}/_build/results?buildId={build.AzureDevOpsBuildId})
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Commit**: [{commitSha}]({build.GitHubRepository}/commit/{commitSha})
+            - **Commit Diff**: [{shortPreviousCommitSha}...{shortCommitSha}]({build.GitHubRepository}/compare/{mockPreviousCommitSha}...{commitSha})
             - **Branch**: main
-
 
             **Updated Dependencies**
             - **Foo.Bar**: [from 1.0.0 to 2.0.0][1]
@@ -249,8 +249,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Build**: [{build1.AzureDevOpsBuildNumber}](https://dev.azure.com/{build1.AzureDevOpsAccount}/{build1.AzureDevOpsProject}/_build/results?buildId={build1.AzureDevOpsBuildId})
             - **Date Produced**: {build1.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Commit**: [{commitSha}]({build1.GitHubRepository}/commit/{commitSha})
-            - **Branch**: main
             - **Commit Diff**: [{shortPreviousCommitSha}...{shortCommitSha}]({build1.GitHubRepository}/compare/{previousCommitSha}...{commitSha})
+            - **Branch**: main
             
             [marker]: <> (End:{subscriptionGuid})
             
@@ -261,8 +261,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Build**: [{build2.AzureDevOpsBuildNumber}](https://dev.azure.com/{build2.AzureDevOpsAccount}/{build2.AzureDevOpsProject}/_build/results?buildId={build2.AzureDevOpsBuildId})
             - **Date Produced**: {build2.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Commit**: [{commitSha2}]({build2.GitHubRepository}/commit/{commitSha2})
-            - **Branch**: main
             - **Commit Diff**: [{shortPreviousCommitSha2}...{shortCommitSha2}]({build2.GitHubRepository}/compare/{previousCommitSha2}...{commitSha2})
+            - **Branch**: main
 
             [marker]: <> (End:{subscriptionGuid2})
 

@@ -1359,12 +1359,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             .Where(x => x.OldCommitSha != x.NewCommitSha)
             .ToList();
 
-        UpstreamRepoDiff vmrDiff = new UpstreamRepoDiff(
-            _vmrInfo.VmrUri,
-            previousFlowSha,
-            currentFlowSha);
-
-        return [vmrDiff, .. upstreamRepoDiffs];
+        return upstreamRepoDiffs;
         
     }
     #endregion
