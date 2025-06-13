@@ -558,8 +558,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     {
         _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
 
-        (Codeflow lastLastFlow, _, _) = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: true);
-
         // Find the BarID of the last flown repo build
         RepositoryRecord previouslyAppliedRepositoryRecord = _sourceManifest.GetRepositoryRecord(mapping.Name);
         Build previouslyAppliedBuild;
@@ -567,7 +565,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         {
             // If we don't find the previously applied build, we'll just use the previously flown sha to recreate the flow
             // We'll apply a new build on top of this one, so the source manifest will get updated anyway
-            previouslyAppliedBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.SourceSha, [], [], [], []);
+            previouslyAppliedBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastFlow.RepoSha, [], [], [], []);
         }
         else
         {
@@ -586,6 +584,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             resetToRemote: false,
             cancellationToken);
         await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
+
+        (Codeflow lastLastFlow, _, _) = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: true);
 
         // Reconstruct the previous flow's branch
         await FlowCodeAsync(
