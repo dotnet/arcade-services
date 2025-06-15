@@ -64,7 +64,7 @@ internal class VmrDiffOperation : Operation
         (Repo repo, Repo vmr, bool fromRepoDirection) = await ParseInput();
         if (_options.NameOnly)
         {
-            await CompareSourceTreeWithVmrAsync(repo, vmr, fromRepoDirection);
+            await FileTreeDiffAsync(repo, vmr, fromRepoDirection);
         }
         else
         {
@@ -410,7 +410,7 @@ internal class VmrDiffOperation : Operation
         return repoPath / VmrInfo.SourceDirName / mapping;
     }
 
-    private async Task CompareSourceTreeWithVmrAsync(Repo sourceRepo, Repo vmrRepo, bool fromRepoDirection)
+    private async Task FileTreeDiffAsync(Repo sourceRepo, Repo vmrRepo, bool fromRepoDirection)
     {
         var sourceGitClient = _gitRepoFactory.CreateClient(sourceRepo.Remote);
         var vmrGitClient = _gitRepoFactory.CreateClient(vmrRepo.Remote);
@@ -460,7 +460,7 @@ internal class VmrDiffOperation : Operation
             ProcessVmrOnlyFiles(filesOnlyInVmr, fileDifferences, directoriesToProcess, fromRepoDirection);
         }
 
-        foreach (var difference in fileDifferences.Values)
+        foreach (var difference in fileDifferences.Values.OrderBy(v => v))
         {
             Console.WriteLine(difference);
         }
