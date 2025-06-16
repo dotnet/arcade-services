@@ -252,6 +252,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 patches,
                 discardPatches,
                 headBranchExisted,
+                build.GetRepository(),
                 cancellationToken);
         }
 
@@ -440,6 +441,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         List<VmrIngestionPatch> patches,
         bool discardPatches,
         bool headBranchExisted,
+        string repoGitHubUri,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
@@ -450,24 +452,14 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             line => line.Contains(VersionDetailsParser.SourceElementName) && line.Contains(lastFlow.SourceSha),
             lastFlow.RepoSha);
 
-        // Find the ID of the last VMR build that flowed into the repo
-        VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsFile(targetRepo.Path / VersionFiles.VersionDetailsXml);
-
         // checkout the previous repo sha so we can get the last last flow
         await targetRepo.CheckoutAsync(previousRepoSha);
         await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
         (Codeflow lastLastFlow, _, _) = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
 
-        Build previouslyAppliedVmrBuild;
-        if (versionDetails.Source?.BarId != null)
+        Build previouslyAppliedVmrBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.SourceSha, [], [], [], [])
         {
-            previouslyAppliedVmrBuild = await _barClient.GetBuildAsync(versionDetails.Source.BarId.Value);
-        }
-        else
-        {
-            // If we don't find the previously applied build, there probably wasn't one.
-            // In this case, we won't update assets, but that's ok because they'll get overwritten by the new build anyway
-            previouslyAppliedVmrBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.VmrSha, [], [], [], []);
+            GitHubRepository = repoGitHubUri
         }
 
         // Reconstruct the previous flow's branch
