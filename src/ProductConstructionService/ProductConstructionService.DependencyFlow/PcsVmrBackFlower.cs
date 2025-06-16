@@ -41,6 +41,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrCloneManager _vmrCloneManager;
     private readonly IRepositoryCloneManager _repositoryCloneManager;
+    private readonly ILogger<VmrCodeFlower> _logger;
 
     public PcsVmrBackFlower(
             IVmrInfo vmrInfo,
@@ -63,6 +64,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         _dependencyTracker = dependencyTracker;
         _vmrCloneManager = vmrCloneManager;
         _repositoryCloneManager = repositoryCloneManager;
+        _logger = logger;
     }
 
     public async Task<CodeFlowResult> FlowBackAsync(
@@ -141,13 +143,22 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         }
         catch (NotFoundException)
         {
-            // If target branch does not exist, we create it off of the base branch
-            targetRepo = await _repositoryCloneManager.PrepareCloneAsync(
-                mapping,
-                remotes,
-                subscription.TargetBranch,
-                ShouldResetClones,
-                cancellationToken);
+            try
+            {
+                // If target branch does not exist, we create it off of the base branch
+                targetRepo = await _repositoryCloneManager.PrepareCloneAsync(
+                    mapping,
+                    remotes,
+                    subscription.TargetBranch,
+                    ShouldResetClones,
+                    cancellationToken);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to find branch {branch} in {uri}", targetBranch, string.Join(", ", remotes));
+                throw new TargetBranchNotFoundException($"Failed to find target branch {targetBranch} in {string.Join(", ", remotes)}");
+            }
+
             await targetRepo.CreateBranchAsync(targetBranch);
             headBranchExisted = false;
         }
