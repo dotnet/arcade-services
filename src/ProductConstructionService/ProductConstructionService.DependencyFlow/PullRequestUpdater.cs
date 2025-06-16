@@ -731,14 +731,40 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         List<DependencyUpdateSummary> existingUpdates,
         List<DependencyUpdate> incomingUpdates)
     {
-        var incomingUpdateNames = incomingUpdates.Select(du => du.To.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var incoming = incomingUpdates
+            .Select(update => new DependencyUpdateSummary(update))
+            .ToList();
 
-        var updatesToAdd = existingUpdates
-            .Where(du => !incomingUpdateNames.Contains(du.DependencyName));
+        List<(DependencyUpdateSummary?, DependencyUpdateSummary?)> mergedUpdates = existingUpdates
+            .Concat(incoming)
+            .Select(update => update.DependencyName)
+            .Select(name => (existingUpdates.FirstOrDefault(u => u.DependencyName == name), incoming.FirstOrDefault(u => u.DependencyName == name)))
+            .ToList();
 
-        return incomingUpdates
-            .Select(du => new DependencyUpdateSummary(du))
-            .Concat(updatesToAdd)
+        static DependencyUpdateSummary MergeUpdate(DependencyUpdateSummary? first, DependencyUpdateSummary? second)
+        {
+            if (first == null)
+            {
+                return second!;
+            }
+
+            if (second == null)
+            {
+                return first!;
+            }
+
+            return new DependencyUpdateSummary()
+            {
+                DependencyName = first.DependencyName,
+                FromCommitSha = first.FromCommitSha,
+                FromVersion = first.FromVersion,
+                ToCommitSha = second.ToCommitSha,
+                ToVersion = second.ToVersion,
+            };
+        }
+
+        return mergedUpdates
+            .Select(pair => MergeUpdate(pair.Item1, pair.Item2))
             .ToList();
     }
 

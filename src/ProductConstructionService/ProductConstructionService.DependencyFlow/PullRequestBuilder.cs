@@ -260,7 +260,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
                 > This is a codeflow update. It may contain both source code changes from [{(isForwardFlow ? "the source repo" : "the VMR")}]({update.SourceRepo}) as well as dependency updates. Learn more [here]({CodeFlowPrFaqUri}).
 
                 This pull request brings the following source code changes
-                {GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates, isForwardFlow)}
+                {GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates)}
                 """;
         }
         else
@@ -283,8 +283,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
                     previousSourceCommit,
                     build,
                     update.SourceRepo,
-                    dependencyUpdates,
-                    isForwardFlow),
+                    dependencyUpdates),
                 currentDescription.AsSpan(endCutoff, currentDescription.Length - endCutoff));
         }
     }
@@ -300,7 +299,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             description = description.Remove(footerStartIndex, footerEndIndex - footerStartIndex + FooterEndMarker.Length);
         }
 
-        if (upstreamRepoDiffs == null || !upstreamRepoDiffs.Any())
+        if (upstreamRepoDiffs == null || upstreamRepoDiffs.Count == 0)
         {
             return description;
         }
@@ -339,8 +338,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         string? previousSourceCommit,
         BuildDTO build,
         string repoUri,
-        List<DependencyUpdateSummary> dependencyUpdates,
-        bool isForwardFlow)
+        List<DependencyUpdateSummary> dependencyUpdates)
     {
         string sourceDiffText = CreateSourceDiffLink(build, previousSourceCommit);
 
@@ -499,13 +497,11 @@ internal class PullRequestBuilder : IPullRequestBuilder
     /// [commitA][1]
     /// [1]: http://github.com/foo/bar/commit-A-SHA
     /// </summary>
-    /// <param name="description"></param>
-    /// <returns></returns>
     private static string CompressRepeatedLinksInDescription(string description)
     {
-        string pattern = "\\((https?://\\S+|www\\.\\S+)\\)";
+        string linkPattern = @"\((https?://\S+|www\.\S+)\)";
 
-        var matches = Regex.Matches(description, pattern).Select(m => m.Value).ToList();
+        var matches = Regex.Matches(description, linkPattern).Select(m => m.Value).ToList();
 
         var linkGroups = matches.GroupBy(link => link)
                                 .Where(group => group.Count() >= 2)
@@ -517,17 +513,19 @@ internal class PullRequestBuilder : IPullRequestBuilder
             return description;
         }
 
+        var existingGroupCount = Regex.Count(description, @"$\[\d+\]: https?://");
+
         foreach (var entry in linkGroups)
         {
-            description = Regex.Replace(description, $"{Regex.Escape(entry.Key)}", $"[{entry.Value}]");
+            description = Regex.Replace(description, $"{Regex.Escape(entry.Key)}", $"[{entry.Value + existingGroupCount}]");
         }
 
-        StringBuilder linkReferencesSection = new StringBuilder();
+        StringBuilder linkReferencesSection = new();
         linkReferencesSection.AppendLine();
 
         foreach (var entry in linkGroups)
         {
-            linkReferencesSection.AppendLine($"[{entry.Value}]: {entry.Key.TrimStart('(').TrimEnd(')')}");
+            linkReferencesSection.AppendLine($"[{entry.Value + existingGroupCount}]: {entry.Key.TrimStart('(').TrimEnd(')')}");
         }
 
         return description + linkReferencesSection.ToString();
@@ -546,7 +544,13 @@ internal class PullRequestBuilder : IPullRequestBuilder
     ///     Because PRs tend to be live for short periods of time, we can put more information
     ///     in the description than the commit message without worrying that links will go stale.
     /// </remarks>
-    private void AppendBuildDescription(StringBuilder description, ref int startingReferenceId, SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps, List<GitFile>? committedFiles, Microsoft.DotNet.ProductConstructionService.Client.Models.Build build)
+    private void AppendBuildDescription(
+        StringBuilder description,
+        ref int startingReferenceId,
+        SubscriptionUpdateWorkItem update,
+        List<DependencyUpdate> deps,
+        List<GitFile>? committedFiles,
+        BuildDTO build)
     {
         var changesLinks = new List<string>();
 
