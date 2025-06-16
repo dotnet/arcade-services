@@ -252,7 +252,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 patches,
                 discardPatches,
                 headBranchExisted,
-                build.GetRepository(),
+                build.GitHubRepository,
+                build.AzureDevOpsRepository,
                 cancellationToken);
         }
 
@@ -442,6 +443,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool discardPatches,
         bool headBranchExisted,
         string repoGitHubUri,
+        string repoAzDoUri,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
@@ -455,11 +457,13 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // checkout the previous repo sha so we can get the last last flow
         await targetRepo.CheckoutAsync(previousRepoSha);
         await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
-        (Codeflow lastLastFlow, _, _) = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
+        (Codeflow lastLastFlow, _, _) = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: lastFlow is Backflow);
 
-        Build previouslyAppliedVmrBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.SourceSha, [], [], [], [])
+        // Create a fake previously applied build. We only care about the sha here, because it will get overwritten anyway
+        Build previouslyAppliedVmrBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastFlow.SourceSha, [], [], [], [])
         {
-            GitHubRepository = repoGitHubUri
+            GitHubRepository = repoGitHubUri,
+            AzureDevOpsRepository = repoAzDoUri
         };
 
         // Reconstruct the previous flow's branch
