@@ -390,7 +390,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         try
         {
             // Try to see if both base and target branch are available
-            await _repositoryCloneManager.PrepareCloneAsync(
+            targetRepo = await _repositoryCloneManager.PrepareCloneAsync(
                 mapping,
                 remotes,
                 [targetBranch, headBranch],
@@ -401,7 +401,23 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
         catch (NotFoundException)
         {
-            // If target branch does not exist, we create it off of the base branch
+            try
+            {
+                // If target branch does not exist, we create it off of the base branch
+                targetRepo = await _repositoryCloneManager.PrepareCloneAsync(
+                    mapping,
+                    remotes,
+                    [targetBranch],
+                    targetBranch,
+                    ShouldResetVmr,
+                    cancellationToken);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to find branch {branch} in {uri}", targetBranch, string.Join(", ", remotes));
+                throw new TargetBranchNotFoundException($"Failed to find target branch {targetBranch} in {string.Join(", ", remotes)}");
+            }
+
             (Codeflow last, _, _) = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: false);
             await targetRepo.CheckoutAsync(last.RepoSha);
             await targetRepo.CreateBranchAsync(headBranch);
