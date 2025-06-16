@@ -1083,6 +1083,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 // If PR already exists, this should not happen
                 throw;
             }
+            _logger.LogWarning("Target branch {targetBranch} not found for subscription {subscriptionId}.", 
+                subscription.TargetBranch, 
+                subscription.Id);
             return;
         }
         catch (Exception)
