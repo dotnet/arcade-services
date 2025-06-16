@@ -460,7 +460,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         Build previouslyAppliedVmrBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastLastFlow.SourceSha, [], [], [], [])
         {
             GitHubRepository = repoGitHubUri
-        }
+        };
 
         // Reconstruct the previous flow's branch
         await FlowCodeAsync(
