@@ -156,7 +156,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             catch (Exception e)
             {
                 _logger.LogError(e, "Failed to find branch {branch} in {uri}", targetBranch, string.Join(", ", remotes));
-                throw new TargetBranchNotFoundException($"Failed to find target branch {targetBranch} in {string.Join(", ", remotes)}");
+                throw new TargetBranchNotFoundException($"Failed to find target branch {targetBranch} in {string.Join(", ", remotes)}", e);
             }
 
             await targetRepo.CreateBranchAsync(targetBranch);

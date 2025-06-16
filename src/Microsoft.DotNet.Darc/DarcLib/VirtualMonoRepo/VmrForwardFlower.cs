@@ -199,7 +199,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             catch (Exception e)
             {
                 _logger.LogError(e, "Failed to find branch {branch} in {uri}", baseBranch, vmrUri);
-                throw new TargetBranchNotFoundException($"Failed to find target branch {baseBranch} in {vmrUri}");
+                throw new TargetBranchNotFoundException($"Failed to find target branch {baseBranch} in {vmrUri}", e);
             }
 
             SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
