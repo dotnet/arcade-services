@@ -40,6 +40,14 @@ public class Constants
           }
         }
         """;
+    public const string GlobalJsonDotNetSdkPlaceholder = "{dotnet-sdk}";
+    public const string GlobalJsonWithVersionTemplate = """
+        {
+          "tools": {
+            "dotnet": "{dotnet-sdk}"
+          }
+        }
+        """;
 
     public const string NuGetConfigTemplate = """
         <?xml version="1.0" encoding="utf-8"?>

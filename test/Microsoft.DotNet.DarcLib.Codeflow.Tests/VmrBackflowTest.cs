@@ -28,6 +28,11 @@ internal class VmrBackflowTest : VmrCodeFlowTests
 
         const string branchName = nameof(OnlyBackflowsTest);
 
+        await File.WriteAllTextAsync(
+            VmrPath / VersionFiles.GlobalJson,
+            Constants.GlobalJsonTemplate);
+        await GitOperations.CommitAll(VmrPath, "Creating global.json in vmrs base");
+
         var hadUpdates = await ChangeVmrFileAndFlowIt("New content from the VMR", branchName);
         hadUpdates.ShouldHaveUpdates();
 
@@ -115,10 +120,16 @@ internal class VmrBackflowTest : VmrCodeFlowTests
 
         await GitOperations.CommitAll(ProductRepoPath, "Set up version files");
 
-        // Create global.json in src/arcade/ in the VMR
+        string vmrSdkVersion = "9.0.101";
+        // Create global.json in src/arcade/ and in VMRs base
         Directory.CreateDirectory(ArcadeInVmrPath);
-        await File.WriteAllTextAsync(ArcadeInVmrPath / VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
-        await GitOperations.CommitAll(VmrPath, "Creating global.json in src/arcade");
+        await File.WriteAllTextAsync(
+            ArcadeInVmrPath / VersionFiles.GlobalJson,
+            Constants.GlobalJsonWithVersionTemplate.Replace(Constants.GlobalJsonDotNetSdkPlaceholder, "9.0.100"));
+        await File.WriteAllTextAsync(
+            VmrPath / VersionFiles.GlobalJson,
+            Constants.GlobalJsonWithVersionTemplate.Replace(Constants.GlobalJsonDotNetSdkPlaceholder, vmrSdkVersion));
+        await GitOperations.CommitAll(VmrPath, "Creating global.json in vmrs base and in src/arcade ");
 
         var hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         hadUpdates.ShouldHaveUpdates();
@@ -132,7 +143,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         Directory.CreateDirectory(ArcadeInVmrPath / DarcLib.Constants.CommonScriptFilesPath);
         await File.WriteAllTextAsync(ArcadeInVmrPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1", "Some other script file");
 
-        await GitOperations.CommitAll(VmrPath, "Changing a VMR's global.json and eng/common file");
+        await GitOperations.CommitAll(VmrPath, "Changing a VMR arcade's global.json and eng/common file");
 
         var build1 = await CreateNewVmrBuild(
         [
@@ -261,7 +272,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         arcadeVersion?.ToString().Should().Be("1.0.2");
 
         var dotnetVersion = await dependencyFileManager.ReadToolsDotnetVersionAsync(ProductRepoPath, branchName + "-pr", repoIsVmr: false);
-        dotnetVersion.ToString().Should().Be("9.0.200");
+        dotnetVersion.ToString().Should().Be(vmrSdkVersion);
 
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-pr");
 
@@ -379,6 +390,9 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         // Update an eng/common file in the VMR
         Directory.CreateDirectory(ArcadeInVmrPath / DarcLib.Constants.CommonScriptFilesPath);
         await File.WriteAllTextAsync(ArcadeInVmrPath / VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
+        await File.WriteAllTextAsync(
+            VmrPath / VersionFiles.GlobalJson,
+            Constants.GlobalJsonTemplate);
         await File.WriteAllTextAsync(ArcadeInVmrPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1", "Some other script file");
         await GitOperations.CommitAll(VmrPath, "Creating VMR's eng/common");
 
@@ -440,6 +454,11 @@ internal class VmrBackflowTest : VmrCodeFlowTests
 
         await EnsureTestRepoIsInitialized();
 
+        await File.WriteAllTextAsync(
+            VmrPath / VersionFiles.GlobalJson,
+            Constants.GlobalJsonTemplate);
+        await GitOperations.CommitAll(VmrPath, "Creating global.json in vmr`s base");
+
         var repo = GetLocal(ProductRepoPath);
         await repo.RemoveDependencyAsync(FakePackageName);
         await repo.AddDependencyAsync(new DependencyDetail
@@ -495,6 +514,10 @@ internal class VmrBackflowTest : VmrCodeFlowTests
 
         const string branchName = nameof(DarcVmrBackflowCommandTest);
 
+        await File.WriteAllTextAsync(
+            VmrPath / VersionFiles.GlobalJson,
+            Constants.GlobalJsonTemplate);
+        await GitOperations.CommitAll(VmrPath, "Creating global.json in vmr`s base");
         // We flow the repo to make sure they are in sync
         var hadUpdates = await ChangeVmrFileAndFlowIt("New content in the VMR", branchName);
         hadUpdates.ShouldHaveUpdates();

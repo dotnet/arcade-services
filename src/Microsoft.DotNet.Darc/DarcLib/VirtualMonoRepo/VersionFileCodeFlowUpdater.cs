@@ -543,12 +543,9 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
 
         // If we are updating the arcade sdk we need to update the eng/common files as well
         DependencyDetail? arcadeItem = updates.GetArcadeUpdate();
-        SemanticVersion? targetDotNetVersion = null;
 
-        if (arcadeItem != null)
-        {
-            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr: true);
-        }
+        // Even tho we are backflowing from the VMR, we want to get the sdk version from VMR`s global.json, not src/arcade's
+        SemanticVersion targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(build.GetRepository(), build.Commit, repoIsVmr: false);
 
         GitFileContentContainer updatedFiles = await _dependencyFileManager.UpdateDependencyFiles(
             updates,
@@ -556,7 +553,9 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
             targetRepo.Path,
             branch: null, // reads the working tree
             currentRepoDependencies.Dependencies,
-            targetDotNetVersion);
+            targetDotNetVersion,
+            // make sure that we always backflow the VMRs root global.json sdk version
+            forceGlobalJsonUpdate: true);
 
         // This actually does not commit but stages only
         await _libGit2Client.CommitFilesAsync(updatedFiles.GetFilesToCommit(), targetRepo.Path, null, null);
