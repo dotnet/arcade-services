@@ -21,7 +21,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
+namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 
 internal abstract class VmrTestsBase
 {
@@ -219,7 +219,7 @@ internal abstract class VmrTestsBase
             cancellationToken: _cancellationToken.Token);
     }
 
-    protected async Task<bool> CallDarcBackflow(
+    protected async Task<CodeFlowResult> CallDarcBackflow(
         string mappingName,
         NativePath repoPath,
         string branch,
@@ -243,10 +243,10 @@ internal abstract class VmrTestsBase
             "main",
             branch,
             cancellationToken: _cancellationToken.Token);
-        return codeFlowResult.HadUpdates;
+        return codeFlowResult;
     }
 
-    protected async Task<bool> CallDarcForwardflow(
+    protected async Task<CodeFlowResult> CallDarcForwardflow(
         string mappingName,
         NativePath repoPath,
         string branch,
@@ -268,7 +268,7 @@ internal abstract class VmrTestsBase
             skipMeaninglessUpdates,
             cancellationToken: _cancellationToken.Token);
 
-        return codeFlowRes.HadUpdates;
+        return codeFlowRes;
     }
 
     protected async Task<List<string>> CallDarcCloakedFileScan(string baselinesFilePath)

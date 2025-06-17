@@ -19,6 +19,8 @@ internal class VmrDiffOptions : VmrCommandLineOptions<VmrDiffOperation>
         "which case current directory will be used as the source for the diff")]
     public string Repositories { get; set; }
 
-    [Option("name-only", Required = false, HelpText = "Only list differing files without the diffs")]
+    [Option("name-only", Required = false, HelpText =
+        "Only list names of differing files and directories. " +
+        "Listed differences are prefixed with +, - or * for addition, removal or differing content.")]
     public bool NameOnly { get; set; }
 }

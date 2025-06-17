@@ -64,16 +64,15 @@ internal class VmrDiffOperation : Operation
         (Repo repo, Repo vmr, bool fromRepoDirection) = await ParseInput();
         if (_options.NameOnly)
         {
-            await CompareSourceTreeWithVmrAsync(repo, vmr, fromRepoDirection);
+            return await FileTreeDiffAsync(repo, vmr, fromRepoDirection);
         }
         else
         {
-            await FullVmrDiffAsync(repo, vmr);
+            return await FullVmrDiffAsync(repo, vmr);
         }
-        return 0;
     }
 
-    private async Task FullVmrDiffAsync(Repo repo, Repo vmr)
+    private async Task<int> FullVmrDiffAsync(Repo repo, Repo vmr)
     {
         NativePath tmpPath = new NativePath(Path.GetTempPath()) / Path.GetRandomFileName();
         try
@@ -83,7 +82,7 @@ internal class VmrDiffOperation : Operation
             (NativePath tmpRepo, NativePath tmpVmr, string mapping) = await PrepareReposAsync(repo, vmr, tmpPath);
 
             IReadOnlyCollection<string> exclusionFilters = await GetDiffFilters(vmr.Remote, vmr.Ref, mapping);
-            await GenerateDiff(tmpRepo, tmpVmr, vmr.Ref, exclusionFilters);
+            return await GenerateDiff(tmpRepo, tmpVmr, vmr.Ref, exclusionFilters);
         }
         finally
         {
@@ -284,7 +283,7 @@ internal class VmrDiffOperation : Operation
     private async Task<bool> IsRepoVmrAsync(string uri, string branch)
         => await _gitRepoFactory.CreateClient(uri).IsRepoVmrAsync(uri, branch);
 
-    private async Task GenerateDiff(string repo1Path, string repo2Path, string repo2Branch, IReadOnlyCollection<string> filters)
+    private async Task<int> GenerateDiff(string repo1Path, string repo2Path, string repo2Branch, IReadOnlyCollection<string> filters)
     {
         var repo1 = _localGitRepoFactory.Create(new NativePath(repo1Path));
         string remoteName = await repo1.AddRemoteIfMissingAsync(repo2Path);
@@ -320,7 +319,7 @@ internal class VmrDiffOperation : Operation
 
         try
         {
-            await OutputDiff(patches);
+            return await OutputDiff(patches);
         }
         finally
         {
@@ -331,7 +330,7 @@ internal class VmrDiffOperation : Operation
         }
     }
 
-    private async Task OutputDiff(List<VmrIngestionPatch> patches)
+    private async Task<int> OutputDiff(List<VmrIngestionPatch> patches)
     {
         if (_options.NameOnly)
         {
@@ -360,10 +359,13 @@ internal class VmrDiffOperation : Operation
             {
                 await File.WriteAllLinesAsync(_options.OutputPath, list);
             }
+
+            return list.Any() ? 1 : 0;
         }
         else
         {
             // For regular diff mode, we print the full diff content
+            bool hadChanges = false;
             foreach (var patch in patches)
             {
                 using FileStream fs = new(patch.Path, FileMode.Open, FileAccess.Read);
@@ -372,8 +374,11 @@ internal class VmrDiffOperation : Operation
                 while ((line = await sr.ReadLineAsync()) != null)
                 {
                     Console.WriteLine(line);
+                    hadChanges = true;
                 }
             }
+
+            return hadChanges ? 1 : 0;
         }
     }
 
@@ -410,7 +415,7 @@ internal class VmrDiffOperation : Operation
         return repoPath / VmrInfo.SourceDirName / mapping;
     }
 
-    private async Task CompareSourceTreeWithVmrAsync(Repo sourceRepo, Repo vmrRepo, bool fromRepoDirection)
+    private async Task<int> FileTreeDiffAsync(Repo sourceRepo, Repo vmrRepo, bool fromRepoDirection)
     {
         var sourceGitClient = _gitRepoFactory.CreateClient(sourceRepo.Remote);
         var vmrGitClient = _gitRepoFactory.CreateClient(vmrRepo.Remote);
@@ -460,10 +465,12 @@ internal class VmrDiffOperation : Operation
             ProcessVmrOnlyFiles(filesOnlyInVmr, fileDifferences, directoriesToProcess, fromRepoDirection);
         }
 
-        foreach (var difference in fileDifferences.Values)
+        foreach (var difference in fileDifferences.Values.OrderBy(v => v))
         {
             Console.WriteLine(difference);
         }
+
+        return fileDifferences.Count > 0 ? 1 : 0;
     }
 
     private async Task<IReadOnlyCollection<string>> GetExclusionFilters(IGitRepo vmrGitClient, Repo vmr, string mapping)

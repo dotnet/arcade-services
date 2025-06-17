@@ -92,6 +92,14 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
             .Where(file => !ignoredFiles.Contains(file))
             .ToArray();
 
+        // For non-arcade repos, we also ignore eng/common changes
+        if (mappingName != "arcade")
+        {
+            changedFiles = changedFiles
+                .Where(file => !file.StartsWith(Constants.CommonScriptFilesPath, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+        }
+
         // Version files (Version.Details.xml, Versions.props, global.json...)
         string[] allowedFiles = DependencyFileManager.DependencyFiles
             .Select(f => (VmrInfo.GetRelativeRepoSourcesPath(mappingName) / f).Path)

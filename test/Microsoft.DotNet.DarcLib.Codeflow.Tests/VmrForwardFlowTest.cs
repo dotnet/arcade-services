@@ -13,7 +13,7 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
+namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 
 [TestFixture]
 internal class VmrForwardFlowTest : VmrCodeFlowTests
@@ -26,20 +26,20 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
 
         const string branchName = nameof(OnlyForwardflowsTest);
 
-        var hadUpdates = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName);
-        hadUpdates.ShouldHaveUpdates();
+        var codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName);
+        codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
         // Flow again - should be a no-op
-        hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
-        hadUpdates.ShouldNotHaveUpdates();
+        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult.ShouldNotHaveUpdates();
         await GitOperations.Checkout(VmrPath, "main");
         await GitOperations.DeleteBranch(VmrPath, branchName);
         CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo");
 
         // Make a change in the repo again
-        hadUpdates = await ChangeRepoFileAndFlowIt("New content in the individual repo again", branchName);
-        hadUpdates.ShouldHaveUpdates();
+        codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo again", branchName);
+        codeFlowResult.ShouldHaveUpdates();
         CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo again");
 
         // Make an additional change in the PR branch before merging
@@ -49,15 +49,15 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
         CheckFileContents(_productRepoVmrFilePath, "Change that happened in the PR");
 
         // Make a conflicting change in the VMR
-        hadUpdates = await ChangeRepoFileAndFlowIt("A completely different change", branchName);
-        hadUpdates.ShouldHaveUpdates();
+        codeFlowResult = await ChangeRepoFileAndFlowIt("A completely different change", branchName);
+        codeFlowResult.ShouldHaveUpdates();
         await GitOperations.VerifyMergeConflict(VmrPath, branchName,
             mergeTheirs: true,
             expectedConflictingFile: VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName);
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
 
         // We used the changes from the repo - let's verify flowing back won't change anything
-        hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
     }
 
@@ -69,12 +69,12 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
         const string branchName = nameof(DarcVmrForwardFlowCommandTest);
 
         // We flow the repo to make sure they are in sync
-        var hadUpdates = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName);
-        hadUpdates.ShouldHaveUpdates();
+        var codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName);
+        codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
-        hadUpdates = await ChangeVmrFileAndFlowIt("New content in the VMR", branchName);
-        hadUpdates.ShouldHaveUpdates();
+        codeFlowResult = await ChangeVmrFileAndFlowIt("New content in the VMR", branchName);
+        codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, branchName);
         await GitOperations.Checkout(ProductRepoPath, "main");
         await GitOperations.Checkout(VmrPath, "main");
@@ -146,8 +146,8 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
 
         // Level the repo and the VMR
         const string branchName = nameof(MeaninglessChangesAreSkipped);
-        var hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
-        hadUpdates.ShouldHaveUpdates();
+        var codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
         // Now we flow a first build with no other changes (package updates only)
@@ -160,18 +160,18 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
                 ("Package.D3", "2.0.0"),
             ]);
 
-        hadUpdates = await CallDarcBackflow(
+        codeFlowResult = await CallDarcBackflow(
             Constants.ProductRepoName,
             ProductRepoPath,
             branchName + "-backflow",
             buildToFlow: firstBuild,
             excludedAssets: ["Package.C2"]);
-        hadUpdates.ShouldHaveUpdates();
+        codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
 
         // We flow to VMR again to level the content
-        hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
-        hadUpdates.ShouldHaveUpdates();
+        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
         var secondBuild = await CreateNewVmrBuild(
@@ -182,23 +182,23 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
                 ("Package.D3", "3.0.0"),
             ]);
 
-        hadUpdates = await CallDarcBackflow(
+        codeFlowResult = await CallDarcBackflow(
             Constants.ProductRepoName,
             ProductRepoPath,
             branchName + "-backflow",
             buildToFlow: secondBuild,
             excludedAssets: ["Package.C2"]);
-        hadUpdates.ShouldHaveUpdates();
+        codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
 
         // Now we try to flow forward and expect no meaningful changes to be detected
-        hadUpdates = await CallDarcForwardflow(
+        codeFlowResult = await CallDarcForwardflow(
             Constants.ProductRepoName,
             ProductRepoPath,
             branchName,
             // This is what we're testing in this test
             skipMeaninglessUpdates: true);
-        hadUpdates.ShouldNotHaveUpdates();
+        codeFlowResult.ShouldNotHaveUpdates();
     }
 }
 
