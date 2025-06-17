@@ -51,7 +51,7 @@ public class WorkBranch(
 
                 // We stage those changes, they will get absorbed with upcoming merge
                 result = await _repo.ExecuteGitCommand(["add", "-A"]);
-                result.ThrowIfFailed($"Failed to merge work branch {_workBranch} into {OriginalBranch}");
+                result.ThrowIfFailed($"Failed to stage whitespace-only EOL changes while merging work branch {_workBranch} into {OriginalBranch}");
                 result = await _repo.ExecuteGitCommand(mergeArgs);
                 result.ThrowIfFailed($"Failed to merge work branch {_workBranch} into {OriginalBranch}");
             }
