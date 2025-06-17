@@ -21,4 +21,5 @@ public class MergePolicyEvaluationResult
     public string Message { get; }
     public string MergePolicyName { get; }
     public string MergePolicyDisplayName { get; }
+    public bool IsCachedResult { get; set; } = false;
 }

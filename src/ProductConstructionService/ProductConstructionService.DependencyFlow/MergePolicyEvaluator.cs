@@ -47,7 +47,7 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
     {
         Dictionary<string, MergePolicyEvaluationResult> resultsByPolicyName = new();
         IDictionary<string, MergePolicyEvaluationResult> cachedResultsByPolicyName =
-            cachedResults?.Results.ToDictionary(r => r.MergePolicyName, r => r) ?? [];
+            cachedResults?.Results.ToDictionary(r => r.MergePolicyName, r => r) ?? new Dictionary<string, MergePolicyEvaluationResult>();
 
         foreach (MergePolicyDefinition definition in policyDefinitions)
         {
@@ -57,13 +57,19 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
                 var policies = await policyBuilder.BuildMergePoliciesAsync(new MergePolicyProperties(definition.Properties), pr);
                 foreach (var policy in policies)
                 {
-                    cachedResultsByPolicyName.TryGetValue(policy.Name, out var cachedEvaluationResult);
-                    if (CanSkipRerunningPRCheck(cachedResults?.TargetCommitSha, cachedEvaluationResult, targetBranchSha))
+                    if (cachedResultsByPolicyName.TryGetValue(policy.Name, out var cachedEvaluationResult) &&
+                        CanSkipRerunningPRCheck(cachedResults?.TargetCommitSha, cachedEvaluationResult, targetBranchSha))
                     {
-                        continue;
+                        Logger.LogInformation("Skipping re-evaluation of {policyName}, which has result {policyResult} at commitSha {commitSha}",
+                            policy.Name, cachedEvaluationResult.Status, cachedResults?.TargetCommitSha);
+                        cachedEvaluationResult.IsCachedResult = true;
+                        resultsByPolicyName[policy.Name] = cachedEvaluationResult;
                     }
-                    using var oPol = _operations.BeginOperation("Evaluating Merge Policy {policyName}", policy.Name);
-                    resultsByPolicyName[policy.Name] = await policy.EvaluateAsync(pr, darc);
+                    else
+                    {
+                        using var oPol = _operations.BeginOperation("Evaluating Merge Policy {policyName}", policy.Name);
+                        resultsByPolicyName[policy.Name] = await policy.EvaluateAsync(pr, darc);
+                    }
                 }
             }
             else
