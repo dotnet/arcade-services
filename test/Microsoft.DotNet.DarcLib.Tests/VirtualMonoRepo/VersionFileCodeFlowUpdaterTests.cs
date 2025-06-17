@@ -447,13 +447,15 @@ public class VersionFileCodeFlowUpdaterTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<IEnumerable<DependencyDetail>>(),
-                null))
+                null,
+                It.IsAny<bool>()))
             .Callback((IEnumerable<DependencyDetail> itemsToUpdate,
                        SourceDependency? sourceDependency,
                        string repo,
                        string? commit,
                        IEnumerable<DependencyDetail> oldDependencies,
-                       SemanticVersion? incomingDotNetSdkVersion) =>
+                       SemanticVersion? incomingDotNetSdkVersion,
+                       bool forceUpdate) =>
             {
                 // Update dependencies in-memory
                 var key = (repo == _vmrPath ? "vmr" : "repo") + "/" + commit;
