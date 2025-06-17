@@ -40,11 +40,11 @@ public class Constants
           }
         }
         """;
-    public const string GlobalJsonDotNetSdkPlaceholder = "{dotnet-sdk}";
-    public const string GlobalJsonWithVersionTemplate = """
+    public const string VmrBaseDotnetSdkVersion = "9.0.101";
+    public const string VmrBaseGlobalJsonTemplate = """
         {
           "tools": {
-            "dotnet": "{dotnet-sdk}"
+            "dotnet": "9.0.101"
           }
         }
         """;

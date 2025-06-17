@@ -82,7 +82,10 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
         var expectedFiles = GetExpectedFilesInVmr(
             VmrPath,
             [Constants.ProductRepoName],
-            [_productRepoVmrFilePath, _productRepoVmrPath / DarcLib.Constants.CommonScriptFilesPath / "build.ps1"]);
+            [
+                _productRepoVmrFilePath,
+                _productRepoVmrPath / DarcLib.Constants.CommonScriptFilesPath / "build.ps1",
+                VmrPath / VersionFiles.GlobalJson]);
 
         CheckDirectoryContents(VmrPath, expectedFiles);
         CompareFileContents(_productRepoVmrFilePath, _productRepoFileName);
@@ -194,6 +197,9 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
         ];
 
         await WriteSourceMappingsInVmr(sourceMappings);
+
+        await File.WriteAllTextAsync(VmrPath / VersionFiles.GlobalJson, Constants.VmrBaseGlobalJsonTemplate);
+        await GitOperations.CommitAll(VmrPath, "Create global json in vmr`s base");
     }
 }
 

@@ -544,8 +544,14 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
         // If we are updating the arcade sdk we need to update the eng/common files as well
         DependencyDetail? arcadeItem = updates.GetArcadeUpdate();
 
-        // Even tho we are backflowing from the VMR, we want to get the sdk version from VMR`s global.json, not src/arcade's
-        SemanticVersion targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(build.GetRepository(), build.Commit, repoIsVmr: false);
+        SemanticVersion? targetDotNetVersion = null;
+
+        // The arcade backflow subscriptions has all assets excluded, but we want to update the global.json sdk version anyway
+        if (arcadeItem != null || mappingName == "arcade")
+        {
+            // Even tho we are backflowing from the VMR, we want to get the sdk version from VMR`s global.json, not src/arcade's
+            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(build.GetRepository(), build.Commit, repoIsVmr: false);
+        }
 
         GitFileContentContainer updatedFiles = await _dependencyFileManager.UpdateDependencyFiles(
             updates,
