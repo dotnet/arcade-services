@@ -1076,6 +1076,18 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             }
             return;
         }
+        catch (TargetBranchNotFoundException)
+        {
+            if (pr != null)
+            {
+                // If PR already exists, this should not happen
+                throw;
+            }
+            _logger.LogWarning("Target branch {targetBranch} not found for subscription {subscriptionId}.", 
+                subscription.TargetBranch, 
+                subscription.Id);
+            return;
+        }
         catch (Exception)
         {
             _logger.LogError("Failed to flow source changes for build {buildId} in subscription {subscriptionId}",
