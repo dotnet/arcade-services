@@ -55,6 +55,10 @@ public class WorkBranch(
                 result = await _repo.ExecuteGitCommand(mergeArgs);
                 result.ThrowIfFailed($"Failed to merge work branch {_workBranch} into {OriginalBranch}");
             }
+            else
+            {
+                result.ThrowIfFailed($"Failed to merge work branch {_workBranch} into {OriginalBranch}");
+            }
         }
 
         await _repo.CommitAsync(commitMessage, true);
