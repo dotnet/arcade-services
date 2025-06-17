@@ -115,10 +115,15 @@ internal class VmrBackflowTest : VmrCodeFlowTests
 
         await GitOperations.CommitAll(ProductRepoPath, "Set up version files");
 
-        // Create global.json in src/arcade/ in the VMR
+        // Create global.json in src/arcade/ and in VMRs base
         Directory.CreateDirectory(ArcadeInVmrPath);
-        await File.WriteAllTextAsync(ArcadeInVmrPath / VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
-        await GitOperations.CommitAll(VmrPath, "Creating global.json in src/arcade");
+        await File.WriteAllTextAsync(
+            ArcadeInVmrPath / VersionFiles.GlobalJson,
+            Constants.GlobalJsonTemplate);
+        await File.WriteAllTextAsync(
+            VmrPath / VersionFiles.GlobalJson,
+            Constants.VmrBaseGlobalJsonTemplate);
+        await GitOperations.CommitAll(VmrPath, "Creating global.json in vmrs base and in src/arcade ");
 
         var codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
@@ -132,7 +137,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         Directory.CreateDirectory(ArcadeInVmrPath / DarcLib.Constants.CommonScriptFilesPath);
         await File.WriteAllTextAsync(ArcadeInVmrPath / DarcLib.Constants.CommonScriptFilesPath / "darc-init.ps1", "Some other script file");
 
-        await GitOperations.CommitAll(VmrPath, "Changing a VMR's global.json and eng/common file");
+        await GitOperations.CommitAll(VmrPath, "Changing a VMR arcade's global.json and eng/common file");
 
         var build1 = await CreateNewVmrBuild(
         [
@@ -261,7 +266,7 @@ internal class VmrBackflowTest : VmrCodeFlowTests
         arcadeVersion?.ToString().Should().Be("1.0.2");
 
         var dotnetVersion = await dependencyFileManager.ReadToolsDotnetVersionAsync(ProductRepoPath, branchName + "-pr", repoIsVmr: false);
-        dotnetVersion.ToString().Should().Be("9.0.200");
+        dotnetVersion.ToString().Should().Be(Constants.VmrBaseDotnetSdkVersion);
 
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-pr");
 
