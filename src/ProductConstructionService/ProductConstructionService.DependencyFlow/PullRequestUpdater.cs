@@ -738,6 +738,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         List<(DependencyUpdateSummary?, DependencyUpdateSummary?)> mergedUpdates = existingUpdates
             .Concat(incoming)
             .Select(update => update.DependencyName)
+            .Distinct()
             .Select(name => (existingUpdates.FirstOrDefault(u => u.DependencyName == name), incoming.FirstOrDefault(u => u.DependencyName == name)))
             .ToList();
 
