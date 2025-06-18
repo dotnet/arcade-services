@@ -13,7 +13,8 @@ param(
     [Parameter(Mandatory=$false, HelpMessage="Open browser with the generated GraphViz diagram")]
     [switch]$OpenInBrowser,
     [Parameter(Mandatory=$false, HelpMessage="Path to output the GraphViz diagram file")]
-    [string]$OutputPath = "",    [Parameter(Mandatory=$false, HelpMessage="Enable verbose output")]
+    [string]$OutputPath = "",
+    [Parameter(Mandatory=$false, HelpMessage="Enable verbose output")]
     [Alias("v")]
     [switch]$VerboseScript,
     [Parameter(Mandatory=$false, HelpMessage="SHA(s) to force display and highlight (comma-separated or array)")]
