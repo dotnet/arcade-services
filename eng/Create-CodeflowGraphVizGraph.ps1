@@ -544,9 +544,11 @@ function Create-GraphVizDiagram {
                     if ($Verbose) { Write-Host "  Skipping duplicate connection from '$finalSourceNodeId' to '$finalTargetNodeId'" -ForegroundColor DarkGray }
                 }
             } else {
-                Write-Host "  Skipping $($connection.ConnectionType) connection: Source '$finalSourceNodeId' (from SHA $actualSourceCommitSHA) or Target '$finalTargetNodeId' (from SHA $actualTargetCommitSHA) not found in generated graph node ID lists." -ForegroundColor Red
-                if (-not $sourceNodeExists) { Write-Host "    Source Node ID '$finalSourceNodeId' (for SHA $actualSourceCommitSHA) NOT found in its respective graph node list." }
-                if (-not $targetNodeExists) { Write-Host "    Target Node ID '$finalTargetNodeId' (for SHA $actualTargetCommitSHA) NOT found in its respective graph node list." }
+                if ($Verbose) { 
+                    Write-Host "  Skipping $($connection.ConnectionType) connection: Source '$finalSourceNodeId' (from SHA $actualSourceCommitSHA) or Target '$finalTargetNodeId' (from SHA $actualTargetCommitSHA) not found in generated graph node ID lists." -ForegroundColor DarkYellow
+                    if (-not $sourceNodeExists) { Write-Host "    Source Node ID '$finalSourceNodeId' (for SHA $actualSourceCommitSHA) NOT found in its respective graph node list." }
+                    if (-not $targetNodeExists) { Write-Host "    Target Node ID '$finalTargetNodeId' (for SHA $actualTargetCommitSHA) NOT found in its respective graph node list." }
+                }
             }
             $crossRepoLinkIndex++
         }
@@ -904,7 +906,7 @@ function Get-MaxVmrDepth {
         Write-Host "  Could not analyze VMR commit $($sourceSha.ShortSourceSHA): $_" -ForegroundColor Red
     }
 
-    Write-Error "  Could not find matching VMR commit range. Make sure to check out the right branches and pull" -ForegroundColor Red
+    Write-Host "  Could not find matching VMR commit range. Make sure to check out the right branches and pull" -ForegroundColor Red
     return 100
 }
 
