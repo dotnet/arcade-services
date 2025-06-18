@@ -47,7 +47,7 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
     {
         Dictionary<string, MergePolicyEvaluationResult> resultsByPolicyName = new();
         IDictionary<string, MergePolicyEvaluationResult> cachedResultsByPolicyName =
-            cachedResults?.Results.ToDictionary(r => r.MergePolicyName, r => r) ?? new Dictionary<string, MergePolicyEvaluationResult>();
+            cachedResults?.Results.ToDictionary(r => r.MergePolicyName, r => r) ?? [];
 
         foreach (MergePolicyDefinition definition in policyDefinitions)
         {
