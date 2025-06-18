@@ -370,7 +370,10 @@ function Create-GraphVizDiagram {
             $shortSHA = $commit.ShortSHA
             $nodeId = "vmr___$shortSHA"  # Prefix with vmr___ to ensure valid GraphViz identifier
             $vmrNodeIds += $nodeId # Add ID of the individual node
-            if ($Verbose) { Write-Host "  VMR Nodes: Added individual node ID '$nodeId' to `$vmrNodeIds." -ForegroundColor DarkMagenta }            $diagram += "  $nodeId [label=`"$shortSHA`""
+            if ($Verbose) { 
+                Write-Host "  VMR Nodes: Added individual node ID '$nodeId' to `$vmrNodeIds." -ForegroundColor DarkMagenta 
+            }
+            $diagram += "  $nodeId [label=`"$shortSHA`""
 
             # Check if this commit should be highlighted
             $isHighlighted = $highlightedCommitSHAs.ContainsKey($commit.CommitSHA) -or 
