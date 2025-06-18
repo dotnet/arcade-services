@@ -67,8 +67,10 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
                     }
                     else
                     {
-                        using var oPol = _operations.BeginOperation("Evaluating Merge Policy {policyName}", policy.Name);
-                        resultsByPolicyName[policy.Name] = await policy.EvaluateAsync(pr, darc);
+                        using (_operations.BeginOperation("Evaluating Merge Policy {policyName}", policy.Name))
+                        {
+                            resultsByPolicyName[policy.Name] = await policy.EvaluateAsync(pr, darc);
+                        }
                     }
                 }
             }
