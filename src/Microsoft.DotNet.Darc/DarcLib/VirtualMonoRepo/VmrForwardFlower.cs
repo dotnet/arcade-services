@@ -186,12 +186,22 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         catch (NotFoundException)
         {
             // If the head branch does not exist, we need to create it at the point of the last sync
-            var vmr = await _vmrCloneManager.PrepareVmrAsync(
-                [vmrUri],
-                [baseBranch],
-                baseBranch,
-                ShouldResetVmr,
-                cancellationToken);
+            ILocalGitRepo vmr;
+            try
+            {
+                vmr = await _vmrCloneManager.PrepareVmrAsync(
+                    [vmrUri],
+                    [baseBranch],
+                    baseBranch,
+                    ShouldResetVmr,
+                    cancellationToken);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to find branch {branch} in {uri}", baseBranch, vmrUri);
+                throw new TargetBranchNotFoundException($"Failed to find target branch {baseBranch} in {vmrUri}", e);
+            }
+
             SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
             (Codeflow last, _, _) = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
             await vmr.CheckoutAsync(last.VmrSha);
