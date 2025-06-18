@@ -10,6 +10,7 @@ using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
+using NetTopologySuite.IO;
 using NUnit.Framework;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
@@ -116,7 +117,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     [Test]
     public async Task ShouldReturnCorrectPRDescriptionForCodeEnabledSubscription()
     {
-        string commitSha = "abc1234567";
+        string originalCommitSha = "abc1234567";
+        string commitSha = originalCommitSha;
         Build build = GivenANewBuildId(101, commitSha);
         build.GitHubRepository = "https://github.com/foo/foobar";
         build.GitHubBranch = "main";
@@ -137,21 +139,28 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         };
 
         List<UpstreamRepoDiff> upstreamRepoDiffs =
-            [
-                new UpstreamRepoDiff("https://github.com/foo/bar", "oldSha123", "newSha789"),
-                new UpstreamRepoDiff("https://github.com/foo/boz", "oldSha234", "newSha678"),
-                new UpstreamRepoDiff("https://github.com/foo/baz", "oldSha345", "newSha567")
-            ];
+        [
+            new UpstreamRepoDiff("https://github.com/foo/bar", "oldSha123", "newSha789"),
+            new UpstreamRepoDiff("https://github.com/foo/boz", "oldSha234", "newSha678"),
+            new UpstreamRepoDiff("https://github.com/foo/baz", "oldSha345", "newSha567")
+        ];
 
         string mockPreviousCommitSha = "SHA1234567890";
 
         string? description = null;
         await Execute(
-            async context =>
+            context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = builder.GenerateCodeFlowPRDescription(update, build, mockPreviousCommitSha, dependencyUpdates: dependencyUpdates, upstreamRepoDiffs: upstreamRepoDiffs, currentDescription: null, isForwardFlow: false);
-                await Task.CompletedTask; // hacky way to make the lambda async
+                description = builder.GenerateCodeFlowPRDescription(
+                    update,
+                    build,
+                    mockPreviousCommitSha,
+                    dependencyUpdates,
+                    upstreamRepoDiffs,
+                    currentDescription: null,
+                    isForwardFlow: false);
+                return Task.CompletedTask;
             });
 
         string shortCommitSha = commitSha.Substring(0, 7);
@@ -185,6 +194,91 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             [1]: {build.GitHubRepository}/compare/abc123...def456
             [marker]: <> (Start:Footer:CodeFlow PR)
             
+            ## Associated changes in original repos:
+            - https://github.com/foo/bar/compare/oldSha123...newSha789
+            - https://github.com/foo/boz/compare/oldSha234...newSha678
+            - https://github.com/foo/baz/compare/oldSha345...newSha567
+
+            [marker]: <> (End:Footer:CodeFlow PR)
+            """);
+
+        // We add another update to see how it handles the existing link references etc
+
+        commitSha = "def888999222";
+        shortCommitSha = commitSha.Substring(0, 7);
+        build = GivenANewBuildId(101, commitSha);
+        build.GitHubRepository = "https://github.com/foo/foobar";
+        build.GitHubBranch = "main";
+        build.AzureDevOpsBuildNumber = "20230205.4";
+        build.AzureDevOpsAccount = "foo";
+        build.AzureDevOpsProject = "bar";
+        build.AzureDevOpsBuildId = 5678;
+        dependencyUpdates = [..dependencyUpdates.Select(u => new DependencyUpdateSummary()
+        {
+            DependencyName = u.DependencyName,
+            FromCommitSha = u.FromCommitSha,
+            ToCommitSha = commitSha,
+            FromVersion = u.FromVersion,
+            ToVersion = "3.0.0",
+        })];
+
+        update = new()
+        {
+            UpdaterId = subscriptionGuid,
+            IsCoherencyUpdate = false,
+            SourceRepo = build.GetRepository(),
+            SubscriptionId = new Guid(subscriptionGuid),
+            BuildId = build.Id,
+            SubscriptionType = SubscriptionType.DependenciesAndSources,
+        };
+
+        await Execute(
+            context =>
+            {
+                var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
+                description = builder.GenerateCodeFlowPRDescription(
+                    update,
+                    build,
+                    mockPreviousCommitSha,
+                    dependencyUpdates,
+                    upstreamRepoDiffs,
+                    description,
+                    isForwardFlow: false);
+                return Task.CompletedTask;
+            });
+
+        description.Should().Be(
+            $"""
+            
+            > [!NOTE]
+            > This is a codeflow update. It may contain both source code changes from [the VMR]({update.SourceRepo}) as well as dependency updates. Learn more [here]({PullRequestBuilder.CodeFlowPrFaqUri}).
+            
+            This pull request brings the following source code changes
+
+
+            [marker]: <> (Begin:{subscriptionGuid})
+
+            ## From {build.GitHubRepository}
+            - **Subscription**: [{subscriptionGuid}](https://maestro.dot.net/subscriptions?search={subscriptionGuid})
+            - **Build**: [{build.AzureDevOpsBuildNumber}](https://dev.azure.com/{build.AzureDevOpsAccount}/{build.AzureDevOpsProject}/_build/results?buildId={build.AzureDevOpsBuildId})
+            - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
+            - **Commit**: [{commitSha}]({build.GitHubRepository}/commit/{commitSha})
+            - **Commit Diff**: [{shortPreviousCommitSha}...{shortCommitSha}]({build.GitHubRepository}/compare/{mockPreviousCommitSha}...{commitSha})
+            - **Branch**: main
+
+            **Updated Dependencies**
+            - **Foo.Bar**: [from 1.0.0 to 3.0.0][2]
+            - **Foo.Biz**: [from 1.0.0 to 3.0.0][2]
+            - **Biz.Boz**: [from 1.0.0 to 3.0.0]({build.GitHubRepository}/compare/uvw789...def8889992)
+
+            [marker]: <> (End:{subscriptionGuid})
+
+
+            [1]: {build.GitHubRepository}/compare/abc123...def456
+
+            [2]: {build.GitHubRepository}/compare/abc123...{commitSha.Substring(0, PullRequestBuilder.GitHubComparisonShaLength)}
+            [marker]: <> (Start:Footer:CodeFlow PR)
+
             ## Associated changes in original repos:
             - https://github.com/foo/bar/compare/oldSha123...newSha789
             - https://github.com/foo/boz/compare/oldSha234...newSha678
