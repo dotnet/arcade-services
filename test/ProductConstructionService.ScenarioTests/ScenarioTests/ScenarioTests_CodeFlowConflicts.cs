@@ -122,7 +122,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
                 using (ChangeDirectory(reposFolder.Directory))
                 {
-                    await WaitForNewCommitInPullRequest(TestRepository.VmrTestRepoName, pr, 5);
+                    await WaitForNewCommitInPullRequest(TestRepository.VmrTestRepoName, pr, 4);
                     await CheckForwardFlowGitHubPullRequest(
                         [(TestRepository.TestRepo1Name, (await GitGetCurrentSha()).TrimEnd())],
                         TestRepository.VmrTestRepoName,
@@ -419,7 +419,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         {
                             try
                             {
-                                await GitHubApi.Git.Reference.Delete(TestParameters.GitHubTestOrg, TestRepository.VmrTestRepoName, $"heads/{targetBranchName}");
+                                await GitHubApi.Git.Reference.Delete(TestParameters.GitHubTestOrg, TestRepository.TestRepo1Name, $"heads/{targetBranchName}");
                             }
                             catch
                             {
