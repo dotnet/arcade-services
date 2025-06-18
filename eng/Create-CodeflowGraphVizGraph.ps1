@@ -16,7 +16,9 @@ param(
     [string]$OutputPath = "",
     [Parameter(Mandatory=$false, HelpMessage="Enable verbose output")]
     [Alias("v")]
-    [switch]$VerboseScript
+    [switch]$VerboseScript,
+    [Parameter(Mandatory=$false, HelpMessage="SHA(s) to force display and highlight (comma-separated or array)")]
+    [string[]]$HighlightedCommits = @()
 )
 
 # This script loads Git commits from a specified repository and a VMR and generates a GraphViz diagram.
@@ -26,6 +28,9 @@ param(
 #
 # Example usage:
 # .\Create-CodeflowGraphVizGraph.ps1 -RepoPath "C:\path\to\repo" -VmrPath "C:\path\to\vmr" -OpenInBrowser -Depth 50
+#
+# To highlight specific commits (force display and visual highlighting):
+# .\Create-CodeflowGraphVizGraph.ps1 -RepoPath "C:\path\to\repo" -VmrPath "C:\path\to\vmr" -HighlightedCommits "abc1234","def5678" -OpenInBrowser
 
 function Create-GraphVizDiagram {
     param (
@@ -38,6 +43,7 @@ function Create-GraphVizDiagram {
         [switch]$NoCollapse,          # Disable collapsing feature entirely
         [string]$vmrRepoUrl = "",     # Repository URL for VMR for clickable links
         [string]$repoUrl = "",        # Repository URL for source repo for clickable links
+        [string[]]$highlightedCommits = @(), # Array of SHA(s) to force display and highlight
         [switch]$Verbose
     )
 
@@ -50,20 +56,31 @@ function Create-GraphVizDiagram {
     $diagram += "// Total Commits: $($vmrCommits.Count) vmr commits, $($repoCommits.Count) repo commits`n"
     $diagram += "// Cross-Repository Connections: $($crossRepoConnections.Count) connections found`n"
     $diagram += "// Collapse Threshold: $CollapseThreshold (NoCollapse: $NoCollapse)`n"
-    $diagram += "// Note: Commit nodes are clickable and link to the repository`n`n"    # Use a consistent prefix with the GraphViz diagram
+    $diagram += "// Highlighted Commits: $($highlightedCommits.Count) commits forced to display and highlighted in orange`n"
+    $diagram += "// Note: Commit nodes are clickable and link to the repository`n`n"
+    # Use a consistent prefix with the GraphViz diagram
     $diagram += "digraph G {`n"
     $diagram += "  rankdir=TB;  // top to bottom flow overall`n"
     $diagram += "  splines=false;  // Straight arrows`n"
     $diagram += "  outputorder=edgesfirst;  // Nodes on top (covering arrows)`n"
     $diagram += "  node [shape=box, style=filled, fillcolor=white, fontcolor=blue, fontname=`"Arial`", fontsize=10];`n`n"
-
+    
     # First identify all commits involved in cross-repo references
     # It's important to mark both source and target commits in both repos as referenced
     # This ensures they won't be collapsed, which could break cross-repo connections
     $referencedVmrCommits = @{}
     $referencedRepoCommits = @{}
 
-    # First pass: identify all commits involved in any type of cross-repo connection
+    # Create a set of highlighted commit SHAs (normalized for lookup)
+    $highlightedCommitSHAs = @{}
+    foreach ($sha in $highlightedCommits) {
+        if ([string]::IsNullOrWhiteSpace($sha)) { continue }
+        $normalizedSHA = $sha.Trim()
+        $highlightedCommitSHAs[$normalizedSHA] = $true
+        if ($Verbose) {
+            Write-Host "  Will highlight and force display of commit: $normalizedSHA" -ForegroundColor Magenta
+        }
+    }    # First pass: identify all commits involved in any type of cross-repo connection
     foreach ($connection in $crossRepoConnections) {
         $referencedVmrCommits[$connection.VMRCommitSHA] = $true  # Mark VMR commit as referenced
         $referencedRepoCommits[$connection.RepoCommitSHA] = $true # Mark repo commit as referenced
@@ -71,6 +88,27 @@ function Create-GraphVizDiagram {
         if ($Verbose) {
             Write-Host "  Marking VMR commit $($connection.VMRCommitSHA) as referenced"
             Write-Host "  Marking repo commit $($connection.RepoCommitSHA) as referenced"
+        }
+    }
+
+    # Second pass: mark highlighted commits as referenced to prevent them from being collapsed
+    foreach ($vmrCommit in $vmrCommits) {
+        if ($highlightedCommitSHAs.ContainsKey($vmrCommit.CommitSHA) -or 
+            $highlightedCommitSHAs.ContainsKey($vmrCommit.ShortSHA)) {
+            $referencedVmrCommits[$vmrCommit.CommitSHA] = $true
+            if ($Verbose) {
+                Write-Host "  Marking highlighted VMR commit $($vmrCommit.CommitSHA) as referenced (forced display)" -ForegroundColor Magenta
+            }
+        }
+    }
+
+    foreach ($repoCommit in $repoCommits) {
+        if ($highlightedCommitSHAs.ContainsKey($repoCommit.CommitSHA) -or 
+            $highlightedCommitSHAs.ContainsKey($repoCommit.ShortSHA)) {
+            $referencedRepoCommits[$repoCommit.CommitSHA] = $true
+            if ($Verbose) {
+                Write-Host "  Marking highlighted repo commit $($repoCommit.CommitSHA) as referenced (forced display)" -ForegroundColor Magenta
+            }
         }
     }
 
@@ -233,14 +271,28 @@ function Create-GraphVizDiagram {
             $nodeId = "repo___$shortSHA"  # Prefix with repo___ to ensure valid GraphViz identifier
             $repoNodeIds += $nodeId
             if ($Verbose) { Write-Host "  Repo Nodes: Added individual node ID '$nodeId' to `$repoNodeIds." -ForegroundColor DarkMagenta }
-
             $diagram += "  $nodeId [label=`"$shortSHA`""
+
+            # Check if this commit should be highlighted
+            $isHighlighted = $highlightedCommitSHAs.ContainsKey($commit.CommitSHA) -or 
+                           $highlightedCommitSHAs.ContainsKey($commit.ShortSHA)
 
             # Create single commit link if repo URL is provided
             if ($repoUrl) {
                 $commitUrl = "$repoUrl/commit/$($commit.CommitSHA)"
-                $diagram += ", URL=`"$commitUrl`", target=`"_blank`", fontcolor=`"blue`", style=`"filled, bold`""
+                $diagram += ", URL=`"$commitUrl`", target=`"_blank`""
             }
+
+            # Apply highlighting styles if this commit is highlighted
+            if ($isHighlighted) {
+                $diagram += ", fillcolor=`"orange`", fontcolor=`"black`", style=`"filled, bold`", penwidth=3"
+                if ($Verbose) {
+                    Write-Host "  Applied highlighting to repo commit $($commit.ShortSHA)" -ForegroundColor Magenta
+                }
+            } else {
+                $diagram += ", fontcolor=`"blue`", style=`"filled, bold`""
+            }
+
             $diagram += "];`n"
         }
     }
@@ -318,15 +370,31 @@ function Create-GraphVizDiagram {
             $shortSHA = $commit.ShortSHA
             $nodeId = "vmr___$shortSHA"  # Prefix with vmr___ to ensure valid GraphViz identifier
             $vmrNodeIds += $nodeId # Add ID of the individual node
-            if ($Verbose) { Write-Host "  VMR Nodes: Added individual node ID '$nodeId' to `$vmrNodeIds." -ForegroundColor DarkMagenta }
-
+            if ($Verbose) { 
+                Write-Host "  VMR Nodes: Added individual node ID '$nodeId' to `$vmrNodeIds." -ForegroundColor DarkMagenta 
+            }
             $diagram += "  $nodeId [label=`"$shortSHA`""
+
+            # Check if this commit should be highlighted
+            $isHighlighted = $highlightedCommitSHAs.ContainsKey($commit.CommitSHA) -or 
+                           $highlightedCommitSHAs.ContainsKey($commit.ShortSHA)
 
             # Create single commit link if repo URL is provided
             if ($vmrRepoUrl) {
                 $commitUrl = "$vmrRepoUrl/commit/$($commit.CommitSHA)"
-                $diagram += ", URL=`"$commitUrl`", target=`"_blank`", fontcolor=`"blue`", style=`"filled, bold`""
+                $diagram += ", URL=`"$commitUrl`", target=`"_blank`""
             }
+
+            # Apply highlighting styles if this commit is highlighted
+            if ($isHighlighted) {
+                $diagram += ", fillcolor=`"orange`", fontcolor=`"black`", style=`"filled, bold`", penwidth=3"
+                if ($Verbose) {
+                    Write-Host "  Applied highlighting to VMR commit $($commit.ShortSHA)" -ForegroundColor Magenta
+                }
+            } else {
+                $diagram += ", fontcolor=`"blue`", style=`"filled, bold`""
+            }
+
             $diagram += "];`n"
         }
     }
@@ -476,9 +544,11 @@ function Create-GraphVizDiagram {
                     if ($Verbose) { Write-Host "  Skipping duplicate connection from '$finalSourceNodeId' to '$finalTargetNodeId'" -ForegroundColor DarkGray }
                 }
             } else {
-                Write-Host "  Skipping $($connection.ConnectionType) connection: Source '$finalSourceNodeId' (from SHA $actualSourceCommitSHA) or Target '$finalTargetNodeId' (from SHA $actualTargetCommitSHA) not found in generated graph node ID lists." -ForegroundColor Red
-                if (-not $sourceNodeExists) { Write-Host "    Source Node ID '$finalSourceNodeId' (for SHA $actualSourceCommitSHA) NOT found in its respective graph node list." }
-                if (-not $targetNodeExists) { Write-Host "    Target Node ID '$finalTargetNodeId' (for SHA $actualTargetCommitSHA) NOT found in its respective graph node list." }
+                if ($Verbose) { 
+                    Write-Host "  Skipping $($connection.ConnectionType) connection: Source '$finalSourceNodeId' (from SHA $actualSourceCommitSHA) or Target '$finalTargetNodeId' (from SHA $actualTargetCommitSHA) not found in generated graph node ID lists." -ForegroundColor DarkYellow
+                    if (-not $sourceNodeExists) { Write-Host "    Source Node ID '$finalSourceNodeId' (for SHA $actualSourceCommitSHA) NOT found in its respective graph node list." }
+                    if (-not $targetNodeExists) { Write-Host "    Target Node ID '$finalTargetNodeId' (for SHA $actualTargetCommitSHA) NOT found in its respective graph node list." }
+                }
             }
             $crossRepoLinkIndex++
         }
@@ -836,7 +906,7 @@ function Get-MaxVmrDepth {
         Write-Host "  Could not analyze VMR commit $($sourceSha.ShortSourceSHA): $_" -ForegroundColor Red
     }
 
-    Write-Error "  Could not find matching VMR commit range. Make sure to check out the right branches and pull" -ForegroundColor Red
+    Write-Host "  Could not find matching VMR commit range. Make sure to check out the right branches and pull" -ForegroundColor Red
     return 100
 }
 
@@ -1389,9 +1459,7 @@ try {
         Write-Host "Source repository URL: $sourceRepoUrl" -ForegroundColor Green
     } else {
         Write-Host "Could not determine source repository URL" -ForegroundColor Yellow
-    }
-
-    # Create Mermaid diagram with cross-repository connections
+    }    # Create Mermaid diagram with cross-repository connections
     $diagramParams = @{
         vmrCommits = $vmrCommits
         repoCommits = $repoCommits
@@ -1401,6 +1469,7 @@ try {
         collapseThreshold = $CollapseThreshold
         vmrRepoUrl = $vmrRepoUrl
         repoUrl = $sourceRepoUrl
+        highlightedCommits = $HighlightedCommits
     }
 
     # Add the NoCollapse parameter if it was provided
