@@ -78,6 +78,14 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
     private const string CommitDiffNotAvailableMsg = "Not available";
 
+    /// <summary>
+    /// The regex is matching numbers surrounded by square brackets that have a colon and something after it.
+    /// Example: given [23]:sometext as input, it will attempt to capture "23"
+    /// </summary>
+    private static readonly Regex ReferenceIdRegex = new("(?<=^\\[)\\d+(?=\\]:.+)", RegexOptions.Multiline | RegexOptions.Compiled);
+
+    private static readonly Regex LinkRegex = new(@"\((https?://\S+|www\.\S+)\)", RegexOptions.Compiled);
+
     private readonly BuildAssetRegistryContext _context;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IBasicBarClient _barClient;
@@ -499,14 +507,15 @@ internal class PullRequestBuilder : IPullRequestBuilder
     /// </summary>
     private static string CompressRepeatedLinksInDescription(string description)
     {
-        string linkPattern = @"\((https?://\S+|www\.\S+)\)";
+        List<string> matches = LinkRegex.Matches(description)
+            .Select(m => m.Value)
+            .ToList();
 
-        var matches = Regex.Matches(description, linkPattern).Select(m => m.Value).ToList();
-
-        var linkGroups = matches.GroupBy(link => link)
-                                .Where(group => group.Count() >= 2)
-                                .Select((group, index) => new { Link = group.Key, Index = index })
-                                .ToDictionary(x => x.Link, x => x.Index);
+        Dictionary<string, int> linkGroups = matches
+            .GroupBy(link => link)
+            .Where(group => group.Count() >= 2)
+            .Select((group, index) => new { Link = group.Key, Index = index })
+            .ToDictionary(x => x.Link, x => x.Index);
 
         if (linkGroups.Count == 0)
         {
@@ -742,12 +751,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     /// </summary>
     internal static int GetStartingReferenceId(string description)
     {
-        //The regex is matching numbers surrounded by square brackets that have a colon and something after it.
-        //The regex captures these numbers
-        //example: given [23]:sometext as input, it will attempt to capture "23"
-        var regex = new Regex("(?<=^\\[)\\d+(?=\\]:.+)", RegexOptions.Multiline);
-
-        return regex.Matches(description.ToString())
+        return ReferenceIdRegex.Matches(description.ToString())
             .Select(m => int.Parse(m.ToString()))
             .DefaultIfEmpty(0)
             .Max() + 1;
@@ -784,8 +788,10 @@ internal class PullRequestBuilder : IPullRequestBuilder
         const int titleLengthLimit = 150;
         const string delimiter = ", ";
 
-        if (repoNames == null || !repoNames.Any())
-            return "";
+        if (repoNames == null || repoNames.Count == 0)
+        {
+            return string.Empty;
+        }
 
         List<string> simpleNames = repoNames
             .Select(name => name
