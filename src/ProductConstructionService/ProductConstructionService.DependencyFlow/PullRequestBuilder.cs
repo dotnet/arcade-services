@@ -319,7 +319,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
     private static string GenerateUpstreamRepoDiffs(IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs)
     {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new();
         foreach (UpstreamRepoDiff upstreamRepoDiff in upstreamRepoDiffs)
         {
             if (!string.IsNullOrEmpty(upstreamRepoDiff.RepoUri)
@@ -372,7 +372,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
         DependencyCategories dependencyCategories = CreateDependencyCategories(dependencyUpdateSummaries);
 
-        StringBuilder stringBuilder = new StringBuilder();
+        StringBuilder stringBuilder = new();
 
         if (dependencyCategories.NewDependencies.Count > 0)
         {
@@ -410,9 +410,9 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
     private static DependencyCategories CreateDependencyCategories(List<DependencyUpdateSummary> dependencyUpdateSummaries)
     {
-        List<DependencyUpdateSummary> newDependencies = new();
-        List<DependencyUpdateSummary> removedDependencies = new();
-        List<DependencyUpdateSummary> updatedDependencies = new();
+        List<DependencyUpdateSummary> newDependencies = [];
+        List<DependencyUpdateSummary> removedDependencies = [];
+        List<DependencyUpdateSummary> updatedDependencies = [];
 
         foreach (DependencyUpdateSummary depUpdate in dependencyUpdateSummaries)
         {
@@ -505,7 +505,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
         var linkGroups = matches.GroupBy(link => link)
                                 .Where(group => group.Count() >= 2)
-                                .Select((group, index) => new { Link = group.Key, Index = index + 1 })
+                                .Select((group, index) => new { Link = group.Key, Index = index })
                                 .ToDictionary(x => x.Link, x => x.Index);
 
         if (linkGroups.Count == 0)
@@ -513,7 +513,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             return description;
         }
 
-        var existingGroupCount = Regex.Count(description, @"$\[\d+\]: https?://");
+        var existingGroupCount = GetStartingReferenceId(description);
 
         foreach (var entry in linkGroups)
         {

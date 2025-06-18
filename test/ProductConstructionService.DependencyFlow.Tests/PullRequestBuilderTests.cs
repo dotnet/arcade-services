@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text;
@@ -78,12 +78,15 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         var build1 = GivenANewBuildId(101, "abc1234");
         var build2 = GivenANewBuildId(102, "def2345");
         var build3 = GivenANewBuildId(103, "gha3456");
+        var build4 = GivenANewBuildId(104, "gha3777");
         SubscriptionUpdateWorkItem update1 = GivenSubscriptionUpdate(false, build1.Id, "11111111-1111-1111-1111-111111111111");
         SubscriptionUpdateWorkItem update2 = GivenSubscriptionUpdate(false, build2.Id, "22222222-2222-2222-2222-222222222222");
         SubscriptionUpdateWorkItem update3 = GivenSubscriptionUpdate(false, build3.Id, "33333333-3333-3333-3333-333333333333");
+        SubscriptionUpdateWorkItem update4 = GivenSubscriptionUpdate(false, build4.Id, "22222222-2222-2222-2222-222222222222");
         List<DependencyUpdate> deps1 = GivenDependencyUpdates('a', build1.Id);
         List<DependencyUpdate> deps2 = GivenDependencyUpdates('b', build2.Id);
         List<DependencyUpdate> deps3 = GivenDependencyUpdates('c', build3.Id);
+        List<DependencyUpdate> deps4 = GivenDependencyUpdates('e', build4.Id);
 
         var description = await GeneratePullRequestDescription([(update1, deps1), (update2, deps2), (update3, deps3)]);
 
@@ -101,6 +104,13 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps3, 5));
         description.Should().NotContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps2, 3));
         description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps22, 7));
+
+        deps3 = GivenDependencyUpdates('e', build4.Id);
+
+        description = await GeneratePullRequestDescription([(update4, deps3)], description);
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps1, 1));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps4, 9));
+        description.Should().NotContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps2, 3));
     }
 
     [Test]
@@ -301,7 +311,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
 
         string dependencyBlock = PullRequestBuilder.CreateDependencyUpdateBlock([newDependency, removedDependency, updatedDependency], "https://github.com/Foo");
 
-        dependencyBlock.Should().Be("""
+        dependencyBlock.Should().Be(
+            """
 
             **New Dependencies**
             - **Foo.Bar**: [2.0.0](https://github.com/Foo/commit/def456)
@@ -315,7 +326,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             """);
     }
 
-    private const string RegexTestString1 = """
+    private const string RegexTestString1 =
+        """
         [2]:qqqq
         qqqqq
         qqqq
@@ -327,16 +339,33 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         """;
 
     private const string RegexTestString2 = "";
-    private const string RegexTestString3 = """
-        this
-        string
-        shouldn't
-        have
-        any
-        matches
+    private const string RegexTestString3 =
+        """
+        > [!NOTE]
+        > This is a codeflow update. It may contain both source code changes from [the VMR](https://github.com/foo/foobar) as well as dependency updates. Learn more [here](https://github.com/dotnet/dotnet/tree/main/docs/Codeflow-PRs.md).
+
+        This pull request brings the following source code changes
+
+        [marker]: <> (Begin:11111111-1111-1111-1111-111111111111)
+
+        ## From https://github.com/foo/foobar
+        - **Subscription**: [11111111-1111-1111-1111-111111111111](https://maestro.dot.net/subscriptions?search=11111111-1111-1111-1111-111111111111)
+        - **Build**: [20230205.2](https://dev.azure.com/foo/bar/_build/results?buildId=1234)
+        - **Date Produced**: června 18, 2025 11:12:39 dop. UTC
+        - **Commit**: [abc1234567](https://github.com/foo/foobar/commit/abc1234567)
+        - **Commit Diff**: [SHA1234...abc1234](https://github.com/foo/foobar/compare/SHA1234567890...abc1234567)
+        - **Branch**: main
+
+        **Updated Dependencies**
+        - **Foo.Bar**: [from 1.0.0 to 2.0.0](https://github.com/foo/foobar/compare/abc123...def456)
+        - **Foo.Biz**: [from 1.0.0 to 2.0.0](https://github.com/foo/foobar/compare/abc123...def456)
+        - **Biz.Boz**: [from 1.0.0 to 2.0.0](https://github.com/foo/foobar/compare/uvw789...xyz890)
+
+        [marker]: <> (End:11111111-1111-1111-1111-111111111111)
         """;
 
-    private const string RegexTestString4 = """
+    private const string RegexTestString4 =
+        """
         [1]:q
         [2]:1
         [3]:q
