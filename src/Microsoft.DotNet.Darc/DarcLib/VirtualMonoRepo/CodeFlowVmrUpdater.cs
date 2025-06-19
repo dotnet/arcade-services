@@ -142,10 +142,10 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
             }
         }
 
-            _logger.LogInformation("Updating VMR {repo} from {current} to {next}..",
-                mapping.Name,
-                Commit.GetShortSha(fromSha),
-                Commit.GetShortSha(update.TargetRevision));
+        _logger.LogInformation("Updating VMR {repo} from {current} to {next}..",
+            mapping.Name,
+            Commit.GetShortSha(fromSha),
+            Commit.GetShortSha(update.TargetRevision));
 
         var commitMessage = PrepareCommitMessage(
             SyncCommitMessage,
