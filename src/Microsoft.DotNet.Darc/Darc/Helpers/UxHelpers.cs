@@ -207,18 +207,18 @@ public static class UxHelpers
             {
                 subInfo.AppendLine($"  - Target Directory: {subscription.TargetDirectory}");
             }
-
-            string excludedAssets;
-            if (subscription.ExcludedAssets.Any())
-            {
-                excludedAssets = string.Join(Environment.NewLine + "    - ", [string.Empty, .. subscription.ExcludedAssets]);
-            }
-            else
-            {
-                excludedAssets = " []";
-            }
-            subInfo.AppendLine($"  - Excluded Assets:{excludedAssets}");
         }
+
+        string excludedAssets;
+        if (subscription.ExcludedAssets.Any())
+        {
+            excludedAssets = string.Join(Environment.NewLine + "    - ", [string.Empty, .. subscription.ExcludedAssets]);
+        }
+        else
+        {
+            excludedAssets = " []";
+        }
+        subInfo.AppendLine($"  - Excluded Assets:{excludedAssets}");
 
         IEnumerable<MergePolicy> policies = mergePolicies ?? subscription.Policy.MergePolicies;
         subInfo.Append(GetMergePoliciesDescription(policies, "  "));

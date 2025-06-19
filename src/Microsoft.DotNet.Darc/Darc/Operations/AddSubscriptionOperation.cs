@@ -133,11 +133,7 @@ internal class AddSubscriptionOperation : Operation
             return Constants.ErrorCode;
         }
 
-        if (_options.ExcludedAssets != null && !_options.SourceEnabled)
-        {
-            Console.WriteLine("Asset exclusion only works for source-enabled subscriptions");
-            return Constants.ErrorCode;
-        }
+
 
         string channel = _options.Channel;
         string sourceRepository = _options.SourceRepository;
@@ -236,11 +232,7 @@ internal class AddSubscriptionOperation : Operation
             excludedAssets = [..addSubscriptionPopup.ExcludedAssets];
         }
 
-        if (excludedAssets.Any() && !sourceEnabled)
-        {
-            Console.WriteLine("Asset exclusion only works for source-enabled subscriptions");
-            return Constants.ErrorCode;
-        }
+
 
         try
         {
