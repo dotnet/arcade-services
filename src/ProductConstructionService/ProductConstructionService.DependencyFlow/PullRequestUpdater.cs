@@ -733,7 +733,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IEnumerable<DependencyUpdateSummary> mergedUpdates = existingUpdates
             .Select(u =>
             {
-                var matchingIncoming = incomingUpdates.FirstOrDefault(i => (i.From?.Name ?? i.To.Name) == u.DependencyName);
+                var matchingIncoming = incomingUpdates.FirstOrDefault(i => i.DependencyName == u.DependencyName);
                 return new DependencyUpdateSummary()
                 {
                     DependencyName = u.DependencyName,
@@ -745,7 +745,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             });
 
         IEnumerable<DependencyUpdateSummary> newUpdates = incomingUpdates
-            .Where(u => !existingUpdates.Any(e => (u.From?.Name ?? u.To.Name) == e.DependencyName))
+            .Where(u => !existingUpdates.Any(e => u.DependencyName == e.DependencyName))
             .Select(update => new DependencyUpdateSummary(update));
 
         return [.. mergedUpdates, .. newUpdates];
