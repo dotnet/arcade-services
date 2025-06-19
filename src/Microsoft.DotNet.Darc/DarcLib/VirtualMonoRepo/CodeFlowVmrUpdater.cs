@@ -21,7 +21,7 @@ public interface ICodeFlowVmrUpdater
     /// to the zero commit to "trick" the algorithm. In these cases we also pass the fromSha parameter to correctly generate the commit message.
     /// This parameter is never used for the actual flow of the code
     /// </summary>
-    /// <param name="mapping">Mapping we're updating</param>
+    /// <param name="mapping">Repository inside of the VMR we're updating</param>
     /// <param name="build">Build we're updating the VMR with</param>
     /// <param name="fromSha">The actual sha of the repository we're updating from.
     /// In some cases, we set the source-manifest json current sha to the git empty commit.
