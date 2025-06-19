@@ -46,6 +46,7 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
     private readonly IRepositoryCloneManager _cloneManager;
     private readonly ILogger<VmrUpdater> _logger;
     private readonly ISourceManifest _sourceManifest;
+    private readonly IGitRepoFactory _gitRepoFactory;
 
     public CodeFlowVmrUpdater(
         IVmrInfo vmrInfo,
@@ -72,6 +73,7 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
         _cloneManager = cloneManager;
+        _gitRepoFactory = gitRepoFactory;
     }
 
     public async Task<bool> UpdateRepository(
@@ -128,16 +130,29 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
             resetToRemoteWhenCloningRepo,
             cancellationToken);
 
+        string fromSha = currentVersion.Sha;
+        // In some flows, we "trick" the VMR into thinking it has the zero commit of a repo.
+        // In that case we want to lookup the remote repo and get the correct sha from there.
+        if (fromSha == Constants.EmptyGitObject)
+        {
+            var remoteSourceManifest = SourceManifest.FromJson(await _gitRepoFactory.CreateClient(_vmrInfo.VmrUri).GetFileContentsAsync(
+                VmrInfo.DefaultRelativeSourceManifestPath,
+                _vmrInfo.VmrUri,
+                _vmrInfo.CheckedOutRef));
+            fromSha = remoteSourceManifest.Repositories.FirstOrDefault(r => r.Path == mapping.Name)?.CommitSha ??
+                throw new DarcException($"Failed to fetch {mapping.Name} commit SHA from source-manifest.json at {_vmrInfo.VmrUri}/{_vmrInfo.CheckedOutRef}");
+        }
+
         _logger.LogInformation("Updating VMR {repo} from {current} to {next}..",
             mapping.Name,
-            Commit.GetShortSha(currentVersion.Sha),
-            Commit.GetShortSha(update.TargetRevision));
+            Commit.GetShortSha(fromSha),
+            Commit.GetShortSha(update.TargetRevision));      
 
         var commitMessage = PrepareCommitMessage(
             SyncCommitMessage,
             mapping.Name,
             update.RemoteUri,
-            currentVersion.Sha,
+            fromSha,
             update.TargetRevision);
 
         try

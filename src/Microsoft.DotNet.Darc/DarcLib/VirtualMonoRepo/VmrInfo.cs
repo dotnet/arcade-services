@@ -22,6 +22,11 @@ public interface IVmrInfo
     NativePath VmrPath { get; set; }
 
     /// <summary>
+    /// Ref to which the VMR is checked out.
+    /// </summary>
+    string? CheckedOutRef { get; set; }
+
+    /// <summary>
     /// Uri from which the VMR has been cloned
     /// </summary>
     string VmrUri { get; set; }
@@ -119,6 +124,8 @@ public class VmrInfo : IVmrInfo
 
     public string VmrUri { get; set; }
 
+    public string? CheckedOutRef { get; set; }
+
     public IReadOnlyCollection<(string Source, string? Destination)> AdditionalMappings { get; set; } = Array.Empty<(string, string?)>();
 
     public VmrInfo(NativePath vmrPath, NativePath tmpPath)
@@ -127,6 +134,7 @@ public class VmrInfo : IVmrInfo
         TmpPath = tmpPath;
         SourceManifestPath = vmrPath / SourcesDir / SourceManifestFileName;
         VmrUri = Constants.DefaultVmrUri;
+        CheckedOutRef = null;
     }
 
     public VmrInfo(string vmrPath, string tmpPath) : this(new NativePath(vmrPath), new NativePath(tmpPath))
