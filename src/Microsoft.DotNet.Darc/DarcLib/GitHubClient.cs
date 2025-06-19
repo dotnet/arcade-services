@@ -492,6 +492,12 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         foreach (var updatedCheckRun in toBeUpdated)
         {
             MergePolicyEvaluationResult eval = evaluations.Last(e => updatedCheckRun.ExternalId == CheckRunId(e, prSha));
+            if (eval.IsCachedResult)
+            {
+                _logger.LogInformation("Not updating check run {checkRunId} for PR {pullRequestUrl} because the merge policy was not re-evaluated.",
+                    updatedCheckRun.ExternalId, pullRequestUrl);
+                continue;
+            }
             CheckRunUpdate newCheckRunUpdateValidation = CheckRunForUpdate(eval);
             await client.Check.Run.Update(owner, repo, updatedCheckRun.Id, newCheckRunUpdateValidation);
         }
