@@ -16,6 +16,11 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface ICodeFlowVmrUpdater
 {
+    /// <summary>
+    /// Updates a repository inside of the VMR with the provided build. In special cases we set the source-manifest.json commitSha for the given repo
+    /// to the zero commit to "trick" the algorithm. In these cases we also pass the fromSha parameter to correctly generate the commit message.
+    /// This parameter is never used for the actual flow of the code
+    /// </summary>
     Task<bool> UpdateRepository(
         SourceMapping mapping,
         Build build,
@@ -130,17 +135,7 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
             resetToRemoteWhenCloningRepo,
             cancellationToken);
 
-        if (currentVersion.Sha != Constants.EmptyGitObject)
-        {
-            fromSha = currentVersion.Sha;
-        }
-        else
-        {
-            if (string.IsNullOrEmpty(fromSha))
-            {
-                throw new ArgumentException($"{nameof(fromSha)} mustn't be null when {nameof(currentVersion.Sha)} is {Constants.EmptyGitObject}");
-            }
-        }
+        fromSha ??= currentVersion.Sha;
 
         _logger.LogInformation("Updating VMR {repo} from {current} to {next}..",
             mapping.Name,
