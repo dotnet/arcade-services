@@ -192,6 +192,20 @@ public static class UxHelpers
               - Update Frequency: {subscription.Policy.UpdateFrequency}
               - Enabled: {subscription.Enabled}
               - Batchable: {subscription.Policy.Batchable}
+
+            """);
+
+        if (subscription.ExcludedAssets.Any())
+        {
+            string excludedAssets = string.Join(Environment.NewLine + "    - ", [string.Empty, .. subscription.ExcludedAssets]);
+            subInfo.AppendLine($"  - Excluded Assets:{excludedAssets}");
+        }
+        else
+        {
+            subInfo.AppendLine($"  - Excluded Assets: []");
+        }
+
+        subInfo.Append($"""
               - PR Failure Notification tags: {subscription.PullRequestFailureNotificationTags}
               - Source-enabled: {subscription.SourceEnabled}
 
@@ -208,17 +222,6 @@ public static class UxHelpers
                 subInfo.AppendLine($"  - Target Directory: {subscription.TargetDirectory}");
             }
         }
-
-        string excludedAssets;
-        if (subscription.ExcludedAssets.Any())
-        {
-            excludedAssets = string.Join(Environment.NewLine + "    - ", [string.Empty, .. subscription.ExcludedAssets]);
-        }
-        else
-        {
-            excludedAssets = " []";
-        }
-        subInfo.AppendLine($"  - Excluded Assets:{excludedAssets}");
 
         IEnumerable<MergePolicy> policies = mergePolicies ?? subscription.Policy.MergePolicies;
         subInfo.Append(GetMergePoliciesDescription(policies, "  "));
