@@ -19,6 +19,7 @@ public interface ICodeFlowVmrUpdater
     Task<bool> UpdateRepository(
         SourceMapping mapping,
         Build build,
+        string? fromSha = null,
         bool resetToRemoteWhenCloningRepo = false,
         CancellationToken cancellationToken = default);
 }
@@ -77,6 +78,7 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
     public async Task<bool> UpdateRepository(
         SourceMapping mapping,
         Build build,
+        string? fromSha = null,
         bool resetToRemoteWhenCloningRepo = false,
         CancellationToken cancellationToken = default)
     {
@@ -128,16 +130,28 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
             resetToRemoteWhenCloningRepo,
             cancellationToken);
 
-        _logger.LogInformation("Updating VMR {repo} from {current} to {next}..",
-            mapping.Name,
-            Commit.GetShortSha(currentVersion.Sha),
-            Commit.GetShortSha(update.TargetRevision));
+        if (currentVersion.Sha != Constants.EmptyGitObject)
+        {
+            fromSha = currentVersion.Sha;
+        }
+        else
+        {
+            if (string.IsNullOrEmpty(fromSha))
+            {
+                throw new ArgumentException($"{nameof(fromSha)} mustn't be null when {nameof(currentVersion.Sha)} is {Constants.EmptyGitObject}");
+            }
+        }
+
+            _logger.LogInformation("Updating VMR {repo} from {current} to {next}..",
+                mapping.Name,
+                Commit.GetShortSha(fromSha),
+                Commit.GetShortSha(update.TargetRevision));
 
         var commitMessage = PrepareCommitMessage(
             SyncCommitMessage,
             mapping.Name,
             update.RemoteUri,
-            currentVersion.Sha,
+            fromSha,
             update.TargetRevision);
 
         try
