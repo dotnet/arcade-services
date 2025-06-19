@@ -78,6 +78,14 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
     private const string CommitDiffNotAvailableMsg = "Not available";
 
+    /// <summary>
+    /// The regex is matching numbers surrounded by square brackets that have a colon and something after it.
+    /// Example: given [23]:sometext as input, it will attempt to capture "23"
+    /// </summary>
+    private static readonly Regex ReferenceIdRegex = new("(?<=^\\[)\\d+(?=\\]:.+)", RegexOptions.Multiline | RegexOptions.Compiled);
+
+    private static readonly Regex LinkRegex = new(@"\((https?://\S+|www\.\S+)\)", RegexOptions.Compiled);
+
     private readonly BuildAssetRegistryContext _context;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IBasicBarClient _barClient;
@@ -260,7 +268,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
                 > This is a codeflow update. It may contain both source code changes from [{(isForwardFlow ? "the source repo" : "the VMR")}]({update.SourceRepo}) as well as dependency updates. Learn more [here]({CodeFlowPrFaqUri}).
 
                 This pull request brings the following source code changes
-                {GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates, isForwardFlow)}
+                {GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates)}
                 """;
         }
         else
@@ -283,8 +291,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
                     previousSourceCommit,
                     build,
                     update.SourceRepo,
-                    dependencyUpdates,
-                    isForwardFlow),
+                    dependencyUpdates),
                 currentDescription.AsSpan(endCutoff, currentDescription.Length - endCutoff));
         }
     }
@@ -300,7 +307,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             description = description.Remove(footerStartIndex, footerEndIndex - footerStartIndex + FooterEndMarker.Length);
         }
 
-        if (upstreamRepoDiffs == null || !upstreamRepoDiffs.Any())
+        if (upstreamRepoDiffs == null || upstreamRepoDiffs.Count == 0)
         {
             return description;
         }
@@ -320,7 +327,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
     private static string GenerateUpstreamRepoDiffs(IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs)
     {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new();
         foreach (UpstreamRepoDiff upstreamRepoDiff in upstreamRepoDiffs)
         {
             if (!string.IsNullOrEmpty(upstreamRepoDiff.RepoUri)
@@ -339,8 +346,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         string? previousSourceCommit,
         BuildDTO build,
         string repoUri,
-        List<DependencyUpdateSummary> dependencyUpdates,
-        bool isForwardFlow)
+        List<DependencyUpdateSummary> dependencyUpdates)
     {
         string sourceDiffText = CreateSourceDiffLink(build, previousSourceCommit);
 
@@ -374,7 +380,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
         DependencyCategories dependencyCategories = CreateDependencyCategories(dependencyUpdateSummaries);
 
-        StringBuilder stringBuilder = new StringBuilder();
+        StringBuilder stringBuilder = new();
 
         if (dependencyCategories.NewDependencies.Count > 0)
         {
@@ -412,9 +418,9 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
     private static DependencyCategories CreateDependencyCategories(List<DependencyUpdateSummary> dependencyUpdateSummaries)
     {
-        List<DependencyUpdateSummary> newDependencies = new();
-        List<DependencyUpdateSummary> removedDependencies = new();
-        List<DependencyUpdateSummary> updatedDependencies = new();
+        List<DependencyUpdateSummary> newDependencies = [];
+        List<DependencyUpdateSummary> removedDependencies = [];
+        List<DependencyUpdateSummary> updatedDependencies = [];
 
         foreach (DependencyUpdateSummary depUpdate in dependencyUpdateSummaries)
         {
@@ -499,35 +505,36 @@ internal class PullRequestBuilder : IPullRequestBuilder
     /// [commitA][1]
     /// [1]: http://github.com/foo/bar/commit-A-SHA
     /// </summary>
-    /// <param name="description"></param>
-    /// <returns></returns>
     private static string CompressRepeatedLinksInDescription(string description)
     {
-        string pattern = "\\((https?://\\S+|www\\.\\S+)\\)";
+        List<string> matches = LinkRegex.Matches(description)
+            .Select(m => m.Value)
+            .ToList();
 
-        var matches = Regex.Matches(description, pattern).Select(m => m.Value).ToList();
-
-        var linkGroups = matches.GroupBy(link => link)
-                                .Where(group => group.Count() >= 2)
-                                .Select((group, index) => new { Link = group.Key, Index = index + 1 })
-                                .ToDictionary(x => x.Link, x => x.Index);
+        Dictionary<string, int> linkGroups = matches
+            .GroupBy(link => link)
+            .Where(group => group.Count() >= 2)
+            .Select((group, index) => new { Link = group.Key, Index = index })
+            .ToDictionary(x => x.Link, x => x.Index);
 
         if (linkGroups.Count == 0)
         {
             return description;
         }
 
+        var existingGroupCount = GetStartingReferenceId(description);
+
         foreach (var entry in linkGroups)
         {
-            description = Regex.Replace(description, $"{Regex.Escape(entry.Key)}", $"[{entry.Value}]");
+            description = Regex.Replace(description, $"{Regex.Escape(entry.Key)}", $"[{entry.Value + existingGroupCount}]");
         }
 
-        StringBuilder linkReferencesSection = new StringBuilder();
+        StringBuilder linkReferencesSection = new();
         linkReferencesSection.AppendLine();
 
         foreach (var entry in linkGroups)
         {
-            linkReferencesSection.AppendLine($"[{entry.Value}]: {entry.Key.TrimStart('(').TrimEnd(')')}");
+            linkReferencesSection.AppendLine($"[{entry.Value + existingGroupCount}]: {entry.Key.TrimStart('(').TrimEnd(')')}");
         }
 
         return description + linkReferencesSection.ToString();
@@ -546,7 +553,13 @@ internal class PullRequestBuilder : IPullRequestBuilder
     ///     Because PRs tend to be live for short periods of time, we can put more information
     ///     in the description than the commit message without worrying that links will go stale.
     /// </remarks>
-    private void AppendBuildDescription(StringBuilder description, ref int startingReferenceId, SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps, List<GitFile>? committedFiles, Microsoft.DotNet.ProductConstructionService.Client.Models.Build build)
+    private void AppendBuildDescription(
+        StringBuilder description,
+        ref int startingReferenceId,
+        SubscriptionUpdateWorkItem update,
+        List<DependencyUpdate> deps,
+        List<GitFile>? committedFiles,
+        BuildDTO build)
     {
         var changesLinks = new List<string>();
 
@@ -738,12 +751,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     /// </summary>
     internal static int GetStartingReferenceId(string description)
     {
-        //The regex is matching numbers surrounded by square brackets that have a colon and something after it.
-        //The regex captures these numbers
-        //example: given [23]:sometext as input, it will attempt to capture "23"
-        var regex = new Regex("(?<=^\\[)\\d+(?=\\]:.+)", RegexOptions.Multiline);
-
-        return regex.Matches(description.ToString())
+        return ReferenceIdRegex.Matches(description.ToString())
             .Select(m => int.Parse(m.ToString()))
             .DefaultIfEmpty(0)
             .Max() + 1;
@@ -780,8 +788,10 @@ internal class PullRequestBuilder : IPullRequestBuilder
         const int titleLengthLimit = 150;
         const string delimiter = ", ";
 
-        if (repoNames == null || !repoNames.Any())
-            return "";
+        if (repoNames == null || repoNames.Count == 0)
+        {
+            return string.Empty;
+        }
 
         List<string> simpleNames = repoNames
             .Select(name => name
