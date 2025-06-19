@@ -32,12 +32,12 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionUpdateDat
                 new Line($"Use this form to update the values of subscription '{subscription.Id}'.", true),
                 new Line($"Note that if you are setting 'Is batchable' to true you need to remove all Merge Policies.", true),
                 Line.Empty,
+                new("Excluded assets is a list of package names to be ignored during dependency updates. ", true),
+                new("Asterisks can be used to filter whole namespaces, e.g. - Microsoft.DotNet.Arcade.*", true),
+                Line.Empty,
                 new("Source and target directories only apply to source-enabled subscriptions (VMR code flow subscriptions).", true),
                 new("They define which directory of the VMR (under src/) are the sources synchronized with.", true),
                 new("Only one of those must be set based on whether the source or the target repo is the VMR.", true),
-                Line.Empty,
-                new("Excluded assets is a list of package names to be ignored during dependency updates. ", true),
-                new("Asterisks can be used to filter whole namespaces, e.g. - Microsoft.DotNet.Arcade.*", true),
                 Line.Empty,
             ])
     {
