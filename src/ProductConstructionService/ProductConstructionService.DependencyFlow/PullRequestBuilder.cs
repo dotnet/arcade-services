@@ -317,7 +317,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
                 $"""
                 {FooterStartMarker}
 
-                ## Associated changes in original repos:
+                ## Associated changes in source repos
                 {GenerateUpstreamRepoDiffs(upstreamRepoDiffs)}
                 {FooterEndMarker}
                 """;
