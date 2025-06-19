@@ -192,20 +192,7 @@ public static class UxHelpers
               - Update Frequency: {subscription.Policy.UpdateFrequency}
               - Enabled: {subscription.Enabled}
               - Batchable: {subscription.Policy.Batchable}
-
-            """);
-
-        if (subscription.ExcludedAssets.Any())
-        {
-            string excludedAssets = string.Join(Environment.NewLine + "    - ", [string.Empty, .. subscription.ExcludedAssets]);
-            subInfo.AppendLine($"  - Excluded Assets:{excludedAssets}");
-        }
-        else
-        {
-            subInfo.AppendLine($"  - Excluded Assets: []");
-        }
-
-        subInfo.Append($"""
+              - Excluded Assets:{(subscription.ExcludedAssets.Any() ? string.Join(Environment.NewLine + "    - ", [string.Empty, .. subscription.ExcludedAssets]) : " []")}
               - PR Failure Notification tags: {subscription.PullRequestFailureNotificationTags}
               - Source-enabled: {subscription.SourceEnabled}
 
