@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
+using System.Linq;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -19,8 +20,8 @@ using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
-using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
+using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -731,42 +732,25 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         List<DependencyUpdateSummary> existingUpdates,
         List<DependencyUpdate> incomingUpdates)
     {
-        var incoming = incomingUpdates
-            .Select(update => new DependencyUpdateSummary(update))
-            .ToList();
-
-        List<(DependencyUpdateSummary?, DependencyUpdateSummary?)> mergedUpdates = existingUpdates
-            .Concat(incoming)
-            .Select(update => update.DependencyName)
-            .Distinct()
-            .Select(name => (existingUpdates.FirstOrDefault(u => u.DependencyName == name), incoming.FirstOrDefault(u => u.DependencyName == name)))
-            .ToList();
-
-        static DependencyUpdateSummary MergeUpdate(DependencyUpdateSummary? first, DependencyUpdateSummary? second)
-        {
-            if (first == null)
+        IEnumerable<DependencyUpdateSummary> mergedUpdates = existingUpdates
+            .Select(u =>
             {
-                return second!;
-            }
+                var matchingIncoming = incomingUpdates.FirstOrDefault(i => (i.From?.Name ?? i.To.Name) == u.DependencyName);
+                return new DependencyUpdateSummary()
+                {
+                    DependencyName = u.DependencyName,
+                    FromCommitSha = u.FromCommitSha,
+                    FromVersion = u.FromVersion,
+                    ToCommitSha = matchingIncoming != null ? matchingIncoming.To.Commit : u.ToCommitSha,
+                    ToVersion = matchingIncoming != null ? matchingIncoming.To.Version : u.ToVersion,
+                };
+            });
 
-            if (second == null)
-            {
-                return first!;
-            }
+        IEnumerable<DependencyUpdateSummary> newUpdates = incomingUpdates
+            .Where(u => !existingUpdates.Any(e => (u.From?.Name ?? u.To.Name) == e.DependencyName))
+            .Select(update => new DependencyUpdateSummary(update));
 
-            return new DependencyUpdateSummary()
-            {
-                DependencyName = first.DependencyName,
-                FromCommitSha = first.FromCommitSha,
-                FromVersion = first.FromVersion,
-                ToCommitSha = second.ToCommitSha,
-                ToVersion = second.ToVersion,
-            };
-        }
-
-        return mergedUpdates
-            .Select(pair => MergeUpdate(pair.Item1, pair.Item2))
-            .ToList();
+        return [.. mergedUpdates, .. newUpdates];
     }
 
     private class TargetRepoDependencyUpdate
@@ -784,7 +768,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// <param name="targetRepository">Target repository to calculate updates for</param>
     /// <param name="prBranch">PR head branch</param>
     /// <param name="targetBranch">Target branch</param>
-    /// <param name="remoteFactory">Darc remote factory</param>
     /// <returns>List of updates and dependencies that need updates.</returns>
     /// <remarks>
     ///     This is done in two passes.  The first pass runs through and determines the non-coherency
