@@ -447,7 +447,7 @@ public class LocalGitClient : ILocalGitClient
             "blame",
             "--first-parent",
             blameFromCommit != null ? blameFromCommit + '^' : Constants.HEAD,
-            "-slL",
+            "-wslL",
             $"{line},{line}",
             relativeFilePath,
         };

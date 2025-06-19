@@ -126,6 +126,13 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             SubscriptionType = SubscriptionType.DependenciesAndSources,
         };
 
+        List<UpstreamRepoDiff> upstreamRepoDiffs =
+            [
+                new UpstreamRepoDiff("https://github.com/foo/bar", "oldSha123", "newSha789"),
+                new UpstreamRepoDiff("https://github.com/foo/boz", "oldSha234", "newSha678"),
+                new UpstreamRepoDiff("https://github.com/foo/baz", "oldSha345", "newSha567")
+            ];
+
         string mockPreviousCommitSha = "SHA1234567890";
 
         string? description = null;
@@ -133,7 +140,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = builder.GenerateCodeFlowPRDescription(update, build, mockPreviousCommitSha, dependencyUpdates: dependencyUpdates, currentDescription: null, isForwardFlow: false);
+                description = builder.GenerateCodeFlowPRDescription(update, build, mockPreviousCommitSha, dependencyUpdates: dependencyUpdates, upstreamRepoDiffs: upstreamRepoDiffs, currentDescription: null, isForwardFlow: false);
                 await Task.CompletedTask; // hacky way to make the lambda async
             });
 
@@ -154,10 +161,10 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Subscription**: [{subscriptionGuid}](https://maestro.dot.net/subscriptions?search={subscriptionGuid})
             - **Build**: [{build.AzureDevOpsBuildNumber}](https://dev.azure.com/{build.AzureDevOpsAccount}/{build.AzureDevOpsProject}/_build/results?buildId={build.AzureDevOpsBuildId})
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
-            - **Commit Diff**: [{shortPreviousCommitSha}...{shortCommitSha}]({build.GitHubRepository}/compare/{mockPreviousCommitSha}...{commitSha})
             - **Commit**: [{commitSha}]({build.GitHubRepository}/commit/{commitSha})
+            - **Commit Diff**: [{shortPreviousCommitSha}...{shortCommitSha}]({build.GitHubRepository}/compare/{mockPreviousCommitSha}...{commitSha})
             - **Branch**: main
-            
+
             **Updated Dependencies**
             - **Foo.Bar**: [from 1.0.0 to 2.0.0][1]
             - **Foo.Biz**: [from 1.0.0 to 2.0.0][1]
@@ -166,7 +173,14 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             [marker]: <> (End:{subscriptionGuid})
             
             [1]: {build.GitHubRepository}/compare/abc123...def456
+            [marker]: <> (Start:Footer:CodeFlow PR)
+            
+            ## Associated changes in original repos:
+            - https://github.com/foo/bar/compare/oldSha123...newSha789
+            - https://github.com/foo/boz/compare/oldSha234...newSha678
+            - https://github.com/foo/baz/compare/oldSha345...newSha567
 
+            [marker]: <> (End:Footer:CodeFlow PR)
             """);
     }
 
@@ -190,7 +204,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = builder.GenerateCodeFlowPRDescription(update, build1, previousCommitSha, dependencyUpdates: [], currentDescription: null, isForwardFlow: false);
+                description = builder.GenerateCodeFlowPRDescription(update, build1, previousCommitSha, dependencyUpdates: [], currentDescription: null, isForwardFlow: true, upstreamRepoDiffs: []);
                 await Task.CompletedTask; // hacky way to make the lambda async
             });
         string shortCommitSha = commitSha.Substring(0, 7);
@@ -213,7 +227,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description2 = builder.GenerateCodeFlowPRDescription(update2, build2, previousCommitSha2, dependencyUpdates: [], description, isForwardFlow: false);
+                description2 = builder.GenerateCodeFlowPRDescription(update2, build2, previousCommitSha2, dependencyUpdates: [], upstreamRepoDiffs: [], description, isForwardFlow: true);
                 await Task.CompletedTask; // hacky way to make the lambda async
             });
         string shortCommitSha2 = commitSha2.Substring(0, 7);
@@ -224,7 +238,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             $"""
             
             > [!NOTE]
-            > This is a codeflow update. It may contain both source code changes from [the VMR]({update.SourceRepo}) as well as dependency updates. Learn more [here]({PullRequestBuilder.CodeFlowPrFaqUri}).
+            > This is a codeflow update. It may contain both source code changes from [the source repo]({update.SourceRepo}) as well as dependency updates. Learn more [here]({PullRequestBuilder.CodeFlowPrFaqUri}).
             
             This pull request brings the following source code changes
             
@@ -234,8 +248,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Subscription**: [{subscriptionGuid}](https://maestro.dot.net/subscriptions?search={subscriptionGuid})
             - **Build**: [{build1.AzureDevOpsBuildNumber}](https://dev.azure.com/{build1.AzureDevOpsAccount}/{build1.AzureDevOpsProject}/_build/results?buildId={build1.AzureDevOpsBuildId})
             - **Date Produced**: {build1.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
-            - **Commit Diff**: [{shortPreviousCommitSha}...{shortCommitSha}]({build1.GitHubRepository}/compare/{previousCommitSha}...{commitSha})
             - **Commit**: [{commitSha}]({build1.GitHubRepository}/commit/{commitSha})
+            - **Commit Diff**: [{shortPreviousCommitSha}...{shortCommitSha}]({build1.GitHubRepository}/compare/{previousCommitSha}...{commitSha})
             - **Branch**: main
             
             [marker]: <> (End:{subscriptionGuid})
@@ -246,8 +260,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Subscription**: [{subscriptionGuid2}](https://maestro.dot.net/subscriptions?search={subscriptionGuid2})
             - **Build**: [{build2.AzureDevOpsBuildNumber}](https://dev.azure.com/{build2.AzureDevOpsAccount}/{build2.AzureDevOpsProject}/_build/results?buildId={build2.AzureDevOpsBuildId})
             - **Date Produced**: {build2.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
-            - **Commit Diff**: [{shortPreviousCommitSha2}...{shortCommitSha2}]({build2.GitHubRepository}/compare/{previousCommitSha2}...{commitSha2})
             - **Commit**: [{commitSha2}]({build2.GitHubRepository}/commit/{commitSha2})
+            - **Commit Diff**: [{shortPreviousCommitSha2}...{shortCommitSha2}]({build2.GitHubRepository}/compare/{previousCommitSha2}...{commitSha2})
             - **Branch**: main
 
             [marker]: <> (End:{subscriptionGuid2})

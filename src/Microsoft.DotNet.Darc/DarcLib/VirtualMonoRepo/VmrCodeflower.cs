@@ -117,26 +117,17 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         else
         {
             _logger.LogInformation("Current flow is in the opposite direction");
-
-            // Check if there were any recent incoming recent we need to take into account
-            if (!headBranchExisted && await TryMergingRecentFlows(mapping, lastFlows, currentFlow, repo, build, targetBranch, headBranch, discardPatches, cancellationToken))
-            {
-                hasChanges = true;// TODO: call SameDirection for the remaining delta instead
-            }
-            else
-            {
-                hasChanges = await OppositeDirectionFlowAsync(
-                    mapping,
-                    lastFlow,
-                    currentFlow,
-                    repo,
-                    build,
-                    targetBranch,
-                    headBranch,
-                    discardPatches,
-                    headBranchExisted,
-                    cancellationToken);
-            }
+            hasChanges = await OppositeDirectionFlowAsync(
+                mapping,
+                lastFlow,
+                currentFlow,
+                repo,
+                build,
+                targetBranch,
+                headBranch,
+                discardPatches,
+                headBranchExisted,
+                cancellationToken);
         }
 
         if (!hasChanges)
@@ -200,59 +191,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         bool discardPatches,
         bool headBranchExisted,
         CancellationToken cancellationToken);
-
-    /// <summary>
-    /// This method makes sure our forward flow branch will apply cleanly in case a more recent forward flow happened in the target branch.
-    /// The conflict arises from the fact that the PR branch created in step 8. clashes with changes from step 6.
-    /// This happens because the forward flow branch created in step 8. will be based on commit 1. (last flow source commit),
-    /// and the PR branch changing the file from AAA -> CCC while the target branch has BBB (step 6.).
-    ///
-    /// This method creates 2 new commits on the head branch (between 1. and 8.) by flowing 5. on top of 1. and then merging 6. into the
-    /// head branch.
-    /// After this, we flow 7. on top of that.
-    ///
-    /// Example:
-    ///          repo                  VMR
-    ///     AAA 0.O────────────────────►O AAA
-    ///           │  2.                 │
-    ///           │   O◄────────────────O 1.
-    ///           │   │            4.   │
-    ///     BBB 3.O───┼────────────►O   │
-    ///           │   │             │   │
-    ///           │   │             │   │
-    ///         5.O◄──┘             └──►O 6. BBB
-    ///           │                 8.  │
-    ///     CCC 7.O────────────────►O   │
-    ///           │                     |
-    ///           │                     │
-    /// </summary>
-    /// <returns>True when a recent flow has been detected and merged into the head branch</returns>
-    private async Task<bool> TryMergingRecentFlows(
-        SourceMapping mapping,
-        LastFlows lastFlows,
-        Codeflow currentFlow,
-        ILocalGitRepo repo,
-        Build build,
-        string targetBranch,
-        string headBranch,
-        bool discardPatches,
-        CancellationToken cancellationToken)
-    {
-        var recentFlow = await DetectRecentFlow(lastFlows, repo);
-        if (recentFlow == null)
-        {
-            return false;
-        }
-
-        try
-        {
-
-        }
-        catch
-        {
-
-        }
-    }
 
     /// <summary>
     /// Tries to detect if there is another recent flow that should be taken into account.

@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 namespace Microsoft.DotNet.DarcLib;
@@ -27,6 +28,8 @@ public interface IGitRepo
     /// <param name="branch">Branch to push to</param>
     /// <param name="commitMessage">Commit message</param>
     Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage);
+
+    Task<List<GitTreeItem>> LsTreeAsync(string uri, string gitRef, string path = null);
 
     async Task<bool> IsRepoVmrAsync(string repoUri, string branch)
     {

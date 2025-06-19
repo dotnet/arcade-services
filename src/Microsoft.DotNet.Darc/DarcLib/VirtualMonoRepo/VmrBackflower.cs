@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -49,12 +48,10 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private readonly IRepositoryCloneManager _repositoryCloneManager;
     private readonly ILocalGitClient _localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
-    private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IVmrPatchHandler _vmrPatchHandler;
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IVersionFileCodeFlowUpdater _versionFileConflictResolver;
     private readonly IFileSystem _fileSystem;
-    private readonly IBasicBarClient _barClient;
     private readonly ILogger<VmrCodeFlower> _logger;
 
     public VmrBackFlower(
@@ -81,12 +78,10 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _repositoryCloneManager = repositoryCloneManager;
         _localGitClient = localGitClient;
         _localGitRepoFactory = localGitRepoFactory;
-        _versionDetailsParser = versionDetailsParser;
         _vmrPatchHandler = vmrPatchHandler;
         _workBranchFactory = workBranchFactory;
         _versionFileConflictResolver = versionFileConflictResolver;
         _fileSystem = fileSystem;
-        _barClient = barClient;
         _logger = logger;
     }
 
@@ -197,6 +192,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
             applicationPath: null,
             includeAdditionalMappings: false,
+            ignoreLineEndings: false,
             cancellationToken);
 
         if (patches.Count == 0 || patches.All(p => _fileSystem.GetFileInfo(p.Path).Length == 0))
@@ -251,6 +247,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 patches,
                 discardPatches,
                 headBranchExisted,
+                build.GitHubRepository,
+                build.AzureDevOpsRepository,
                 cancellationToken);
         }
 
@@ -307,6 +305,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
             applicationPath: null,
             includeAdditionalMappings: false,
+            ignoreLineEndings: false,
             cancellationToken);
 
         _logger.LogInformation("Created {count} patch(es)", patches.Count);
@@ -400,7 +399,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         try
         {
             // Try to see if both base and target branch are available
-            await _repositoryCloneManager.PrepareCloneAsync(
+            targetRepo = await _repositoryCloneManager.PrepareCloneAsync(
                 mapping,
                 remotes,
                 [targetBranch, headBranch],
@@ -411,7 +410,23 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
         catch (NotFoundException)
         {
-            // If target branch does not exist, we create it off of the base branch
+            try
+            {
+                // If target branch does not exist, we create it off of the base branch
+                targetRepo = await _repositoryCloneManager.PrepareCloneAsync(
+                    mapping,
+                    remotes,
+                    [targetBranch],
+                    targetBranch,
+                    ShouldResetVmr,
+                    cancellationToken);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to find branch {branch} in {uri}", targetBranch, string.Join(", ", remotes));
+                throw new TargetBranchNotFoundException($"Failed to find target branch {targetBranch} in {string.Join(", ", remotes)}", e);
+            }
+
             (Codeflow last, _, _) = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: false);
             await targetRepo.CheckoutAsync(last.RepoSha);
             await targetRepo.CreateBranchAsync(headBranch);
@@ -450,6 +465,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         List<VmrIngestionPatch> patches,
         bool discardPatches,
         bool headBranchExisted,
+        string repoGitHubUri,
+        string repoAzDoUri,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
@@ -460,25 +477,17 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             line => line.Contains(VersionDetailsParser.SourceElementName) && line.Contains(lastFlow.SourceSha),
             lastFlow.RepoSha);
 
-        // Find the ID of the last VMR build that flowed into the repo
-        VersionDetails versionDetails = _versionDetailsParser.ParseVersionDetailsFile(targetRepo.Path / VersionFiles.VersionDetailsXml);
-
         // checkout the previous repo sha so we can get the last last flow
         await targetRepo.CheckoutAsync(previousRepoSha);
         await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
-        LastFlows lastLastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
+        LastFlows lastLastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: lastFlow is Backflow);
 
-        Build previouslyAppliedVmrBuild;
-        if (versionDetails.Source?.BarId != null)
+        // Create a fake previously applied build. We only care about the sha here, because it will get overwritten anyway
+        Build previouslyAppliedVmrBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastFlow.SourceSha, [], [], [], [])
         {
-            previouslyAppliedVmrBuild = await _barClient.GetBuildAsync(versionDetails.Source.BarId.Value);
-        }
-        else
-        {
-            // If we don't find the previously applied build, there probably wasn't one.
-            // In this case, we won't update assets, but that's ok because they'll get overwritten by the new build anyway
-            previouslyAppliedVmrBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastLastFlows.LastFlow.VmrSha, [], [], [], []);
-        }
+            GitHubRepository = repoGitHubUri,
+            AzureDevOpsRepository = repoAzDoUri
+        };
 
         // Reconstruct the previous flow's branch
         await FlowCodeAsync(

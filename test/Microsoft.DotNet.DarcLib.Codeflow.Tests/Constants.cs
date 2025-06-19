@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-namespace Microsoft.DotNet.Darc.VirtualMonoRepo.E2E.Tests;
+namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 
 public class Constants
 {
@@ -37,6 +37,14 @@ public class Constants
         {
           "tools": {
             "dotnet": "9.0.100"
+          }
+        }
+        """;
+    public const string VmrBaseDotnetSdkVersion = "9.0.101";
+    public const string VmrBaseGlobalJsonTemplate = """
+        {
+          "tools": {
+            "dotnet": "9.0.101"
           }
         }
         """;

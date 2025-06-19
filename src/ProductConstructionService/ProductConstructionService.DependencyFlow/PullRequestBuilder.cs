@@ -59,6 +59,7 @@ internal interface IPullRequestBuilder
         BuildDTO build,
         string? previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
+        IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
         string? currentDescription,
         bool isForwardFlow);
 }
@@ -71,6 +72,9 @@ internal class PullRequestBuilder : IPullRequestBuilder
     // PR description markers
     private const string DependencyUpdateBegin = "[DependencyUpdate]: <> (Begin)";
     private const string DependencyUpdateEnd = "[DependencyUpdate]: <> (End)";
+
+    private const string FooterStartMarker = "[marker]: <> (Start:Footer:CodeFlow PR)";
+    private const string FooterEndMarker = "[marker]: <> (End:Footer:CodeFlow PR)";
 
     private const string CommitDiffNotAvailableMsg = "Not available";
 
@@ -222,10 +226,11 @@ internal class PullRequestBuilder : IPullRequestBuilder
         BuildDTO build,
         string? previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
+        IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
         string? currentDescription,
         bool isForwardFlow)
     {
-        string desc = GenerateCodeFlowPRDescriptionInternal(
+        string description = GenerateCodeFlowPRDescriptionInternal(
             update,
             build,
             previousSourceCommit,
@@ -233,7 +238,9 @@ internal class PullRequestBuilder : IPullRequestBuilder
             currentDescription,
             isForwardFlow);
 
-        return CompressRepeatedLinksInDescription(desc);
+        description = CompressRepeatedLinksInDescription(description);
+
+        return AddOrUpdateFooterInDescription(description, upstreamRepoDiffs);
     }
 
     private static string GenerateCodeFlowPRDescriptionInternal(
@@ -246,14 +253,14 @@ internal class PullRequestBuilder : IPullRequestBuilder
     {
         if (string.IsNullOrEmpty(currentDescription))
         {
-            // if PR is new, create the entire PR description
+            // if PR is new, create the new subscription update section along with the PR header
             return $"""
                 
                 > [!NOTE]
                 > This is a codeflow update. It may contain both source code changes from [{(isForwardFlow ? "the source repo" : "the VMR")}]({update.SourceRepo}) as well as dependency updates. Learn more [here]({CodeFlowPrFaqUri}).
 
                 This pull request brings the following source code changes
-                {GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates)}
+                {GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates, isForwardFlow)}
                 """;
         }
         else
@@ -271,9 +278,60 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
             return string.Concat(
                 currentDescription.AsSpan(0, startCutoff),
-                GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates),
+                GenerateCodeFlowDescriptionForSubscription(
+                    update.SubscriptionId,
+                    previousSourceCommit,
+                    build,
+                    update.SourceRepo,
+                    dependencyUpdates,
+                    isForwardFlow),
                 currentDescription.AsSpan(endCutoff, currentDescription.Length - endCutoff));
         }
+    }
+
+    private static string AddOrUpdateFooterInDescription(string description, IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs)
+    {
+        int footerStartIndex = description.IndexOf(FooterStartMarker);
+        int footerEndIndex = description.IndexOf(FooterEndMarker);
+
+        // Remove footer if exists
+        if (footerStartIndex != -1 && footerEndIndex != -1)
+        {
+            description = description.Remove(footerStartIndex, footerEndIndex - footerStartIndex + FooterEndMarker.Length);
+        }
+
+        if (upstreamRepoDiffs == null || !upstreamRepoDiffs.Any())
+        {
+            return description;
+        }
+        else
+        {
+            description +=
+                $"""
+                {FooterStartMarker}
+
+                ## Associated changes in original repos:
+                {GenerateUpstreamRepoDiffs(upstreamRepoDiffs)}
+                {FooterEndMarker}
+                """;
+            return description;
+        }
+    }
+
+    private static string GenerateUpstreamRepoDiffs(IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs)
+    {
+        StringBuilder sb = new StringBuilder();
+        foreach (UpstreamRepoDiff upstreamRepoDiff in upstreamRepoDiffs)
+        {
+            if (!string.IsNullOrEmpty(upstreamRepoDiff.RepoUri)
+                && !string.IsNullOrEmpty(upstreamRepoDiff.OldCommitSha)
+                && !string.IsNullOrEmpty(upstreamRepoDiff.NewCommitSha))
+            {
+                string cleanRepoUri = upstreamRepoDiff.RepoUri.TrimEnd('/');
+                sb.AppendLine($"- {cleanRepoUri}/compare/{upstreamRepoDiff.OldCommitSha}...{upstreamRepoDiff.NewCommitSha}");
+            }
+        }
+        return sb.ToString();
     }
 
     private static string GenerateCodeFlowDescriptionForSubscription(
@@ -281,7 +339,8 @@ internal class PullRequestBuilder : IPullRequestBuilder
         string? previousSourceCommit,
         BuildDTO build,
         string repoUri,
-        List<DependencyUpdateSummary> dependencyUpdates)
+        List<DependencyUpdateSummary> dependencyUpdates,
+        bool isForwardFlow)
     {
         string sourceDiffText = CreateSourceDiffLink(build, previousSourceCommit);
 
@@ -295,8 +354,8 @@ internal class PullRequestBuilder : IPullRequestBuilder
             - **Subscription**: {GetSubscriptionLink(subscriptionId)}
             - **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
-            - **Commit Diff**: {sourceDiffText}
             - **Commit**: [{build.Commit}]({build.GetCommitLink()})
+            - **Commit Diff**: {sourceDiffText}
             - **Branch**: {build.GetBranch()}
             {dependencyUpdateBlock}
             {GetEndMarker(subscriptionId)}

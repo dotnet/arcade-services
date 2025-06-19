@@ -33,6 +33,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="targetVmrUri">URI of the VMR to update</param>
     /// <param name="discardPatches">Keep patch files?</param>
+    /// <param name="skipMeaninglessUpdates">Skip creating PR if only insignificant changes are present</param>
     /// <returns>CodeFlowResult containing information about the codeflow calculation</returns>
     Task<CodeFlowResult> FlowForwardAsync(
         string mapping,
@@ -43,6 +44,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
         string headBranch,
         string targetVmrUri,
         bool discardPatches = false,
+        bool skipMeaninglessUpdates = false,
         CancellationToken cancellationToken = default);
 }
 
@@ -55,6 +57,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly IVmrCloneManager _vmrCloneManager;
     private readonly ILocalGitClient _localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
+    private readonly ICodeflowChangeAnalyzer _codeflowChangeAnalyzer;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
     private readonly IBasicBarClient _barClient;
@@ -69,6 +72,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             ILocalGitClient localGitClient,
             ILocalGitRepoFactory localGitRepoFactory,
             IVersionDetailsParser versionDetailsParser,
+            ICodeflowChangeAnalyzer codeflowChangeAnalyzer,
             IProcessManager processManager,
             IFileSystem fileSystem,
             IBasicBarClient barClient,
@@ -82,6 +86,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         _vmrCloneManager = vmrCloneManager;
         _localGitClient = localGitClient;
         _localGitRepoFactory = localGitRepoFactory;
+        _codeflowChangeAnalyzer = codeflowChangeAnalyzer;
         _processManager = processManager;
         _fileSystem = fileSystem;
         _barClient = barClient;
@@ -97,6 +102,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string headBranch,
         string targetVmrUri,
         bool discardPatches = false,
+        bool skipMeaninglessUpdates = false,
         CancellationToken cancellationToken = default)
     {
         ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
@@ -139,9 +145,15 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 cancellationToken);
         }
 
+        // We try to detect if the changes were meaningful and it's worth creating a new PR
+        if (conflictedFiles != null && skipMeaninglessUpdates && hasChanges && !headBranchExisted)
+        {
+            hasChanges &= await _codeflowChangeAnalyzer.ForwardFlowHasMeaningfulChangesAsync(mapping.Name, headBranch, targetBranch);
+        }
+
         return new CodeFlowResult(
             hasChanges,
-            conflictedFiles ?? [], 
+            conflictedFiles ?? [],
             sourceRepo.Path,
             DependencyUpdates: []);
     }
@@ -174,12 +186,22 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         catch (NotFoundException)
         {
             // If the head branch does not exist, we need to create it at the point of the last sync
-            var vmr = await _vmrCloneManager.PrepareVmrAsync(
-                [vmrUri],
-                [baseBranch],
-                baseBranch,
-                ShouldResetVmr,
-                cancellationToken);
+            ILocalGitRepo vmr;
+            try
+            {
+                vmr = await _vmrCloneManager.PrepareVmrAsync(
+                    [vmrUri],
+                    [baseBranch],
+                    baseBranch,
+                    ShouldResetVmr,
+                    cancellationToken);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to find branch {branch} in {uri}", baseBranch, vmrUri);
+                throw new TargetBranchNotFoundException($"Failed to find target branch {baseBranch} in {vmrUri}", e);
+            }
+
             SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
             (Codeflow last, _, _) = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
             await vmr.CheckoutAsync(last.VmrSha);
@@ -559,34 +581,29 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     {
         _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
 
-        LastFlows lastLastFlows = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: true);
-
-        // Find the BarID of the last flown repo build
-        RepositoryRecord previouslyAppliedRepositoryRecord = _sourceManifest.GetRepositoryRecord(mapping.Name);
-        Build previouslyAppliedBuild;
-        if (previouslyAppliedRepositoryRecord.BarId == null)
+        // Create a fake previously applied build. We only care about the sha here, because it will get overwritten anyway
+        Build previouslyAppliedBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastFlow.SourceSha, [], [], [], [])
         {
-            // If we don't find the previously applied build, we'll just use the previously flown sha to recreate the flow
-            // We'll apply a new build on top of this one, so the source manifest will get updated anyway
-            previouslyAppliedBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastLastFlows.LastFlow.SourceSha, [], [], [], []);
-        }
-        else
-        {
-            previouslyAppliedBuild = await _barClient.GetBuildAsync(previouslyAppliedRepositoryRecord.BarId.Value);
-        }
+            GitHubRepository = build.GitHubRepository,
+            AzureDevOpsRepository = build.AzureDevOpsRepository
+        };
 
         // Find the VMR sha before the last successful flow
         var previousFlowTargetSha = await _localGitClient.BlameLineAsync(
             _vmrInfo.SourceManifestPath,
             line => line.Contains(lastFlow.SourceSha),
             lastFlow.TargetSha);
+
         var vmr = await _vmrCloneManager.PrepareVmrAsync(
             [_vmrInfo.VmrUri],
             [previousFlowTargetSha],
             previousFlowTargetSha,
             resetToRemote: false,
             cancellationToken);
+
         await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
+
+        LastFlows lastLastFlows = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: lastFlow is Backflow);
 
         // Reconstruct the previous flow's branch
         await FlowCodeAsync(

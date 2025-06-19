@@ -45,7 +45,8 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
         MergePolicyEvaluationResults? cachedResults,
         string targetBranchSha)
     {
-        IDictionary<string, MergePolicyEvaluationResult> resultsByPolicyName =
+        Dictionary<string, MergePolicyEvaluationResult> resultsByPolicyName = new();
+        IDictionary<string, MergePolicyEvaluationResult> cachedResultsByPolicyName =
             cachedResults?.Results.ToDictionary(r => r.MergePolicyName, r => r) ?? [];
 
         foreach (MergePolicyDefinition definition in policyDefinitions)
@@ -56,13 +57,21 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
                 var policies = await policyBuilder.BuildMergePoliciesAsync(new MergePolicyProperties(definition.Properties), pr);
                 foreach (var policy in policies)
                 {
-                    resultsByPolicyName.TryGetValue(policy.Name, out var cachedEvaluationResult);
-                    if (CanSkipRerunningPRCheck(cachedResults?.TargetCommitSha, cachedEvaluationResult, targetBranchSha))
+                    if (cachedResultsByPolicyName.TryGetValue(policy.Name, out var cachedEvaluationResult) &&
+                        CanSkipRerunningPRCheck(cachedResults?.TargetCommitSha, cachedEvaluationResult, targetBranchSha))
                     {
-                        continue;
+                        Logger.LogInformation("Skipping re-evaluation of {policyName}, which has result {policyResult} at commitSha {commitSha}",
+                            policy.Name, cachedEvaluationResult.Status, cachedResults?.TargetCommitSha);
+                        cachedEvaluationResult.IsCachedResult = true;
+                        resultsByPolicyName[policy.Name] = cachedEvaluationResult;
                     }
-                    using var oPol = _operations.BeginOperation("Evaluating Merge Policy {policyName}", policy.Name);
-                    resultsByPolicyName[policy.Name] = await policy.EvaluateAsync(pr, darc);
+                    else
+                    {
+                        using (_operations.BeginOperation("Evaluating Merge Policy {policyName}", policy.Name))
+                        {
+                            resultsByPolicyName[policy.Name] = await policy.EvaluateAsync(pr, darc);
+                        }
+                    }
                 }
             }
             else
@@ -84,7 +93,7 @@ internal class MergePolicyEvaluator : IMergePolicyEvaluator
         MergePolicyEvaluationResult? cachedEvaluationValue,
         string targetBranchSha)
     {
-        if (cachedCommitSha == null || !targetBranchSha.Equals(cachedCommitSha))
+        if (cachedCommitSha == null || !cachedCommitSha.Equals(targetBranchSha))
         {
             return false;
         }

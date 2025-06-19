@@ -395,7 +395,8 @@ public class DependencyFileManager : IDependencyFileManager
         string repoUri,
         string branch,
         IEnumerable<DependencyDetail> oldDependencies,
-        SemanticVersion incomingDotNetSdkVersion)
+        SemanticVersion incomingDotNetSdkVersion,
+        bool forceGlobalJsonUpdate = false)
     {
         // When updating version files, we always want to look in the base folder, even when we're updating it in the VMR
         // src/arcade version files only get updated during arcade forward flows
@@ -446,7 +447,7 @@ public class DependencyFileManager : IDependencyFileManager
         Dictionary<GitFileMetadataName, string> globalJsonMetadata = null;
         if (incomingDotNetSdkVersion != null)
         {
-            globalJsonMetadata = UpdateDotnetVersionGlobalJson(incomingDotNetSdkVersion, globalJson);
+            globalJsonMetadata = UpdateDotnetVersionGlobalJson(incomingDotNetSdkVersion, globalJson, forceGlobalJsonUpdate);
         }
 
         var fileContainer = new GitFileContentContainer
@@ -470,15 +471,19 @@ public class DependencyFileManager : IDependencyFileManager
     /// Updates the global.json entries for tools.dotnet and sdk.version if they are older than an incoming version
     /// </summary>
     /// <param name="incomingDotnetVersion">version to compare against</param>
-    /// <param name="repoGlobalJson">Global.Json file to update</param>
+    /// <param name="globalJson">Global.Json file to update</param>
+    /// <param name="forceUpdate">Ignores version check and forces globalJson update</param>
     /// <returns>Updated global.json file if was able to update, or the unchanged global.json if unable to</returns>
-    private Dictionary<GitFileMetadataName, string> UpdateDotnetVersionGlobalJson(SemanticVersion incomingDotnetVersion, JObject globalJson)
+    private Dictionary<GitFileMetadataName, string> UpdateDotnetVersionGlobalJson(
+        SemanticVersion incomingDotnetVersion,
+        JObject globalJson,
+        bool forceUpdate = false)
     {
         try
         {
             if (SemanticVersion.TryParse(globalJson.SelectToken("tools.dotnet")?.ToString(), out SemanticVersion repoDotnetVersion))
             {
-                if (repoDotnetVersion.CompareTo(incomingDotnetVersion) < 0)
+                if (repoDotnetVersion.CompareTo(incomingDotnetVersion) < 0 || forceUpdate)
                 {
                     Dictionary<GitFileMetadataName, string> metadata = [];
 
