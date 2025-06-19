@@ -36,7 +36,7 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionUpdateDat
                 new("They define which directory of the VMR (under src/) are the sources synchronized with.", true),
                 new("Only one of those must be set based on whether the source or the target repo is the VMR.", true),
                 Line.Empty,
-                new("Excluded assets is a list of package names to be ignored during source-enabled subscriptions (VMR code flow). ", true),
+                new("Excluded assets is a list of package names to be ignored during dependency updates. ", true),
                 new("Asterisks can be used to filter whole namespaces, e.g. - Microsoft.DotNet.Arcade.*", true),
                 Line.Empty,
             ])
