@@ -12,6 +12,7 @@ using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;
 using ProductConstructionService.Common;
@@ -777,11 +778,17 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         TargetRepoDependencyUpdate repoDependencyUpdate = new();
 
+        // Get subscription to access excluded assets
+        var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId);
+        var excludedAssetsMatcher = GetExcludedAssetsMatcher(subscription?.ExcludedAssets);
+
         // Existing details 
         var existingDependencies = (await darc.GetDependenciesAsync(targetRepository, prBranch ?? targetBranch)).ToList();
 
-        IEnumerable<AssetData> assetData = build.Assets.Select(
-            a => new AssetData(false)
+        // Filter out excluded assets from the build assets
+        IEnumerable<AssetData> assetData = build.Assets
+            .Where(a => !IsExcludedAsset(a.Name, excludedAssetsMatcher))
+            .Select(a => new AssetData(false)
             {
                 Name = a.Name,
                 Version = a.Version
@@ -1381,6 +1388,39 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         return upstreamRepoDiffs;
         
     }
+
+    /// <summary>
+    /// Creates a matcher for excluded asset patterns.
+    /// </summary>
+    /// <param name="excludedAssets">Collection of asset filter patterns</param>
+    /// <returns>Matcher instance or null if no patterns</returns>
+    private static Matcher? GetExcludedAssetsMatcher(IReadOnlyCollection<string>? excludedAssets)
+    {
+        if (excludedAssets == null || excludedAssets.Count == 0)
+        {
+            return null;
+        }
+        var matcher = new Matcher();
+        matcher.AddIncludePatterns(excludedAssets);
+        return matcher;
+    }
+
+    /// <summary>
+    /// Checks if an asset should be excluded based on the excluded assets matcher.
+    /// </summary>
+    /// <param name="assetName">Name of the asset to check</param>
+    /// <param name="excludedAssetsMatcher">Matcher for excluded asset patterns</param>
+    /// <returns>True if the asset should be excluded</returns>
+    private static bool IsExcludedAsset(string assetName, Matcher? excludedAssetsMatcher)
+    {
+        if (excludedAssetsMatcher == null)
+        {
+            return false;
+        }
+
+        return excludedAssetsMatcher.Match(assetName).HasMatches;
+    }
+
     #endregion
 }
 
