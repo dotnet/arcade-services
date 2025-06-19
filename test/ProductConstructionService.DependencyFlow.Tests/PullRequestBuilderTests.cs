@@ -461,18 +461,14 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         """
         [1]:q
         [2]:1
-        [3]:q
         [4]:q
+        [3]:q
         """;
-    private static readonly object[] RegexTestCases =
-    [
-        new object[] { RegexTestString1, 43},
-        new object[] { RegexTestString2, 1},
-        new object[] { RegexTestString3, 1},
-        new object [] { RegexTestString4, 5},
-    ];
 
-    [TestCaseSource(nameof(RegexTestCases))]
+    [TestCase(RegexTestString1, 43)]
+    [TestCase(RegexTestString2, 1)]
+    [TestCase(RegexTestString3, 1)]
+    [TestCase(RegexTestString4, 5)]
     public void ShouldReturnCorrectMaximumIndex(string str, int expectedResult)
     {
         PullRequestBuilder.GetStartingReferenceId(str).Should().Be(expectedResult);
