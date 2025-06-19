@@ -76,7 +76,7 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
             cancellationToken);
 
         _vmrInfo.VmrPath = vmr.Path;
-        _vmrInfo.CheckedOutRef = await vmr.GetShaForRefAsync();
+        _vmrInfo.LastPreparedSha = await vmr.GetShaForRefAsync();
         await _dependencyTracker.RefreshMetadata();
 
         return vmr;

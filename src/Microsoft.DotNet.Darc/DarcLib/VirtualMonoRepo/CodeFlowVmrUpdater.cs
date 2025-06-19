@@ -138,9 +138,9 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
             var remoteSourceManifest = SourceManifest.FromJson(await _gitRepoFactory.CreateClient(_vmrInfo.VmrUri).GetFileContentsAsync(
                 VmrInfo.DefaultRelativeSourceManifestPath,
                 _vmrInfo.VmrUri,
-                _vmrInfo.CheckedOutRef));
+                _vmrInfo.LastPreparedSha));
             fromSha = remoteSourceManifest.Repositories.FirstOrDefault(r => r.Path == mapping.Name)?.CommitSha ??
-                throw new DarcException($"Failed to fetch {mapping.Name} commit SHA from source-manifest.json at {_vmrInfo.VmrUri}/{_vmrInfo.CheckedOutRef}");
+                throw new DarcException($"Failed to fetch {mapping.Name} commit SHA from source-manifest.json at {_vmrInfo.VmrUri}/{_vmrInfo.LastPreparedSha}");
         }
 
         _logger.LogInformation("Updating VMR {repo} from {current} to {next}..",
