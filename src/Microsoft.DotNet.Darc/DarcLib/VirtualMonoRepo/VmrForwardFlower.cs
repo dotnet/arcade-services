@@ -235,7 +235,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 mapping,
                 build,
                 resetToRemoteWhenCloningRepo: ShouldResetClones,
-                cancellationToken);
+                cancellationToken: cancellationToken);
         }
         catch (PatchApplicationFailedException e)
         {
@@ -297,6 +297,10 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         result.ThrowIfFailed($"Failed to remove files from {sourceRepo}");
 
+        // Save the current sha we're flowing from before changing it to the zero commit
+        var currentSha = _dependencyTracker.GetDependencyVersion(mapping)?.Sha
+            ?? throw new Exception($"Failed to find current sha for {mapping.Name}");
+
         // We make the VMR believe it has the zero commit of the repo as it matches the dir/git state at the moment
         _dependencyTracker.UpdateDependencyVersion(new VmrDependencyUpdate(
             mapping,
@@ -312,8 +316,9 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         return await _vmrUpdater.UpdateRepository(
             mapping,
             build,
+            fromSha: currentSha,
             resetToRemoteWhenCloningRepo: ShouldResetClones,
-            cancellationToken);
+            cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -611,7 +616,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 mapping,
                 build,
                 resetToRemoteWhenCloningRepo: ShouldResetClones,
-                cancellationToken);
+                cancellationToken: cancellationToken);
         }
         catch (Exception e)
         {

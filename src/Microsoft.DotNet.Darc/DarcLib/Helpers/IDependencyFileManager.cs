@@ -58,7 +58,8 @@ public interface IDependencyFileManager
         string repoUri,
         string? branch,
         IEnumerable<DependencyDetail> oldDependencies,
-        SemanticVersion? incomingDotNetSdkVersion);
+        SemanticVersion? incomingDotNetSdkVersion,
+        bool forceGlobalJsonUpdate = false);
 
     XmlDocument UpdatePackageSources(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo);
 

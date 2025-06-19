@@ -13,14 +13,13 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.Services.Common;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
-using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
+using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -731,15 +730,25 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         List<DependencyUpdateSummary> existingUpdates,
         List<DependencyUpdate> incomingUpdates)
     {
-        var incomingUpdateNames = incomingUpdates.Select(du => du.To.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        IEnumerable<DependencyUpdateSummary> mergedUpdates = existingUpdates
+            .Select(u =>
+            {
+                var matchingIncoming = incomingUpdates.FirstOrDefault(i => i.DependencyName == u.DependencyName);
+                return new DependencyUpdateSummary()
+                {
+                    DependencyName = u.DependencyName,
+                    FromCommitSha = u.FromCommitSha,
+                    FromVersion = u.FromVersion,
+                    ToCommitSha = matchingIncoming != null ? matchingIncoming.To.Commit : u.ToCommitSha,
+                    ToVersion = matchingIncoming != null ? matchingIncoming.To.Version : u.ToVersion,
+                };
+            });
 
-        var updatesToAdd = existingUpdates
-            .Where(du => !incomingUpdateNames.Contains(du.DependencyName));
+        IEnumerable<DependencyUpdateSummary> newUpdates = incomingUpdates
+            .Where(u => !existingUpdates.Any(e => u.DependencyName == e.DependencyName))
+            .Select(update => new DependencyUpdateSummary(update));
 
-        return incomingUpdates
-            .Select(du => new DependencyUpdateSummary(du))
-            .Concat(updatesToAdd)
-            .ToList();
+        return [.. mergedUpdates, .. newUpdates];
     }
 
     private class TargetRepoDependencyUpdate
@@ -757,7 +766,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// <param name="targetRepository">Target repository to calculate updates for</param>
     /// <param name="prBranch">PR head branch</param>
     /// <param name="targetBranch">Target branch</param>
-    /// <param name="remoteFactory">Darc remote factory</param>
     /// <returns>List of updates and dependencies that need updates.</returns>
     /// <remarks>
     ///     This is done in two passes.  The first pass runs through and determines the non-coherency
@@ -1066,6 +1074,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 previousSourceSha = sourceDependency?.Sha;
 
                 upstreamRepoDiffs = await ComputeRepoUpdatesAsync(previousSourceSha, build.Commit);
+
+                // Do not display the diff for which we're flowing back as the diff does not make a whole lot of sense
+                upstreamRepoDiffs = [..upstreamRepoDiffs.Where(diff => diff.RepoUri != subscription.TargetRepository)];
             }
         }
         catch (ConflictInPrBranchException conflictException)

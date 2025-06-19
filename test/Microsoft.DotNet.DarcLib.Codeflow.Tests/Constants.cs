@@ -40,6 +40,14 @@ public class Constants
           }
         }
         """;
+    public const string VmrBaseDotnetSdkVersion = "9.0.101";
+    public const string VmrBaseGlobalJsonTemplate = """
+        {
+          "tools": {
+            "dotnet": "9.0.101"
+          }
+        }
+        """;
 
     public const string NuGetConfigTemplate = """
         <?xml version="1.0" encoding="utf-8"?>
