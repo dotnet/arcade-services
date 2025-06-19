@@ -16,8 +16,11 @@ public class DependencyUpdate
     ///     Current dependency
     /// </summary>
     public DependencyDetail From { get; set; }
+
     /// <summary>
     ///     Updated dependency
     /// </summary>
     public DependencyDetail To { get; set; }
+
+    public string DependencyName => From?.Name ?? To?.Name;
 }

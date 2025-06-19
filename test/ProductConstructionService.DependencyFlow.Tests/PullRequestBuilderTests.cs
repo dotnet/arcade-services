@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text;
@@ -78,12 +78,15 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         var build1 = GivenANewBuildId(101, "abc1234");
         var build2 = GivenANewBuildId(102, "def2345");
         var build3 = GivenANewBuildId(103, "gha3456");
+        var build4 = GivenANewBuildId(104, "gha3777");
         SubscriptionUpdateWorkItem update1 = GivenSubscriptionUpdate(false, build1.Id, "11111111-1111-1111-1111-111111111111");
         SubscriptionUpdateWorkItem update2 = GivenSubscriptionUpdate(false, build2.Id, "22222222-2222-2222-2222-222222222222");
         SubscriptionUpdateWorkItem update3 = GivenSubscriptionUpdate(false, build3.Id, "33333333-3333-3333-3333-333333333333");
+        SubscriptionUpdateWorkItem update4 = GivenSubscriptionUpdate(false, build4.Id, "22222222-2222-2222-2222-222222222222");
         List<DependencyUpdate> deps1 = GivenDependencyUpdates('a', build1.Id);
         List<DependencyUpdate> deps2 = GivenDependencyUpdates('b', build2.Id);
         List<DependencyUpdate> deps3 = GivenDependencyUpdates('c', build3.Id);
+        List<DependencyUpdate> deps4 = GivenDependencyUpdates('e', build4.Id);
 
         var description = await GeneratePullRequestDescription([(update1, deps1), (update2, deps2), (update3, deps3)]);
 
@@ -101,12 +104,20 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps3, 5));
         description.Should().NotContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps2, 3));
         description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps22, 7));
+
+        deps3 = GivenDependencyUpdates('e', build4.Id);
+
+        description = await GeneratePullRequestDescription([(update4, deps3)], description);
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps1, 1));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps4, 9));
+        description.Should().NotContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps2, 3));
     }
 
     [Test]
     public async Task ShouldReturnCorrectPRDescriptionForCodeEnabledSubscription()
     {
-        string commitSha = "abc1234567";
+        string originalCommitSha = "abc1234567";
+        string commitSha = originalCommitSha;
         Build build = GivenANewBuildId(101, commitSha);
         build.GitHubRepository = "https://github.com/foo/foobar";
         build.GitHubBranch = "main";
@@ -127,21 +138,28 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         };
 
         List<UpstreamRepoDiff> upstreamRepoDiffs =
-            [
-                new UpstreamRepoDiff("https://github.com/foo/bar", "oldSha123", "newSha789"),
-                new UpstreamRepoDiff("https://github.com/foo/boz", "oldSha234", "newSha678"),
-                new UpstreamRepoDiff("https://github.com/foo/baz", "oldSha345", "newSha567")
-            ];
+        [
+            new UpstreamRepoDiff("https://github.com/foo/bar", "oldSha123", "newSha789"),
+            new UpstreamRepoDiff("https://github.com/foo/boz", "oldSha234", "newSha678"),
+            new UpstreamRepoDiff("https://github.com/foo/baz", "oldSha345", "newSha567")
+        ];
 
         string mockPreviousCommitSha = "SHA1234567890";
 
         string? description = null;
         await Execute(
-            async context =>
+            context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = builder.GenerateCodeFlowPRDescription(update, build, mockPreviousCommitSha, dependencyUpdates: dependencyUpdates, upstreamRepoDiffs: upstreamRepoDiffs, currentDescription: null, isForwardFlow: false);
-                await Task.CompletedTask; // hacky way to make the lambda async
+                description = builder.GenerateCodeFlowPRDescription(
+                    update,
+                    build,
+                    mockPreviousCommitSha,
+                    dependencyUpdates,
+                    upstreamRepoDiffs,
+                    currentDescription: null,
+                    isForwardFlow: false);
+                return Task.CompletedTask;
             });
 
         string shortCommitSha = commitSha.Substring(0, 7);
@@ -175,7 +193,92 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             [1]: {build.GitHubRepository}/compare/abc123...def456
             [marker]: <> (Start:Footer:CodeFlow PR)
             
-            ## Associated changes in original repos:
+            ## Associated changes in source repos
+            - https://github.com/foo/bar/compare/oldSha123...newSha789
+            - https://github.com/foo/boz/compare/oldSha234...newSha678
+            - https://github.com/foo/baz/compare/oldSha345...newSha567
+
+            [marker]: <> (End:Footer:CodeFlow PR)
+            """);
+
+        // We add another update to see how it handles the existing link references etc
+
+        commitSha = "def888999222";
+        shortCommitSha = commitSha.Substring(0, 7);
+        build = GivenANewBuildId(101, commitSha);
+        build.GitHubRepository = "https://github.com/foo/foobar";
+        build.GitHubBranch = "main";
+        build.AzureDevOpsBuildNumber = "20230205.4";
+        build.AzureDevOpsAccount = "foo";
+        build.AzureDevOpsProject = "bar";
+        build.AzureDevOpsBuildId = 5678;
+        dependencyUpdates = [..dependencyUpdates.Select(u => new DependencyUpdateSummary()
+        {
+            DependencyName = u.DependencyName,
+            FromCommitSha = u.FromCommitSha,
+            ToCommitSha = commitSha,
+            FromVersion = u.FromVersion,
+            ToVersion = "3.0.0",
+        })];
+
+        update = new()
+        {
+            UpdaterId = subscriptionGuid,
+            IsCoherencyUpdate = false,
+            SourceRepo = build.GetRepository(),
+            SubscriptionId = new Guid(subscriptionGuid),
+            BuildId = build.Id,
+            SubscriptionType = SubscriptionType.DependenciesAndSources,
+        };
+
+        await Execute(
+            context =>
+            {
+                var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
+                description = builder.GenerateCodeFlowPRDescription(
+                    update,
+                    build,
+                    mockPreviousCommitSha,
+                    dependencyUpdates,
+                    upstreamRepoDiffs,
+                    description,
+                    isForwardFlow: false);
+                return Task.CompletedTask;
+            });
+
+        description.Should().Be(
+            $"""
+            
+            > [!NOTE]
+            > This is a codeflow update. It may contain both source code changes from [the VMR]({update.SourceRepo}) as well as dependency updates. Learn more [here]({PullRequestBuilder.CodeFlowPrFaqUri}).
+            
+            This pull request brings the following source code changes
+
+
+            [marker]: <> (Begin:{subscriptionGuid})
+
+            ## From {build.GitHubRepository}
+            - **Subscription**: [{subscriptionGuid}](https://maestro.dot.net/subscriptions?search={subscriptionGuid})
+            - **Build**: [{build.AzureDevOpsBuildNumber}](https://dev.azure.com/{build.AzureDevOpsAccount}/{build.AzureDevOpsProject}/_build/results?buildId={build.AzureDevOpsBuildId})
+            - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
+            - **Commit**: [{commitSha}]({build.GitHubRepository}/commit/{commitSha})
+            - **Commit Diff**: [{shortPreviousCommitSha}...{shortCommitSha}]({build.GitHubRepository}/compare/{mockPreviousCommitSha}...{commitSha})
+            - **Branch**: main
+
+            **Updated Dependencies**
+            - **Foo.Bar**: [from 1.0.0 to 3.0.0][2]
+            - **Foo.Biz**: [from 1.0.0 to 3.0.0][2]
+            - **Biz.Boz**: [from 1.0.0 to 3.0.0]({build.GitHubRepository}/compare/uvw789...def8889992)
+
+            [marker]: <> (End:{subscriptionGuid})
+
+
+            [1]: {build.GitHubRepository}/compare/abc123...def456
+
+            [2]: {build.GitHubRepository}/compare/abc123...{commitSha.Substring(0, PullRequestBuilder.GitHubComparisonShaLength)}
+            [marker]: <> (Start:Footer:CodeFlow PR)
+
+            ## Associated changes in source repos
             - https://github.com/foo/bar/compare/oldSha123...newSha789
             - https://github.com/foo/boz/compare/oldSha234...newSha678
             - https://github.com/foo/baz/compare/oldSha345...newSha567
@@ -301,7 +404,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
 
         string dependencyBlock = PullRequestBuilder.CreateDependencyUpdateBlock([newDependency, removedDependency, updatedDependency], "https://github.com/Foo");
 
-        dependencyBlock.Should().Be("""
+        dependencyBlock.Should().Be(
+            """
 
             **New Dependencies**
             - **Foo.Bar**: [2.0.0](https://github.com/Foo/commit/def456)
@@ -315,7 +419,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             """);
     }
 
-    private const string RegexTestString1 = """
+    private const string RegexTestString1 =
+        """
         [2]:qqqq
         qqqqq
         qqqq
@@ -327,30 +432,43 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         """;
 
     private const string RegexTestString2 = "";
-    private const string RegexTestString3 = """
-        this
-        string
-        shouldn't
-        have
-        any
-        matches
+    private const string RegexTestString3 =
+        """
+        > [!NOTE]
+        > This is a codeflow update. It may contain both source code changes from [the VMR](https://github.com/foo/foobar) as well as dependency updates. Learn more [here](https://github.com/dotnet/dotnet/tree/main/docs/Codeflow-PRs.md).
+
+        This pull request brings the following source code changes
+
+        [marker]: <> (Begin:11111111-1111-1111-1111-111111111111)
+
+        ## From https://github.com/foo/foobar
+        - **Subscription**: [11111111-1111-1111-1111-111111111111](https://maestro.dot.net/subscriptions?search=11111111-1111-1111-1111-111111111111)
+        - **Build**: [20230205.2](https://dev.azure.com/foo/bar/_build/results?buildId=1234)
+        - **Date Produced**: června 18, 2025 11:12:39 dop. UTC
+        - **Commit**: [abc1234567](https://github.com/foo/foobar/commit/abc1234567)
+        - **Commit Diff**: [SHA1234...abc1234](https://github.com/foo/foobar/compare/SHA1234567890...abc1234567)
+        - **Branch**: main
+
+        **Updated Dependencies**
+        - **Foo.Bar**: [from 1.0.0 to 2.0.0](https://github.com/foo/foobar/compare/abc123...def456)
+        - **Foo.Biz**: [from 1.0.0 to 2.0.0](https://github.com/foo/foobar/compare/abc123...def456)
+        - **Biz.Boz**: [from 1.0.0 to 2.0.0](https://github.com/foo/foobar/compare/uvw789...xyz890)
+
+        [marker]: <> (End:11111111-1111-1111-1111-111111111111)
         """;
 
-    private const string RegexTestString4 = """
+    private const string RegexTestString4 =
+        """
         [1]:q
         [2]:1
-        [3]:q
         [4]:q
+        [3]:q
         """;
-    private static readonly object[] RegexTestCases =
-    [
-        new object[] { RegexTestString1, 43},
-        new object[] { RegexTestString2, 1},
-        new object[] { RegexTestString3, 1},
-        new object [] { RegexTestString4, 5},
-    ];
 
-    [TestCaseSource(nameof(RegexTestCases))]
+    [TestCase(RegexTestString1, 43)]
+    [TestCase(RegexTestString2, 1)]
+    [TestCase(RegexTestString3, 1)]
+    [TestCase(RegexTestString4, 5)]
     public void ShouldReturnCorrectMaximumIndex(string str, int expectedResult)
     {
         PullRequestBuilder.GetStartingReferenceId(str).Should().Be(expectedResult);
