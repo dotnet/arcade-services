@@ -10,7 +10,6 @@ using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
-using NetTopologySuite.IO;
 using NUnit.Framework;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
