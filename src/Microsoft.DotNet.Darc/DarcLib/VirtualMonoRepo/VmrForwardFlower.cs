@@ -316,7 +316,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         return await _vmrUpdater.UpdateRepository(
             mapping,
             build,
-            fromSha: currentSha, // we're passing a sha we're flowing from because we overwrote it in source-manifest.json
+            fromSha: currentSha,
             resetToRemoteWhenCloningRepo: ShouldResetClones,
             cancellationToken: cancellationToken);
     }
