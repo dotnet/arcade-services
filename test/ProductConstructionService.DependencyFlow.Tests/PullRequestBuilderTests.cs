@@ -175,7 +175,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             [1]: {build.GitHubRepository}/compare/abc123...def456
             [marker]: <> (Start:Footer:CodeFlow PR)
             
-            ## Associated changes in original repos
+            ## Associated changes in source repos
             - https://github.com/foo/bar/compare/oldSha123...newSha789
             - https://github.com/foo/boz/compare/oldSha234...newSha678
             - https://github.com/foo/baz/compare/oldSha345...newSha567
