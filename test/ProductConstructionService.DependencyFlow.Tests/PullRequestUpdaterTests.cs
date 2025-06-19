@@ -22,6 +22,8 @@ using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.Asse
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using System.Collections.Immutable;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using System;
+using System.Linq;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
@@ -115,6 +117,36 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 });
     }
 
+    protected void ThenGetRequiredUpdatesShouldHaveBeenCalledWithFilteredAssets(Build withBuild, bool prExists, Func<Asset, bool> assetFilter)
+    {
+        var assets = new List<IEnumerable<AssetData>>();
+        var dependencies = new List<IEnumerable<DependencyDetail>>();
+
+        UpdateResolver
+            .Verify(r => r.GetRequiredNonCoherencyUpdates(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)));
+
+        DarcRemotes[TargetRepo]
+            .Verify(r => r.GetDependenciesAsync(TargetRepo, prExists ? InProgressPrHeadBranch : TargetBranch, null));
+
+        UpdateResolver
+            .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies)));
+
+        // Verify that only the expected (filtered) assets were passed
+        assets.Should()
+            .BeEquivalentTo(
+                new List<List<AssetData>>
+                {
+                    withBuild.Assets
+                        .Where(assetFilter)
+                        .Select(a => new AssetData(false)
+                        {
+                            Name = a.Name,
+                            Version = a.Version
+                        })
+                        .ToList()
+                });
+    }
+
     protected void AndCreateNewBranchShouldHaveBeenCalled()
     {
         var captureNewBranch = new CaptureMatch<string>(newBranch => InProgressPrHeadBranch = newBranch);
@@ -138,6 +170,34 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 new List<List<DependencyDetail>>
                 {
                     withUpdatesFromBuild.Assets
+                        .Select(a => new DependencyDetail
+                        {
+                            Name = a.Name,
+                            Version = a.Version,
+                            RepoUri = withUpdatesFromBuild.GitHubRepository,
+                            Commit = "sha3333"
+                        })
+                        .ToList()
+                });
+    }
+
+    protected void AndCommitUpdatesShouldHaveBeenCalledWithFilteredAssets(Build withUpdatesFromBuild, Func<Asset, bool> assetFilter)
+    {
+        var updatedDependencies = new List<List<DependencyDetail>>();
+        DarcRemotes[TargetRepo]
+            .Verify(
+                r => r.CommitUpdatesAsync(
+                    TargetRepo,
+                    InProgressPrHeadBranch,
+                    Capture.In(updatedDependencies),
+                    It.IsAny<string>()));
+
+        updatedDependencies.Should()
+            .BeEquivalentTo(
+                new List<List<DependencyDetail>>
+                {
+                    withUpdatesFromBuild.Assets
+                        .Where(assetFilter)
                         .Select(a => new DependencyDetail
                         {
                             Name = a.Name,
@@ -333,6 +393,11 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             ? WithExistingPullRequest(forBuild, PrStatus.Open, null, nextBuildToProcess, setupRemoteMock)
             : WithExistingPullRequest(forBuild, PrStatus.Open, MergePolicyEvaluationStatus.Pending, nextBuildToProcess, setupRemoteMock);
 
+    protected IDisposable WithExistingPullRequestWithFilteredAssets(Build forBuild, Func<Asset, bool> assetFilter, bool canUpdate, int nextBuildToProcess = 0, bool setupRemoteMock = true)
+        => canUpdate
+            ? WithExistingPullRequestWithFilteredAssets(forBuild, assetFilter, PrStatus.Open, null, nextBuildToProcess, setupRemoteMock)
+            : WithExistingPullRequestWithFilteredAssets(forBuild, assetFilter, PrStatus.Open, MergePolicyEvaluationStatus.Pending, nextBuildToProcess, setupRemoteMock);
+
     protected IDisposable WithExistingPullRequest(
         Build forBuild,
         PrStatus prStatus,
@@ -347,6 +412,73 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         AfterDbUpdateActions.Add(() =>
         {
             var pr = CreatePullRequestState(forBuild, prUrl, nextBuildToProcess);
+            SetState(Subscription, pr);
+            SetExpectedPullRequestState(Subscription, pr);
+        });
+
+        var targetRepo = Subscription.TargetDirectory != null ? VmrUri : TargetRepo;
+
+        var remote = DarcRemotes.GetOrAddValue(targetRepo, () => CreateMock<IRemote>());
+
+        if (!setupRemoteMock)
+        {
+            return Disposable.Create(remote.VerifyAll);
+        }
+
+        var results = policyEvaluationStatus.HasValue
+            ? new MergePolicyEvaluationResults(
+                [
+                    new MergePolicyEvaluationResult(
+                        policyEvaluationStatus.Value,
+                        "Check",
+                        "Fake one",
+                        "Policy",
+                        "Some policy")
+                ],
+                string.Empty)
+            : new MergePolicyEvaluationResults([], string.Empty);
+
+        remote
+            .Setup(r => r.GetPullRequestAsync(prUrl))
+            .ReturnsAsync(
+                new PullRequest
+                {
+                    HeadBranch = InProgressPrHeadBranch,
+                    BaseBranch = TargetBranch,
+                    Status = prStatus,
+                });
+
+        remote
+            .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, results.Results.ToImmutableList()))
+            .Returns(Task.CompletedTask);
+
+        MergePolicyEvaluator
+            .Setup(x => x.EvaluateAsync(
+                It.Is<PullRequestUpdateSummary>(pr => pr.Url == prUrl),
+                It.IsAny<IRemote>(),
+                It.IsAny<IReadOnlyList<MergePolicyDefinition>>(),
+                It.IsAny<MergePolicyEvaluationResults?>(),
+                It.IsAny<string>()))
+            .ReturnsAsync(results.Results);
+
+        return Disposable.Create(remote.VerifyAll);
+    }
+
+    protected IDisposable WithExistingPullRequestWithFilteredAssets(
+        Build forBuild,
+        Func<Asset, bool> assetFilter,
+        PrStatus prStatus,
+        MergePolicyEvaluationStatus? policyEvaluationStatus,
+        int nextBuildToProcess = 0,
+        bool setupRemoteMock = true)
+    {
+        var prUrl = Subscription.TargetDirectory != null
+            ? VmrPullRequestUrl
+            : InProgressPrUrl;
+
+        AfterDbUpdateActions.Add(() =>
+        {
+            var pr = CreatePullRequestStateWithFilteredAssets(forBuild, assetFilter, prUrl, nextBuildToProcess);
             SetState(Subscription, pr);
             SetExpectedPullRequestState(Subscription, pr);
         });
@@ -591,6 +723,32 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     prState));
     }
 
+    protected void AndShouldHaveInProgressPullRequestStateWithFilteredAssets(
+        Build forBuild,
+        Func<Asset, bool> assetFilter,
+        int nextBuildToProcess = 0,
+        bool? coherencyCheckSuccessful = true,
+        List<CoherencyErrorDetails>? coherencyErrors = null,
+        string? overwriteBuildCommit = null,
+        InProgressPullRequestState prState = InProgressPullRequestState.Mergeable)
+    {
+        var prUrl = Subscription.SourceEnabled
+            ? VmrPullRequestUrl
+            : InProgressPrUrl;
+
+        SetExpectedPullRequestState(
+            Subscription,
+            CreatePullRequestStateWithFilteredAssets(
+                forBuild,
+                assetFilter,
+                prUrl,
+                nextBuildToProcess,
+                coherencyCheckSuccessful,
+                coherencyErrors,
+                overwriteBuildCommit,
+                prState));
+    }
+
     protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, int nextBuildToProcess = 0, InProgressPullRequest? expectedState = null)
         => AndShouldHaveInProgressPullRequestState(forBuild, nextBuildToProcess, expectedState: expectedState);
 
@@ -660,6 +818,53 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 }
             ],
             RequiredUpdates = forBuild.Assets
+                .Select(d => new DependencyUpdateSummary
+                {
+                    DependencyName = d.Name,
+                    FromVersion = d.Version,
+                    ToVersion = d.Version,
+                    FromCommitSha = NewCommit,
+                    ToCommitSha = "sha3333"
+                })
+                .ToList(),
+            CoherencyCheckSuccessful = coherencyCheckSuccessful,
+            CoherencyErrors = coherencyErrors,
+            Url = prUrl,
+            MergeState = prState,
+            NextBuildsToProcess = nextBuildToProcess != 0 ?
+                new Dictionary<Guid, int>
+                {
+                    [Subscription.Id] = nextBuildToProcess
+                } :
+                []
+        };
+
+    protected InProgressPullRequest CreatePullRequestStateWithFilteredAssets(
+            Build forBuild,
+            Func<Asset, bool> assetFilter,
+            string prUrl,
+            int nextBuildToProcess = 0,
+            bool? coherencyCheckSuccessful = true,
+            List<CoherencyErrorDetails>? coherencyErrors = null,
+            string? overwriteBuildCommit = null,
+            InProgressPullRequestState prState = InProgressPullRequestState.Mergeable)
+        => new()
+        {
+            UpdaterId = GetPullRequestUpdaterId().ToString(),
+            HeadBranch = InProgressPrHeadBranch,
+            SourceSha = overwriteBuildCommit ?? forBuild.Commit,
+            ContainedSubscriptions =
+            [
+                new SubscriptionPullRequestUpdate
+                {
+                    BuildId = forBuild.Id,
+                    SubscriptionId = Subscription.Id,
+                    SourceRepo = forBuild.GetRepository(),
+                    CommitSha = forBuild.Commit
+                }
+            ],
+            RequiredUpdates = forBuild.Assets
+                .Where(assetFilter)
                 .Select(d => new DependencyUpdateSummary
                 {
                     DependencyName = d.Name,
