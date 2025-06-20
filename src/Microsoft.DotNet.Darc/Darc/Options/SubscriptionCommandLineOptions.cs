@@ -21,7 +21,7 @@ internal abstract class SubscriptionCommandLineOptions<T> : CommandLineOptions<T
     [Option("target-directory", HelpText = "Name of the VMR target directory which are the repository sources synchronized to.")]
     public string TargetDirectory { get; set; }
 
-    [Option("excluded-assets", HelpText = "Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded from source-enabled code flow.")]
+    [Option("excluded-assets", HelpText = "Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded.")]
     public string ExcludedAssets { get; set; }
 
     [Option('f', "force", HelpText = "Force subscription creation even when some checks fail.")]

@@ -27,14 +27,14 @@ public class CoherencyUpdateResolver : ICoherencyUpdateResolver
         _logger = logger;
     }
 
-    public async Task<List<DependencyUpdate>> GetRequiredCoherencyUpdatesAsync(IEnumerable<DependencyDetail> dependencies)
+    public async Task<List<DependencyUpdate>> GetRequiredCoherencyUpdatesAsync(IReadOnlyCollection<DependencyDetail> dependencies)
         => await GetRequiredStrictCoherencyUpdatesAsync(dependencies);
 
     public List<DependencyUpdate> GetRequiredNonCoherencyUpdates(
         string sourceRepoUri,
         string sourceCommit,
-        IEnumerable<AssetData> assets,
-        IEnumerable<DependencyDetail> dependencies)
+        IReadOnlyCollection<AssetData> assets,
+        IReadOnlyCollection<DependencyDetail> dependencies)
     {
         Dictionary<DependencyDetail, DependencyDetail> toUpdate = [];
 

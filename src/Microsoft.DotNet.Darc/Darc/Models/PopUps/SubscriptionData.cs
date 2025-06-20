@@ -44,6 +44,9 @@ internal class SubscriptionData
     [YamlMember(Alias = BatchableElement, ApplyNamingConventions = false)]
     public string Batchable { get; set; }
 
+    [YamlMember(Alias = ExcludedAssetsElement, ApplyNamingConventions = false)]
+    public List<string> ExcludedAssets { get; set; }
+
     [YamlMember(Alias = MergePolicyElement, ApplyNamingConventions = false)]
     public List<MergePolicyData> MergePolicies { get; set; }
 
@@ -58,7 +61,4 @@ internal class SubscriptionData
 
     [YamlMember(Alias = TargetDirectoryElement, ApplyNamingConventions = false)]
     public string TargetDirectory { get; set; }
-
-    [YamlMember(Alias = ExcludedAssetsElement, ApplyNamingConventions = false)]
-    public List<string> ExcludedAssets { get; set; }
 }

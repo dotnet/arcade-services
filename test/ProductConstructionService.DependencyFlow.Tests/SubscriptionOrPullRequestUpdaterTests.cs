@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Moq;
 using NUnit.Framework;
+using System.Linq;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
@@ -91,6 +92,21 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
             TargetBranch = TargetBranch,
             PolicyObject = policy,
             Id = Guid.NewGuid()
+        };
+        ContextUpdates.Add(context => context.Subscriptions.Add(Subscription));
+    }
+
+    internal void GivenASubscriptionWithExcludedAssets(SubscriptionPolicy policy, params string[] excludedAssetPatterns)
+    {
+        Subscription = new Subscription
+        {
+            Channel = Channel,
+            SourceRepository = SourceRepo,
+            TargetRepository = TargetRepo,
+            TargetBranch = TargetBranch,
+            PolicyObject = policy,
+            Id = Guid.NewGuid(),
+            ExcludedAssets = excludedAssetPatterns.Select(pattern => new AssetFilter { Filter = pattern }).ToList()
         };
         ContextUpdates.Add(context => context.Subscriptions.Add(Subscription));
     }

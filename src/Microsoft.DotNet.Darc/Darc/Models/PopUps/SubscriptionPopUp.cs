@@ -189,11 +189,7 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Sub
             return Constants.ErrorCode;
         }
 
-        if (outputYamlData.ExcludedAssets.Any() && !sourceEnabled)
-        {
-            _logger.LogError("Asset exclusion only works for source-enabled subscriptions");
-            return Constants.ErrorCode;
-        }
+
 
         if (sourceEnabled)
         {

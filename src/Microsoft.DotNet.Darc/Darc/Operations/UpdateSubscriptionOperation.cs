@@ -234,11 +234,7 @@ internal class UpdateSubscriptionOperation : Operation
             excludedAssets = [..updateSubscriptionPopUp.ExcludedAssets];
         }
 
-        if (excludedAssets.Any() && !sourceEnabled)
-        {
-            Console.WriteLine("Asset exclusion only works for source-enabled subscriptions");
-            return Constants.ErrorCode;
-        }
+
 
         try
         {
