@@ -184,13 +184,14 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Branch**: main
 
             **Updated Dependencies**
-            - **Foo.Bar**: [from 1.0.0 to 2.0.0][1]
-            - **Foo.Biz**: [from 1.0.0 to 2.0.0][1]
-            - **Biz.Boz**: [from 1.0.0 to 2.0.0]({build.GitHubRepository}/compare/uvw789...xyz890)
+            - From [1.0.0 to 2.0.0]({build.GitHubRepository}/compare/abc123...def456)
+              - Foo.Bar
+              - Foo.Biz
+            - From [1.0.0 to 2.0.0]({build.GitHubRepository}/compare/uvw789...xyz890)
+              - Biz.Boz
 
             [marker]: <> (End:{subscriptionGuid})
-            
-            [1]: {build.GitHubRepository}/compare/abc123...def456
+
             [marker]: <> (Start:Footer:CodeFlow PR)
             
             ## Associated changes in source repos
@@ -266,16 +267,17 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Branch**: main
 
             **Updated Dependencies**
-            - **Foo.Bar**: [from 1.0.0 to 3.0.0][2]
-            - **Foo.Biz**: [from 1.0.0 to 3.0.0][2]
-            - **Biz.Boz**: [from 1.0.0 to 3.0.0]({build.GitHubRepository}/compare/uvw789...def8889992)
+            - From [1.0.0 to 3.0.0]({build.GitHubRepository}/compare/abc123...{commitSha.Substring(0, PullRequestBuilder.GitHubComparisonShaLength)})
+              - Foo.Bar
+              - Foo.Biz
+            - From [1.0.0 to 3.0.0]({build.GitHubRepository}/compare/uvw789...def8889992)
+              - Biz.Boz
 
             [marker]: <> (End:{subscriptionGuid})
 
 
             [1]: {build.GitHubRepository}/compare/abc123...def456
 
-            [2]: {build.GitHubRepository}/compare/abc123...{commitSha.Substring(0, PullRequestBuilder.GitHubComparisonShaLength)}
             [marker]: <> (Start:Footer:CodeFlow PR)
 
             ## Associated changes in source repos
@@ -414,7 +416,53 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Foo.Biz**: 1.0.0
 
             **Updated Dependencies**
-            - **Biz.Boz**: [from 1.0.0 to 2.0.0](https://github.com/Foo/compare/uvw789...xyz890)
+            - From [1.0.0 to 2.0.0](https://github.com/Foo/compare/uvw789...xyz890)
+              - Biz.Boz
+
+            """);
+    }
+
+    [Test]
+    public void ShouldGroupDependenciesWithSameVersionRange()
+    {
+        DependencyUpdateSummary groupedDependency1 = new()
+        {
+            DependencyName = "Foo.Bar",
+            FromVersion = "1.0.0",
+            ToVersion = "2.0.0",
+            FromCommitSha = "abc123",
+            ToCommitSha = "def456"
+        };
+
+        DependencyUpdateSummary groupedDependency2 = new()
+        {
+            DependencyName = "Foo.Biz",
+            FromVersion = "1.0.0",
+            ToVersion = "2.0.0",
+            FromCommitSha = "abc123",
+            ToCommitSha = "def456"
+        };
+
+        DependencyUpdateSummary separateDependency = new()
+        {
+            DependencyName = "Biz.Boz",
+            FromVersion = "1.0.0",
+            ToVersion = "2.0.0",
+            FromCommitSha = "uvw789",
+            ToCommitSha = "xyz890"
+        };
+
+        string dependencyBlock = PullRequestBuilder.CreateDependencyUpdateBlock([groupedDependency1, groupedDependency2, separateDependency], "https://github.com/Foo");
+
+        dependencyBlock.Should().Be(
+            """
+
+            **Updated Dependencies**
+            - From [1.0.0 to 2.0.0](https://github.com/Foo/compare/abc123...def456)
+              - Foo.Bar
+              - Foo.Biz
+            - From [1.0.0 to 2.0.0](https://github.com/Foo/compare/uvw789...xyz890)
+              - Biz.Boz
 
             """);
     }

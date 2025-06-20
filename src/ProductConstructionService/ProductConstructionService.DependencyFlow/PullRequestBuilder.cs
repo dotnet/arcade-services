@@ -407,10 +407,28 @@ internal class PullRequestBuilder : IPullRequestBuilder
         {
             stringBuilder.AppendLine();
             stringBuilder.AppendLine("**Updated Dependencies**");
-            foreach (DependencyUpdateSummary depUpdate in dependencyCategories.UpdatedDependencies)
+
+            // Group dependencies by version range and commit range
+            var dependencyGroups = dependencyCategories.UpdatedDependencies
+                .GroupBy(dep => new
+                {
+                    FromVersion = dep.FromVersion,
+                    ToVersion = dep.ToVersion,
+                    FromCommitSha = dep.FromCommitSha,
+                    ToCommitSha = dep.ToCommitSha
+                })
+                .ToList();
+
+            foreach (var group in dependencyGroups)
             {
-                string? diffLink = GetLinkForDependencyItem(repoUri, depUpdate);
-                stringBuilder.AppendLine($"- **{depUpdate.DependencyName}**: [from {depUpdate.FromVersion} to {depUpdate.ToVersion}]({diffLink})");
+                var representative = group.First();
+                string? diffLink = GetLinkForDependencyItem(repoUri, representative);
+                
+                stringBuilder.AppendLine($"- From [{representative.FromVersion} to {representative.ToVersion}]({diffLink})");
+                foreach (var dep in group)
+                {
+                    stringBuilder.AppendLine($"  - {dep.DependencyName}");
+                }
             }
         }
         return stringBuilder.ToString();
