@@ -183,19 +183,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         // Do we need to change anything?
         if (currentVersion.Sha == update.TargetRevision)
         {
-            if (currentVersion.PackageVersion != update.TargetVersion && update.TargetVersion != null)
-            {
-                await UpdateTargetVersionOnly(
-                    update.TargetRevision,
-                    update.TargetVersion,
-                    update.OfficialBuildId,
-                    update.BarId,
-                    update.Mapping,
-                    currentVersion,
-                    cancellationToken);
-                return [];
-            }
-
             throw new EmptySyncException($"Repository {update.Mapping.Name} is already at {update.TargetRevision}");
         }
 
@@ -638,47 +625,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {
             _logger.LogInformation("{repo} version information is already deleted", repo);
         }
-    }
-
-    /// <summary>
-    /// This method is called in cases when a repository is already at the target revision but the package version
-    /// differs. This can happen when a new build from the same commit is synchronized to the VMR.
-    /// </summary>
-    private async Task UpdateTargetVersionOnly(
-        string targetRevision,
-        string targetVersion,
-        string? officialBuildId,
-        int? barId,
-        SourceMapping mapping,
-        VmrDependencyVersion currentVersion,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogWarning(
-            "Repository {repo} is already at {sha} but differs in package version ({old} vs {new}). Updating metadata...",
-            mapping.Name,
-            targetRevision,
-            currentVersion.PackageVersion,
-            targetVersion);
-
-        _dependencyTracker.UpdateDependencyVersion(new VmrDependencyUpdate(
-            Mapping: mapping,
-            TargetRevision: targetRevision,
-            TargetVersion: targetVersion,
-            Parent: null,
-            RemoteUri: _sourceManifest.GetRepoVersion(mapping.Name).RemoteUri,
-            OfficialBuildId: officialBuildId,
-            BarId: barId));
-
-        var filesToAdd = new List<string>
-        {
-            VmrInfo.GitInfoSourcesDir,
-            _vmrInfo.SourceManifestPath
-        };
-
-        cancellationToken.ThrowIfCancellationRequested();
-        await GetLocalVmr().StageAsync(filesToAdd, cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-        await CommitAsync($"Updated package version of {mapping.Name} to {targetVersion}", author: null);
     }
 
     private async Task<SourceMapping> LoadNewSourceMappings(

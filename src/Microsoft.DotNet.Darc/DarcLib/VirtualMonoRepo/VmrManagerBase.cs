@@ -111,13 +111,6 @@ public abstract class VmrManagerBase
         {
             _vmrInfo.SourceManifestPath
         };
-        
-        // Only add the git-info directory to staging if it exists
-        var gitInfoDirPath = _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir;
-        if (_fileSystem.DirectoryExists(gitInfoDirPath))
-        {
-            filesToAdd.Add(VmrInfo.GitInfoSourcesDir);
-        }
 
         await _localGitClient.StageAsync(_vmrInfo.VmrPath, filesToAdd, cancellationToken);
 
