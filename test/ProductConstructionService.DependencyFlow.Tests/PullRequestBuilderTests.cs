@@ -191,7 +191,6 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
               - Biz.Boz
 
             [marker]: <> (End:{subscriptionGuid})
-
             [marker]: <> (Start:Footer:CodeFlow PR)
             
             ## Associated changes in source repos
@@ -274,9 +273,6 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
               - Biz.Boz
 
             [marker]: <> (End:{subscriptionGuid})
-
-
-            [1]: {build.GitHubRepository}/compare/abc123...def456
 
             [marker]: <> (Start:Footer:CodeFlow PR)
 
