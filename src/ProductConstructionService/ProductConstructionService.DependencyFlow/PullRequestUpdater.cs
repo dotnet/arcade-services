@@ -782,7 +782,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId)
             ?? throw new ($"Subscription with ID {update.SubscriptionId} not found in the DB.");
 
-        var excludedAssetsMatcher = AssetFilterExtensions.GetAssetMatcher(subscription.ExcludedAssets);
+        var excludedAssetsMatcher = subscription.ExcludedAssets.GetAssetMatcher();
 
         // Existing details 
         var existingDependencies = (await darc.GetDependenciesAsync(targetRepository, prBranch ?? targetBranch)).ToList();

@@ -92,7 +92,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
             targetBranch,
             cancellationToken);
 
-        var excludedAssetsMatcher = AssetFilterExtensions.GetAssetMatcher(excludedAssets);
+        var excludedAssetsMatcher = excludedAssets.GetAssetMatcher();
 
         if (mergeSuccessful)
         {
