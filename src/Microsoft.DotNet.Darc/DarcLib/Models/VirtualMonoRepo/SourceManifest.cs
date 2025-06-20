@@ -21,7 +21,7 @@ public interface ISourceManifest
     void RemoveRepository(string repository);
     void RemoveSubmodule(ISourceComponent submodule);
     void UpdateSubmodule(ISourceComponent submodule);
-    void UpdateVersion(string repository, string uri, string sha, string? packageVersion, int? barId);
+    void UpdateVersion(string repository, string uri, string sha, int? barId);
     VmrDependencyVersion? GetVersion(string repository);
     bool TryGetRepoVersion(string mappingName, [NotNullWhen(true)] out ISourceComponent? mapping);
     ISourceComponent GetRepoVersion(string mappingName);
@@ -48,7 +48,7 @@ public class SourceManifest : ISourceManifest
         _submodules = [.. submodules];
     }
 
-    public void UpdateVersion(string repository, string uri, string sha, string? packageVersion, int? barId)
+    public void UpdateVersion(string repository, string uri, string sha, int? barId)
     {
         var repo = _repositories.FirstOrDefault(r => r.Path == repository);
         if (repo != null)
@@ -56,10 +56,6 @@ public class SourceManifest : ISourceManifest
             repo.CommitSha = sha;
             repo.RemoteUri = uri;
 
-            if (packageVersion != null)
-            {
-                repo.PackageVersion = packageVersion;
-            }
             if (barId != null)
             {
                 repo.BarId = barId;
@@ -67,7 +63,7 @@ public class SourceManifest : ISourceManifest
         }
         else
         {
-            _repositories.Add(new RepositoryRecord(repository, uri, sha, packageVersion, barId));
+            _repositories.Add(new RepositoryRecord(repository, uri, sha, barId));
         }
     }
 
@@ -169,7 +165,7 @@ public class SourceManifest : ISourceManifest
         var repositoryRecord = _repositories.FirstOrDefault(r => r.Path == repository);
         if (repositoryRecord != null)
         {
-            return new(repositoryRecord.CommitSha, repositoryRecord.PackageVersion);
+            return new(repositoryRecord.CommitSha);
         }
         else
         {

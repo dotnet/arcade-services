@@ -140,7 +140,6 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
                     subscription.TargetDirectory,
                     update.SourceRepo,
                     update.SourceSha,
-                    build.Assets.FirstOrDefault()?.Version,
                     update.BuildId),
                 new JsonSerializerOptions()
                 {

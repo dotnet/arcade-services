@@ -36,7 +36,6 @@ public class VmrPusherTests
             "some-repo",
             "https://github.com/org/some-repo",
             Sha,
-            "8.0",
             barId: null);
 
         _sourceManifest.Reset();

@@ -42,11 +42,6 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
             // Verify source-manifest has changes
             files.Should().Contain(file => file.FileName == VmrInfo.DefaultRelativeSourceManifestPath);
 
-            foreach (var repoUpdate in repoUpdates)
-            {
-                files.Should().Contain(file => file.FileName == $"{VmrInfo.GitInfoSourcesDir}/{repoUpdate.Repo}.props");
-            }
-
             // Verify new files are in the PR
             foreach (var testFile in testFiles)
             {

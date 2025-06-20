@@ -53,7 +53,6 @@ internal class ForwardFlowOperation(
     protected override IEnumerable<string> GetIgnoredFiles(string mapping) =>
     [
         VmrInfo.DefaultRelativeSourceManifestPath,
-        VmrInfo.GitInfoSourcesDir,
         VmrInfo.GetRelativeRepoSourcesPath(mapping) / VersionFiles.VersionDetailsXml,
     ];
 }

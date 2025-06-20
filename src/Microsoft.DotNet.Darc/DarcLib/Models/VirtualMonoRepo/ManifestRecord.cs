@@ -55,7 +55,6 @@ public interface ISourceComponent
 
 public interface IVersionedSourceComponent : ISourceComponent
 {
-    string? PackageVersion { get; }
     public int? BarId { get; }
 }
 
@@ -93,15 +92,12 @@ public class RepositoryRecord : ManifestRecord, IVersionedSourceComponent
         string path,
         string remoteUri,
         string commitSha,
-        string? packageVersion,
         int? barId)
         : base(path, remoteUri, commitSha)
     {
-        PackageVersion = packageVersion;
         BarId = barId;
     }
 
-    public string? PackageVersion { get; set; }
     public int? BarId { get; set; }
 }
 

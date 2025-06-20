@@ -116,7 +116,6 @@ internal abstract class VmrTestsBase
         foreach (var repo in reposWithVersionFiles)
         {
             expectedFiles.AddRange(GetExpectedVersionFiles(vmrPath / VmrInfo.SourcesDir / repo));
-            expectedFiles.Add(vmrPath / VmrInfo.GitInfoSourcesDir / $"{repo}.props");
         }
 
         expectedFiles.AddRange(reposFiles);

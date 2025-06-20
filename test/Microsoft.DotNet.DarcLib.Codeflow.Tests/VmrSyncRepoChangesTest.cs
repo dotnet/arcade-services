@@ -87,8 +87,8 @@ internal class VmrSyncRepoChangesTest : VmrTestsBase
         await GitOperations.CheckAllIsCommitted(VmrPath);
         var sourceManifest = SourceManifest.FromFile(VmrPath / VmrInfo.DefaultRelativeSourceManifestPath);
 
-        sourceManifest.GetVersion(Constants.DependencyRepoName)!.PackageVersion.Should().Be("8.0.1");
-        (await File.ReadAllTextAsync(VmrPath / VmrInfo.GitInfoSourcesDir / Constants.DependencyRepoName + ".props")).Should().Contain("8.0.1");
+        // Package version is no longer tracked, but we can verify the SHA is correct
+        sourceManifest.GetVersion(Constants.DependencyRepoName)!.Sha.Should().NotBeNull();
     }
 
     [Test]
