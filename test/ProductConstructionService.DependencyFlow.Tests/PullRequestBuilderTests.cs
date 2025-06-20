@@ -464,6 +464,52 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     }
 
     [Test]
+    public void ShouldOrderDependenciesAlphabeticallyWithinGroups()
+    {
+        // Create dependencies in non-alphabetical order to verify sorting
+        DependencyUpdateSummary dependencyZ = new()
+        {
+            DependencyName = "Zebra.Package",
+            FromVersion = "1.0.0",
+            ToVersion = "2.0.0",
+            FromCommitSha = "abc123",
+            ToCommitSha = "def456"
+        };
+
+        DependencyUpdateSummary dependencyA = new()
+        {
+            DependencyName = "Alpha.Package",
+            FromVersion = "1.0.0",
+            ToVersion = "2.0.0",
+            FromCommitSha = "abc123",
+            ToCommitSha = "def456"
+        };
+
+        DependencyUpdateSummary dependencyM = new()
+        {
+            DependencyName = "Middle.Package",
+            FromVersion = "1.0.0",
+            ToVersion = "2.0.0",
+            FromCommitSha = "abc123",
+            ToCommitSha = "def456"
+        };
+
+        // Pass dependencies in Z, A, M order to verify alphabetical sorting
+        string dependencyBlock = PullRequestBuilder.CreateDependencyUpdateBlock([dependencyZ, dependencyA, dependencyM], "https://github.com/Foo");
+
+        dependencyBlock.Should().Be(
+            """
+
+            **Updated Dependencies**
+            - From [1.0.0 to 2.0.0](https://github.com/Foo/compare/abc123...def456)
+              - Alpha.Package
+              - Middle.Package
+              - Zebra.Package
+
+            """);
+    }
+
+    [Test]
     public async Task ShouldGroupDependenciesInDependencyFlowPRs()
     {
         var build1 = GivenANewBuildId(101, "abc1234");

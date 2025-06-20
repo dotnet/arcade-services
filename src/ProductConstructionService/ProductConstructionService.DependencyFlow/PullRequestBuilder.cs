@@ -425,7 +425,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
                 string? diffLink = GetLinkForDependencyItem(repoUri, representative);
                 
                 stringBuilder.AppendLine($"- From [{representative.FromVersion} to {representative.ToVersion}]({diffLink})");
-                foreach (var dep in group)
+                foreach (var dep in group.OrderBy(dep => dep.DependencyName))
                 {
                     stringBuilder.AppendLine($"  - {dep.DependencyName}");
                 }
