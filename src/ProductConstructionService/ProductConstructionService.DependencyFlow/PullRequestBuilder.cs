@@ -610,23 +610,45 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
         var shaRangeToLinkId = new Dictionary<(string from, string to), int>();
 
-        foreach (DependencyUpdate dep in deps)
+        // Group dependencies by version range and commit range
+        var dependencyGroups = deps
+            .GroupBy(dep => new
+            {
+                FromVersion = dep.From.Version,
+                ToVersion = dep.To.Version,
+                FromCommit = dep.From.Commit,
+                ToCommit = dep.To.Commit,
+                RepoUri = dep.To.RepoUri
+            })
+            .ToList();
+
+        foreach (var group in dependencyGroups)
         {
-            if (!shaRangeToLinkId.ContainsKey((dep.From.Commit, dep.To.Commit)))
+            var representative = group.First();
+            
+            if (!shaRangeToLinkId.ContainsKey((representative.From.Commit, representative.To.Commit)))
             {
                 var changesUri = string.Empty;
                 try
                 {
-                    changesUri = GetChangesURI(dep.To.RepoUri, dep.From.Commit, dep.To.Commit);
+                    changesUri = GetChangesURI(representative.To.RepoUri, representative.From.Commit, representative.To.Commit);
                 }
                 catch (ArgumentNullException e)
                 {
-                    _logger.LogError(e, $"Failed to create SHA comparison link for dependency {dep.To.Name} during asset update for subscription {update.SubscriptionId}");
+                    _logger.LogError(e, $"Failed to create SHA comparison link for dependency {representative.To.Name} during asset update for subscription {update.SubscriptionId}");
                 }
-                shaRangeToLinkId.Add((dep.From.Commit, dep.To.Commit), startingReferenceId + changesLinks.Count);
+                shaRangeToLinkId.Add((representative.From.Commit, representative.To.Commit), startingReferenceId + changesLinks.Count);
                 changesLinks.Add(changesUri);
             }
-            subscriptionSection.AppendLine($"  - **{dep.To.Name}**: [from {dep.From.Version} to {dep.To.Version}][{shaRangeToLinkId[(dep.From.Commit, dep.To.Commit)]}]");
+
+            // Write the group header with version range and link
+            subscriptionSection.AppendLine($"  - From [{representative.From.Version} to {representative.To.Version}][{shaRangeToLinkId[(representative.From.Commit, representative.To.Commit)]}]");
+            
+            // Write each dependency in the group
+            foreach (var dep in group)
+            {
+                subscriptionSection.AppendLine($"    - {dep.To.Name}");
+            }
         }
 
         subscriptionSection.AppendLine();

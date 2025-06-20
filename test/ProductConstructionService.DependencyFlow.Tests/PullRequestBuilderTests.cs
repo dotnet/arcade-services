@@ -467,6 +467,51 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             """);
     }
 
+    [Test]
+    public async Task ShouldGroupDependenciesInDependencyFlowPRs()
+    {
+        var build1 = GivenANewBuildId(101, "abc1234");
+        SubscriptionUpdateWorkItem update1 = GivenSubscriptionUpdate(false, build1.Id, "11111111-1111-1111-1111-111111111111");
+        
+        // Create dependencies that should be grouped (same version range and commit range)
+        List<DependencyUpdate> deps1 = [
+            new DependencyUpdate
+            {
+                From = new DependencyDetail { Name = "Microsoft.TemplateEngine.Abstractions", Version = "10.0.100-preview.6.25317.107", Commit = "abc123" },
+                To = new DependencyDetail { Name = "Microsoft.TemplateEngine.Abstractions", Version = "10.0.100-preview.6.25318.104", RepoUri = "https://amazing_uri.com", Commit = "def456" }
+            },
+            new DependencyUpdate
+            {
+                From = new DependencyDetail { Name = "Microsoft.TemplateEngine.Edge", Version = "10.0.100-preview.6.25317.107", Commit = "abc123" },
+                To = new DependencyDetail { Name = "Microsoft.TemplateEngine.Edge", Version = "10.0.100-preview.6.25318.104", RepoUri = "https://amazing_uri.com", Commit = "def456" }
+            },
+            new DependencyUpdate
+            {
+                From = new DependencyDetail { Name = "Microsoft.TemplateEngine.Utils", Version = "10.0.100-preview.6.25317.107", Commit = "abc123" },
+                To = new DependencyDetail { Name = "Microsoft.TemplateEngine.Utils", Version = "10.0.100-preview.6.25318.104", RepoUri = "https://amazing_uri.com", Commit = "def456" }
+            }
+        ];
+
+        foreach (var dependency in deps1.SelectMany(d => new[] { d.From, d.To }))
+        {
+            _barClient
+                .Setup(x => x.GetAssetsAsync(dependency.Name, dependency.Version, null, null))
+                .ReturnsAsync([new Asset(1, build1.Id, false, dependency.Name, dependency.Version, [])]);
+        }
+
+        var description = await GeneratePullRequestDescription([(update1, deps1)]);
+        
+        // The grouped dependencies should appear like:
+        // - From [10.0.100-preview.6.25317.107 to 10.0.100-preview.6.25318.104][1]
+        //   - Microsoft.TemplateEngine.Abstractions
+        //   - Microsoft.TemplateEngine.Edge  
+        //   - Microsoft.TemplateEngine.Utils
+        description.Should().Contain("From [10.0.100-preview.6.25317.107 to 10.0.100-preview.6.25318.104][1]");
+        description.Should().Contain("    - Microsoft.TemplateEngine.Abstractions");
+        description.Should().Contain("    - Microsoft.TemplateEngine.Edge");
+        description.Should().Contain("    - Microsoft.TemplateEngine.Utils");
+    }
+
     private const string RegexTestString1 =
         """
         [2]:qqqq
@@ -634,12 +679,34 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     private static string BuildCorrectPRDescriptionWhenNonCoherencyUpdate(List<DependencyUpdate> deps, int startingId)
     {
         var builder = new StringBuilder();
+        
+        // Group dependencies by version range and commit range
+        var dependencyGroups = deps
+            .GroupBy(dep => new
+            {
+                FromVersion = dep.From.Version,
+                ToVersion = dep.To.Version,
+                FromCommit = dep.From.Commit,
+                ToCommit = dep.To.Commit
+            })
+            .ToList();
+
         List<string> urls = [];
-        for (var i = 0; i < deps.Count; i++)
+        int currentId = startingId;
+
+        foreach (var group in dependencyGroups)
         {
-            urls.Add(PullRequestBuilder.GetChangesURI(deps[i].To.RepoUri, deps[i].From.Commit, deps[i].To.Commit));
-            builder.AppendLine($"  - **{deps[i].To.Name}**: [from {deps[i].From.Version} to {deps[i].To.Version}][{startingId + i}]");
+            var representative = group.First();
+            urls.Add(PullRequestBuilder.GetChangesURI(representative.To.RepoUri, representative.From.Commit, representative.To.Commit));
+            
+            builder.AppendLine($"  - From [{representative.From.Version} to {representative.To.Version}][{currentId}]");
+            foreach (var dep in group)
+            {
+                builder.AppendLine($"    - {dep.To.Name}");
+            }
+            currentId++;
         }
+        
         builder.AppendLine();
         for (var i = 0; i < urls.Count; i++)
         {
