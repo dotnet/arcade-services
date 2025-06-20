@@ -363,15 +363,19 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return true;
     }
 
-    protected override async Task<Codeflow?> DetectRecentFlow(LastFlows lastFlows, ILocalGitRepo repo)
+    protected override async Task<Codeflow?> DetectRecentFlow(
+        Codeflow lastFlow,
+        Backflow? lastBackFlow,
+        ForwardFlow lastForwardFlow,
+        ILocalGitRepo repo)
     {
-        if (lastFlows.LastFlow is not ForwardFlow ff || lastFlows.LastBackFlow == null)
+        if (lastFlow is not ForwardFlow ff || lastBackFlow == null)
         {
             return null;
         }
 
-        return await repo.IsAncestorCommit(ff.RepoSha, lastFlows.LastBackFlow.RepoSha)
-            ? lastFlows.LastForwardFlow
+        return await repo.IsAncestorCommit(ff.RepoSha, lastBackFlow.RepoSha)
+            ? lastForwardFlow
             : null;
     }
 

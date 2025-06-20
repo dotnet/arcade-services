@@ -60,7 +60,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly ICodeflowChangeAnalyzer _codeflowChangeAnalyzer;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
-    private readonly IBasicBarClient _barClient;
     private readonly ILogger<VmrCodeFlower> _logger;
 
     public VmrForwardFlower(
@@ -89,7 +88,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         _codeflowChangeAnalyzer = codeflowChangeAnalyzer;
         _processManager = processManager;
         _fileSystem = fileSystem;
-        _barClient = barClient;
         _logger = logger;
     }
 
@@ -321,16 +319,20 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             cancellationToken: cancellationToken);
     }
 
-    protected override async Task<Codeflow?> DetectRecentFlow(LastFlows lastFlows, ILocalGitRepo repo)
+    protected override async Task<Codeflow?> DetectRecentFlow(
+        Codeflow lastFlow,
+        Backflow? lastBackFlow,
+        ForwardFlow lastForwardFlow,
+        ILocalGitRepo repo)
     {
-        if (lastFlows.LastFlow is not Backflow bf)
+        if (lastFlow is not Backflow bf)
         {
             return null;
         }
 
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        return await vmr.IsAncestorCommit(bf.VmrSha, lastFlows.LastForwardFlow.VmrSha)
-            ? lastFlows.LastForwardFlow
+        return await vmr.IsAncestorCommit(bf.VmrSha, lastForwardFlow.VmrSha)
+            ? lastForwardFlow
             : null;
     }
 

@@ -216,7 +216,11 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// of commit 1. and 6.
     /// </summary>
     /// <returns>Null, if the last flow is the most recent otherwise the other recent flow.</returns>
-    protected abstract Task<Codeflow?> DetectRecentFlow(LastFlows lastFlows, ILocalGitRepo repo);
+    protected abstract Task<Codeflow?> DetectRecentFlow(
+        Codeflow lastFlow,
+        Backflow? lastBackFlow,
+        ForwardFlow lastForwardFlow,
+        ILocalGitRepo repo);
 
     /// <summary>
     /// Checks the last flows between a repo and a VMR and returns the most recent one.
@@ -234,10 +238,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         if (lastBackflow is null)
         {
-            return new LastFlows(
-                LastFlow: lastForwardFlow,
-                LastBackFlow: lastBackflow,
-                LastForwardFlow: lastForwardFlow);
+            return new LastFlows(lastForwardFlow, lastBackflow, lastForwardFlow, RecentFlow: null);
         }
 
         string backwardSha, forwardSha;
@@ -264,10 +265,12 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         // If the SHA's are the same, it's a commit created by inflow which was then flown out
         if (forwardSha == backwardSha)
         {
+            Codeflow lastflow = sourceRepo == repoClone ? lastForwardFlow : lastBackflow;
             return new LastFlows(
-                LastFlow: sourceRepo == repoClone ? lastForwardFlow : lastBackflow,
-                LastBackFlow: lastBackflow,
-                LastForwardFlow: lastForwardFlow);
+                lastflow,
+                lastBackflow,
+                lastForwardFlow,
+                await DetectRecentFlow(lastflow, lastBackflow, lastForwardFlow, repoClone));
         }
 
         // Let's determine the last flow by comparing source commit of last backflow with target commit of last forward flow
@@ -304,15 +307,17 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 return new LastFlows(
                     LastFlow: lastForwardFlow,
                     LastBackFlow: lastBackflow,
-                    LastForwardFlow: lastForwardFlow
-                );
+                    LastForwardFlow: lastForwardFlow,
+                    await DetectRecentFlow(lastForwardFlow, lastBackflow, lastForwardFlow, repoClone));
             }
         }
 
+        Codeflow lastFlow = isBackwardOlder ? lastForwardFlow : lastBackflow;
         return new LastFlows(
-            LastFlow: isBackwardOlder ? lastForwardFlow : lastBackflow,
+            LastFlow: lastFlow,
             LastBackFlow: lastBackflow,
-            LastForwardFlow: lastForwardFlow);
+            LastForwardFlow: lastForwardFlow,
+            await DetectRecentFlow(lastFlow, lastBackflow, lastForwardFlow, repoClone));
     }
 
     /// <summary>
@@ -355,4 +360,15 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     protected abstract bool TargetRepoIsVmr();
 }
 
-public record LastFlows(Codeflow LastFlow, Backflow? LastBackFlow, ForwardFlow LastForwardFlow);
+/// <summary>
+/// Holds information about the last flows between a repo and a VMR.
+/// </summary>
+/// <param name="LastFlow">Last flow from the PoV of the current commit. Equals LastBackFlow or LastForwardFlow</param>
+/// <param name="LastBackFlow">Last backflow from the PoV of the current commit</param>
+/// <param name="LastForwardFlow">Last forward flow from the PoV of the current commit</param>
+/// <param name="RecentFlow">A recent flow that should be taken into account when forming the PR. See DetectRecentFlow for more details.</param>
+public record LastFlows(
+    Codeflow LastFlow,
+    Backflow? LastBackFlow,
+    ForwardFlow LastForwardFlow,
+    Codeflow? RecentFlow);
