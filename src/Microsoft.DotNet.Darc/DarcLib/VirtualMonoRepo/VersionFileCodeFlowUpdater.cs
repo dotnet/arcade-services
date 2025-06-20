@@ -225,10 +225,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
             result.ThrowIfFailed("Failed to resolve version file conflicts - failed to get a list of conflicted files");
         }
 
-        var conflictedFiles = result.StandardOutput
-            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
-            .Select(line => line.Trim())
-            .ToList();
+        var conflictedFiles = result.GetOutput();
 
         var unresolvableConflicts = conflictedFiles
             .Except(DependencyFileManager.DependencyFiles)

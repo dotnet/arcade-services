@@ -170,7 +170,7 @@ public interface ILocalGitClient
     /// </summary>
     /// <param name="repoPath">Path to a git repository</param>
     /// <returns>List of currently modified staged files</returns>
-    Task<string[]> GetStagedFiles(string repoPath);
+    Task<IReadOnlyCollection<string>> GetStagedFiles(string repoPath);
 
     /// <summary>
     ///     Determines if a given path is a git repository.

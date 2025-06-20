@@ -59,8 +59,7 @@ public class VmrCloakedFileScanner : VmrScanner
 
         ret.ThrowIfFailed($"Failed to scan the {sourceMapping.Name} repository");
 
-        return ret.StandardOutput
-            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+        return ret.GetOutput();
     }
 
     protected override string ScanType { get; } = "cloaked";

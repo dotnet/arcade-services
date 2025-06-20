@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Text;
 
 namespace Microsoft.DotNet.DarcLib.Helpers;
@@ -11,8 +12,8 @@ public class ProcessExecutionResult
     public bool TimedOut { get; set; }
     public int ExitCode { get; set; }
     public bool Succeeded => !TimedOut && ExitCode == 0;
-    public string StandardOutput { get; set; } = "";
-    public string StandardError { get; set; } = "";
+    public string StandardOutput { get; set; } = string.Empty;
+    public string StandardError { get; set; } = string.Empty;
 
     public void ThrowIfFailed(string failureMessage)
     {
@@ -20,6 +21,11 @@ public class ProcessExecutionResult
         {
             throw new ProcessFailedException(this, failureMessage);
         }
+    }
+
+    public IReadOnlyCollection<string> GetOutput()
+    {
+        return [.. StandardOutput.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
     }
 
     public override string ToString()
