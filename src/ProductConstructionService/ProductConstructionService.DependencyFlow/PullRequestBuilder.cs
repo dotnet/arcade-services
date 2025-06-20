@@ -386,10 +386,26 @@ internal class PullRequestBuilder : IPullRequestBuilder
         {
             stringBuilder.AppendLine();
             stringBuilder.AppendLine("**New Dependencies**");
-            foreach (DependencyUpdateSummary depUpdate in dependencyCategories.NewDependencies)
+
+            // Group dependencies by version and commit
+            var dependencyGroups = dependencyCategories.NewDependencies
+                .GroupBy(dep => new
+                {
+                    ToVersion = dep.ToVersion,
+                    ToCommitSha = dep.ToCommitSha
+                })
+                .ToList();
+
+            foreach (var group in dependencyGroups)
             {
-                string? diffLink = GetLinkForDependencyItem(repoUri, depUpdate);
-                stringBuilder.AppendLine($"- **{depUpdate.DependencyName}**: [{depUpdate.ToVersion}]({diffLink})");
+                var representative = group.First();
+                string? diffLink = GetLinkForDependencyItem(repoUri, representative);
+                
+                stringBuilder.AppendLine($"- Added [{representative.ToVersion}]({diffLink})");
+                foreach (var dep in group.OrderBy(dep => dep.DependencyName))
+                {
+                    stringBuilder.AppendLine($"  - {dep.DependencyName}");
+                }
             }
         }
 
@@ -397,9 +413,25 @@ internal class PullRequestBuilder : IPullRequestBuilder
         {
             stringBuilder.AppendLine();
             stringBuilder.AppendLine("**Removed Dependencies**");
-            foreach (DependencyUpdateSummary depUpdate in dependencyCategories.RemovedDependencies)
+
+            // Group dependencies by version and commit
+            var dependencyGroups = dependencyCategories.RemovedDependencies
+                .GroupBy(dep => new
+                {
+                    FromVersion = dep.FromVersion,
+                    FromCommitSha = dep.FromCommitSha
+                })
+                .ToList();
+
+            foreach (var group in dependencyGroups)
             {
-                stringBuilder.AppendLine($"- **{depUpdate.DependencyName}**: {depUpdate.FromVersion}");
+                var representative = group.First();
+                
+                stringBuilder.AppendLine($"- Removed {representative.FromVersion}");
+                foreach (var dep in group.OrderBy(dep => dep.DependencyName))
+                {
+                    stringBuilder.AppendLine($"  - {dep.DependencyName}");
+                }
             }
         }
 

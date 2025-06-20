@@ -406,10 +406,12 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             """
 
             **New Dependencies**
-            - **Foo.Bar**: [2.0.0](https://github.com/Foo/commit/def456)
+            - Added [2.0.0](https://github.com/Foo/commit/def456)
+              - Foo.Bar
 
             **Removed Dependencies**
-            - **Foo.Biz**: 1.0.0
+            - Removed 1.0.0
+              - Foo.Biz
 
             **Updated Dependencies**
             - From [1.0.0 to 2.0.0](https://github.com/Foo/compare/uvw789...xyz890)
@@ -755,6 +757,127 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             builder.AppendLine($"[{i + startingId}]: {urls[i]}");
         }
         return builder.ToString();
+    }
+
+    [Test]
+    public void ShouldGroupAllTypesOfDependencyChanges()
+    {
+        // New Dependencies - multiple packages with same version
+        DependencyUpdateSummary newDep1 = new()
+        {
+            DependencyName = "New.Package.Alpha",
+            FromVersion = null,
+            ToVersion = "3.0.0",
+            FromCommitSha = null,
+            ToCommitSha = "new123"
+        };
+
+        DependencyUpdateSummary newDep2 = new()
+        {
+            DependencyName = "New.Package.Beta",
+            FromVersion = null,
+            ToVersion = "3.0.0",
+            FromCommitSha = null,
+            ToCommitSha = "new123"
+        };
+
+        DependencyUpdateSummary newDep3 = new()
+        {
+            DependencyName = "New.Package.Gamma",
+            FromVersion = null,
+            ToVersion = "3.5.0",
+            FromCommitSha = null,
+            ToCommitSha = "new456"
+        };
+
+        // Removed Dependencies - multiple packages with same version
+        DependencyUpdateSummary removedDep1 = new()
+        {
+            DependencyName = "Removed.Package.Zeta",
+            FromVersion = "2.0.0",
+            ToVersion = null,
+            FromCommitSha = "old123",
+            ToCommitSha = null
+        };
+
+        DependencyUpdateSummary removedDep2 = new()
+        {
+            DependencyName = "Removed.Package.Delta",
+            FromVersion = "2.0.0",
+            ToVersion = null,
+            FromCommitSha = "old123",
+            ToCommitSha = null
+        };
+
+        DependencyUpdateSummary removedDep3 = new()
+        {
+            DependencyName = "Removed.Package.Epsilon",
+            FromVersion = "1.5.0",
+            ToVersion = null,
+            FromCommitSha = "old456",
+            ToCommitSha = null
+        };
+
+        // Updated Dependencies - multiple packages with same version ranges
+        DependencyUpdateSummary updatedDep1 = new()
+        {
+            DependencyName = "Updated.Package.Charlie",
+            FromVersion = "1.0.0",
+            ToVersion = "2.0.0",
+            FromCommitSha = "update123",
+            ToCommitSha = "update456"
+        };
+
+        DependencyUpdateSummary updatedDep2 = new()
+        {
+            DependencyName = "Updated.Package.Bravo",
+            FromVersion = "1.0.0",
+            ToVersion = "2.0.0",
+            FromCommitSha = "update123",
+            ToCommitSha = "update456"
+        };
+
+        DependencyUpdateSummary updatedDep3 = new()
+        {
+            DependencyName = "Updated.Package.Alpha",
+            FromVersion = "1.5.0",
+            ToVersion = "2.5.0",
+            FromCommitSha = "update789",
+            ToCommitSha = "update012"
+        };
+
+        // Pass dependencies in non-alphabetical order to verify sorting within groups
+        string dependencyBlock = PullRequestBuilder.CreateDependencyUpdateBlock([
+            newDep2, newDep1, newDep3,  // new deps out of order
+            removedDep1, removedDep3, removedDep2,  // removed deps out of order
+            updatedDep2, updatedDep3, updatedDep1   // updated deps out of order
+        ], "https://github.com/Test");
+
+        dependencyBlock.Should().Be(
+            """
+
+            **New Dependencies**
+            - Added [3.0.0](https://github.com/Test/commit/new123)
+              - New.Package.Alpha
+              - New.Package.Beta
+            - Added [3.5.0](https://github.com/Test/commit/new456)
+              - New.Package.Gamma
+
+            **Removed Dependencies**
+            - Removed 2.0.0
+              - Removed.Package.Delta
+              - Removed.Package.Zeta
+            - Removed 1.5.0
+              - Removed.Package.Epsilon
+
+            **Updated Dependencies**
+            - From [1.0.0 to 2.0.0](https://github.com/Test/compare/update123...update456)
+              - Updated.Package.Bravo
+              - Updated.Package.Charlie
+            - From [1.5.0 to 2.5.0](https://github.com/Test/compare/update789...update012)
+              - Updated.Package.Alpha
+
+            """);
     }
 
     private async Task<string> GeneratePullRequestDescription(
