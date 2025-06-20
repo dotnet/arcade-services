@@ -91,8 +91,6 @@ internal class PullRequestBuilder : IPullRequestBuilder
     private readonly IBasicBarClient _barClient;
     private readonly ILogger<PullRequestBuilder> _logger;
 
-
-
     public PullRequestBuilder(
         BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
@@ -388,19 +386,18 @@ internal class PullRequestBuilder : IPullRequestBuilder
             .ToList();
 
         // Separate groups by dependency type
-        var newDependencyGroups = dependencyGroups.Where(g => string.IsNullOrEmpty(g.Key.FromVersion)).ToList();
-        var removedDependencyGroups = dependencyGroups.Where(g => string.IsNullOrEmpty(g.Key.ToVersion)).ToList();
+        var newDependencyGroups = dependencyGroups.Where(g => string.IsNullOrEmpty(g.Key.FromVersion) && !string.IsNullOrEmpty(g.Key.ToVersion)).ToList();
+        var removedDependencyGroups = dependencyGroups.Where(g => string.IsNullOrEmpty(g.Key.ToVersion) && !string.IsNullOrEmpty(g.Key.FromVersion)).ToList();
         var updatedDependencyGroups = dependencyGroups.Where(g => !string.IsNullOrEmpty(g.Key.FromVersion) && !string.IsNullOrEmpty(g.Key.ToVersion)).ToList();
 
         if (newDependencyGroups.Count > 0)
         {
             stringBuilder.AppendLine();
             stringBuilder.AppendLine("**New Dependencies**");
-
             foreach (var group in newDependencyGroups)
             {
                 var representative = group.First();
-                string? diffLink = GetLinkForDependencyItem(repoUri, representative);
+                string? diffLink = GetLinkForDependencyItem(repoUri, representative.FromCommitSha, representative.ToCommitSha);
                 
                 stringBuilder.AppendLine($"- Added [{representative.ToVersion}]({diffLink})");
                 foreach (var dep in group.OrderBy(dep => dep.DependencyName))
@@ -414,7 +411,6 @@ internal class PullRequestBuilder : IPullRequestBuilder
         {
             stringBuilder.AppendLine();
             stringBuilder.AppendLine("**Removed Dependencies**");
-
             foreach (var group in removedDependencyGroups)
             {
                 var representative = group.First();
@@ -435,7 +431,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             foreach (var group in updatedDependencyGroups)
             {
                 var representative = group.First();
-                string? diffLink = GetLinkForDependencyItem(repoUri, representative);
+                string? diffLink = GetLinkForDependencyItem(repoUri, representative.FromCommitSha, representative.ToCommitSha);
                 
                 stringBuilder.AppendLine($"- From [{representative.FromVersion} to {representative.ToVersion}]({diffLink})");
                 foreach (var dep in group.OrderBy(dep => dep.DependencyName))
@@ -449,17 +445,16 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
 
 
-    private static string? GetLinkForDependencyItem(string repoUri, DependencyUpdateSummary dependencyUpdateSummary)
+    private static string? GetLinkForDependencyItem(string repoUri, string? fromCommitSha, string? toCommitSha)
     {
-        if (!string.IsNullOrEmpty(dependencyUpdateSummary.FromCommitSha) &&
-            !string.IsNullOrEmpty(dependencyUpdateSummary.ToCommitSha))
+        if (!string.IsNullOrEmpty(fromCommitSha) && !string.IsNullOrEmpty(toCommitSha))
         {
-            return GetChangesURI(repoUri, dependencyUpdateSummary.FromCommitSha, dependencyUpdateSummary.ToCommitSha);
+            return GetChangesURI(repoUri, fromCommitSha, toCommitSha);
         }
 
-        if (!string.IsNullOrEmpty(dependencyUpdateSummary.ToCommitSha))
+        if (!string.IsNullOrEmpty(toCommitSha))
         {
-            return GetCommitURI(repoUri, dependencyUpdateSummary.ToCommitSha);
+            return GetCommitURI(repoUri, toCommitSha);
         }
 
         return null;
