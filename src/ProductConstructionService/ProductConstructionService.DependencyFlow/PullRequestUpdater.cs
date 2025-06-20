@@ -786,13 +786,14 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var existingDependencies = (await darc.GetDependenciesAsync(targetRepository, prBranch ?? targetBranch)).ToList();
 
         // Filter out excluded assets from the build assets
-        IEnumerable<AssetData> assetData = build.Assets
+        List<AssetData> assetData = build.Assets
             .Where(a => !IsExcludedAsset(a.Name, excludedAssetsMatcher))
             .Select(a => new AssetData(false)
             {
                 Name = a.Name,
                 Version = a.Version
-            });
+            })
+            .ToList();
 
         // Retrieve the source of the assets
         List<DependencyUpdate> dependenciesToUpdate = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(

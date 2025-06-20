@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Immutable;
 using FluentAssertions;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -11,6 +12,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,11 +21,6 @@ using Moq;
 using NUnit.Framework;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
-using System.Collections.Immutable;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using System;
-using System.Linq;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
@@ -91,8 +88,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
     protected void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild, bool prExists)
     {
-        var assets = new List<IEnumerable<AssetData>>();
-        var dependencies = new List<IEnumerable<DependencyDetail>>();
+        var assets = new List<IReadOnlyCollection<AssetData>>();
+        var dependencies = new List<IReadOnlyCollection<DependencyDetail>>();
 
         UpdateResolver
             .Verify(r => r.GetRequiredNonCoherencyUpdates(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)));
@@ -119,8 +116,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
     protected void ThenGetRequiredUpdatesShouldHaveBeenCalledWithFilteredAssets(Build withBuild, bool prExists, Func<Asset, bool> assetFilter)
     {
-        var assets = new List<IEnumerable<AssetData>>();
-        var dependencies = new List<IEnumerable<DependencyDetail>>();
+        var assets = new List<IReadOnlyCollection<AssetData>>();
+        var dependencies = new List<IReadOnlyCollection<DependencyDetail>>();
 
         UpdateResolver
             .Verify(r => r.GetRequiredNonCoherencyUpdates(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)));
@@ -338,10 +335,10 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             .Setup(r => r.GetRequiredNonCoherencyUpdates(
                 SourceRepo,
                 NewCommit,
-                It.IsAny<IEnumerable<AssetData>>(),
-                It.IsAny<IEnumerable<DependencyDetail>>()))
+                It.IsAny<IReadOnlyCollection<AssetData>>(),
+                It.IsAny<IReadOnlyCollection<DependencyDetail>>()))
             .Returns(
-                (string sourceRepo, string sourceSha, IEnumerable<AssetData> assets, IEnumerable<DependencyDetail> dependencies) =>
+                (string sourceRepo, string sourceSha, IReadOnlyCollection<AssetData> assets, IReadOnlyCollection<DependencyDetail> dependencies) =>
                     // Just make from->to identical.
                     assets
                         .Select(d => new DependencyUpdate
@@ -367,14 +364,14 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     protected void WithNoRequiredCoherencyUpdates()
     {
         UpdateResolver
-            .Setup(r => r.GetRequiredCoherencyUpdatesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
+            .Setup(r => r.GetRequiredCoherencyUpdatesAsync(It.IsAny<IReadOnlyCollection<DependencyDetail>>()))
             .ReturnsAsync([]);
     }
 
     protected void WithFailsStrictCheckForCoherencyUpdates()
     {
         UpdateResolver
-            .Setup(r => r.GetRequiredCoherencyUpdatesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
+            .Setup(r => r.GetRequiredCoherencyUpdatesAsync(It.IsAny<IReadOnlyCollection<DependencyDetail>>()))
             .ReturnsAsync(
                 (IEnumerable<DependencyDetail> dependencies) =>
                 {
@@ -626,11 +623,11 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     "branch",
                     "repo",
                     isForwardFlow: true));
-                
+
         }
 
         if (flowerWillHaveConflict || prAlreadyHasConflict)
-        {         
+        {
             remote
                 .Setup(x => x.GetLatestCommitAsync(It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(latestCommitToReturn);
@@ -675,7 +672,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 .Returns(Task.CompletedTask);
         }
 
-         return Disposable.Create(remote.VerifyAll);
+        return Disposable.Create(remote.VerifyAll);
     }
 
     protected void AndShouldHavePullRequestCheckReminder()
@@ -779,7 +776,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     protected IPullRequestUpdater CreatePullRequestActor(IServiceProvider context)
     {
         var updaterFactory = context.GetRequiredService<IPullRequestUpdaterFactory>();
-        return updaterFactory.CreatePullRequestUpdater(GetPullRequestUpdaterId()); 
+        return updaterFactory.CreatePullRequestUpdater(GetPullRequestUpdaterId());
     }
 
     protected SubscriptionUpdateWorkItem CreateSubscriptionUpdate(Build forBuild, bool isCodeFlow = false)
