@@ -91,11 +91,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     private readonly IBasicBarClient _barClient;
     private readonly ILogger<PullRequestBuilder> _logger;
 
-    private record DependencyCategories(
-        IReadOnlyCollection<DependencyUpdateSummary> NewDependencies,
-        IReadOnlyCollection<DependencyUpdateSummary> RemovedDependencies,
-        IReadOnlyCollection<DependencyUpdateSummary> UpdatedDependencies
-    );
+
 
     public PullRequestBuilder(
         BuildAssetRegistryContext context,
@@ -378,25 +374,30 @@ internal class PullRequestBuilder : IPullRequestBuilder
             return string.Empty;
         }
 
-        DependencyCategories dependencyCategories = CreateDependencyCategories(dependencyUpdateSummaries);
-
         StringBuilder stringBuilder = new();
 
-        if (dependencyCategories.NewDependencies.Count > 0)
+        // Group all dependencies by FromCommitSha, FromVersion, ToCommitSha, and ToVersion
+        var dependencyGroups = dependencyUpdateSummaries
+            .GroupBy(dep => new
+            {
+                FromCommitSha = dep.FromCommitSha,
+                FromVersion = dep.FromVersion,
+                ToCommitSha = dep.ToCommitSha,
+                ToVersion = dep.ToVersion
+            })
+            .ToList();
+
+        // Separate groups by dependency type
+        var newDependencyGroups = dependencyGroups.Where(g => string.IsNullOrEmpty(g.Key.FromVersion)).ToList();
+        var removedDependencyGroups = dependencyGroups.Where(g => string.IsNullOrEmpty(g.Key.ToVersion)).ToList();
+        var updatedDependencyGroups = dependencyGroups.Where(g => !string.IsNullOrEmpty(g.Key.FromVersion) && !string.IsNullOrEmpty(g.Key.ToVersion)).ToList();
+
+        if (newDependencyGroups.Count > 0)
         {
             stringBuilder.AppendLine();
             stringBuilder.AppendLine("**New Dependencies**");
 
-            // Group dependencies by version and commit
-            var dependencyGroups = dependencyCategories.NewDependencies
-                .GroupBy(dep => new
-                {
-                    ToVersion = dep.ToVersion,
-                    ToCommitSha = dep.ToCommitSha
-                })
-                .ToList();
-
-            foreach (var group in dependencyGroups)
+            foreach (var group in newDependencyGroups)
             {
                 var representative = group.First();
                 string? diffLink = GetLinkForDependencyItem(repoUri, representative);
@@ -409,21 +410,12 @@ internal class PullRequestBuilder : IPullRequestBuilder
             }
         }
 
-        if (dependencyCategories.RemovedDependencies.Count > 0)
+        if (removedDependencyGroups.Count > 0)
         {
             stringBuilder.AppendLine();
             stringBuilder.AppendLine("**Removed Dependencies**");
 
-            // Group dependencies by version and commit
-            var dependencyGroups = dependencyCategories.RemovedDependencies
-                .GroupBy(dep => new
-                {
-                    FromVersion = dep.FromVersion,
-                    FromCommitSha = dep.FromCommitSha
-                })
-                .ToList();
-
-            foreach (var group in dependencyGroups)
+            foreach (var group in removedDependencyGroups)
             {
                 var representative = group.First();
                 
@@ -435,23 +427,12 @@ internal class PullRequestBuilder : IPullRequestBuilder
             }
         }
 
-        if (dependencyCategories.UpdatedDependencies.Count > 0)
+        if (updatedDependencyGroups.Count > 0)
         {
             stringBuilder.AppendLine();
             stringBuilder.AppendLine("**Updated Dependencies**");
 
-            // Group dependencies by version range and commit range
-            var dependencyGroups = dependencyCategories.UpdatedDependencies
-                .GroupBy(dep => new
-                {
-                    FromVersion = dep.FromVersion,
-                    ToVersion = dep.ToVersion,
-                    FromCommitSha = dep.FromCommitSha,
-                    ToCommitSha = dep.ToCommitSha
-                })
-                .ToList();
-
-            foreach (var group in dependencyGroups)
+            foreach (var group in updatedDependencyGroups)
             {
                 var representative = group.First();
                 string? diffLink = GetLinkForDependencyItem(repoUri, representative);
@@ -466,30 +447,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         return stringBuilder.ToString();
     }
 
-    private static DependencyCategories CreateDependencyCategories(List<DependencyUpdateSummary> dependencyUpdateSummaries)
-    {
-        List<DependencyUpdateSummary> newDependencies = [];
-        List<DependencyUpdateSummary> removedDependencies = [];
-        List<DependencyUpdateSummary> updatedDependencies = [];
 
-        foreach (DependencyUpdateSummary depUpdate in dependencyUpdateSummaries)
-        {
-            if (string.IsNullOrEmpty(depUpdate.FromVersion))
-            {
-                newDependencies.Add(depUpdate);
-            }
-            else if (string.IsNullOrEmpty(depUpdate.ToVersion))
-            {
-                removedDependencies.Add(depUpdate);
-            }
-            else
-            {
-                updatedDependencies.Add(depUpdate);
-            }
-        }
-
-        return new DependencyCategories(newDependencies, removedDependencies, updatedDependencies);
-    }
 
     private static string? GetLinkForDependencyItem(string repoUri, DependencyUpdateSummary dependencyUpdateSummary)
     {
