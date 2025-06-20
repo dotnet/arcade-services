@@ -92,7 +92,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
             targetBranch,
             cancellationToken);
 
-        var excludedAssetsMatcher = GetExcludedAssetsMatcher(excludedAssets);
+        var excludedAssetsMatcher = AssetFilterExtensions.GetAssetMatcher(excludedAssets);
 
         if (mergeSuccessful)
         {
@@ -207,7 +207,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
         Build build,
         string headBranch,
         string branchToMerge,
-        Matcher? excludedAssetsMatcher,
+        IAssetMatcher excludedAssetsMatcher,
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
@@ -310,7 +310,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
         ILocalGitRepo targetRepo,
         string targetBranch,
         Build build,
-        Matcher? excludedAssetsMatcher,
+        IAssetMatcher excludedAssetsMatcher,
         Codeflow lastFlow,
         Backflow currentFlow,
         CancellationToken cancellationToken)
@@ -346,7 +346,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
             currentVmrDependencies);
 
         List<AssetData> buildAssets = build.Assets
-            .Where(a => !IsExcludedAsset(a.Name, excludedAssetsMatcher))
+            .Where(a => !excludedAssetsMatcher.IsExcluded(a.Name))
             .Select(a => new AssetData(a.NonShipping)
             {
                 Name = a.Name,
@@ -361,7 +361,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
             .Concat(vmrChanges.Select(c => c.From?.Name ?? c.To.Name))
             .Concat(repoChanges.Select(c => c.From?.Name ?? c.To.Name))
             .Distinct()
-            .Where(dep => !IsExcludedAsset(dep, excludedAssetsMatcher))
+            .Where(dep => !excludedAssetsMatcher.IsExcluded(dep))
             .ToHashSet();
 
         var versionUpdates = new List<DependencyDetail>();
@@ -636,31 +636,10 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
         return dependencyUpdates;
     }
 
-    private static Matcher? GetExcludedAssetsMatcher(IReadOnlyCollection<string>? excludedAssets)
-    {
-        if (excludedAssets == null || excludedAssets.Count == 0)
-        {
-            return null;
-        }
-        var matcher = new Matcher();
-        matcher.AddIncludePatterns(excludedAssets);
-        return matcher;
-    }
-
-    private static bool IsExcludedAsset(string asset, Matcher? excludedAssetsMatcher)
-    {
-        if (excludedAssetsMatcher == null)
-        {
-            return false;
-        }
-
-        return excludedAssetsMatcher.Match(asset).HasMatches;
-    }
-
-    private static List<DependencyUpdate> ComputeChanges(Matcher? excludedAssetsMatcher, VersionDetails before, VersionDetails after)
+    private static List<DependencyUpdate> ComputeChanges(IAssetMatcher excludedAssetsMatcher, VersionDetails before, VersionDetails after)
     {
         var dependencyChanges = before.Dependencies
-            .Where(dep => !IsExcludedAsset(dep.Name, excludedAssetsMatcher))
+            .Where(dep => !excludedAssetsMatcher.IsExcluded(dep.Name))
             .Select(dep => new DependencyUpdate()
             {
                 From = dep,
@@ -668,7 +647,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
             .ToList();
 
         // Pair dependencies with the same name
-        foreach (var dep in after.Dependencies.Where(dep => !IsExcludedAsset(dep.Name, excludedAssetsMatcher)))
+        foreach (var dep in after.Dependencies.Where(dep => !excludedAssetsMatcher.IsExcluded(dep.Name)))
         {
             var existing = dependencyChanges.FirstOrDefault(d => d.From?.Name == dep.Name);
             if (existing != null)
