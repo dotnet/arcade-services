@@ -96,15 +96,13 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         CancellationToken cancellationToken = default)
     {
         var targetRepo = _localGitRepoFactory.Create(targetRepoPath);
-        (bool headBranchExisted, SourceMapping mapping) = await PrepareVmrAndRepo(
+        (bool headBranchExisted, SourceMapping mapping, LastFlows lastFlows) = await PrepareVmrAndRepo(
             mappingName,
             targetRepo,
             build,
             targetBranch,
             headBranch,
             cancellationToken);
-
-        LastFlows lastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
 
         return await FlowBackAsync(
             mapping,
@@ -191,7 +189,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             relativePaths: true,
             workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
             applicationPath: null,
-            includeAdditionalMappings: false,
             ignoreLineEndings: false,
             cancellationToken);
 
@@ -304,7 +301,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             relativePaths: true,
             workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
             applicationPath: null,
-            includeAdditionalMappings: false,
             ignoreLineEndings: false,
             cancellationToken);
 
@@ -379,7 +375,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             : null;
     }
 
-    private async Task<(bool, SourceMapping)> PrepareVmrAndRepo(
+    private async Task<(bool, SourceMapping, LastFlows)> PrepareVmrAndRepo(
         string mappingName,
         ILocalGitRepo targetRepo,
         Build build,
@@ -410,7 +406,9 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 headBranch,
                 ShouldResetVmr,
                 cancellationToken);
-            return (true, mapping);
+
+            LastFlows lastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
+            return (true, mapping, lastFlows);
         }
         catch (NotFoundException)
         {
@@ -431,10 +429,10 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 throw new TargetBranchNotFoundException($"Failed to find target branch {targetBranch} in {string.Join(", ", remotes)}", e);
             }
 
-            (Codeflow last, _, _) = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: false);
-            await targetRepo.CheckoutAsync(last.RepoSha);
+            LastFlows lastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
+            await targetRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
             await targetRepo.CreateBranchAsync(headBranch);
-            return (false, mapping);
+            return (false, mapping, lastFlows);
         }
     }
 

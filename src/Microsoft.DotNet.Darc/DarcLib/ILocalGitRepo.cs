@@ -194,7 +194,7 @@ public interface ILocalGitRepo
     ///     Returns a list of modified staged files.
     /// </summary>
     /// <returns>List of currently modified staged files</returns>
-    Task<string[]> GetStagedFiles();
+    Task<IReadOnlyCollection<string>> GetStagedFiles();
 
     /// <summary>
     ///     Stages files from the given path.
@@ -207,7 +207,7 @@ public interface ILocalGitRepo
     /// </summary>
     /// <param name="args">Where to add the new argument into</param>
     /// <param name="envVars">Where to add the new variables into</param>
-    public void AddGitAuthHeader(IList<string> args, IDictionary<string, string> envVars, string repoUri);
+    void AddGitAuthHeader(IList<string> args, IDictionary<string, string> envVars, string repoUri);
 
     /// <summary>
     /// Runs an arbitrary git command in the repo.
@@ -218,4 +218,9 @@ public interface ILocalGitRepo
     /// Compares 2 git commits and returns true if the first one is an ancestor of the second one.
     /// </summary>
     Task<bool> IsAncestorCommit(string ancestor, string descendant);
+
+    /// <summary>
+    ///     Resolves a conflict in a given file to ours/theirs.
+    /// </summary>
+    Task ResolveConflict(string filePath, bool ours);
 }

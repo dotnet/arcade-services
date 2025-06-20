@@ -156,7 +156,6 @@ public class VmrPatchHandler : IVmrPatchHandler
             relativePaths: false,
             repoPath,
             VmrInfo.SourcesDir / relativePath,
-            includeAdditionalMappings,
             ignoreLineEndings: false,
             cancellationToken));
 
@@ -276,17 +275,17 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         var result = await _processManager.ExecuteGit(targetDirectory, args, cancellationToken: CancellationToken.None);
 
+        if (removePatchAfter)
+        {
+            _fileSystem.DeleteFile(patch.Path);
+        }
+
         if (!result.Succeeded)
         {
             throw new PatchApplicationFailedException(patch, result, reverseApply);
         }
 
         _logger.LogDebug("{output}", result.ToString());
-
-        if (removePatchAfter)
-        {
-            _fileSystem.DeleteFile(patch.Path);
-        }
 
         await _localGitClient.ResetWorkingTree(targetDirectory, patch.ApplicationPath);
     }
@@ -332,7 +331,6 @@ public class VmrPatchHandler : IVmrPatchHandler
         bool relativePaths,
         NativePath workingDir,
         UnixPath? applicationPath,
-        bool includeAdditionalMappings,
         bool ignoreLineEndings = false,
         CancellationToken cancellationToken = default)
     {
@@ -385,7 +383,6 @@ public class VmrPatchHandler : IVmrPatchHandler
                 true,
                 workingDir / dirName,
                 applicationPath == null ? new UnixPath(dirName) : applicationPath / dirName,
-                includeAdditionalMappings,
                 ignoreLineEndings: false,
                 cancellationToken));
         }
@@ -590,7 +587,6 @@ public class VmrPatchHandler : IVmrPatchHandler
                 relativePaths: true, // Relative paths so that we can apply the patch on VMR's root dir
                 contentDir,
                 destination != null ? new UnixPath(destination) : null,
-                includeAdditionalMappings: true,
                 ignoreLineEndings: false,
                 cancellationToken));
         }

@@ -87,7 +87,7 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
     public async Task PullAsync(CancellationToken cancellationToken = default)
         => await _localGitClient.PullAsync(Path, cancellationToken);
 
-    public async Task<string[]> GetStagedFiles()
+    public async Task<IReadOnlyCollection<string>> GetStagedFiles()
         => await _localGitClient.GetStagedFiles(Path);
 
     public async Task<string> GetConfigValue(string setting)
@@ -98,6 +98,9 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
 
     public async Task ResetWorkingTree(UnixPath? relativePath = null)
         => await _localGitClient.ResetWorkingTree(new NativePath(Path), relativePath);
+
+    public async Task ResolveConflict(string filePath, bool ours)
+        => await _localGitClient.ResolveConflict(Path, filePath, ours);
 
     public async Task<ProcessExecutionResult> RunGitCommandAsync(string[] args, CancellationToken cancellationToken = default)
         => await _localGitClient.RunGitCommandAsync(Path, args, cancellationToken);

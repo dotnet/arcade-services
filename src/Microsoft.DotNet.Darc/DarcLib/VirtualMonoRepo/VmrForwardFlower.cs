@@ -11,6 +11,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
+using static Microsoft.VisualStudio.Services.Graph.GraphResourceIds.Users;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -58,6 +59,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly ILocalGitClient _localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly ICodeflowChangeAnalyzer _codeflowChangeAnalyzer;
+    private readonly IVmrPatchHandler _patchHandler;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
@@ -72,6 +74,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             ILocalGitRepoFactory localGitRepoFactory,
             IVersionDetailsParser versionDetailsParser,
             ICodeflowChangeAnalyzer codeflowChangeAnalyzer,
+            IVmrPatchHandler patchHandler,
             IProcessManager processManager,
             IFileSystem fileSystem,
             IBasicBarClient barClient,
@@ -86,6 +89,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         _localGitClient = localGitClient;
         _localGitRepoFactory = localGitRepoFactory;
         _codeflowChangeAnalyzer = codeflowChangeAnalyzer;
+        _patchHandler = patchHandler;
         _processManager = processManager;
         _fileSystem = fileSystem;
         _logger = logger;
@@ -104,14 +108,13 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         CancellationToken cancellationToken = default)
     {
         ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
-        var headBranchExisted = await PrepareHeadBranch(targetVmrUri, mappingName, sourceRepo, targetBranch, headBranch, cancellationToken);
+        (bool headBranchExisted, LastFlows lastFlows) = await PrepareHeadBranch(targetVmrUri, mappingName, sourceRepo, targetBranch, headBranch, cancellationToken);
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
         ISourceComponent repoInfo = _sourceManifest.GetRepoVersion(mapping.Name);
         await sourceRepo.FetchAllAsync([mapping.DefaultRemote, repoInfo.RemoteUri], cancellationToken);
         await sourceRepo.CheckoutAsync(build.Commit);
 
-        LastFlows lastFlows = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
         ForwardFlow currentFlow = new(build.Commit, lastFlows.LastFlow.VmrSha);
 
         bool hasChanges = await FlowCodeAsync(
@@ -136,10 +139,11 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             conflictedFiles = await TryMergingBranch(
                 mapping.Name,
                 vmr,
-                build,
-                excludedAssets,
+                sourceRepo,
                 headBranch,
                 targetBranch,
+                currentFlow,
+                lastFlows.RecentFlow,
                 cancellationToken);
         }
 
@@ -162,7 +166,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     /// and creates the head branch at that point.
     /// </summary>
     /// <returns>True if the head branch already existed</returns>
-    protected async Task<bool> PrepareHeadBranch(
+    private async Task<(bool, LastFlows)> PrepareHeadBranch(
         string vmrUri,
         string mappingName,
         ILocalGitRepo sourceRepo,
@@ -171,6 +175,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         CancellationToken cancellationToken)
     {
         _vmrInfo.VmrUri = vmrUri;
+
         try
         {
             await _vmrCloneManager.PrepareVmrAsync(
@@ -179,7 +184,10 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 headBranch,
                 ShouldResetVmr,
                 cancellationToken);
-            return true;
+
+            SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
+            LastFlows lastFlows = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
+            return (true, lastFlows);
         }
         catch (NotFoundException)
         {
@@ -201,10 +209,10 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             }
 
             SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
-            (Codeflow last, _, _) = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
-            await vmr.CheckoutAsync(last.VmrSha);
+            LastFlows lastFlows = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
+            await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
             await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
-            return false;
+            return (false, lastFlows);
         }
     }
 
@@ -309,8 +317,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             build.AzureDevOpsBuildNumber,
             build.Id));
 
-        // TODO https://github.com/dotnet/arcade-services/issues/4178: Detect if no changes.
-        // Technically, if we only changed metadata files, there are no updates still
         return await _vmrUpdater.UpdateRepository(
             mapping,
             build,
@@ -370,22 +376,23 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     /// <returns>Conflicted files (if any)</returns>
     private async Task<IReadOnlyCollection<UnixPath>> TryMergingBranch(
         string mappingName,
-        ILocalGitRepo repo,
-        Build build,
-        IReadOnlyCollection<string>? excludedAssets,
+        ILocalGitRepo vmr,
+        ILocalGitRepo sourceRepo,
         string targetBranch,
         string branchToMerge,
+        ForwardFlow currentFlow,
+        Codeflow? recentFlow,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Checking if target branch {targetBranch} has conflicts with {headBranch}", branchToMerge, targetBranch);
 
-        await repo.CheckoutAsync(targetBranch);
-        var result = await repo.RunGitCommandAsync(["merge", "--no-commit", "--no-ff", branchToMerge], cancellationToken);
+        await vmr.CheckoutAsync(targetBranch);
+        var result = await vmr.RunGitCommandAsync(["merge", "--no-commit", "--no-ff", branchToMerge], cancellationToken);
         if (result.Succeeded)
         {
             try
             {
-                await repo.CommitAsync(
+                await vmr.CommitAsync(
                     $"Merge {branchToMerge} into {targetBranch}",
                     allowEmpty: false,
                     cancellationToken: CancellationToken.None);
@@ -393,7 +400,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 _logger.LogInformation("Successfully merged the branch {targetBranch} into {headBranch} in {repoPath}",
                     branchToMerge,
                     targetBranch,
-                    repo.Path);
+                    vmr.Path);
             }
             catch (Exception e) when (e.Message.Contains("nothing to commit"))
             {
@@ -407,54 +414,27 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         }
         else
         {
-            result = await repo.RunGitCommandAsync(["diff", "--name-only", "--diff-filter=U", "--relative"], cancellationToken);
+            result = await vmr.RunGitCommandAsync(["diff", "--name-only", "--diff-filter=U", "--relative"], cancellationToken);
             if (!result.Succeeded)
             {
-                var abort = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
+                var abort = await vmr.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
                 abort.ThrowIfFailed("Failed to abort a merge when resolving version file conflicts");
                 result.ThrowIfFailed("Failed to resolve version file conflicts - failed to get a list of conflicted files");
                 throw new InvalidOperationException(); // the line above will throw, including more details
             }
 
-            var conflictedFiles = result.StandardOutput
-                .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+            var conflictedFiles = result
+                .GetOutput()
                 .Select(line => new UnixPath(line.Trim()))
                 .ToList();
 
-            UnixPath[] allowedConflicts = [
-                // source-manifest.json
-                VmrInfo.DefaultRelativeSourceManifestPath,
-
-                // git-info for the repo
-                new UnixPath($"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props"),
-
-                // TODO https://github.com/dotnet/arcade-services/issues/4792: Do not ignore conflicts in version files
-                ..DependencyFileManager.DependencyFiles.Select(
-                    f => new UnixPath(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / f)),
-            ];
-
-            var unresolvableConflicts = conflictedFiles
-                .Except(allowedConflicts)
-                .ToList();
-
-            if (unresolvableConflicts.Count > 0)
-            {
-                _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} due to unresolvable conflicts: {conflicts}",
-                    branchToMerge,
-                    targetBranch,
-                    string.Join(", ", unresolvableConflicts));
-
-                result = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
-                return conflictedFiles;
-            }
-
             if (!await TryResolveConflicts(
                 mappingName,
-                repo,
-                build,
-                excludedAssets,
-                targetBranch,
+                vmr,
+                sourceRepo,
                 conflictedFiles,
+                currentFlow,
+                recentFlow,
                 cancellationToken))
             {
                 return conflictedFiles;
@@ -466,7 +446,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
             try
             {
-                await repo.CommitAsync(
+                await vmr.CommitAsync(
                     $"Merge branch {branchToMerge} into {targetBranch}",
                     allowEmpty: true,
                     cancellationToken: CancellationToken.None);
@@ -480,23 +460,45 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         }
     }
 
-    protected virtual async Task<bool> TryResolveConflicts(
+    private async Task<bool> TryResolveConflicts(
         string mappingName,
-        ILocalGitRepo repo,
-        Build build,
-        IReadOnlyCollection<string>? excludedAssets,
-        string targetBranch,
+        ILocalGitRepo vmr,
+        ILocalGitRepo sourceRepo,
         IEnumerable<UnixPath> conflictedFiles,
+        ForwardFlow currentFlow,
+        Codeflow? recentFlow,
         CancellationToken cancellationToken)
     {
+        UnixPath[] allowedConflicts =
+        [
+            // git-info for the repo
+            new UnixPath($"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props"),
+
+            // TODO https://github.com/dotnet/arcade-services/issues/4792: Do not ignore conflicts in version files
+            ..DependencyFileManager.DependencyFiles
+                .Select(f => new UnixPath(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / f)),
+        ];
+
         foreach (var filePath in conflictedFiles)
         {
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                if (await TryResolvingConflict(mappingName, repo, filePath, cancellationToken))
+                if (await TryResolvingConflict(
+                    mappingName,
+                    vmr,
+                    sourceRepo,
+                    filePath,
+                    allowedConflicts,
+                    currentFlow,
+                    recentFlow,
+                    cancellationToken))
                 {
                     continue;
+                }
+                else
+                {
+                    _logger.LogInformation("Conflict in {filePath} cannot be resolved automatically", filePath);
                 }
             }
             catch (Exception e)
@@ -504,7 +506,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 _logger.LogError(e, "Failed to resolve conflicts in {filePath}", filePath);
             }
 
-            await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
+            await vmr.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
             return false;
         }
 
@@ -513,22 +515,99 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
     private async Task<bool> TryResolvingConflict(
         string mappingName,
-        ILocalGitRepo repo,
+        ILocalGitRepo vmr,
+        ILocalGitRepo sourceRepo,
         string filePath,
+        UnixPath[] allowedConflicts,
+        ForwardFlow currentFlow,
+        Codeflow? recentFlow,
         CancellationToken cancellationToken)
     {
         // Known conflict in source-manifest.json
         if (string.Equals(filePath, VmrInfo.DefaultRelativeSourceManifestPath, StringComparison.OrdinalIgnoreCase))
         {
-            await TryResolvingSourceManifestConflict(repo, mappingName!, cancellationToken);
+            await TryResolvingSourceManifestConflict(vmr, mappingName!, cancellationToken);
             return true;
         }
 
-        // Git-info file conflict
-        _logger.LogInformation("Auto-resolving conflict in {file} using PR version", filePath);
-        await repo.RunGitCommandAsync(["checkout", "--ours", filePath], cancellationToken);
-        await repo.StageAsync([filePath], cancellationToken);
-        return true;
+        // Known conflicts are resolved to "ours" version (the PR version)
+        if (allowedConflicts.Any(allowed => filePath.Equals(allowed, StringComparison.OrdinalIgnoreCase)))
+        {
+            _logger.LogInformation("Auto-resolving conflict in {file} using PR version", filePath);
+            await vmr.ResolveConflict(filePath, ours: true);
+            return true;
+        }
+
+        UnixPath vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(mappingName);
+        if (!filePath.StartsWith(vmrSourcesPath + '/'))
+        {
+            _logger.LogInformation("Conflict in {file} is not in the source repo, skipping auto-resolution", filePath);
+            return false;
+        }
+
+        // Unknown conflict, but can be conflicting with a out-of-order recent flow
+        // Check DetectRecentFlow documentation for more details
+        if (recentFlow != null)
+        {
+            // TODO: If the file is already matching to the repo version, it's already resolved
+
+
+            // If a recent flow is detected, we can try to figure out if the changes that happened to it in the repo
+            // apply on top of the VMR file.
+            _logger.LogInformation("Trying to auto-resolve a conflict in {filePath} based on a recent flow...", filePath);
+
+            await vmr.ResolveConflict(filePath, ours: false);
+
+            var patchName = _vmrInfo.TmpPath / $"{mappingName}-{Guid.NewGuid()}.patch";
+            List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
+                patchName,
+                recentFlow.RepoSha,
+                currentFlow.RepoSha,
+                new UnixPath(filePath.Substring(vmrSourcesPath.Length + 1)),
+                filters: null,
+                relativePaths: true,
+                workingDir: sourceRepo.Path,
+                applicationPath: vmrSourcesPath,
+                ignoreLineEndings: true,
+                cancellationToken);
+
+            if (patches.Count > 1)
+            {
+                foreach (var patch in patches)
+                {
+                    try
+                    {
+                        _fileSystem.DeleteFile(patch.Path);
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                throw new InvalidOperationException("Cannot auto-resolve conflicts for files over 1GB in size");
+            }
+
+            try
+            {
+                await _patchHandler.ApplyPatch(
+                    patches[0],
+                    vmr.Path,
+                    removePatchAfter: true,
+                    reverseApply: false,
+                    cancellationToken);
+                _logger.LogInformation("Successfully auto-resolved a conflict in {filePath} based on a recent flow", filePath);
+                return true;
+            }
+            catch (PatchApplicationFailedException)
+            {
+                // If the patch failed, we cannot resolve the conflict automatically
+                // We will just leave it as is and let the user resolve it manually
+                _logger.LogInformation("Failed to auto-resolve conflicts in {filePath} - conflicting changes detected", filePath);
+                return false;
+            }
+        }
+
+        return false;
     }
 
     // TODO https://github.com/dotnet/arcade-services/issues/3378: This might not work for batched subscriptions

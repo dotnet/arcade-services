@@ -568,4 +568,13 @@ public class LocalGitClient : ILocalGitClient
 
         return result.ExitCode == 0;
     }
+
+    public async Task ResolveConflict(string repoPath, string file, bool ours)
+    {
+        var result = await _processManager.ExecuteGit(repoPath, "checkout", ours ? "--ours" : "--theirs", file);
+        result.ThrowIfFailed($"Failed to resolve conflict in {file} in {repoPath}");
+
+        result = await _processManager.ExecuteGit(repoPath, "add", file);
+        result.ThrowIfFailed($"Failed to stage resolved conflict in {file} in {repoPath}");
+    }
 }

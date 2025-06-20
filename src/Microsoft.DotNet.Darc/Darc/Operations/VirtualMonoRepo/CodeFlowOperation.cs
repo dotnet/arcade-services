@@ -229,7 +229,6 @@ internal abstract class CodeFlowOperation(
             relativePaths: false,
             workingDir: targetRepo.Path,
             applicationPath: null,
-            includeAdditionalMappings: false,
             ignoreLineEndings: false,
             cancellationToken);
 
