@@ -184,13 +184,13 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Branch**: main
 
             **Updated Dependencies**
-            - **Foo.Bar**: [from 1.0.0 to 2.0.0][1]
-            - **Foo.Biz**: [from 1.0.0 to 2.0.0][1]
-            - **Biz.Boz**: [from 1.0.0 to 2.0.0]({build.GitHubRepository}/compare/uvw789...xyz890)
+            - From [1.0.0 to 2.0.0]({build.GitHubRepository}/compare/abc123...def456)
+              - Foo.Bar
+              - Foo.Biz
+            - From [1.0.0 to 2.0.0]({build.GitHubRepository}/compare/uvw789...xyz890)
+              - Biz.Boz
 
             [marker]: <> (End:{subscriptionGuid})
-            
-            [1]: {build.GitHubRepository}/compare/abc123...def456
             [marker]: <> (Start:Footer:CodeFlow PR)
             
             ## Associated changes in source repos
@@ -266,16 +266,14 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Branch**: main
 
             **Updated Dependencies**
-            - **Foo.Bar**: [from 1.0.0 to 3.0.0][2]
-            - **Foo.Biz**: [from 1.0.0 to 3.0.0][2]
-            - **Biz.Boz**: [from 1.0.0 to 3.0.0]({build.GitHubRepository}/compare/uvw789...def8889992)
+            - From [1.0.0 to 3.0.0]({build.GitHubRepository}/compare/abc123...{commitSha.Substring(0, PullRequestBuilder.GitHubComparisonShaLength)})
+              - Foo.Bar
+              - Foo.Biz
+            - From [1.0.0 to 3.0.0]({build.GitHubRepository}/compare/uvw789...def8889992)
+              - Biz.Boz
 
             [marker]: <> (End:{subscriptionGuid})
 
-
-            [1]: {build.GitHubRepository}/compare/abc123...def456
-
-            [2]: {build.GitHubRepository}/compare/abc123...{commitSha.Substring(0, PullRequestBuilder.GitHubComparisonShaLength)}
             [marker]: <> (Start:Footer:CodeFlow PR)
 
             ## Associated changes in source repos
@@ -408,15 +406,154 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             """
 
             **New Dependencies**
-            - **Foo.Bar**: [2.0.0](https://github.com/Foo/commit/def456)
+            - Added [2.0.0](https://github.com/Foo/commit/def456)
+              - Foo.Bar
 
             **Removed Dependencies**
-            - **Foo.Biz**: 1.0.0
+            - Removed 1.0.0
+              - Foo.Biz
 
             **Updated Dependencies**
-            - **Biz.Boz**: [from 1.0.0 to 2.0.0](https://github.com/Foo/compare/uvw789...xyz890)
+            - From [1.0.0 to 2.0.0](https://github.com/Foo/compare/uvw789...xyz890)
+              - Biz.Boz
 
             """);
+    }
+
+    [Test]
+    public void ShouldGroupDependenciesWithSameVersionRange()
+    {
+        DependencyUpdateSummary groupedDependency1 = new()
+        {
+            DependencyName = "Foo.Bar",
+            FromVersion = "1.0.0",
+            ToVersion = "2.0.0",
+            FromCommitSha = "abc123",
+            ToCommitSha = "def456"
+        };
+
+        DependencyUpdateSummary groupedDependency2 = new()
+        {
+            DependencyName = "Foo.Biz",
+            FromVersion = "1.0.0",
+            ToVersion = "2.0.0",
+            FromCommitSha = "abc123",
+            ToCommitSha = "def456"
+        };
+
+        DependencyUpdateSummary separateDependency = new()
+        {
+            DependencyName = "Biz.Boz",
+            FromVersion = "1.0.0",
+            ToVersion = "2.0.0",
+            FromCommitSha = "uvw789",
+            ToCommitSha = "xyz890"
+        };
+
+        string dependencyBlock = PullRequestBuilder.CreateDependencyUpdateBlock([groupedDependency1, groupedDependency2, separateDependency], "https://github.com/Foo");
+
+        dependencyBlock.Should().Be(
+            """
+
+            **Updated Dependencies**
+            - From [1.0.0 to 2.0.0](https://github.com/Foo/compare/abc123...def456)
+              - Foo.Bar
+              - Foo.Biz
+            - From [1.0.0 to 2.0.0](https://github.com/Foo/compare/uvw789...xyz890)
+              - Biz.Boz
+
+            """);
+    }
+
+    [Test]
+    public void ShouldOrderDependenciesAlphabeticallyWithinGroups()
+    {
+        // Create dependencies in non-alphabetical order to verify sorting
+        DependencyUpdateSummary dependencyZ = new()
+        {
+            DependencyName = "Zebra.Package",
+            FromVersion = "1.0.0",
+            ToVersion = "2.0.0",
+            FromCommitSha = "abc123",
+            ToCommitSha = "def456"
+        };
+
+        DependencyUpdateSummary dependencyA = new()
+        {
+            DependencyName = "Alpha.Package",
+            FromVersion = "1.0.0",
+            ToVersion = "2.0.0",
+            FromCommitSha = "abc123",
+            ToCommitSha = "def456"
+        };
+
+        DependencyUpdateSummary dependencyM = new()
+        {
+            DependencyName = "Middle.Package",
+            FromVersion = "1.0.0",
+            ToVersion = "2.0.0",
+            FromCommitSha = "abc123",
+            ToCommitSha = "def456"
+        };
+
+        // Pass dependencies in Z, A, M order to verify alphabetical sorting
+        string dependencyBlock = PullRequestBuilder.CreateDependencyUpdateBlock([dependencyZ, dependencyA, dependencyM], "https://github.com/Foo");
+
+        dependencyBlock.Should().Be(
+            """
+
+            **Updated Dependencies**
+            - From [1.0.0 to 2.0.0](https://github.com/Foo/compare/abc123...def456)
+              - Alpha.Package
+              - Middle.Package
+              - Zebra.Package
+
+            """);
+    }
+
+    [Test]
+    public async Task ShouldGroupDependenciesInDependencyFlowPRs()
+    {
+        var build1 = GivenANewBuildId(101, "abc1234");
+        SubscriptionUpdateWorkItem update1 = GivenSubscriptionUpdate(false, build1.Id, "11111111-1111-1111-1111-111111111111");
+        
+        // Create dependencies that should be grouped (same version range and commit range)
+        List<DependencyUpdate> deps1 = [
+            new DependencyUpdate
+            {
+                From = new DependencyDetail { Name = "Microsoft.TemplateEngine.Abstractions", Version = "10.0.100-preview.6.25317.107", Commit = "abc123" },
+                To = new DependencyDetail { Name = "Microsoft.TemplateEngine.Abstractions", Version = "10.0.100-preview.6.25318.104", RepoUri = "https://amazing_uri.com", Commit = "def456" }
+            },
+            new DependencyUpdate
+            {
+                From = new DependencyDetail { Name = "Microsoft.TemplateEngine.Edge", Version = "10.0.100-preview.6.25317.107", Commit = "abc123" },
+                To = new DependencyDetail { Name = "Microsoft.TemplateEngine.Edge", Version = "10.0.100-preview.6.25318.104", RepoUri = "https://amazing_uri.com", Commit = "def456" }
+            },
+            new DependencyUpdate
+            {
+                From = new DependencyDetail { Name = "Microsoft.TemplateEngine.Utils", Version = "10.0.100-preview.6.25317.107", Commit = "abc123" },
+                To = new DependencyDetail { Name = "Microsoft.TemplateEngine.Utils", Version = "10.0.100-preview.6.25318.104", RepoUri = "https://amazing_uri.com", Commit = "def456" }
+            }
+        ];
+
+        foreach (var dependency in deps1.SelectMany(d => new[] { d.From, d.To }))
+        {
+            _barClient
+                .Setup(x => x.GetAssetsAsync(dependency.Name, dependency.Version, null, null))
+                .ReturnsAsync([new Asset(1, build1.Id, false, dependency.Name, dependency.Version, [])]);
+        }
+
+        var description = await GeneratePullRequestDescription([(update1, deps1)]);
+        
+        // The grouped dependencies should appear like:
+        // - From [10.0.100-preview.6.25317.107 to 10.0.100-preview.6.25318.104][1]
+        //   - Microsoft.TemplateEngine.Abstractions
+        //   - Microsoft.TemplateEngine.Edge  
+        //   - Microsoft.TemplateEngine.Utils
+        description.Should().Contain("From [10.0.100-preview.6.25317.107 to 10.0.100-preview.6.25318.104][1]");
+        description.Should().Contain("    - Microsoft.TemplateEngine.Abstractions");
+        description.Should().Contain("    - Microsoft.TemplateEngine.Edge");
+        description.Should().Contain("    - Microsoft.TemplateEngine.Utils");
     }
 
     private const string RegexTestString1 =
@@ -586,18 +723,161 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     private static string BuildCorrectPRDescriptionWhenNonCoherencyUpdate(List<DependencyUpdate> deps, int startingId)
     {
         var builder = new StringBuilder();
+        
+        // Group dependencies by version range and commit range
+        var dependencyGroups = deps
+            .GroupBy(dep => new
+            {
+                FromVersion = dep.From.Version,
+                ToVersion = dep.To.Version,
+                FromCommit = dep.From.Commit,
+                ToCommit = dep.To.Commit
+            })
+            .ToList();
+
         List<string> urls = [];
-        for (var i = 0; i < deps.Count; i++)
+        int currentId = startingId;
+
+        foreach (var group in dependencyGroups)
         {
-            urls.Add(PullRequestBuilder.GetChangesURI(deps[i].To.RepoUri, deps[i].From.Commit, deps[i].To.Commit));
-            builder.AppendLine($"  - **{deps[i].To.Name}**: [from {deps[i].From.Version} to {deps[i].To.Version}][{startingId + i}]");
+            var representative = group.First();
+            urls.Add(PullRequestBuilder.GetChangesURI(representative.To.RepoUri, representative.From.Commit, representative.To.Commit));
+            
+            builder.AppendLine($"  - From [{representative.From.Version} to {representative.To.Version}][{currentId}]");
+            foreach (var dep in group)
+            {
+                builder.AppendLine($"    - {dep.To.Name}");
+            }
+            currentId++;
         }
+        
         builder.AppendLine();
         for (var i = 0; i < urls.Count; i++)
         {
             builder.AppendLine($"[{i + startingId}]: {urls[i]}");
         }
         return builder.ToString();
+    }
+
+    [Test]
+    public void ShouldGroupAllTypesOfDependencyChanges()
+    {
+        // New Dependencies - multiple packages with same version
+        DependencyUpdateSummary newDep1 = new()
+        {
+            DependencyName = "New.Package.Alpha",
+            FromVersion = null,
+            ToVersion = "3.0.0",
+            FromCommitSha = null,
+            ToCommitSha = "new123"
+        };
+
+        DependencyUpdateSummary newDep2 = new()
+        {
+            DependencyName = "New.Package.Beta",
+            FromVersion = null,
+            ToVersion = "3.0.0",
+            FromCommitSha = null,
+            ToCommitSha = "new123"
+        };
+
+        DependencyUpdateSummary newDep3 = new()
+        {
+            DependencyName = "New.Package.Gamma",
+            FromVersion = null,
+            ToVersion = "3.5.0",
+            FromCommitSha = null,
+            ToCommitSha = "new456"
+        };
+
+        // Removed Dependencies - multiple packages with same version
+        DependencyUpdateSummary removedDep1 = new()
+        {
+            DependencyName = "Removed.Package.Zeta",
+            FromVersion = "2.0.0",
+            ToVersion = null,
+            FromCommitSha = "old123",
+            ToCommitSha = null
+        };
+
+        DependencyUpdateSummary removedDep2 = new()
+        {
+            DependencyName = "Removed.Package.Delta",
+            FromVersion = "2.0.0",
+            ToVersion = null,
+            FromCommitSha = "old123",
+            ToCommitSha = null
+        };
+
+        DependencyUpdateSummary removedDep3 = new()
+        {
+            DependencyName = "Removed.Package.Epsilon",
+            FromVersion = "1.5.0",
+            ToVersion = null,
+            FromCommitSha = "old456",
+            ToCommitSha = null
+        };
+
+        // Updated Dependencies - multiple packages with same version ranges
+        DependencyUpdateSummary updatedDep1 = new()
+        {
+            DependencyName = "Updated.Package.Charlie",
+            FromVersion = "1.0.0",
+            ToVersion = "2.0.0",
+            FromCommitSha = "update123",
+            ToCommitSha = "update456"
+        };
+
+        DependencyUpdateSummary updatedDep2 = new()
+        {
+            DependencyName = "Updated.Package.Bravo",
+            FromVersion = "1.0.0",
+            ToVersion = "2.0.0",
+            FromCommitSha = "update123",
+            ToCommitSha = "update456"
+        };
+
+        DependencyUpdateSummary updatedDep3 = new()
+        {
+            DependencyName = "Updated.Package.Alpha",
+            FromVersion = "1.5.0",
+            ToVersion = "2.5.0",
+            FromCommitSha = "update789",
+            ToCommitSha = "update012"
+        };
+
+        // Pass dependencies in non-alphabetical order to verify sorting within groups
+        string dependencyBlock = PullRequestBuilder.CreateDependencyUpdateBlock([
+            newDep2, newDep1, newDep3,  // new deps out of order
+            removedDep1, removedDep3, removedDep2,  // removed deps out of order
+            updatedDep2, updatedDep3, updatedDep1   // updated deps out of order
+        ], "https://github.com/Test");
+
+        dependencyBlock.Should().Be(
+            """
+
+            **New Dependencies**
+            - Added [3.0.0](https://github.com/Test/commit/new123)
+              - New.Package.Alpha
+              - New.Package.Beta
+            - Added [3.5.0](https://github.com/Test/commit/new456)
+              - New.Package.Gamma
+
+            **Removed Dependencies**
+            - Removed 2.0.0
+              - Removed.Package.Delta
+              - Removed.Package.Zeta
+            - Removed 1.5.0
+              - Removed.Package.Epsilon
+
+            **Updated Dependencies**
+            - From [1.0.0 to 2.0.0](https://github.com/Test/compare/update123...update456)
+              - Updated.Package.Bravo
+              - Updated.Package.Charlie
+            - From [1.5.0 to 2.5.0](https://github.com/Test/compare/update789...update012)
+              - Updated.Package.Alpha
+
+            """);
     }
 
     private async Task<string> GeneratePullRequestDescription(
