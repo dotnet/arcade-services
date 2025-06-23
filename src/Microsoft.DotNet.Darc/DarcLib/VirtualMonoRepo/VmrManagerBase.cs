@@ -289,7 +289,6 @@ public abstract class VmrManagerBase
                     mapping,
                     dependency.RepoUri,
                     dependency.Commit,
-                    dependency.Version,
                     repo.Mapping,
                     build?.AzureDevOpsBuildNumber,
                     build?.Id);

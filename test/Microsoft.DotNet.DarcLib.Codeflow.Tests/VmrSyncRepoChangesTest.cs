@@ -87,7 +87,6 @@ internal class VmrSyncRepoChangesTest : VmrTestsBase
         await GitOperations.CheckAllIsCommitted(VmrPath);
         var sourceManifest = SourceManifest.FromFile(VmrPath / VmrInfo.DefaultRelativeSourceManifestPath);
 
-        // Package version is no longer tracked, but we can verify the SHA is correct
         sourceManifest.GetVersion(Constants.DependencyRepoName)!.Sha.Should().NotBeNull();
     }
 

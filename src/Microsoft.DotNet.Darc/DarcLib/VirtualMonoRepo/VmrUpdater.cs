@@ -135,7 +135,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             mapping,
             mapping.DefaultRemote,
             targetRevision ?? mapping.DefaultRef,
-            TargetVersion: build?.Assets.FirstOrDefault()?.Version,
             Parent: null,
             officialBuildId,
             barId);
@@ -369,7 +368,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 TargetRevision = GetCurrentVersion(update.Mapping),
 
                 // We also store the original SHA (into the version!) so that later we use it in the commit message
-                TargetVersion = currentSha,
+                OriginRevision = currentSha,
             });
         }
 
@@ -378,16 +377,16 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         foreach (var update in updatedDependencies)
         {
-            if (update.TargetRevision == update.TargetVersion)
+            if (update.TargetRevision == update.OriginRevision)
             {
                 continue;
             }
 
-            var fromShort = Commit.GetShortSha(update.TargetVersion);
+            var fromShort = Commit.GetShortSha(update.OriginRevision);
             var toShort = Commit.GetShortSha(update.TargetRevision);
             summaryMessage
                 .AppendLine($"  - {update.Mapping.Name} / {fromShort}{Constants.Arrow}{toShort}")
-                .AppendLine($"    {update.RemoteUri}/compare/{update.TargetVersion}..{update.TargetRevision}");
+                .AppendLine($"    {update.RemoteUri}/compare/{update.OriginRevision}..{update.TargetRevision}");
         }
 
         await ApplyVmrPatches(workBranch, vmrPatchesToReapply, cancellationToken);

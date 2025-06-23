@@ -179,7 +179,6 @@ internal abstract class VmrTestsBase
         await vmrInitializer.InitializeRepository(
             mappingName: mapping,
             targetRevision: commit,
-            targetVersion: null,
             initializeDependencies: true,
             sourceMappingsPath: sourceMappingsPath,
             new CodeFlowParameters(
