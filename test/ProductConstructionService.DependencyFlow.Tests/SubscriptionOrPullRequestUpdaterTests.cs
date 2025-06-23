@@ -5,7 +5,6 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Moq;
 using NUnit.Framework;
@@ -82,6 +81,9 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
     }
 
     internal void GivenASubscription(SubscriptionPolicy policy)
+        => GivenASubscription(policy, []);
+
+    internal void GivenASubscription(SubscriptionPolicy policy, params string[] excludedAssetPatterns)
     {
         Subscription = new Subscription
         {
@@ -90,7 +92,8 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
             TargetRepository = TargetRepo,
             TargetBranch = TargetBranch,
             PolicyObject = policy,
-            Id = Guid.NewGuid()
+            Id = Guid.NewGuid(),
+            ExcludedAssets = [..excludedAssetPatterns.Select(pattern => new AssetFilter { Filter = pattern })]
         };
         ContextUpdates.Add(context => context.Subscriptions.Add(Subscription));
     }

@@ -257,12 +257,13 @@ internal class UpdateDependenciesOperation : Operation
         List<DependencyDetail> candidateDependenciesForUpdate,
         List<DependencyDetail> dependenciesToUpdate)
     {
-        IEnumerable<AssetData> assetData = build.Assets.Select(
-            a => new AssetData(a.NonShipping)
+        List<AssetData> assetData = build.Assets
+            .Select(a => new AssetData(a.NonShipping)
             {
                 Name = a.Name,
                 Version = a.Version
-            });
+            })
+            .ToList();
 
         // Now determine what needs to be updated.
         List<DependencyUpdate> updates = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(

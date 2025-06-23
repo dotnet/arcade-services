@@ -92,7 +92,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
     {
         var conflictedFiles = await TryMergingBranch(targetRepo, targetBranch, branchToMerge, cancellationToken);
 
-        var excludedAssetsMatcher = GetExcludedAssetsMatcher(excludedAssets);
+        var excludedAssetsMatcher = excludedAssets.GetAssetMatcher();
 
         if (conflictedFiles.Any())
         {
@@ -176,7 +176,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         Build build,
         string targetBranch,
         string branchToMerge,
-        Matcher? excludedAssetsMatcher,
+        IAssetMatcher excludedAssetsMatcher,
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
@@ -278,7 +278,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         ILocalGitRepo targetRepo,
         string targetBranch,
         Build build,
-        Matcher? excludedAssetsMatcher,
+        IAssetMatcher excludedAssetsMatcher,
         Codeflow lastFlow,
         Backflow currentFlow,
         CancellationToken cancellationToken)
@@ -314,7 +314,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             currentVmrDependencies);
 
         List<AssetData> buildAssets = build.Assets
-            .Where(a => !IsExcludedAsset(a.Name, excludedAssetsMatcher))
+            .Where(a => !excludedAssetsMatcher.IsExcluded(a.Name))
             .Select(a => new AssetData(a.NonShipping)
             {
                 Name = a.Name,
@@ -329,7 +329,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             .Concat(vmrChanges.Select(c => c.From?.Name ?? c.To.Name))
             .Concat(repoChanges.Select(c => c.From?.Name ?? c.To.Name))
             .Distinct()
-            .Where(dep => !IsExcludedAsset(dep, excludedAssetsMatcher))
+            .Where(dep => !excludedAssetsMatcher.IsExcluded(dep))
             .ToHashSet();
 
         var versionUpdates = new List<DependencyDetail>();
@@ -604,31 +604,10 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         return dependencyUpdates;
     }
 
-    private static Matcher? GetExcludedAssetsMatcher(IReadOnlyCollection<string>? excludedAssets)
-    {
-        if (excludedAssets == null || excludedAssets.Count == 0)
-        {
-            return null;
-        }
-        var matcher = new Matcher();
-        matcher.AddIncludePatterns(excludedAssets);
-        return matcher;
-    }
-
-    private static bool IsExcludedAsset(string asset, Matcher? excludedAssetsMatcher)
-    {
-        if (excludedAssetsMatcher == null)
-        {
-            return false;
-        }
-
-        return excludedAssetsMatcher.Match(asset).HasMatches;
-    }
-
-    private static List<DependencyUpdate> ComputeChanges(Matcher? excludedAssetsMatcher, VersionDetails before, VersionDetails after)
+    private static List<DependencyUpdate> ComputeChanges(IAssetMatcher excludedAssetsMatcher, VersionDetails before, VersionDetails after)
     {
         var dependencyChanges = before.Dependencies
-            .Where(dep => !IsExcludedAsset(dep.Name, excludedAssetsMatcher))
+            .Where(dep => !excludedAssetsMatcher.IsExcluded(dep.Name))
             .Select(dep => new DependencyUpdate()
             {
                 From = dep,
@@ -636,7 +615,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             .ToList();
 
         // Pair dependencies with the same name
-        foreach (var dep in after.Dependencies.Where(dep => !IsExcludedAsset(dep.Name, excludedAssetsMatcher)))
+        foreach (var dep in after.Dependencies.Where(dep => !excludedAssetsMatcher.IsExcluded(dep.Name)))
         {
             var existing = dependencyChanges.FirstOrDefault(d => d.From?.Name == dep.Name);
             if (existing != null)
