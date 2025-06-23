@@ -27,10 +27,6 @@ pr:
     - SECURITY.md
     - THIRD-PARTY-NOTICES.TXT
 
-pool:
-  name: NetCore1ESPool-Internal-NoMSI
-  demands: ImageOverride -equals 1es-windows-2019
-
 stages:
 - ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
   - stage: GitHub_Issue_Verification
@@ -92,7 +88,7 @@ stages:
         displayName: Build Docker Image
         pool:
           name: NetCore-Public
-          demands: ImageOverride -equals build.ubuntu.2204.amd64.open
+          demands: ImageOverride -equals 1es-ubuntu-2004-open
 
         steps:
         - checkout: self
