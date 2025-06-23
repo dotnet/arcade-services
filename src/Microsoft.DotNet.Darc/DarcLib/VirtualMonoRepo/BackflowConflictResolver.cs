@@ -31,6 +31,7 @@ public interface IBackflowConflictResolver
         SourceMapping mapping,
         Codeflow lastFlow,
         Backflow currentFlow,
+        Codeflow? recentFlow,
         ILocalGitRepo targetRepo,
         Build build,
         string targetBranch,
@@ -54,6 +55,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
     public BackflowConflictResolver(
         IVmrInfo vmrInfo,
+        IVmrPatchHandler patchHandler,
         ILocalLibGit2Client libGit2Client,
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
@@ -62,7 +64,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         IDependencyFileManager dependencyFileManager,
         IFileSystem fileSystem,
         ILogger<BackflowConflictResolver> logger)
-        : base(logger)
+        : base(vmrInfo, patchHandler, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
         _libGit2Client = libGit2Client;
@@ -79,6 +81,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         SourceMapping mapping,
         Codeflow lastFlow,
         Backflow currentFlow,
+        Codeflow? recentFlow,
         ILocalGitRepo targetRepo,
         Build build,
         string targetBranch,
@@ -98,6 +101,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 mapping,
                 lastFlow,
                 currentFlow,
+                recentFlow,
                 targetRepo,
                 build,
                 targetBranch,
@@ -167,6 +171,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         SourceMapping mapping,
         Codeflow lastFlow,
         Codeflow currentFlow,
+        Codeflow? recentFlow,
         ILocalGitRepo repo,
         Build build,
         string targetBranch,
@@ -175,16 +180,43 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        var unresolvableConflicts = conflictedFiles
-            .Where(f => !DependencyFileManager.DependencyFiles.Any(d => d.Equals(f.Path, StringComparison.InvariantCultureIgnoreCase)))
-            .ToList();
+        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
-        if (unresolvableConflicts.Count > 0)
+        foreach (var conflictedFile in conflictedFiles)
         {
-            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} due to unresolvable conflicts: {conflicts}",
+            // Known version file - check out the branch version, we want to override it
+            // See https://github.com/dotnet/arcade-services/issues/4865
+            if (DependencyFileManager.DependencyFiles.Any(f => f.Equals(conflictedFile, StringComparison.OrdinalIgnoreCase)))
+            {
+                // Revert files so that we can resolve the conflicts
+                // We use the target branch version when we are flowing the first time (because we did not flow the version files yet)
+                // We use the head branch version when we are flowing again because it already has updates from previous flow
+                // plus it can contain additional changes from the PR
+                await repo.RunGitCommandAsync(["checkout", headBranchExisted ? "--ours" : "--theirs", conflictedFile], cancellationToken);
+                continue;
+            }
+
+            // Unknown conflict, but can be conflicting with a out-of-order recent flow
+            // Check DetectRecentFlow documentation for more details
+            if (recentFlow != null)
+            {
+                if (await TryResolvingConflictUsingRecentFlow(
+                    mapping.Name,
+                    vmr,
+                    repo,
+                    conflictedFile,
+                    currentFlow,
+                    recentFlow,
+                    cancellationToken))
+                {
+                    continue;
+                }
+            }
+
+            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} due to unresolvable conflict in {conflictedFile}",
                 branchToMerge,
                 targetBranch,
-                string.Join(", ", unresolvableConflicts));
+                conflictedFile);
 
             await AbortMerge(repo);
 
@@ -200,24 +232,15 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                     lastFlow,
                     (Backflow)currentFlow,
                     cancellationToken);
-                return new VersionFileUpdateResult(ConflictedFiles: [.. conflictedFiles.Select(file => new UnixPath(file))], updates);
+                return new VersionFileUpdateResult(conflictedFiles, updates);
             }
 
-            return new VersionFileUpdateResult([..conflictedFiles.Select(file => new UnixPath(file))], []);
+            return new VersionFileUpdateResult(conflictedFiles, []);
         }
 
-        foreach (var file in conflictedFiles)
-        {
-            // Revert files so that we can resolve the conflicts
-            // We use the target branch version when we are flowing the first time (because we did not flow the version files yet)
-            // We use the head branch version when we are flowing again because it already has updates from previous flow
-            // plus it can contain additional changes from the PR
-            await repo.RunGitCommandAsync(["checkout", headBranchExisted ? "--ours" : "--theirs", file], cancellationToken);
-        }
-
+        // After conflicts are dealt with, we override the version files by regenerating them properly
         try
         {
-            // When only version files are conflicted, we can resolve the conflicts by generating them correctly
             var updates = await BackflowDependenciesAndToolset(
                 mapping.Name,
                 repo,
@@ -233,7 +256,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         {
             _logger.LogInformation("Detected conflicts in version file changes - failed to update dependencies: {message}", e.Message);
             await AbortMerge(repo);
-            return new VersionFileUpdateResult([.. conflictedFiles.Select(file => new UnixPath(file))], []);
+            return new VersionFileUpdateResult(conflictedFiles, []);
         }
         catch
         {

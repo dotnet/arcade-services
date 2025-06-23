@@ -62,7 +62,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
-    private readonly IVmrPatchHandler _patchHandler;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<ForwardFlowConflictResolver> _logger;
 
@@ -72,11 +71,10 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         IVmrPatchHandler patchHandler,
         IFileSystem fileSystem,
         ILogger<ForwardFlowConflictResolver> logger)
-        : base(logger)
+        : base(vmrInfo, patchHandler, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
-        _patchHandler = patchHandler;
         _fileSystem = fileSystem;
         _logger = logger;
     }
@@ -186,32 +184,25 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         string mappingName,
         ILocalGitRepo vmr,
         ILocalGitRepo sourceRepo,
-        string filePath,
+        UnixPath conflictedFile,
         UnixPath[] allowedConflicts,
         ForwardFlow currentFlow,
         Codeflow? recentFlow,
         CancellationToken cancellationToken)
     {
         // Known conflict in source-manifest.json
-        if (string.Equals(filePath, VmrInfo.DefaultRelativeSourceManifestPath, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(conflictedFile, VmrInfo.DefaultRelativeSourceManifestPath, StringComparison.OrdinalIgnoreCase))
         {
             await TryResolvingSourceManifestConflict(vmr, mappingName!, cancellationToken);
             return true;
         }
 
         // Known conflicts are resolved to "ours" version (the PR version)
-        if (allowedConflicts.Any(allowed => filePath.Equals(allowed, StringComparison.OrdinalIgnoreCase)))
+        if (allowedConflicts.Any(allowed => conflictedFile.Path.Equals(allowed, StringComparison.OrdinalIgnoreCase)))
         {
-            _logger.LogInformation("Auto-resolving conflict in {file} using PR version", filePath);
-            await vmr.ResolveConflict(filePath, ours: true);
+            _logger.LogInformation("Auto-resolving conflict in {file} using PR version", conflictedFile);
+            await vmr.ResolveConflict(conflictedFile, ours: true);
             return true;
-        }
-
-        UnixPath vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(mappingName);
-        if (!filePath.StartsWith(vmrSourcesPath + '/'))
-        {
-            _logger.LogInformation("Conflict in {file} is not in the source repo, skipping auto-resolution", filePath);
-            return false;
         }
 
         // Unknown conflict, but can be conflicting with a out-of-order recent flow
@@ -222,82 +213,13 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                 mappingName,
                 vmr,
                 sourceRepo,
-                filePath,
+                conflictedFile,
                 currentFlow,
                 recentFlow,
-                vmrSourcesPath,
                 cancellationToken);
         }
 
         return false;
-    }
-
-    /// <summary>
-    /// If a recent flow is detected, we can try to figure out if the changes that happened to it in the repo
-    /// apply on top of the VMR file.
-    /// </summary>
-    /// <returns>True when auto-resolution succeeded</returns>
-    private async Task<bool> TryResolvingConflictUsingRecentFlow(
-        string mappingName,
-        ILocalGitRepo vmr,
-        ILocalGitRepo sourceRepo,
-        string filePath,
-        ForwardFlow currentFlow,
-        Codeflow recentFlow,
-        UnixPath vmrSourcesPath,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Trying to auto-resolve a conflict in {filePath} based on a recent flow...", filePath);
-
-        await vmr.ResolveConflict(filePath, ours: false);
-
-        var patchName = _vmrInfo.TmpPath / $"{mappingName}-{Guid.NewGuid()}.patch";
-        List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
-            patchName,
-            recentFlow.RepoSha,
-            currentFlow.RepoSha,
-            new UnixPath(filePath.Substring(vmrSourcesPath.Length + 1)),
-            filters: null,
-            relativePaths: true,
-            workingDir: sourceRepo.Path,
-            applicationPath: vmrSourcesPath,
-            ignoreLineEndings: true,
-            cancellationToken);
-
-        if (patches.Count > 1)
-        {
-            foreach (var patch in patches)
-            {
-                try
-                {
-                    _fileSystem.DeleteFile(patch.Path);
-                }
-                catch
-                {
-                }
-            }
-
-            throw new InvalidOperationException("Cannot auto-resolve conflicts for files over 1GB in size");
-        }
-
-        try
-        {
-            await _patchHandler.ApplyPatch(
-                patches[0],
-                vmr.Path,
-                removePatchAfter: true,
-                reverseApply: false,
-                cancellationToken);
-            _logger.LogInformation("Successfully auto-resolved a conflict in {filePath} based on a recent flow", filePath);
-            return true;
-        }
-        catch (PatchApplicationFailedException)
-        {
-            // If the patch failed, we cannot resolve the conflict automatically
-            // We will just leave it as is and let the user resolve it manually
-            _logger.LogInformation("Failed to auto-resolve conflicts in {filePath} - conflicting changes detected", filePath);
-            return false;
-        }
     }
 
     private async Task TryResolvingSourceManifestConflict(ILocalGitRepo vmr, string mappingName, CancellationToken cancellationToken)

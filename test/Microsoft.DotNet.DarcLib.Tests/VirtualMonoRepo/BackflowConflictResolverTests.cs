@@ -473,6 +473,7 @@ public class BackflowConflictResolverTests
             new SourceMapping(MappingName, "https://github/repo1", "main", [], [], false),
             lastFlow,
             currentFlow,
+            recentFlow: null,
             _localRepo.Object,
             build,
             PrBranch,

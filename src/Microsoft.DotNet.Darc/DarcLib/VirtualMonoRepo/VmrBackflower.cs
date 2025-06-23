@@ -148,6 +148,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             mapping,
             lastFlows.LastFlow,
             currentFlow,
+            lastFlows.RecentFlow,
             targetRepo,
             build,
             headBranch,
