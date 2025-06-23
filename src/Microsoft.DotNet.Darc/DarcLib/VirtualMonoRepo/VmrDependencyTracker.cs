@@ -33,8 +33,6 @@ public interface IVmrDependencyTracker
 
     void UpdateSubmodules(List<SubmoduleRecord> submodules);
 
-    bool RemoveRepositoryVersion(string repo);
-
     VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping);
 }
 
@@ -105,13 +103,6 @@ public class VmrDependencyTracker : IVmrDependencyTracker
             update.TargetRevision,
             update.BarId);
         _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, _sourceManifest.ToJson());
-    }
-
-    public bool RemoveRepositoryVersion(string repo)
-    {
-        // With git-info files removed, this method no longer needs to delete anything
-        // The repository will be removed from the source manifest through other methods
-        return false;
     }
 
     public void UpdateSubmodules(List<SubmoduleRecord> submodules)

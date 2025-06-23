@@ -616,15 +616,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         _sourceManifest.RemoveRepository(repo);
         _logger.LogInformation("Removed record for repository {name} from {file}", repo, _vmrInfo.SourceManifestPath);
-
-        if (_dependencyTracker.RemoveRepositoryVersion(repo))
-        {
-            _logger.LogInformation("Deleted {repo} version information from git-info", repo);
-        } 
-        else
-        {
-            _logger.LogInformation("{repo} version information is already deleted", repo);
-        }
     }
 
     private async Task<SourceMapping> LoadNewSourceMappings(
