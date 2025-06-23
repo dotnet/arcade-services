@@ -37,6 +37,7 @@ public class BackflowConflictResolverTests
     private readonly NativePath _repoPath = new("/data/repo");
 
     private readonly Mock<IVmrInfo> _vmrInfo = new();
+    private readonly Mock<IVmrPatchHandler> _patchHandler = new();
     private readonly Mock<ILocalLibGit2Client> _libGit2Client = new();
     private readonly Mock<ILocalGitRepoFactory> _localGitRepoFactory = new();
     private readonly Mock<IVersionDetailsParser> _versionDetailsParser = new();
@@ -108,6 +109,9 @@ public class BackflowConflictResolverTests
         _assetLocationResolver.Reset();
         _assetLocationResolver.SetReturnsDefault(Task.CompletedTask);
 
+        _patchHandler.Reset();
+        _patchHandler.SetReturnsDefault(Task.CompletedTask);
+
         _dependencyFileManager.Reset();
         _dependencyFileManager
             .Setup(x => x.AddDependencyAsync(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>()))
@@ -143,6 +147,7 @@ public class BackflowConflictResolverTests
 
         _conflictResolver = new(
             _vmrInfo.Object,
+            _patchHandler.Object,
             _libGit2Client.Object,
             _localGitRepoFactory.Object,
             _versionDetailsParser.Object,
