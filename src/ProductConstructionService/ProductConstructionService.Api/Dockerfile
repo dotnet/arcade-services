@@ -3,9 +3,9 @@
 # Build .NET apps
 FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine3.20 AS build
 ARG BUILD_CONFIGURATION=Release
-ENV BUILD_CONFIGURATION=${BUILD_CONFIGURATION}
+ENV BUILD_CONFIGURATION=$BUILD_CONFIGURATION
 ARG PACKAGE_VERSION="0.0.99-dev"
-ENV PACKAGE_VERSION=${PACKAGE_VERSION}
+ENV PACKAGE_VERSION=$PACKAGE_VERSION
 
 
 WORKDIR /src
@@ -54,15 +54,15 @@ COPY ["src/ProductConstructionService", "."]
 
 WORKDIR ./ProductConstructionService.Api
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
-RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/ProductConstructionService /p:UseAppHost=false /p:Version=${PACKAGE_VERSION}
+RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/ProductConstructionService /p:UseAppHost=false /p:Version=$PACKAGE_VERSION
 
 WORKDIR ../ProductConstructionService.FeedCleaner
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
-RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/FeedCleaner /p:UseAppHost=false /p:Version=${PACKAGE_VERSION}
+RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/FeedCleaner /p:UseAppHost=false /p:Version=$PACKAGE_VERSION
 
 WORKDIR ../ProductConstructionService.SubscriptionTriggerer
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
-RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/SubscriptionTriggerer /p:UseAppHost=false /p:Version=${PACKAGE_VERSION}
+RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/SubscriptionTriggerer /p:UseAppHost=false /p:Version=$PACKAGE_VERSION
 
 # Copy everything to the final image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine3.20
