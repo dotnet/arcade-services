@@ -4,7 +4,6 @@
 using Maestro.Data.Models;
 using Maestro.MergePolicies;
 using NUnit.Framework;
-using System;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
@@ -155,7 +154,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
     public async Task UpdateWithAssetsWithExcludedAssetsSomePackagesExcluded(bool batchable)
     {
         GivenATestChannel();
-        GivenASubscriptionWithExcludedAssets(
+        GivenASubscription(
             new SubscriptionPolicy
             {
                 Batchable = batchable,
@@ -170,7 +169,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
             ("another.package", "3.0.0", false)          // Should NOT be excluded
         ]);
 
-        var assetFilter = (Asset asset) => !asset.Name.StartsWith("quail.eating.");
+        static bool assetFilter(Asset asset) => !asset.Name.StartsWith("quail.eating.");
 
         WithRequireNonCoherencyUpdates();
         WithNoRequiredCoherencyUpdates();
@@ -192,7 +191,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
     public async Task UpdateWithAssetsWithExcludedAssetsAllPackagesExcluded(bool batchable)
     {
         GivenATestChannel();
-        GivenASubscriptionWithExcludedAssets(
+        GivenASubscription(
             new SubscriptionPolicy
             {
                 Batchable = batchable,
@@ -222,7 +221,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
     public async Task UpdateWithAssetsWithExcludedAssetsExistingPR(bool batchable)
     {
         GivenATestChannel();
-        GivenASubscriptionWithExcludedAssets(
+        GivenASubscription(
             new SubscriptionPolicy
             {
                 Batchable = batchable,
@@ -237,7 +236,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
             ("quail.package", "1.5.0", false)            // Should be excluded
         ]);
 
-        var assetFilter = (Asset asset) => !asset.Name.StartsWith("quail.");
+        static bool assetFilter(Asset asset) => !asset.Name.StartsWith("quail.");
 
         WithRequireNonCoherencyUpdates();
         WithNoRequiredCoherencyUpdates();
