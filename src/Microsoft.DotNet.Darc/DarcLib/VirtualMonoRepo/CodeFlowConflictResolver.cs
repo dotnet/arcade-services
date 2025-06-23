@@ -123,10 +123,12 @@ public abstract class CodeFlowConflictResolver
             patchName,
             isForwardFlow ? recentFlow.RepoSha : recentFlow.VmrSha,
             isForwardFlow ? currentFlow.RepoSha : currentFlow.VmrSha,
-            isForwardFlow ? new UnixPath(conflictedFile.Path.Substring(vmrSourcesPath.Length + 1)) : conflictedFile,
+            isForwardFlow
+                ? new UnixPath(conflictedFile.Path.Substring(vmrSourcesPath.Length + 1))
+                : conflictedFile,
             filters: null,
             relativePaths: true,
-            workingDir: isForwardFlow ? repo.Path : vmr.Path,
+            workingDir: isForwardFlow ? repo.Path : vmr.Path / vmrSourcesPath,
             applicationPath: isForwardFlow ? vmrSourcesPath : null,
             ignoreLineEndings: true,
             cancellationToken);
