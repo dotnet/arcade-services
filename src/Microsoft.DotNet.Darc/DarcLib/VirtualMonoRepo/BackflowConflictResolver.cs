@@ -33,14 +33,14 @@ public interface IBackflowConflictResolver
         Backflow currentFlow,
         ILocalGitRepo targetRepo,
         Build build,
-        string headBranch,
         string targetBranch,
+        string branchToMerge,
         IReadOnlyCollection<string>? excludedAssets,
         bool headBranchExisted,
         CancellationToken cancellationToken);
 }
 
-public class BackflowConflictResolver : IBackflowConflictResolver
+public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConflictResolver
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ILocalLibGit2Client _libGit2Client;
@@ -62,6 +62,7 @@ public class BackflowConflictResolver : IBackflowConflictResolver
         IDependencyFileManager dependencyFileManager,
         IFileSystem fileSystem,
         ILogger<BackflowConflictResolver> logger)
+        : base(logger)
     {
         _vmrInfo = vmrInfo;
         _libGit2Client = libGit2Client;
@@ -80,92 +81,54 @@ public class BackflowConflictResolver : IBackflowConflictResolver
         Backflow currentFlow,
         ILocalGitRepo targetRepo,
         Build build,
-        string headBranch,
         string targetBranch,
+        string branchToMerge,
         IReadOnlyCollection<string>? excludedAssets,
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        var mergeSuccessful = await TryMergingBranch(
-            targetRepo,
-            headBranch,
-            targetBranch,
-            cancellationToken);
+        var conflictedFiles = await TryMergingBranch(targetRepo, targetBranch, branchToMerge, cancellationToken);
 
         var excludedAssetsMatcher = GetExcludedAssetsMatcher(excludedAssets);
 
-        if (mergeSuccessful)
+        if (conflictedFiles.Any())
         {
-            try
-            {
-                var updates = await BackflowDependenciesAndToolset(
-                    mapping.Name,
-                    targetRepo,
-                    targetBranch,
-                    build,
-                    excludedAssetsMatcher,
-                    lastFlow,
-                    currentFlow,
-                    cancellationToken);
-                return new VersionFileUpdateResult(ConflictedFiles: [], updates);
-            }
-            catch (Exception e)
-            {
-                // We don't want to push this as there is some problem
-                _logger.LogError(e, "Failed to update dependencies after merging {targetBranch} into {headBranch} in {repoPath}",
-                    targetBranch,
-                    headBranch,
-                    targetRepo.Path);
-                throw;
-            }
-        }
-
-        return await ResolveVersionFileConflicts(
-            mapping,
-            lastFlow,
-            currentFlow,
-            targetRepo,
-            build,
-            headBranch,
-            targetBranch,
-            excludedAssetsMatcher,
-            headBranchExisted,
-            cancellationToken);
-    }
-
-    private async Task<bool> TryMergingBranch(
-        ILocalGitRepo repo,
-        string headBranch,
-        string branchToMerge,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Checking if target branch {targetBranch} has conflicts with {headBranch}", branchToMerge, headBranch);
-
-        await repo.CheckoutAsync(headBranch);
-        var result = await repo.RunGitCommandAsync(["merge", "--no-commit", "--no-ff", branchToMerge], cancellationToken);
-        if (!result.Succeeded)
-        {
-            return false;
+            return await TryResolvingConflicts(
+                conflictedFiles,
+                mapping,
+                lastFlow,
+                currentFlow,
+                targetRepo,
+                build,
+                targetBranch,
+                branchToMerge,
+                excludedAssetsMatcher,
+                headBranchExisted,
+                cancellationToken);
         }
 
         try
         {
-            await repo.CommitAsync(
-                $"Merging {branchToMerge} into {headBranch}",
-                allowEmpty: false,
-                cancellationToken: CancellationToken.None);
-
-            _logger.LogInformation("Successfully merged the branch {targetBranch} into {headBranch} in {repoPath}",
-                branchToMerge,
-                headBranch,
-                repo.Path);
+            var updates = await BackflowDependenciesAndToolset(
+                mapping.Name,
+                targetRepo,
+                targetBranch,
+                build,
+                excludedAssetsMatcher,
+                lastFlow,
+                currentFlow,
+                cancellationToken);
+            return new VersionFileUpdateResult(ConflictedFiles: [], updates);
         }
-        catch (Exception e) when (e.Message.Contains("nothing to commit"))
+        catch (Exception e)
         {
-            // Our branch might be fast-forward and so no commit was needed
+            // We don't want to push this as there is some problem
+            _logger.LogError(e, "Failed to update dependencies after merging {branchToMerge} into {targetBranch} in {repoPath}",
+                branchToMerge,
+                targetBranch,
+                targetRepo.Path);
+            throw;
         }
-
-        return true;
     }
 
     /// <summary>
@@ -199,46 +162,31 @@ public class BackflowConflictResolver : IBackflowConflictResolver
     ///   - However, if only the version files are in conflict, we can try merging 6. into 7. and resolve the conflict.
     ///   - This is because basically we know we want to set the version files to point at 5.
     /// </summary>
-    private async Task<VersionFileUpdateResult> ResolveVersionFileConflicts(
+    private async Task<VersionFileUpdateResult> TryResolvingConflicts(
+        IReadOnlyCollection<UnixPath> conflictedFiles,
         SourceMapping mapping,
         Codeflow lastFlow,
         Codeflow currentFlow,
         ILocalGitRepo repo,
         Build build,
-        string headBranch,
+        string targetBranch,
         string branchToMerge,
         Matcher? excludedAssetsMatcher,
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        async Task AbortMerge()
-        {
-            var result = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
-            result.ThrowIfFailed("Failed to abort a merge when resolving version file conflicts");
-        }
-
-        // When we had conflicts, we verify that they can be resolved (i.e. they are only in version files)
-        var result = await repo.RunGitCommandAsync(["diff", "--name-only", "--diff-filter=U", "--relative"], cancellationToken);
-        if (!result.Succeeded)
-        {
-            await AbortMerge();
-            result.ThrowIfFailed("Failed to resolve version file conflicts - failed to get a list of conflicted files");
-        }
-
-        var conflictedFiles = result.GetOutput();
-
         var unresolvableConflicts = conflictedFiles
-            .Except(DependencyFileManager.DependencyFiles)
+            .Where(f => !DependencyFileManager.DependencyFiles.Any(d => d.Equals(f.Path, StringComparison.InvariantCultureIgnoreCase)))
             .ToList();
 
         if (unresolvableConflicts.Count > 0)
         {
             _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} due to unresolvable conflicts: {conflicts}",
                 branchToMerge,
-                headBranch,
+                targetBranch,
                 string.Join(", ", unresolvableConflicts));
 
-            await AbortMerge();
+            await AbortMerge(repo);
 
             // If this is a first commit, we need to update dependencies still
             if (!headBranchExisted)
@@ -284,7 +232,7 @@ public class BackflowConflictResolver : IBackflowConflictResolver
         catch (ConflictingDependencyUpdateException e)
         {
             _logger.LogInformation("Detected conflicts in version file changes - failed to update dependencies: {message}", e.Message);
-            await AbortMerge();
+            await AbortMerge(repo);
             return new VersionFileUpdateResult([.. conflictedFiles.Select(file => new UnixPath(file))], []);
         }
         catch
@@ -292,7 +240,7 @@ public class BackflowConflictResolver : IBackflowConflictResolver
             // We don't want to push this as there is some problem
             _logger.LogError("Failed to update dependencies after merging {targetBranch} into {headBranch} in {repoPath}",
                 branchToMerge,
-                headBranch,
+                targetBranch,
                 repo.Path);
             throw;
         }
