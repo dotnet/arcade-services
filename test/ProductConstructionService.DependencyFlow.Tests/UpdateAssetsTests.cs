@@ -170,6 +170,8 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
             ("another.package", "3.0.0", false)          // Should NOT be excluded
         ]);
 
+        var assetFilter = (Asset asset) => !asset.Name.StartsWith("quail.eating.");
+
         WithRequireNonCoherencyUpdates();
         WithNoRequiredCoherencyUpdates();
 
@@ -177,16 +179,12 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
         await WhenUpdateAssetsAsyncIsCalled(b);
 
-        // Verify that only non-excluded assets were passed to GetRequiredNonCoherencyUpdates
-        ThenGetRequiredUpdatesShouldHaveBeenCalledWithFilteredAssets(b, false, 
-            asset => !asset.Name.StartsWith("quail.eating."));
+        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false, assetFilter);
         AndCreateNewBranchShouldHaveBeenCalled();
-        AndCommitUpdatesShouldHaveBeenCalledWithFilteredAssets(b, 
-            asset => !asset.Name.StartsWith("quail.eating."));
+        AndCommitUpdatesShouldHaveBeenCalled(b, assetFilter);
         AndCreatePullRequestShouldHaveBeenCalled();
         AndShouldHavePullRequestCheckReminder();
-        AndShouldHaveInProgressPullRequestStateWithFilteredAssets(b, 
-            asset => !asset.Name.StartsWith("quail.eating."));
+        AndShouldHaveInProgressPullRequestState(b, assetFilter: assetFilter);
     }
 
     [TestCase(false)]
@@ -215,8 +213,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
         await WhenUpdateAssetsAsyncIsCalled(b);
 
         // Verify that no assets were passed to GetRequiredNonCoherencyUpdates (all excluded)
-        ThenGetRequiredUpdatesShouldHaveBeenCalledWithFilteredAssets(b, false, 
-            asset => false); // No assets should match
+        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false, asset => false);
         AndSubscriptionShouldBeUpdatedForMergedPullRequest(b);
     }
 
@@ -240,22 +237,21 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
             ("quail.package", "1.5.0", false)            // Should be excluded
         ]);
 
+        var assetFilter = (Asset asset) => !asset.Name.StartsWith("quail.");
+
         WithRequireNonCoherencyUpdates();
         WithNoRequiredCoherencyUpdates();
 
-        using (WithExistingPullRequestWithFilteredAssets(b, asset => !asset.Name.StartsWith("quail"), canUpdate: true))
+        using (WithExistingPullRequest(b, canUpdate: true, assetFilter: assetFilter))
         {
             await WhenUpdateAssetsAsyncIsCalled(b);
 
             // Verify that only non-excluded assets were passed
-            ThenGetRequiredUpdatesShouldHaveBeenCalledWithFilteredAssets(b, true, 
-                asset => !asset.Name.StartsWith("quail"));
-            AndCommitUpdatesShouldHaveBeenCalledWithFilteredAssets(b,
-                asset => !asset.Name.StartsWith("quail"));
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true, assetFilter);
+            AndCommitUpdatesShouldHaveBeenCalled(b, assetFilter);
             AndUpdatePullRequestShouldHaveBeenCalled();
             AndShouldHavePullRequestCheckReminder();
-            AndShouldHaveInProgressPullRequestStateWithFilteredAssets(b,
-                asset => !asset.Name.StartsWith("quail"));
+            AndShouldHaveInProgressPullRequestState(b, assetFilter: assetFilter);
         }
     }
 }
