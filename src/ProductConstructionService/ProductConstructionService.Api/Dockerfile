@@ -7,8 +7,6 @@ ARG PACKAGE_VERSION="0.0.99-dev"
 
 WORKDIR /src
 
-RUN dotnet restore "./ProductConstructionService.Api/ProductConstructionService.Api.csproj"
-
 COPY ["Directory.Packages.props", "Directory.Build.props", "Directory.Build.targets", "NuGet.config", "global.json", "./"]
 COPY ["eng/Versions.props", "./eng/"]
 
