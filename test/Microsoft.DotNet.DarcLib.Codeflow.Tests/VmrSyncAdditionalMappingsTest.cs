@@ -70,7 +70,12 @@ internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
         CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, VmrPath);
 
         // In this test, we remove the git-info directory to see that it does not get created
-        Directory.Delete(VmrPath / "prereqs" / "git-info");
+        // Note: With git-info functionality removed, this directory may not exist
+        var gitInfoPath = VmrPath / "prereqs" / "git-info";
+        if (Directory.Exists(gitInfoPath))
+        {
+            Directory.Delete(gitInfoPath);
+        }
 
         var sourceMappings = new SourceMappingFile()
         {
