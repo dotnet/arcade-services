@@ -54,7 +54,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             IVersionDetailsParser versionDetailsParser,
             IVmrPatchHandler vmrPatchHandler,
             IWorkBranchFactory workBranchFactory,
-            IVersionFileCodeFlowUpdater versionFileConflictResolver,
+            IBackflowConflictResolver versionFileConflictResolver,
             IFileSystem fileSystem,
             IBasicBarClient barClient,
             ILogger<VmrCodeFlower> logger)

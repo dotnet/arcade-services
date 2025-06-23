@@ -22,7 +22,7 @@ using NUnit.Framework;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Tests.VirtualMonoRepo;
 
-public class VersionFileCodeFlowUpdaterTests
+public class BackflowConflictResolverTests
 {
     private const string MappingName = "test-repo";
     private const string CurrentVmrSha = "current flow VMR SHA";
@@ -47,7 +47,7 @@ public class VersionFileCodeFlowUpdaterTests
     private readonly Mock<ILocalGitRepo> _localRepo = new();
     private readonly Mock<ILocalGitRepo> _localVmr = new();
 
-    VersionFileCodeFlowUpdater _versionFileCodeFlowUpdater = null!;
+    BackflowConflictResolver _conflictResolver = null!;
 
     // Mapping of SHA -> Content of version details
     Dictionary<string, VersionDetails> _versionDetails = [];
@@ -141,7 +141,7 @@ public class VersionFileCodeFlowUpdaterTests
 
         _fileSystem.Reset();
 
-        _versionFileCodeFlowUpdater = new(
+        _conflictResolver = new(
             _vmrInfo.Object,
             _libGit2Client.Object,
             _localGitRepoFactory.Object,
@@ -150,7 +150,7 @@ public class VersionFileCodeFlowUpdaterTests
             new CoherencyUpdateResolver(Mock.Of<IBasicBarClient>(), Mock.Of<IRemoteFactory>(), new NullLogger<CoherencyUpdateResolver>()),
             _dependencyFileManager.Object,
             _fileSystem.Object,
-            new NullLogger<VersionFileCodeFlowUpdater>());
+            new NullLogger<BackflowConflictResolver>());
     }
 
     // Tests a case when packages were updated in the repo as well as in VMR and some created during the build.
@@ -415,7 +415,7 @@ public class VersionFileCodeFlowUpdaterTests
             },
         };
 
-        VersionFileCodeFlowUpdater.BuildDependencyUpdateCommitMessage([dep1, dep2, dep3, dep4, dep5]).Should().BeEquivalentTo(
+        BackflowConflictResolver.BuildDependencyUpdateCommitMessage([dep1, dep2, dep3, dep4, dep5]).Should().BeEquivalentTo(
             """
             Updated Dependencies:
             Foo, Bar (Version 2.0.0 -> 3.0.0)
@@ -469,7 +469,7 @@ public class VersionFileCodeFlowUpdaterTests
             .ReturnsAsync(gitFileChanges);
 
         var cancellationToken = new CancellationToken();
-        VersionFileUpdateResult mergeResult = await _versionFileCodeFlowUpdater.TryMergingBranchAndUpdateDependencies(
+        VersionFileUpdateResult mergeResult = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
             new SourceMapping(MappingName, "https://github/repo1", "main", [], [], false),
             lastFlow,
             currentFlow,

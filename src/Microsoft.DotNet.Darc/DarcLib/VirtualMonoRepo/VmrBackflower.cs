@@ -50,7 +50,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVmrPatchHandler _vmrPatchHandler;
     private readonly IWorkBranchFactory _workBranchFactory;
-    private readonly IVersionFileCodeFlowUpdater _versionFileConflictResolver;
+    private readonly IBackflowConflictResolver _versionFileConflictResolver;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
 
@@ -65,7 +65,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             IVersionDetailsParser versionDetailsParser,
             IVmrPatchHandler vmrPatchHandler,
             IWorkBranchFactory workBranchFactory,
-            IVersionFileCodeFlowUpdater versionFileConflictResolver,
+            IBackflowConflictResolver versionFileConflictResolver,
             IFileSystem fileSystem,
             IBasicBarClient barClient,
             ILogger<VmrCodeFlower> logger)
