@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Immutable;
 using FluentAssertions;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -11,6 +12,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,9 +21,6 @@ using Moq;
 using NUnit.Framework;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
-using System.Collections.Immutable;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
@@ -87,10 +86,10 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.IsAny<PullRequest>()));
     }
 
-    protected void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild, bool prExists)
+    protected void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild, bool prExists, Func<Asset, bool>? assetFilter = null)
     {
-        var assets = new List<IEnumerable<AssetData>>();
-        var dependencies = new List<IEnumerable<DependencyDetail>>();
+        var assets = new List<IReadOnlyCollection<AssetData>>();
+        var dependencies = new List<IReadOnlyCollection<DependencyDetail>>();
 
         UpdateResolver
             .Verify(r => r.GetRequiredNonCoherencyUpdates(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)));
@@ -106,6 +105,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 new List<List<AssetData>>
                 {
                     withBuild.Assets
+                        .Where(assetFilter ?? (_ => true))
                         .Select(a => new AssetData(false)
                         {
                             Name = a.Name,
@@ -122,7 +122,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             .Verify(r => r.CreateNewBranchAsync(TargetRepo, TargetBranch, Capture.With(captureNewBranch)));
     }
 
-    protected void AndCommitUpdatesShouldHaveBeenCalled(Build withUpdatesFromBuild)
+    protected void AndCommitUpdatesShouldHaveBeenCalled(Build withUpdatesFromBuild, Func<Asset, bool>? assetFilter = null)
     {
         var updatedDependencies = new List<List<DependencyDetail>>();
         DarcRemotes[TargetRepo]
@@ -138,6 +138,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 new List<List<DependencyDetail>>
                 {
                     withUpdatesFromBuild.Assets
+                        .Where(assetFilter ?? (_ => true))
                         .Select(a => new DependencyDetail
                         {
                             Name = a.Name,
@@ -278,10 +279,10 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             .Setup(r => r.GetRequiredNonCoherencyUpdates(
                 SourceRepo,
                 NewCommit,
-                It.IsAny<IEnumerable<AssetData>>(),
-                It.IsAny<IEnumerable<DependencyDetail>>()))
+                It.IsAny<IReadOnlyCollection<AssetData>>(),
+                It.IsAny<IReadOnlyCollection<DependencyDetail>>()))
             .Returns(
-                (string sourceRepo, string sourceSha, IEnumerable<AssetData> assets, IEnumerable<DependencyDetail> dependencies) =>
+                (string sourceRepo, string sourceSha, IReadOnlyCollection<AssetData> assets, IReadOnlyCollection<DependencyDetail> dependencies) =>
                     // Just make from->to identical.
                     assets
                         .Select(d => new DependencyUpdate
@@ -307,14 +308,14 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     protected void WithNoRequiredCoherencyUpdates()
     {
         UpdateResolver
-            .Setup(r => r.GetRequiredCoherencyUpdatesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
+            .Setup(r => r.GetRequiredCoherencyUpdatesAsync(It.IsAny<IReadOnlyCollection<DependencyDetail>>()))
             .ReturnsAsync([]);
     }
 
     protected void WithFailsStrictCheckForCoherencyUpdates()
     {
         UpdateResolver
-            .Setup(r => r.GetRequiredCoherencyUpdatesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
+            .Setup(r => r.GetRequiredCoherencyUpdatesAsync(It.IsAny<IReadOnlyCollection<DependencyDetail>>()))
             .ReturnsAsync(
                 (IEnumerable<DependencyDetail> dependencies) =>
                 {
@@ -328,17 +329,18 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 });
     }
 
-    protected IDisposable WithExistingPullRequest(Build forBuild, bool canUpdate, int nextBuildToProcess = 0, bool setupRemoteMock = true)
+    protected IDisposable WithExistingPullRequest(Build forBuild, bool canUpdate, int nextBuildToProcess = 0, bool setupRemoteMock = true, Func<Asset, bool>? assetFilter = null)
         => canUpdate
-            ? WithExistingPullRequest(forBuild, PrStatus.Open, null, nextBuildToProcess, setupRemoteMock)
-            : WithExistingPullRequest(forBuild, PrStatus.Open, MergePolicyEvaluationStatus.Pending, nextBuildToProcess, setupRemoteMock);
+            ? WithExistingPullRequest(forBuild, PrStatus.Open, null, nextBuildToProcess, setupRemoteMock, assetFilter)
+            : WithExistingPullRequest(forBuild, PrStatus.Open, MergePolicyEvaluationStatus.Pending, nextBuildToProcess, setupRemoteMock, assetFilter);
 
     protected IDisposable WithExistingPullRequest(
         Build forBuild,
         PrStatus prStatus,
         MergePolicyEvaluationStatus? policyEvaluationStatus,
         int nextBuildToProcess = 0,
-        bool setupRemoteMock = true)
+        bool setupRemoteMock = true,
+        Func<Asset, bool>? assetFilter = null)
     {
         var prUrl = Subscription.TargetDirectory != null
             ? VmrPullRequestUrl
@@ -346,7 +348,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
         AfterDbUpdateActions.Add(() =>
         {
-            var pr = CreatePullRequestState(forBuild, prUrl, nextBuildToProcess);
+            var pr = CreatePullRequestState(forBuild, prUrl, nextBuildToProcess, assetFilter: assetFilter);
             SetState(Subscription, pr);
             SetExpectedPullRequestState(Subscription, pr);
         });
@@ -494,11 +496,11 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     "branch",
                     "repo",
                     isForwardFlow: true));
-                
+
         }
 
         if (flowerWillHaveConflict || prAlreadyHasConflict)
-        {         
+        {
             remote
                 .Setup(x => x.GetLatestCommitAsync(It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(latestCommitToReturn);
@@ -543,7 +545,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 .Returns(Task.CompletedTask);
         }
 
-         return Disposable.Create(remote.VerifyAll);
+        return Disposable.Create(remote.VerifyAll);
     }
 
     protected void AndShouldHavePullRequestCheckReminder()
@@ -572,7 +574,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         List<CoherencyErrorDetails>? coherencyErrors = null,
         InProgressPullRequest? expectedState = null,
         string? overwriteBuildCommit = null,
-        InProgressPullRequestState prState = InProgressPullRequestState.Mergeable)
+        InProgressPullRequestState prState = InProgressPullRequestState.Mergeable,
+        Func<Asset, bool>? assetFilter = null)
     {
         var prUrl = Subscription.SourceEnabled
             ? VmrPullRequestUrl
@@ -588,7 +591,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     coherencyCheckSuccessful,
                     coherencyErrors,
                     overwriteBuildCommit,
-                    prState));
+                    prState,
+                    assetFilter));
     }
 
     protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, int nextBuildToProcess = 0, InProgressPullRequest? expectedState = null)
@@ -621,7 +625,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     protected IPullRequestUpdater CreatePullRequestActor(IServiceProvider context)
     {
         var updaterFactory = context.GetRequiredService<IPullRequestUpdaterFactory>();
-        return updaterFactory.CreatePullRequestUpdater(GetPullRequestUpdaterId()); 
+        return updaterFactory.CreatePullRequestUpdater(GetPullRequestUpdaterId());
     }
 
     protected SubscriptionUpdateWorkItem CreateSubscriptionUpdate(Build forBuild, bool isCodeFlow = false)
@@ -643,7 +647,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             bool? coherencyCheckSuccessful = true,
             List<CoherencyErrorDetails>? coherencyErrors = null,
             string? overwriteBuildCommit = null,
-            InProgressPullRequestState prState = InProgressPullRequestState.Mergeable)
+            InProgressPullRequestState prState = InProgressPullRequestState.Mergeable,
+            Func<Asset, bool>? assetFilter = null)
         => new()
         {
             UpdaterId = GetPullRequestUpdaterId().ToString(),
@@ -660,6 +665,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 }
             ],
             RequiredUpdates = forBuild.Assets
+                .Where(assetFilter ?? (_ => true))
                 .Select(d => new DependencyUpdateSummary
                 {
                     DependencyName = d.Name,

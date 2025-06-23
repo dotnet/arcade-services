@@ -3,6 +3,7 @@
   - Update Frequency: EveryDay
   - Enabled: True
   - Batchable: False
+  - Excluded Assets: []
   - PR Failure Notification tags: 
   - Source-enabled: False
   - Merge Policies: []
@@ -11,8 +12,8 @@ source2 (name) ==> 'target2' ('test')
   - Update Frequency: EveryDay
   - Enabled: True
   - Batchable: False
+  - Excluded Assets: []
   - PR Failure Notification tags: 
   - Source-enabled: True
   - Source Directory: repo-name
-  - Excluded Assets: []
   - Merge Policies: []

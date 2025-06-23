@@ -89,7 +89,7 @@ public class Subscription
     public string TargetDirectory { get; set; }
 
     /// <summary>
-    /// Dependencies to ignore when synchronizing code of source-enabled subscriptions.
+    /// Dependencies to ignore when updating dependencies in subscriptions.
     /// </summary>
     public List<AssetFilter> ExcludedAssets { get; set; }
 
