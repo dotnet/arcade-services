@@ -272,7 +272,7 @@ public class LocalGitClient : ILocalGitClient
 
         string? remoteName = null;
 
-        foreach (var line in result.GetOutput())
+        foreach (var line in result.GetOutputLines())
         {
             // This doesn't work if the repo path has a whitespace
             var parts = line.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -412,7 +412,7 @@ public class LocalGitClient : ILocalGitClient
         var result = await _processManager.ExecuteGit(repoPath, "diff", "--name-only", "--cached");
         result.ThrowIfFailed($"Failed to get staged files in {repoPath}");
 
-        return result.GetOutput();
+        return result.GetOutputLines();
     }
 
     public async Task<string?> GetFileFromGitAsync(string repoPath, string relativeFilePath, string revision = "HEAD", string? outputPath = null)

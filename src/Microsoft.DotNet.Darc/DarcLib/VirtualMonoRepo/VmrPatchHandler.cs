@@ -307,7 +307,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         var result = await _processManager.ExecuteGit(_vmrInfo.TmpPath, ["apply", "--numstat", patchPath], cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to enumerate files from a patch at `{patchPath}`");
 
-        foreach (var line in result.GetOutput())
+        foreach (var line in result.GetOutputLines())
         {
             var match = GitPatchSummaryLine.Match(line);
             if (match.Success)

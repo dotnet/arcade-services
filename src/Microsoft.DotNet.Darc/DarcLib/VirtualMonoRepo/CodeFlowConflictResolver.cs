@@ -71,14 +71,13 @@ public abstract class CodeFlowConflictResolver
             result = await repo.RunGitCommandAsync(["diff", "--name-only", "--diff-filter=U", "--relative"], cancellationToken);
             if (!result.Succeeded)
             {
-                var abort = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
-                abort.ThrowIfFailed("Failed to abort a merge when resolving version file conflicts");
+                await AbortMerge(repo);
                 result.ThrowIfFailed("Failed to resolve version file conflicts - failed to get a list of conflicted files");
                 throw new InvalidOperationException(); // the line above will throw, including more details
             }
 
             return result
-                .GetOutput()
+                .GetOutputLines()
                 .Select(line => new UnixPath(line))
                 .ToList();
         }

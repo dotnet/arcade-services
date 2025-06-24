@@ -23,7 +23,7 @@ public class ProcessExecutionResult
         }
     }
 
-    public IReadOnlyCollection<string> GetOutput()
+    public IReadOnlyCollection<string> GetOutputLines()
     {
         return [.. StandardOutput.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
     }

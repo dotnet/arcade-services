@@ -122,7 +122,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 lastFlow,
                 currentFlow,
                 cancellationToken);
-            return new VersionFileUpdateResult(ConflictedFiles: [], updates);
+            return new VersionFileUpdateResult(conflictedFiles, updates);
         }
         catch (Exception e)
         {
