@@ -46,6 +46,10 @@ var containerAppEnv = [
       name: 'TmpPath'
       value: '/mnt/datadir/tmp'
   }
+  {
+      name: 'AZURE_TOKEN_CREDENTIALS'
+      value: 'prod'
+  }
 ]
 
 // container app hosting the Product Construction Service
