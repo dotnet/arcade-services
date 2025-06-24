@@ -252,12 +252,12 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
 
         // 2. Open a backflow PR
         await GitOperations.Checkout(ProductRepoPath, "main");
-        var hadUpdates = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName);
-        hadUpdates.ShouldHaveUpdates();
+        var codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName);
+        codeFlowResult.ShouldHaveUpdates();
 
         // 3-4. Change the file in the repo again
-        hadUpdates = await ChangeRepoFileAndFlowIt("BBB", forwardBranchName + "-second");
-        hadUpdates.ShouldHaveUpdates();
+        codeFlowResult = await ChangeRepoFileAndFlowIt("BBB", forwardBranchName + "-second");
+        codeFlowResult.ShouldHaveUpdates();
 
         // 5. Merge the backflow PR
         await GitOperations.MergePrBranch(ProductRepoPath, backBranchName);
@@ -266,7 +266,7 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         await GitOperations.MergePrBranch(VmrPath, forwardBranchName + "-second");
 
         // 7-8. Update the file again in the repo
-        hadUpdates = await ChangeRepoFileAndFlowIt("CCC", forwardBranchName + "-third");
+        codeFlowResult = await ChangeRepoFileAndFlowIt("CCC", forwardBranchName + "-third");
 
         // 9. Merge the forward flow PR - any conflicts are dealt with automatically
         await GitOperations.MergePrBranch(VmrPath, forwardBranchName + "-third");
@@ -328,12 +328,12 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
 
         // 2. Open a forwardflow PR
         await GitOperations.Checkout(VmrPath, "main");
-        var hadUpdates = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardBranchName);
-        hadUpdates.ShouldHaveUpdates();
+        var codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardBranchName);
+        codeFlowResult.ShouldHaveUpdates();
 
         // 3-4. Change the file in the VMR again
-        hadUpdates = await ChangeVmrFileAndFlowIt("BBB", backBranchName + "-second");
-        hadUpdates.ShouldHaveUpdates();
+        codeFlowResult = await ChangeVmrFileAndFlowIt("BBB", backBranchName + "-second");
+        codeFlowResult.ShouldHaveUpdates();
 
         // 5. Merge the forwardflow PR
         await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
@@ -342,7 +342,7 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         await GitOperations.MergePrBranch(ProductRepoPath, backBranchName + "-second");
 
         // 7-8. Update the file again in the VMR
-        hadUpdates = await ChangeVmrFileAndFlowIt("CCC", backBranchName + "-third");
+        codeFlowResult = await ChangeVmrFileAndFlowIt("CCC", backBranchName + "-third");
 
         // 9. Merge the backflow PR - any conflicts are dealt with automatically
         await GitOperations.MergePrBranch(ProductRepoPath, backBranchName + "-third");
