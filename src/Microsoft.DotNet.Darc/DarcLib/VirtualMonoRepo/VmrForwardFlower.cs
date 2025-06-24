@@ -139,7 +139,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 headBranch,
                 targetBranch,
                 currentFlow,
-                lastFlows.RecentFlow,
+                lastFlows.CrossingFlow,
                 cancellationToken);
         }
 
@@ -214,8 +214,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
     protected override async Task<bool> SameDirectionFlowAsync(
         SourceMapping mapping,
-        Codeflow lastFlow,
-        Codeflow currentFlow,
+        CrossingFlow lastFlow,
+        CrossingFlow currentFlow,
         ILocalGitRepo sourceRepo,
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
@@ -268,8 +268,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
     protected override async Task<bool> OppositeDirectionFlowAsync(
         SourceMapping mapping,
-        Codeflow lastFlow,
-        Codeflow currentFlow,
+        CrossingFlow lastFlow,
+        CrossingFlow currentFlow,
         ILocalGitRepo sourceRepo,
         Build build,
         string targetBranch,
@@ -321,13 +321,13 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             cancellationToken: cancellationToken);
     }
 
-    protected override async Task<Codeflow?> DetectRelevantRecentFlow(
-        Codeflow lastFlow,
-        Backflow? lastBackFlow,
+    protected override async Task<CrossingFlow?> DetectCrossingFlow(
+        CrossingFlow lastFlow,
+        BackFlow? lastBackFlow,
         ForwardFlow lastForwardFlow,
         ILocalGitRepo repo)
     {
-        if (lastFlow is not Backflow bf)
+        if (lastFlow is not BackFlow bf)
         {
             return null;
         }
@@ -340,7 +340,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
     private async Task<bool> RecreatePreviousFlowAndApplyBuild(
         SourceMapping mapping,
-        Codeflow lastFlow,
+        CrossingFlow lastFlow,
         string headBranch,
         ILocalGitRepo sourceRepo,
         IReadOnlyCollection<string>? excludedAssets,
@@ -374,7 +374,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
-        LastFlows lastLastFlows = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: lastFlow is Backflow);
+        LastFlows lastLastFlows = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: lastFlow is BackFlow);
 
         // Reconstruct the previous flow's branch
         await FlowCodeAsync(

@@ -88,13 +88,13 @@ public abstract class CodeFlowConflictResolver
     /// apply on top of the VMR file.
     /// </summary>
     /// <returns>True when auto-resolution succeeded</returns>
-    protected async Task<bool> TryResolvingConflictUsingRecentFlow(
+    protected async Task<bool> TryResolvingConflictWithCrossingFlow(
         string mappingName,
         ILocalGitRepo vmr,
         ILocalGitRepo repo,
         UnixPath conflictedFile,
-        Codeflow currentFlow,
-        Codeflow recentFlow,
+        CrossingFlow currentFlow,
+        CrossingFlow crossingFlow,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Trying to auto-resolve a conflict in {filePath} based on a recent flow...", conflictedFile);
@@ -120,7 +120,7 @@ public abstract class CodeFlowConflictResolver
         var patchName = _vmrInfo.TmpPath / $"{mappingName}-{Guid.NewGuid()}.patch";
         List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
             patchName,
-            isForwardFlow ? recentFlow.RepoSha : recentFlow.VmrSha,
+            isForwardFlow ? crossingFlow.RepoSha : crossingFlow.VmrSha,
             isForwardFlow ? currentFlow.RepoSha : currentFlow.VmrSha,
             isForwardFlow
                 ? new UnixPath(conflictedFile.Path.Substring(vmrSourcesPath.Length + 1))

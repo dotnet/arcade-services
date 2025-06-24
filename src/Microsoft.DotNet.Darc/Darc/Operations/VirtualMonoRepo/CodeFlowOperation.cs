@@ -69,9 +69,9 @@ internal abstract class CodeFlowOperation(
             !isForwardFlow ? mappingName : "VMR",
             targetRepo.Path);
 
-        Codeflow currentFlow = isForwardFlow
+        CrossingFlow currentFlow = isForwardFlow
             ? new ForwardFlow(_options.Ref, await targetRepo.GetShaForRefAsync())
-            : new Backflow(_options.Ref, await targetRepo.GetShaForRefAsync());
+            : new BackFlow(_options.Ref, await targetRepo.GetShaForRefAsync());
 
         await _dependencyTracker.RefreshMetadata();
 
@@ -80,7 +80,7 @@ internal abstract class CodeFlowOperation(
         LastFlows lastFlows;
         try
         {
-            lastFlows = await _codeFlower.GetLastFlowsAsync(mapping, productRepo, currentFlow is Backflow);
+            lastFlows = await _codeFlower.GetLastFlowsAsync(mapping, productRepo, currentFlow is BackFlow);
         }
         catch (InvalidSynchronizationException)
         {

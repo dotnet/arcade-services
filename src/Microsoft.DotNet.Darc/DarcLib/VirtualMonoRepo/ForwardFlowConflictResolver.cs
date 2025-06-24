@@ -54,7 +54,7 @@ public interface IForwardFlowConflictResolver
         string headBranch,
         string branchToMerge,
         ForwardFlow currentFlow,
-        Codeflow? recentFlow,
+        CrossingFlow? crossingFlow,
         CancellationToken cancellationToken);
 }
 
@@ -86,7 +86,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         string headBranch,
         string branchToMerge,
         ForwardFlow currentFlow,
-        Codeflow? recentFlow,
+        CrossingFlow? crossingFlow,
         CancellationToken cancellationToken)
     {
         var conflictedFiles = await TryMergingBranch(vmr, headBranch, branchToMerge, cancellationToken);
@@ -102,7 +102,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             sourceRepo,
             conflictedFiles,
             currentFlow,
-            recentFlow,
+            crossingFlow,
             cancellationToken))
         {
             return conflictedFiles;
@@ -133,7 +133,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         ILocalGitRepo sourceRepo,
         IReadOnlyCollection<UnixPath> conflictedFiles,
         ForwardFlow currentFlow,
-        Codeflow? recentFlow,
+        CrossingFlow? crossingFlow,
         CancellationToken cancellationToken)
     {
         UnixPath[] allowedConflicts =
@@ -158,7 +158,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                     filePath,
                     allowedConflicts,
                     currentFlow,
-                    recentFlow,
+                    crossingFlow,
                     cancellationToken))
                 {
                     continue;
@@ -187,7 +187,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         UnixPath conflictedFile,
         UnixPath[] allowedConflicts,
         ForwardFlow currentFlow,
-        Codeflow? recentFlow,
+        CrossingFlow? crossingFlow,
         CancellationToken cancellationToken)
     {
         // Known conflict in source-manifest.json
@@ -205,17 +205,17 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             return true;
         }
 
-        // Unknown conflict, but can be conflicting with a out-of-order recent flow
-        // Check DetectRecentFlow documentation for more details
-        if (recentFlow != null)
+        // Unknown conflict, but can be conflicting with a crossing flow
+        // Check DetectCrossingFlow documentation for more details
+        if (crossingFlow != null)
         {
-            return await TryResolvingConflictUsingRecentFlow(
+            return await TryResolvingConflictWithCrossingFlow(
                 mappingName,
                 vmr,
                 sourceRepo,
                 conflictedFile,
                 currentFlow,
-                recentFlow,
+                crossingFlow,
                 cancellationToken);
         }
 

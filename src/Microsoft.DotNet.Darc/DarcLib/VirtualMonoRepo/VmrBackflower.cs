@@ -129,7 +129,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        var currentFlow = new Backflow(build.Commit, lastFlows.LastFlow.RepoSha);
+        var currentFlow = new BackFlow(build.Commit, lastFlows.LastFlow.RepoSha);
         var hasChanges = await FlowCodeAsync(
             lastFlows,
             currentFlow,
@@ -148,7 +148,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             mapping,
             lastFlows.LastFlow,
             currentFlow,
-            lastFlows.RecentFlow,
+            lastFlows.CrossingFlow,
             targetRepo,
             build,
             headBranch,
@@ -166,8 +166,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
     protected override async Task<bool> SameDirectionFlowAsync(
         SourceMapping mapping,
-        Codeflow lastFlow,
-        Codeflow currentFlow,
+        CrossingFlow lastFlow,
+        CrossingFlow currentFlow,
         ILocalGitRepo targetRepo,
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
@@ -267,8 +267,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
     protected override async Task<bool> OppositeDirectionFlowAsync(
         SourceMapping mapping,
-        Codeflow lastFlow,
-        Codeflow currentFlow,
+        CrossingFlow lastFlow,
+        CrossingFlow currentFlow,
         ILocalGitRepo targetRepo,
         Build build,
         string targetBranch,
@@ -360,9 +360,9 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return true;
     }
 
-    protected override async Task<Codeflow?> DetectRelevantRecentFlow(
-        Codeflow lastFlow,
-        Backflow? lastBackFlow,
+    protected override async Task<CrossingFlow?> DetectCrossingFlow(
+        CrossingFlow lastFlow,
+        BackFlow? lastBackFlow,
         ForwardFlow lastForwardFlow,
         ILocalGitRepo repo)
     {
@@ -461,7 +461,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private async Task RecreatePreviousFlowAndApplyBuild(
         SourceMapping mapping,
         ILocalGitRepo targetRepo,
-        Codeflow lastFlow,
+        CrossingFlow lastFlow,
         string headBranch,
         string newBranchName,
         IReadOnlyCollection<string>? excludedAssets,
@@ -483,7 +483,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // checkout the previous repo sha so we can get the last last flow
         await targetRepo.CheckoutAsync(previousRepoSha);
         await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
-        LastFlows lastLastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: lastFlow is Backflow);
+        LastFlows lastLastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: lastFlow is BackFlow);
 
         // Create a fake previously applied build. We only care about the sha here, because it will get overwritten anyway
         Build previouslyAppliedVmrBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastFlow.SourceSha, [], [], [], [])
@@ -527,8 +527,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
     private async Task CommitAndMergeWorkBranch(
         SourceMapping mapping,
-        Codeflow lastFlow,
-        Codeflow currentFlow,
+        CrossingFlow lastFlow,
+        CrossingFlow currentFlow,
         ILocalGitRepo targetRepo,
         string targetBranch,
         string headBranch,

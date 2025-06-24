@@ -22,7 +22,7 @@ public interface IVmrCodeFlower
 
     Task<bool> FlowCodeAsync(
         LastFlows lastFlows,
-        Codeflow currentFlow,
+        CrossingFlow currentFlow,
         ILocalGitRepo repo,
         SourceMapping mapping,
         Build build,
@@ -74,7 +74,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// <returns>True if there were changes to flow</returns>
     public async Task<bool> FlowCodeAsync(
         LastFlows lastFlows,
-        Codeflow currentFlow,
+        CrossingFlow currentFlow,
         ILocalGitRepo repo,
         SourceMapping mapping,
         Build build,
@@ -88,7 +88,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         var lastFlow = lastFlows.LastFlow;
         if (lastFlow.SourceSha == currentFlow.SourceSha)
         {
-            _logger.LogInformation("No new commits to flow from {sourceRepo}", currentFlow is Backflow ? "VMR" : mapping.Name);
+            _logger.LogInformation("No new commits to flow from {sourceRepo}", currentFlow is BackFlow ? "VMR" : mapping.Name);
             return false;
         }
 
@@ -132,7 +132,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         if (!hasChanges)
         {
-            _logger.LogInformation("Nothing to flow from {sourceRepo}", currentFlow is Backflow ? "VMR" : mapping.Name);
+            _logger.LogInformation("Nothing to flow from {sourceRepo}", currentFlow is BackFlow ? "VMR" : mapping.Name);
         }
 
         return hasChanges;
@@ -155,8 +155,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// <returns>True if there were changes to flow</returns>
     protected abstract Task<bool> SameDirectionFlowAsync(
         SourceMapping mapping,
-        Codeflow lastFlow,
-        Codeflow currentFlow,
+        CrossingFlow lastFlow,
+        CrossingFlow currentFlow,
         ILocalGitRepo repo,
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
@@ -182,8 +182,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// <returns>True if there were changes to flow</returns>
     protected abstract Task<bool> OppositeDirectionFlowAsync(
         SourceMapping mapping,
-        Codeflow lastFlow,
-        Codeflow currentFlow,
+        CrossingFlow lastFlow,
+        CrossingFlow currentFlow,
         ILocalGitRepo repo,
         Build build,
         string targetBranch,
@@ -193,32 +193,43 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         CancellationToken cancellationToken);
 
     /// <summary>
-    /// Tries to detect if there is another recent flow that should be taken into account.
-    /// For instance in the following setup, when we're forming the flow for 7. we detect
-    /// the last flow to be 1.->5. This means the forward flow branch will be based on 1.
-    /// However, the 3.->6. flow needs to be taken into account when forming the PR branch.
+    /// Tries to detect if given last flows (forward and backward) are crossing each other.
+    /// In the following diagram, where we are creating the flow 7. the flows 3->6 and 1->5
+    /// are crossing each other.
     ///
     ///     repo                   VMR
     ///       O────────────────────►O
     ///       │  2.                 │ 1.
-    ///       │   O◄────────────────O
+    ///       │   O◄────────────────O- - ┐
     ///       │   │            4.   │
-    ///     3.O───┼────────────►O   │
+    ///     3.O───┼────────────►O   │    │
     ///       │   │             │   │
-    ///       │ ┌─┘             │   │
+    ///       │ ┌─┘             │   │    │
     ///       │ │               │   │
-    ///     5.O◄┘               └──►O 6.
-    ///       │               7.    │
-    ///       |────────────────►    │
+    ///     5.O◄┘               └──►O 6. │
+    ///       │                 7.  │    O (actual branch for 7. is based on top of 1.)
+    ///       |────────────────►O   │
+    ///       │                 └──►x 8.
     ///       │                     │
     ///
-    /// The implementations of this method need to compare the directions of the last flows and the age
+    /// This can cause problems when we're forming 7. and we detect the last flow to be 1.->5.
+    /// 
+    /// The conflict arises in step 8. and is caused by the fact that:
+    ///   - When the forward flow PR branch is being opened in 7., the last sync (from the point of view of 5.) is from 1.
+    ///   - This means that the PR branch will be based on 1. (the real PR branch is the "actual 7.")
+    ///   - This means that when 6. merged, VMR's source-manifest.json got updated with the SHA of the 3.
+    ///   - So the source-manifest in 6. contains the SHA of 3.
+    ///   - The forward flow PR branch contains the SHA of 5.
+    ///   - So the source-manifest file conflicts on the SHA (3. vs 5.)
+    ///   - There's also a similar conflict in the git-info files.
+    ///   - However, if only the version files are in conflict, we can try merging 6. into 7. and resolve the conflict.
+    ///   - This is because basically we know we want to set the version files to point at 5.
     /// of commit 1. and 6.
     /// </summary>
     /// <returns>Null, if the last flow is the most recent otherwise the other recent flow.</returns>
-    protected abstract Task<Codeflow?> DetectRelevantRecentFlow(
-        Codeflow lastFlow,
-        Backflow? lastBackFlow,
+    protected abstract Task<CrossingFlow?> DetectCrossingFlow(
+        CrossingFlow lastFlow,
+        BackFlow? lastBackFlow,
         ForwardFlow lastForwardFlow,
         ILocalGitRepo repo);
 
@@ -234,11 +245,11 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
 
         ForwardFlow lastForwardFlow = await GetLastForwardFlow(mapping.Name);
-        Backflow? lastBackflow = await GetLastBackflow(repoClone.Path);
+        BackFlow? lastBackflow = await GetLastBackflow(repoClone.Path);
 
         if (lastBackflow is null)
         {
-            return new LastFlows(lastForwardFlow, lastBackflow, lastForwardFlow, RecentFlow: null);
+            return new LastFlows(lastForwardFlow, lastBackflow, lastForwardFlow, CrossingFlow: null);
         }
 
         string backwardSha, forwardSha;
@@ -265,12 +276,12 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         // If the SHA's are the same, it's a commit created by inflow which was then flown out
         if (forwardSha == backwardSha)
         {
-            Codeflow lastflow = sourceRepo == repoClone ? lastForwardFlow : lastBackflow;
+            CrossingFlow lastflow = sourceRepo == repoClone ? lastForwardFlow : lastBackflow;
             return new LastFlows(
                 lastflow,
                 lastBackflow,
                 lastForwardFlow,
-                await DetectRelevantRecentFlow(lastflow, lastBackflow, lastForwardFlow, repoClone));
+                await DetectCrossingFlow(lastflow, lastBackflow, lastForwardFlow, repoClone));
         }
 
         // Let's determine the last flow by comparing source commit of last backflow with target commit of last forward flow
@@ -308,22 +319,22 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     LastFlow: lastForwardFlow,
                     LastBackFlow: lastBackflow,
                     LastForwardFlow: lastForwardFlow,
-                    await DetectRelevantRecentFlow(lastForwardFlow, lastBackflow, lastForwardFlow, repoClone));
+                    await DetectCrossingFlow(lastForwardFlow, lastBackflow, lastForwardFlow, repoClone));
             }
         }
 
-        Codeflow lastFlow = isBackwardOlder ? lastForwardFlow : lastBackflow;
+        CrossingFlow lastFlow = isBackwardOlder ? lastForwardFlow : lastBackflow;
         return new LastFlows(
             LastFlow: lastFlow,
             LastBackFlow: lastBackflow,
             LastForwardFlow: lastForwardFlow,
-            await DetectRelevantRecentFlow(lastFlow, lastBackflow, lastForwardFlow, repoClone));
+            await DetectCrossingFlow(lastFlow, lastBackflow, lastForwardFlow, repoClone));
     }
 
     /// <summary>
     /// Finds the last backflow between a repo and a VMR.
     /// </summary>
-    private async Task<Backflow?> GetLastBackflow(NativePath repoPath)
+    private async Task<BackFlow?> GetLastBackflow(NativePath repoPath)
     {
         // Last backflow SHA comes from Version.Details.xml in the repo
         SourceDependency? source = _versionDetailsParser.ParseVersionDetailsFile(repoPath / VersionFiles.VersionDetailsXml).Source;
@@ -337,7 +348,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             repoPath / VersionFiles.VersionDetailsXml,
             line => line.Contains(VersionDetailsParser.SourceElementName) && line.Contains(lastBackflowVmrSha));
 
-        return new Backflow(lastBackflowVmrSha, lastBackflowRepoSha);
+        return new BackFlow(lastBackflowVmrSha, lastBackflowRepoSha);
     }
 
     /// <summary>
@@ -366,9 +377,9 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 /// <param name="LastFlow">Last flow from the PoV of the current commit. Equals LastBackFlow or LastForwardFlow</param>
 /// <param name="LastBackFlow">Last backflow from the PoV of the current commit</param>
 /// <param name="LastForwardFlow">Last forward flow from the PoV of the current commit</param>
-/// <param name="RecentFlow">A recent flow that should be taken into account when forming the PR. See DetectRecentFlow for more details.</param>
+/// <param name="CrossingFlow">A recent flow that should be taken into account as it crosses the last flow. See DetectCrossingFlow for more details.</param>
 public record LastFlows(
-    Codeflow LastFlow,
-    Backflow? LastBackFlow,
+    CrossingFlow LastFlow,
+    BackFlow? LastBackFlow,
     ForwardFlow LastForwardFlow,
-    Codeflow? RecentFlow);
+    CrossingFlow? CrossingFlow);

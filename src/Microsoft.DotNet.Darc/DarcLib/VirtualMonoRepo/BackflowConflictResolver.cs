@@ -28,9 +28,9 @@ public interface IBackflowConflictResolver
     /// <returns>List of dependency updates made to the version files</returns>
     Task<VersionFileUpdateResult> TryMergingBranchAndUpdateDependencies(
         SourceMapping mapping,
-        Codeflow lastFlow,
-        Backflow currentFlow,
-        Codeflow? recentFlow,
+        CrossingFlow lastFlow,
+        BackFlow currentFlow,
+        CrossingFlow? crossingFlow,
         ILocalGitRepo targetRepo,
         Build build,
         string headBranch,
@@ -78,9 +78,9 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
     public async Task<VersionFileUpdateResult> TryMergingBranchAndUpdateDependencies(
         SourceMapping mapping,
-        Codeflow lastFlow,
-        Backflow currentFlow,
-        Codeflow? recentFlow,
+        CrossingFlow lastFlow,
+        BackFlow currentFlow,
+        CrossingFlow? crossingFlow,
         ILocalGitRepo targetRepo,
         Build build,
         string headBranch,
@@ -100,7 +100,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 mapping,
                 lastFlow,
                 currentFlow,
-                recentFlow,
+                crossingFlow,
                 targetRepo,
                 build,
                 headBranch,
@@ -136,7 +136,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
     /// <summary>
     /// Tries to resolve well-known conflicts that can occur during a code flow operation.
-    /// The conflicts can happen when backward a forward flow PRs get merged out of order.
+    /// The conflicts can happen when backward a forward flow PRs get merged out of order
+    /// and so called "crossing" flow occurs.
     /// This can be shown on the following schema (the order of events is numbered):
     /// 
     ///     repo                   VMR
@@ -151,8 +152,10 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
     ///     5.O◄┘               └──►O 6. │
     ///       │                 7.  │    O (actual branch for 7. is based on top of 1.)
     ///       |────────────────►O   │
-    ///       │                 └──►O 8.
+    ///       │                 └──►x 8.
     ///       │                     │
+    ///
+    /// In this diagram, the flows 1->5 and 3->6 are crossing each other.
     ///
     /// The conflict arises in step 8. and is caused by the fact that:
     ///   - When the forward flow PR branch is being opened in 7., the last sync (from the point of view of 5.) is from 1.
@@ -168,9 +171,9 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
     private async Task<VersionFileUpdateResult> TryResolvingConflicts(
         IReadOnlyCollection<UnixPath> conflictedFiles,
         SourceMapping mapping,
-        Codeflow lastFlow,
-        Codeflow currentFlow,
-        Codeflow? recentFlow,
+        CrossingFlow lastFlow,
+        CrossingFlow currentFlow,
+        CrossingFlow? crossingFlow,
         ILocalGitRepo repo,
         Build build,
         string headBranch,
@@ -196,16 +199,16 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             }
 
             // Unknown conflict, but can be conflicting with a out-of-order recent flow
-            // Check DetectRecentFlow documentation for more details
-            if (recentFlow != null)
+            // Check DetectCrossingFlow documentation for more details
+            if (crossingFlow != null)
             {
-                if (await TryResolvingConflictUsingRecentFlow(
+                if (await TryResolvingConflictWithCrossingFlow(
                     mapping.Name,
                     vmr,
                     repo,
                     conflictedFile,
                     currentFlow,
-                    recentFlow,
+                    crossingFlow,
                     cancellationToken))
                 {
                     continue;
@@ -229,7 +232,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                     build,
                     excludedAssetsMatcher,
                     lastFlow,
-                    (Backflow)currentFlow,
+                    (BackFlow)currentFlow,
                     cancellationToken);
                 return new VersionFileUpdateResult(conflictedFiles, updates);
             }
@@ -247,7 +250,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 build,
                 excludedAssetsMatcher,
                 lastFlow,
-                (Backflow)currentFlow,
+                (BackFlow)currentFlow,
                 cancellationToken);
             return new VersionFileUpdateResult(ConflictedFiles: [], updates);
         }
@@ -278,8 +281,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         string targetBranch,
         Build build,
         IAssetMatcher excludedAssetsMatcher,
-        Codeflow lastFlow,
-        Backflow currentFlow,
+        CrossingFlow lastFlow,
+        BackFlow currentFlow,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation(
@@ -297,7 +300,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         // and the contents of the version files inside.
         // We distinguish the direction of the previous flow vs the current flow.
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        var previousVmrDependencies = lastFlow is Backflow
+        var previousVmrDependencies = lastFlow is BackFlow
             ? await GetVmrDependencies(vmr, mappingName, lastFlow.VmrSha)
             : previousRepoDependencies;
         var currentVmrDependencies = await GetVmrDependencies(vmr, mappingName, currentFlow.VmrSha);
