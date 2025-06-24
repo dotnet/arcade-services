@@ -88,7 +88,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         var lastFlow = lastFlows.LastFlow;
         if (lastFlow.SourceSha == currentFlow.SourceSha)
         {
-            _logger.LogInformation("No new commits to flow from {sourceRepo}", currentFlow is BackFlow ? "VMR" : mapping.Name);
+            _logger.LogInformation("No new commits to flow from {sourceRepo}", currentFlow is Backflow ? "VMR" : mapping.Name);
             return false;
         }
 
@@ -132,7 +132,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         if (!hasChanges)
         {
-            _logger.LogInformation("Nothing to flow from {sourceRepo}", currentFlow is BackFlow ? "VMR" : mapping.Name);
+            _logger.LogInformation("Nothing to flow from {sourceRepo}", currentFlow is Backflow ? "VMR" : mapping.Name);
         }
 
         return hasChanges;
@@ -229,7 +229,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// <returns>Null, if the last flow is the most recent flow for both sides. otherwise the other crossing flow.</returns>
     protected abstract Task<Codeflow?> DetectCrossingFlow(
         Codeflow lastFlow,
-        BackFlow? lastBackFlow,
+        Backflow? lastBackFlow,
         ForwardFlow lastForwardFlow,
         ILocalGitRepo repo);
 
@@ -245,7 +245,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
 
         ForwardFlow lastForwardFlow = await GetLastForwardFlow(mapping.Name);
-        BackFlow? lastBackflow = await GetLastBackflow(repoClone.Path);
+        Backflow? lastBackflow = await GetLastBackflow(repoClone.Path);
 
         if (lastBackflow is null)
         {
@@ -334,7 +334,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// <summary>
     /// Finds the last backflow between a repo and a VMR.
     /// </summary>
-    private async Task<BackFlow?> GetLastBackflow(NativePath repoPath)
+    private async Task<Backflow?> GetLastBackflow(NativePath repoPath)
     {
         // Last backflow SHA comes from Version.Details.xml in the repo
         SourceDependency? source = _versionDetailsParser.ParseVersionDetailsFile(repoPath / VersionFiles.VersionDetailsXml).Source;
@@ -348,7 +348,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             repoPath / VersionFiles.VersionDetailsXml,
             line => line.Contains(VersionDetailsParser.SourceElementName) && line.Contains(lastBackflowVmrSha));
 
-        return new BackFlow(lastBackflowVmrSha, lastBackflowRepoSha);
+        return new Backflow(lastBackflowVmrSha, lastBackflowRepoSha);
     }
 
     /// <summary>
@@ -380,6 +380,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 /// <param name="CrossingFlow">A recent flow that should be taken into account as it crosses the last flow. See DetectCrossingFlow for more details.</param>
 public record LastFlows(
     Codeflow LastFlow,
-    BackFlow? LastBackFlow,
+    Backflow? LastBackFlow,
     ForwardFlow LastForwardFlow,
     Codeflow? CrossingFlow);

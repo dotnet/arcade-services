@@ -129,7 +129,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        var currentFlow = new BackFlow(build.Commit, lastFlows.LastFlow.RepoSha);
+        var currentFlow = new Backflow(build.Commit, lastFlows.LastFlow.RepoSha);
         var hasChanges = await FlowCodeAsync(
             lastFlows,
             currentFlow,
@@ -362,7 +362,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
     protected override async Task<Codeflow?> DetectCrossingFlow(
         Codeflow lastFlow,
-        BackFlow? lastBackFlow,
+        Backflow? lastBackFlow,
         ForwardFlow lastForwardFlow,
         ILocalGitRepo repo)
     {
@@ -483,7 +483,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // checkout the previous repo sha so we can get the last last flow
         await targetRepo.CheckoutAsync(previousRepoSha);
         await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
-        LastFlows lastLastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: lastFlow is BackFlow);
+        LastFlows lastLastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: lastFlow is Backflow);
 
         // Create a fake previously applied build. We only care about the sha here, because it will get overwritten anyway
         Build previouslyAppliedVmrBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastFlow.SourceSha, [], [], [], [])

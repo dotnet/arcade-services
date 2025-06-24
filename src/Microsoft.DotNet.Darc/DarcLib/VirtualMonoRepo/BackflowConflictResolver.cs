@@ -29,7 +29,7 @@ public interface IBackflowConflictResolver
     Task<VersionFileUpdateResult> TryMergingBranchAndUpdateDependencies(
         SourceMapping mapping,
         Codeflow lastFlow,
-        BackFlow currentFlow,
+        Backflow currentFlow,
         Codeflow? crossingFlow,
         ILocalGitRepo targetRepo,
         Build build,
@@ -79,7 +79,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
     public async Task<VersionFileUpdateResult> TryMergingBranchAndUpdateDependencies(
         SourceMapping mapping,
         Codeflow lastFlow,
-        BackFlow currentFlow,
+        Backflow currentFlow,
         Codeflow? crossingFlow,
         ILocalGitRepo targetRepo,
         Build build,
@@ -245,7 +245,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
         Codeflow lastFlow,
-        BackFlow currentFlow,
+        Backflow currentFlow,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation(
@@ -263,7 +263,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         // and the contents of the version files inside.
         // We distinguish the direction of the previous flow vs the current flow.
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        var previousVmrDependencies = lastFlow is BackFlow
+        var previousVmrDependencies = lastFlow is Backflow
             ? await GetVmrDependencies(vmr, mappingName, lastFlow.VmrSha)
             : previousRepoDependencies;
         var currentVmrDependencies = await GetVmrDependencies(vmr, mappingName, currentFlow.VmrSha);

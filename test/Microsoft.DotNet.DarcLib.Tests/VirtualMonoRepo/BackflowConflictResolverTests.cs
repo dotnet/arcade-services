@@ -164,7 +164,7 @@ public class BackflowConflictResolverTests
     public async Task VersionsAreMergedInBackflowAfterForwardFlowTest()
     {
         var lastFlow = new ForwardFlow(LastRepoSha, LastVmrSha);
-        var currentFlow = new BackFlow(CurrentVmrSha, CurrentRepoSha);
+        var currentFlow = new Backflow(CurrentVmrSha, CurrentRepoSha);
 
         // Dependencies in the repo after last flow
         _versionDetails[$"repo/{lastFlow.RepoSha}"] = new VersionDetails(
@@ -258,7 +258,7 @@ public class BackflowConflictResolverTests
         // We will change a dependency in the repo too
         // And we will flow a new build from the VMR to the existing PR
         var newVmrSha = "new flow VMR SHA";
-        var newFlow = new BackFlow(newVmrSha, CurrentRepoSha);
+        var newFlow = new Backflow(newVmrSha, CurrentRepoSha);
         var newRepoDependency = CreateDependency("New.Package.In.Repo", "4.0.0", "sha does not matter");
         var newPrDependency = CreateDependency("New.Package.In.Pr", "4.0.0", "sha does not matter");
         var newVmrDependency = CreateDependency("New.Package.In.Vmr", "4.0.0", "sha does not matter");
@@ -318,8 +318,8 @@ public class BackflowConflictResolverTests
     [Test]
     public async Task ConflictingChangesThrowTest()
     {
-        var lastFlow = new BackFlow(LastRepoSha, LastVmrSha);
-        var currentFlow = new BackFlow(CurrentVmrSha, CurrentRepoSha);
+        var lastFlow = new Backflow(LastRepoSha, LastVmrSha);
+        var currentFlow = new Backflow(CurrentVmrSha, CurrentRepoSha);
 
         var withPackage = new VersionDetails(
         [
@@ -439,7 +439,7 @@ public class BackflowConflictResolverTests
     private async Task TestConflictResolver(
         Build build,
         Codeflow lastFlow,
-        BackFlow currentFlow,
+        Backflow currentFlow,
         (string Name, string Version)[] expectedDependencies,
         ExpectedUpdate[] expectedUpdates,
         bool headBranchExisted,

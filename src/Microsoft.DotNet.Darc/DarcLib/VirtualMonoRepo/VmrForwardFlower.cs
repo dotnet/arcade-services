@@ -323,11 +323,11 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
     protected override async Task<Codeflow?> DetectCrossingFlow(
         Codeflow lastFlow,
-        BackFlow? lastBackFlow,
+        Backflow? lastBackFlow,
         ForwardFlow lastForwardFlow,
         ILocalGitRepo repo)
     {
-        if (lastFlow is not BackFlow bf)
+        if (lastFlow is not Backflow bf)
         {
             return null;
         }
@@ -374,7 +374,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
-        LastFlows lastLastFlows = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: lastFlow is BackFlow);
+        LastFlows lastLastFlows = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: lastFlow is Backflow);
 
         // Reconstruct the previous flow's branch
         await FlowCodeAsync(

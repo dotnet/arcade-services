@@ -23,7 +23,7 @@ public record ForwardFlow(string RepoSha, string VmrSha) : Codeflow(RepoSha, Vmr
     public override string Name { get; } = "forward";
 }
 
-public record BackFlow(string VmrSha, string RepoSha) : Codeflow(VmrSha, RepoSha)
+public record Backflow(string VmrSha, string RepoSha) : Codeflow(VmrSha, RepoSha)
 {
     public override string Name { get; } = "back";
 }
