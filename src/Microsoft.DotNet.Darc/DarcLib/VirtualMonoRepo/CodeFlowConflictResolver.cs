@@ -34,34 +34,34 @@ public abstract class CodeFlowConflictResolver
 
     protected async Task<IReadOnlyCollection<UnixPath>> TryMergingBranch(
         ILocalGitRepo repo,
-        string targetBranch,
+        string headBranch,
         string branchToMerge,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Trying to merge {branchToMerge} into {targetBranch}...", branchToMerge, targetBranch);
+        _logger.LogInformation("Trying to merge {branchToMerge} into {headBranch}...", branchToMerge, headBranch);
 
-        await repo.CheckoutAsync(targetBranch);
+        await repo.CheckoutAsync(headBranch);
         var result = await repo.RunGitCommandAsync(["merge", "--no-commit", "--no-ff", branchToMerge], cancellationToken);
         if (result.Succeeded)
         {
             try
             {
                 await repo.CommitAsync(
-                    $"Merging {branchToMerge} into {targetBranch}",
+                    $"Merging {branchToMerge} into {headBranch}",
                     allowEmpty: false,
                     cancellationToken: CancellationToken.None);
 
-                _logger.LogInformation("Successfully merged the branch {targetBranch} into {headBranch} in {repoPath}",
+                _logger.LogInformation("Successfully merged the branch {headBranch} into {headBranch} in {repoPath}",
                     branchToMerge,
-                    targetBranch,
+                    headBranch,
                     repo.Path);
             }
             catch (Exception e) when (e.Message.Contains("nothing to commit"))
             {
                 // Our branch might be fast-forward and so no commit was needed
-                _logger.LogInformation("Branch {targetBranch} had no updates since it was last merged into {headBranch}",
+                _logger.LogInformation("Branch {headBranch} had no updates since it was last merged into {headBranch}",
                     branchToMerge,
-                    targetBranch);
+                    headBranch);
             }
 
             return [];

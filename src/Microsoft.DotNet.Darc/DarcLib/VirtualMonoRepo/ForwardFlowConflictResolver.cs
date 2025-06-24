@@ -51,7 +51,7 @@ public interface IForwardFlowConflictResolver
         string mappingName,
         ILocalGitRepo vmr,
         ILocalGitRepo sourceRepo,
-        string targetBranch,
+        string headBranch,
         string branchToMerge,
         ForwardFlow currentFlow,
         Codeflow? recentFlow,
@@ -83,13 +83,13 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         string mappingName,
         ILocalGitRepo vmr,
         ILocalGitRepo sourceRepo,
-        string targetBranch,
+        string headBranch,
         string branchToMerge,
         ForwardFlow currentFlow,
         Codeflow? recentFlow,
         CancellationToken cancellationToken)
     {
-        var conflictedFiles = await TryMergingBranch(vmr, targetBranch, branchToMerge, cancellationToken);
+        var conflictedFiles = await TryMergingBranch(vmr, headBranch, branchToMerge, cancellationToken);
 
         if (!conflictedFiles.Any())
         {
@@ -108,14 +108,14 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             return conflictedFiles;
         }
 
-        _logger.LogInformation("Successfully resolved file conflicts between branches {targetBranch} and {headBranch}",
+        _logger.LogInformation("Successfully resolved file conflicts between branches {headBranch} and {headBranch}",
             branchToMerge,
-            targetBranch);
+            headBranch);
 
         try
         {
             await vmr.CommitAsync(
-                $"Merge branch {branchToMerge} into {targetBranch}",
+                $"Merge branch {branchToMerge} into {headBranch}",
                 allowEmpty: true,
                 cancellationToken: CancellationToken.None);
         }

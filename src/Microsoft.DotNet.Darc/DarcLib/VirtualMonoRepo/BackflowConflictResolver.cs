@@ -12,7 +12,6 @@ using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
-using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;
 using NuGet.Versioning;
@@ -34,7 +33,7 @@ public interface IBackflowConflictResolver
         Codeflow? recentFlow,
         ILocalGitRepo targetRepo,
         Build build,
-        string targetBranch,
+        string headBranch,
         string branchToMerge,
         IReadOnlyCollection<string>? excludedAssets,
         bool headBranchExisted,
@@ -84,13 +83,13 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         Codeflow? recentFlow,
         ILocalGitRepo targetRepo,
         Build build,
-        string targetBranch,
+        string headBranch,
         string branchToMerge,
         IReadOnlyCollection<string>? excludedAssets,
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        var conflictedFiles = await TryMergingBranch(targetRepo, targetBranch, branchToMerge, cancellationToken);
+        var conflictedFiles = await TryMergingBranch(targetRepo, headBranch, branchToMerge, cancellationToken);
 
         var excludedAssetsMatcher = excludedAssets.GetAssetMatcher();
 
@@ -104,7 +103,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 recentFlow,
                 targetRepo,
                 build,
-                targetBranch,
+                headBranch,
                 branchToMerge,
                 excludedAssetsMatcher,
                 headBranchExisted,
@@ -116,7 +115,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             var updates = await BackflowDependenciesAndToolset(
                 mapping.Name,
                 targetRepo,
-                targetBranch,
+                branchToMerge,
                 build,
                 excludedAssetsMatcher,
                 lastFlow,
@@ -127,9 +126,9 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         catch (Exception e)
         {
             // We don't want to push this as there is some problem
-            _logger.LogError(e, "Failed to update dependencies after merging {branchToMerge} into {targetBranch} in {repoPath}",
+            _logger.LogError(e, "Failed to update dependencies after merging {branchToMerge} into {headBranch} in {repoPath}",
                 branchToMerge,
-                targetBranch,
+                headBranch,
                 targetRepo.Path);
             throw;
         }
@@ -174,7 +173,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         Codeflow? recentFlow,
         ILocalGitRepo repo,
         Build build,
-        string targetBranch,
+        string headBranch,
         string branchToMerge,
         IAssetMatcher excludedAssetsMatcher,
         bool headBranchExisted,
@@ -213,9 +212,9 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 }
             }
 
-            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} due to unresolvable conflict in {conflictedFile}",
+            _logger.LogInformation("Failed to merge the branch {branchToMerge} into {headBranch} due to unresolvable conflict in {conflictedFile}",
                 branchToMerge,
-                targetBranch,
+                headBranch,
                 conflictedFile);
 
             await AbortMerge(repo);
@@ -244,7 +243,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             var updates = await BackflowDependenciesAndToolset(
                 mapping.Name,
                 repo,
-                branchToMerge,
+                headBranch,
                 build,
                 excludedAssetsMatcher,
                 lastFlow,
@@ -261,9 +260,9 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         catch
         {
             // We don't want to push this as there is some problem
-            _logger.LogError("Failed to update dependencies after merging {targetBranch} into {headBranch} in {repoPath}",
+            _logger.LogError("Failed to update dependencies after merging {headBranch} into {headBranch} in {repoPath}",
                 branchToMerge,
-                targetBranch,
+                headBranch,
                 repo.Path);
             throw;
         }
