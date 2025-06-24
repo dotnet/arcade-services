@@ -360,7 +360,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return true;
     }
 
-    protected override async Task<Codeflow?> DetectRecentFlow(
+    protected override async Task<Codeflow?> DetectRelevantRecentFlow(
         Codeflow lastFlow,
         Backflow? lastBackFlow,
         ForwardFlow lastForwardFlow,

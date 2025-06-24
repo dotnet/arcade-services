@@ -216,7 +216,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// of commit 1. and 6.
     /// </summary>
     /// <returns>Null, if the last flow is the most recent otherwise the other recent flow.</returns>
-    protected abstract Task<Codeflow?> DetectRecentFlow(
+    protected abstract Task<Codeflow?> DetectRelevantRecentFlow(
         Codeflow lastFlow,
         Backflow? lastBackFlow,
         ForwardFlow lastForwardFlow,
@@ -270,7 +270,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 lastflow,
                 lastBackflow,
                 lastForwardFlow,
-                await DetectRecentFlow(lastflow, lastBackflow, lastForwardFlow, repoClone));
+                await DetectRelevantRecentFlow(lastflow, lastBackflow, lastForwardFlow, repoClone));
         }
 
         // Let's determine the last flow by comparing source commit of last backflow with target commit of last forward flow
@@ -308,7 +308,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     LastFlow: lastForwardFlow,
                     LastBackFlow: lastBackflow,
                     LastForwardFlow: lastForwardFlow,
-                    await DetectRecentFlow(lastForwardFlow, lastBackflow, lastForwardFlow, repoClone));
+                    await DetectRelevantRecentFlow(lastForwardFlow, lastBackflow, lastForwardFlow, repoClone));
             }
         }
 
@@ -317,7 +317,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             LastFlow: lastFlow,
             LastBackFlow: lastBackflow,
             LastForwardFlow: lastForwardFlow,
-            await DetectRecentFlow(lastFlow, lastBackflow, lastForwardFlow, repoClone));
+            await DetectRelevantRecentFlow(lastFlow, lastBackflow, lastForwardFlow, repoClone));
     }
 
     /// <summary>

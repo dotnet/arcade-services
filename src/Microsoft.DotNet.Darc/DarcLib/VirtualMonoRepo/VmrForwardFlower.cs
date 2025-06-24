@@ -321,7 +321,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             cancellationToken: cancellationToken);
     }
 
-    protected override async Task<Codeflow?> DetectRecentFlow(
+    protected override async Task<Codeflow?> DetectRelevantRecentFlow(
         Codeflow lastFlow,
         Backflow? lastBackFlow,
         ForwardFlow lastForwardFlow,
