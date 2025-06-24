@@ -89,25 +89,31 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        var conflictedFiles = await TryMergingBranch(targetRepo, headBranch, branchToMerge, cancellationToken);
+        IReadOnlyCollection<UnixPath> conflictedFiles = await TryMergingBranch(
+            targetRepo,
+            headBranch,
+            branchToMerge,
+            cancellationToken);
 
-        var excludedAssetsMatcher = excludedAssets.GetAssetMatcher();
-
-        if (conflictedFiles.Any())
-        {
-            return await TryResolvingConflicts(
+        if (conflictedFiles.Any() && await TryResolvingConflicts(
                 conflictedFiles,
                 mapping,
-                lastFlow,
                 currentFlow,
                 crossingFlow,
                 targetRepo,
-                build,
                 headBranch,
                 branchToMerge,
-                excludedAssetsMatcher,
                 headBranchExisted,
-                cancellationToken);
+                cancellationToken))
+        {
+            await targetRepo.CommitAsync(
+                $"""
+                Merge {branchToMerge} into {headBranch}
+                Auto-resolved conflicts:
+                - {string.Join(Environment.NewLine + "- ", conflictedFiles.Select(f => f.Path))}
+                """,
+                allowEmpty: true,
+                cancellationToken: CancellationToken.None);
         }
 
         try
@@ -117,7 +123,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 targetRepo,
                 branchToMerge,
                 build,
-                excludedAssetsMatcher,
+                excludedAssets,
                 lastFlow,
                 currentFlow,
                 cancellationToken);
@@ -168,17 +174,14 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
     ///   - However, if only the version files are in conflict, we can try merging 6. into 7. and resolve the conflict.
     ///   - This is because basically we know we want to set the version files to point at 5.
     /// </summary>
-    private async Task<VersionFileUpdateResult> TryResolvingConflicts(
+    private async Task<bool> TryResolvingConflicts(
         IReadOnlyCollection<UnixPath> conflictedFiles,
         SourceMapping mapping,
-        CrossingFlow lastFlow,
         CrossingFlow currentFlow,
         CrossingFlow? crossingFlow,
         ILocalGitRepo repo,
-        Build build,
         string headBranch,
         string branchToMerge,
-        IAssetMatcher excludedAssetsMatcher,
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
@@ -221,54 +224,14 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 conflictedFile);
 
             await AbortMerge(repo);
-
-            // If this is a first commit, we need to update dependencies still
-            if (!headBranchExisted)
-            {
-                var updates = await BackflowDependenciesAndToolset(
-                    mapping.Name,
-                    repo,
-                    branchToMerge,
-                    build,
-                    excludedAssetsMatcher,
-                    lastFlow,
-                    (BackFlow)currentFlow,
-                    cancellationToken);
-                return new VersionFileUpdateResult(conflictedFiles, updates);
-            }
-
-            return new VersionFileUpdateResult(conflictedFiles, []);
+            return false;
         }
 
-        // After conflicts are dealt with, we override the version files by regenerating them properly
-        try
-        {
-            var updates = await BackflowDependenciesAndToolset(
-                mapping.Name,
-                repo,
-                headBranch,
-                build,
-                excludedAssetsMatcher,
-                lastFlow,
-                (BackFlow)currentFlow,
-                cancellationToken);
-            return new VersionFileUpdateResult(ConflictedFiles: [], updates);
-        }
-        catch (ConflictingDependencyUpdateException e)
-        {
-            _logger.LogInformation("Detected conflicts in version file changes - failed to update dependencies: {message}", e.Message);
-            await AbortMerge(repo);
-            return new VersionFileUpdateResult(conflictedFiles, []);
-        }
-        catch
-        {
-            // We don't want to push this as there is some problem
-            _logger.LogError("Failed to update dependencies after merging {headBranch} into {headBranch} in {repoPath}",
-                branchToMerge,
-                headBranch,
-                repo.Path);
-            throw;
-        }
+        _logger.LogInformation("Successfully auto-resolved all conflicts between {branchToMerge} and {headBranch}",
+            branchToMerge,
+            headBranch);
+
+        return true;
     }
 
     /// <summary>
@@ -280,7 +243,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         ILocalGitRepo targetRepo,
         string targetBranch,
         Build build,
-        IAssetMatcher excludedAssetsMatcher,
+        IReadOnlyCollection<string>? excludedAssets,
         CrossingFlow lastFlow,
         BackFlow currentFlow,
         CancellationToken cancellationToken)
@@ -304,6 +267,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             ? await GetVmrDependencies(vmr, mappingName, lastFlow.VmrSha)
             : previousRepoDependencies;
         var currentVmrDependencies = await GetVmrDependencies(vmr, mappingName, currentFlow.VmrSha);
+
+        var excludedAssetsMatcher = excludedAssets.GetAssetMatcher();
 
         List<DependencyUpdate> repoChanges = ComputeChanges(
             excludedAssetsMatcher,

@@ -47,7 +47,7 @@ public abstract class CodeFlowConflictResolver
             try
             {
                 await repo.CommitAsync(
-                    $"Merging {branchToMerge} into {headBranch}",
+                    $"Merge {branchToMerge} into {headBranch}",
                     allowEmpty: false,
                     cancellationToken: CancellationToken.None);
 
