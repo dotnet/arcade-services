@@ -221,6 +221,37 @@ The Product Construction Service uses the [Blue-Green](https://learn.microsoft.c
 While we're still in the early development phase we want to be able to publish to production easily (as it's not used by anything). We've temporarily made it so so any branch that starts with `production/`
 or `production-` deploys to prod
 
+## Changing the Container App configuration
+
+If you need to change the configuration of the Container App (e.g. increase disk size, memory, environment variables, etc.), you have to be careful not to do it from the Azure Portal. We are on an preview feature allowing for larger disk space and the changes made in the portal will revert this setting to the publicly known maximum of 8GB (while we need around 50GB).
+
+To correctly change the configuration, you need to use `az containerapp` commands like so:
+
+```ps
+az login
+az account set --subscription fbd6122a-9ad3-42e4-976e-bccb82486856 # prod PCS
+az containerapp show --name product-construction-prod --resource-group product-construction-service --output yaml
+```
+
+You can store the above into a file (or use `| clip` and save it), edit the settings you want to change.
+Then change the `revisionSuffix` to something unique (e.g. add `-dev`).
+When your new configuration is read, make sure you stop the background job processing:
+
+```ps
+cd arcade-services\tools\ProductConstructionService.Cli
+dotnet run -- stop
+# Wait and verify with dotnet run -- get-status
+```
+
+Then you can update the Container App with the new configuration:
+
+```ps
+az containerapp update --name product-construction-prod --resource-group product-construction-service --yaml [PATH TO THE YAML FILE FROM ABOVE]
+```
+
+This will create a new revision of the Container App with the updated configuration. However, it will not automatically switch the traffic to the new revision.
+For this, just re-run the `Deploy` stage of the last pipeline run (either prod or int) which will clean up the old revision and switch the traffic to the new one.
+
 # Debugging
 
 ## Getting container logs (when service does not start)
