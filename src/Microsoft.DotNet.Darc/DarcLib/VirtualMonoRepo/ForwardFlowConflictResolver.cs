@@ -54,7 +54,7 @@ public interface IForwardFlowConflictResolver
         string headBranch,
         string branchToMerge,
         ForwardFlow currentFlow,
-        CrossingFlow? crossingFlow,
+        Codeflow? crossingFlow,
         CancellationToken cancellationToken);
 }
 
@@ -86,7 +86,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         string headBranch,
         string branchToMerge,
         ForwardFlow currentFlow,
-        CrossingFlow? crossingFlow,
+        Codeflow? crossingFlow,
         CancellationToken cancellationToken)
     {
         var conflictedFiles = await TryMergingBranch(vmr, headBranch, branchToMerge, cancellationToken);
@@ -133,7 +133,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         ILocalGitRepo sourceRepo,
         IReadOnlyCollection<UnixPath> conflictedFiles,
         ForwardFlow currentFlow,
-        CrossingFlow? crossingFlow,
+        Codeflow? crossingFlow,
         CancellationToken cancellationToken)
     {
         UnixPath[] allowedConflicts =
@@ -187,7 +187,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         UnixPath conflictedFile,
         UnixPath[] allowedConflicts,
         ForwardFlow currentFlow,
-        CrossingFlow? crossingFlow,
+        Codeflow? crossingFlow,
         CancellationToken cancellationToken)
     {
         // Known conflict in source-manifest.json

@@ -438,7 +438,7 @@ public class BackflowConflictResolverTests
 
     private async Task TestConflictResolver(
         Build build,
-        CrossingFlow lastFlow,
+        Codeflow lastFlow,
         BackFlow currentFlow,
         (string Name, string Version)[] expectedDependencies,
         ExpectedUpdate[] expectedUpdates,

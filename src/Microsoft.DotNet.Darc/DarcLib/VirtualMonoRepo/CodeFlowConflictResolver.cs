@@ -84,7 +84,7 @@ public abstract class CodeFlowConflictResolver
     }
 
     /// <summary>
-    /// If a recent flow is detected, we can try to figure out if the changes that happened to it in the repo
+    /// If a recent crossing flow is detected, we can try to figure out if the changes that happened to it in the repo
     /// apply on top of the VMR file.
     /// </summary>
     /// <returns>True when auto-resolution succeeded</returns>
@@ -93,11 +93,11 @@ public abstract class CodeFlowConflictResolver
         ILocalGitRepo vmr,
         ILocalGitRepo repo,
         UnixPath conflictedFile,
-        CrossingFlow currentFlow,
-        CrossingFlow crossingFlow,
+        Codeflow currentFlow,
+        Codeflow crossingFlow,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Trying to auto-resolve a conflict in {filePath} based on a recent flow...", conflictedFile);
+        _logger.LogInformation("Trying to auto-resolve a conflict in {filePath} based on a crossing flow...", conflictedFile);
 
         bool isForwardFlow = currentFlow is ForwardFlow;
 
@@ -156,7 +156,7 @@ public abstract class CodeFlowConflictResolver
                 removePatchAfter: true,
                 reverseApply: false,
                 cancellationToken);
-            _logger.LogInformation("Successfully auto-resolved a conflict in {filePath} based on a recent flow", conflictedFile);
+            _logger.LogInformation("Successfully auto-resolved a conflict in {filePath} based on a crossing flow", conflictedFile);
             return true;
         }
         catch (PatchApplicationFailedException)

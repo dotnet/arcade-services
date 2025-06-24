@@ -69,7 +69,7 @@ internal abstract class CodeFlowOperation(
             !isForwardFlow ? mappingName : "VMR",
             targetRepo.Path);
 
-        CrossingFlow currentFlow = isForwardFlow
+        Codeflow currentFlow = isForwardFlow
             ? new ForwardFlow(_options.Ref, await targetRepo.GetShaForRefAsync())
             : new BackFlow(_options.Ref, await targetRepo.GetShaForRefAsync());
 

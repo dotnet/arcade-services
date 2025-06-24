@@ -22,7 +22,7 @@ public interface IVmrCodeFlower
 
     Task<bool> FlowCodeAsync(
         LastFlows lastFlows,
-        CrossingFlow currentFlow,
+        Codeflow currentFlow,
         ILocalGitRepo repo,
         SourceMapping mapping,
         Build build,
@@ -74,7 +74,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// <returns>True if there were changes to flow</returns>
     public async Task<bool> FlowCodeAsync(
         LastFlows lastFlows,
-        CrossingFlow currentFlow,
+        Codeflow currentFlow,
         ILocalGitRepo repo,
         SourceMapping mapping,
         Build build,
@@ -155,8 +155,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// <returns>True if there were changes to flow</returns>
     protected abstract Task<bool> SameDirectionFlowAsync(
         SourceMapping mapping,
-        CrossingFlow lastFlow,
-        CrossingFlow currentFlow,
+        Codeflow lastFlow,
+        Codeflow currentFlow,
         ILocalGitRepo repo,
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
@@ -182,8 +182,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// <returns>True if there were changes to flow</returns>
     protected abstract Task<bool> OppositeDirectionFlowAsync(
         SourceMapping mapping,
-        CrossingFlow lastFlow,
-        CrossingFlow currentFlow,
+        Codeflow lastFlow,
+        Codeflow currentFlow,
         ILocalGitRepo repo,
         Build build,
         string targetBranch,
@@ -226,9 +226,9 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     ///   - This is because basically we know we want to set the version files to point at 5.
     /// of commit 1. and 6.
     /// </summary>
-    /// <returns>Null, if the last flow is the most recent otherwise the other recent flow.</returns>
-    protected abstract Task<CrossingFlow?> DetectCrossingFlow(
-        CrossingFlow lastFlow,
+    /// <returns>Null, if the last flow is the most recent flow for both sides. otherwise the other crossing flow.</returns>
+    protected abstract Task<Codeflow?> DetectCrossingFlow(
+        Codeflow lastFlow,
         BackFlow? lastBackFlow,
         ForwardFlow lastForwardFlow,
         ILocalGitRepo repo);
@@ -276,7 +276,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         // If the SHA's are the same, it's a commit created by inflow which was then flown out
         if (forwardSha == backwardSha)
         {
-            CrossingFlow lastflow = sourceRepo == repoClone ? lastForwardFlow : lastBackflow;
+            Codeflow lastflow = sourceRepo == repoClone ? lastForwardFlow : lastBackflow;
             return new LastFlows(
                 lastflow,
                 lastBackflow,
@@ -323,7 +323,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             }
         }
 
-        CrossingFlow lastFlow = isBackwardOlder ? lastForwardFlow : lastBackflow;
+        Codeflow lastFlow = isBackwardOlder ? lastForwardFlow : lastBackflow;
         return new LastFlows(
             LastFlow: lastFlow,
             LastBackFlow: lastBackflow,
@@ -379,7 +379,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 /// <param name="LastForwardFlow">Last forward flow from the PoV of the current commit</param>
 /// <param name="CrossingFlow">A recent flow that should be taken into account as it crosses the last flow. See DetectCrossingFlow for more details.</param>
 public record LastFlows(
-    CrossingFlow LastFlow,
+    Codeflow LastFlow,
     BackFlow? LastBackFlow,
     ForwardFlow LastForwardFlow,
-    CrossingFlow? CrossingFlow);
+    Codeflow? CrossingFlow);

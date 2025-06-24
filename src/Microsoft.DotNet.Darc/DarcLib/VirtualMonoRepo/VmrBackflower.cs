@@ -166,8 +166,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
     protected override async Task<bool> SameDirectionFlowAsync(
         SourceMapping mapping,
-        CrossingFlow lastFlow,
-        CrossingFlow currentFlow,
+        Codeflow lastFlow,
+        Codeflow currentFlow,
         ILocalGitRepo targetRepo,
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
@@ -267,8 +267,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
     protected override async Task<bool> OppositeDirectionFlowAsync(
         SourceMapping mapping,
-        CrossingFlow lastFlow,
-        CrossingFlow currentFlow,
+        Codeflow lastFlow,
+        Codeflow currentFlow,
         ILocalGitRepo targetRepo,
         Build build,
         string targetBranch,
@@ -360,8 +360,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return true;
     }
 
-    protected override async Task<CrossingFlow?> DetectCrossingFlow(
-        CrossingFlow lastFlow,
+    protected override async Task<Codeflow?> DetectCrossingFlow(
+        Codeflow lastFlow,
         BackFlow? lastBackFlow,
         ForwardFlow lastForwardFlow,
         ILocalGitRepo repo)
@@ -461,7 +461,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private async Task RecreatePreviousFlowAndApplyBuild(
         SourceMapping mapping,
         ILocalGitRepo targetRepo,
-        CrossingFlow lastFlow,
+        Codeflow lastFlow,
         string headBranch,
         string newBranchName,
         IReadOnlyCollection<string>? excludedAssets,
@@ -527,8 +527,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
     private async Task CommitAndMergeWorkBranch(
         SourceMapping mapping,
-        CrossingFlow lastFlow,
-        CrossingFlow currentFlow,
+        Codeflow lastFlow,
+        Codeflow currentFlow,
         ILocalGitRepo targetRepo,
         string targetBranch,
         string headBranch,

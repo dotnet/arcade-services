@@ -214,8 +214,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
     protected override async Task<bool> SameDirectionFlowAsync(
         SourceMapping mapping,
-        CrossingFlow lastFlow,
-        CrossingFlow currentFlow,
+        Codeflow lastFlow,
+        Codeflow currentFlow,
         ILocalGitRepo sourceRepo,
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
@@ -268,8 +268,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
     protected override async Task<bool> OppositeDirectionFlowAsync(
         SourceMapping mapping,
-        CrossingFlow lastFlow,
-        CrossingFlow currentFlow,
+        Codeflow lastFlow,
+        Codeflow currentFlow,
         ILocalGitRepo sourceRepo,
         Build build,
         string targetBranch,
@@ -321,8 +321,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             cancellationToken: cancellationToken);
     }
 
-    protected override async Task<CrossingFlow?> DetectCrossingFlow(
-        CrossingFlow lastFlow,
+    protected override async Task<Codeflow?> DetectCrossingFlow(
+        Codeflow lastFlow,
         BackFlow? lastBackFlow,
         ForwardFlow lastForwardFlow,
         ILocalGitRepo repo)
@@ -340,7 +340,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
     private async Task<bool> RecreatePreviousFlowAndApplyBuild(
         SourceMapping mapping,
-        CrossingFlow lastFlow,
+        Codeflow lastFlow,
         string headBranch,
         ILocalGitRepo sourceRepo,
         IReadOnlyCollection<string>? excludedAssets,

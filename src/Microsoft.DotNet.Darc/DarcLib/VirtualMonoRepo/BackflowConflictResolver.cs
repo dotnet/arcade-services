@@ -28,9 +28,9 @@ public interface IBackflowConflictResolver
     /// <returns>List of dependency updates made to the version files</returns>
     Task<VersionFileUpdateResult> TryMergingBranchAndUpdateDependencies(
         SourceMapping mapping,
-        CrossingFlow lastFlow,
+        Codeflow lastFlow,
         BackFlow currentFlow,
-        CrossingFlow? crossingFlow,
+        Codeflow? crossingFlow,
         ILocalGitRepo targetRepo,
         Build build,
         string headBranch,
@@ -78,9 +78,9 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
     public async Task<VersionFileUpdateResult> TryMergingBranchAndUpdateDependencies(
         SourceMapping mapping,
-        CrossingFlow lastFlow,
+        Codeflow lastFlow,
         BackFlow currentFlow,
-        CrossingFlow? crossingFlow,
+        Codeflow? crossingFlow,
         ILocalGitRepo targetRepo,
         Build build,
         string headBranch,
@@ -177,8 +177,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
     private async Task<bool> TryResolvingConflicts(
         IReadOnlyCollection<UnixPath> conflictedFiles,
         SourceMapping mapping,
-        CrossingFlow currentFlow,
-        CrossingFlow? crossingFlow,
+        Codeflow currentFlow,
+        Codeflow? crossingFlow,
         ILocalGitRepo repo,
         string headBranch,
         string branchToMerge,
@@ -201,7 +201,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 continue;
             }
 
-            // Unknown conflict, but can be conflicting with a out-of-order recent flow
+            // Unknown conflict, but can be conflicting with a crossing flow
             // Check DetectCrossingFlow documentation for more details
             if (crossingFlow != null)
             {
@@ -244,7 +244,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         string targetBranch,
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
-        CrossingFlow lastFlow,
+        Codeflow lastFlow,
         BackFlow currentFlow,
         CancellationToken cancellationToken)
     {
