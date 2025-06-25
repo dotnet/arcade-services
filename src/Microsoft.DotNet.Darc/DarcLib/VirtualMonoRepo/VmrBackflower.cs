@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -49,12 +48,10 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private readonly IRepositoryCloneManager _repositoryCloneManager;
     private readonly ILocalGitClient _localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
-    private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IVmrPatchHandler _vmrPatchHandler;
     private readonly IWorkBranchFactory _workBranchFactory;
-    private readonly IVersionFileCodeFlowUpdater _versionFileConflictResolver;
+    private readonly IBackflowConflictResolver _conflictResolver;
     private readonly IFileSystem _fileSystem;
-    private readonly IBasicBarClient _barClient;
     private readonly ILogger<VmrCodeFlower> _logger;
 
     public VmrBackFlower(
@@ -68,7 +65,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             IVersionDetailsParser versionDetailsParser,
             IVmrPatchHandler vmrPatchHandler,
             IWorkBranchFactory workBranchFactory,
-            IVersionFileCodeFlowUpdater versionFileConflictResolver,
+            IBackflowConflictResolver versionFileConflictResolver,
             IFileSystem fileSystem,
             IBasicBarClient barClient,
             ILogger<VmrCodeFlower> logger)
@@ -81,12 +78,10 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _repositoryCloneManager = repositoryCloneManager;
         _localGitClient = localGitClient;
         _localGitRepoFactory = localGitRepoFactory;
-        _versionDetailsParser = versionDetailsParser;
         _vmrPatchHandler = vmrPatchHandler;
         _workBranchFactory = workBranchFactory;
-        _versionFileConflictResolver = versionFileConflictResolver;
+        _conflictResolver = versionFileConflictResolver;
         _fileSystem = fileSystem;
-        _barClient = barClient;
         _logger = logger;
     }
 
@@ -101,7 +96,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         CancellationToken cancellationToken = default)
     {
         var targetRepo = _localGitRepoFactory.Create(targetRepoPath);
-        (bool headBranchExisted, SourceMapping mapping) = await PrepareVmrAndRepo(
+        (bool headBranchExisted, SourceMapping mapping, LastFlows lastFlows) = await PrepareVmrAndRepo(
             mappingName,
             targetRepo,
             build,
@@ -109,12 +104,10 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             headBranch,
             cancellationToken);
 
-        (Codeflow lastFlow, Backflow? lastBackFlow, _) = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
-
         return await FlowBackAsync(
             mapping,
             targetRepo,
-            lastFlow,
+            lastFlows,
             build,
             excludedAssets,
             targetBranch,
@@ -127,7 +120,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     protected async Task<CodeFlowResult> FlowBackAsync(
         SourceMapping mapping,
         ILocalGitRepo targetRepo,
-        Codeflow lastFlow,
+        LastFlows lastFlows,
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
@@ -136,9 +129,9 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        var currentFlow = new Backflow(build.Commit, lastFlow.RepoSha);
+        var currentFlow = new Backflow(build.Commit, lastFlows.LastFlow.RepoSha);
         var hasChanges = await FlowCodeAsync(
-            lastFlow,
+            lastFlows,
             currentFlow,
             targetRepo,
             mapping,
@@ -151,10 +144,11 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             cancellationToken);
 
         // We try to merge the target branch and we apply dependency updates
-        VersionFileUpdateResult mergeResult = await _versionFileConflictResolver.TryMergingBranchAndUpdateDependencies(
+        VersionFileUpdateResult mergeResult = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
             mapping,
-            lastFlow,
+            lastFlows.LastFlow,
             currentFlow,
+            lastFlows.CrossingFlow,
             targetRepo,
             build,
             headBranch,
@@ -196,7 +190,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             relativePaths: true,
             workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
             applicationPath: null,
-            includeAdditionalMappings: false,
             ignoreLineEndings: false,
             cancellationToken);
 
@@ -309,7 +302,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             relativePaths: true,
             workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
             applicationPath: null,
-            includeAdditionalMappings: false,
             ignoreLineEndings: false,
             cancellationToken);
 
@@ -368,7 +360,23 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return true;
     }
 
-    private async Task<(bool, SourceMapping)> PrepareVmrAndRepo(
+    protected override async Task<Codeflow?> DetectCrossingFlow(
+        Codeflow lastFlow,
+        Backflow? lastBackFlow,
+        ForwardFlow lastForwardFlow,
+        ILocalGitRepo repo)
+    {
+        if (lastFlow is not ForwardFlow ff || lastBackFlow == null)
+        {
+            return null;
+        }
+
+        return await repo.IsAncestorCommit(ff.RepoSha, lastBackFlow.RepoSha)
+            ? lastForwardFlow
+            : null;
+    }
+
+    private async Task<(bool, SourceMapping, LastFlows)> PrepareVmrAndRepo(
         string mappingName,
         ILocalGitRepo targetRepo,
         Build build,
@@ -399,7 +407,9 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 headBranch,
                 ShouldResetVmr,
                 cancellationToken);
-            return (true, mapping);
+
+            LastFlows lastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
+            return (true, mapping, lastFlows);
         }
         catch (NotFoundException)
         {
@@ -420,10 +430,10 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 throw new TargetBranchNotFoundException($"Failed to find target branch {targetBranch} in {string.Join(", ", remotes)}", e);
             }
 
-            (Codeflow last, _, _) = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: false);
-            await targetRepo.CheckoutAsync(last.RepoSha);
+            LastFlows lastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
+            await targetRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
             await targetRepo.CreateBranchAsync(headBranch);
-            return (false, mapping);
+            return (false, mapping, lastFlows);
         }
     }
 
@@ -473,7 +483,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // checkout the previous repo sha so we can get the last last flow
         await targetRepo.CheckoutAsync(previousRepoSha);
         await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
-        (Codeflow lastLastFlow, _, _) = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: lastFlow is Backflow);
+        LastFlows lastLastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: lastFlow is Backflow);
 
         // Create a fake previously applied build. We only care about the sha here, because it will get overwritten anyway
         Build previouslyAppliedVmrBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastFlow.SourceSha, [], [], [], [])
@@ -484,7 +494,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         // Reconstruct the previous flow's branch
         await FlowCodeAsync(
-            lastLastFlow,
+            lastLastFlows,
             lastFlow,
             targetRepo,
             mapping,

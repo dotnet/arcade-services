@@ -76,7 +76,6 @@ public class VmrInfo : IVmrInfo
 
     public const string SourceDirName = "src";
     public const string SourceMappingsFileName = "source-mappings.json";
-    public const string GitInfoSourcesDir = "prereqs/git-info";
     public const string SourceManifestFileName = "source-manifest.json";
 
     // These git attributes can override cloaking of files when set it individual repositories

@@ -135,7 +135,7 @@ public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
             }
 
             // 3. Interactive login (user-based scenario)
-            credentials[account] = new DefaultAzureCredential(includeInteractiveCredentials: true);
+            credentials[account] = new DefaultAzureCredential(includeInteractiveCredentials: true); // CodeQL [SM05137] This is non-production code which is not deployed as a service but instead runs in a developer tool. The service also defines AZURE_TOKEN_CREDENTIALS just to be sure.
         }
 
         return credentials;

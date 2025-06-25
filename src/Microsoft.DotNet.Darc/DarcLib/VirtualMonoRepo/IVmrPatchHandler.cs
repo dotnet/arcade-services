@@ -38,7 +38,6 @@ public interface IVmrPatchHandler
         bool relativePaths,
         NativePath workingDir,
         UnixPath? applicationPath,
-        bool includeAdditionalMappings,
         bool ignoreLineEndings = false,
         CancellationToken cancellationToken = default);
 
