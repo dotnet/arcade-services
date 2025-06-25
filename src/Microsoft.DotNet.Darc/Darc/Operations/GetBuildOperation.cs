@@ -3,11 +3,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -38,6 +40,16 @@ internal class GetBuildOperation : Operation
     /// <returns>Process exit code.</returns>
     public override async Task<int> ExecuteAsync()
     {
+        var aBefore = JsonFlattener.FlattenJsonToDictionary(File.ReadAllText("C:\\Users\\dkurepa\\Desktop\\MOT outputs - Copy\\aBefore.json"));
+        var aAfter = JsonFlattener.FlattenJsonToDictionary(File.ReadAllText("C:\\Users\\dkurepa\\Desktop\\MOT outputs - Copy\\aAfter.json"));
+        var bBefore = JsonFlattener.FlattenJsonToDictionary(File.ReadAllText("C:\\Users\\dkurepa\\Desktop\\MOT outputs - Copy\\bBefore.json"));
+        var bAfter = JsonFlattener.FlattenJsonToDictionary(File.ReadAllText("C:\\Users\\dkurepa\\Desktop\\MOT outputs - Copy\\bAfter.json"));
+
+        var aChanges = FlatJsonComparer.CompareFlatJsons(aBefore, aAfter);
+        var bChanges = FlatJsonComparer.CompareFlatJsons(bBefore, bAfter);
+        FlatJsonChangeComparer.ApplyChanges(
+             File.ReadAllText("C:\\Users\\dkurepa\\Desktop\\MOT outputs - Copy\\aAfter.json"),
+             FlatJsonChangeComparer.ComputeChanges(aChanges, bChanges));
         try
         {
             List<Build>? matchingBuilds = null;

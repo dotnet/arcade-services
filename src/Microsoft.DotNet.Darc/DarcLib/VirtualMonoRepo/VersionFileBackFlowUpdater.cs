@@ -12,7 +12,6 @@ using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
-using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;
 using NuGet.Versioning;
@@ -20,28 +19,9 @@ using NuGet.Versioning;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public interface IVersionFileCodeFlowUpdater
+public class VersionFileBackFlowUpdater
 {
-    /// <summary>
-    /// Tries to merge the target branch into the head branch and then updates the dependencies and toolset.
-    /// Calculates the dependency updates based on the current build assets, the changes in the VMR and the repo.
-    /// </summary>
-    /// <returns>List of dependency updates made to the version files</returns>
-    Task<VersionFileUpdateResult> TryMergingBranchAndUpdateDependencies(
-        SourceMapping mapping,
-        Codeflow lastFlow,
-        Backflow currentFlow,
-        ILocalGitRepo targetRepo,
-        Build build,
-        string headBranch,
-        string targetBranch,
-        IReadOnlyCollection<string>? excludedAssets,
-        bool headBranchExisted,
-        CancellationToken cancellationToken);
-}
-
-public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
-{
+    private readonly ILogger<VersionFileBackFlowUpdater> _logger;
     private readonly IVmrInfo _vmrInfo;
     private readonly ILocalLibGit2Client _libGit2Client;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
@@ -50,9 +30,8 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IDependencyFileManager _dependencyFileManager;
     private readonly IFileSystem _fileSystem;
-    private readonly ILogger<VersionFileCodeFlowUpdater> _logger;
 
-    public VersionFileCodeFlowUpdater(
+    public VersionFileBackFlowUpdater(
         IVmrInfo vmrInfo,
         ILocalLibGit2Client libGit2Client,
         ILocalGitRepoFactory localGitRepoFactory,
@@ -61,7 +40,7 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IDependencyFileManager dependencyFileManager,
         IFileSystem fileSystem,
-        ILogger<VersionFileCodeFlowUpdater> logger)
+        ILogger<VersionFileBackFlowUpdater> logger)
     {
         _vmrInfo = vmrInfo;
         _libGit2Client = libGit2Client;
@@ -72,233 +51,6 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
         _dependencyFileManager = dependencyFileManager;
         _fileSystem = fileSystem;
         _logger = logger;
-    }
-
-    public async Task<VersionFileUpdateResult> TryMergingBranchAndUpdateDependencies(
-        SourceMapping mapping,
-        Codeflow lastFlow,
-        Backflow currentFlow,
-        ILocalGitRepo targetRepo,
-        Build build,
-        string headBranch,
-        string targetBranch,
-        IReadOnlyCollection<string>? excludedAssets,
-        bool headBranchExisted,
-        CancellationToken cancellationToken)
-    {
-        var mergeSuccessful = await TryMergingBranch(
-            targetRepo,
-            headBranch,
-            targetBranch,
-            cancellationToken);
-
-        var excludedAssetsMatcher = excludedAssets.GetAssetMatcher();
-
-        if (mergeSuccessful)
-        {
-            try
-            {
-                var updates = await BackflowDependenciesAndToolset(
-                    mapping.Name,
-                    targetRepo,
-                    targetBranch,
-                    build,
-                    excludedAssetsMatcher,
-                    lastFlow,
-                    currentFlow,
-                    cancellationToken);
-                return new VersionFileUpdateResult(ConflictedFiles: [], updates);
-            }
-            catch (Exception e)
-            {
-                // We don't want to push this as there is some problem
-                _logger.LogError(e, "Failed to update dependencies after merging {targetBranch} into {headBranch} in {repoPath}",
-                    targetBranch,
-                    headBranch,
-                    targetRepo.Path);
-                throw;
-            }
-        }
-
-        return await ResolveVersionFileConflicts(
-            mapping,
-            lastFlow,
-            currentFlow,
-            targetRepo,
-            build,
-            headBranch,
-            targetBranch,
-            excludedAssetsMatcher,
-            headBranchExisted,
-            cancellationToken);
-    }
-
-    private async Task<bool> TryMergingBranch(
-        ILocalGitRepo repo,
-        string headBranch,
-        string branchToMerge,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Checking if target branch {targetBranch} has conflicts with {headBranch}", branchToMerge, headBranch);
-
-        await repo.CheckoutAsync(headBranch);
-        var result = await repo.RunGitCommandAsync(["merge", "--no-commit", "--no-ff", branchToMerge], cancellationToken);
-        if (!result.Succeeded)
-        {
-            return false;
-        }
-
-        try
-        {
-            await repo.CommitAsync(
-                $"Merging {branchToMerge} into {headBranch}",
-                allowEmpty: false,
-                cancellationToken: CancellationToken.None);
-
-            _logger.LogInformation("Successfully merged the branch {targetBranch} into {headBranch} in {repoPath}",
-                branchToMerge,
-                headBranch,
-                repo.Path);
-        }
-        catch (Exception e) when (e.Message.Contains("nothing to commit"))
-        {
-            // Our branch might be fast-forward and so no commit was needed
-        }
-
-        return true;
-    }
-
-    /// <summary>
-    /// Tries to resolve well-known conflicts that can occur during a code flow operation.
-    /// The conflicts can happen when backward a forward flow PRs get merged out of order.
-    /// This can be shown on the following schema (the order of events is numbered):
-    /// 
-    ///     repo                   VMR
-    ///       O────────────────────►O
-    ///       │  2.                 │ 1.
-    ///       │   O◄────────────────O- - ┐
-    ///       │   │            4.   │
-    ///     3.O───┼────────────►O   │    │
-    ///       │   │             │   │
-    ///       │ ┌─┘             │   │    │
-    ///       │ │               │   │
-    ///     5.O◄┘               └──►O 6. │
-    ///       │                 7.  │    O (actual branch for 7. is based on top of 1.)
-    ///       |────────────────►O   │
-    ///       │                 └──►O 8.
-    ///       │                     │
-    ///
-    /// The conflict arises in step 8. and is caused by the fact that:
-    ///   - When the forward flow PR branch is being opened in 7., the last sync (from the point of view of 5.) is from 1.
-    ///   - This means that the PR branch will be based on 1. (the real PR branch is the "actual 7.")
-    ///   - This means that when 6. merged, VMR's source-manifest.json got updated with the SHA of the 3.
-    ///   - So the source-manifest in 6. contains the SHA of 3.
-    ///   - The forward flow PR branch contains the SHA of 5.
-    ///   - So the source-manifest file conflicts on the SHA (3. vs 5.)
-    ///   - There's also a similar conflict in the git-info files.
-    ///   - However, if only the version files are in conflict, we can try merging 6. into 7. and resolve the conflict.
-    ///   - This is because basically we know we want to set the version files to point at 5.
-    /// </summary>
-    private async Task<VersionFileUpdateResult> ResolveVersionFileConflicts(
-        SourceMapping mapping,
-        Codeflow lastFlow,
-        Codeflow currentFlow,
-        ILocalGitRepo repo,
-        Build build,
-        string headBranch,
-        string branchToMerge,
-        IAssetMatcher excludedAssetsMatcher,
-        bool headBranchExisted,
-        CancellationToken cancellationToken)
-    {
-        async Task AbortMerge()
-        {
-            var result = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
-            result.ThrowIfFailed("Failed to abort a merge when resolving version file conflicts");
-        }
-
-        // When we had conflicts, we verify that they can be resolved (i.e. they are only in version files)
-        var result = await repo.RunGitCommandAsync(["diff", "--name-only", "--diff-filter=U", "--relative"], cancellationToken);
-        if (!result.Succeeded)
-        {
-            await AbortMerge();
-            result.ThrowIfFailed("Failed to resolve version file conflicts - failed to get a list of conflicted files");
-        }
-
-        var conflictedFiles = result.StandardOutput
-            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
-            .Select(line => line.Trim())
-            .ToList();
-
-        var unresolvableConflicts = conflictedFiles
-            .Except(DependencyFileManager.DependencyFiles)
-            .ToList();
-
-        if (unresolvableConflicts.Count > 0)
-        {
-            _logger.LogInformation("Failed to merge the branch {targetBranch} into {headBranch} due to unresolvable conflicts: {conflicts}",
-                branchToMerge,
-                headBranch,
-                string.Join(", ", unresolvableConflicts));
-
-            await AbortMerge();
-
-            // If this is a first commit, we need to update dependencies still
-            if (!headBranchExisted)
-            {
-                var updates = await BackflowDependenciesAndToolset(
-                    mapping.Name,
-                    repo,
-                    branchToMerge,
-                    build,
-                    excludedAssetsMatcher,
-                    lastFlow,
-                    (Backflow)currentFlow,
-                    cancellationToken);
-                return new VersionFileUpdateResult(ConflictedFiles: [.. conflictedFiles.Select(file => new UnixPath(file))], updates);
-            }
-
-            return new VersionFileUpdateResult([..conflictedFiles.Select(file => new UnixPath(file))], []);
-        }
-
-        foreach (var file in conflictedFiles)
-        {
-            // Revert files so that we can resolve the conflicts
-            // We use the target branch version when we are flowing the first time (because we did not flow the version files yet)
-            // We use the head branch version when we are flowing again because it already has updates from previous flow
-            // plus it can contain additional changes from the PR
-            await repo.RunGitCommandAsync(["checkout", headBranchExisted ? "--ours" : "--theirs", file], cancellationToken);
-        }
-
-        try
-        {
-            // When only version files are conflicted, we can resolve the conflicts by generating them correctly
-            var updates = await BackflowDependenciesAndToolset(
-                mapping.Name,
-                repo,
-                branchToMerge,
-                build,
-                excludedAssetsMatcher,
-                lastFlow,
-                (Backflow)currentFlow,
-                cancellationToken);
-            return new VersionFileUpdateResult(ConflictedFiles: [], updates);
-        }
-        catch (ConflictingDependencyUpdateException e)
-        {
-            _logger.LogInformation("Detected conflicts in version file changes - failed to update dependencies: {message}", e.Message);
-            await AbortMerge();
-            return new VersionFileUpdateResult([.. conflictedFiles.Select(file => new UnixPath(file))], []);
-        }
-        catch
-        {
-            // We don't want to push this as there is some problem
-            _logger.LogError("Failed to update dependencies after merging {targetBranch} into {headBranch} in {repoPath}",
-                branchToMerge,
-                headBranch,
-                repo.Path);
-            throw;
-        }
     }
 
     /// <summary>
@@ -636,42 +388,6 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
         return dependencyUpdates;
     }
 
-    private static List<DependencyUpdate> ComputeChanges(IAssetMatcher excludedAssetsMatcher, VersionDetails before, VersionDetails after)
-    {
-        var dependencyChanges = before.Dependencies
-            .Where(dep => !excludedAssetsMatcher.IsExcluded(dep.Name))
-            .Select(dep => new DependencyUpdate()
-            {
-                From = dep,
-            })
-            .ToList();
-
-        // Pair dependencies with the same name
-        foreach (var dep in after.Dependencies.Where(dep => !excludedAssetsMatcher.IsExcluded(dep.Name)))
-        {
-            var existing = dependencyChanges.FirstOrDefault(d => d.From?.Name == dep.Name);
-            if (existing != null)
-            {
-                existing.To = dep;
-            }
-            else
-            {
-                dependencyChanges.Add(new DependencyUpdate()
-                {
-                    From = null,
-                    To = dep,
-                });
-            }
-        }
-
-        // Check if there are any actual changes
-        return dependencyChanges
-            .Where(change => change.From?.Version != change.To?.Version
-                || change.From?.Commit != change.To?.Commit
-                || change.From?.RepoUri != change.To?.RepoUri)
-            .ToList();
-    }
-
     public static string BuildDependencyUpdateCommitMessage(IEnumerable<DependencyUpdate> updates)
     {
         if (!updates.Any())
@@ -756,4 +472,40 @@ public class VersionFileCodeFlowUpdater : IVersionFileCodeFlowUpdater
         => content == null
             ? new VersionDetails([], null)
             : _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: false);
+
+    private static List<DependencyUpdate> ComputeChanges(IAssetMatcher excludedAssetsMatcher, VersionDetails before, VersionDetails after)
+    {
+        var dependencyChanges = before.Dependencies
+            .Where(dep => !excludedAssetsMatcher.IsExcluded(dep.Name))
+            .Select(dep => new DependencyUpdate()
+            {
+                From = dep,
+            })
+            .ToList();
+
+        // Pair dependencies with the same name
+        foreach (var dep in after.Dependencies.Where(dep => !excludedAssetsMatcher.IsExcluded(dep.Name)))
+        {
+            var existing = dependencyChanges.FirstOrDefault(d => d.From?.Name == dep.Name);
+            if (existing != null)
+            {
+                existing.To = dep;
+            }
+            else
+            {
+                dependencyChanges.Add(new DependencyUpdate()
+                {
+                    From = null,
+                    To = dep,
+                });
+            }
+        }
+
+        // Check if there are any actual changes
+        return dependencyChanges
+            .Where(change => change.From?.Version != change.To?.Version
+                || change.From?.Commit != change.To?.Commit
+                || change.From?.RepoUri != change.To?.RepoUri)
+            .ToList();
+    }
 }

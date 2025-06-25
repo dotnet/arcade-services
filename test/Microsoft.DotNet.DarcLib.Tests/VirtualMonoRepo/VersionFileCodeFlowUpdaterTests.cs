@@ -212,7 +212,8 @@ public class VersionFileCodeFlowUpdaterTests
             ("Package.Excluded.From.Backflow", "1.0.2"),
             ("Package.Also.Excluded.From.Backflow", "1.0.2"),
             ("Another.Package.From.Build", "1.0.5"),
-            ("Yet.Another.Package.From.Build", "1.0.5")
+            ("Yet.Another.Package.From.Build", "1.0.5"),
+            ("Package.Removed.In.Repo", "1.0.5")
         ]);
 
         // The final set of updates should be following

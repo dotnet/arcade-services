@@ -10,7 +10,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 
 public static class FlatJsonComparer
 {
-    public static void CompareFlatJsons(
+    public static List<FlatJsonComparerResultNode> CompareFlatJsons(
         Dictionary<string, object> oldJson,
         Dictionary<string, object> newJson)
     {
@@ -48,6 +48,8 @@ public static class FlatJsonComparer
                 changes.Add(new FlatJsonComparerResultNode(kvp.Key, NodeComparisonResult.Added, kvp.Value));
             }
         }
+
+        return changes;
     }
 }
 
