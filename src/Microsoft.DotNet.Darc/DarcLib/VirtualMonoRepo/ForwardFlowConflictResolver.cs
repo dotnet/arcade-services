@@ -42,7 +42,6 @@ public interface IForwardFlowConflictResolver
     ///   - So the source-manifest in 6. contains the SHA of 3.
     ///   - The forward flow PR branch contains the SHA of 5.
     ///   - So the source-manifest file conflicts on the SHA (3. vs 5.)
-    ///   - There's also a similar conflict in the git-info files.
     ///   - However, if only the version files are in conflict, we can try merging 6. into 7. and resolve the conflict.
     ///   - This is because basically we know we want to set the version files to point at 5.
     /// </summary>
