@@ -15,7 +15,7 @@ public interface ICoherencyUpdateResolver
     /// </summary>
     /// <param name="dependencies">Current set of dependencies.</param>
     /// <returns>List of dependency updates.</returns>
-    Task<List<DependencyUpdate>> GetRequiredCoherencyUpdatesAsync(IEnumerable<DependencyDetail> dependencies);
+    Task<List<DependencyUpdate>> GetRequiredCoherencyUpdatesAsync(IReadOnlyCollection<DependencyDetail> dependencies);
 
     /// <summary>
     ///     Given a current set of dependencies, determine what non-coherency updates
@@ -29,6 +29,6 @@ public interface ICoherencyUpdateResolver
     List<DependencyUpdate> GetRequiredNonCoherencyUpdates(
         string sourceRepoUri,
         string sourceCommit,
-        IEnumerable<AssetData> assets,
-        IEnumerable<DependencyDetail> dependencies);
+        IReadOnlyCollection<AssetData> assets,
+        IReadOnlyCollection<DependencyDetail> dependencies);
 }

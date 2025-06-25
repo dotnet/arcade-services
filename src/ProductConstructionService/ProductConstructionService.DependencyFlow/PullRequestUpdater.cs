@@ -12,6 +12,7 @@ using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
@@ -785,15 +786,24 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         TargetRepoDependencyUpdate repoDependencyUpdate = new();
 
+        // Get subscription to access excluded assets
+        var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId)
+            ?? throw new ($"Subscription with ID {update.SubscriptionId} not found in the DB.");
+
+        var excludedAssetsMatcher = subscription.ExcludedAssets.GetAssetMatcher();
+
         // Existing details 
         var existingDependencies = (await darc.GetDependenciesAsync(targetRepository, prBranch ?? targetBranch)).ToList();
 
-        IEnumerable<AssetData> assetData = build.Assets.Select(
-            a => new AssetData(false)
+        // Filter out excluded assets from the build assets
+        List<AssetData> assetData = build.Assets
+            .Where(a => !excludedAssetsMatcher.IsExcluded(a.Name))
+            .Select(a => new AssetData(false)
             {
                 Name = a.Name,
                 Version = a.Version
-            });
+            })
+            .ToList();
 
         // Retrieve the source of the assets
         List<DependencyUpdate> dependenciesToUpdate = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
@@ -1392,6 +1402,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         return upstreamRepoDiffs;
         
     }
+
     #endregion
 }
 

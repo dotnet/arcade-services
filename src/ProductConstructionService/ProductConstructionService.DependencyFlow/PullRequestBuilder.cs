@@ -91,12 +91,6 @@ internal class PullRequestBuilder : IPullRequestBuilder
     private readonly IBasicBarClient _barClient;
     private readonly ILogger<PullRequestBuilder> _logger;
 
-    private record DependencyCategories(
-        IReadOnlyCollection<DependencyUpdateSummary> NewDependencies,
-        IReadOnlyCollection<DependencyUpdateSummary> RemovedDependencies,
-        IReadOnlyCollection<DependencyUpdateSummary> UpdatedDependencies
-    );
-
     public PullRequestBuilder(
         BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
@@ -378,80 +372,89 @@ internal class PullRequestBuilder : IPullRequestBuilder
             return string.Empty;
         }
 
-        DependencyCategories dependencyCategories = CreateDependencyCategories(dependencyUpdateSummaries);
-
         StringBuilder stringBuilder = new();
 
-        if (dependencyCategories.NewDependencies.Count > 0)
+        // Group all dependencies by FromCommitSha, FromVersion, ToCommitSha, and ToVersion
+        var dependencyGroups = dependencyUpdateSummaries
+            .GroupBy(dep => new
+            {
+                FromCommitSha = dep.FromCommitSha,
+                FromVersion = dep.FromVersion,
+                ToCommitSha = dep.ToCommitSha,
+                ToVersion = dep.ToVersion
+            })
+            .ToList();
+
+        // Separate groups by dependency type
+        var newDependencyGroups = dependencyGroups.Where(g => string.IsNullOrEmpty(g.Key.FromVersion) && !string.IsNullOrEmpty(g.Key.ToVersion)).ToList();
+        var removedDependencyGroups = dependencyGroups.Where(g => string.IsNullOrEmpty(g.Key.ToVersion) && !string.IsNullOrEmpty(g.Key.FromVersion)).ToList();
+        var updatedDependencyGroups = dependencyGroups.Where(g => !string.IsNullOrEmpty(g.Key.FromVersion) && !string.IsNullOrEmpty(g.Key.ToVersion)).ToList();
+
+        if (newDependencyGroups.Count > 0)
         {
             stringBuilder.AppendLine();
             stringBuilder.AppendLine("**New Dependencies**");
-            foreach (DependencyUpdateSummary depUpdate in dependencyCategories.NewDependencies)
+            foreach (var group in newDependencyGroups)
             {
-                string? diffLink = GetLinkForDependencyItem(repoUri, depUpdate);
-                stringBuilder.AppendLine($"- **{depUpdate.DependencyName}**: [{depUpdate.ToVersion}]({diffLink})");
+                var representative = group.First();
+                string? diffLink = GetLinkForDependencyItem(repoUri, representative.FromCommitSha, representative.ToCommitSha);
+                
+                stringBuilder.AppendLine($"- Added [{representative.ToVersion}]({diffLink})");
+                foreach (var dep in group.OrderBy(dep => dep.DependencyName))
+                {
+                    stringBuilder.AppendLine($"  - {dep.DependencyName}");
+                }
             }
         }
 
-        if (dependencyCategories.RemovedDependencies.Count > 0)
+        if (removedDependencyGroups.Count > 0)
         {
             stringBuilder.AppendLine();
             stringBuilder.AppendLine("**Removed Dependencies**");
-            foreach (DependencyUpdateSummary depUpdate in dependencyCategories.RemovedDependencies)
+            foreach (var group in removedDependencyGroups)
             {
-                stringBuilder.AppendLine($"- **{depUpdate.DependencyName}**: {depUpdate.FromVersion}");
+                var representative = group.First();
+                
+                stringBuilder.AppendLine($"- Removed {representative.FromVersion}");
+                foreach (var dep in group.OrderBy(dep => dep.DependencyName))
+                {
+                    stringBuilder.AppendLine($"  - {dep.DependencyName}");
+                }
             }
         }
 
-        if (dependencyCategories.UpdatedDependencies.Count > 0)
+        if (updatedDependencyGroups.Count > 0)
         {
             stringBuilder.AppendLine();
             stringBuilder.AppendLine("**Updated Dependencies**");
-            foreach (DependencyUpdateSummary depUpdate in dependencyCategories.UpdatedDependencies)
+
+            foreach (var group in updatedDependencyGroups)
             {
-                string? diffLink = GetLinkForDependencyItem(repoUri, depUpdate);
-                stringBuilder.AppendLine($"- **{depUpdate.DependencyName}**: [from {depUpdate.FromVersion} to {depUpdate.ToVersion}]({diffLink})");
+                var representative = group.First();
+                string? diffLink = GetLinkForDependencyItem(repoUri, representative.FromCommitSha, representative.ToCommitSha);
+                
+                stringBuilder.AppendLine($"- From [{representative.FromVersion} to {representative.ToVersion}]({diffLink})");
+                foreach (var dep in group.OrderBy(dep => dep.DependencyName))
+                {
+                    stringBuilder.AppendLine($"  - {dep.DependencyName}");
+                }
             }
         }
         return stringBuilder.ToString();
     }
 
-    private static DependencyCategories CreateDependencyCategories(List<DependencyUpdateSummary> dependencyUpdateSummaries)
-    {
-        List<DependencyUpdateSummary> newDependencies = [];
-        List<DependencyUpdateSummary> removedDependencies = [];
-        List<DependencyUpdateSummary> updatedDependencies = [];
 
-        foreach (DependencyUpdateSummary depUpdate in dependencyUpdateSummaries)
+
+    private static string? GetLinkForDependencyItem(string repoUri, string? fromCommitSha, string? toCommitSha)
+    {
+        if (!string.IsNullOrEmpty(fromCommitSha) && !string.IsNullOrEmpty(toCommitSha))
         {
-            if (string.IsNullOrEmpty(depUpdate.FromVersion))
-            {
-                newDependencies.Add(depUpdate);
-            }
-            else if (string.IsNullOrEmpty(depUpdate.ToVersion))
-            {
-                removedDependencies.Add(depUpdate);
-            }
-            else
-            {
-                updatedDependencies.Add(depUpdate);
-            }
+            return GetChangesURI(repoUri, fromCommitSha, toCommitSha);
         }
 
-        return new DependencyCategories(newDependencies, removedDependencies, updatedDependencies);
-    }
-
-    private static string? GetLinkForDependencyItem(string repoUri, DependencyUpdateSummary dependencyUpdateSummary)
-    {
-        if (!string.IsNullOrEmpty(dependencyUpdateSummary.FromCommitSha) &&
-            !string.IsNullOrEmpty(dependencyUpdateSummary.ToCommitSha))
+        if (!string.IsNullOrEmpty(toCommitSha))
         {
-            return GetChangesURI(repoUri, dependencyUpdateSummary.FromCommitSha, dependencyUpdateSummary.ToCommitSha);
-        }
-
-        if (!string.IsNullOrEmpty(dependencyUpdateSummary.ToCommitSha))
-        {
-            return GetCommitURI(repoUri, dependencyUpdateSummary.ToCommitSha);
+            return GetCommitURI(repoUri, toCommitSha);
         }
 
         return null;
@@ -592,23 +595,45 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
         var shaRangeToLinkId = new Dictionary<(string from, string to), int>();
 
-        foreach (DependencyUpdate dep in deps)
+        // Group dependencies by version range and commit range
+        var dependencyGroups = deps
+            .GroupBy(dep => new
+            {
+                FromVersion = dep.From.Version,
+                ToVersion = dep.To.Version,
+                FromCommit = dep.From.Commit,
+                ToCommit = dep.To.Commit,
+                RepoUri = dep.To.RepoUri
+            })
+            .ToList();
+
+        foreach (var group in dependencyGroups)
         {
-            if (!shaRangeToLinkId.ContainsKey((dep.From.Commit, dep.To.Commit)))
+            var representative = group.First();
+            
+            if (!shaRangeToLinkId.ContainsKey((representative.From.Commit, representative.To.Commit)))
             {
                 var changesUri = string.Empty;
                 try
                 {
-                    changesUri = GetChangesURI(dep.To.RepoUri, dep.From.Commit, dep.To.Commit);
+                    changesUri = GetChangesURI(representative.To.RepoUri, representative.From.Commit, representative.To.Commit);
                 }
                 catch (ArgumentNullException e)
                 {
-                    _logger.LogError(e, $"Failed to create SHA comparison link for dependency {dep.To.Name} during asset update for subscription {update.SubscriptionId}");
+                    _logger.LogError(e, $"Failed to create SHA comparison link for dependency {representative.To.Name} during asset update for subscription {update.SubscriptionId}");
                 }
-                shaRangeToLinkId.Add((dep.From.Commit, dep.To.Commit), startingReferenceId + changesLinks.Count);
+                shaRangeToLinkId.Add((representative.From.Commit, representative.To.Commit), startingReferenceId + changesLinks.Count);
                 changesLinks.Add(changesUri);
             }
-            subscriptionSection.AppendLine($"  - **{dep.To.Name}**: [from {dep.From.Version} to {dep.To.Version}][{shaRangeToLinkId[(dep.From.Commit, dep.To.Commit)]}]");
+
+            // Write the group header with version range and link
+            subscriptionSection.AppendLine($"  - From [{representative.From.Version} to {representative.To.Version}][{shaRangeToLinkId[(representative.From.Commit, representative.To.Commit)]}]");
+            
+            // Write each dependency in the group
+            foreach (var dep in group)
+            {
+                subscriptionSection.AppendLine($"    - {dep.To.Name}");
+            }
         }
 
         subscriptionSection.AppendLine();

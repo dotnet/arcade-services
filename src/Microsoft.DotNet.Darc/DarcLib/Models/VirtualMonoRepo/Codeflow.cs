@@ -2,8 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 #nullable enable
+using System.Diagnostics;
+
 namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
+[DebuggerDisplay("{Name}: {SourceSha} -> {TargetSha}")]
 public abstract record Codeflow(string SourceSha, string TargetSha)
 {
     public abstract string RepoSha { get; init; }

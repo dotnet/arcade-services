@@ -36,16 +36,10 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
 
             files.Count.Should().Be(
                 testFiles.Length
-                + 34 // source-manifest.json and eng/common changes
-                + repoUpdates.Length); // 1 git-info file per repo
+                + 34); // source-manifest.json and eng/common changes
 
             // Verify source-manifest has changes
             files.Should().Contain(file => file.FileName == VmrInfo.DefaultRelativeSourceManifestPath);
-
-            foreach (var repoUpdate in repoUpdates)
-            {
-                files.Should().Contain(file => file.FileName == $"{VmrInfo.GitInfoSourcesDir}/{repoUpdate.Repo}.props");
-            }
 
             // Verify new files are in the PR
             foreach (var testFile in testFiles)

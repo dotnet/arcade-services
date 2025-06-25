@@ -644,7 +644,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                     {
                         return await GetGitTreeItem(path, treeItem, owner, repo);
                     }));
-        return [.. files.Where(f => f != null)];
+        return [.. files.Where(f => f != null).Select(f => f!)];
     }
 
     /// <summary>

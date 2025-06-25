@@ -3,6 +3,7 @@
   - Update Frequency: EveryDay
   - Enabled: True
   - Batchable: False
+  - Excluded Assets: []
   - PR Failure Notification tags: 
   - Source-enabled: False
   - Merge Policies: []

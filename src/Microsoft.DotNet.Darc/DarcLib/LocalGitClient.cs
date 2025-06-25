@@ -272,7 +272,7 @@ public class LocalGitClient : ILocalGitClient
 
         string? remoteName = null;
 
-        foreach (var line in result.StandardOutput.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        foreach (var line in result.GetOutputLines())
         {
             // This doesn't work if the repo path has a whitespace
             var parts = line.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -407,12 +407,12 @@ public class LocalGitClient : ILocalGitClient
         return submodules;
     }
 
-    public async Task<string[]> GetStagedFiles(string repoPath)
+    public async Task<IReadOnlyCollection<string>> GetStagedFiles(string repoPath)
     {
         var result = await _processManager.ExecuteGit(repoPath, "diff", "--name-only", "--cached");
         result.ThrowIfFailed($"Failed to get staged files in {repoPath}");
 
-        return result.StandardOutput.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return result.GetOutputLines();
     }
 
     public async Task<string?> GetFileFromGitAsync(string repoPath, string relativeFilePath, string revision = "HEAD", string? outputPath = null)
@@ -554,18 +554,27 @@ public class LocalGitClient : ILocalGitClient
         res.ThrowIfFailed($"Failed to set {setting} value to {value} for {repoPath}");
     }
 
-    public async Task<bool> IsAncestorCommit(string repoPath, string parent, string ancestor)
+    public async Task<bool> IsAncestorCommit(string repoPath, string ancestor, string descendant)
     {
-        var result = await _processManager.ExecuteGit(repoPath, "merge-base", "--is-ancestor", parent, ancestor);
+        var result = await _processManager.ExecuteGit(repoPath, "merge-base", "--is-ancestor", ancestor, descendant);
 
         // 0 - is ancestor
         // 1 - is not ancestor
         // other - invalid objects, other errors
         if (result.ExitCode > 1)
         {
-            result.ThrowIfFailed($"Failed to determine which commit of {repoPath} is older ({parent}, {ancestor})");
+            result.ThrowIfFailed($"Failed to determine which commit of {repoPath} is older ({ancestor}, {descendant})");
         }
 
         return result.ExitCode == 0;
+    }
+
+    public async Task ResolveConflict(string repoPath, string file, bool ours)
+    {
+        var result = await _processManager.ExecuteGit(repoPath, "checkout", ours ? "--ours" : "--theirs", file);
+        result.ThrowIfFailed($"Failed to resolve conflict in {file} in {repoPath}");
+
+        result = await _processManager.ExecuteGit(repoPath, "add", file);
+        result.ThrowIfFailed($"Failed to stage resolved conflict in {file} in {repoPath}");
     }
 }

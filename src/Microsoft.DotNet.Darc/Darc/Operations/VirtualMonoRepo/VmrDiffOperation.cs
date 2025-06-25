@@ -314,7 +314,6 @@ internal class VmrDiffOperation : Operation
             relativePaths: false,
             workingDir: repo1.Path,
             applicationPath: null,
-            includeAdditionalMappings: false,
             ignoreLineEndings: true);
 
         try
