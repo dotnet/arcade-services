@@ -50,7 +50,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVmrPatchHandler _vmrPatchHandler;
     private readonly IWorkBranchFactory _workBranchFactory;
-    private readonly IBackflowConflictResolver _versionFileConflictResolver;
+    private readonly IBackflowConflictResolver _conflictResolver;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
 
@@ -80,7 +80,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _localGitRepoFactory = localGitRepoFactory;
         _vmrPatchHandler = vmrPatchHandler;
         _workBranchFactory = workBranchFactory;
-        _versionFileConflictResolver = versionFileConflictResolver;
+        _conflictResolver = versionFileConflictResolver;
         _fileSystem = fileSystem;
         _logger = logger;
     }
@@ -144,7 +144,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             cancellationToken);
 
         // We try to merge the target branch and we apply dependency updates
-        VersionFileUpdateResult mergeResult = await _versionFileConflictResolver.TryMergingBranchAndUpdateDependencies(
+        VersionFileUpdateResult mergeResult = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
             mapping,
             lastFlows.LastFlow,
             currentFlow,
