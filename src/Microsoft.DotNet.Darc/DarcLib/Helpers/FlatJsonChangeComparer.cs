@@ -148,7 +148,7 @@ public class FlatJsonChangeComparer
         }
     }
 
-    public static void ApplyChanges(
+    public static string ApplyChanges(
         string file,
         JsonChanges changes)
     {
@@ -163,12 +163,10 @@ public class FlatJsonChangeComparer
             AddOrUpdateJsonProperty(rootNode, path, value);
         }
 
-        // write the modified JSON to a specific file path
-        string outputFilePath = "C:\\Users\\dkurepa\\Desktop\\MOT outputs - Copy\\new.json"; // Change this to your desired output file path
-        using (var stream = new System.IO.FileStream(outputFilePath, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.None))
+        return rootNode.ToJsonString(new JsonSerializerOptions
         {
-            JsonSerializer.Serialize(stream, rootNode, new JsonSerializerOptions { WriteIndented = true });
-        }
+            WriteIndented = true
+        });
     }
 
     private static void RemoveJsonProperty(JsonNode root, string path)

@@ -50,6 +50,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IDependencyFileManager _dependencyFileManager;
     private readonly IFileSystem _fileSystem;
+    private readonly IVmrVersionFileMerger _vmrVersionFileMerger;
     private readonly ILogger<BackflowConflictResolver> _logger;
 
     public BackflowConflictResolver(
@@ -62,7 +63,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IDependencyFileManager dependencyFileManager,
         IFileSystem fileSystem,
-        ILogger<BackflowConflictResolver> logger)
+        ILogger<BackflowConflictResolver> logger,
+        IVmrVersionFileMerger vmrVersionFileMerger)
         : base(vmrInfo, patchHandler, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
@@ -74,6 +76,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         _dependencyFileManager = dependencyFileManager;
         _fileSystem = fileSystem;
         _logger = logger;
+        _vmrVersionFileMerger = vmrVersionFileMerger;
     }
 
     public async Task<VersionFileUpdateResult> TryMergingBranchAndUpdateDependencies(
@@ -266,6 +269,17 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             ? await GetVmrDependencies(vmr, mappingName, lastFlow.VmrSha)
             : previousRepoDependencies;
         var currentVmrDependencies = await GetVmrDependencies(vmr, mappingName, currentFlow.VmrSha);
+
+        await _vmrVersionFileMerger.MergeJsonAsync(
+            lastFlow,
+            targetRepo,
+            lastFlow.RepoSha,
+            targetBranch,
+            vmr,
+            lastFlow.VmrSha,
+            currentFlow.VmrSha,
+            mappingName,
+            VersionFiles.GlobalJson);
 
         var excludedAssetsMatcher = excludedAssets.GetAssetMatcher();
 
