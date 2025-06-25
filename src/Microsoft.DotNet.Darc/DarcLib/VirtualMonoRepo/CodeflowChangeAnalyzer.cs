@@ -74,9 +74,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         ProcessExecutionResult result = await vmr.ExecuteGitCommand("merge-base", targetBranch, headBranch);
         result.ThrowIfFailed($"Failed to find a common ancestor for {targetBranch} and {headBranch}");
 
-        var commonAncestor = result.StandardOutput
-            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .First();
+        var commonAncestor = result.GetOutputLines().First();
 
         result = await vmr.ExecuteGitCommand("diff", "--name-only", $"{commonAncestor}..{headBranch}");
         result.ThrowIfFailed($"Failed to get the list of changed files between {commonAncestor} and {headBranch}");
@@ -86,8 +84,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
             VmrInfo.DefaultRelativeSourceManifestPath,
         ];
 
-        string[] changedFiles = result.StandardOutput
-            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        string[] changedFiles = result.GetOutputLines()
             .Where(file => !ignoredFiles.Contains(file))
             .ToArray();
 
@@ -146,8 +143,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
             ..GetExpectedContentsForBuild(build2),
         ];
 
-        IEnumerable<string> diffLines = result.StandardOutput
-            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        IEnumerable<string> diffLines = result.GetOutputLines();
         if (diffLines.Any(line => ContainsUnexpectedChange(line, expectedContents)))
         {
             _logger.LogInformation("Unexpected changes detected, code flow will proceed");

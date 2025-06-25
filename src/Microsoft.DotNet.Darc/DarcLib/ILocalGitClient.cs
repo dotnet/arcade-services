@@ -170,7 +170,7 @@ public interface ILocalGitClient
     /// </summary>
     /// <param name="repoPath">Path to a git repository</param>
     /// <returns>List of currently modified staged files</returns>
-    Task<string[]> GetStagedFiles(string repoPath);
+    Task<IReadOnlyCollection<string>> GetStagedFiles(string repoPath);
 
     /// <summary>
     ///     Determines if a given path is a git repository.
@@ -247,5 +247,10 @@ public interface ILocalGitClient
     /// <summary>
     /// Compares 2 git commits and returns true if the first one is an ancestor of the second one.
     /// </summary>
-    Task<bool> IsAncestorCommit(string repoPath, string parent, string ancestor);
+    Task<bool> IsAncestorCommit(string repoPath, string ancestor, string descendant);
+
+    /// <summary>
+    ///     Resolves a conflict in a given file to ours/theirs.
+    /// </summary>
+    Task ResolveConflict(string repoPath, string file, bool ours);
 }

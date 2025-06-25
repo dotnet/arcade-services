@@ -54,7 +54,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             IVersionDetailsParser versionDetailsParser,
             IVmrPatchHandler vmrPatchHandler,
             IWorkBranchFactory workBranchFactory,
-            IVersionFileCodeFlowUpdater versionFileConflictResolver,
+            IBackflowConflictResolver versionFileConflictResolver,
             IFileSystem fileSystem,
             IBasicBarClient barClient,
             ILogger<VmrCodeFlower> logger)
@@ -84,7 +84,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         var result = await FlowBackAsync(
             mapping,
             targetRepo,
-            lastFlows.LastFlow,
+            lastFlows,
             build,
             subscription.ExcludedAssets,
             subscription.TargetBranch,
