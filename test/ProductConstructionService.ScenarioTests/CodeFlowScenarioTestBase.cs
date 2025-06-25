@@ -36,8 +36,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
 
             files.Count.Should().Be(
                 testFiles.Length
-                + 34 // source-manifest.json and eng/common changes
-                + repoUpdates.Length); // 1 git-info file per repo
+                + 34); // source-manifest.json and eng/common changes
 
             // Verify source-manifest has changes
             files.Should().Contain(file => file.FileName == VmrInfo.DefaultRelativeSourceManifestPath);
