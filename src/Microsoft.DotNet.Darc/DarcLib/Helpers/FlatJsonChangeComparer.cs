@@ -40,12 +40,20 @@ public class FlatJsonChangeComparer
 
             if (removedInRepo)
             {
+                if (addedInVmr)
+                {
+                    throw new ArgumentException($"Key {property} is added in one repo and removed in the other json, which is not allowed.");
+                }
                 // we don't have to do anything since the property is removed in the repo
                 continue;
             }
 
             if (removedInVmr)
             {
+                if (addedInRepo)
+                {
+                    throw new ArgumentException($"Key {property} is added in one repo and removed in the other json, which is not allowed.");
+                }
                 removals.Add(property);
                 continue;
             }
