@@ -308,7 +308,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             mapping,
             build.GetRepository(),
             Constants.EmptyGitObject,
-            _dependencyTracker.GetDependencyVersion(mapping)!.PackageVersion,
             Parent: null,
             build.AzureDevOpsBuildNumber,
             build.Id));

@@ -79,7 +79,6 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     public async Task InitializeRepository(
         string mappingName,
         string? targetRevision,
-        string? targetVersion,
         bool initializeDependencies,
         LocalPath sourceMappingsPath,
         CodeFlowParameters codeFlowParameters,
@@ -118,7 +117,6 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             mapping,
             mapping.DefaultRemote,
             targetRevision ?? mapping.DefaultRef,
-            targetVersion,
             null,
             officialBuildId,
             barId);

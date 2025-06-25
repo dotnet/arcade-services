@@ -37,7 +37,6 @@ internal class InitializeOperation : VmrOperationBase
         await _vmrInitializer.InitializeRepository(
             repoName,
             targetRevision,
-            null,
             _options.Recursive,
             new NativePath(_options.SourceMappings),
             new CodeFlowParameters(

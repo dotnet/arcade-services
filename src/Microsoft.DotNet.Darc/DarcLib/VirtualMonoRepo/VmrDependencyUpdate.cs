@@ -20,7 +20,7 @@ public record VmrDependencyUpdate(
     SourceMapping Mapping,
     string RemoteUri,
     string TargetRevision,
-    string? TargetVersion,
     SourceMapping? Parent,
     string? OfficialBuildId,
-    int? BarId);
+    int? BarId,
+    string? OriginRevision = null);

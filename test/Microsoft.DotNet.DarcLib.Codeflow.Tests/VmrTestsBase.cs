@@ -63,10 +63,6 @@ internal abstract class VmrTestsBase
 
         await CopyReposForCurrentTest();
         await CopyVmrForCurrentTest();
-        
-        // Ensure git-info directory exists for tests
-        Directory.CreateDirectory(VmrPath / "prereqs");
-        Directory.CreateDirectory(VmrPath / "prereqs" / "git-info");
 
         ServiceProvider = CreateServiceProvider().BuildServiceProvider();
         ServiceProvider.GetRequiredService<IVmrInfo>().VmrUri = VmrPath;
@@ -116,7 +112,6 @@ internal abstract class VmrTestsBase
         foreach (var repo in reposWithVersionFiles)
         {
             expectedFiles.AddRange(GetExpectedVersionFiles(vmrPath / VmrInfo.SourcesDir / repo));
-            expectedFiles.Add(vmrPath / VmrInfo.GitInfoSourcesDir / $"{repo}.props");
         }
 
         expectedFiles.AddRange(reposFiles);
@@ -181,7 +176,6 @@ internal abstract class VmrTestsBase
         await vmrInitializer.InitializeRepository(
             mappingName: mapping,
             targetRevision: commit,
-            targetVersion: null,
             initializeDependencies: true,
             sourceMappingsPath: sourceMappingsPath,
             new CodeFlowParameters(

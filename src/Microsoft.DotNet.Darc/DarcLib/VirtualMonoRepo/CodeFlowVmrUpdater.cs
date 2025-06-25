@@ -112,7 +112,6 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
             mapping,
             build.GetRepository(),
             build.Commit,
-            build.Assets.FirstOrDefault()?.Version,
             Parent: null,
             build.AzureDevOpsBuildNumber,
             build.Id);
