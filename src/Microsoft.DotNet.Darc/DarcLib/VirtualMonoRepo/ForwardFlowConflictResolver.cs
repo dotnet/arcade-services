@@ -136,15 +136,10 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         Codeflow? crossingFlow,
         CancellationToken cancellationToken)
     {
-        UnixPath[] allowedConflicts =
-        [
-            // git-info for the repo
-            new UnixPath($"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props"),
-
-            // TODO https://github.com/dotnet/arcade-services/issues/4792: Do not ignore conflicts in version files
-            ..DependencyFileManager.DependencyFiles
-                .Select(f => new UnixPath(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / f)),
-        ];
+        // TODO https://github.com/dotnet/arcade-services/issues/4792: Do not ignore conflicts in version files
+        var allowedConflicts = DependencyFileManager.DependencyFiles
+            .Select(f => new UnixPath(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / f))
+            .ToList();
 
         foreach (var filePath in conflictedFiles)
         {
@@ -185,7 +180,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         ILocalGitRepo vmr,
         ILocalGitRepo sourceRepo,
         UnixPath conflictedFile,
-        UnixPath[] allowedConflicts,
+        IReadOnlyCollection<UnixPath> allowedConflicts,
         ForwardFlow currentFlow,
         Codeflow? crossingFlow,
         CancellationToken cancellationToken)
@@ -240,7 +235,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             mappingName,
             updatedMapping.RemoteUri,
             updatedMapping.CommitSha,
-            updatedMapping.PackageVersion,
             updatedMapping.BarId);
 
         var theirAffectedSubmodules = theirSourceManifest.Submodules
