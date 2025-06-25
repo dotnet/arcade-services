@@ -38,9 +38,6 @@ internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
             expectedFilesFromRepos
         );
 
-        // The git-info files are not created in this test so we should not expect them
-        expectedFiles = [..expectedFiles.Where(f => !f.Path.Contains(new NativePath(VmrInfo.GitInfoSourcesDir)))];
-
         CheckDirectoryContents(VmrPath, expectedFiles);
         await GitOperations.CheckAllIsCommitted(VmrPath);
 
@@ -71,9 +68,6 @@ internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
     protected override async Task CopyVmrForCurrentTest()
     {
         CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, VmrPath);
-
-        // In this test, we remove the git-info directory to see that it does not get created
-        Directory.Delete(VmrPath / "prereqs" / "git-info");
 
         var sourceMappings = new SourceMappingFile()
         {

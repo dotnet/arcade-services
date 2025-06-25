@@ -84,7 +84,6 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         string[] ignoredFiles =
         [
             VmrInfo.DefaultRelativeSourceManifestPath,
-            $"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props",
         ];
 
         string[] changedFiles = result.StandardOutput

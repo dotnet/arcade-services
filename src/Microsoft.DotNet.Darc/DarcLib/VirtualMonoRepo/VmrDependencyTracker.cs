@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public record VmrDependencyVersion(string Sha, string? PackageVersion);
+public record VmrDependencyVersion(string Sha);
 
 public interface IVmrDependencyTracker
 {
@@ -33,14 +33,12 @@ public interface IVmrDependencyTracker
 
     void UpdateSubmodules(List<SubmoduleRecord> submodules);
 
-    bool RemoveRepositoryVersion(string repo);
-
     VmrDependencyVersion? GetDependencyVersion(SourceMapping mapping);
 }
 
 /// <summary>
 /// Holds information about versions of individual repositories synchronized in the VMR.
-/// Uses the source-manifest.json file as source of truth and propagates changes into the git-info files.
+/// Uses the source-manifest.json file as source of truth.
 /// </summary>
 public class VmrDependencyTracker : IVmrDependencyTracker
 {
@@ -103,67 +101,8 @@ public class VmrDependencyTracker : IVmrDependencyTracker
             update.Mapping.Name,
             update.RemoteUri,
             update.TargetRevision,
-            update.TargetVersion,
             update.BarId);
         _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, _sourceManifest.ToJson());
-
-        var gitInfoDirPath = _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir;
-        
-        // Only update git-info files if the git-info directory exists
-        if (!_fileSystem.DirectoryExists(gitInfoDirPath))
-        {
-            _logger.LogInformation("Skipped creating git-info files for {repo} as the git-info directory doesn't exist", update.Mapping.Name);
-            return;
-        }
-            
-        // Root repository of an update does not have a package version associated with it
-        // For installer, we leave whatever was there (e.g. 8.0.100)
-        // For one-off non-recursive updates of repositories, we keep the previous
-        string packageVersion = update.TargetVersion
-            ?? _sourceManifest.GetVersion(update.Mapping.Name)?.PackageVersion
-            ?? "0.0.0";
-
-        // If we didn't find a Bar build for the update, calculate it the old way
-        string? officialBuildId = update.OfficialBuildId;
-        if (string.IsNullOrEmpty(officialBuildId))
-        {
-            var (calculatedOfficialBuildId, _) = VersionFiles.DeriveBuildInfo(update.Mapping.Name, packageVersion);
-            officialBuildId = calculatedOfficialBuildId;
-        }
-
-        var gitInfo = new GitInfoFile
-        {
-            GitCommitHash = update.TargetRevision,
-            OfficialBuildId = officialBuildId,
-            OutputPackageVersion = packageVersion,
-        };
-
-        var gitInfoFilePath = GetGitInfoFilePath(update.Mapping);
-        gitInfo.SerializeToXml(gitInfoFilePath);
-        _logger.LogInformation("Updated git-info file {file} for {repo}", gitInfoFilePath, update.Mapping.Name);
-    }
-
-    public bool RemoveRepositoryVersion(string repo)
-    {
-        var hasChanges = false;
-        
-        var gitInfoDirPath = _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir;
-        
-        // Only try to delete git-info files if the git-info directory exists
-        if (!_fileSystem.DirectoryExists(gitInfoDirPath))
-        {
-            _logger.LogInformation("Skipped removing git-info file for {repo} as the git-info directory doesn't exist", repo);
-            return hasChanges;
-        }
-            
-        var gitInfoFilePath = GetGitInfoFilePath(repo);
-        if (_fileSystem.FileExists(gitInfoFilePath))
-        {
-            _fileSystem.DeleteFile(gitInfoFilePath);
-            hasChanges = true;
-        }
-
-        return hasChanges;
     }
 
     public void UpdateSubmodules(List<SubmoduleRecord> submodules)
@@ -182,8 +121,4 @@ public class VmrDependencyTracker : IVmrDependencyTracker
 
         _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, _sourceManifest.ToJson());
     }
-
-    private string GetGitInfoFilePath(SourceMapping mapping) => GetGitInfoFilePath(mapping.Name);
-
-    private string GetGitInfoFilePath(string mappingName) => _vmrInfo.VmrPath / VmrInfo.GitInfoSourcesDir / $"{mappingName}.props";
 }

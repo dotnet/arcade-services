@@ -306,7 +306,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             mapping,
             build.GetRepository(),
             Constants.EmptyGitObject,
-            _dependencyTracker.GetDependencyVersion(mapping)!.PackageVersion,
             Parent: null,
             build.AzureDevOpsBuildNumber,
             build.Id));
@@ -409,9 +408,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             UnixPath[] allowedConflicts = [
                 // source-manifest.json
                 VmrInfo.DefaultRelativeSourceManifestPath,
-
-                // git-info for the repo
-                new UnixPath($"{VmrInfo.GitInfoSourcesDir}/{mappingName}.props"),
 
                 // TODO https://github.com/dotnet/arcade-services/issues/4792: Do not ignore conflicts in version files
                 ..DependencyFileManager.DependencyFiles.Select(
@@ -535,7 +531,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             mappingName,
             updatedMapping.RemoteUri,
             updatedMapping.CommitSha,
-            updatedMapping.PackageVersion,
             updatedMapping.BarId);
 
         var theirAffectedSubmodules = theirSourceManifest.Submodules
