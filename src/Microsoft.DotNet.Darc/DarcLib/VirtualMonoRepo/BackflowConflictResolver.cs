@@ -197,7 +197,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 // We use the target branch version when we are flowing the first time (because we did not flow the version files yet)
                 // We use the head branch version when we are flowing again because it already has updates from previous flow
                 // plus it can contain additional changes from the PR
-                await repo.RunGitCommandAsync(["checkout", headBranchExisted ? "--ours" : "--theirs", conflictedFile], cancellationToken);
+                await repo.ResolveConflict(conflictedFile, ours: headBranchExisted);
                 continue;
             }
 
