@@ -44,7 +44,7 @@ public class CherryPickOperationTests
 
         _options = new CherryPickCommandLineOptions
         {
-            SourceRepo = "/test/repo",
+            Source = "/test/repo",
             Commit = "abcd1234"
         };
     }
@@ -126,12 +126,12 @@ public class CherryPickOperationTests
         // Arrange & Act
         var options = new CherryPickCommandLineOptions
         {
-            SourceRepo = "test-repo",
+            Source = "test-repo",
             Commit = "test-commit"
         };
 
         // Assert
-        options.SourceRepo.Should().Be("test-repo");
+        options.Source.Should().Be("test-repo");
         options.Commit.Should().Be("test-commit");
     }
 }

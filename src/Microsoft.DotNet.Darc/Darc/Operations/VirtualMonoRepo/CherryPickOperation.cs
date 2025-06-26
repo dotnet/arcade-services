@@ -63,8 +63,8 @@ internal class CherryPickOperation : Operation
     {
         // Step 1: Determine if we're in VMR or repo based on source-manifest.json existence
         var currentDirectory = Environment.CurrentDirectory;
-        var gitRoot = _processManager.FindGitRoot(currentDirectory);
-        var sourceManifestPath = Path.Combine(gitRoot, VmrInfo.DefaultRelativeSourceManifestPath.Path);
+        var gitRoot = new NativePath(_processManager.FindGitRoot(currentDirectory));
+        var sourceManifestPath = gitRoot / VmrInfo.DefaultRelativeSourceManifestPath.Path;
         var isInVmr = _fileSystem.FileExists(sourceManifestPath);
 
         _logger.LogInformation("Cherry-pick operation starting from {location}", isInVmr ? "VMR" : "repository");
@@ -74,12 +74,12 @@ internal class CherryPickOperation : Operation
         if (isInVmr)
         {
             // When in VMR, we need to get mapping from the source repo's Version.Details.xml
-            mappingName = GetMappingFromRepo(_options.SourceRepo);
+            mappingName = GetMappingFromRepo(_options.Source);
         }
         else
         {
             // When in repo, get mapping from current repo's Version.Details.xml
-            mappingName = GetMappingFromRepo(gitRoot);
+            mappingName = GetMappingFromRepo(gitRoot.Path);
         }
 
         _logger.LogInformation("Detected mapping name: {mappingName}", mappingName);
@@ -87,18 +87,18 @@ internal class CherryPickOperation : Operation
         if (isInVmr)
         {
             // Cherry-pick from VMR to repo
-            return await CherryPickFromVmrToRepoAsync(gitRoot, mappingName);
+            return await CherryPickFromVmrToRepoAsync(gitRoot.Path, mappingName);
         }
         else
         {
             // Cherry-pick from repo to VMR
-            return await CherryPickFromRepoToVmrAsync(gitRoot, mappingName);
+            return await CherryPickFromRepoToVmrAsync(gitRoot.Path, mappingName);
         }
     }
 
     private string GetMappingFromRepo(string repoPath)
     {
-        var versionDetailsPath = Path.Combine(repoPath, "eng", "Version.Details.xml");
+        var versionDetailsPath = Path.Combine(repoPath, VersionFiles.VersionDetailsXml);
         if (!_fileSystem.FileExists(versionDetailsPath))
         {
             throw new DarcException($"Version.Details.xml not found at {versionDetailsPath}");
@@ -118,7 +118,7 @@ internal class CherryPickOperation : Operation
     private async Task<int> CherryPickFromVmrToRepoAsync(string vmrPath, string mappingName)
     {
         _logger.LogInformation("Cherry-picking commit {commit} from VMR path src/{mapping} to repository {repo}", 
-            _options.Commit, mappingName, _options.SourceRepo);
+            _options.Commit, mappingName, _options.Source);
 
         // Set up VMR info
         _vmrInfo.VmrPath = new NativePath(vmrPath);
@@ -131,7 +131,7 @@ internal class CherryPickOperation : Operation
 
         // Create a patch from the VMR mapping directory
         var vmrRepo = _localGitRepoFactory.Create(new NativePath(vmrPath));
-        var patchName = $"cherry-pick-{_options.Commit}";
+        var patchName = $"cherry-pick-{_options.Commit}.patch";
         var tmpDir = Path.GetTempPath();
         var patches = await _patchHandler.CreatePatches(
             patchName,
@@ -145,10 +145,10 @@ internal class CherryPickOperation : Operation
             ignoreLineEndings: true);
 
         // Apply the patch to the target repository
-        var targetRepo = _localGitRepoFactory.Create(new NativePath(_options.SourceRepo));
+        var targetRepo = _localGitRepoFactory.Create(new NativePath(_options.Source));
         foreach (var patch in patches)
         {
-            await _patchHandler.ApplyPatch(patch, new NativePath(_options.SourceRepo), removePatchAfter: true);
+            await _patchHandler.ApplyPatch(patch, new NativePath(_options.Source), removePatchAfter: true);
         }
 
         _logger.LogInformation("Successfully cherry-picked commit {commit} to repository", _options.Commit);
@@ -177,7 +177,7 @@ internal class CherryPickOperation : Operation
 
         // Create a patch from the source repository
         var sourceRepo = _localGitRepoFactory.Create(new NativePath(repoPath));
-        var patchName = $"cherry-pick-{_options.Commit}";
+        var patchName = $"cherry-pick-{_options.Commit}.patch";
         var patches = await _patchHandler.CreatePatches(
             patchName,
             $"{_options.Commit}~1",

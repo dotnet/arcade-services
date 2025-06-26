@@ -2719,10 +2719,10 @@ The mapping name is automatically determined by parsing the `Version.Details.xml
 **Sample**
 ```
 # Cherry-pick from VMR to repository (when called from VMR)
-darc vmr cherry-pick --source-repo C:\Path\TargetRepo --commit abc123def
+darc vmr cherry-pick --source C:\Path\TargetRepo --commit abc123def
 
 # Cherry-pick from repository to VMR (when called from repository)
-darc vmr cherry-pick --source-repo . --commit abc123def --vmr C:\Path\VMR
+darc vmr cherry-pick --commit abc123def --source C:\Path\VMR
 ```
 
 ### **`forwardflow`**
