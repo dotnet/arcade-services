@@ -2,8 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.IO;
-using System.Threading;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
@@ -21,8 +21,7 @@ internal class CherryPickOperation : Operation
     private readonly IFileSystem _fileSystem;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IVersionDetailsParser _versionDetailsParser;
-    private readonly ILocalGitRepoFactory _localGitRepoFactory;
-    private readonly IVmrInfo _vmrInfo;
+    private readonly ISourceMappingParser _sourceMappingParser;
     private readonly ILogger<CherryPickOperation> _logger;
 
     public CherryPickOperation(
@@ -31,8 +30,7 @@ internal class CherryPickOperation : Operation
         IFileSystem fileSystem,
         IVmrPatchHandler patchHandler,
         IVersionDetailsParser versionDetailsParser,
-        ILocalGitRepoFactory localGitRepoFactory,
-        IVmrInfo vmrInfo,
+        ISourceMappingParser sourceMappingParser,
         ILogger<CherryPickOperation> logger)
     {
         _options = options;
@@ -40,8 +38,7 @@ internal class CherryPickOperation : Operation
         _fileSystem = fileSystem;
         _patchHandler = patchHandler;
         _versionDetailsParser = versionDetailsParser;
-        _localGitRepoFactory = localGitRepoFactory;
-        _vmrInfo = vmrInfo;
+        _sourceMappingParser = sourceMappingParser;
         _logger = logger;
     }
 
@@ -61,44 +58,92 @@ internal class CherryPickOperation : Operation
 
     private async Task<int> ExecuteInternalAsync()
     {
+        if (string.IsNullOrEmpty(_options.Source))
+        {
+            _logger.LogError("Source repository path is not specified. Use --source option to specify the source repository.");
+            return Constants.ErrorCode;
+        }
+
         // Step 1: Determine if we're in VMR or repo based on source-manifest.json existence
         var currentDirectory = Environment.CurrentDirectory;
         var gitRoot = new NativePath(_processManager.FindGitRoot(currentDirectory));
         var sourceManifestPath = gitRoot / VmrInfo.DefaultRelativeSourceManifestPath.Path;
         var isInVmr = _fileSystem.FileExists(sourceManifestPath);
+        var source = new NativePath(_options.Source);
+
+        var (vmrPath, repoPath) = isInVmr
+            ? (gitRoot, source)
+            : (source, gitRoot);
 
         _logger.LogInformation("Cherry-pick operation starting from {location}", isInVmr ? "VMR" : "repository");
 
-        // Step 2: Get mapping name from Version.Details.xml
-        string mappingName;
-        if (isInVmr)
-        {
-            // When in VMR, we need to get mapping from the source repo's Version.Details.xml
-            mappingName = GetMappingFromRepo(_options.Source);
-        }
-        else
-        {
-            // When in repo, get mapping from current repo's Version.Details.xml
-            mappingName = GetMappingFromRepo(gitRoot.Path);
-        }
+        string mappingName = GetMappingFromRepo(repoPath);
 
         _logger.LogInformation("Detected mapping name: {mappingName}", mappingName);
 
-        if (isInVmr)
+        var mappings = await _sourceMappingParser.ParseMappings(vmrPath / VmrInfo.DefaultRelativeSourceMappingsPath);
+        var mapping = mappings.FirstOrDefault(m => m.Name.Equals(mappingName, StringComparison.OrdinalIgnoreCase))
+            ?? throw new DarcException($"Mapping '{mappingName}' not found in source mappings.");
+
+        _logger.LogInformation("Cherry-picking commit {commit}", _options.Commit);
+
+        List<string> filters =
+        [
+            .. mapping.Include.Select(VmrPatchHandler.GetInclusionRule),
+            .. mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule)
+        ];
+
+        var srcPath = VmrInfo.GetRelativeRepoSourcesPath(mapping.Name);
+        List<VmrIngestionPatch> patches;
+
+        try
         {
-            // Cherry-pick from VMR to repo
-            return await CherryPickFromVmrToRepoAsync(gitRoot.Path, mappingName);
+            patches = await _patchHandler.CreatePatches(
+                _fileSystem.GetTempFileName(),
+                $"{_options.Commit}~1",
+                _options.Commit,
+                path: null,
+                filters,
+                relativePaths: true,
+                workingDir: isInVmr ? repoPath : vmrPath / srcPath,
+                applicationPath: isInVmr ? srcPath : null,
+                ignoreLineEndings: true);
         }
-        else
+        catch (ProcessFailedException e) when (e.Message.Contains("bad revision"))
         {
-            // Cherry-pick from repo to VMR
-            return await CherryPickFromRepoToVmrAsync(gitRoot.Path, mappingName);
+            _logger.LogError("Commit {commit} not found in {path}", _options.Commit, isInVmr ? repoPath : vmrPath);
+            return Constants.ErrorCode;
         }
+
+        try
+        {
+            foreach (var patch in patches)
+            {
+                await _patchHandler.ApplyPatch(patch, gitRoot, removePatchAfter: true);
+            }
+        }
+        catch
+        {
+            try
+            {
+                foreach (var patch in patches)
+                {
+                    _fileSystem.DeleteFile(patch.Path);
+                }
+            }
+            catch
+            {
+            }
+            throw;
+        }
+
+        _logger.LogInformation("Successfully cherry-picked commit {commit} to repository", _options.Commit);
+        return Constants.SuccessCode;
     }
 
-    private string GetMappingFromRepo(string repoPath)
+    private string GetMappingFromRepo(NativePath repoPath)
     {
-        var versionDetailsPath = Path.Combine(repoPath, VersionFiles.VersionDetailsXml);
+        var versionDetailsPath = repoPath / VersionFiles.VersionDetailsXml;
         if (!_fileSystem.FileExists(versionDetailsPath))
         {
             throw new DarcException($"Version.Details.xml not found at {versionDetailsPath}");
@@ -113,89 +158,5 @@ internal class CherryPickOperation : Operation
         }
 
         return sourceInfo.Mapping;
-    }
-
-    private async Task<int> CherryPickFromVmrToRepoAsync(string vmrPath, string mappingName)
-    {
-        _logger.LogInformation("Cherry-picking commit {commit} from VMR path src/{mapping} to repository {repo}", 
-            _options.Commit, mappingName, _options.Source);
-
-        // Set up VMR info
-        _vmrInfo.VmrPath = new NativePath(vmrPath);
-        var mappingPath = _vmrInfo.GetRepoSourcesPath(mappingName);
-
-        if (!_fileSystem.DirectoryExists(mappingPath))
-        {
-            throw new DarcException($"Mapping directory {mappingPath} not found in VMR");
-        }
-
-        // Create a patch from the VMR mapping directory
-        var vmrRepo = _localGitRepoFactory.Create(new NativePath(vmrPath));
-        var patchName = $"cherry-pick-{_options.Commit}.patch";
-        var tmpDir = Path.GetTempPath();
-        var patches = await _patchHandler.CreatePatches(
-            patchName,
-            $"{_options.Commit}~1",
-            _options.Commit,
-            path: VmrInfo.GetRelativeRepoSourcesPath(mappingName),
-            filters: null,
-            relativePaths: false,
-            workingDir: new NativePath(vmrPath),
-            applicationPath: null,
-            ignoreLineEndings: true);
-
-        // Apply the patch to the target repository
-        var targetRepo = _localGitRepoFactory.Create(new NativePath(_options.Source));
-        foreach (var patch in patches)
-        {
-            await _patchHandler.ApplyPatch(patch, new NativePath(_options.Source), removePatchAfter: true);
-        }
-
-        _logger.LogInformation("Successfully cherry-picked commit {commit} to repository", _options.Commit);
-        return Constants.SuccessCode;
-    }
-
-    private async Task<int> CherryPickFromRepoToVmrAsync(string repoPath, string mappingName)
-    {
-        _logger.LogInformation("Cherry-picking commit {commit} from repository to VMR path src/{mapping}", 
-            _options.Commit, mappingName);
-
-        // Parse VMR path from options or find it
-        var vmrPath = _options.VmrPath;
-        if (string.IsNullOrEmpty(vmrPath))
-        {
-            throw new DarcException("VMR path must be specified when cherry-picking from repository to VMR");
-        }
-
-        _vmrInfo.VmrPath = new NativePath(vmrPath);
-        var vmrMappingPath = _vmrInfo.GetRepoSourcesPath(mappingName);
-
-        if (!_fileSystem.DirectoryExists(vmrMappingPath))
-        {
-            throw new DarcException($"Mapping directory {vmrMappingPath} not found in VMR");
-        }
-
-        // Create a patch from the source repository
-        var sourceRepo = _localGitRepoFactory.Create(new NativePath(repoPath));
-        var patchName = $"cherry-pick-{_options.Commit}.patch";
-        var patches = await _patchHandler.CreatePatches(
-            patchName,
-            $"{_options.Commit}~1",
-            _options.Commit,
-            path: null,
-            filters: null,
-            relativePaths: false,
-            workingDir: new NativePath(repoPath),
-            applicationPath: VmrInfo.GetRelativeRepoSourcesPath(mappingName),
-            ignoreLineEndings: true);
-
-        // Apply the patch to the VMR mapping directory
-        foreach (var patch in patches)
-        {
-            await _patchHandler.ApplyPatch(patch, vmrMappingPath, removePatchAfter: true);
-        }
-
-        _logger.LogInformation("Successfully cherry-picked commit {commit} to VMR", _options.Commit);
-        return Constants.SuccessCode;
     }
 }
