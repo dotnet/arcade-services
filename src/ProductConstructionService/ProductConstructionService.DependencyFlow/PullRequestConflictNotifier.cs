@@ -79,11 +79,12 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
 
         try
         {
+            _logger.LogInformation("Posting a conflict notification comment to {prUrl}", pr.Url);
             await remote.CommentPullRequestAsync(pr.Url, sb.ToString());
         }
         catch (Exception e)
         {
-            _logger.LogWarning("Posting comment to {prUrl} failed with exception {message}", pr.Url, e.Message);
+            _logger.LogError(e, "Posting comment to {prUrl} failed with exception {message}", pr.Url, e.Message);
         }
     }
 
