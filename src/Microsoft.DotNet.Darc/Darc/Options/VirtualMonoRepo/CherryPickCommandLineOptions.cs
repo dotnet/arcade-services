@@ -8,7 +8,7 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 [Verb("cherry-pick", HelpText = "Cherry-picks a single commit from a repository to/from the VMR. " +
                                 "Must be called from the VMR directory or from the repository folder.")]
-internal class CherryPickCommandLineOptions : VmrCommandLineOptionsBase<CherryPickOperation>
+internal class CherryPickCommandLineOptions : VmrCommandLineOptions<CherryPickOperation>
 {
     [Option("source-repo", Required = true, HelpText = "Path to the source repository folder or URI")]
     public string SourceRepo { get; set; } = string.Empty;
