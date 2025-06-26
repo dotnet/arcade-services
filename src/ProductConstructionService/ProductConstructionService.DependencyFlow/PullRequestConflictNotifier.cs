@@ -84,7 +84,7 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
         }
         catch (Exception e)
         {
-            _logger.LogWarning("Posting comment to {prUrl} failed with exception {message}", pr.Url, e.Message);
+            _logger.LogError(e, "Posting comment to {prUrl} failed with exception {message}", pr.Url, e.Message);
         }
     }
 
