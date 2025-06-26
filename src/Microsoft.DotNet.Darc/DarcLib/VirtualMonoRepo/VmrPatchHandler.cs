@@ -275,17 +275,24 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         var result = await _processManager.ExecuteGit(targetDirectory, args, cancellationToken: CancellationToken.None);
 
-        if (removePatchAfter)
-        {
-            _fileSystem.DeleteFile(patch.Path);
-        }
-
         if (!result.Succeeded)
         {
             throw new PatchApplicationFailedException(patch, result, reverseApply);
         }
 
         _logger.LogDebug("{output}", result.ToString());
+
+        if (removePatchAfter)
+        {
+            try
+            {
+                _fileSystem.DeleteFile(patch.Path);
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e, "Failed to delete patch {patchPath} after applying it", patch.Path);
+            }
+        }
 
         await _localGitClient.ResetWorkingTree(targetDirectory, patch.ApplicationPath);
     }
