@@ -72,6 +72,7 @@ use darc to achieve them, as well as a general reference guide to darc commands.
   - [generate-tpn](#generate-tpn) - Generates a new THIRD-PARTY-NOTICES.txt.
   - [get-version](#get-version) - Gets the current version (a SHA) of a repository in the VMR.
   - [push](#push) - Pushes given VMR branch to a given remote.
+  - [reset](#reset) - Resets the contents of a VMR mapping to match a specific commit SHA from the source repository.
   - [diff](#diff) - Diffs the VMR and the product repositories.
 
 ## Scenarios
@@ -2760,6 +2761,20 @@ Note: this command was used prior to onboarding repos onto flat flow to push new
 **Sample**
 ```
 darc vmr push --remote-url https://github.com/myfork/dotnet --branch main --skip-commit-verification
+```
+
+### **`reset`**
+
+Resets the contents of a VMR mapping to match a specific commit SHA from the source repository, effectively restoring the mapping to a known good state. This command takes a single parameter in the format `[mapping]:[sha]`.
+
+**Sample**
+```
+# Reset runtime mapping to specific commit
+darc vmr reset runtime:abc123def456
+
+# Invalid format - shows clear error
+darc vmr reset invalid-format
+# Output: fail: Invalid format. Expected [mapping]:[sha] but got: invalid-format
 ```
 
 ### **`diff`**
