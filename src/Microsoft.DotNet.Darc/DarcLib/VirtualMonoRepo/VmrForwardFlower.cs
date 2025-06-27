@@ -360,6 +360,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             line => line.Contains(lastFlow.SourceSha),
             lastFlow.TargetSha);
 
+        await _localGitClient.ResetWorkingTree(_vmrInfo.VmrPath);
         var vmr = await _vmrCloneManager.PrepareVmrAsync(
             [_vmrInfo.VmrUri],
             [previousFlowTargetSha],
