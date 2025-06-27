@@ -103,15 +103,12 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
             return false;
         }
 
-        changedFiles = changedFiles
+        var unknownChangedFiles = changedFiles
             .Except(DependencyFileManager.DependencyFiles, StringComparer.OrdinalIgnoreCase);
 
-        var unknownChangedFiles = changedFiles.ToArray();
-
-        if (unknownChangedFiles.Length > 0)
+        if (unknownChangedFiles.Any())
         {
-            _logger.LogInformation("Flow contains {count} changes that warrant PR creation: {files}",
-                unknownChangedFiles.Length,
+            _logger.LogInformation("Flow contains changes that warrant PR creation: {files}",
                 string.Join(", ", unknownChangedFiles));
             return true;
         }
