@@ -59,9 +59,10 @@ internal class ResetOperation : Operation
             // Validate that the mapping exists
             await _dependencyTracker.RefreshMetadata();
             
+            SourceMapping mapping;
             try
             {
-                var mapping = _dependencyTracker.GetMapping(mappingName);
+                mapping = _dependencyTracker.GetMapping(mappingName);
                 _logger.LogInformation("Found mapping '{mapping}' pointing to remote '{remote}'", 
                     mappingName, mapping.DefaultRemote);
             }
@@ -72,14 +73,17 @@ internal class ResetOperation : Operation
             }
 
             // Perform the reset by updating to the target SHA
-            // The VmrUpdater will handle validation of the SHA and perform the reset
+            // This will erase differences and repopulate content to match the target SHA
             var codeFlowParameters = new CodeFlowParameters(
                 AdditionalRemotes: Array.Empty<AdditionalRemote>(),
                 TpnTemplatePath: null,
                 GenerateCodeOwners: false,
-                GenerateCredScanSuppressions: false,
+                GenerateCredScanSuppressions: false,  
                 DiscardPatches: true,
                 ApplyAdditionalMappings: true);
+
+            _logger.LogInformation("Synchronizing mapping '{mapping}' to SHA '{sha}' (this will reset all content)", 
+                mappingName, targetSha);
 
             bool success = await _vmrUpdater.UpdateRepository(
                 mappingName,
