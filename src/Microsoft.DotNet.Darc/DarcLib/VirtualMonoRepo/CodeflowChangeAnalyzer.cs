@@ -34,7 +34,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
     // -    <PackageB1PackageVersion>2.0.0</PackageB1PackageVersion>
     // +    <PackageA1PackageVersion>2.0.1</PackageA1PackageVersion>
     // +    <PackageB1PackageVersion>2.0.1</PackageB1PackageVersion>
-    private static readonly IReadOnlyCollection<string> ignoredDiffLines = ["diff --git", "index ", "@@ ", "--- ", "+++ "];
+    private static readonly IReadOnlyCollection<string> IgnoredDiffLines = ["diff --git", "index ", "@@ ", "--- ", "+++ "];
 
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
@@ -79,38 +79,38 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         result = await vmr.ExecuteGitCommand("diff", "--name-only", $"{commonAncestor}..{headBranch}");
         result.ThrowIfFailed($"Failed to get the list of changed files between {commonAncestor} and {headBranch}");
 
+        var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(mappingName);
+
         string[] ignoredFiles =
         [
             VmrInfo.DefaultRelativeSourceManifestPath,
         ];
 
-        string[] changedFiles = result.GetOutputLines()
+        IEnumerable<string> changedFiles = result.GetOutputLines()
             .Where(file => !ignoredFiles.Contains(file))
-            .ToArray();
+            .Select(file => file.Substring(vmrSourcesPath.Length + 1));
 
         // For non-arcade repos, we also ignore eng/common changes
-        if (mappingName != "arcade")
+        if (mappingName != VmrInfo.ArcadeMappingName)
         {
             changedFiles = changedFiles
-                .Where(file => !file.StartsWith(Constants.CommonScriptFilesPath, StringComparison.OrdinalIgnoreCase))
-                .ToArray();
+                .Where(file => !file.StartsWith(Constants.CommonScriptFilesPath, StringComparison.OrdinalIgnoreCase));
         }
 
-        // Version files (Version.Details.xml, Versions.props, global.json...)
-        string[] allowedFiles = DependencyFileManager.DependencyFiles
-            .Select(f => (VmrInfo.GetRelativeRepoSourcesPath(mappingName) / f).Path)
-            .ToArray();
-
-        if (changedFiles.Any(file => !allowedFiles.Contains(file)))
-        {
-            _logger.LogInformation("Flow contains {count} changes that warrant PR creation", changedFiles.Length);
-            return true;
-        }
-
-        if (changedFiles.Length == 0)
+        if (!changedFiles.Any())
         {
             _logger.LogInformation("No meaningful changes detected, code flow can be skipped");
             return false;
+        }
+
+        var unknownChangedFiles = changedFiles
+            .Except(DependencyFileManager.DependencyFiles, StringComparer.OrdinalIgnoreCase);
+
+        if (unknownChangedFiles.Any())
+        {
+            _logger.LogInformation("Flow contains changes that warrant PR creation: {files}",
+                string.Join(", ", unknownChangedFiles));
+            return true;
         }
 
         return await CheckDiffForChanges(vmr, mappingName, headBranch, commonAncestor, ignoredFiles);
@@ -178,7 +178,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
     private static bool ContainsUnexpectedChange(string line, IEnumerable<string> expectedContents)
     {
         // Characters belonging to the diff command output
-        if (ignoredDiffLines.Any(line.StartsWith))
+        if (IgnoredDiffLines.Any(line.StartsWith))
         {
             return false;
         }
