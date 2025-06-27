@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
@@ -23,7 +24,8 @@ public interface IVmrVersionFileMerger
         string vmrPreviousRef,
         string vmrCurrentRef,
         string mapping,
-        string jsonRelativePath);
+        string jsonRelativePath,
+        CancellationToken cancellationToken);
 }
 
 public class VmrVersionFileMerger : IVmrVersionFileMerger
@@ -44,12 +46,13 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         string vmrPreviousRef,
         string vmrCurrentRef,
         string mapping,
-        string jsonRelativePath)
+        string jsonRelativePath,
+        CancellationToken cancellationToken)
     {
         var targetRepoPreviousGlobalJson = await targetRepo.GetFileFromGitAsync(jsonRelativePath, targetRepoPreviousRef)
             ?? throw new FileNotFoundException($"File not found at {targetRepo.Path / jsonRelativePath} for reference {targetRepoPreviousRef}");
         var targetRepoCurrentGlobalJson = await targetRepo.GetFileFromGitAsync(jsonRelativePath, targetRepoCurrentRef)
-            ?? throw new FileNotFoundException($"File not found at {targetRepo.Path / jsonRelativePath} for reference {targetRepoCurrentRef}"); ;
+            ?? throw new FileNotFoundException($"File not found at {targetRepo.Path / jsonRelativePath} for reference {targetRepoCurrentRef}");
 
         var vmrPreviousGlobalJson = lastFlow is Backflow 
             ? await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mapping) / jsonRelativePath, vmrPreviousRef)
@@ -67,12 +70,13 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         var globalJsonChanges = FlatJsonChangeComparer.ComputeChanges(targetRepoChanges, vmrChanges);
 
         var mergedGlobalJson = FlatJsonChangeComparer.ApplyChanges(
-            vmrCurrentGlobalJson,
+            targetRepoCurrentGlobalJson,
             globalJsonChanges);
 
         var newGlobalJson = new GitFile(jsonRelativePath, mergedGlobalJson);
-        await _gitRepoFactory.CreateClient(targetRepo.Path)
-            .CommitFilesAsync(
+        var repoClient = _gitRepoFactory.CreateClient(targetRepo.Path);
+        // This doesn't actually commit the changes, it just adds them to the working tree
+        await repoClient.CommitFilesAsync(
                 [newGlobalJson],
                 targetRepo.Path,
                 targetRepoCurrentRef,

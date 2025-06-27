@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization.Metadata;
 using NuGet.Versioning;
 using JsonChanges = (System.Collections.Generic.List<string> removals,
         System.Collections.Generic.List<(string, object)> additions,
@@ -165,7 +166,8 @@ public class FlatJsonChangeComparer
 
         return rootNode.ToJsonString(new JsonSerializerOptions
         {
-            WriteIndented = true
+            WriteIndented = true,
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver()
         });
     }
 
