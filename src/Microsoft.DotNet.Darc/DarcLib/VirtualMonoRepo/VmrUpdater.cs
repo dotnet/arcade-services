@@ -11,7 +11,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -111,11 +110,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         string? officialBuildId = null;
         int? barId = null;
-        Build? build = null;
 
         if (lookUpBuilds)
         {
-            build = (await _barClient.GetBuildsAsync(mapping.DefaultRemote, targetRevision))
+            var build = (await _barClient.GetBuildsAsync(mapping.DefaultRemote, targetRevision))
                 .FirstOrDefault();
 
             officialBuildId = build?.AzureDevOpsBuildNumber;

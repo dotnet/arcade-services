@@ -176,7 +176,7 @@ public abstract class VmrManagerBase
         _logger.LogInformation("VMR patches re-applied back onto the VMR");
     }
 
-    protected async Task CommitAsync(string commitMessage, (string Name, string Email)? author = null)
+    protected virtual async Task CommitAsync(string commitMessage, (string Name, string Email)? author = null)
     {
         _logger.LogInformation("Committing..");
 

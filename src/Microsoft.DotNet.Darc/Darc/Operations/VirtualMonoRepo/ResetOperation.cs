@@ -3,10 +3,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -43,10 +45,10 @@ internal class ResetOperation : Operation
     public override async Task<int> ExecuteAsync()
     {
         // Parse the mapping:sha parameter
-        var parts = _options.MappingAndSha.Split(':', 2);
+        var parts = _options.Target.Split(':', 2);
         if (parts.Length != 2)
         {
-            _logger.LogError("Invalid format. Expected [mapping]:[sha] but got: {input}", _options.MappingAndSha);
+            _logger.LogError("Invalid format. Expected [mapping]:[sha] but got: {input}", _options.Target);
             return Constants.ErrorCode;
         }
 
@@ -87,10 +89,20 @@ internal class ResetOperation : Operation
             return Constants.ErrorCode;
         }
 
+        // Additional remotes are in the form of [mapping name]:[remote URI]
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes = Array.Empty<AdditionalRemote>();
+        if (_options.AdditionalRemotes != null)
+        {
+            additionalRemotes = _options.AdditionalRemotes
+                .Select(a => a.Split(':', 2))
+                .Select(parts => new AdditionalRemote(parts[0], parts[1]))
+                .ToImmutableArray();
+        }
+
         // Perform the reset by updating to the target SHA
         // This will erase differences and repopulate content to match the target SHA
         var codeFlowParameters = new CodeFlowParameters(
-            AdditionalRemotes: [],
+            AdditionalRemotes: additionalRemotes,
             TpnTemplatePath: null,
             GenerateCodeOwners: false,
             GenerateCredScanSuppressions: false,
@@ -108,10 +120,13 @@ internal class ResetOperation : Operation
         try
         {
             // Delete all uncloaked files in the mapping directory
+            var targetDir = _vmrInfo.GetRepoSourcesPath(mapping);
             var result = await _processManager.Execute(
                 _processManager.GitExecutable,
                 ["rm", "-r", "-q", "--", .. removalFilters],
-                workingDir: _vmrInfo.GetRepoSourcesPath(mapping));
+                workingDir: targetDir);
+
+            result.ThrowIfFailed($"Failed to remove files in {targetDir}");
 
             // Tell the VMR dependency tracker that the repository has been reset
             _dependencyTracker.UpdateDependencyVersion(new VmrDependencyUpdate(
@@ -128,7 +143,7 @@ internal class ResetOperation : Operation
                 updateDependencies: false,
                 codeFlowParameters,
                 lookUpBuilds: false,
-                resetToRemoteWhenCloningRepo: true,
+                resetToRemoteWhenCloningRepo: false,
                 CancellationToken.None);
 
             _logger.LogInformation("Successfully reset {mapping} to {sha}", mappingName, targetSha);
