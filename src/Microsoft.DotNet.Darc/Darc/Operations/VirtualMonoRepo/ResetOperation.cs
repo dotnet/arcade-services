@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
@@ -75,14 +76,34 @@ internal class ResetOperation : Operation
             // Perform the reset by updating to the target SHA
             // This will erase differences and repopulate content to match the target SHA
             var codeFlowParameters = new CodeFlowParameters(
-                AdditionalRemotes: Array.Empty<AdditionalRemote>(),
+                AdditionalRemotes: [],
                 TpnTemplatePath: null,
                 GenerateCodeOwners: false,
                 GenerateCredScanSuppressions: false,  
                 DiscardPatches: true,
-                ApplyAdditionalMappings: true);
+                ApplyAdditionalMappings: false);
 
-            _logger.LogInformation("Synchronizing mapping '{mapping}' to SHA '{sha}' (this will reset all content)", 
+            _logger.LogInformation("Resetting mapping '{mapping}' by setting dependency to empty commit first", mappingName);
+
+            // Reset the dependency to empty commit to ensure a complete reset
+            // This mimics the approach used in VmrForwardFlower.OppositeDirectionFlowAsync
+            var currentDependency = _dependencyTracker.GetDependencyVersion(mapping);
+            if (currentDependency == null)
+            {
+                _logger.LogError("Could not find current dependency version for mapping '{mapping}'", mappingName);
+                return Constants.ErrorCode;
+            }
+
+            // Update dependency to empty commit first to force a complete reset
+            _dependencyTracker.UpdateDependencyVersion(new VmrDependencyUpdate(
+                mapping,
+                mapping.DefaultRemote,
+                DarcLib.Constants.EmptyGitObject,
+                Parent: null,
+                OfficialBuildId: null,
+                BarId: null));
+
+            _logger.LogInformation("Synchronizing mapping '{mapping}' from empty commit to SHA '{sha}' (complete reset)", 
                 mappingName, targetSha);
 
             bool success = await _vmrUpdater.UpdateRepository(
