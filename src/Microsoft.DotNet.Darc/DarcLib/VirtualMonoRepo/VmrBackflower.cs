@@ -449,7 +449,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             .Concat(DependencyFileManager.DependencyFiles);
 
         // Exclude eng/common for non-arcade mappings (it will be copied separately based on the Arcade.Sdk package version)
-        if (mapping.Name != "arcade")
+        if (mapping.Name != VmrInfo.ArcadeMappingName)
         {
             exclusions = exclusions
                 .Append(Constants.CommonScriptFilesPath);

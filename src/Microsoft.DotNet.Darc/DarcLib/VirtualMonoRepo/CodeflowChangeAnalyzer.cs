@@ -91,7 +91,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
             .Select(file => file.Substring(vmrSourcesPath.Length + 1));
 
         // For non-arcade repos, we also ignore eng/common changes
-        if (mappingName != "arcade")
+        if (mappingName != VmrInfo.ArcadeMappingName)
         {
             changedFiles = changedFiles
                 .Where(file => !file.StartsWith(Constants.CommonScriptFilesPath, StringComparison.OrdinalIgnoreCase));
