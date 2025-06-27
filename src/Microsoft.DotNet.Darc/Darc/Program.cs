@@ -129,6 +129,7 @@ internal static class Program
         typeof(InitializeCommandLineOptions),
         typeof(UpdateCommandLineOptions),
         typeof(BackflowCommandLineOptions),
+        typeof(CherryPickCommandLineOptions),
         typeof(ForwardFlowCommandLineOptions),
         typeof(GenerateTpnCommandLineOptions),
         typeof(CloakedFileScanOptions),

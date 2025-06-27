@@ -67,6 +67,7 @@ use darc to achieve them, as well as a general reference guide to darc commands.
   - [initialize](#initialize) - Initializes new repo(s) that haven't been synchronized into the VMR yet.
   - [update](#update) - Updates given repo(s) in the VMR to match given refs.
   - [backflow](#backflow) - Flows source code from the current commit of a locally checked out VMR into a target local repository.
+  - [cherry-pick](#cherry-pick) - Cherry-picks a single commit from a repository to/from the VMR.
   - [forwardflow](#forwardflow) - Flows source code from the current commit of a local repository into a local VMR.
   - [generate-tpn](#generate-tpn) - Generates a new THIRD-PARTY-NOTICES.txt.
   - [get-version](#get-version) - Gets the current version (a SHA) of a repository in the VMR.
@@ -2698,6 +2699,30 @@ the VMR directory.
 **Sample**
 ```
 darc vmr backflow C:\Path\Repo
+```
+
+### **`cherry-pick`**
+
+Cherry-picks a single commit from a repository to/from the VMR. The command automatically detects whether it's being called
+from a VMR or repository folder (based on the existence of `src/source-manifest.json`) and applies the appropriate flow direction.
+
+When called from the VMR:
+- Creates a patch from the specified commit in the VMR's `src/{mapping}` folder
+- Applies the patch to the target repository
+
+When called from a repository:
+- Creates a patch from the specified commit in the repository
+- Applies the patch to the VMR's `src/{mapping}` folder
+
+The mapping name is automatically determined by parsing the `Version.Details.xml` file's `Source` section.
+
+**Sample**
+```
+# Cherry-pick from VMR to repository (when called from VMR)
+darc vmr cherry-pick --source C:\Path\TargetRepo --commit abc123def
+
+# Cherry-pick from repository to VMR (when called from repository)
+darc vmr cherry-pick --commit abc123def --source C:\Path\VMR
 ```
 
 ### **`forwardflow`**
