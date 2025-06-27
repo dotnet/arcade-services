@@ -109,12 +109,12 @@ public abstract class CloneManager
         if (resetToRemote)
         {
             // get the upstream branch for the currently checked out branch
-            var result = await _localGitRepo.RunGitCommandAsync(path, ["for-each-ref", "--format=%(upstream:short)", $"refs/heads/{checkoutRef}"]);
+            var result = await _localGitRepo.RunGitCommandAsync(path, ["for-each-ref", "--format=%(upstream:short)", $"refs/heads/{checkoutRef}"], cancellationToken);
             result.ThrowIfFailed("Couldn't get upstream branch for the current branch");
             var upstream = result.StandardOutput.Trim();
 
             // reset the branch to the remote one
-            result = await _localGitRepo.RunGitCommandAsync(path, ["reset", "--hard", upstream]);
+            result = await _localGitRepo.RunGitCommandAsync(path, ["reset", "--hard", upstream], cancellationToken);
             result.ThrowIfFailed($"Couldn't reset to remote ref {upstream}");
         }
 
