@@ -104,7 +104,6 @@ public abstract class CloneManager
         cancellationToken.ThrowIfCancellationRequested();
 
         var repo = _localGitRepoFactory.Create(path);
-        await repo.ResetWorkingTree();
         await repo.CheckoutAsync(checkoutRef);
 
         if (resetToRemote)
