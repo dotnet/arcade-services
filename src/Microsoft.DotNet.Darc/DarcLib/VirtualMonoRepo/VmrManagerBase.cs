@@ -7,7 +7,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
@@ -28,7 +27,6 @@ public abstract class VmrManagerBase
     private readonly ICredScanSuppressionsGenerator _credScanSuppressionsGenerator;
     private readonly ILocalGitClient _localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
-    private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
 
     protected ILocalGitRepo GetLocalVmr() => _localGitRepoFactory.Create(_vmrInfo.VmrPath);
@@ -42,7 +40,6 @@ public abstract class VmrManagerBase
         ICredScanSuppressionsGenerator credScanSuppressionsGenerator,
         ILocalGitClient localGitClient,
         ILocalGitRepoFactory localGitRepoFactory,
-        IFileSystem fileSystem,
         ILogger<VmrUpdater> logger)
     {
         _logger = logger;
@@ -54,10 +51,9 @@ public abstract class VmrManagerBase
         _credScanSuppressionsGenerator = credScanSuppressionsGenerator;
         _localGitClient = localGitClient;
         _localGitRepoFactory = localGitRepoFactory;
-        _fileSystem = fileSystem;
     }
 
-    protected async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepoToRevisionAsync(
+    protected async Task UpdateRepoToRevisionAsync(
         VmrDependencyUpdate update,
         ILocalGitRepo repoClone,
         string fromRevision,
@@ -73,20 +69,12 @@ public abstract class VmrManagerBase
             update.TargetRevision,
             _vmrInfo.TmpPath,
             _vmrInfo.TmpPath,
-            codeFlowParameters.ApplyAdditionalMappings,
             cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        // Get a list of patches that need to be reverted for this update so that repo changes can be applied
-        // This includes all patches that are also modified by the current change
-        // (happens when we update repo from which the VMR patches come)
-        IReadOnlyCollection<VmrIngestionPatch> vmrPatchesToRestore = restoreVmrPatches
-            ? await StripVmrPatchesAsync(patches, codeFlowParameters.AdditionalRemotes, cancellationToken)
-            : [];
-
         foreach (var patch in patches)
         {
-            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, codeFlowParameters.DiscardPatches, reverseApply: false, cancellationToken);
+            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, removePatchAfter: true, reverseApply: false, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
 
@@ -122,43 +110,11 @@ public abstract class VmrManagerBase
         // TODO: Workaround for cases when we get CRLF problems on Windows
         // We should figure out why restoring and reapplying VMR patches leaves working tree with EOL changes
         // https://github.com/dotnet/arcade-services/issues/3277
-        if (restoreVmrPatches && vmrPatchesToRestore.Any() && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (restoreVmrPatches && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             cancellationToken.ThrowIfCancellationRequested();
             await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, ".");
         }
-
-        return vmrPatchesToRestore;
-    }
-
-    protected async Task ReapplyVmrPatchesAsync(
-        IReadOnlyCollection<VmrIngestionPatch> patches,
-        CancellationToken cancellationToken)
-    {
-        if (patches.Count == 0)
-        {
-            return;
-        }
-
-        _logger.LogInformation("Re-applying {count} VMR patch{s}...",
-            patches.Count,
-            patches.Count > 1 ? "es" : string.Empty);
-
-        foreach (var patch in patches.DistinctBy(p => p.Path).OrderBy(p => p.Path))
-        {
-            if (!_fileSystem.FileExists(patch.Path))
-            {
-                // Patch was removed, so it doesn't exist anymore
-                _logger.LogDebug("Not re-applying {patch} as it was removed", patch.Path);
-                continue;
-            }
-
-            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, false, reverseApply: false, cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-        }
-
-        await CommitAsync("[VMR patches] Re-apply VMR patches");
-        _logger.LogInformation("VMR patches re-applied back onto the VMR");
     }
 
     protected virtual async Task CommitAsync(string commitMessage, (string Name, string Email)? author = null)
@@ -186,11 +142,6 @@ public abstract class VmrManagerBase
             cancellationToken.ThrowIfCancellationRequested();
         }
     }
-
-    protected abstract Task<IReadOnlyCollection<VmrIngestionPatch>> StripVmrPatchesAsync(
-        IReadOnlyCollection<VmrIngestionPatch> patches,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        CancellationToken cancellationToken);
 
     /// <summary>
     /// Takes a given commit message template and populates it with given values, URLs and others.

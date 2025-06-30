@@ -91,8 +91,7 @@ internal class VmrMultipleRemotesTests : VmrTestsBase
                     Name = Constants.DependencyRepoName,
                     DefaultRemote = FirstDependencyPath
                 }
-            ],
-            PatchesPath = "src/installer/patches/"
+            ]
         };
 
         await WriteSourceMappingsInVmr(sourceMappings);
