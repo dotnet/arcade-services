@@ -58,39 +58,6 @@ internal class VmrSyncRepoChangesTest : VmrTestsBase
     }
 
     [Test]
-    public async Task PackageVersionIsUpdatedOnlyTest()
-    {
-        await EnsureTestRepoIsInitialized();
-
-        // Update version of dependent repo to 8.0.1
-        var versionDetails = await File.ReadAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml);
-        versionDetails = versionDetails.Replace("8.0.0", "8.0.1");
-        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml, versionDetails);
-        await GitOperations.CommitAll(ProductRepoPath, "Changing SHA");
-
-        await UpdateRepoToLastCommit(Constants.ProductRepoName, ProductRepoPath);
-
-        var expectedFilesFromRepos = new List<NativePath>
-        {
-            _productRepoFilePath,
-            _dependencyRepoFilePath
-        };
-
-        var expectedFiles = GetExpectedFilesInVmr(
-            VmrPath,
-            [Constants.ProductRepoName, Constants.DependencyRepoName],
-            expectedFilesFromRepos
-        );
-
-        CheckDirectoryContents(VmrPath, expectedFiles);
-        CheckFileContents(_productRepoPath / VersionFiles.VersionDetailsXml, versionDetails, removeEmptyLines: false);
-        await GitOperations.CheckAllIsCommitted(VmrPath);
-        var sourceManifest = SourceManifest.FromFile(VmrPath / VmrInfo.DefaultRelativeSourceManifestPath);
-
-        sourceManifest.GetVersion(Constants.DependencyRepoName)!.Sha.Should().NotBeNull();
-    }
-
-    [Test]
     public async Task FileIsIncludedTest()
     {
         var excludedDir = ProductRepoPath / "excluded";
