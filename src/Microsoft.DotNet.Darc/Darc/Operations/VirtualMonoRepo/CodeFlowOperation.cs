@@ -125,7 +125,6 @@ internal abstract class CodeFlowOperation(
                     excludedAssets: [],
                     tmpTargetBranch,
                     tmpHeadBranch,
-                    discardPatches: true,
                     headBranchExisted: false,
                     cancellationToken);
             }

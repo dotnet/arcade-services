@@ -4,7 +4,6 @@
 using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
@@ -12,9 +11,6 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 [Verb("initialize", HelpText = "Initializes new repo(s) that haven't been synchronized into the VMR yet.")]
 internal class InitializeCommandLineOptions : VmrCommandLineOptions<InitializeOperation>, IBaseVmrCommandLineOptions
 {
-    [Option('r', "recursive", Required = false, HelpText = $"Process also dependencies (from {VersionFiles.VersionDetailsXml}) recursively.")]
-    public bool Recursive { get; set; } = false;
-
     [Option("source-mappings", Required = true, HelpText = $"A path to the {VmrInfo.SourceMappingsFileName} file to be used for syncing.")]
     public string SourceMappings { get; set; }
 
@@ -37,7 +33,4 @@ internal class InitializeCommandLineOptions : VmrCommandLineOptions<InitializeOp
 
     [Option("generate-credscansuppressions", Required = false, HelpText = "Generate a common .config/CredScanSuppressions.json file for all repositories.")]
     public bool GenerateCredScanSuppressions { get; set; } = false;
-
-    [Option("discard-patches", Required = false, HelpText = "Delete .patch files created during the sync.")]
-    public bool DiscardPatches { get; set; } = true;
 }

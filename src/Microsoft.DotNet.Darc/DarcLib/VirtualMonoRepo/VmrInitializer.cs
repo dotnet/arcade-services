@@ -11,6 +11,7 @@ using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualBasic;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -42,7 +43,6 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
-    private readonly IVmrPatchHandler _patchHandler;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IRepositoryCloneManager _cloneManager;
     private readonly IDependencyFileManager _dependencyFileManager;
@@ -67,11 +67,10 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, dependencyTracker, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, fileSystem, logger)
+        : base(vmrInfo, dependencyTracker, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, logger)
     {
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
-        _patchHandler = patchHandler;
         _versionDetailsParser = versionDetailsParser;
         _cloneManager = cloneManager;
         _dependencyFileManager = dependencyFileManager;
@@ -84,7 +83,6 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     public async Task InitializeRepository(
         string mappingName,
         string? targetRevision,
-        bool initializeDependencies,
         LocalPath sourceMappingsPath,
         CodeFlowParameters codeFlowParameters,
         CancellationToken cancellationToken)
@@ -105,7 +103,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(GetLocalVmr(), workBranchName);
 
-        var rootUpdate = new VmrDependencyUpdate(
+        var update = new VmrDependencyUpdate(
             mapping,
             mapping.DefaultRemote,
             targetRevision ?? mapping.DefaultRef,
@@ -115,31 +113,20 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
 
         try
         {
-            IEnumerable<VmrDependencyUpdate> updates = initializeDependencies
-                ? await GetAllDependenciesAsync(rootUpdate, codeFlowParameters.AdditionalRemotes, cancellationToken)
-                : [rootUpdate];
-
-            foreach (var update in updates)
+            var sourcesPath = _vmrInfo.GetRepoSourcesPath(update.Mapping);
+            if (_fileSystem.DirectoryExists(sourcesPath)
+                && _fileSystem.GetFiles(sourcesPath).Length > 1
+                && _dependencyTracker.GetDependencyVersion(update.Mapping) == null)
             {
-                var sourcesPath = _vmrInfo.GetRepoSourcesPath(update.Mapping);
-                if (_fileSystem.DirectoryExists(sourcesPath) && _fileSystem.GetFiles(sourcesPath).Length > 1)
-                {
-                    if (_dependencyTracker.GetDependencyVersion(update.Mapping) == null)
-                    {
-                        throw new InvalidOperationException(
-                            $"Sources for {update.Mapping.Name} already exists but repository is not initialized properly. " +
-                             "Please investigate!");
-                    }
-
-                    // Repository has already been initialized
-                    continue;
-                }
-
-                await InitializeRepository(
-                    update,
-                    codeFlowParameters,
-                    cancellationToken);
+                throw new InvalidOperationException(
+                    $"Sources for {update.Mapping.Name} already exists but repository is not initialized properly. " +
+                     "Please investigate!");
             }
+
+            await InitializeRepository(
+                update,
+                codeFlowParameters,
+                cancellationToken);
         }
         catch (Exception)
         {
@@ -198,11 +185,6 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             restoreVmrPatches: false,
             codeFlowParameters,
             cancellationToken);
-
-        // We apply the VMR patches for the first time
-        var repoVmrPatches = _patchHandler.GetVmrPatches()
-            .Where(patch => patch.ApplicationPath!.Path.StartsWith(VmrInfo.GetRelativeRepoSourcesPath(update.Mapping)));
-        await ReapplyVmrPatchesAsync([.. repoVmrPatches], cancellationToken);
 
         _logger.LogInformation("Initialization of {name} finished", update.Mapping.Name);
     }
@@ -317,9 +299,4 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         VersionDetails versionDetails = await _dependencyFileManager.ParseVersionDetailsXmlAsync(remoteRepoUri, commitSha, includePinned: true);
         return versionDetails.Dependencies;
     }
-
-    // VMR initialization does not need to restore patches,
-    // the repository is new and does not have those applied
-    protected override Task<IReadOnlyCollection<VmrIngestionPatch>> StripVmrPatchesAsync(IReadOnlyCollection<VmrIngestionPatch> patches, IReadOnlyCollection<AdditionalRemote> additionalRemotes, CancellationToken cancellationToken)
-        => Task.FromResult<IReadOnlyCollection<VmrIngestionPatch>>([]);
 }

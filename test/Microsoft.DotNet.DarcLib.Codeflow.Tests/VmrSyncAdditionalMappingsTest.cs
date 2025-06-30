@@ -78,14 +78,6 @@ internal class VmrSyncAdditionalMappingsTest : VmrTestsBase
                     Name = Constants.ProductRepoName,
                     DefaultRemote = ProductRepoPath
                 }
-            ],
-            AdditionalMappings =
-            [
-                new AdditionalMappingSetting
-                {
-                    Source = new UnixPath(VmrInfo.SourcesDir) / Constants.ProductRepoName / "content",
-                    Destination = ""
-                }
             ]
         };
 

@@ -58,8 +58,7 @@ internal class VmrPatchesTestsBase : VmrTestsBase
                     Name = Constants.ProductRepoName,
                     DefaultRemote = ProductRepoPath
                 }
-            ],
-            PatchesPath = "src/installer/patches/"
+            ]
         };
 
         await WriteSourceMappingsInVmr(sourceMappings);

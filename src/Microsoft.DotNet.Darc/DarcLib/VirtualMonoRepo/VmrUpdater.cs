@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,14 +30,10 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {{Constants.AUTOMATION_COMMIT_TAG}}
         """;
 
-    private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IRepositoryCloneManager _cloneManager;
-    private readonly IVmrPatchHandler _patchHandler;
-    private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrUpdater> _logger;
     private readonly ISourceManifest _sourceManifest;
-    private readonly IGitRepoFactory _gitRepoFactory;
 
     public VmrUpdater(
         IVmrDependencyTracker dependencyTracker,
@@ -50,20 +45,15 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         ILocalGitClient localGitClient,
         ILocalGitRepoFactory localGitRepoFactory,
         IGitRepoFactory gitRepoFactory,
-        IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, dependencyTracker, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, fileSystem, logger)
+        : base(vmrInfo, dependencyTracker, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, logger)
     {
         _logger = logger;
         _sourceManifest = sourceManifest;
-        _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
         _cloneManager = cloneManager;
-        _patchHandler = patchHandler;
-        _fileSystem = fileSystem;
-        _gitRepoFactory = gitRepoFactory;
     }
 
     public async Task<bool> UpdateRepository(
@@ -77,36 +67,22 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         var mapping = _dependencyTracker.GetMapping(mappingName);
 
-        string? officialBuildId = null;
-        int? barId = null;
-
-        // Reload source-mappings.json if it's getting updated
-        if (_vmrInfo.SourceMappingsPath != null
-            && targetRevision != null
-            && _vmrInfo.SourceMappingsPath.StartsWith(VmrInfo.GetRelativeRepoSourcesPath(mapping)))
-        {
-            var relativePath = _vmrInfo.SourceMappingsPath.Substring(VmrInfo.GetRelativeRepoSourcesPath(mapping).Length);
-            mapping = await LoadNewSourceMappings(mapping, relativePath, targetRevision, codeFlowParameters.AdditionalRemotes);
-        }
-
         var dependencyUpdate = new VmrDependencyUpdate(
             mapping,
             mapping.DefaultRemote,
             targetRevision ?? mapping.DefaultRef,
             Parent: null,
-            officialBuildId,
-            barId);
+            OfficialBuildId: null,
+            BarId: null);
 
         try
         {
-            IReadOnlyCollection<VmrIngestionPatch> patchesToReapply = await UpdateRepositoryInternal(
+            await UpdateRepositoryInternal(
                 dependencyUpdate,
                 restoreVmrPatches: true,
                 codeFlowParameters,
                 resetToRemoteWhenCloningRepo,
                 cancellationToken);
-
-            await ReapplyVmrPatchesAsync(patchesToReapply, cancellationToken);
             return true;
         }
         catch (EmptySyncException e)
@@ -116,7 +92,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
     }
 
-    private async Task<IReadOnlyCollection<VmrIngestionPatch>> UpdateRepositoryInternal(
+    private async Task UpdateRepositoryInternal(
         VmrDependencyUpdate update,
         bool restoreVmrPatches,
         CodeFlowParameters codeFlowParameters,
@@ -178,7 +154,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             currentVersion.Sha,
             update.TargetRevision);
 
-        return await UpdateRepoToRevisionAsync(
+        await UpdateRepoToRevisionAsync(
             update,
             clone,
             currentVersion.Sha,
@@ -186,164 +162,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             restoreVmrPatches,
             codeFlowParameters,
             cancellationToken: cancellationToken);
-    }
-
-    /// <summary>
-    /// Removes changes applied by VMR patches and restores the original state of the files.
-    /// </summary>
-    /// <param name="patches">Patches with incoming changes to be checked whether they affect some VMR patch</param>
-    protected override async Task<IReadOnlyCollection<VmrIngestionPatch>> StripVmrPatchesAsync(
-        IReadOnlyCollection<VmrIngestionPatch> patches,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        CancellationToken cancellationToken)
-    {
-        IReadOnlyCollection<VmrIngestionPatch> vmrPatchesToRestore = await GetVmrPatches(
-            patches,
-            cancellationToken);
-
-        if (vmrPatchesToRestore.Count == 0)
-        {
-            return vmrPatchesToRestore;
-        }
-
-        foreach (var patch in vmrPatchesToRestore.OrderByDescending(p => p.Path))
-        {
-            if (!_fileSystem.FileExists(patch.Path))
-            {
-                // Patch is being added, so it doesn't exist yet
-                _logger.LogDebug("Not restoring {patch} as it will be added during the sync", patch.Path);
-                continue;
-            }
-
-            await _patchHandler.ApplyPatch(
-                patch,
-                _vmrInfo.VmrPath,
-                removePatchAfter: false,
-                reverseApply: true,
-                cancellationToken);
-        }
-
-        // Patches are reversed directly in index so we need to reset the working tree
-        await GetLocalVmr().ResetWorkingTree();
-
-        _logger.LogInformation("Files affected by VMR patches restored");
-
-        return vmrPatchesToRestore;
-    }
-
-    /// <summary>
-    /// Gets a list of all VMR patches so that they can be reverted before repo changes can be applied.
-    /// 
-    /// One exception is when the updated mapping is the one that the VMR patches come from into the VMR (e.g. dotnet/installer).
-    /// In this case, we also check which VMR patches are modified by the change and we also returns those.
-    /// Examples:
-    ///   - An aspnetcore VMR patch is removed from installer - we must remove it from the files it is applied to in the VMR.
-    ///   - A new version of patch is synchronized from installer - we must remove the old version and apply the new.
-    /// </summary>
-    /// <param name="patches">Patches of currently synchronized changes</param>
-    private async Task<IReadOnlyCollection<VmrIngestionPatch>> GetVmrPatches(
-        IReadOnlyCollection<VmrIngestionPatch> patches,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Getting a list of VMR patches to restore before we ingest new changes...");
-
-        // Always restore all patches
-        var patchesToRestore = new List<VmrIngestionPatch>();
-
-        // If we are not updating the mapping that the VMR patches come from, we're done
-        if (_vmrInfo.PatchesPath == null)
-        {
-            return patchesToRestore;
-        }
-
-        patchesToRestore.AddRange(_patchHandler.GetVmrPatches());
-
-        _logger.LogInformation("Checking which VMR patches have changes...");
-
-        // Check which files are modified by every of the patches that bring new changes into the VMR
-        foreach (var patch in patches)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            IReadOnlyCollection<UnixPath> patchedFiles = await _patchHandler.GetPatchedFiles(patch.Path, cancellationToken);
-            IEnumerable<LocalPath> affectedPatches = patchedFiles
-                .Select(path => patch.ApplicationPath != null ? patch.ApplicationPath! / path : path)
-                .Where(path => path.Path.StartsWith(_vmrInfo.PatchesPath) && path.Path.EndsWith(".patch"))
-                .Select(path => _vmrInfo.VmrPath / path);
-
-            foreach (LocalPath affectedPatch in affectedPatches)
-            {
-                // patch is in the folder named as the mapping for which it is applied
-                var affectedRepo = affectedPatch.Path.Split(_fileSystem.DirectorySeparatorChar)[^2];
-                var affectedMapping = _dependencyTracker.GetMapping(affectedRepo);
-
-                _logger.LogInformation("Detected a change of a VMR patch {patch} for {repo}", affectedPatch, affectedRepo);
-                patchesToRestore.Add(new VmrIngestionPatch(affectedPatch, affectedMapping));
-            }
-        }
-
-        return [..patchesToRestore.DistinctBy(patch => patch.Path)];
-    }
-
-    private async Task<SourceMapping> LoadNewSourceMappings(
-        SourceMapping mapping,
-        string relativePath,
-        string? targetRevision,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes)
-    {
-        var remotes = additionalRemotes
-            .Where(r => r.Mapping == mapping.Name)
-            .Select(r => r.RemoteUri)
-            .Prepend(mapping.DefaultRemote);
-
-        string? sourceMappingContent = null;
-
-        foreach (var remote in remotes)
-        {
-            IGitRepo gitClient = _gitRepoFactory.CreateClient(remote);
-
-            try
-            {
-                _logger.LogDebug("Looking for a new version of {file} in {repo}", relativePath, remote);
-                sourceMappingContent = await gitClient.GetFileContentsAsync(relativePath, remote, targetRevision);
-
-                if (sourceMappingContent != null)
-                {
-                    _logger.LogDebug("Found new version of {file} in {repo}", relativePath, remote);
-                    break;
-                }
-            }
-            catch
-            {
-                _logger.LogDebug("Failed to find {revision} in {repo}", targetRevision, remote);
-            }
-        }
-
-        if (sourceMappingContent is null)
-        {
-            throw new Exception($"Failed to find version {targetRevision} of {relativePath} in any of the {mapping.Name} remotes");
-        }
-
-        _logger.LogDebug($"Loading a new version of source mappings...");
-
-        var tempFile = _fileSystem.GetTempFileName();
-
-        try
-        {
-            _fileSystem.WriteToFile(tempFile, sourceMappingContent);
-            await _dependencyTracker.RefreshMetadata(tempFile);
-            _logger.LogInformation("Initialized a new version of {file}", relativePath);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Failed to initialize a new version of {file}", relativePath);
-        }
-        finally
-        {
-            _fileSystem.DeleteFile(tempFile);
-        }
-
-        return _dependencyTracker.GetMapping(mapping.Name);
     }
 
     private class RepositoryNotInitializedException(string message) : Exception(message)
