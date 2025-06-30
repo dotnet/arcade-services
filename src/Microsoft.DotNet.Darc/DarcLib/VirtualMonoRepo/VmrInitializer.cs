@@ -7,6 +7,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
@@ -39,13 +41,15 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         """;
 
     private readonly IVmrInfo _vmrInfo;
-    private readonly IBasicBarClient _barClient;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IVmrPatchHandler _patchHandler;
+    private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IRepositoryCloneManager _cloneManager;
+    private readonly IDependencyFileManager _dependencyFileManager;
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrUpdater> _logger;
+    private readonly ISourceManifest _sourceManifest;
 
     public VmrInitializer(
         IVmrDependencyTracker dependencyTracker,
@@ -59,21 +63,22 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         ILocalGitRepoFactory localGitRepoFactory,
         IDependencyFileManager dependencyFileManager,
         IWorkBranchFactory workBranchFactory,
-        IBasicBarClient barClient,
         IFileSystem fileSystem,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, barClient, fileSystem, logger)
+        : base(vmrInfo, dependencyTracker, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
-        _barClient = barClient;
         _dependencyTracker = dependencyTracker;
         _patchHandler = patchHandler;
+        _versionDetailsParser = versionDetailsParser;
         _cloneManager = cloneManager;
+        _dependencyFileManager = dependencyFileManager;
         _workBranchFactory = workBranchFactory;
         _fileSystem = fileSystem;
         _logger = logger;
+        _sourceManifest = sourceManifest;
     }
 
     public async Task InitializeRepository(
@@ -82,23 +87,10 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         bool initializeDependencies,
         LocalPath sourceMappingsPath,
         CodeFlowParameters codeFlowParameters,
-        bool lookUpBuilds,
         CancellationToken cancellationToken)
     {
         await _dependencyTracker.RefreshMetadata(sourceMappingsPath);
         var mapping = _dependencyTracker.GetMapping(mappingName);
-
-        string? officialBuildId = null;
-        int? barId = null;
-
-        if (lookUpBuilds)
-        {
-            var build = (await _barClient.GetBuildsAsync(mapping.DefaultRemote, targetRevision))
-                .FirstOrDefault();
-
-            officialBuildId = build?.AzureDevOpsBuildNumber;
-            barId = build?.Id;
-        }
 
         if (_dependencyTracker.GetDependencyVersion(mapping) is not null)
         {
@@ -117,14 +109,14 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             mapping,
             mapping.DefaultRemote,
             targetRevision ?? mapping.DefaultRef,
-            null,
-            officialBuildId,
-            barId);
+            Parent: null,
+            OfficialBuildId: null,
+            BarId: null);
 
         try
         {
             IEnumerable<VmrDependencyUpdate> updates = initializeDependencies
-                ? await GetAllDependenciesAsync(rootUpdate, codeFlowParameters.AdditionalRemotes, lookUpBuilds, cancellationToken)
+                ? await GetAllDependenciesAsync(rootUpdate, codeFlowParameters.AdditionalRemotes, cancellationToken)
                 : [rootUpdate];
 
             foreach (var update in updates)
@@ -213,6 +205,117 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         await ReapplyVmrPatchesAsync([.. repoVmrPatches], cancellationToken);
 
         _logger.LogInformation("Initialization of {name} finished", update.Mapping.Name);
+    }
+
+    /// <summary>
+    /// Recursively parses Version.Details.xml files of all repositories and returns the list of source build dependencies.
+    /// </summary>
+    private async Task<IEnumerable<VmrDependencyUpdate>> GetAllDependenciesAsync(
+        VmrDependencyUpdate root,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+        CancellationToken cancellationToken)
+    {
+        var transitiveDependencies = new Dictionary<SourceMapping, VmrDependencyUpdate>
+        {
+            { root.Mapping, root },
+        };
+
+        var reposToScan = new Queue<VmrDependencyUpdate>();
+        reposToScan.Enqueue(transitiveDependencies.Values.Single());
+
+        _logger.LogInformation("Finding transitive dependencies for {mapping}:{revision}..", root.Mapping.Name, root.TargetRevision);
+
+        while (reposToScan.TryDequeue(out var repo))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var remotes = additionalRemotes
+                .Where(r => r.Mapping == repo.Mapping.Name)
+                .Select(r => r.RemoteUri)
+                .Append(repo.RemoteUri)
+                .Prepend(repo.Mapping.DefaultRemote)
+                .Distinct()
+                .OrderRemotesByLocalPublicOther();
+
+            IEnumerable<DependencyDetail>? repoDependencies = null;
+            foreach (var remoteUri in remotes)
+            {
+                try
+                {
+                    repoDependencies = (await GetRepoDependenciesAsync(remoteUri, repo.TargetRevision))
+                        .Where(dep => dep.SourceBuild is not null);
+                    break;
+                }
+                catch
+                {
+                    _logger.LogDebug("Could not find {file} for {mapping}:{revision} in {remote}",
+                        VersionFiles.VersionDetailsXml,
+                        repo.Mapping.Name,
+                        repo.TargetRevision,
+                        remoteUri);
+                }
+            }
+
+            if (repoDependencies is null)
+            {
+                _logger.LogInformation(
+                    "Repository {repository} does not have {file} file, skipping dependency detection.",
+                    repo.Mapping.Name,
+                    VersionFiles.VersionDetailsXml);
+                continue;
+            }
+
+            foreach (var dependency in repoDependencies)
+            {
+                if (!_dependencyTracker.TryGetMapping(dependency.SourceBuild.RepoName, out var mapping))
+                {
+                    throw new InvalidOperationException(
+                        $"No source mapping named '{dependency.SourceBuild.RepoName}' found " +
+                        $"for a {VersionFiles.VersionDetailsXml} dependency of {dependency.Name}");
+                }
+
+                var update = new VmrDependencyUpdate(
+                    mapping,
+                    dependency.RepoUri,
+                    dependency.Commit,
+                    repo.Mapping,
+                    OfficialBuildId: null,
+                    BarId: null);
+
+                if (transitiveDependencies.TryAdd(mapping, update))
+                {
+                    _logger.LogDebug("Detected {parent}'s dependency {name} ({uri} / {sha})",
+                        repo.Mapping.Name,
+                        update.Mapping.Name,
+                        update.RemoteUri,
+                        update.TargetRevision);
+
+                    reposToScan.Enqueue(update);
+                }
+            }
+        }
+
+        _logger.LogInformation("Found {count} transitive dependencies for {mapping}:{revision}..",
+            transitiveDependencies.Count,
+            root.Mapping.Name,
+            root.TargetRevision);
+
+        return transitiveDependencies.Values;
+    }
+
+    private async Task<IEnumerable<DependencyDetail>> GetRepoDependenciesAsync(string remoteRepoUri, string commitSha)
+    {
+        // Check if we have the file locally
+        var localVersion = _sourceManifest.Repositories.FirstOrDefault(repo => repo.RemoteUri == remoteRepoUri);
+        if (localVersion?.CommitSha == commitSha)
+        {
+            var path = _vmrInfo.VmrPath / VmrInfo.SourcesDir / localVersion.Path / VersionFiles.VersionDetailsXml;
+            var content = await _fileSystem.ReadAllTextAsync(path);
+            return _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: true).Dependencies;
+        }
+
+        VersionDetails versionDetails = await _dependencyFileManager.ParseVersionDetailsXmlAsync(remoteRepoUri, commitSha, includePinned: true);
+        return versionDetails.Dependencies;
     }
 
     // VMR initialization does not need to restore patches,

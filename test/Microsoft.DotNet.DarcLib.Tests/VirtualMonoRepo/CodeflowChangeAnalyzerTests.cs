@@ -66,10 +66,10 @@ public class CodeflowChangeAnalyzerTests
         // Arrange
         var gitDiffOutput =
             """
-            eng/common/build.ps1
+            src/source-manifest.json
+            src/test-repo/eng/common/build.ps1
             src/test-repo/Program.cs
             src/test-repo/Library.cs
-            src/source-manifest.json
             src/test-repo/global.json
             src/test-repo/eng/Version.Details.xml
             src/test-repo/eng/Versions.props
@@ -90,8 +90,8 @@ public class CodeflowChangeAnalyzerTests
         // Arrange
         var gitDiffOutput =
             """
-            eng/common/build.ps1
             src/source-manifest.json
+            src/test-repo/eng/common/build.ps1
             """;
 
         SetChangedFiles(gitDiffOutput);
@@ -109,7 +109,7 @@ public class CodeflowChangeAnalyzerTests
         // Arrange
         var gitDiffOutput =
             """
-            eng/common/build.ps1
+            src/test-repo/eng/common/build.ps1
             src/source-manifest.json
             src/test-repo/global.json
             src/test-repo/eng/Version.Details.xml
@@ -153,16 +153,6 @@ public class CodeflowChangeAnalyzerTests
             +    "Microsoft.DotNet.Arcade.Sdk": "10.0.0-beta.25306.103"
             diff --git a/src/source-manifest.json b/src/source-manifest.json
             index 6cb979ccc3a..90ec6500113 100644
-            --- a/src/source-manifest.json
-            +++ b/src/source-manifest.json
-            @@ -102,2 +102,2 @@
-            -      "packageVersion": "10.0.0-preview.25305.2",
-            -      "barId": 270822,
-            +      "packageVersion": "10.0.0-preview.25309.1",
-            +      "barId": 271087,
-            @@ -106 +106 @@
-            -      "commitSha": "b5c183add7824375fb00c6f4a1614098555b3e62"
-            +      "commitSha": "d72f60b9124ae5a25538dbceab7b3590ce309641"
             """;
 
         SetChangedFiles(gitDiffOutput);
@@ -173,7 +163,7 @@ public class CodeflowChangeAnalyzerTests
         var result = await _analyzer.ForwardFlowHasMeaningfulChangesAsync(TestMappingName, TestHeadBranch, TestTargetBranch);
 
         // Assert
-        result.Should().BeTrue();
+        result.Should().BeFalse();
     }
 
     [Test]
@@ -182,8 +172,8 @@ public class CodeflowChangeAnalyzerTests
         // Arrange
         var gitDiffOutput =
             """
-            eng/common/build.ps1
             src/source-manifest.json
+            src/test-repo/eng/common/build.ps1
             src/test-repo/global.json
             src/test-repo/eng/Version.Details.xml
             src/test-repo/eng/Versions.props
@@ -245,11 +235,11 @@ public class CodeflowChangeAnalyzerTests
     {
         var versionDetails1 = new VersionDetails(
             Dependencies: [],
-            Source: new SourceDependency("https://github.com/dotnet/dotnet", "test-repo", "abc123", 270662));
+            Source: new SourceDependency("https://github.com/dotnet/dotnet", "test-repo", "7e27ec4c314eb774eae2c54ce4682c98973c7c60", 270662));
 
         var versionDetails2 = new VersionDetails(
             Dependencies: [],
-            Source: new SourceDependency("https://github.com/dotnet/dotnet", "test-repo", "def456", 271018));
+            Source: new SourceDependency("https://github.com/dotnet/dotnet", "test-repo", "9a90ec1b43070dc3ee0f0b869a78a175c1d33b68", 271018));
 
         _localGitRepo
             .Setup(x => x.GetFileFromGitAsync("src/test-repo/eng/Version.Details.xml", TestAncestorCommit, null))
@@ -273,7 +263,7 @@ public class CodeflowChangeAnalyzerTests
             staleness: 0,
             released: false,
             stable: true,
-            commit: "abc123",
+            commit: "7e27ec4c314eb774eae2c54ce4682c98973c7c60",
             channels: [],
             assets:
             [
@@ -291,7 +281,7 @@ public class CodeflowChangeAnalyzerTests
             staleness: 0,
             released: false,
             stable: true,
-            commit: "def456",
+            commit: "9a90ec1b43070dc3ee0f0b869a78a175c1d33b68",
             channels: [],
             assets:
             [
