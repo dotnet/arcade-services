@@ -185,7 +185,6 @@ internal abstract class VmrTestsBase
                 GenerateCredScanSuppressions: false,
                 DiscardPatches: true,
                 ApplyAdditionalMappings: true),
-            lookUpBuilds: false,
             cancellationToken: _cancellationToken.Token);
     }
 
@@ -201,7 +200,6 @@ internal abstract class VmrTestsBase
         await vmrUpdater.UpdateRepository(
             mappingName: mapping,
             targetRevision: commit,
-            updateDependencies: true,
             new CodeFlowParameters(
                 AdditionalRemotes: additionalRemotes,
                 TpnTemplatePath: null,
@@ -209,7 +207,6 @@ internal abstract class VmrTestsBase
                 GenerateCredScanSuppressions: generateCredScanSuppressions,
                 DiscardPatches: true,
                 ApplyAdditionalMappings: true),
-            lookUpBuilds: false,
             cancellationToken: _cancellationToken.Token);
     }
 

@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -20,13 +19,11 @@ public interface IVmrInitializer
     /// <param name="initializeDependencies">When true, initializes dependencies (from Version.Details.xml) recursively</param>
     /// <param name="sourceMappingsPath">Path to the source-mappings.json file</param>
     /// <param name="codeFlowParameters">Record containing parameters for VMR initialization</param>
-    /// <param name="lookUpBuilds">Whether to look up package versions and build number from BAR when populating version files</param>
     Task InitializeRepository(
         string mappingName,
         string? targetRevision,
         bool initializeDependencies,
         LocalPath sourceMappingsPath,
         CodeFlowParameters codeFlowParameters,
-        bool lookUpBuilds,
         CancellationToken cancellationToken);
 }

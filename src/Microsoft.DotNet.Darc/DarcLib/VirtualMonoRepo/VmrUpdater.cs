@@ -3,15 +3,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -20,9 +16,6 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// <summary>
 /// This class is able to update an individual repository within the VMR from one commit to another.
 /// It creates git diffs while adhering to cloaking rules, accommodating for patched files, resolving submodules.
-/// It can also update other repositories recursively based on the dependencies stored in Version.Details.xml.
-/// This implementation is meant to be used in the pre-.NET 10 VMR synchronization process
-/// (one-way synchronization from dotnet/sdk using a pipeline).
 /// </summary>
 public class VmrUpdater : VmrManagerBase, IVmrUpdater
 {
@@ -38,33 +31,17 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         {{Constants.AUTOMATION_COMMIT_TAG}}
         """;
 
-    // Message used when finalizing the sync with a merge commit
-    private const string MergeCommitMessage =
-        $$"""
-        [Recursive sync] {name} / {oldShaShort}{{Constants.Arrow}}{newShaShort}
-        
-        Updated repositories:
-        {commitMessage}
-        
-        {{Constants.AUTOMATION_COMMIT_TAG}}
-        """;
-
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IRepositoryCloneManager _cloneManager;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IFileSystem _fileSystem;
-    private readonly IBasicBarClient _barClient;
     private readonly ILogger<VmrUpdater> _logger;
     private readonly ISourceManifest _sourceManifest;
-    private readonly IThirdPartyNoticesGenerator _thirdPartyNoticesGenerator;
-    private readonly ILocalGitClient _localGitClient;
     private readonly IGitRepoFactory _gitRepoFactory;
-    private readonly IWorkBranchFactory _workBranchFactory;
 
     public VmrUpdater(
         IVmrDependencyTracker dependencyTracker,
-        IVersionDetailsParser versionDetailsParser,
         IRepositoryCloneManager cloneManager,
         IVmrPatchHandler patchHandler,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
@@ -72,15 +49,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         ICredScanSuppressionsGenerator credScanSuppressionsGenerator,
         ILocalGitClient localGitClient,
         ILocalGitRepoFactory localGitRepoFactory,
-        IDependencyFileManager dependencyFileManager,
         IGitRepoFactory gitRepoFactory,
-        IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
-        IBasicBarClient barClient,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest,
         IVmrInfo vmrInfo)
-        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, barClient, fileSystem, logger)
+        : base(vmrInfo, dependencyTracker, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, fileSystem, logger)
     {
         _logger = logger;
         _sourceManifest = sourceManifest;
@@ -89,19 +63,13 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         _cloneManager = cloneManager;
         _patchHandler = patchHandler;
         _fileSystem = fileSystem;
-        _barClient = barClient;
-        _thirdPartyNoticesGenerator = thirdPartyNoticesGenerator;
-        _localGitClient = localGitClient;
         _gitRepoFactory = gitRepoFactory;
-        _workBranchFactory = workBranchFactory;
     }
 
     public async Task<bool> UpdateRepository(
         string mappingName,
         string? targetRevision,
-        bool updateDependencies,
         CodeFlowParameters codeFlowParameters,
-        bool lookUpBuilds,
         bool resetToRemoteWhenCloningRepo = false,
         CancellationToken cancellationToken = default)
     {
@@ -111,16 +79,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         string? officialBuildId = null;
         int? barId = null;
-        Build? build = null;
-
-        if (lookUpBuilds)
-        {
-            build = (await _barClient.GetBuildsAsync(mapping.DefaultRemote, targetRevision))
-                .FirstOrDefault();
-
-            officialBuildId = build?.AzureDevOpsBuildNumber;
-            barId = build?.Id;
-        }
 
         // Reload source-mappings.json if it's getting updated
         if (_vmrInfo.SourceMappingsPath != null
@@ -139,33 +97,22 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             officialBuildId,
             barId);
 
-        if (updateDependencies)
+        try
         {
-            return await UpdateRepositoryRecursively(
+            IReadOnlyCollection<VmrIngestionPatch> patchesToReapply = await UpdateRepositoryInternal(
                 dependencyUpdate,
+                restoreVmrPatches: true,
                 codeFlowParameters,
-                lookUpBuilds,
+                resetToRemoteWhenCloningRepo,
                 cancellationToken);
-        }
-        else
-        {
-            try
-            {
-                IReadOnlyCollection<VmrIngestionPatch> patchesToReapply = await UpdateRepositoryInternal(
-                    dependencyUpdate,
-                    restoreVmrPatches: true,
-                    codeFlowParameters,
-                    resetToRemoteWhenCloningRepo,
-                    cancellationToken);
 
-                await ReapplyVmrPatchesAsync(patchesToReapply, cancellationToken);
-                return true;
-            }
-            catch (EmptySyncException e)
-            {
-                _logger.LogInformation(e.Message);
-                return false;
-            }
+            await ReapplyVmrPatchesAsync(patchesToReapply, cancellationToken);
+            return true;
+        }
+        catch (EmptySyncException e)
+        {
+            _logger.LogInformation(e.Message);
+            return false;
         }
     }
 
@@ -242,231 +189,8 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     }
 
     /// <summary>
-    /// Updates a repository and all of it's dependencies recursively starting with a given mapping.
-    /// Always updates to the first version found per repository in the dependency tree.
-    /// </summary>
-    private async Task<bool> UpdateRepositoryRecursively(
-        VmrDependencyUpdate rootUpdate,
-        CodeFlowParameters codeFlowParameters,
-        bool lookUpBuilds,
-        CancellationToken cancellationToken)
-    {
-        string originalRootSha = GetCurrentVersion(rootUpdate.Mapping);
-
-        _logger.LogInformation("Recursive update for {repo} / {from}{arrow}{to}",
-            rootUpdate.Mapping.Name,
-            Commit.GetShortSha(originalRootSha),
-            Constants.Arrow,
-            rootUpdate.TargetRevision);
-
-        var updates = (await GetAllDependenciesAsync(rootUpdate, codeFlowParameters.AdditionalRemotes, lookUpBuilds, cancellationToken)).ToList();
-
-        var extraneousMappings = _dependencyTracker.Mappings
-            .Where(mapping => !updates.Any(update => update.Mapping == mapping) && !mapping.DisableSynchronization)
-            .Select(mapping => mapping.Name);
-
-        if (extraneousMappings.Any())
-        {
-            var separator = $"{Environment.NewLine}  - ";
-            _logger.LogWarning($"The following mappings do not appear in current update's dependency tree:{separator}{{extraMappings}}",
-                string.Join(separator, extraneousMappings));
-        }
-
-        // Synchronization creates commits (one per mapping and some extra) on a separate branch that is then merged into original one
-
-        var workBranchName = "sync" +
-            $"/{rootUpdate.Mapping.Name}" +
-            $"/{Commit.GetShortSha(GetCurrentVersion(rootUpdate.Mapping))}-{rootUpdate.TargetRevision}";
-        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(GetLocalVmr(), workBranchName);
-
-        // Collection of all affected VMR patches we will need to restore after the sync
-        var vmrPatchesToReapply = new List<VmrIngestionPatch>();
-
-        // Dependencies that were already updated during this run
-        var updatedDependencies = new HashSet<VmrDependencyUpdate>();
-
-        foreach (VmrDependencyUpdate update in updates)
-        {
-            if (update.Mapping.DisableSynchronization)
-            {
-                _logger.LogInformation("Synchronization for {repo} is disabled, skipping...", update.Mapping.Name);
-                continue;
-            }
-
-            cancellationToken.ThrowIfCancellationRequested();
-
-            string currentSha;
-            try
-            {
-                currentSha = GetCurrentVersion(update.Mapping);
-            }
-            catch (RepositoryNotInitializedException)
-            {
-                _logger.LogWarning("Dependency {repo} has not been initialized in the VMR yet, repository will be initialized",
-                    update.Mapping.Name);
-
-                currentSha = Constants.EmptyGitObject;
-                _dependencyTracker.UpdateDependencyVersion(update with
-                {
-                    TargetRevision = currentSha
-                });
-            }
-
-            if (update.Parent is not null && currentSha != update.TargetRevision)
-            {
-                _logger.LogInformation("Recursively updating {parent}'s dependency {repo} / {from}{arrow}{to}",
-                    update.Parent.Name,
-                    update.Mapping.Name,
-                    currentSha,
-                    Constants.Arrow,
-                    update.TargetRevision);
-            }
-
-            IReadOnlyCollection<VmrIngestionPatch> patchesToReapply;
-            try
-            {
-                patchesToReapply = await UpdateRepositoryInternal(
-                    update,
-                    restoreVmrPatches: update.Parent == null,
-                    codeFlowParameters,
-                    resetToRemoteWhenCloningRepo: false,
-                    cancellationToken);
-            }
-            catch (EmptySyncException e) when (e.Message.Contains("is already at"))
-            {
-                if (update.Mapping == rootUpdate.Mapping)
-                {
-                    _logger.LogWarning(e.Message);
-                }
-                else
-                {
-                    _logger.LogInformation(e.Message);
-                }
-
-                continue;
-            }
-            catch (EmptySyncException e)
-            {
-                _logger.LogWarning(e.Message);
-                continue;
-            }
-            catch (Exception)
-            {
-                _logger.LogWarning(
-                    InterruptedSyncExceptionMessage,
-                    workBranch.OriginalBranch.StartsWith("sync") || workBranch.OriginalBranch.StartsWith("init")
-                        ? "the original"
-                        : workBranch.OriginalBranch);
-                throw;
-            }
-
-            vmrPatchesToReapply.AddRange(patchesToReapply);
-
-            updatedDependencies.Add(update with
-            {
-                // We resolve the SHA again because original target could have been a branch name
-                TargetRevision = GetCurrentVersion(update.Mapping),
-
-                // We also store the original SHA (into the version!) so that later we use it in the commit message
-                OriginRevision = currentSha,
-            });
-        }
-
-        string finalRootSha = GetCurrentVersion(rootUpdate.Mapping);
-        var summaryMessage = new StringBuilder();
-
-        foreach (var update in updatedDependencies)
-        {
-            if (update.TargetRevision == update.OriginRevision)
-            {
-                continue;
-            }
-
-            var fromShort = Commit.GetShortSha(update.OriginRevision);
-            var toShort = Commit.GetShortSha(update.TargetRevision);
-            summaryMessage
-                .AppendLine($"  - {update.Mapping.Name} / {fromShort}{Constants.Arrow}{toShort}")
-                .AppendLine($"    {update.RemoteUri}/compare/{update.OriginRevision}..{update.TargetRevision}");
-        }
-
-        await ApplyVmrPatches(workBranch, vmrPatchesToReapply, cancellationToken);
-
-        await CleanUpRemovedRepos(codeFlowParameters.TpnTemplatePath);
-
-        var commitMessage = PrepareCommitMessage(
-            MergeCommitMessage,
-            rootUpdate.Mapping.Name,
-            rootUpdate.Mapping.DefaultRemote,
-            originalRootSha,
-            finalRootSha,
-            summaryMessage.ToString());
-
-        await workBranch.MergeBackAsync(commitMessage);
-
-        _logger.LogInformation("Recursive update for {repo} finished.{newLine}{message}",
-            rootUpdate.Mapping.Name,
-            Environment.NewLine,
-            summaryMessage);
-
-        return updatedDependencies.Any();
-    }
-
-    private async Task ApplyVmrPatches(IWorkBranch workBranch, List<VmrIngestionPatch> vmrPatchesToReapply, CancellationToken cancellationToken)
-    {
-        if (!vmrPatchesToReapply.Any())
-        {
-            return;
-        }
-
-        try
-        {
-            await ReapplyVmrPatchesAsync(vmrPatchesToReapply, cancellationToken);
-        }
-        catch (Exception)
-        {
-            _logger.LogWarning(
-                InterruptedSyncExceptionMessage,
-                workBranch.OriginalBranch.StartsWith("sync") || workBranch.OriginalBranch.StartsWith("init")
-                    ? "the original"
-                    : workBranch.OriginalBranch);
-            throw;
-        }
-
-        // TODO: Workaround for cases when we get CRLF problems on Windows
-        // We should figure out why restoring and reapplying VMR patches leaves working tree with EOL changes
-        // https://github.com/dotnet/arcade-services/issues/3277
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var vmr = GetLocalVmr();
-            if (await vmr.HasWorkingTreeChangesAsync())
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, ".");
-
-                // Sometimes not even checkout helps, so we check again
-                if (await vmr.HasWorkingTreeChangesAsync())
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    await _localGitClient.RunGitCommandAsync(
-                        _vmrInfo.VmrPath,
-                        ["add", "--u", "."],
-                        cancellationToken: default);
-
-                    await _localGitClient.RunGitCommandAsync(
-                        _vmrInfo.VmrPath,
-                        ["commit", "--amend", "--no-edit"],
-                        cancellationToken: default);
-                }
-            }
-        }
-    }
-
-    /// <summary>
     /// Removes changes applied by VMR patches and restores the original state of the files.
     /// </summary>
-    /// <param name="updatedMapping">Mapping that is currently being updated (so we get its patches)</param>
     /// <param name="patches">Patches with incoming changes to be checked whether they affect some VMR patch</param>
     protected override async Task<IReadOnlyCollection<VmrIngestionPatch>> StripVmrPatchesAsync(
         IReadOnlyCollection<VmrIngestionPatch> patches,
@@ -559,62 +283,6 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         }
 
         return [..patchesToRestore.DistinctBy(patch => patch.Path)];
-    }
-
-    private string GetCurrentVersion(SourceMapping mapping)
-    {
-        var version = _dependencyTracker.GetDependencyVersion(mapping)
-            ?? throw new RepositoryNotInitializedException($"Repository {mapping.Name} has not been initialized yet");
-
-        return version.Sha;
-    }
-
-    private async Task CleanUpRemovedRepos(string? tpnTemplatePath)
-    {
-        var deletedRepos = _sourceManifest
-            .Repositories
-            .Where(r => !_dependencyTracker.TryGetMapping(r.Path, out _))
-            .ToList();
-
-        if (!deletedRepos.Any())
-        {
-            return;
-        }
-
-        foreach (var repo in deletedRepos)
-        {
-            _logger.LogWarning("The mapping for {name} was deleted. Removing the repository from the VMR.", repo.Path);
-            DeleteRepository(repo.Path);
-        }
-
-        var sourceManifestPath = _vmrInfo.SourceManifestPath;
-        _fileSystem.WriteToFile(sourceManifestPath, _sourceManifest.ToJson());
-
-        if (tpnTemplatePath != null)
-        {
-            await _thirdPartyNoticesGenerator.UpdateThirdPartyNotices(tpnTemplatePath);
-        }
-
-        await GetLocalVmr().StageAsync(["*"]);
-        var commitMessage = "Delete " + string.Join(", ", deletedRepos.Select(r => r.Path));
-        await CommitAsync(commitMessage);
-    }
-
-    private void DeleteRepository(string repo)
-    {
-        var repoSourcesDir = _vmrInfo.GetRepoSourcesPath(repo);
-        try
-        {
-            _fileSystem.DeleteDirectory(repoSourcesDir, true);
-            _logger.LogInformation("Deleted directory {dir}", repoSourcesDir);
-        }
-        catch (DirectoryNotFoundException)
-        {
-            _logger.LogInformation("Directory {dir} is already deleted", repoSourcesDir);
-        }
-
-        _sourceManifest.RemoveRepository(repo);
-        _logger.LogInformation("Removed record for repository {name} from {file}", repo, _vmrInfo.SourceManifestPath);
     }
 
     private async Task<SourceMapping> LoadNewSourceMappings(

@@ -63,7 +63,6 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
     public CodeFlowVmrUpdater(
         IVmrInfo vmrInfo,
         IVmrDependencyTracker dependencyTracker,
-        IVersionDetailsParser versionDetailsParser,
         IRepositoryCloneManager cloneManager,
         IVmrPatchHandler patchHandler,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
@@ -71,14 +70,11 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
         ICredScanSuppressionsGenerator credScanSuppressionsGenerator,
         ILocalGitClient localGitClient,
         ILocalGitRepoFactory localGitRepoFactory,
-        IDependencyFileManager dependencyFileManager,
         IGitRepoFactory gitRepoFactory,
-        IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
-        IBasicBarClient barClient,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest)
-        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, barClient, fileSystem, logger)
+        : base(vmrInfo, dependencyTracker, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, fileSystem, logger)
     {
         _logger = logger;
         _sourceManifest = sourceManifest;
