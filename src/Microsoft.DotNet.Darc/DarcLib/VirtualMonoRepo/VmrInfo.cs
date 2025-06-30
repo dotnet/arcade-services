@@ -86,7 +86,8 @@ public class VmrInfo : IVmrInfo
     public const string CodeownersFileName = "CODEOWNERS";
     public const string CredScanSuppressionsFileName = "CredScanSuppressions.json";
 
-    public static readonly UnixPath ArcadeRepoDir = SourcesDir / "arcade";
+    public const string ArcadeMappingName = "arcade";
+    public static readonly UnixPath ArcadeRepoDir = SourcesDir / ArcadeMappingName;
 
     public static UnixPath DefaultRelativeSourceMappingsPath { get; } = SourcesDir / SourceMappingsFileName;
 
