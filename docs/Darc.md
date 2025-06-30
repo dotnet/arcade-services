@@ -2771,7 +2771,6 @@ Resets the contents of a VMR mapping to match a specific commit SHA from the sou
 ```
 # Reset runtime mapping to specific commit
 darc vmr reset runtime:abc123def456
-
 # Invalid format - shows clear error
 darc vmr reset invalid-format
 # Output: fail: Invalid format. Expected [mapping]:[sha] but got: invalid-format
