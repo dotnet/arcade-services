@@ -65,7 +65,6 @@ use darc to achieve them, as well as a general reference guide to darc commands.
 
   Darc also has a suite of new VMR commands. These all have the following format `darc vmr <command>`:
   - [initialize](#initialize) - Initializes new repo(s) that haven't been synchronized into the VMR yet.
-  - [update](#update) - Updates given repo(s) in the VMR to match given refs.
   - [backflow](#backflow) - Flows source code from the current commit of a locally checked out VMR into a target local repository.
   - [cherry-pick](#cherry-pick) - Cherry-picks a single commit from a repository to/from the VMR.
   - [forwardflow](#forwardflow) - Flows source code from the current commit of a local repository into a local VMR.
@@ -2679,16 +2678,6 @@ Initializes new repo(s) that haven't been synchronized into the VMR yet. The new
 **Sample**
 ```
 darc vmr initialize -r --source-mappings <path to source mappings> arcade-services
-```
-
-### **`update`**
-
-Updates given repo(s) in the VMR to match given refs. This command was primarely used in the dotnet/sdk pipelines to recursevly update the VMR with the latest commits.
-The command shouldn't be used for local development, [backflow](#backflow) and [forwardflow](#forwardflow) commands are reccomended for this scenario
-
-**Sample**
-```
-darc vmr update --recursive sdk:<sha>
 ```
 
 ### **`backflow`**

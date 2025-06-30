@@ -46,7 +46,6 @@ internal class InitializeOperation : VmrOperationBase
                 _options.GenerateCredScanSuppressions,
                 _options.DiscardPatches,
                 ApplyAdditionalMappings: true),
-            _options.EnableBuildLookUp,
             cancellationToken);
     }
 }
