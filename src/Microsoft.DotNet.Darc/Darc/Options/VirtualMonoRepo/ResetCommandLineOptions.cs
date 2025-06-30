@@ -39,7 +39,6 @@ internal class ResetCommandLineOptions : VmrCommandLineOptions<ResetOperation>
     {
         public VmrReseter(
             IVmrDependencyTracker dependencyTracker,
-            IVersionDetailsParser versionDetailsParser,
             IRepositoryCloneManager cloneManager,
             IVmrPatchHandler patchHandler,
             IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
@@ -47,15 +46,11 @@ internal class ResetCommandLineOptions : VmrCommandLineOptions<ResetOperation>
             ICredScanSuppressionsGenerator credScanSuppressionsGenerator,
             ILocalGitClient localGitClient,
             ILocalGitRepoFactory localGitRepoFactory,
-            IDependencyFileManager dependencyFileManager,
             IGitRepoFactory gitRepoFactory,
-            IWorkBranchFactory workBranchFactory,
-            IFileSystem fileSystem,
-            IBasicBarClient barClient,
             ILogger<VmrUpdater> logger,
             ISourceManifest sourceManifest,
             IVmrInfo vmrInfo)
-            : base(dependencyTracker, versionDetailsParser, cloneManager, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, gitRepoFactory, workBranchFactory, fileSystem, barClient, logger, sourceManifest, vmrInfo)
+            : base(dependencyTracker, cloneManager, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, gitRepoFactory, logger, sourceManifest, vmrInfo)
         {
         }
 

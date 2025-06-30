@@ -105,9 +105,7 @@ internal class ResetOperation : Operation
             AdditionalRemotes: additionalRemotes,
             TpnTemplatePath: null,
             GenerateCodeOwners: false,
-            GenerateCredScanSuppressions: false,
-            DiscardPatches: true,
-            ApplyAdditionalMappings: false);
+            GenerateCredScanSuppressions: false);
 
         // We will remove everything not-cloaked and replace it with current contents of the source repo
         // When flowing to the VMR, we remove all files but the cloaked files
@@ -140,9 +138,7 @@ internal class ResetOperation : Operation
             await _vmrUpdater.UpdateRepository(
                 mappingName,
                 targetSha,
-                updateDependencies: false,
                 codeFlowParameters,
-                lookUpBuilds: false,
                 resetToRemoteWhenCloningRepo: false,
                 CancellationToken.None);
 
