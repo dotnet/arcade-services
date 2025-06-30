@@ -16,13 +16,11 @@ public interface IVmrInitializer
     /// </summary>
     /// <param name="mappingName">Name of a repository mapping</param>
     /// <param name="targetRevision">Revision (commit SHA, branch, tag..) onto which to synchronize, leave empty for HEAD</param>
-    /// <param name="initializeDependencies">When true, initializes dependencies (from Version.Details.xml) recursively</param>
     /// <param name="sourceMappingsPath">Path to the source-mappings.json file</param>
     /// <param name="codeFlowParameters">Record containing parameters for VMR initialization</param>
     Task InitializeRepository(
         string mappingName,
         string? targetRevision,
-        bool initializeDependencies,
         LocalPath sourceMappingsPath,
         CodeFlowParameters codeFlowParameters,
         CancellationToken cancellationToken);

@@ -83,12 +83,6 @@ public class VmrPatchHandlerTests
             .SetupGet(x => x.VmrPath)
             .Returns(_vmrPath);
         _vmrInfo
-            .Setup(x => x.PatchesPath)
-            .Returns(_vmrPath + "/patches");
-        _vmrInfo
-            .Setup(x => x.AdditionalMappings)
-            .Returns(Array.Empty<(string, string?)>());
-        _vmrInfo
             .Setup(x => x.GetRepoSourcesPath(It.IsAny<SourceMapping>()))
             .Returns((SourceMapping mapping) => _vmrPath / VmrInfo.SourcesDir / mapping.Name);
 
@@ -180,7 +174,6 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            includeAdditionalMappings: true,
             CancellationToken.None);
 
         var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName, Sha1, Sha2, null);
@@ -199,117 +192,6 @@ public class VmrPatchHandlerTests
 
         patches.Should().ContainSingle();
         patches.Single().Should().Be(new VmrIngestionPatch(expectedPatchName, RepoVmrPath));
-    }
-
-    [Test]
-    public async Task CreatePatchesWithAdditionalMappingsTest()
-    {
-        // Setup
-        NativePath expectedPatchName1 = _patchDir / $"{IndividualRepoName}-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}.patch";
-        NativePath expectedPatchName2 = _patchDir / $"root-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}-1.patch";
-        NativePath expectedPatchName3 = _patchDir / $"eng_common-{Commit.GetShortSha(Sha1)}-{Commit.GetShortSha(Sha2)}-2.patch";
-
-        _vmrInfo.Reset();
-        _vmrInfo
-            .SetupGet(x => x.VmrPath)
-            .Returns(_vmrPath);
-        _vmrInfo
-            .Setup(x => x.PatchesPath)
-            .Returns("eng/patches");
-        _vmrInfo
-            .SetupGet(x => x.AdditionalMappings)
-            .Returns(new (string, string?)[]
-            {
-                (SRC / _testRepoMapping.Name / "SourceBuild/tarball/content", null),
-                (SRC / _testRepoMapping.Name / Constants.CommonScriptFilesPath, Constants.CommonScriptFilesPath),
-            });
-
-        _fileSystem
-            .Setup(x => x.DirectoryExists(_clone.Path / "SourceBuild/tarball/content"))
-            .Returns(true);
-        _fileSystem
-            .Setup(x => x.DirectoryExists(_clone.Path / Constants.CommonScriptFilesPath))
-            .Returns(true);
-        _fileSystem
-            .Setup(x => x.GetFileName(SRC / _testRepoMapping.Name / "SourceBuild/tarball/content"))
-            .Returns("content");
-        _fileSystem
-            .Setup(x => x.GetFileName(SRC / _testRepoMapping.Name / Constants.CommonScriptFilesPath))
-            .Returns("common");
-
-        // Act
-        var patches = await _patchHandler.CreatePatches(
-            _testRepoMapping,
-            _clone,
-            Sha1,
-            Sha2,
-            _patchDir,
-            TmpDir,
-            includeAdditionalMappings: true,
-            CancellationToken.None);
-
-        var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName1, Sha1, Sha2, null);
-
-        // Verify
-        _processManager
-            .Verify(x => x.Execute("git",
-                expectedArgs,
-                It.IsAny<TimeSpan?>(),
-                _clone.Path,
-                It.IsAny<Dictionary<string, string>>(),
-                It.IsAny<CancellationToken>()),
-                Times.Once);
-
-        expectedArgs = new[]
-        {
-            "diff",
-            "--patch",
-            "--binary",
-            "--output",
-            expectedPatchName2,
-            "--relative",
-            $"{Sha1}..{Sha2}",
-            "--",
-            "."
-        };
-
-        _processManager
-            .Verify(x => x.Execute("git",
-                expectedArgs,
-                It.IsAny<TimeSpan?>(),
-                _clone.Path / "SourceBuild/tarball/content",
-                It.IsAny<Dictionary<string, string>>(),
-                It.IsAny<CancellationToken>()),
-                Times.Once);
-
-        expectedArgs = new[]
-        {
-            "diff",
-            "--patch",
-            "--binary",
-            "--output",
-            expectedPatchName3,
-            "--relative",
-            $"{Sha1}..{Sha2}",
-            "--",
-            "."
-        };
-
-        _processManager
-            .Verify(x => x.Execute("git",
-                expectedArgs,
-                It.IsAny<TimeSpan?>(),
-                _clone.Path / Constants.CommonScriptFilesPath,
-                It.IsAny<Dictionary<string, string>>(),
-                It.IsAny<CancellationToken>()),
-                Times.Once);
-
-        _dependencyTracker.Verify(x => x.UpdateSubmodules(It.Is<List<SubmoduleRecord>>(l => l.Count == 0)), Times.Once);
-
-        patches.Should().Equal(
-            new VmrIngestionPatch(expectedPatchName1, RepoVmrPath),
-            new VmrIngestionPatch(expectedPatchName2, (string?)null),
-            new VmrIngestionPatch(expectedPatchName3, Constants.CommonScriptFilesPath));
     }
 
     [Test]
@@ -335,7 +217,6 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            includeAdditionalMappings: true,
             CancellationToken.None);
 
         var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName, Sha1, Sha2, new[] { _submoduleInfo.Path });
@@ -390,7 +271,6 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            includeAdditionalMappings: true,
             CancellationToken.None);
 
         // Verify diff for the individual repo
@@ -482,7 +362,6 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            includeAdditionalMappings: true,
             CancellationToken.None);
 
         // Verify diff for the individual repo
@@ -590,7 +469,6 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            includeAdditionalMappings: true,
             CancellationToken.None);
 
         // Verify diff for the individual repo
@@ -668,7 +546,6 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            includeAdditionalMappings: true,
             CancellationToken.None);
 
         // Verify diff for the individual repo
@@ -747,7 +624,6 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            includeAdditionalMappings: true,
             CancellationToken.None);
 
         // Verify diff for the individual repo
@@ -931,7 +807,6 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            includeAdditionalMappings: true,
             CancellationToken.None);
 
         var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName, Sha1, Sha2, null);
@@ -991,7 +866,6 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            includeAdditionalMappings: true,
             CancellationToken.None);
 
         // Verify

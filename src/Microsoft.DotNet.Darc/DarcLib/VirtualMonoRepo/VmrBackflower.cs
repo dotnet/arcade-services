@@ -27,7 +27,6 @@ public interface IVmrBackFlower : IVmrCodeFlower
     /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
     /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
     /// <param name="headBranch">New/existing branch to make the changes on</param>
-    /// <param name="discardPatches">Keep patch files?</param>
     Task<CodeFlowResult> FlowBackAsync(
         string mapping,
         NativePath targetRepo,
@@ -35,7 +34,6 @@ public interface IVmrBackFlower : IVmrCodeFlower
         IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
         string headBranch,
-        bool discardPatches = false,
         CancellationToken cancellationToken = default);
 }
 
@@ -92,7 +90,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
         string headBranch,
-        bool discardPatches = false,
         CancellationToken cancellationToken = default)
     {
         var targetRepo = _localGitRepoFactory.Create(targetRepoPath);
@@ -112,7 +109,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             excludedAssets,
             targetBranch,
             headBranch,
-            discardPatches,
             headBranchExisted,
             cancellationToken);
     }
@@ -125,7 +121,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
         string headBranch,
-        bool discardPatches,
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
@@ -139,7 +134,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             excludedAssets,
             targetBranch,
             headBranch,
-            discardPatches,
             headBranchExisted,
             cancellationToken);
 
@@ -173,7 +167,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
         string headBranch,
-        bool discardPatches,
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
@@ -199,11 +192,15 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 lastFlow.VmrSha,
                 currentFlow.VmrSha);
 
-            if (discardPatches)
+            foreach (VmrIngestionPatch patch in patches)
             {
-                foreach (VmrIngestionPatch patch in patches)
+                try
                 {
                     _fileSystem.DeleteFile(patch.Path);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogWarning(e, "Failed to delete patch file {patchPath}", patch.Path);
                 }
             }
 
@@ -218,7 +215,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             foreach (VmrIngestionPatch patch in patches)
             {
-                await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, discardPatches, reverseApply: false, cancellationToken);
+                await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, removePatchAfter: true, reverseApply: false, cancellationToken);
             }
         }
         catch (PatchApplicationFailedException e)
@@ -243,7 +240,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 newBranchName,
                 excludedAssets,
                 patches,
-                discardPatches,
                 headBranchExisted,
                 build.GitHubRepository,
                 build.AzureDevOpsRepository,
@@ -273,7 +269,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         Build build,
         string targetBranch,
         string headBranch,
-        bool discardPatches,
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
@@ -332,7 +327,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // Now we insert the VMR files
         foreach (var patch in patches)
         {
-            await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, discardPatches, reverseApply: false, cancellationToken);
+            await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, removePatchAfter: true, reverseApply: false, cancellationToken);
         }
 
         // Check if there are any changes and only commit if there are
@@ -466,7 +461,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string newBranchName,
         IReadOnlyCollection<string>? excludedAssets,
         List<VmrIngestionPatch> patches,
-        bool discardPatches,
         bool headBranchExisted,
         string repoGitHubUri,
         string repoAzDoUri,
@@ -502,7 +496,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             excludedAssets,
             headBranch,
             headBranch,
-            discardPatches,
             headBranchExisted,
             cancellationToken);
 
@@ -515,7 +508,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             try
             {
-                await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, discardPatches, reverseApply: false, cancellationToken);
+                await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, removePatchAfter: true, reverseApply: false, cancellationToken);
             }
             catch (Exception e)
             {

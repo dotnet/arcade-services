@@ -37,15 +37,12 @@ internal class InitializeOperation : VmrOperationBase
         await _vmrInitializer.InitializeRepository(
             repoName,
             targetRevision,
-            _options.Recursive,
             new NativePath(_options.SourceMappings),
             new CodeFlowParameters(
                 additionalRemotes,
                 _options.TpnTemplate,
                 _options.GenerateCodeowners,
-                _options.GenerateCredScanSuppressions,
-                _options.DiscardPatches,
-                ApplyAdditionalMappings: true),
+                _options.GenerateCredScanSuppressions),
             cancellationToken);
     }
 }
