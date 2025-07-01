@@ -279,20 +279,27 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             lastFlow.VmrSha,
             currentFlow.VmrSha,
             mappingName,
-            VersionFiles.GlobalJson,
-            cancellationToken);
+            VersionFiles.GlobalJson);
+
+        await _vmrVersionFileMerger.MergeJsonAsync(
+            lastFlow,
+            targetRepo,
+            lastFlow.RepoSha,
+            targetBranch,
+            vmr,
+            lastFlow.VmrSha,
+            currentFlow.VmrSha,
+            mappingName,
+            VersionFiles.DotnetToolsConfigJson);
 
         var excludedAssetsMatcher = excludedAssets.GetAssetMatcher();
-
-        List<DependencyUpdate> repoChanges = ComputeChanges(
-            excludedAssetsMatcher,
-            previousRepoDependencies,
-            currentRepoDependencies);
-
-        List<DependencyUpdate> vmrChanges = ComputeChanges(
-            excludedAssetsMatcher,
-            previousVmrDependencies,
-            currentVmrDependencies);
+        await _vmrVersionFileMerger.MergeVersionDetails(
+            lastFlow,
+            currentFlow,
+            mappingName,
+            targetRepo,
+            targetBranch,
+            excludedAssetsMatcher);
 
         List<AssetData> buildAssets = build.Assets
             .Where(a => !excludedAssetsMatcher.IsExcluded(a.Name))
@@ -303,182 +310,15 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             })
             .ToList();
 
-        // All packages that can appear in current dependency update
-        var headBranchDependencies = await GetRepoDependencies(targetRepo, commit: null! /* working tree */);
-        var uniquePackages = headBranchDependencies.Dependencies
-            .Select(dep => dep.Name)
-            .Concat(vmrChanges.Select(c => c.DependencyName))
-            .Concat(repoChanges.Select(c => c.DependencyName))
-            .Distinct()
-            .Where(dep => !excludedAssetsMatcher.IsExcluded(dep))
-            .ToHashSet();
-
-        var versionUpdates = new List<DependencyDetail>();
-        var buildUpdates = new List<AssetData>();
-        var removals = new HashSet<string>();
-        var additions = new List<DependencyDetail>();
-
-        foreach (var assetName in uniquePackages)
-        {
-            AssetData? buildAsset = buildAssets.FirstOrDefault(a => a.Name == assetName);
-            DependencyUpdate? repoChange = repoChanges.FirstOrDefault(c => assetName == (c.From?.Name ?? c.To!.Name));
-            DependencyUpdate? vmrChange = vmrChanges.FirstOrDefault(c => assetName == (c.From?.Name ?? c.To!.Name));
-
-            bool repoAddition = repoChange != null && repoChange.From == null;
-            bool vmrAddition = vmrChange != null && vmrChange.From == null;
-            bool repoRemoval = repoChange != null && repoChange.To == null;
-            bool vmrRemoval = vmrChange != null && vmrChange.To == null;
-            bool includedInBuild = buildAsset != null;
-            bool repoUpdated = repoChange?.From != null && repoChange.To != null;
-            bool vmrUpdated = vmrChange?.From != null && vmrChange.To != null;
-
-            DependencyDetail? repoVersion = repoChange?.To;
-            DependencyDetail? vmrVersion = vmrChange?.To;
-
-            // When part of the build, we use the version from the build
-            // This is the most common case
-            if (includedInBuild)
-            {
-                _logger.LogInformation("Asset {assetName} contained in build, updating to {version}", assetName, buildAsset!.Version);
-
-                buildUpdates.Add(new AssetData(false)
-                {
-                    Name = assetName,
-                    Version = buildAsset.Version,
-                });
-
-                continue;
-            }
-
-            if (repoUpdated && vmrUpdated)
-            {
-                if (SemanticVersion.TryParse(repoVersion!.Version, out var repoSemVer) && SemanticVersion.TryParse(vmrVersion!.Version, out var vmrSemVer))
-                {
-                    DependencyDetail newerVersion = repoSemVer > vmrSemVer ? repoVersion! : vmrVersion!;
-                    _logger.LogInformation(
-                        "Asset {assetName} updated to {repoVersion} in the repo and {vmrVersion} in the VMR. Choosing the newer version {newerVersion}",
-                        assetName,
-                        repoVersion.Version,
-                        vmrVersion.Version,
-                        newerVersion.Version);
-                    versionUpdates.Add(newerVersion);
-                    continue;
-                }
-
-                // We can't tell which one is newer, we pick the repo version
-                _logger.LogInformation(
-                    "Asset {assetName} updated to {repoVersion} in the repo and {vmrVersion} in the VMR. Choosing the repo version {repoVersion}",
-                    assetName,
-                    repoVersion.Version,
-                    vmrVersion!.Version,
-                    repoVersion.Version);
-                versionUpdates.Add(repoVersion);
-                continue;
-            }
-
-            if (repoRemoval)
-            {
-                if (vmrAddition)
-                {
-                    // Asset was removed from the repo and added to the VMR at the same time
-                    _logger.LogInformation(
-                        "Asset {assetName} was removed from the repo and added to the VMR at the same time. Skipping the asset",
-                        assetName);
-                    throw new ConflictingDependencyUpdateException(repoChange!, vmrChange!);
-                }
-
-                // Asset got removed from the repo, we can skip it (it won't be in the target V.D.xml)
-                _logger.LogInformation("Asset {assetName} was removed from the repo", assetName);
-                continue;
-            }
-
-            if (vmrRemoval)
-            {
-                if (repoAddition)
-                {
-                    // Asset was removed from the VMR and added to the repo at the same time
-                    _logger.LogInformation(
-                        "Asset {assetName} was removed from the VMR and added to the repo at the same time. Skipping the asset",
-                        assetName);
-                    throw new ConflictingDependencyUpdateException(repoChange!, vmrChange!);
-                }
-
-                // Asset got removed from the VMR, we need to remove it
-                removals.Add(assetName);
-                _logger.LogInformation("Asset {assetName} was removed from the VMR, removing from repo too", assetName);
-                continue;
-            }
-
-            if (repoAddition || vmrAddition)
-            {
-                if (repoAddition && vmrAddition && SemanticVersion.TryParse(repoVersion!.Version, out var repoSemVer) && SemanticVersion.TryParse(vmrVersion!.Version, out var vmrSemVer))
-                {
-                    DependencyDetail newerVersion = repoSemVer > vmrSemVer ? repoVersion! : vmrVersion!;
-                    _logger.LogInformation(
-                        "Asset {assetName} added in both the repo ({repoVersion}) and the VMR ({vmrVersion}). Choosing the newer version {newerVersion}",
-                        assetName,
-                        repoVersion.Version,
-                        vmrVersion.Version,
-                        newerVersion.Version);
-                    additions.Add(newerVersion);
-                    continue;
-                }
-
-                if (repoAddition)
-                {
-                    // Asset was added to the repo, no change necessary
-                    _logger.LogInformation("Asset {assetName} was added in the repo", assetName);
-                    additions.Add(repoVersion!);
-                    continue;
-                }
-
-                if (vmrAddition)
-                {
-                    // Asset was added to the VMR, we need to add it
-                    _logger.LogInformation("Asset {assetName} version {version} was added in the VMR, adding it to the repo too", assetName, vmrVersion!.Version);
-                    additions.Add(vmrVersion);
-                    continue;
-                }
-            }
-
-            if (repoUpdated)
-            {
-                // Don't do anything, package is updated in the repo already
-                _logger.LogInformation("Asset {assetName} updated to {version} in the repo, skipping", assetName, repoVersion!.Version);
-                continue;
-            }
-
-            if (vmrUpdated)
-            {
-                // Package got updated in the VMR only
-                _logger.LogInformation("Asset {assetName} updated to {version} in the VMR, updating in the repo too", assetName, vmrVersion!.Version);
-                versionUpdates.Add(vmrVersion);
-                continue;
-            }
-
-            _logger.LogDebug("Asset {assetName} is not part of the build, not updated in the repo and not updated in the VMR. Skipping", assetName);
-        }
-
-        foreach (var removedAsset in removals)
-        {
-            await _dependencyFileManager.RemoveDependencyAsync(removedAsset, targetRepo.Path, null!);
-        }
-
-        foreach (var addedDependency in additions)
-        {
-            await _dependencyFileManager.AddDependencyAsync(addedDependency, targetRepo.Path, branch: null!);
-        }
-
         currentRepoDependencies = await GetRepoDependencies(targetRepo, null!);
 
         List<DependencyDetail> updates = _coherencyUpdateResolver
             .GetRequiredNonCoherencyUpdates(
                 build.GetRepository(),
                 build.Commit,
-                buildUpdates,
+                buildAssets,
                 currentRepoDependencies.Dependencies)
             .Select(u => u.To)
-            .Concat(versionUpdates)
             .ToList();
 
         await _assetLocationResolver.AddAssetLocationToDependenciesAsync(updates);
@@ -549,7 +389,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
         await targetRepo.StageAsync(["."], cancellationToken);
 
-        List<DependencyUpdate> dependencyUpdates = [
+        /*List<DependencyUpdate> dependencyUpdates = [
             ..additions
                 .Where(addition => headBranchDependencies.Dependencies.All(a => addition.Name != a.Name))
                 .Select(addition => new DependencyUpdate()
@@ -570,19 +410,20 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                     From = headBranchDependencies.Dependencies.Concat(additions).First(d => d.Name == update.Name),
                     To = update,
                 }),
-        ];
+        ];*/
 
         string commitMessage = string.Concat(
             $"Update dependencies from {build.GetRepository()} build {build.Id}",
-            Environment.NewLine,
-            BuildDependencyUpdateCommitMessage(dependencyUpdates));
+            Environment.NewLine//,
+            /*BuildDependencyUpdateCommitMessage(dependencyUpdates)*/);
 
         await targetRepo.CommitAsync(
             commitMessage,
             allowEmpty: false,
             cancellationToken: cancellationToken);
 
-        return dependencyUpdates;
+        return [];
+        //return dependencyUpdates;
     }
 
     private static List<DependencyUpdate> ComputeChanges(IAssetMatcher excludedAssetsMatcher, VersionDetails before, VersionDetails after)

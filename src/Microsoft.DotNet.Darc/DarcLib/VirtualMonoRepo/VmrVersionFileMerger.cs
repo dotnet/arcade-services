@@ -36,6 +36,14 @@ public interface IVmrVersionFileMerger
         string vmrCurrentRef,
         string mapping,
         string jsonRelativePath);
+
+    Task MergeVersionDetails(
+        Codeflow lastFlow,
+        Codeflow currentFlow,
+        string mappingName,
+        ILocalGitRepo targetRepo,
+        string targetBranch,
+        IAssetMatcher excludedAssetsMatcher);
 }
 
 public class VmrVersionFileMerger : IVmrVersionFileMerger
@@ -111,7 +119,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         string mappingName,
         ILocalGitRepo targetRepo,
         string targetBranch,
-        IReadOnlyCollection<string>? excludedAssets)
+        IAssetMatcher excludedAssetsMatcher)
     {
         _logger.LogInformation(
             "Resolving backflow dependency updates between VMR {vmrSha1}..{vmrSha2} and {repo} {repoSha1}..{repoSha2}",
@@ -132,8 +140,6 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             ? await GetVmrDependencies(vmr, mappingName, lastFlow.VmrSha)
             : previousRepoDependencies;
         var currentVmrDependencies = await GetVmrDependencies(vmr, mappingName, currentFlow.VmrSha);
-
-        var excludedAssetsMatcher = excludedAssets.GetAssetMatcher();
 
         List<DependencyUpdate> repoChanges = ComputeChanges(
             excludedAssetsMatcher,
