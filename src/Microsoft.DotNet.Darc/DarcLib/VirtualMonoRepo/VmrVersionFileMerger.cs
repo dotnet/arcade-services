@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -75,7 +76,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         var targetRepoPreviousJson = await targetRepo.GetFileFromGitAsync(jsonRelativePath, targetRepoPreviousRef)
             ?? throw new FileNotFoundException($"File not found at {targetRepo.Path / jsonRelativePath} for reference {targetRepoPreviousRef}");
         var targetRepoCurrentJson = await targetRepo.GetFileFromGitAsync(jsonRelativePath, targetRepoCurrentRef)
-            ?? throw new FileNotFoundException($"File not found at {targetRepo.Path / jsonRelativePath} for reference {targetRepoCurrentRef}"); ;
+            ?? throw new FileNotFoundException($"File not found at {targetRepo.Path / jsonRelativePath} for reference {targetRepoCurrentRef}");
 
         var vmrPreviousJson = lastFlow is Backflow 
             ? await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / jsonRelativePath, vmrPreviousRef)
@@ -292,7 +293,8 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
         return rootNode.ToJsonString(new JsonSerializerOptions
         {
-            WriteIndented = true
+            WriteIndented = true,
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver()
         });
     }
 

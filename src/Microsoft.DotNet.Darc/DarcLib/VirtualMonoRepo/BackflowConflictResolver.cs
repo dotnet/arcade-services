@@ -279,7 +279,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             lastFlow.VmrSha,
             currentFlow.VmrSha,
             mappingName,
-            VersionFiles.GlobalJson);
+            VersionFiles.GlobalJson,
+            cancellationToken);
 
         var excludedAssetsMatcher = excludedAssets.GetAssetMatcher();
 
