@@ -26,7 +26,10 @@ public class DependencyUpdate : VersionFileProperty
 
     public string DependencyName => From?.Name ?? To?.Name;
 
-    public override string GetName() => DependencyName;
+    public override string Name => DependencyName;
+
+    public override object Value => To;
+
     public override bool IsAdded() => From == null;
     public override bool IsGreater(VersionFileProperty otherProperty)
     {

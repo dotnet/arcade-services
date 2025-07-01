@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -42,18 +44,21 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
     private readonly IVmrInfo _vmrInfo;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
+    private readonly IDependencyFileManager _dependencyFileManager;
 
     public VmrVersionFileMerger(IGitRepoFactory gitRepoFactory,
         ILogger<VmrVersionFileMerger> logger,
         IVmrInfo vmrInfo,
         ILocalGitRepoFactory localGitRepoFactory,
-        IVersionDetailsParser versionDetailsParser)
+        IVersionDetailsParser versionDetailsParser,
+        IDependencyFileManager dependencyFileManager)
     {
         _gitRepoFactory = gitRepoFactory;
         _logger = logger;
         _vmrInfo = vmrInfo;
         _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
+        _dependencyFileManager = dependencyFileManager;
     }
 
     public async Task MergeJsonAsync(
@@ -67,34 +72,36 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         string mappingName,
         string jsonRelativePath)
     {
-        var targetRepoPreviousGlobalJson = await targetRepo.GetFileFromGitAsync(jsonRelativePath, targetRepoPreviousRef)
+        var targetRepoPreviousJson = await targetRepo.GetFileFromGitAsync(jsonRelativePath, targetRepoPreviousRef)
             ?? throw new FileNotFoundException($"File not found at {targetRepo.Path / jsonRelativePath} for reference {targetRepoPreviousRef}");
-        var targetRepoCurrentGlobalJson = await targetRepo.GetFileFromGitAsync(jsonRelativePath, targetRepoCurrentRef)
+        var targetRepoCurrentJson = await targetRepo.GetFileFromGitAsync(jsonRelativePath, targetRepoCurrentRef)
             ?? throw new FileNotFoundException($"File not found at {targetRepo.Path / jsonRelativePath} for reference {targetRepoCurrentRef}"); ;
 
-        var vmrPreviousGlobalJson = lastFlow is Backflow 
+        var vmrPreviousJson = lastFlow is Backflow 
             ? await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / jsonRelativePath, vmrPreviousRef)
                 ?? throw new FileNotFoundException($"File not found at {vmr.Path / (VmrInfo.GetRelativeRepoSourcesPath(mappingName) / jsonRelativePath)} for reference {vmrPreviousRef}")
-            : targetRepoPreviousGlobalJson;
-        var vmrCurrentGlobalJson = await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / jsonRelativePath, vmrCurrentRef)
+            : targetRepoPreviousJson;
+        var vmrCurrentJson = await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / jsonRelativePath, vmrCurrentRef)
             ?? throw new FileNotFoundException($"File not found at {vmr.Path / (VmrInfo.GetRelativeRepoSourcesPath(mappingName) / jsonRelativePath)} for reference {vmrCurrentRef}");
 
         var targetRepoChanges = FlatJsonComparer.CompareFlatJsons(
-            JsonFlattener.FlattenJsonToDictionary(targetRepoPreviousGlobalJson),
-            JsonFlattener.FlattenJsonToDictionary(targetRepoCurrentGlobalJson));
+            JsonFlattener.FlattenJsonToDictionary(targetRepoPreviousJson),
+            JsonFlattener.FlattenJsonToDictionary(targetRepoCurrentJson));
         var vmrChanges = FlatJsonComparer.CompareFlatJsons(
-            JsonFlattener.FlattenJsonToDictionary(vmrPreviousGlobalJson),
-            JsonFlattener.FlattenJsonToDictionary(vmrCurrentGlobalJson));
+            JsonFlattener.FlattenJsonToDictionary(vmrPreviousJson),
+            JsonFlattener.FlattenJsonToDictionary(vmrCurrentJson));
 
         var finalChanges = MergeDependencyChanges(targetRepoChanges, vmrChanges);
 
-        /*var newGlobalJson = new GitFile(jsonRelativePath, mergedGlobalJson);
+        var mergedJson = ApplyJsonChanges(targetRepoCurrentJson, finalChanges);
+
+        var newJson = new GitFile(jsonRelativePath, mergedJson);
         await _gitRepoFactory.CreateClient(targetRepo.Path)
             .CommitFilesAsync(
-                [newGlobalJson],
+                [newJson],
                 targetRepo.Path,
                 targetRepoCurrentRef,
-                $"Merge {jsonRelativePath} changes from VMR");*/
+                $"Merge {jsonRelativePath} changes from VMR");
     }
 
     public async Task MergeVersionDetails(
@@ -137,8 +144,9 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             previousVmrDependencies,
             currentVmrDependencies);
 
-        MergeDependencyChanges(repoChanges, vmrChanges);
+        var mergedChanges = MergeDependencyChanges(repoChanges, vmrChanges);
 
+        await ApplyVersionDetailsChangesAsync(targetRepo.Path, mergedChanges);
     }
 
     private VersionFileChanges MergeDependencyChanges(
@@ -147,15 +155,15 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
     {
         var changedProperties = repoChanges
             .Concat(vmrChanges)
-            .Select(c => c.GetName());
+            .Select(c => c.Name);
 
         var removals = new List<string>();
         var additions = new List<VersionFileProperty>();
         var updates = new List<VersionFileProperty>();
         foreach (var property in changedProperties)
         {
-            var repoChange = repoChanges.FirstOrDefault(c => c.GetName() == property);
-            var vmrChange = vmrChanges.FirstOrDefault(c => c.GetName() == property);
+            var repoChange = repoChanges.FirstOrDefault(c => c.Name == property);
+            var vmrChange = vmrChanges.FirstOrDefault(c => c.Name == property);
 
             var addedInRepo = repoChange != null && repoChange.IsAdded();
             var addedInVmr = vmrChange != null && vmrChange.IsAdded();
@@ -266,4 +274,89 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 || change.From?.RepoUri != change.To?.RepoUri)
             .ToList();
     }
+
+    private string ApplyJsonChanges(
+        string file,
+        VersionFileChanges changes)
+    {
+        JsonNode rootNode = JsonNode.Parse(file) ?? throw new InvalidOperationException("Failed to parse JSON file.");
+
+        foreach (string removal in changes.removals)
+        {
+            RemoveJsonProperty(rootNode, removal);
+        }
+        foreach (var change in changes.additions.Concat(changes.updates))
+        {
+            AddOrUpdateJsonProperty(rootNode, (JsonVersionProperty)change);
+        }
+
+        return rootNode.ToJsonString(new JsonSerializerOptions
+        {
+            WriteIndented = true
+        });
+    }
+
+    private static void RemoveJsonProperty(JsonNode root, string path)
+    {
+        var segments = path.Split(':', StringSplitOptions.RemoveEmptyEntries);
+
+        JsonNode currentNode = root;
+        for (int i = 0; i < segments.Length - 1; i++)
+        {
+            if (currentNode is not JsonObject obj || !obj.ContainsKey(segments[i]))
+            {
+                throw new InvalidOperationException($"Cannot navigate to {segments[i]} in JSON structure.");
+            }
+
+            currentNode = obj[segments[i]]!;
+        }
+
+        // Remove the property from its parent
+        if (currentNode is JsonObject parentObject)
+        {
+            string propertyToRemove = segments[segments.Length - 1];
+            parentObject.Remove(propertyToRemove);
+        }
+    }
+
+    private static void AddOrUpdateJsonProperty(JsonNode root, JsonVersionProperty property)
+    {
+        var segments = property.Name.Split(':', StringSplitOptions.RemoveEmptyEntries);
+        JsonNode currentNode = root;
+        for (int i = 0; i < segments.Length - 1; i++)
+        {
+            if (currentNode is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"Cannot navigate to {segments[i]} in JSON structure.");
+            }
+            if (!obj.ContainsKey(segments[i]))
+            {
+                obj[segments[i]] = new JsonObject();
+            }
+            currentNode = obj[segments[i]]!;
+        }
+        // Add the property to its parent
+        if (currentNode is JsonObject parentObject)
+        {
+            string propertyToAdd = segments[segments.Length - 1];
+            parentObject[propertyToAdd] = JsonValue.Create(property.Value);
+        }
+    }
+
+    private async Task ApplyVersionDetailsChangesAsync(string repoPath, VersionFileChanges changes)
+    {
+        foreach (var removal in changes.removals)
+        {
+            // Remove the property from the version details
+            await _dependencyFileManager.RemoveDependencyAsync(removal, repoPath, null!);
+        }
+        foreach (var update in changes.additions.Concat(changes.updates))
+        {
+            await _dependencyFileManager.AddDependencyAsync(
+                (DependencyDetail)update.Value!,
+                repoPath,
+                null!);
+        }
+    }
 }
+

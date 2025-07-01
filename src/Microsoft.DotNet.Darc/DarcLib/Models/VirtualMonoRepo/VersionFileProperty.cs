@@ -1,10 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 public abstract class VersionFileProperty
 {
-    public abstract string GetName();
+    public abstract string Name { get; }
+    public abstract object? Value { get; }
     public abstract bool IsAdded();
     public abstract bool IsRemoved();
     public abstract bool IsUpdated();

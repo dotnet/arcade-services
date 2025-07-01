@@ -10,21 +10,24 @@ using NuGet.Versioning;
 namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 public class JsonVersionProperty : VersionFileProperty
 {
-    public string Name { get; }
-    public NodeComparisonResult Result { get; }
-    public object? NewValue { get; }
+    private string _name { get; }
+    private NodeComparisonResult _result { get; }
+    private object? _newValue { get; }
 
     public JsonVersionProperty(string jsonVersionPropertyName, NodeComparisonResult result, object? newValue = null)
     {
-        Name = jsonVersionPropertyName;
-        Result = result;
-        NewValue = newValue;
+        _name = jsonVersionPropertyName;
+        _result = result;
+        _newValue = newValue;
     }
 
-    public override string GetName() => Name;
-    public override bool IsAdded() => Result == NodeComparisonResult.Added;
-    public override bool IsRemoved() => Result == NodeComparisonResult.Removed;
-    public override bool IsUpdated() => Result == NodeComparisonResult.Updated;
+    public override string Name => _name;
+
+    public override object? Value => _newValue;
+
+    public override bool IsAdded() => _result == NodeComparisonResult.Added;
+    public override bool IsRemoved() => _result == NodeComparisonResult.Removed;
+    public override bool IsUpdated() => _result == NodeComparisonResult.Updated;
     public override bool IsGreater(VersionFileProperty otherProperty)
     {
         // Are these even comparable?
@@ -34,45 +37,45 @@ public class JsonVersionProperty : VersionFileProperty
         }
         // Is one of them null?
         var property = (JsonVersionProperty)otherProperty;
-        if (NewValue == null && property == null)
+        if (_newValue == null && property == null)
         {
             throw new ArgumentException("Cannot compare null properties.");
         }
-        if (NewValue == null)
+        if (_newValue == null)
         {
             return false;
         }
-        if (property.NewValue == null) 
+        if (property._newValue == null) 
         {
             return true;
         }
 
         // Are the value types the same?
-        if (NewValue.GetType() != property.NewValue.GetType())
+        if (_newValue.GetType() != property._newValue.GetType())
         {
             throw new ArgumentException($"Cannot compare {GetType()} with {otherProperty.GetType()} because their values are of different types.");
         }
 
-        if (NewValue.GetType() == typeof(List<string>))
+        if (_newValue.GetType() == typeof(List<string>))
         {
             throw new ArgumentException($"Cannot compare properties with {nameof(List<string>)} values.");
         }
 
-        if (NewValue.GetType() == typeof(bool))
+        if (_newValue.GetType() == typeof(bool))
         {
             // if values are different, throw an exception
-            if (!NewValue.Equals(property.NewValue))
+            if (!_newValue.Equals(property._newValue))
             {
                 throw new ArgumentException($"Key {Name} value has different boolean values in properties.");
             }
             return true;
         }
 
-        if (NewValue.GetType() == typeof(string))
+        if (_newValue.GetType() == typeof(string))
         {
             // if we're able to parse both values as SemanticVersion, take the bigger one
-            if (SemanticVersion.TryParse(NewValue.ToString()!, out var thisVersion) &&
-                SemanticVersion.TryParse(property.NewValue.ToString()!, out var otherVersion))
+            if (SemanticVersion.TryParse(_newValue.ToString()!, out var thisVersion) &&
+                SemanticVersion.TryParse(property._newValue.ToString()!, out var otherVersion))
             {
                 return thisVersion > otherVersion;
             }
@@ -80,6 +83,6 @@ public class JsonVersionProperty : VersionFileProperty
             throw new ArgumentException($"Key {Name} value has different string values in properties, and cannot be parsed as SemanticVersion");
         }
 
-        throw new ArgumentException($"Cannot compare properties with {NewValue.GetType()} values.");
+        throw new ArgumentException($"Cannot compare properties with {_newValue.GetType()} values.");
     }
 }
