@@ -4,23 +4,24 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Helpers;
 
 public static class FlatJsonComparer
 {
-    public static List<FlatJsonComparerResultNode> CompareFlatJsons(
+    public static List<JsonVersionProperty> CompareFlatJsons(
         Dictionary<string, object> oldJson,
         Dictionary<string, object> newJson)
     {
-        List<FlatJsonComparerResultNode> changes = [];
+        List<JsonVersionProperty> changes = [];
 
         foreach (var kvp in oldJson)
         {
             if (!newJson.TryGetValue(kvp.Key, out var newValue))
             {
-                changes.Add(new FlatJsonComparerResultNode(kvp.Key, NodeComparisonResult.Removed, null));
+                changes.Add(new JsonVersionProperty(kvp.Key, NodeComparisonResult.Removed, null));
             }
             else if (kvp.Value.GetType() != newValue.GetType())
             {
@@ -32,12 +33,12 @@ public static class FlatJsonComparer
                 var newList = (List<string>)newValue;
                 if (!oldList.SequenceEqual(newList))
                 {
-                    changes.Add(new FlatJsonComparerResultNode(kvp.Key, NodeComparisonResult.Updated, newValue));
+                    changes.Add(new JsonVersionProperty(kvp.Key, NodeComparisonResult.Updated, newValue));
                 }
             }
             else if (!kvp.Value.Equals(newValue))
             {
-                changes.Add(new FlatJsonComparerResultNode(kvp.Key, NodeComparisonResult.Updated, newValue));
+                changes.Add(new JsonVersionProperty(kvp.Key, NodeComparisonResult.Updated, newValue));
             }
         }
 
@@ -45,15 +46,13 @@ public static class FlatJsonComparer
         {
             if (!oldJson.ContainsKey(kvp.Key))
             {
-                changes.Add(new FlatJsonComparerResultNode(kvp.Key, NodeComparisonResult.Added, kvp.Value));
+                changes.Add(new JsonVersionProperty(kvp.Key, NodeComparisonResult.Added, kvp.Value));
             }
         }
 
         return changes;
     }
 }
-
-public record FlatJsonComparerResultNode(string Key, NodeComparisonResult Result, object? NewValue);
 
 public enum NodeComparisonResult
 {
