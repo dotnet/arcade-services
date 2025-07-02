@@ -44,6 +44,7 @@ public class BackflowConflictResolverTests
     private readonly Mock<IAssetLocationResolver> _assetLocationResolver = new();
     private readonly Mock<IDependencyFileManager> _dependencyFileManager = new();
     private readonly Mock<IFileSystem> _fileSystem = new();
+    private readonly Mock<IVmrVersionFileMerger> _vmrVersionFileMerger = new();
 
     private readonly Mock<ILocalGitRepo> _localRepo = new();
     private readonly Mock<ILocalGitRepo> _localVmr = new();
@@ -155,7 +156,8 @@ public class BackflowConflictResolverTests
             new CoherencyUpdateResolver(Mock.Of<IBasicBarClient>(), Mock.Of<IRemoteFactory>(), new NullLogger<CoherencyUpdateResolver>()),
             _dependencyFileManager.Object,
             _fileSystem.Object,
-            new NullLogger<BackflowConflictResolver>());
+            new NullLogger<BackflowConflictResolver>(),
+            _vmrVersionFileMerger.Object);
     }
 
     // Tests a case when packages were updated in the repo as well as in VMR and some created during the build.

@@ -281,16 +281,19 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             mappingName,
             VersionFiles.GlobalJson);
 
-        await _vmrVersionFileMerger.MergeJsonAsync(
-            lastFlow,
-            targetRepo,
-            lastFlow.RepoSha,
-            targetBranch,
-            vmr,
-            lastFlow.VmrSha,
-            currentFlow.VmrSha,
-            mappingName,
-            VersionFiles.DotnetToolsConfigJson);
+        if (_fileSystem.FileExists(targetRepo.Path / VersionFiles.DotnetToolsConfigJson))
+        {
+            await _vmrVersionFileMerger.MergeJsonAsync(
+                lastFlow,
+                targetRepo,
+                lastFlow.RepoSha,
+                targetBranch,
+                vmr,
+                lastFlow.VmrSha,
+                currentFlow.VmrSha,
+                mappingName,
+                VersionFiles.DotnetToolsConfigJson);
+        }
 
         var excludedAssetsMatcher = excludedAssets.GetAssetMatcher();
         await _vmrVersionFileMerger.MergeVersionDetails(
