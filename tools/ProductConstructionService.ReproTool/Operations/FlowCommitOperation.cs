@@ -104,7 +104,7 @@ internal class FlowCommitOperation : Operation
             _options.SourceBranch,
             Microsoft.DotNet.DarcLib.Commit.GetShortSha(commit.Sha));
 
-        var prodBuild = await _prodClient.GetBuildAsync(273256);
+        var prodBuild = await _prodClient.GetBuildAsync(273672);
         var build = await _localPcsApi.Builds.CreateAsync(new BuildData(
             commit.Sha,
             "dnceng",

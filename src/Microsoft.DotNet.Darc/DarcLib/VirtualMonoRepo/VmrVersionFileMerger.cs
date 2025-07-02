@@ -37,7 +37,7 @@ public interface IVmrVersionFileMerger
         string mapping,
         string jsonRelativePath);
 
-    Task MergeVersionDetails(
+    Task<VersionFileChanges> MergeVersionDetails(
         Codeflow lastFlow,
         Codeflow currentFlow,
         string mappingName,
@@ -55,7 +55,8 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IDependencyFileManager _dependencyFileManager;
 
-    public VmrVersionFileMerger(IGitRepoFactory gitRepoFactory,
+    public VmrVersionFileMerger(
+        IGitRepoFactory gitRepoFactory,
         ILogger<VmrVersionFileMerger> logger,
         IVmrInfo vmrInfo,
         ILocalGitRepoFactory localGitRepoFactory,
@@ -105,6 +106,8 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         var mergedJson = ApplyJsonChanges(targetRepoCurrentJson, finalChanges);
 
         var newJson = new GitFile(jsonRelativePath, mergedJson);
+        await _localGitRepoFactory.Create(targetRepo.Path).StageAsync(["."]);
+
         await _gitRepoFactory.CreateClient(targetRepo.Path)
             .CommitFilesAsync(
                 [newJson],
@@ -113,7 +116,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 $"Merge {jsonRelativePath} changes from VMR");
     }
 
-    public async Task MergeVersionDetails(
+    public async Task<VersionFileChanges> MergeVersionDetails(
         Codeflow lastFlow,
         Codeflow currentFlow,
         string mappingName,
@@ -154,6 +157,8 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         var mergedChanges = MergeDependencyChanges(repoChanges, vmrChanges);
 
         await ApplyVersionDetailsChangesAsync(targetRepo.Path, mergedChanges);
+
+        return mergedChanges;
     }
 
     private VersionFileChanges MergeDependencyChanges(
@@ -183,7 +188,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             {
                 if (addedInVmr)
                 {
-                    throw new ArgumentException($"Key {property} is added in one repo and removed in the other json, which is not allowed.");
+                    throw new ConflictingDependencyUpdateException(repoChange!, vmrChange!);
                 }
                 // we don't have to do anything since the property is removed in the repo
                 continue;
@@ -193,7 +198,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             {
                 if (addedInRepo)
                 {
-                    throw new ArgumentException($"Key {property} is added in one repo and removed in the other json, which is not allowed.");
+                    throw new ConflictingDependencyUpdateException(repoChange!, vmrChange!);
                 }
                 removals.Add(property);
                 continue;

@@ -44,7 +44,8 @@ public class BackflowConflictResolverTests
     private readonly Mock<IAssetLocationResolver> _assetLocationResolver = new();
     private readonly Mock<IDependencyFileManager> _dependencyFileManager = new();
     private readonly Mock<IFileSystem> _fileSystem = new();
-    private readonly Mock<IVmrVersionFileMerger> _vmrVersionFileMerger = new();
+    private IVmrVersionFileMerger _vmrVersionFileMerger = null!;
+    private readonly Mock<IVmrVersionFileMerger> _vmrVersionFileMergerMock = new();
 
     private readonly Mock<ILocalGitRepo> _localRepo = new();
     private readonly Mock<ILocalGitRepo> _localVmr = new();
@@ -146,6 +147,47 @@ public class BackflowConflictResolverTests
 
         _fileSystem.Reset();
 
+        _vmrVersionFileMerger = new VmrVersionFileMerger(
+            new Mock<IGitRepoFactory>().Object,
+            new NullLogger<VmrVersionFileMerger>(),
+            _vmrInfo.Object,
+            _localGitRepoFactory.Object,
+            _versionDetailsParser.Object,
+            _dependencyFileManager.Object);
+
+        _vmrVersionFileMergerMock
+            .Setup(x => x.MergeJsonAsync(
+                It.IsAny<Codeflow>(),
+                It.IsAny<ILocalGitRepo>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<ILocalGitRepo>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>()))
+            .Callback(async (Codeflow codeflow,
+                       ILocalGitRepo localRepo,
+                       string repoPath,
+                       string commitSha,
+                       ILocalGitRepo localVmr,
+                       string vmrPath,
+                       string vmrCommitSha,
+                       string mappingName,
+                       string vmrUri) =>
+            {
+                await _vmrVersionFileMerger.MergeJsonAsync(
+                    codeflow,
+                    localRepo,
+                    repoPath,
+                    commitSha,
+                    localVmr,
+                    vmrPath,
+                    vmrCommitSha,
+                    mappingName,
+                    vmrUri);
+            });
+
         _conflictResolver = new(
             _vmrInfo.Object,
             _patchHandler.Object,
@@ -157,7 +199,7 @@ public class BackflowConflictResolverTests
             _dependencyFileManager.Object,
             _fileSystem.Object,
             new NullLogger<BackflowConflictResolver>(),
-            _vmrVersionFileMerger.Object);
+            _vmrVersionFileMergerMock.Object);
     }
 
     // Tests a case when packages were updated in the repo as well as in VMR and some created during the build.
