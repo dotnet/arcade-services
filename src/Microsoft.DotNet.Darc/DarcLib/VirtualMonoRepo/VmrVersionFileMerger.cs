@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Intrinsics.Arm;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
@@ -42,8 +43,7 @@ public interface IVmrVersionFileMerger
         Codeflow currentFlow,
         string mappingName,
         ILocalGitRepo targetRepo,
-        string targetBranch,
-        IAssetMatcher excludedAssetsMatcher);
+        string targetBranch);
 }
 
 public class VmrVersionFileMerger : IVmrVersionFileMerger
@@ -121,8 +121,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         Codeflow currentFlow,
         string mappingName,
         ILocalGitRepo targetRepo,
-        string targetBranch,
-        IAssetMatcher excludedAssetsMatcher)
+        string targetBranch)
     {
         _logger.LogInformation(
             "Resolving backflow dependency updates between VMR {vmrSha1}..{vmrSha2} and {repo} {repoSha1}..{repoSha2}",
@@ -145,12 +144,10 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         var currentVmrDependencies = await GetVmrDependencies(vmr, mappingName, currentFlow.VmrSha);
 
         List<DependencyUpdate> repoChanges = ComputeChanges(
-            excludedAssetsMatcher,
             previousRepoDependencies,
             currentRepoDependencies);
 
         List<DependencyUpdate> vmrChanges = ComputeChanges(
-            excludedAssetsMatcher,
             previousVmrDependencies,
             currentVmrDependencies);
 
@@ -167,7 +164,8 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
     {
         var changedProperties = repoChanges
             .Concat(vmrChanges)
-            .Select(c => c.Name);
+            .Select(c => c.Name)
+            .Distinct(StringComparer.OrdinalIgnoreCase);
 
         var removals = new List<string>();
         var additions = new List<VersionFileProperty>();
@@ -206,7 +204,14 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
             if (addedInRepo && addedInVmr)
             {
-                additions.Add(repoChange! > vmrChange! ? vmrChange! : repoChange!);
+                if (repoChange! > vmrChange!)
+                {
+                    // do nothing, we already have the property added in the repo
+                }
+                else
+                {
+                    additions.Add(vmrChange!);
+                }
                 continue;
             }
             if (addedInRepo)
@@ -222,7 +227,14 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
             if (updatedInRepo && updatedInVmr)
             {
-                updates.Add(repoChange! > vmrChange! ? vmrChange! : repoChange!);
+                if (repoChange! > vmrChange!)
+                {
+                    // do nothing, we already have the property updated in the repo
+                }
+                else
+                {
+                    updates.Add(vmrChange!);
+                }
                 continue;
             }
             if (updatedInRepo)
@@ -251,10 +263,9 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             ? new VersionDetails([], null)
             : _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: false);
 
-    private static List<DependencyUpdate> ComputeChanges(IAssetMatcher excludedAssetsMatcher, VersionDetails before, VersionDetails after)
+    private static List<DependencyUpdate> ComputeChanges(VersionDetails before, VersionDetails after)
     {
         var dependencyChanges = before.Dependencies
-            .Where(dep => !excludedAssetsMatcher.IsExcluded(dep.Name))
             .Select(dep => new DependencyUpdate()
             {
                 From = dep,
@@ -262,8 +273,9 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             .ToList();
 
         // Pair dependencies with the same name
-        foreach (var dep in after.Dependencies.Where(dep => !excludedAssetsMatcher.IsExcluded(dep.Name)))
+        foreach (var dep in after.Dependencies)
         {
+
             var existing = dependencyChanges.FirstOrDefault(d => d.From?.Name == dep.Name);
             if (existing != null)
             {

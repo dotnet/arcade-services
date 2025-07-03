@@ -279,15 +279,14 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 VersionFiles.DotnetToolsConfigJson);
         }
 
-        var excludedAssetsMatcher = excludedAssets.GetAssetMatcher();
         var versionDetailsChanges = await _vmrVersionFileMerger.MergeVersionDetails(
             lastFlow,
             currentFlow,
             mappingName,
             targetRepo,
-            targetBranch,
-            excludedAssetsMatcher);
+            targetBranch);
 
+        var excludedAssetsMatcher = excludedAssets.GetAssetMatcher();
         List<AssetData> buildAssets = build.Assets
             .Where(a => !excludedAssetsMatcher.IsExcluded(a.Name))
             .Select(a => new AssetData(a.NonShipping)
