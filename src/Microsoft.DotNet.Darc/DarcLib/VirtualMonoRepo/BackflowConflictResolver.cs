@@ -384,6 +384,21 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 allUpdates.Add(updateDetail);
             }
         }
+        // if a repo was added during the merge and then updated, we want to set it's from to null
+        foreach (var update in allUpdates)
+        {
+            var addition = versionDetailsChanges.additions.FirstOrDefault(a => a.Name == update.Name);
+            if (addition != null)
+            {
+                addition = new DependencyUpdate()
+                {
+                    From = null,
+                    To = update
+                };
+                allUpdates.Remove(update);
+            }
+        }
+        allUpdates = allUpdates.Where(u => versionDetailsChanges.additions.Any(a => a.Name == u.Name)).ToList();
         List<DependencyUpdate> dependencyUpdates = [
             ..versionDetailsChanges.additions
                 .Select(addition => new DependencyUpdate()
@@ -416,42 +431,6 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             cancellationToken: cancellationToken);
 
         return dependencyUpdates;
-    }
-
-    private static List<DependencyUpdate> ComputeChanges(IAssetMatcher excludedAssetsMatcher, VersionDetails before, VersionDetails after)
-    {
-        var dependencyChanges = before.Dependencies
-            .Where(dep => !excludedAssetsMatcher.IsExcluded(dep.Name))
-            .Select(dep => new DependencyUpdate()
-            {
-                From = dep,
-            })
-            .ToList();
-
-        // Pair dependencies with the same name
-        foreach (var dep in after.Dependencies.Where(dep => !excludedAssetsMatcher.IsExcluded(dep.Name)))
-        {
-            var existing = dependencyChanges.FirstOrDefault(d => d.From?.Name == dep.Name);
-            if (existing != null)
-            {
-                existing.To = dep;
-            }
-            else
-            {
-                dependencyChanges.Add(new DependencyUpdate()
-                {
-                    From = null,
-                    To = dep,
-                });
-            }
-        }
-
-        // Check if there are any actual changes
-        return dependencyChanges
-            .Where(change => change.From?.Version != change.To?.Version
-                || change.From?.Commit != change.To?.Commit
-                || change.From?.RepoUri != change.To?.RepoUri)
-            .ToList();
     }
 
     public static string BuildDependencyUpdateCommitMessage(IEnumerable<DependencyUpdate> updates)
