@@ -56,6 +56,8 @@ else
             </FluentLabel>
         </FluentStack>
     </FluentStack>
+
+
 }
 
 @code {
@@ -87,6 +89,8 @@ else
 
         _loading = false;
     }
+
+
 
     private string GetShortCommitMessage() => string.Join(' ', _commit!.Message.Split([' ', '\n']).Take(7));
 
