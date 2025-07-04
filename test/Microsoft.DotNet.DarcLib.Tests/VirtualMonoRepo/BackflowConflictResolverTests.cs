@@ -147,13 +147,6 @@ public class BackflowConflictResolverTests
         _fileSystem.Reset();
 
         _vmrVersionFileMergerMock.Reset();
-        _vmrVersionFileMergerMock.Setup(x => x.MergeVersionDetails(
-            It.IsAny<Codeflow>(),
-            It.IsAny<Codeflow>(),
-            It.IsAny<string>(),
-            It.IsAny<ILocalGitRepo>(),
-            It.IsAny<string>()))
-            .ReturnsAsync(([], [], []));
 
         _conflictResolver = new(
             _vmrInfo.Object,
@@ -224,6 +217,14 @@ public class BackflowConflictResolverTests
         _versionDetails["repo/"] = new VersionDetails(
             _versionDetails[$"repo/{TargetBranch}"].Dependencies.ToArray(),
             _versionDetails[$"repo/{TargetBranch}"].Source);
+
+        _vmrVersionFileMergerMock.Setup(x => x.MergeVersionDetails(
+            It.IsAny<Codeflow>(),
+            It.IsAny<Codeflow>(),
+            It.IsAny<string>(),
+            It.IsAny<ILocalGitRepo>(),
+            It.IsAny<string>()))
+            .ReturnsAsync(([], [new DependencyUpdate() { From = null, To = new DependencyDetail { Name = "Package.Added.In.Repo", Version = "1.0.1" } }], []));
 
         // Simulate dependency manager
         _assetLocationResolver.Setup(a => a.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))

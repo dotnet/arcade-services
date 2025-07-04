@@ -253,6 +253,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         var headBranchDependencies = await GetRepoDependencies(targetRepo, commit: null! /* working tree */);
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
+        // handle global.json
         await _vmrVersionFileMerger.MergeJsonAsync(
             lastFlow,
             targetRepo,
@@ -264,19 +265,25 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             mappingName,
             VersionFiles.GlobalJson);
 
-        // TODO what if someone creates this file?
-        if (_fileSystem.FileExists(targetRepo.Path / VersionFiles.DotnetToolsConfigJson))
+        // and handle dotnet-tools.json if it exists
+        bool dotnetToolsConfigExists =
+            (await targetRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, targetBranch) != null) ||
+            (await vmr.GetFileFromGitAsync(_vmrInfo.GetRepoSourcesPath(mappingName) / VersionFiles.DotnetToolsConfigJson, currentFlow.VmrSha) != null ||
+            (await targetRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, targetBranch) != null) ||
+            (await vmr.GetFileFromGitAsync(_vmrInfo.GetRepoSourcesPath(mappingName) / VersionFiles.DotnetToolsConfigJson, lastFlow.VmrSha) != null));
+        if (dotnetToolsConfigExists)
         {
             await _vmrVersionFileMerger.MergeJsonAsync(
-                lastFlow,
-                targetRepo,
-                lastFlow.RepoSha,
-                targetBranch,
-                vmr,
-                lastFlow.VmrSha,
-                currentFlow.VmrSha,
-                mappingName,
-                VersionFiles.DotnetToolsConfigJson);
+                    lastFlow,
+                    targetRepo,
+                    lastFlow.RepoSha,
+                    targetBranch,
+                    vmr,
+                    lastFlow.VmrSha,
+                    currentFlow.VmrSha,
+                    mappingName,
+                    VersionFiles.DotnetToolsConfigJson,
+                    allowMissingFiles: true);
         }
 
         var versionDetailsChanges = await _vmrVersionFileMerger.MergeVersionDetails(
@@ -376,6 +383,22 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         await targetRepo.StageAsync(["."], cancellationToken);
 
         List<DependencyDetail> allUpdates = [.. buildUpdates];
+        // if a repo was added during the merge and then updated, it's not an update, but an addition
+        foreach (var addition in versionDetailsChanges.additions)
+        {
+            var update = allUpdates.FirstOrDefault(U => U.Name == addition.Name);
+
+            if (update != null)
+            {
+                allUpdates.Remove(update);
+                var depUpdate = (DependencyDetail)addition.Value!;
+                depUpdate.Version = update.Version;
+                depUpdate.Commit = update.Commit;
+                depUpdate.RepoUri = update.RepoUri;
+            }
+        }
+
+        // Add updates tha are not a part of the build updates
         foreach (var update in versionDetailsChanges.updates)
         {
             DependencyDetail updateDetail = (DependencyDetail)update.Value!;
@@ -384,21 +407,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 allUpdates.Add(updateDetail);
             }
         }
-        // if a repo was added during the merge and then updated, we want to set it's from to null
-        foreach (var update in allUpdates)
-        {
-            var addition = versionDetailsChanges.additions.FirstOrDefault(a => a.Name == update.Name);
-            if (addition != null)
-            {
-                addition = new DependencyUpdate()
-                {
-                    From = null,
-                    To = update
-                };
-                allUpdates.Remove(update);
-            }
-        }
-        allUpdates = allUpdates.Where(u => versionDetailsChanges.additions.Any(a => a.Name == u.Name)).ToList();
+
         List<DependencyUpdate> dependencyUpdates = [
             ..versionDetailsChanges.additions
                 .Select(addition => new DependencyUpdate()

@@ -13,12 +13,12 @@ public static class JsonFlattener
     {
         using var document = JsonDocument.Parse(json);
         Dictionary<string, object> dictionary = [];
-        Stack<(JsonElement element, string path)> pathsToProcess = [];
-        pathsToProcess.Push((document.RootElement, string.Empty));
+        Queue<(JsonElement element, string path)> pathsToProcess = [];
+        pathsToProcess.Enqueue((document.RootElement, string.Empty));
 
         while (pathsToProcess.Count > 0)
         {
-            (JsonElement currentElement, string currentPath) = pathsToProcess.Pop();
+            (JsonElement currentElement, string currentPath) = pathsToProcess.Dequeue();
 
             FlattenJsonElement(currentElement, currentPath, dictionary, pathsToProcess);
         }
@@ -30,7 +30,7 @@ public static class JsonFlattener
     /// This method is used to flatten global.json and dotnet-tools.json files into a dictionary, which don't have a complex structure.
     /// For example, we can expect that arrays won't have other arrays inside of them
     /// </summary>
-    private static void FlattenJsonElement(JsonElement element, string path, Dictionary<string, object> dictionary, Stack<(JsonElement, string)> pathsToProcess)
+    private static void FlattenJsonElement(JsonElement element, string path, Dictionary<string, object> dictionary, Queue<(JsonElement, string)> pathsToProcess)
     {
         switch (element.ValueKind)
         {
@@ -38,7 +38,7 @@ public static class JsonFlattener
                 foreach(JsonProperty property in element.EnumerateObject())
                 {
                     string newPath = string.IsNullOrEmpty(path) ? property.Name : $"{path}:{property.Name}";
-                    pathsToProcess.Push((property.Value, newPath));
+                    pathsToProcess.Enqueue((property.Value, newPath));
                 }
                 break;
 

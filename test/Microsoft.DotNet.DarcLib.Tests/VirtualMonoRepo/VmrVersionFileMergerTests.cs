@@ -3,9 +3,7 @@
 
 #nullable enable
 
-using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -15,7 +13,6 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
 
@@ -218,6 +215,89 @@ public class VmrVersionFileMergerTests
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<string>()), Times.Once);   
+    }
+
+    [Test]
+    public async Task MergeJsonAsyncHandlesMissingJsonsCorrectly()
+    {
+        var lastFlow = new Backflow("previous-vmr-sha", "previous-repo-sha");
+        
+        string? targetPreviousJson = null;
+        string? targetCurrentJson = null;
+        string? vmrPreviousJson = null;
+        var vmrCurrentJson = """
+            {
+              "sdk": {
+                "version": "8.0.305",
+                "rollForward": "minor"
+              },
+              "tools": {
+                "dotnet": "8.0.307",
+                "runtimes": {
+                  "dotnet": [
+                    "6.0.29"
+                  ],
+                  "aspnetcore": [
+                    "6.0.29"
+                  ]
+                }
+              },
+              "msbuild-sdks": {
+                "Microsoft.DotNet.Arcade.Sdk": "8.0.0-beta.25310.3"
+              }
+            }
+            """;
+
+        var expectedJson = """
+            {
+              "sdk": {
+                "version": "8.0.305",
+                "rollForward": "minor"
+              },
+              "tools": {
+                "dotnet": "8.0.307",
+                "runtimes": {
+                  "dotnet": [
+                    "6.0.29"
+                  ],
+                  "aspnetcore": [
+                    "6.0.29"
+                  ]
+                }
+              },
+              "msbuild-sdks": {
+                "Microsoft.DotNet.Arcade.Sdk": "8.0.0-beta.25310.3"
+              }
+            }
+            """;
+
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, TargetPreviousSha, It.IsAny<string>()))
+            .ReturnsAsync(targetPreviousJson);
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, TargetCurrentSha, It.IsAny<string>()))
+            .ReturnsAsync(targetCurrentJson);
+        _vmrMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()))
+            .ReturnsAsync(vmrPreviousJson);
+        _vmrMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
+            .ReturnsAsync(vmrCurrentJson);
+
+        // Act
+        await _vmrVersionFileMerger.MergeJsonAsync(
+            lastFlow,
+            _targetRepoMock.Object,
+            TargetPreviousSha,
+            TargetCurrentSha,
+            _vmrMock.Object,
+            VmrPreviousSha,
+            VmrCurrentSha,
+            TestMappingName,
+            TestJsonPath,
+            allowMissingFiles: true);
+
+        _gitRepoMock.Verify(g => g.CommitFilesAsync(
+            It.Is<List<GitFile>>(files => files.Count == 1 && ValidateGitFile(files[0], expectedJson)),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()), Times.Once);
     }
 
     private bool ValidateGitFile(GitFile file, string expectedContent)

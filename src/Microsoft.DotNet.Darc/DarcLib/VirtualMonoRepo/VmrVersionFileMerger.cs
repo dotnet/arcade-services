@@ -36,7 +36,8 @@ public interface IVmrVersionFileMerger
         string vmrPreviousRef,
         string vmrCurrentRef,
         string mapping,
-        string jsonRelativePath);
+        string jsonRelativePath,
+        bool allowMissingFiles = false);
 
     Task<VersionFileChanges> MergeVersionDetails(
         Codeflow lastFlow,
@@ -54,6 +55,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IDependencyFileManager _dependencyFileManager;
+    private const string EmptyJsonString = "{}";
 
     public VmrVersionFileMerger(
         IGitRepoFactory gitRepoFactory,
@@ -80,19 +82,20 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         string vmrPreviousRef,
         string vmrCurrentRef,
         string mappingName,
-        string jsonRelativePath)
+        string jsonRelativePath,
+        bool allowMissingFiles = false)
     {
         var targetRepoPreviousJson = await targetRepo.GetFileFromGitAsync(jsonRelativePath, targetRepoPreviousRef)
-            ?? throw new FileNotFoundException($"File not found at {targetRepo.Path / jsonRelativePath} for reference {targetRepoPreviousRef}");
+            ?? (allowMissingFiles ? EmptyJsonString : throw new FileNotFoundException($"File not found at {targetRepo.Path / jsonRelativePath} for reference {targetRepoPreviousRef}"));
         var targetRepoCurrentJson = await targetRepo.GetFileFromGitAsync(jsonRelativePath, targetRepoCurrentRef)
-            ?? throw new FileNotFoundException($"File not found at {targetRepo.Path / jsonRelativePath} for reference {targetRepoCurrentRef}");
+            ?? (allowMissingFiles ? EmptyJsonString : throw new FileNotFoundException($"File not found at {targetRepo.Path / jsonRelativePath} for reference {targetRepoCurrentRef}"));
 
         var vmrPreviousJson = lastFlow is Backflow 
             ? await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / jsonRelativePath, vmrPreviousRef)
-                ?? throw new FileNotFoundException($"File not found at {vmr.Path / (VmrInfo.GetRelativeRepoSourcesPath(mappingName) / jsonRelativePath)} for reference {vmrPreviousRef}")
+                ?? (allowMissingFiles ? EmptyJsonString : throw new FileNotFoundException($"File not found at {vmr.Path / (VmrInfo.GetRelativeRepoSourcesPath(mappingName) / jsonRelativePath)} for reference {vmrPreviousRef}"))
             : targetRepoPreviousJson;
         var vmrCurrentJson = await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / jsonRelativePath, vmrCurrentRef)
-            ?? throw new FileNotFoundException($"File not found at {vmr.Path / (VmrInfo.GetRelativeRepoSourcesPath(mappingName) / jsonRelativePath)} for reference {vmrCurrentRef}");
+            ?? (allowMissingFiles ? EmptyJsonString : throw new FileNotFoundException($"File not found at {vmr.Path / (VmrInfo.GetRelativeRepoSourcesPath(mappingName) / jsonRelativePath)} for reference {vmrCurrentRef}"));
 
         var targetRepoChanges = FlatJsonComparer.CompareFlatJsons(
             JsonFlattener.FlattenJsonToDictionary(targetRepoPreviousJson),
