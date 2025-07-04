@@ -116,7 +116,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
         var mergedJson = ApplyJsonChanges(targetRepoCurrentJson, finalChanges);
 
-        var newJson = new GitFile(jsonRelativePath, mergedJson);
+        var newJson = new GitFile(targetRepo.Path / jsonRelativePath, mergedJson);
         await _localGitRepoFactory.Create(targetRepo.Path).StageAsync(["."]);
 
         await _gitRepoFactory.CreateClient(targetRepo.Path)
