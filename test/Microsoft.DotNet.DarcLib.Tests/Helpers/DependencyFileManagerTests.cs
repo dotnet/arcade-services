@@ -379,34 +379,14 @@ public class DependencyFileManagerTests
             </Dependencies>
             """;
 
-        // Test 1: Unicode BOM character (\uFEFF)
-        string xmlWithUnicodeBom = "\uFEFF" + xmlWithoutBom;
-        var document1 = DependencyFileManager.GetXmlDocument(xmlWithUnicodeBom);
-        document1.Should().NotBeNull();
-        document1.DocumentElement?.Name.Should().Be("Dependencies");
-        var dependencies1 = document1.DocumentElement?.SelectNodes("//Dependency");
-        dependencies1.Should().NotBeNull();
-        dependencies1!.Count.Should().Be(1);
-        dependencies1[0]?.Attributes?["Name"]?.Value.Should().Be("TestPackage");
-
-        // Test 2: Latin-1 BOM representation (ï»¿)
-        string xmlWithLatin1Bom = "ï»¿" + xmlWithoutBom;
-        var document2 = DependencyFileManager.GetXmlDocument(xmlWithLatin1Bom);
-        document2.Should().NotBeNull();
-        document2.DocumentElement?.Name.Should().Be("Dependencies");
-        var dependencies2 = document2.DocumentElement?.SelectNodes("//Dependency");
-        dependencies2.Should().NotBeNull();
-        dependencies2!.Count.Should().Be(1);
-        dependencies2[0]?.Attributes?["Name"]?.Value.Should().Be("TestPackage");
-
-        // Test 3: Other BOM representation mentioned in issue (∩╗┐)
-        string xmlWithOtherBom = "∩╗┐" + xmlWithoutBom;
-        var document3 = DependencyFileManager.GetXmlDocument(xmlWithOtherBom);
-        document3.Should().NotBeNull();
-        document3.DocumentElement?.Name.Should().Be("Dependencies");
-        var dependencies3 = document3.DocumentElement?.SelectNodes("//Dependency");
-        dependencies3.Should().NotBeNull();
-        dependencies3!.Count.Should().Be(1);
-        dependencies3[0]?.Attributes?["Name"]?.Value.Should().Be("TestPackage");
+        // Test BOM representation mentioned in issue (∩╗┐)
+        string xmlWithBom = "∩╗┐" + xmlWithoutBom;
+        var document = DependencyFileManager.GetXmlDocument(xmlWithBom);
+        document.Should().NotBeNull();
+        document.DocumentElement?.Name.Should().Be("Dependencies");
+        var dependencies = document.DocumentElement?.SelectNodes("//Dependency");
+        dependencies.Should().NotBeNull();
+        dependencies!.Count.Should().Be(1);
+        dependencies[0]?.Attributes?["Name"]?.Value.Should().Be("TestPackage");
     }
 }

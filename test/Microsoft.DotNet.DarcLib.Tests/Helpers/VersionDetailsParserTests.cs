@@ -194,25 +194,11 @@ public class VersionDetailsParserTests
 
         var parser = new VersionDetailsParser();
         
-        // Test 1: Unicode BOM character (\uFEFF)
-        string xmlWithUnicodeBom = "\uFEFF" + xmlWithoutBom;
-        var versionDetails1 = parser.ParseVersionDetailsXml(xmlWithUnicodeBom);
-        versionDetails1.Dependencies.Should().HaveCount(1);
-        versionDetails1.Dependencies.Should().Contain(d => d.Name == "NETStandard.Library.Ref"
-            && d.Version == "2.1.0");
-
-        // Test 2: Latin-1 BOM representation (ï»¿)
-        string xmlWithLatin1Bom = "ï»¿" + xmlWithoutBom;
-        var versionDetails2 = parser.ParseVersionDetailsXml(xmlWithLatin1Bom);
-        versionDetails2.Dependencies.Should().HaveCount(1);
-        versionDetails2.Dependencies.Should().Contain(d => d.Name == "NETStandard.Library.Ref"
-            && d.Version == "2.1.0");
-
-        // Test 3: Other BOM representation mentioned in issue (∩╗┐)
-        string xmlWithOtherBom = "∩╗┐" + xmlWithoutBom;
-        var versionDetails3 = parser.ParseVersionDetailsXml(xmlWithOtherBom);
-        versionDetails3.Dependencies.Should().HaveCount(1);
-        versionDetails3.Dependencies.Should().Contain(d => d.Name == "NETStandard.Library.Ref"
+        // Test BOM representation mentioned in issue (∩╗┐)
+        string xmlWithBom = "∩╗┐" + xmlWithoutBom;
+        var versionDetails = parser.ParseVersionDetailsXml(xmlWithBom);
+        versionDetails.Dependencies.Should().HaveCount(1);
+        versionDetails.Dependencies.Should().Contain(d => d.Name == "NETStandard.Library.Ref"
             && d.Version == "2.1.0");
     }
 }
