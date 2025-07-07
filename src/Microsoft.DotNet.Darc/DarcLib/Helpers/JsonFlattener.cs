@@ -7,6 +7,7 @@ using System.Text.Json;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Helpers;
+
 public static class JsonFlattener
 {
     public static Dictionary<string, object> FlattenJsonToDictionary(string json)
