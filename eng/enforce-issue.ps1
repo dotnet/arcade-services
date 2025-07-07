@@ -38,6 +38,7 @@ foreach ($name in $issuePatterns.Keys) {
     if ($prDetail.body -match $issuePatterns[$name]) {
         Write-Host "Found issue link matching pattern: $name"
         $hasIssue = $true
+        break
     }
 }
 
