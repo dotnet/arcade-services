@@ -380,7 +380,6 @@ public class DependencyFileManagerTests
             </Dependencies>
             """;
 
-        // Test BOM representation mentioned in issue (∩╗┐)
         string xmlWithBom = "∩╗┐" + xmlWithoutBom;
         var f = () => DependencyFileManager.GetXmlDocument(xmlWithBom);
         f.Should().NotThrow<Exception>();
