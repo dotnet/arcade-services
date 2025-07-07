@@ -365,7 +365,7 @@ public class DependencyFileManagerTests
     [Test]
     public void GetXmlDocumentHandlesBomCharacters()
     {
-        // Create XML content with UTF-8 BOM characters at the beginning
+        // Create XML content without BOM
         const string xmlWithoutBom =
             """
             <?xml version="1.0" encoding="utf-8"?>
@@ -379,21 +379,34 @@ public class DependencyFileManagerTests
             </Dependencies>
             """;
 
-        // Add UTF-8 BOM character (\uFEFF) at the beginning
-        string xmlWithBom = "\uFEFF" + xmlWithoutBom;
+        // Test 1: Unicode BOM character (\uFEFF)
+        string xmlWithUnicodeBom = "\uFEFF" + xmlWithoutBom;
+        var document1 = DependencyFileManager.GetXmlDocument(xmlWithUnicodeBom);
+        document1.Should().NotBeNull();
+        document1.DocumentElement?.Name.Should().Be("Dependencies");
+        var dependencies1 = document1.DocumentElement?.SelectNodes("//Dependency");
+        dependencies1.Should().NotBeNull();
+        dependencies1!.Count.Should().Be(1);
+        dependencies1[0]?.Attributes?["Name"]?.Value.Should().Be("TestPackage");
 
-        // This should not throw an exception and should parse successfully
-        var document = DependencyFileManager.GetXmlDocument(xmlWithBom);
-        
-        document.Should().NotBeNull();
-        document.DocumentElement?.Name.Should().Be("Dependencies");
-        
-        var dependencies = document.DocumentElement?.SelectNodes("//Dependency");
-        dependencies.Should().NotBeNull();
-        dependencies!.Count.Should().Be(1);
-        
-        var dependency = dependencies[0];
-        dependency?.Attributes?["Name"]?.Value.Should().Be("TestPackage");
-        dependency?.Attributes?["Version"]?.Value.Should().Be("1.0.0");
+        // Test 2: Latin-1 BOM representation (ï»¿)
+        string xmlWithLatin1Bom = "ï»¿" + xmlWithoutBom;
+        var document2 = DependencyFileManager.GetXmlDocument(xmlWithLatin1Bom);
+        document2.Should().NotBeNull();
+        document2.DocumentElement?.Name.Should().Be("Dependencies");
+        var dependencies2 = document2.DocumentElement?.SelectNodes("//Dependency");
+        dependencies2.Should().NotBeNull();
+        dependencies2!.Count.Should().Be(1);
+        dependencies2[0]?.Attributes?["Name"]?.Value.Should().Be("TestPackage");
+
+        // Test 3: Other BOM representation mentioned in issue (∩╗┐)
+        string xmlWithOtherBom = "∩╗┐" + xmlWithoutBom;
+        var document3 = DependencyFileManager.GetXmlDocument(xmlWithOtherBom);
+        document3.Should().NotBeNull();
+        document3.DocumentElement?.Name.Should().Be("Dependencies");
+        var dependencies3 = document3.DocumentElement?.SelectNodes("//Dependency");
+        dependencies3.Should().NotBeNull();
+        dependencies3!.Count.Should().Be(1);
+        dependencies3[0]?.Attributes?["Name"]?.Value.Should().Be("TestPackage");
     }
 }

@@ -191,10 +191,21 @@ public class VersionDetailsParser : IVersionDetailsParser
             PreserveWhitespace = true
         };
 
-        // Remove BOM character if present (UTF-8 BOM is \uFEFF)
+        // Remove BOM character if present - handle different BOM representations
         if (fileContent.StartsWith('\uFEFF'))
         {
+            // Unicode BOM character (proper UTF-8 interpretation)
             fileContent = fileContent.Substring(1);
+        }
+        else if (fileContent.StartsWith("ï»¿"))
+        {
+            // UTF-8 BOM bytes interpreted as Latin-1 characters
+            fileContent = fileContent.Substring(3);
+        }
+        else if (fileContent.StartsWith("∩╗┐"))
+        {
+            // UTF-8 BOM bytes interpreted as other encoding characters
+            fileContent = fileContent.Substring(3);
         }
 
         document.LoadXml(fileContent);
