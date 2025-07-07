@@ -10,10 +10,6 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
     /// </summary>
     public class SourceManifestEntry
     {
-        public SourceManifestEntry()
-        {
-        }
-
         public SourceManifestEntry(string path, string remoteUri, string commitSha, int? barId)
         {
             Path = path;
