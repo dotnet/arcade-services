@@ -195,7 +195,6 @@ public class VersionDetailsParserTests
 
         var parser = new VersionDetailsParser();
         
-        // Test BOM representation mentioned in issue (∩╗┐)
         string xmlWithBom = "∩╗┐" + xmlWithoutBom;
         var action = () => parser.ParseVersionDetailsXml(xmlWithBom);
         action.Should().NotThrow<Exception>();
