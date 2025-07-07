@@ -117,7 +117,7 @@ public abstract class VmrManagerBase
         }
     }
 
-    protected async Task CommitAsync(string commitMessage, (string Name, string Email)? author = null)
+    protected virtual async Task CommitAsync(string commitMessage, (string Name, string Email)? author = null)
     {
         _logger.LogInformation("Committing..");
 
