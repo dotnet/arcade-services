@@ -174,4 +174,36 @@ public class VersionDetailsParserTests
         versionDetails.Source.Mapping.Should().Be("SomeRepo");
         versionDetails.Source.BarId.Should().Be(23412);
     }
+
+    [Test]
+    public void XmlWithBomCharactersIsParsedTest()
+    {
+        // Create XML content with UTF-8 BOM characters at the beginning
+        const string xmlWithoutBom =
+            """
+            <?xml version="1.0" encoding="utf-8"?>
+            <Dependencies>
+              <ProductDependencies>
+                <Dependency Name="NETStandard.Library.Ref" Version="2.1.0">
+                  <Uri>https://github.com/dotnet/core-setup</Uri>
+                  <Sha>7d57652f33493fa022125b7f63aad0d70c52d810</Sha>
+                </Dependency>
+              </ProductDependencies>
+            </Dependencies>
+            """;
+
+        // Add UTF-8 BOM character (\uFEFF) at the beginning
+        string xmlWithBom = "\uFEFF" + xmlWithoutBom;
+
+        var parser = new VersionDetailsParser();
+        
+        // This should not throw an exception and should parse successfully
+        var versionDetails = parser.ParseVersionDetailsXml(xmlWithBom);
+        
+        versionDetails.Dependencies.Should().HaveCount(1);
+        versionDetails.Dependencies.Should().Contain(d => d.Name == "NETStandard.Library.Ref"
+            && d.Version == "2.1.0"
+            && d.RepoUri == "https://github.com/dotnet/core-setup"
+            && d.Commit == "7d57652f33493fa022125b7f63aad0d70c52d810");
+    }
 }

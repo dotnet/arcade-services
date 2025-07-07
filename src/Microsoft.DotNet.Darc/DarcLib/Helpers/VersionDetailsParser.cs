@@ -191,6 +191,12 @@ public class VersionDetailsParser : IVersionDetailsParser
             PreserveWhitespace = true
         };
 
+        // Remove BOM character if present (UTF-8 BOM is \uFEFF)
+        if (fileContent.StartsWith('\uFEFF'))
+        {
+            fileContent = fileContent.Substring(1);
+        }
+
         document.LoadXml(fileContent);
 
         return document;

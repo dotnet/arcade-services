@@ -361,4 +361,39 @@ public class DependencyFileManagerTests
         versionDetails.Replace("\r\n", "\n").TrimEnd().Should().Be(expectedVersionDetails.Replace("\r\n", "\n").TrimEnd());
         versionProps.Replace("\r\n", "\n").TrimEnd().Should().Be(expectedVersionProps.Replace("\r\n", "\n").TrimEnd());
     }
+
+    [Test]
+    public void GetXmlDocumentHandlesBomCharacters()
+    {
+        // Create XML content with UTF-8 BOM characters at the beginning
+        const string xmlWithoutBom =
+            """
+            <?xml version="1.0" encoding="utf-8"?>
+            <Dependencies>
+              <ProductDependencies>
+                <Dependency Name="TestPackage" Version="1.0.0">
+                  <Uri>https://github.com/test/test</Uri>
+                  <Sha>abc123</Sha>
+                </Dependency>
+              </ProductDependencies>
+            </Dependencies>
+            """;
+
+        // Add UTF-8 BOM character (\uFEFF) at the beginning
+        string xmlWithBom = "\uFEFF" + xmlWithoutBom;
+
+        // This should not throw an exception and should parse successfully
+        var document = DependencyFileManager.GetXmlDocument(xmlWithBom);
+        
+        document.Should().NotBeNull();
+        document.DocumentElement?.Name.Should().Be("Dependencies");
+        
+        var dependencies = document.DocumentElement?.SelectNodes("//Dependency");
+        dependencies.Should().NotBeNull();
+        dependencies!.Count.Should().Be(1);
+        
+        var dependency = dependencies[0];
+        dependency?.Attributes?["Name"]?.Value.Should().Be("TestPackage");
+        dependency?.Attributes?["Version"]?.Value.Should().Be("1.0.0");
+    }
 }
