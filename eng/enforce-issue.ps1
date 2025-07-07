@@ -24,19 +24,27 @@ elseif ($prDetail.title -match "\[automated\]") {
 	exit 0
 }
 
-# Look for https://github.com/dotnet/arcade-services/issues/3625
-$hasIssue = $prDetail.body -Match "github\.com/dotnet/(.+)/issues/(\d+)"
+
+$issuePatterns = @{
+    "GitHub Full Link"      = "github\.com/dotnet/(.+)/issues/(\d+)" # Eg: https://github.com/dotnet/arcade-services/issues/3625
+    "AzDO DevOps Link"      = "dev\.azure\.com/(.+)/(.+)/_workitems" #Eg: https://dev.azure.com/dnceng/internal/_workitems/edit/45126
+    "AzDO Visual Studio Link" = "(.+)\.visualstudio\.com/(.+)/_workitems"
+    "GitHub Issue Shortcut" = "(?<!\w)#\d+\b" # Eg: #5374
+}
+
+$hasIssue = $false
+
+foreach ($name in $issuePatterns.Keys) {
+    if ($prDetail.body -match $issuePatterns[$name]) {
+        Write-Host "Found issue link matching pattern: $name"
+        $hasIssue = $true
+        break
+    }
+}
+
 if (-not $hasIssue) {
-	# Or for https://dev.azure.com/dnceng/internal/_workitems/edit/45126
-	$hasIssue = $prDetail.body -Match "dev\.azure\.com/(.+)/(.+)/_workitems"
-	if (-not $hasIssue) {
-		# Or for https://dev.azure.com/dnceng/internal/_workitems/edit/12345
-		$hasIssue = $prDetail.body -Match "(.+)\.visualstudio\.com/(.+)/_workitems"
-		if (-not $hasIssue) {
-			Write-Host "##vso[task.LogIssue type=error;]Link to the corresponding GitHub/AzDO issue is missing in the PR description. Check failed."
-			exit 1
-		}
-	}
+    Write-Host "##vso[task.LogIssue type=error;]Link to the corresponding GitHub/AzDO issue is missing in the PR description. Check failed."
+    exit 1
 }
 
 exit 0
