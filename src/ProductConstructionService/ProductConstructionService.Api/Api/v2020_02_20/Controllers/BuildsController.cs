@@ -204,7 +204,7 @@ public class BuildsController : v2019_01_16.Controllers.BuildsController
             return NotFound();
         }
 
-        string repository = build.AzureDevOpsRepository ?? build.GitHubRepository;
+        string repository = build.GetRepository();
         if (string.IsNullOrEmpty(repository))
         {
             return NotFound("Repository information not available for this build");
