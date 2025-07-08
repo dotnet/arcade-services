@@ -29,7 +29,6 @@ public interface IVmrCodeFlower
         IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
         string headBranch,
-        bool discardPatches,
         bool headBranchExisted,
         CancellationToken cancellationToken = default);
 }
@@ -81,7 +80,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
         string headBranch,
-        bool discardPatches,
         bool headBranchExisted,
         CancellationToken cancellationToken = default)
     {
@@ -110,7 +108,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 excludedAssets,
                 targetBranch,
                 headBranch,
-                discardPatches,
                 headBranchExisted,
                 cancellationToken);
         }
@@ -125,7 +122,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 build,
                 targetBranch,
                 headBranch,
-                discardPatches,
                 headBranchExisted,
                 cancellationToken);
         }
@@ -150,7 +146,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
     /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
     /// <param name="headBranch">New/existing branch to make the changes on</param>
-    /// <param name="discardPatches">If true, patches are deleted after applying them</param>
     /// <param name="headBranchExisted">Did we just create the headbranch or are we updating an existing one?</param>
     /// <returns>True if there were changes to flow</returns>
     protected abstract Task<bool> SameDirectionFlowAsync(
@@ -162,7 +157,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
         string headBranch,
-        bool discardPatches,
         bool headBranchExisted,
         CancellationToken cancellationToken);
 
@@ -177,7 +171,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// <param name="build">Build with assets (dependencies) that is being flown</param>
     /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
     /// <param name="headBranch">New/existing branch to make the changes on</param>
-    /// <param name="discardPatches">If true, patches are deleted after applying them</param>
     /// <param name="headBranchExisted">Did we just create the headbranch or are we updating an existing one?</param>
     /// <returns>True if there were changes to flow</returns>
     protected abstract Task<bool> OppositeDirectionFlowAsync(
@@ -188,7 +181,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         Build build,
         string targetBranch,
         string headBranch,
-        bool discardPatches,
         bool headBranchExisted,
         CancellationToken cancellationToken);
 

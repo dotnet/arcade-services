@@ -63,7 +63,6 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
     public CodeFlowVmrUpdater(
         IVmrInfo vmrInfo,
         IVmrDependencyTracker dependencyTracker,
-        IVersionDetailsParser versionDetailsParser,
         IRepositoryCloneManager cloneManager,
         IVmrPatchHandler patchHandler,
         IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
@@ -71,14 +70,11 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
         ICredScanSuppressionsGenerator credScanSuppressionsGenerator,
         ILocalGitClient localGitClient,
         ILocalGitRepoFactory localGitRepoFactory,
-        IDependencyFileManager dependencyFileManager,
         IGitRepoFactory gitRepoFactory,
-        IWorkBranchFactory workBranchFactory,
         IFileSystem fileSystem,
-        IBasicBarClient barClient,
         ILogger<VmrUpdater> logger,
         ISourceManifest sourceManifest)
-        : base(vmrInfo, sourceManifest, dependencyTracker, patchHandler, versionDetailsParser, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, dependencyFileManager, barClient, fileSystem, logger)
+        : base(vmrInfo, dependencyTracker, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, logger)
     {
         _logger = logger;
         _sourceManifest = sourceManifest;
@@ -167,9 +163,7 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
                     AdditionalRemotes: [.. remotes.Select(r => new AdditionalRemote(mapping.Name, r))],
                     TpnTemplatePath: _vmrInfo.ThirdPartyNoticesTemplateFullPath,
                     GenerateCodeOwners: false,
-                    GenerateCredScanSuppressions: true,
-                    DiscardPatches: true,
-                    ApplyAdditionalMappings: false),
+                    GenerateCredScanSuppressions: true),
                 cancellationToken);
 
             return true;
@@ -180,11 +174,4 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
             return false;
         }
     }
-
-    // VMR patches are not handled during full code flow
-    protected override Task<IReadOnlyCollection<VmrIngestionPatch>> StripVmrPatchesAsync(
-            IReadOnlyCollection<VmrIngestionPatch> patches,
-            IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-            CancellationToken cancellationToken)
-        => Task.FromResult<IReadOnlyCollection<VmrIngestionPatch>>([]);
 }

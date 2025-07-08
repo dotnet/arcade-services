@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
+using FluentAssertions.Specialized;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -360,5 +361,27 @@ public class DependencyFileManagerTests
 
         versionDetails.Replace("\r\n", "\n").TrimEnd().Should().Be(expectedVersionDetails.Replace("\r\n", "\n").TrimEnd());
         versionProps.Replace("\r\n", "\n").TrimEnd().Should().Be(expectedVersionProps.Replace("\r\n", "\n").TrimEnd());
+    }
+
+    [Test]
+    public void GetXmlDocumentHandlesBomCharacters()
+    {
+        // Create XML content without BOM
+        const string xmlWithoutBom =
+            """
+            <?xml version="1.0" encoding="utf-8"?>
+            <Dependencies>
+              <ProductDependencies>
+                <Dependency Name="TestPackage" Version="1.0.0">
+                  <Uri>https://github.com/test/test</Uri>
+                  <Sha>abc123</Sha>
+                </Dependency>
+              </ProductDependencies>
+            </Dependencies>
+            """;
+
+        string xmlWithBom = "∩╗┐" + xmlWithoutBom;
+        var f = () => DependencyFileManager.GetXmlDocument(xmlWithBom);
+        f.Should().NotThrow<Exception>();
     }
 }

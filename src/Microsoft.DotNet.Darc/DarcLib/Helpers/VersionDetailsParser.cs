@@ -191,6 +191,12 @@ public class VersionDetailsParser : IVersionDetailsParser
             PreserveWhitespace = true
         };
 
+        // Remove BOM character if present
+        if (fileContent.StartsWith("∩╗┐"))
+        {
+            fileContent = fileContent.Substring(3);
+        }
+
         document.LoadXml(fileContent);
 
         return document;

@@ -127,10 +127,10 @@ internal static class Program
     public static Type[] GetVmrOptions() =>
     [
         typeof(InitializeCommandLineOptions),
-        typeof(UpdateCommandLineOptions),
         typeof(BackflowCommandLineOptions),
-        typeof(CherryPickCommandLineOptions),
         typeof(ForwardFlowCommandLineOptions),
+        typeof(CherryPickCommandLineOptions),
+        typeof(ResetCommandLineOptions),
         typeof(GenerateTpnCommandLineOptions),
         typeof(CloakedFileScanOptions),
         typeof(GetRepoVersionCommandLineOptions),

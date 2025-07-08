@@ -26,17 +26,6 @@ public class SourceMappingFile
     };
 
     /// <summary>
-    /// Location within the VMR where the source-build patches are stored
-    /// These patches are applied on top of the code synchronized into the VMR
-    /// </summary>
-    public string? PatchesPath { get; set; }
-
-    /// <summary>
-    /// Location within the VMR where the source-mappings.json file is stored
-    /// </summary>
-    public string? SourceMappingsPath { get; set; }
-
-    /// <summary>
     /// Location within the VMR where the third-party notices template file is stored
     /// </summary>
     public string? ThirdPartyNoticesTemplatePath { get; set; }
@@ -45,13 +34,6 @@ public class SourceMappingFile
     /// Each of these mappings has a corresponding folder in the src/ directory
     /// </summary>
     public List<SourceMappingSetting> Mappings { get; set; } = [];
-
-    /// <summary>
-    /// Some files are copied outside of the src/ directory into other locations
-    /// When files in the source paths are changed, they are automatically synchronized too
-    /// Source can be a path to a folder or a file. Destination is a path to a folder where the file(s) will be synchronized.
-    /// </summary>
-    public List<AdditionalMappingSetting>? AdditionalMappings { get; set; }
 }
 
 public class SourceMappingSetting

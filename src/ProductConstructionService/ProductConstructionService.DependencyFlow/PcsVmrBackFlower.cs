@@ -89,7 +89,6 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             subscription.ExcludedAssets,
             subscription.TargetBranch,
             targetBranch,
-            discardPatches: true,
             headBranchExisted,
             cancellationToken);
 

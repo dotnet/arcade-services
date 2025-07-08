@@ -78,7 +78,6 @@ public class VmrPatchHandler : IVmrPatchHandler
         string sha2,
         NativePath destDir,
         NativePath tmpPath,
-        bool includeAdditionalMappings,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Creating patches for {mapping} in {path}..", mapping.Name, destDir);
@@ -91,7 +90,6 @@ public class VmrPatchHandler : IVmrPatchHandler
             destDir,
             tmpPath,
             new UnixPath(mapping.Name),
-            includeAdditionalMappings,
             cancellationToken);
 
         _logger.LogInformation("{count} patch{s} created", patches.Count, patches.Count == 1 ? string.Empty : "es");
@@ -107,7 +105,6 @@ public class VmrPatchHandler : IVmrPatchHandler
         NativePath destDir,
         NativePath tmpPath,
         UnixPath relativePath,
-        bool includeAdditionalMappings,
         CancellationToken cancellationToken)
     {
         var repoPath = clone.Path;
@@ -159,11 +156,6 @@ public class VmrPatchHandler : IVmrPatchHandler
             ignoreLineEndings: false,
             cancellationToken));
 
-        if (includeAdditionalMappings)
-        {
-            patches.AddRange(await CreatePatchesForAdditionalMappings(mapping, sha1, sha2, destDir, repoPath, cancellationToken));
-        }
-
         if (!submoduleChanges.Any())
         {
             return patches;
@@ -201,7 +193,6 @@ public class VmrPatchHandler : IVmrPatchHandler
                 tmpPath,
                 relativePath,
                 change,
-                includeAdditionalMappings,
                 cancellationToken));
 
             _logger.LogInformation("Patches created for submodule {submodule} of {repo}", change.Name, mapping.Name);
@@ -536,72 +527,6 @@ public class VmrPatchHandler : IVmrPatchHandler
     }
 
     /// <summary>
-    /// Create patches for additionally mapped content from a repository folder onto a different VMR path.
-    /// </summary>
-    /// <returns>A list of generated patches based on the additional mappings.</returns>
-    private async Task<List<VmrIngestionPatch>> CreatePatchesForAdditionalMappings(
-        SourceMapping mapping,
-        string sha1,
-        string sha2,
-        NativePath destDir,
-        NativePath repoPath,
-        CancellationToken cancellationToken)
-    {
-        var patches = new List<VmrIngestionPatch>();
-
-        // If current mapping hosts VMR's non-src/ content, synchronize it too
-        // We only do it when processing the root mapping, not its submodules
-        var relativeRepoPath = VmrInfo.GetRelativeRepoSourcesPath(mapping);
-        var i = 1;
-        foreach (var (source, destination) in _vmrInfo.AdditionalMappings.Where(m => m.Source.StartsWith(relativeRepoPath)))
-        {
-            var relativeClonePath = source.Substring(relativeRepoPath.Length + 1);
-
-            _logger.LogInformation("Detected 'non-src/' mapped content in {source}. Creating patch..", source);
-
-            var prefix = destination != null ? destination.Replace('/', '_') : "root";
-            var patchName = destDir / $"{prefix}-{Commit.GetShortSha(sha1)}-{Commit.GetShortSha(sha2)}-{i++}.patch";
-
-            var path = UnixPath.CurrentDir;
-
-            // We take the content path from the VMR config and map it onto the cloned repo
-            var contentDir = repoPath / relativeClonePath;
-
-            var fileName = _fileSystem.GetFileName(source) ?? throw new ArgumentNullException(nameof(source));
-
-            if (_fileSystem.FileExists(contentDir)
-                || (destination != null && _fileSystem.FileExists(_vmrInfo.VmrPath / destination / fileName)))
-            {
-                path = new UnixPath(fileName);
-
-                var relativeCloneDir = _fileSystem.GetDirectoryName(relativeClonePath)
-                    ?? throw new Exception($"Invalid source path {source} in mapping.");
-
-                contentDir = repoPath / relativeCloneDir;
-            }
-            else if (!_fileSystem.DirectoryExists(contentDir))
-            {
-                // the source can be a file that doesn't exist, then we skip it
-                continue;
-            }
-
-            patches.AddRange(await CreatePatches(
-                patchName,
-                sha1,
-                sha2,
-                path, // Apply for a given file or directory (we will call this from the content dir)
-                filters: null,
-                relativePaths: true, // Relative paths so that we can apply the patch on VMR's root dir
-                contentDir,
-                destination != null ? new UnixPath(destination) : null,
-                ignoreLineEndings: false,
-                cancellationToken));
-        }
-
-        return patches;
-    }
-
-    /// <summary>
     /// Creates and returns path to patch files that inline all submodules recursively.
     /// </summary>
     /// <param name="mapping">Mapping for the current repo/submodule</param>
@@ -617,7 +542,6 @@ public class VmrPatchHandler : IVmrPatchHandler
         NativePath tmpPath,
         UnixPath relativePath,
         SubmoduleChange change,
-        bool includeAdditionalMappings,
         CancellationToken cancellationToken)
     {
         var checkoutCommit = change.Before == Constants.EmptyGitObject ? change.After : change.Before;
@@ -666,28 +590,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             destDir,
             tmpPath,
             new UnixPath(submodulePath),
-            includeAdditionalMappings,
             cancellationToken);
-    }
-
-    public IReadOnlyCollection<VmrIngestionPatch> GetVmrPatches()
-    {
-        if (_vmrInfo.PatchesPath is null || !_fileSystem.DirectoryExists(_vmrInfo.VmrPath / _vmrInfo.PatchesPath))
-        {
-            return [];
-        }
-
-        var patches = new List<VmrIngestionPatch>();
-        foreach (var patchDir in _fileSystem.GetDirectories(_vmrInfo.VmrPath / _vmrInfo.PatchesPath))
-        {
-            foreach (var patch in _fileSystem.GetFiles(patchDir))
-            {
-                var dirName = _fileSystem.GetFileName(_fileSystem.GetDirectoryName(patch));
-                patches.Add(new(patch, _dependencyTracker.GetMapping(dirName!)));
-            }
-        }
-
-        return patches;
     }
 
     public static string GetInclusionRule(string path) => $":(glob,attr:!{VmrInfo.IgnoreAttribute}){path}";
