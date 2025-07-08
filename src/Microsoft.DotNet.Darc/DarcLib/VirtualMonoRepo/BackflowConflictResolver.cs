@@ -329,7 +329,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         SemanticVersion? targetDotNetVersion = null;
 
         // The arcade backflow subscriptions has all assets excluded, but we want to update the global.json sdk version anyway
-        if (arcadeItem != null || mappingName == "arcade")
+        if (arcadeItem != null || mappingName == VmrInfo.ArcadeMappingName)
         {
             // Even tho we are backflowing from the VMR, we want to get the sdk version from VMR`s global.json, not src/arcade's
             targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(build.GetRepository(), build.Commit, repoIsVmr: false);

@@ -72,7 +72,6 @@ extends:
             publish:
               logs: true
               ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
-                artifacts: true
                 manifests: true
           enableTelemetry: true
           enableMicrobuild: false

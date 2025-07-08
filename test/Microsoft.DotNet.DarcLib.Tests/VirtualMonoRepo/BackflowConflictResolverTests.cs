@@ -63,12 +63,6 @@ public class BackflowConflictResolverTests
             .SetupGet(x => x.VmrPath)
             .Returns(_vmrPath);
         _vmrInfo
-            .Setup(x => x.PatchesPath)
-            .Returns(_vmrPath + "/patches");
-        _vmrInfo
-            .Setup(x => x.AdditionalMappings)
-            .Returns(Array.Empty<(string, string?)>());
-        _vmrInfo
             .Setup(x => x.GetRepoSourcesPath(It.IsAny<SourceMapping>()))
             .Returns((SourceMapping mapping) => _vmrPath / VmrInfo.SourcesDir / mapping.Name);
 

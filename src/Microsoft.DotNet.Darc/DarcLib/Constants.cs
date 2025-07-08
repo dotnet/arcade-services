@@ -28,6 +28,4 @@ public class Constants
 
     public const string EngFolderName = "eng";
     public const string CommonScriptFilesPath = $"{EngFolderName}/common";
-
-    public const string VmrFolderName = "vmr";
 }

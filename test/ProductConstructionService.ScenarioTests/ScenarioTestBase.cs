@@ -49,7 +49,7 @@ internal abstract partial class ScenarioTestBase
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepo);
 
-        var attempts = 40;
+        var attempts = 20;
         while (attempts-- > 0)
         {
             IReadOnlyList<Octokit.PullRequest> prs = await GitHubApi.PullRequest.GetAllForRepository(repo.Id, new Octokit.PullRequestRequest

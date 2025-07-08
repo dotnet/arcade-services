@@ -176,16 +176,12 @@ internal abstract class VmrTestsBase
         await vmrInitializer.InitializeRepository(
             mappingName: mapping,
             targetRevision: commit,
-            initializeDependencies: true,
             sourceMappingsPath: sourceMappingsPath,
             new CodeFlowParameters(
                 AdditionalRemotes: [],
                 TpnTemplatePath: null,
                 GenerateCodeOwners: false,
-                GenerateCredScanSuppressions: false,
-                DiscardPatches: true,
-                ApplyAdditionalMappings: true),
-            lookUpBuilds: false,
+                GenerateCredScanSuppressions: false),
             cancellationToken: _cancellationToken.Token);
     }
 
@@ -201,15 +197,11 @@ internal abstract class VmrTestsBase
         await vmrUpdater.UpdateRepository(
             mappingName: mapping,
             targetRevision: commit,
-            updateDependencies: true,
             new CodeFlowParameters(
                 AdditionalRemotes: additionalRemotes,
                 TpnTemplatePath: null,
                 GenerateCodeOwners: generateCodeowners,
-                GenerateCredScanSuppressions: generateCredScanSuppressions,
-                DiscardPatches: true,
-                ApplyAdditionalMappings: true),
-            lookUpBuilds: false,
+                GenerateCredScanSuppressions: generateCredScanSuppressions),
             cancellationToken: _cancellationToken.Token);
     }
 
@@ -258,7 +250,6 @@ internal abstract class VmrTestsBase
             "main",
             branch,
             VmrPath,
-            discardPatches: false,
             skipMeaninglessUpdates,
             cancellationToken: _cancellationToken.Token);
 

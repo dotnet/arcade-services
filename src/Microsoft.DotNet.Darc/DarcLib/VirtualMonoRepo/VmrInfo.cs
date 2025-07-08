@@ -27,18 +27,6 @@ public interface IVmrInfo
     string VmrUri { get; set; }
 
     /// <summary>
-    /// Path within the VMR where VMR patches are stored.
-    /// These patches are applied on top of the synchronized content.
-    /// The Path is UNIX style and relative (e.g. "src/patches").
-    /// </summary>
-    string? PatchesPath { get; set; }
-
-    /// <summary>
-    /// Path to the source-mappings.json file
-    /// </summary>
-    string? SourceMappingsPath { get; set; }
-
-    /// <summary>
     /// Path to the third-party notices template file
     /// </summary>
     string? ThirdPartyNoticesTemplatePath { get; set; }
@@ -47,13 +35,6 @@ public interface IVmrInfo
     /// Gets a full path leading to the source manifest JSON file.
     /// </summary>
     NativePath SourceManifestPath { get; }
-
-    /// <summary>
-    /// Additionally mapped directories that are copied to non-src/ locations within the VMR.
-    /// Paths are UNIX style and relative.
-    /// Example: ("src/installer/eng/common", "eng/common")
-    /// </summary>
-    IReadOnlyCollection<(string Source, string? Destination)> AdditionalMappings { get; set; }
 
     /// <summary>
     /// Gets a full path leading to sources belonging to a given repo (mapping)
@@ -86,7 +67,8 @@ public class VmrInfo : IVmrInfo
     public const string CodeownersFileName = "CODEOWNERS";
     public const string CredScanSuppressionsFileName = "CredScanSuppressions.json";
 
-    public static readonly UnixPath ArcadeRepoDir = SourcesDir / "arcade";
+    public const string ArcadeMappingName = "arcade";
+    public static readonly UnixPath ArcadeRepoDir = SourcesDir / ArcadeMappingName;
 
     public static UnixPath DefaultRelativeSourceMappingsPath { get; } = SourcesDir / SourceMappingsFileName;
 
@@ -111,8 +93,6 @@ public class VmrInfo : IVmrInfo
     public NativePath TmpPath { get; set; }
 
     public string? PatchesPath { get; set; }
-
-    public string? SourceMappingsPath { get; set; }
 
     public string? ThirdPartyNoticesTemplatePath { get; set; }
 

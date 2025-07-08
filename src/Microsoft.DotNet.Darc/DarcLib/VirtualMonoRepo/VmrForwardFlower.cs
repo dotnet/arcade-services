@@ -32,7 +32,6 @@ public interface IVmrForwardFlower : IVmrCodeFlower
     /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="targetVmrUri">URI of the VMR to update</param>
-    /// <param name="discardPatches">Keep patch files?</param>
     /// <param name="skipMeaninglessUpdates">Skip creating PR if only insignificant changes are present</param>
     /// <returns>CodeFlowResult containing information about the codeflow calculation</returns>
     Task<CodeFlowResult> FlowForwardAsync(
@@ -43,7 +42,6 @@ public interface IVmrForwardFlower : IVmrCodeFlower
         string targetBranch,
         string headBranch,
         string targetVmrUri,
-        bool discardPatches = false,
         bool skipMeaninglessUpdates = false,
         CancellationToken cancellationToken = default);
 }
@@ -99,7 +97,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string targetBranch,
         string headBranch,
         string targetVmrUri,
-        bool discardPatches = false,
         bool skipMeaninglessUpdates = false,
         CancellationToken cancellationToken = default)
     {
@@ -122,7 +119,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             excludedAssets,
             targetBranch,
             headBranch,
-            discardPatches,
             headBranchExisted,
             cancellationToken);
 
@@ -221,7 +217,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
         string headBranch,
-        bool discardPatches,
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
@@ -254,7 +249,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 excludedAssets,
                 targetBranch,
                 build,
-                discardPatches,
                 headBranchExisted,
                 cancellationToken);
         }
@@ -270,7 +264,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         Build build,
         string targetBranch,
         string headBranch,
-        bool discardPatches,
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
@@ -341,7 +334,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
         Build build,
-        bool discardPatches,
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
@@ -360,6 +352,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             line => line.Contains(lastFlow.SourceSha),
             lastFlow.TargetSha);
 
+        await _localGitClient.ResetWorkingTree(_vmrInfo.VmrPath);
         var vmr = await _vmrCloneManager.PrepareVmrAsync(
             [_vmrInfo.VmrUri],
             [previousFlowTargetSha],
@@ -381,7 +374,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             excludedAssets,
             targetBranch,
             headBranch,
-            discardPatches,
             headBranchExisted,
             cancellationToken);
 

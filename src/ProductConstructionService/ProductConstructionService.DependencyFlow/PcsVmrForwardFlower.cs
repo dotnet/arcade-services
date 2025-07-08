@@ -76,7 +76,6 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             subscription.TargetBranch,
             headBranch,
             subscription.TargetRepository,
-            discardPatches: true,
             skipMeaninglessUpdates,
             cancellationToken);
     }
