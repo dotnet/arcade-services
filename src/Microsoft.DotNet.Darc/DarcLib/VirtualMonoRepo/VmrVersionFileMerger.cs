@@ -217,7 +217,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             {
                 if (repoChange! > vmrChange!)
                 {
-                    // do nothing, we already have the property added in the repo
+                    additions.Add(repoChange!);
                 }
                 else
                 {
@@ -227,8 +227,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             }
             if (addedInRepo)
             {
-                // we don't have to do anything since the property is added in the repo
-                continue;
+                additions.Add(repoChange!);
             }
             if (addedInVmr)
             {
@@ -240,7 +239,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             {
                 if (repoChange! > vmrChange!)
                 {
-                    // do nothing, we already have the property updated in the repo
+                    updates.Add(repoChange!);
                 }
                 else
                 {
@@ -250,7 +249,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             }
             if (updatedInRepo)
             {
-                // we don't have to do anything since the property is updated in the repo
+                updates.Add(repoChange!);
                 continue;
             }
             if (updatedInVmr)
