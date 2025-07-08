@@ -272,6 +272,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         var patchName = _vmrInfo.TmpPath / $"{headBranch.Replace('/', '-')}.patch";
         var branchName = currentFlow.GetBranchName();
 
+        
+
         // We will remove everything not-cloaked and replace it with current contents of the source repo
         // When flowing to the VMR, we remove all files but the cloaked files
         List<string> removalFilters =
