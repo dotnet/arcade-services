@@ -12,7 +12,7 @@ namespace Microsoft.DotNet.DarcLib.Models.Darc;
 ///     dependency detail to a new dependency detail
 /// </summary>
 [DebuggerDisplay("{From} -> {To}")]
-public class DependencyUpdate : VersionFileProperty
+public class DependencyUpdate : IVersionFileProperty
 {
     /// <summary>
     ///     Current dependency
@@ -26,20 +26,11 @@ public class DependencyUpdate : VersionFileProperty
 
     public string DependencyName => From?.Name ?? To?.Name;
 
-    public override string Name => DependencyName;
+    public string Name => DependencyName;
 
-    public override object Value => To;
+    public object Value => To;
 
-    public override bool IsAdded() => From == null;
-    public override bool IsGreater(VersionFileProperty otherProperty)
-    {
-        if (SemanticVersion.TryParse(To?.Version, out var toVersion) &&
-            SemanticVersion.TryParse(((DependencyUpdate)otherProperty).To?.Version, out var otherToVersion))
-        {
-            return toVersion > otherToVersion;
-        }
-        return false;
-    }
-    public override bool IsRemoved() => To == null;
-    public override bool IsUpdated() => From != null && To != null;
+    public bool IsAdded() => From == null;
+    public  bool IsRemoved() => To == null;
+    public  bool IsUpdated() => From != null && To != null;
 }

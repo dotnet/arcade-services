@@ -14,9 +14,10 @@ using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
+using NuGet.Versioning;
 using VersionFileChanges = (System.Collections.Generic.List<string> removals,
-        System.Collections.Generic.List<Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo.VersionFileProperty> additions,
-        System.Collections.Generic.List<Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo.VersionFileProperty> updates);
+        System.Collections.Generic.List<Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo.IVersionFileProperty> additions,
+        System.Collections.Generic.List<Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo.IVersionFileProperty> updates);
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -100,7 +101,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             SimpleConfigJsonFlattener.FlattenSimpleConfigJsonToDictionary(vmrPreviousJson),
             SimpleConfigJsonFlattener.FlattenSimpleConfigJsonToDictionary(vmrCurrentJson));
 
-        var finalChanges = MergeDependencyChanges(targetRepoChanges, vmrChanges);
+        var finalChanges = MergeDependencyChanges(targetRepoChanges, vmrChanges, JsonVersionProperty.SelectJsonProperty);
 
         var currentJson = await GetJsonFromGit(targetRepo, jsonRelativePath, "HEAD", allowMissingFiles);
         var mergedJson = ApplyJsonChanges(currentJson, finalChanges);
@@ -151,7 +152,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             previousVmrDependencies,
             currentVmrDependencies);
 
-        var mergedChanges = MergeDependencyChanges(repoChanges, vmrChanges);
+        var mergedChanges = MergeDependencyChanges(repoChanges, vmrChanges, VersionDetailsSelector);
 
         await ApplyVersionDetailsChangesAsync(targetRepo.Path, mergedChanges);
 
@@ -159,8 +160,9 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
     }
 
     private VersionFileChanges MergeDependencyChanges(
-        IReadOnlyCollection<VersionFileProperty> repoChanges,
-        IReadOnlyCollection<VersionFileProperty> vmrChanges)
+        IReadOnlyCollection<IVersionFileProperty> repoChanges,
+        IReadOnlyCollection<IVersionFileProperty> vmrChanges,
+        Func<IVersionFileProperty, IVersionFileProperty, IVersionFileProperty> select)
     {
         var changedProperties = repoChanges
             .Concat(vmrChanges)
@@ -168,8 +170,8 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             .Distinct(StringComparer.OrdinalIgnoreCase);
 
         var removals = new List<string>();
-        var additions = new List<VersionFileProperty>();
-        var updates = new List<VersionFileProperty>();
+        var additions = new List<IVersionFileProperty>();
+        var updates = new List<IVersionFileProperty>();
         foreach (var property in changedProperties)
         {
             var repoChange = repoChanges.FirstOrDefault(c => c.Name == property);
@@ -204,14 +206,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
             if (addedInRepo && addedInVmr)
             {
-                if (repoChange! > vmrChange!)
-                {
-                    additions.Add(repoChange!);
-                }
-                else
-                {
-                    additions.Add(vmrChange!);
-                }
+                additions.Add(select(repoChange!, vmrChange!));
                 continue;
             }
             if (addedInRepo)
@@ -227,14 +222,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
             if (updatedInRepo && updatedInVmr)
             {
-                if (repoChange! > vmrChange!)
-                {
-                    updates.Add(repoChange!);
-                }
-                else
-                {
-                    updates.Add(vmrChange!);
-                }
+                updates.Add(select(repoChange!, vmrChange!));
                 continue;
             }
             if (updatedInRepo)
@@ -382,6 +370,23 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 repoPath,
                 null!);
         }
+    }
+
+    public IVersionFileProperty VersionDetailsSelector(IVersionFileProperty repoChange, IVersionFileProperty vmrChange)
+    {
+        if (repoChange.GetType() != typeof(DependencyUpdate) || vmrChange.GetType() != typeof(DependencyUpdate))
+        {
+            throw new ArgumentException($"Provided updates are not {typeof(DependencyUpdate)}");
+        }
+        var repoUpdate = (DependencyUpdate)repoChange;
+        var vmrUpdate = (DependencyUpdate)vmrChange;
+
+        if (SemanticVersion.TryParse(repoUpdate.To?.Version!, out var repoVersion) &&
+            SemanticVersion.TryParse(vmrUpdate.To?.Version!, out var vmrVersion))
+        {
+            return repoVersion > vmrVersion ? repoChange : vmrChange;
+        }
+        throw new ArgumentException($"Cannot compare {repoUpdate.To?.Version} with {vmrUpdate.To?.Version} because they are not valid semantic versions.");
     }
 
     private static async Task<string> GetJsonFromGit(ILocalGitRepo repo, string jsonRelativePath, string reference, bool allowMissingFile) =>

@@ -8,7 +8,7 @@ using NuGet.Versioning;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
-public class JsonVersionProperty : VersionFileProperty
+public class JsonVersionProperty : IVersionFileProperty
 {
     private string _name { get; }
     private NodeComparisonResult _result { get; }
@@ -21,73 +21,72 @@ public class JsonVersionProperty : VersionFileProperty
         _newValue = newValue;
     }
 
-    public override string Name => _name;
+    public string Name => _name;
 
-    public override object? Value => _newValue;
+    public object? Value => _newValue;
 
-    public override bool IsAdded() => _result == NodeComparisonResult.Added;
-    public override bool IsRemoved() => _result == NodeComparisonResult.Removed;
-    public override bool IsUpdated() => _result == NodeComparisonResult.Updated;
-    public override bool IsGreater(VersionFileProperty otherProperty)
+    public bool IsAdded() => _result == NodeComparisonResult.Added;
+    public bool IsRemoved() => _result == NodeComparisonResult.Removed;
+    public bool IsUpdated() => _result == NodeComparisonResult.Updated;
+    public static IVersionFileProperty SelectJsonProperty(IVersionFileProperty repoProp, IVersionFileProperty vmrProp)
     {
         // Are these even comparable?
-        if (otherProperty.GetType() != typeof(JsonVersionProperty))
+        if (repoProp.GetType() != typeof(JsonVersionProperty) || vmrProp.GetType() != typeof(JsonVersionProperty))
         {
-            throw new ArgumentException($"Cannot compare {GetType()} with {otherProperty.GetType()}");
+            throw new ArgumentException($"Cannot compare {repoProp.GetType()} with {vmrProp.GetType()}");
         }
         // Is one of them null?
-        var other = (JsonVersionProperty)otherProperty;
-        if (_newValue == null && other == null)
+        if (repoProp.Value == null && vmrProp == null)
         {
-            throw new ArgumentException($"Compared values for '{_name}' are null");
+            throw new ArgumentException($"Compared values for '{repoProp}' are null");
         }
-        if (_newValue == null)
+        if (repoProp == null)
         {
-            return false;
+            return vmrProp!;
         }
-        if (other._newValue == null) 
+        if (vmrProp.Value == null) 
         {
-            return true;
+            return repoProp!;
         }
 
         // Are the value types the same?
-        if (_newValue.GetType() != other._newValue.GetType())
+        if (repoProp.Value!.GetType() != vmrProp.Value!.GetType())
         {
-            throw new ArgumentException($"Cannot compare {GetType()} with {otherProperty.GetType()} because their values are of different types.");
+            throw new ArgumentException($"Cannot compare {repoProp.Value.GetType()} with {vmrProp.Value.GetType()} because their values are of different types.");
         }
 
-        if (_newValue.GetType() == typeof(List<string>))
+        if (repoProp.Value!.GetType() == typeof(List<string>))
         {
             throw new ArgumentException($"Cannot compare properties with {nameof(List<string>)} values.");
         }
 
-        if (_newValue.GetType() == typeof(bool))
+        if (repoProp.Value!.GetType() == typeof(bool))
         {
             // if values are different, throw an exception
-            if (!_newValue.Equals(other._newValue))
+            if (!repoProp.Value!.Equals(vmrProp.Value))
             {
-                throw new ArgumentException($"Key {Name} value has different boolean values in properties.");
+                throw new ArgumentException($"Key {repoProp.Name} value has different boolean values in properties.");
             }
-            return true;
+            return repoProp;
         }
 
-        if (_newValue.GetType() == typeof(int))
+        if (repoProp.Value!.GetType() == typeof(int))
         {
-            return (int)_newValue > (int)other._newValue;
+            return (int)repoProp.Value! > (int)vmrProp.Value! ? repoProp : vmrProp;
         }
 
-        if (_newValue.GetType() == typeof(string))
+        if (repoProp.Value!.GetType() == typeof(string))
         {
             // if we're able to parse both values as SemanticVersion, take the bigger one
-            if (SemanticVersion.TryParse(_newValue.ToString()!, out var thisVersion) &&
-                SemanticVersion.TryParse(other._newValue.ToString()!, out var otherVersion))
+            if (SemanticVersion.TryParse(repoProp.Value!.ToString()!, out var repoVersion) &&
+                SemanticVersion.TryParse(vmrProp.Value!.ToString()!, out var vmrVersion))
             {
-                return thisVersion > otherVersion;
+                return repoVersion > vmrVersion ? repoProp : vmrProp;
             }
             // if we can't parse both values as SemanticVersion, that means one is using a different property like $(Version), so throw an exception
-            throw new ArgumentException($"Key {Name} value has different string values in properties, and cannot be parsed as SemanticVersion");
+            throw new ArgumentException($"Key {repoProp.Name} value has different string values in properties, and cannot be parsed as SemanticVersion");
         }
 
-        throw new ArgumentException($"Cannot compare properties with {_newValue.GetType()} values.");
+        throw new ArgumentException($"Cannot compare properties with {repoProp.Value!.GetType()} values.");
     }
 }

@@ -12,13 +12,13 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 public class ConflictingDependencyUpdateException : Exception
 {
     public ConflictingDependencyUpdateException(
-            VersionFileProperty repoUpdate,
-            VersionFileProperty vmrUpdate)
+            IVersionFileProperty repoUpdate,
+            IVersionFileProperty vmrUpdate)
         : base(ConstructMessage(repoUpdate, vmrUpdate))
     {
     }
 
-    private static string ConstructMessage(VersionFileProperty repoUpdate, VersionFileProperty vmrUpdate)
+    private static string ConstructMessage(IVersionFileProperty repoUpdate, IVersionFileProperty vmrUpdate)
     {
         var message = new StringBuilder();
         message.AppendLine($"Conflicting updates of asset {repoUpdate.Name} found between a repo and a VMR");
@@ -29,7 +29,7 @@ public class ConflictingDependencyUpdateException : Exception
         return message.ToString();
     }
 
-    private static string ConstructMessageForUpdate(VersionFileProperty update)
+    private static string ConstructMessageForUpdate(IVersionFileProperty update)
     {
         if (update.IsRemoved())
         {
