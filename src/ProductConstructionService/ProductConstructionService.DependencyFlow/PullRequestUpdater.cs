@@ -1109,6 +1109,14 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 subscription.Id);
             return;
         }
+        catch (ManualChangesWouldGetOverwrittenException exception)
+        {
+            if (pr != null)
+            {
+
+            }
+            return;
+        }
         catch (Exception)
         {
             _logger.LogError("Failed to flow source changes for build {buildId} in subscription {subscriptionId}",

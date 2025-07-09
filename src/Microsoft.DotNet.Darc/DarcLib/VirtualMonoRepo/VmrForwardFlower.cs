@@ -272,7 +272,27 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         var patchName = _vmrInfo.TmpPath / $"{headBranch.Replace('/', '-')}.patch";
         var branchName = currentFlow.GetBranchName();
 
-        
+        var result = await _processManager.ExecuteGit(
+            _vmrInfo.VmrPath,
+            [
+                "log",
+                "--reverse",
+                "--pretty=format:\"%H %an\"",
+                $"{targetBranch}..{headBranch}"]);
+
+        result.ThrowIfFailed($"Failed to get commits from {targetBranch} to HEAD in {sourceRepo.Path}");
+        // splits the output into 
+        List<(string sha, string commiter)> headBranchCommits = result.StandardOutput
+            .Trim('\"')
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries) // split by lines
+            .Select(line => line.Split(' ', 2)) // split by space, but only once
+            .Select(l => (l[0], l[1]))
+            .ToList();
+        var manualCommits = headBranchCommits.Where(c => c.commiter != Constants.DefaultCommitAuthor);
+        if (manualCommits.Count() > 0)
+        {
+            throw new ManualChangesWouldGetOverwrittenException(manualCommits.Select(c => c.sha).ToList());
+        }
 
         // We will remove everything not-cloaked and replace it with current contents of the source repo
         // When flowing to the VMR, we remove all files but the cloaked files
@@ -282,7 +302,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             .. mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule)
         ];
 
-        var result = await _processManager.Execute(
+        result = await _processManager.Execute(
             _processManager.GitExecutable,
             ["rm", "-r", "-q", "--", .. removalFilters],
             workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
