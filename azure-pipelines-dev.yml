@@ -54,7 +54,7 @@ resources:
     ref: refs/tags/release
 
 extends:
-  template: ${{ true && 'v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates' || 'v1/1ES.Unofficial.PipelineTemplate.yml@1ESPipelineTemplates' }}
+  template: ${{ if eq(true, true) }}v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates${{ else }}v1/1ES.Unofficial.PipelineTemplate.yml@1ESPipelineTemplates${{ end }}
   parameters:
     pool:
       name: $(DncEngInternalBuildPool)
