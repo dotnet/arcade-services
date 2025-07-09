@@ -4,4 +4,12 @@ trigger:
       - main
       - production
 
-template: azure-pipelines-shared.yml
+resources:
+  repositories:
+  - repository: 1ESPipelineTemplates
+    type: git
+    name: 1ESPipelineTemplates/1ESPipelineTemplates
+    ref: refs/tags/release
+
+stages:
+- template: azure-pipelines-shared.yml
