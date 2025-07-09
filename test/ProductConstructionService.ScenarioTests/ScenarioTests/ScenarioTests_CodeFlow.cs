@@ -458,7 +458,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                                                     TestRepository.VmrTestRepoName,
                                                     vmrBranchName,
                                                     "Stopping code flow updates for this pull request as the following commits would get overwritten");
-                                                pr.Head.Sha.Should().Be(manualChangeSha)
+                                                pr.Head.Sha.Should().Be(manualChangeSha);
                                             }
                                         }
                                     }
