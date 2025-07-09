@@ -1,18 +1,5 @@
 variables:
-- name: _TeamName
-  value: DotNetCore
-- name: _PublishUsingPipelines
-  value: true
-- name: _DotNetArtifactsCategory
-  value: .NETCore
-- name: AzdoOrgUri
-  value: https://dev.azure.com/dnceng
-- name: AzdoProject
-  value: internal
-- name: resourceGroupName
-  value: product-construction-service
-- name: containerName
-  value: product-construction-service.api
+- template: azure-pipelines-shared-variables.yml
 
 trigger:
   batch: true
@@ -21,7 +8,19 @@ trigger:
     - main
     - production
 
+resources:
+  repositories:
+  - repository: 1ESPipelineTemplates
+    type: git
+    name: 1ESPipelineTemplates/1ESPipelineTemplates
+    ref: refs/tags/release
+
 extends:
-  template: azure-pipelines-shared.yml@self
+  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
-    isProd: true
+    pool:
+      name: $(DncEngInternalBuildPool)
+      image: 1es-windows-2019
+      os: windows
+    stages:
+    - template: azure-pipelines-shared-jobs.yml
