@@ -1392,6 +1392,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             {
                 sb.AppendLine($"- {commit}");
             }
+            sb.AppendLine();
             sb.AppendLine("Codeflow will resume after this PR is merged");
             await remote.CommentPullRequestAsync(pr.Url, sb.ToString());
         }
