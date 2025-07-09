@@ -56,8 +56,7 @@ public class SimpleConfigJsonFlattenerTests
         result["msbuild-sdks:Microsoft.DotNet.Arcade.Sdk"].Should().Be("8.0.0-beta.25326.1");
         result["nested:deep:value"].Should().Be("deeply nested");
         
-        // Test numeric values (flattened as strings)
-        result["version"].Should().Be("1");
+        result["version"].Should().Be(1);
         
         // Test boolean values (preserved as booleans)
         result["isRoot"].Should().BeOfType<bool>().And.Be(true);
