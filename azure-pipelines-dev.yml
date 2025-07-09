@@ -1,5 +1,5 @@
 variables:
-- template: azure-pipelines-shared.yml
+- template: azure-pipelines-shared-variables.yml
 
 trigger:
   batch: true
