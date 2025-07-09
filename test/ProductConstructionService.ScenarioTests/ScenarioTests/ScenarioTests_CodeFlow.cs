@@ -6,6 +6,7 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using NUnit.Framework;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using FluentAssertions;
 
 #nullable enable
 namespace ProductConstructionService.ScenarioTests.ScenarioTests;
@@ -421,6 +422,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                                     await File.WriteAllTextAsync(newFileInPr, "changes made in PR");
                                     await GitAddAllAsync();
                                     await GitCommitAsync("Add changes to PR file");
+                                    var manualChangeSha = (await GitGetCurrentSha()).TrimEnd();
 
                                     await using (await PushGitBranchAsync("origin", forwardFlowPR.Head.Ref))
                                     {
@@ -456,6 +458,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                                                     TestRepository.VmrTestRepoName,
                                                     vmrBranchName,
                                                     "Stopping code flow updates for this pull request as the following commits would get overwritten");
+                                                pr.Head.Sha.Should().Be(manualChangeSha)
                                             }
                                         }
                                     }
