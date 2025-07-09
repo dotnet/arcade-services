@@ -52,7 +52,7 @@ resources:
     ref: refs/tags/release
 
 extends:
-  template: ${{ if parameters.isProd }}v1/1ES.Official.PipelineTemplate.yml${{ else }}v1/1ES.Unofficial.PipelineTemplate.yml${{ end }}@1ESPipelineTemplates
+  template: ${{ if parameters.isProd }}v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates${{ else }}v1/1ES.Unofficial.PipelineTemplate.yml@1ESPipelineTemplates${{ end }}
   parameters:
     pool:
       name: $(DncEngInternalBuildPool)
