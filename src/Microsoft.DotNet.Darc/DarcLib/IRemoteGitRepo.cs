@@ -169,6 +169,13 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// <param name="pullRequestUri">Uri of the pull request</param>
     /// <param name="comment">Comment message</param>
     Task CommentPullRequestAsync(string pullRequestUri, string comment);
+
+    /// <summary>
+    ///     Get the comments for the specified pull request.
+    /// </summary>
+    /// <param name="pullRequestUrl">Url of pull request.</param>
+    /// <returns>List of comments</returns>
+    Task<List<string>> GetPullRequestCommentsAsync(string pullRequestUrl);
 }
 
 #nullable disable

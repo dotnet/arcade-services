@@ -28,5 +28,5 @@ public class Constants
 
     public const string EngFolderName = "eng";
     public const string CommonScriptFilesPath = $"{EngFolderName}/common";
-    public const string DefaultCommitAuthor = "dotnet-maestro[bot";
+    public const string DefaultCommitAuthor = "dotnet-maestro[bot]";
 }

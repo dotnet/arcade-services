@@ -311,7 +311,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
     }
 
     [Test]
-    public async Task NewTest()
+    public async Task Vmr_ForwardFlowManualPRChangesDontGetOverwritten()
     {
         var channelName = GetTestChannelName();
         var vmrBranchName = GetTestBranchName();
@@ -452,7 +452,10 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                                                 // Now trigger the subscription
                                                 await TriggerSubscriptionAsync(forwardFlowSubscriptionId.Value);
                                                 TestContext.WriteLine("Verifying subscription PR");
-                                                await WaitForPullRequestAsync(TestRepository.VmrTestRepoName, vmrBranchName);
+                                                var pr = await WaitForPullRequestComment(
+                                                    TestRepository.VmrTestRepoName,
+                                                    vmrBranchName,
+                                                    "Stopping code flow updates for this pull request as the following commits would get overwritten");
                                             }
                                         }
                                     }

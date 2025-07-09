@@ -100,9 +100,8 @@ public class ManualChangesWouldGetOverwrittenException : Exception
     public ManualChangesWouldGetOverwrittenException(List<string> overwrittenCommits)
         : base("Failed to flow changes as they would overwrite manual changes to the PR")
     {
-        _overwrittenCommits = overwrittenCommits;
+        OverwrittenCommits = overwrittenCommits;
     }
 
-    private readonly List<string> _overwrittenCommits;
-
+    public List<string> OverwrittenCommits { get; }
 }

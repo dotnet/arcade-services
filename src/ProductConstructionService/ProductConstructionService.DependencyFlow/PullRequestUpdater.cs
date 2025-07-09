@@ -1,7 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Immutable;
+using System.Text;
+using LibGit2Sharp;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -18,6 +21,7 @@ using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
 using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
@@ -48,6 +52,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private readonly IPcsVmrBackFlower _vmrBackFlower;
     private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly ILogger _logger;
+
+    private const string OverwrittenCommitMessage = "Stopping code flow updates for this pull request as the following commits would get overwritten:";
 
     protected readonly IReminderManager<SubscriptionUpdateWorkItem> _pullRequestUpdateReminders;
     protected readonly IReminderManager<PullRequestCheck> _pullRequestCheckReminders;
@@ -1113,7 +1119,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             if (pr != null)
             {
-
+                // TODO https://github.com/dotnet/arcade-services/issues/5030
+                // This is only a temporary band aid solution, we should figure out the best way to fix the algorithm so the flow continues as expected 
+                await HandleOverwrittingChanges(subscription, exception.OverwrittenCommits, pr, update);
             }
             return;
         }
@@ -1366,6 +1374,28 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         pr.MergeState = InProgressPullRequestState.Conflict;
         pr.SourceSha = remoteCommit;
+        pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
+        await _pullRequestState.SetAsync(pr);
+        await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
+        await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);
+    }
+
+    private async Task HandleOverwrittingChanges(SubscriptionDTO subscription, List<string> commits, InProgressPullRequest pr, SubscriptionUpdateWorkItem update)
+    {
+        var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
+        var prComments = await remote.GetPullRequestCommentsAsync(pr.Url);
+        if (!prComments.Any(c => c.Contains(OverwrittenCommitMessage)))
+        {
+            StringBuilder sb = new();
+            sb.AppendLine(OverwrittenCommitMessage);
+            foreach (var commit in commits)
+            {
+                sb.AppendLine($"- {commit}");
+            }
+            sb.AppendLine("Codeflow will resume after this PR is merged");
+            await remote.CommentPullRequestAsync(pr.Url, sb.ToString());
+        }
+
         pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
         await _pullRequestState.SetAsync(pr);
         await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
