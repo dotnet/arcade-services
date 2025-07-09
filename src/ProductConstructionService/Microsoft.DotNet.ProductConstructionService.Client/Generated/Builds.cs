@@ -77,6 +77,11 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             CancellationToken cancellationToken = default
         );
 
+        Task<List<Models.SourceManifestEntry>> GetSourceManifestAsync(
+            int buildId,
+            CancellationToken cancellationToken = default
+        );
+
         Task<Models.Build> UpdateAsync(
             Models.BuildUpdate body,
             int buildId,
@@ -681,6 +686,76 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                 Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedGetCommitRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
+        }
+
+        partial void HandleFailedGetSourceManifestRequest(RestApiException ex);
+
+        public async Task<List<Models.SourceManifestEntry>> GetSourceManifestAsync(
+            int buildId,
+            CancellationToken cancellationToken = default
+        )
+        {
+
+            const string apiVersion = "2020-02-20";
+
+            var _baseUri = Client.Options.BaseUri;
+            var _url = new RequestUriBuilder();
+            _url.Reset(_baseUri);
+            _url.AppendPath(
+                "/api/builds/{buildId}/source-manifest".Replace("{buildId}", Uri.EscapeDataString(Client.Serialize(buildId))),
+                false);
+
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+
+
+            using (var _req = Client.Pipeline.CreateRequest())
+            {
+                _req.Uri = _url;
+                _req.Method = RequestMethod.Get;
+
+                using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
+                {
+                    if (_res.Status < 200 || _res.Status >= 300)
+                    {
+                        await OnGetSourceManifestFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    if (_res.ContentStream == null)
+                    {
+                        await OnGetSourceManifestFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    using (var _reader = new StreamReader(_res.ContentStream))
+                    {
+                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
+                        var _body = Client.Deserialize<List<Models.SourceManifestEntry>>(_content);
+                        return _body;
+                    }
+                }
+            }
+        }
+
+        internal async Task OnGetSourceManifestFailed(Request req, Response res)
+        {
+            string content = null;
+            if (res.ContentStream != null)
+            {
+                using (var reader = new StreamReader(res.ContentStream))
+                {
+                    content = await reader.ReadToEndAsync().ConfigureAwait(false);
+                }
+            }
+
+            var ex = new RestApiException<Models.ApiError>(
+                req,
+                res,
+                content,
+                Client.Deserialize<Models.ApiError>(content)
+                );
+            HandleFailedGetSourceManifestRequest(ex);
             HandleFailedRequest(ex);
             Client.OnFailedRequest(ex);
             throw ex;

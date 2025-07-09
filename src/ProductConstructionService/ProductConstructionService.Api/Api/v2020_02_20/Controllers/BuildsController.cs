@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Internal;
 using ProductConstructionService.DependencyFlow.WorkItems;
@@ -185,6 +186,47 @@ public class BuildsController : v2019_01_16.Controllers.BuildsController
         }
 
         return Ok(new ProductConstructionService.Api.v2020_02_20.Models.Commit(commit.Author, commit.Sha, commit.Message));
+    }
+
+    /// <summary>
+    ///   Gets the source manifest for a VMR build at the specified commit.
+    /// </summary>
+    /// <param name="buildId">The id of the <see cref="Build"/>.</param>
+    [HttpGet("{buildId}/source-manifest")]
+    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<SourceManifestEntry>), Description = "The source manifest at the build's commit")]
+    [SwaggerApiResponse(HttpStatusCode.NotFound, Description = "Build not found or source manifest not available")]
+    [ValidateModelState]
+    public async Task<IActionResult> GetSourceManifest(int buildId)
+    {
+        Maestro.Data.Models.Build? build = await _context.Builds.FirstOrDefaultAsync(b => b.Id == buildId);
+        if (build == null)
+        {
+            return NotFound();
+        }
+
+        string repository = build.GetRepository();
+        if (string.IsNullOrEmpty(repository))
+        {
+            return NotFound("Repository information not available for this build");
+        }
+
+        try
+        {
+            IRemote remote = await _factory.CreateRemoteAsync(repository);
+            SourceManifest sourceManifest = await remote.GetSourceManifestAsync(repository, build.Commit);
+            
+            var entries = sourceManifest.Repositories
+                .Select(r => new SourceManifestEntry(r.Path, r.RemoteUri, r.CommitSha, r.BarId))
+                .OrderBy(e => e.Path)
+                .ToList();
+            
+            return Ok(entries);
+        }
+        catch (Exception ex)
+        {
+            // Source manifest may not exist for non-VMR builds
+            return NotFound($"Source manifest not found: {ex.Message}");
+        }
     }
 
     [ApiRemoved]

@@ -31,6 +31,10 @@ else
             <SubscriptionGrid Repository="@Repo" ChannelId="@ChannelId" />
         </ErrorBoundary>
 
+        <ErrorBoundary>
+            <SourceManifest BuildId="@_build.Id" />
+        </ErrorBoundary>
+
         <Assets BuildId="@_build.Id" />
 
     </FluentStack>
