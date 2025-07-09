@@ -891,6 +891,7 @@ public class VmrPatchHandlerTests
             "diff",
             "--patch",
             "--binary",
+            "--no-color",
             "--output",
             new NativePath(patchPath),
             $"{Sha1}..{Sha2}",
