@@ -1,8 +1,3 @@
-parameters:
-- name: isProd
-  type: boolean
-  default: false
-
 variables:
 # For $(DncEngInternalBuildPool) used below
 - template: /eng/common/templates-official/variables/pool-providers.yml@self
@@ -43,6 +38,13 @@ variables:
 - ${{ else }}:
   - name: devBranchSuffix
     value: -dev
+
+trigger:
+  batch: true
+  branches:
+    exclude:
+    - main
+    - production
 
 resources:
   repositories:
@@ -170,15 +172,14 @@ extends:
           symbolPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
           SDLValidationParameters:
             enable: true
-            params: >-
-              -SourceToolsList @("policheck","credscan")
-              -TsaInstanceURL $(_TsaInstanceURL)
-              -TsaProjectName $(_TsaProjectName)
-              -TsaNotificationEmail $(_TsaNotificationEmail)
-              -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
-              -TsaBugAreaPath $(_TsaBugAreaPath)
-              -TsaIterationPath $(_TsaIterationPath)
-              -TsaRepositoryName "Arcade-Services"
-              -TsaCodebaseName "Arcade-Services"
-              -TsaPublish $True
-              -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")
+            params: '-SourceToolsList @("policheck","credscan")
+            -TsaInstanceURL $(_TsaInstanceURL)
+            -TsaProjectName $(_TsaProjectName)
+            -TsaNotificationEmail $(_TsaNotificationEmail)
+            -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
+            -TsaBugAreaPath $(_TsaBugAreaPath)
+            -TsaIterationPath $(_TsaIterationPath)
+            -TsaRepositoryName "Arcade-Services"
+            -TsaCodebaseName "Arcade-Services"
+            -TsaPublish $True
+            -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
