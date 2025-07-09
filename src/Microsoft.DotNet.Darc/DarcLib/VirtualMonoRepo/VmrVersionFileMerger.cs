@@ -102,10 +102,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
         var finalChanges = MergeDependencyChanges(targetRepoChanges, vmrChanges);
 
-        var currentJson = await targetRepo.GetFileFromGitAsync(jsonRelativePath)
-            ?? (allowMissingFiles
-                ? EmptyJsonString
-                : throw new FileNotFoundException($"File not found at {targetRepo.Path / jsonRelativePath} for reference HEAD"));
+        var currentJson = await GetJsonFromGit(targetRepo, jsonRelativePath, "HEAD", allowMissingFiles);
         var mergedJson = ApplyJsonChanges(currentJson, finalChanges);
 
         var newJson = new GitFile(targetRepo.Path / jsonRelativePath, mergedJson);

@@ -191,6 +191,8 @@ public class VmrVersionFileMergerTests
             .ReturnsAsync(targetPreviousJson);
         _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, TargetCurrentSha, It.IsAny<string>()))
             .ReturnsAsync(targetCurrentJson);
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, "HEAD", It.IsAny<string>()))
+            .ReturnsAsync(targetCurrentJson);
         _vmrMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()    ))
             .ReturnsAsync(vmrPreviousJson);
         _vmrMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
@@ -367,6 +369,8 @@ public class VmrVersionFileMergerTests
             .ReturnsAsync(targetCurrentKey);
         _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), targetBranch, It.IsAny<string>()))
             .ReturnsAsync(targetCurrentKey);
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), "HEAD", It.IsAny<string>()))
+            .ReturnsAsync(targetCurrentKey);
         _vmrMock.Setup(v => v.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()))
             .ReturnsAsync(vmrPreviousKey);
         _vmrMock.Setup(v => v.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
@@ -417,16 +421,26 @@ public class VmrVersionFileMergerTests
             .Select(d => (d.Name, d.Version))
             .Should()
             .BeEquivalentTo(expectedVersions, options => options.WithStrictOrdering());
-        result.additions.Should().HaveCount(1);
+        result.additions.Should().HaveCount(3);
         result.removals.Should().HaveCount(1);
-        result.updates.Should().HaveCount(1);
-        var addition = (DependencyDetail)result.additions[0].Value!;
-        addition.Name.Should().Be("Package.Added.In.VMR");
-        addition.Version.Should().Be("2.0.0");
-        result.removals[0].Should().Be("Package.Removed.In.VMR");
-        var update = (DependencyDetail)result.updates[0].Value!;
-        update.Name.Should().Be("Package.Updated.In.Both");
-        update.Version.Should().Be("3.0.0");
+        result.updates.Should().HaveCount(2);
+        List<(string, string)> expectedAdditions = [
+            ("Package.Added.In.Repo", "1.0.0"),
+            ("Package.Added.In.Both", "2.2.2"),
+            ("Package.Added.In.VMR", "2.0.0")];
+        result.additions
+            .Select(a => (DependencyDetail)a.Value!)
+            .Select(d => (d.Name, d.Version))
+            .Should()
+            .BeEquivalentTo(expectedAdditions, options => options.WithStrictOrdering());
+        List<(string, string)> expectedUpdates = [
+            ("Package.From.Build", "1.0.1"),
+            ("Package.Updated.In.Both", "3.0.0")];
+        result.updates
+            .Select(u => (DependencyDetail)u.Value!)
+            .Select(d => (d.Name, d.Version))
+            .Should()
+            .BeEquivalentTo(expectedUpdates, options => options.WithStrictOrdering());
     }
 
     [Test]
