@@ -71,7 +71,7 @@ public class JsonVersionProperty : VersionFileProperty
             return true;
         }
 
-        if (_newValue.GetType() == typeof(Int32))
+        if (_newValue.GetType() == typeof(int))
         {
             return (int)_newValue > (int)property._newValue;
         }
