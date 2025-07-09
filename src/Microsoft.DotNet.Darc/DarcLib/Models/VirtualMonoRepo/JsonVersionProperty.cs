@@ -39,7 +39,7 @@ public class JsonVersionProperty : VersionFileProperty
         var property = (JsonVersionProperty)otherProperty;
         if (_newValue == null && property == null)
         {
-            throw new ArgumentException("Cannot compare null properties.");
+            throw new ArgumentException($"Compared values for '{_name}' are null");
         }
         if (_newValue == null)
         {
