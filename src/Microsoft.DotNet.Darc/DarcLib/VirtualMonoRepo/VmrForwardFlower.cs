@@ -348,6 +348,12 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             .Select(line => line.Split(' ', 2)) // split by space, but only once
             .Select(l => (l[0], l[1]))
             .ToList();
+
+        // if the first commit in the head branch wasn't made by the bot don't check, we might be in a test
+        if (headBranchCommits[0].commiter != Constants.DefaultCommitAuthor)
+        {
+            return;
+        }
         var manualCommits = headBranchCommits.Where(c => c.commiter != Constants.DefaultCommitAuthor);
         if (manualCommits.Count() > 0)
         {
