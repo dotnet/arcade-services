@@ -1,43 +1,5 @@
 variables:
-# For $(DncEngInternalBuildPool) used below
-- template: /eng/common/templates-official/variables/pool-providers.yml@self
-- group: SDL_Settings
-- name: _TeamName
-  value: DotNetCore
-- name: _PublishUsingPipelines
-  value: trueN
-- name: _DotNetArtifactsCategory
-  value: .NETCore
-- name: AzdoOrgUri
-  value: https://dev.azure.com/dnceng
-- name: AzdoProject
-  value: internal
-- name: resourceGroupName
-  value: product-construction-service
-- name: containerName
-  value: product-construction-service.api
-
-- ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-  - name: dockerRegistryUrl
-    value: productconstructionprod.azurecr.io
-  - name: containerRegistryName
-    value: productconstructionprod
-  - name: serviceConnectionName
-    value: ProductConstructionServiceDeploymentProd
-- ${{ else }}:
-  - name: dockerRegistryUrl
-    value: productconstructionint.azurecr.io
-  - name: containerRegistryName
-    value: productconstructionint
-  - name: serviceConnectionName
-    value: ProductConstructionServiceDeploymentInt
-
-- ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
-  - name: devBranchSuffix
-    value:
-- ${{ else }}:
-  - name: devBranchSuffix
-    value: -dev
+- template: azure-pipelines-shared.yml
 
 trigger:
   batch: true
