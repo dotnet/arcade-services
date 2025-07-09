@@ -339,9 +339,9 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             TestParameters.GitHubTestOrg,
             targetDirectory: TestRepository.TestRepo1Name);
 
-        await using TemporaryDirectory testRepoFolder = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
+        TemporaryDirectory testRepoFolder = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
         string sourceRepoUri = GetGitHubRepoUrl(TestRepository.VmrTestRepoName);
-        await using TemporaryDirectory vmrFolder = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
+        TemporaryDirectory vmrFolder = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
         var backflowNewFilePath = vmrFolder.Directory / VmrInfo.GetRelativeRepoSourcesPath(TestRepository.TestRepo1Name) /  TestFile1Name;
         var forwardFlowNewFilePath = Path.Combine(testRepoFolder.Directory, "forwardFlowFile.txt");
 
