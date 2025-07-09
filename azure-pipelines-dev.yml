@@ -15,13 +15,12 @@ variables:
   value: product-construction-service.api
 
 trigger:
-  batch: true
   branches:
-    include:
+    exclude:
     - main
     - production
 
 extends:
   template: azure-pipelines-shared.yml@self
   parameters:
-    isProd: true
+    isProd: false
