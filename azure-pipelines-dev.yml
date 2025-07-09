@@ -1,4 +1,7 @@
 variables:
+# For $(DncEngInternalBuildPool) used below
+- template: /eng/common/templates-official/variables/pool-providers.yml@self
+- group: SDL_Settings
 - name: _TeamName
   value: DotNetCore
 - name: _PublishUsingPipelines
@@ -14,11 +17,169 @@ variables:
 - name: containerName
   value: product-construction-service.api
 
+- ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+  - name: dockerRegistryUrl
+    value: productconstructionprod.azurecr.io
+  - name: containerRegistryName
+    value: productconstructionprod
+  - name: serviceConnectionName
+    value: ProductConstructionServiceDeploymentProd
+- ${{ else }}:
+  - name: dockerRegistryUrl
+    value: productconstructionint.azurecr.io
+  - name: containerRegistryName
+    value: productconstructionint
+  - name: serviceConnectionName
+    value: ProductConstructionServiceDeploymentInt
+
+- ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
+  - name: devBranchSuffix
+    value:
+- ${{ else }}:
+  - name: devBranchSuffix
+    value: -dev
+
 trigger:
+  batch: true
   branches:
-    exclude:
+    include:
     - main
     - production
 
+resources:
+  repositories:
+  - repository: 1ESPipelineTemplates
+    type: git
+    name: 1ESPipelineTemplates/1ESPipelineTemplates
+    ref: refs/tags/release
+
 extends:
-  template: azure-pipelines-shared.yml@self
+  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  parameters:
+    pool:
+      name: $(DncEngInternalBuildPool)
+      image: 1es-windows-2019
+      os: windows
+
+    stages:
+    - stage: Build
+      dependsOn: []
+      displayName: Build
+      jobs:
+      - template: /eng/common/templates-official/jobs/jobs.yml@self
+        parameters:
+          artifacts:
+            publish:
+              logs: true
+              ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
+                manifests: true
+          enableTelemetry: true
+          enableMicrobuild: false
+          enablePublishTestResults: false
+          enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
+
+          jobs:
+          - job: Windows_NT
+            timeoutInMinutes: 90
+            displayName: Build repository
+            pool:
+              name: $(DncEngInternalBuildPool)
+              image: 1es-windows-2022
+              os: windows
+
+            variables:
+            # DotNet-Symbol-Server-Pats provides: microsoft-symbol-server-pat, symweb-symbol-server-pat
+            # Publish-Build-Assets provides: MaestroAppClientId, MaestroStagingAppClientId, BotAccount-dotnet-maestro-bot-PAT
+            - group: DotNet-Symbol-Server-Pats
+            - group: Publish-Build-Assets
+            - _InternalBuildArgs: >
+                /p:DotNetSignType=$(_SignType)
+                /p:TeamName=$(_TeamName)
+                /p:DotNetPublishUsingPipelines=$(_PublishUsingPipelines)
+                /p:DotNetArtifactsCategory=$(_DotNetArtifactsCategory)
+                /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
+                /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
+                /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+
+            - _BuildConfig: Release
+            - _PublishType: blob
+            - _SignType: test
+            
+            steps:
+            - checkout: self
+              clean: true
+
+            - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production')}}:
+              - template: /eng/common/templates-official/steps/retain-build.yml@self
+                parameters:
+                  AzdoOrgUri: $(AzdoOrgUri)
+                  AzdoProject: $(AzdoProject)
+                  BuildId: $(Build.BuildId)
+
+            - template: /eng/templates/steps/build.yml@self
+              parameters:
+                configuration: $(_BuildConfig)
+                buildArgs: $(_InternalBuildArgs)
+
+            templateContext:
+              outputs:
+              - output: pipelineArtifact
+                path: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.ScenarioTests\$(_BuildConfig)\net8.0\publish
+                artifact: ProductConstructionService.ScenarioTests
+                displayName: Publish E2E Tests
+
+              - output: pipelineArtifact
+                path: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Cli\$(_BuildConfig)\net8.0
+                artifact: ProductConstructionService.Cli
+                displayName: Publish PCS CLI
+
+      - job: BuildAndPublishDocker
+        displayName: Build/publish docker image
+        pool:
+          name: NetCore1ESPool-Internal
+          demands: ImageOverride -equals 1es-ubuntu-2204
+          os: linux
+
+        steps:
+        - checkout: self
+
+        - template: /eng/templates/steps/docker-build.yml@self
+          parameters:
+            devBranchSuffix: $(devBranchSuffix)
+            dockerImageName: $(dockerRegistryUrl)/$(containerName)
+
+        - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: $(serviceConnectionName)
+              scriptType: pscore
+              scriptLocation: inlineScript
+              inlineScript: |
+                az acr login --name $(containerRegistryName)
+                docker push "$(dockerRegistryUrl)/$(containerName):$(DockerTag.newDockerImageTag)"
+            displayName: Push docker image
+
+    - template: /eng/templates/stages/deploy.yaml@self
+      parameters:
+        isProd: ${{ eq(variables['Build.SourceBranch'], 'refs/heads/production') }}
+
+    - ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
+      - template: /eng/common/templates-official/post-build/post-build.yml@self
+        parameters:
+          enableSymbolValidation: true
+          enableSigningValidation: false
+          artifactsPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
+          symbolPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
+          SDLValidationParameters:
+            enable: true
+            params: '-SourceToolsList @("policheck","credscan")
+            -TsaInstanceURL $(_TsaInstanceURL)
+            -TsaProjectName $(_TsaProjectName)
+            -TsaNotificationEmail $(_TsaNotificationEmail)
+            -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
+            -TsaBugAreaPath $(_TsaBugAreaPath)
+            -TsaIterationPath $(_TsaIterationPath)
+            -TsaRepositoryName "Arcade-Services"
+            -TsaCodebaseName "Arcade-Services"
+            -TsaPublish $True
+            -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
