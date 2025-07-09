@@ -1,5 +1,4 @@
 # For $(DncEngInternalBuildPool) used below
-- template: /eng/common/templates-official/variables/pool-providers.yml@self
 - group: SDL_Settings
 - name: _TeamName
   value: DotNetCore
