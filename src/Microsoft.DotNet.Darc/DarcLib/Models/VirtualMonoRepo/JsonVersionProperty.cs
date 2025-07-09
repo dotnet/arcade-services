@@ -36,8 +36,8 @@ public class JsonVersionProperty : VersionFileProperty
             throw new ArgumentException($"Cannot compare {GetType()} with {otherProperty.GetType()}");
         }
         // Is one of them null?
-        var property = (JsonVersionProperty)otherProperty;
-        if (_newValue == null && property == null)
+        var other = (JsonVersionProperty)otherProperty;
+        if (_newValue == null && other == null)
         {
             throw new ArgumentException($"Compared values for '{_name}' are null");
         }
@@ -45,13 +45,13 @@ public class JsonVersionProperty : VersionFileProperty
         {
             return false;
         }
-        if (property._newValue == null) 
+        if (other._newValue == null) 
         {
             return true;
         }
 
         // Are the value types the same?
-        if (_newValue.GetType() != property._newValue.GetType())
+        if (_newValue.GetType() != other._newValue.GetType())
         {
             throw new ArgumentException($"Cannot compare {GetType()} with {otherProperty.GetType()} because their values are of different types.");
         }
@@ -64,7 +64,7 @@ public class JsonVersionProperty : VersionFileProperty
         if (_newValue.GetType() == typeof(bool))
         {
             // if values are different, throw an exception
-            if (!_newValue.Equals(property._newValue))
+            if (!_newValue.Equals(other._newValue))
             {
                 throw new ArgumentException($"Key {Name} value has different boolean values in properties.");
             }
@@ -73,14 +73,14 @@ public class JsonVersionProperty : VersionFileProperty
 
         if (_newValue.GetType() == typeof(int))
         {
-            return (int)_newValue > (int)property._newValue;
+            return (int)_newValue > (int)other._newValue;
         }
 
         if (_newValue.GetType() == typeof(string))
         {
             // if we're able to parse both values as SemanticVersion, take the bigger one
             if (SemanticVersion.TryParse(_newValue.ToString()!, out var thisVersion) &&
-                SemanticVersion.TryParse(property._newValue.ToString()!, out var otherVersion))
+                SemanticVersion.TryParse(other._newValue.ToString()!, out var otherVersion))
             {
                 return thisVersion > otherVersion;
             }

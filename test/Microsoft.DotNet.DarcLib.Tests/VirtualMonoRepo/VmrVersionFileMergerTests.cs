@@ -277,6 +277,8 @@ public class VmrVersionFileMergerTests
             .ReturnsAsync(targetPreviousJson);
         _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, TargetCurrentSha, It.IsAny<string>()))
             .ReturnsAsync(targetCurrentJson);
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, "HEAD", It.IsAny<string>()))
+            .ReturnsAsync(targetCurrentJson);
         _vmrMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()))
             .ReturnsAsync(vmrPreviousJson);
         _vmrMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
