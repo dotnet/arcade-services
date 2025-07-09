@@ -8,7 +8,7 @@ using NUnit.Framework;
 
 namespace Microsoft.DotNet.DarcLib.Tests.Helpers;
 
-public class JsonFlattenerTests
+public class SimpleConfigJsonFlattenerTests
 {
     [Test]
     public void FlattenJsonToDictionary_AllScenarios_FlattensCorrectly()
@@ -44,7 +44,7 @@ public class JsonFlattenerTests
         """;
 
         // Act
-        var result = JsonFlattener.FlattenJsonToDictionary(json);
+        var result = SimpleConfigJsonFlattener.FlattenSimpleConfigJsonToDictionary(json);
 
         // Assert
         result.Should().HaveCount(12);

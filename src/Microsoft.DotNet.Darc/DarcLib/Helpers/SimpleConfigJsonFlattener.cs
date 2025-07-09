@@ -8,9 +8,14 @@ using System.Text.Json;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Helpers;
 
-public static class JsonFlattener
+/// <summary>
+/// This class is used to flatten simple json config files like global.json and dotnet-tools.json files into a dictionary.
+/// It only supports a limited set of types and structures, which are expected to be simple.
+/// For example, we can expect that arrays will only have strings inside of them
+/// </summary>
+public static class SimpleConfigJsonFlattener
 {
-    public static Dictionary<string, object> FlattenJsonToDictionary(string json)
+    public static Dictionary<string, object> FlattenSimpleConfigJsonToDictionary(string json)
     {
         using var document = JsonDocument.Parse(json);
         Dictionary<string, object> dictionary = [];
@@ -21,17 +26,13 @@ public static class JsonFlattener
         {
             (JsonElement currentElement, string currentPath) = pathsToProcess.Dequeue();
 
-            FlattenJsonElement(currentElement, currentPath, dictionary, pathsToProcess);
+            FlattenSimpleJsonConfigElement(currentElement, currentPath, dictionary, pathsToProcess);
         }
 
         return dictionary;
     }
 
-    /// <summary>
-    /// This method is used to flatten global.json and dotnet-tools.json files into a dictionary, which don't have a complex structure.
-    /// For example, we can expect that arrays won't have other arrays inside of them
-    /// </summary>
-    private static void FlattenJsonElement(JsonElement element, string path, Dictionary<string, object> dictionary, Queue<(JsonElement, string)> pathsToProcess)
+    private static void FlattenSimpleJsonConfigElement(JsonElement element, string path, Dictionary<string, object> dictionary, Queue<(JsonElement, string)> pathsToProcess)
     {
         switch (element.ValueKind)
         {
@@ -44,6 +45,7 @@ public static class JsonFlattener
                 break;
 
             case JsonValueKind.Array:
+                ValidateJsonStringArray(element);
                 dictionary[path] = element.EnumerateArray().Select(item => item.ToString()).ToList();
                 break;
 
@@ -55,9 +57,28 @@ public static class JsonFlattener
                 dictionary[path] = false;
                 break;
 
+            case JsonValueKind.Number:
+                dictionary[path] = element.GetInt32(); // Assuming that all numbers are integers
+                break; 
+
             default:
                 dictionary[path] = element.ToString();
                 break;
+        }
+    }
+
+    public static void ValidateJsonStringArray(JsonElement arrayElement)
+    {
+        if (arrayElement.ValueKind != JsonValueKind.Array)
+        {
+            throw new JsonException("Expected an array element.");
+        }
+        foreach (JsonElement item in arrayElement.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.String)
+            {
+                throw new JsonException("Expected all items in the array to be strings.");
+            }
         }
     }
 }

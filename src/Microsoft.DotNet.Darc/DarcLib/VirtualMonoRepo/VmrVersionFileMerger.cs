@@ -106,11 +106,11 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 : throw new FileNotFoundException($"File not found at {vmr.Path / (VmrInfo.GetRelativeRepoSourcesPath(mappingName) / jsonRelativePath)} for reference {vmrCurrentRef}"));
 
         var targetRepoChanges = FlatJsonComparer.CompareFlatJsons(
-            JsonFlattener.FlattenJsonToDictionary(targetRepoPreviousJson),
-            JsonFlattener.FlattenJsonToDictionary(targetRepoCurrentJson));
+            SimpleConfigJsonFlattener.FlattenSimpleConfigJsonToDictionary(targetRepoPreviousJson),
+            SimpleConfigJsonFlattener.FlattenSimpleConfigJsonToDictionary(targetRepoCurrentJson));
         var vmrChanges = FlatJsonComparer.CompareFlatJsons(
-            JsonFlattener.FlattenJsonToDictionary(vmrPreviousJson),
-            JsonFlattener.FlattenJsonToDictionary(vmrCurrentJson));
+            SimpleConfigJsonFlattener.FlattenSimpleConfigJsonToDictionary(vmrPreviousJson),
+            SimpleConfigJsonFlattener.FlattenSimpleConfigJsonToDictionary(vmrCurrentJson));
 
         var finalChanges = MergeDependencyChanges(targetRepoChanges, vmrChanges);
 
