@@ -71,6 +71,11 @@ public class JsonVersionProperty : VersionFileProperty
             return true;
         }
 
+        if (_newValue.GetType() == typeof(Int32))
+        {
+            return (int)_newValue > (int)property._newValue;
+        }
+
         if (_newValue.GetType() == typeof(string))
         {
             // if we're able to parse both values as SemanticVersion, take the bigger one
