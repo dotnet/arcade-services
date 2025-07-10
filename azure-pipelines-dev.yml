@@ -1,5 +1,5 @@
 variables:
-- template: azure-pipelines-shared-variables.yml
+- template: /eng/templates/azure-pipelines-shared-variables.yml
 
 trigger:
   batch: true
@@ -23,6 +23,6 @@ extends:
       image: 1es-windows-2019
       os: windows
     stages:
-    - template: azure-pipelines-shared-jobs.yml
+    - template: /eng/templates/azure-pipelines-shared-jobs.yml
       parameters:
         isOfficial: false
