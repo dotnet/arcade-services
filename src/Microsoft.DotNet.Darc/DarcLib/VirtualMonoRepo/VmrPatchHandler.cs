@@ -242,7 +242,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             "--cached",
 
             // Options to help with CR/LF and similar problems
-            "--ignore-space-change"
+            "--ignore-space-change",
         };
 
         if (reverseApply)
@@ -433,7 +433,6 @@ public class VmrPatchHandler : IVmrPatchHandler
             "diff",
             "--patch",
             "--binary", // Include binary contents as base64
-            "--no-color",
             "--output", // Store the diff in a .patch file
             patchName,
         };
