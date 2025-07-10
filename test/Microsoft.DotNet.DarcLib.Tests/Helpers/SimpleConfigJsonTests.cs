@@ -4,13 +4,87 @@
 using System;
 using System.Collections.Generic;
 using FluentAssertions;
-using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
 namespace Microsoft.DotNet.DarcLib.Tests.Helpers;
 
-public class FlatJsonComparerTests
+public class SimpleConfigJsonTests
 {
+    [Test]
+    public void FlattenJsonToDictionary_AllScenarios_FlattensCorrectly()
+    {
+        // Arrange - comprehensive JSON with all scenarios from global.json and dotnet-tools.json
+        var json = """
+        {
+          "sdk": {
+            "version": "8.0.303",
+            "rollForward": "minor"
+          },
+          "tools": {
+            "dotnet": "8.0.303",
+            "runtimes": {
+              "dotnet": ["6.0.29"],
+              "aspnetcore": ["6.0.29", "7.0.0"]
+            }
+          },
+          "msbuild-sdks": {
+            "Microsoft.DotNet.Arcade.Sdk": "8.0.0-beta.25326.1"
+          },
+          "version": 1,
+          "isRoot": true,
+          "enabled": false,
+          "nullValue": null,
+          "emptyArray": [],
+          "nested": {
+            "deep": {
+              "value": "deeply nested"
+            }
+          }
+        }
+        """;
+
+        // Act
+        var simpleConfigJson = SimpleConfigJson.Parse(json);
+        var result = simpleConfigJson.Dictionary;
+
+        // Assert
+        result.Should().HaveCount(12);
+        
+        // Test string values
+        result["sdk:version"].Should().Be("8.0.303");
+        result["sdk:rollForward"].Should().Be("minor");
+        result["tools:dotnet"].Should().Be("8.0.303");
+        result["msbuild-sdks:Microsoft.DotNet.Arcade.Sdk"].Should().Be("8.0.0-beta.25326.1");
+        result["nested:deep:value"].Should().Be("deeply nested");
+        
+        result["version"].Should().Be(1);
+        
+        // Test boolean values (preserved as booleans)
+        result["isRoot"].Should().BeOfType<bool>().And.Be(true);
+        result["enabled"].Should().BeOfType<bool>().And.Be(false);
+        
+        // Test null values (flattened as empty strings)
+        result["nullValue"].Should().Be("");
+        
+        // Test arrays (flattened as List<string>)
+        result["tools:runtimes:dotnet"].Should().BeOfType<List<string>>();
+        var dotnetRuntimes = (List<string>)result["tools:runtimes:dotnet"];
+        dotnetRuntimes.Should().HaveCount(1);
+        dotnetRuntimes[0].Should().Be("6.0.29");
+
+        result["tools:runtimes:aspnetcore"].Should().BeOfType<List<string>>();
+        var aspnetRuntimes = (List<string>)result["tools:runtimes:aspnetcore"];
+        aspnetRuntimes.Should().HaveCount(2);
+        aspnetRuntimes[0].Should().Be("6.0.29");
+        aspnetRuntimes[1].Should().Be("7.0.0");
+        
+        // Test empty arrays
+        result["emptyArray"].Should().BeOfType<List<string>>();
+        var emptyArray = (List<string>)result["emptyArray"];
+        emptyArray.Should().BeEmpty();
+    }
+
     [Test]
     public void CompareFlatJsons_AllScenarios_DetectsAllChanges()
     {
@@ -43,7 +117,9 @@ public class FlatJsonComparerTests
         };
 
         // Act
-        var changes = FlatJsonComparer.CompareFlatJsons(oldJson, newJson);
+        var oldSimpleConfigJson = new SimpleConfigJson(oldJson);
+        var newSimpleConfigJson = new SimpleConfigJson(newJson);
+        var changes = oldSimpleConfigJson.GetDiff(newSimpleConfigJson);
 
         // Assert
         changes.Should().HaveCount(6);
@@ -93,7 +169,9 @@ public class FlatJsonComparerTests
         };
 
         // Act
-        var changes = FlatJsonComparer.CompareFlatJsons(json, new Dictionary<string, object>(json));
+        var oldSimpleConfigJson = new SimpleConfigJson(json);
+        var newSimpleConfigJson = new SimpleConfigJson(new Dictionary<string, object>(json));
+        var changes = oldSimpleConfigJson.GetDiff(newSimpleConfigJson);
 
         // Assert
         changes.Should().BeEmpty();
@@ -114,7 +192,9 @@ public class FlatJsonComparerTests
         };
 
         // Act & Assert
-        var action = () => FlatJsonComparer.CompareFlatJsons(oldJson, newJson);
+        var oldSimpleConfigJson = new SimpleConfigJson(oldJson);
+        var newSimpleConfigJson = new SimpleConfigJson(newJson);
+        var action = () => oldSimpleConfigJson.GetDiff(newSimpleConfigJson);
         action.Should().Throw<ArgumentException>()
             .WithMessage("Key property value has different types in old and new json");
     }
@@ -134,7 +214,9 @@ public class FlatJsonComparerTests
         };
 
         // Act & Assert
-        var action = () => FlatJsonComparer.CompareFlatJsons(oldJson, newJson);
+        var oldSimpleConfigJson = new SimpleConfigJson(oldJson);
+        var newSimpleConfigJson = new SimpleConfigJson(newJson);
+        var action = () => oldSimpleConfigJson.GetDiff(newSimpleConfigJson);
         action.Should().Throw<ArgumentException>()
             .WithMessage("Key property value has different types in old and new json");
     }
@@ -147,7 +229,9 @@ public class FlatJsonComparerTests
         var newJson = new Dictionary<string, object>();
 
         // Act
-        var changes = FlatJsonComparer.CompareFlatJsons(oldJson, newJson);
+        var oldSimpleConfigJson = new SimpleConfigJson(oldJson);
+        var newSimpleConfigJson = new SimpleConfigJson(newJson);
+        var changes = oldSimpleConfigJson.GetDiff(newSimpleConfigJson);
 
         // Assert
         changes.Should().BeEmpty();
