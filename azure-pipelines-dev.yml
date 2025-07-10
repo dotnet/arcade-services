@@ -4,7 +4,7 @@ variables:
 trigger:
   batch: true
   branches:
-    include:
+    exclude:
     - main
     - production
 
@@ -16,7 +16,7 @@ resources:
     ref: refs/tags/release
 
 extends:
-  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  template: v1/1ES.Unofficial.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
     pool:
       name: $(DncEngInternalBuildPool)
@@ -25,4 +25,4 @@ extends:
     stages:
     - template: azure-pipelines-shared-jobs.yml
       parameters:
-        isOfficial: true
+        isOfficial: false
