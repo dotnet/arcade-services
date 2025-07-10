@@ -384,7 +384,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
         List<DependencyDetail> allUpdates = [.. buildUpdates];
         // if a repo was added during the merge and then updated, it's not an update, but an addition
-        foreach (var addition in versionDetailsChanges.additions)
+        foreach (var addition in versionDetailsChanges.Additions)
         {
             var update = allUpdates.FirstOrDefault(U => U.Name == addition.Name);
 
@@ -399,7 +399,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         }
 
         // Add updates tha are not a part of the build updates
-        foreach (var update in versionDetailsChanges.updates)
+        foreach (var update in versionDetailsChanges.Updates)
         {
             DependencyDetail updateDetail = (DependencyDetail)update.Value!;
             if (!allUpdates.Any(u => u.Name == update.Name))
@@ -409,13 +409,13 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         }
 
         List<DependencyUpdate> dependencyUpdates = [
-            ..versionDetailsChanges.additions
+            ..versionDetailsChanges.Additions
                 .Select(addition => new DependencyUpdate()
                 {
                     From = null,
                     To = (DependencyDetail)addition.Value!
                 }),
-            ..versionDetailsChanges.removals
+            ..versionDetailsChanges.Removals
                 .Select(removal => new DependencyUpdate()
                 {
                     From = headBranchDependencies.Dependencies.First(d => d.Name == removal),
@@ -424,7 +424,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             ..allUpdates
                 .Select(update => new DependencyUpdate()
                 {
-                    From = headBranchDependencies.Dependencies.Concat(versionDetailsChanges.additions.Select(a => (DependencyDetail)a.Value!)).First(d => d.Name == update.Name),
+                    From = headBranchDependencies.Dependencies.Concat(versionDetailsChanges.Additions.Select(a => (DependencyDetail)a.Value!)).First(d => d.Name == update.Name),
                     To = update,
                 }),
         ];

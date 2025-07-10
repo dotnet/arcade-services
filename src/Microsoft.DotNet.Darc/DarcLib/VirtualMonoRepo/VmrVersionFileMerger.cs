@@ -15,9 +15,6 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
-using VersionFileChanges = (System.Collections.Generic.List<string> removals,
-        System.Collections.Generic.List<Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo.IVersionFileProperty> additions,
-        System.Collections.Generic.List<Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo.IVersionFileProperty> updates);
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -94,17 +91,13 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             : targetRepoPreviousJson;
         var vmrCurrentJson = await GetJsonFromGit(vmr, vmrJsonPath, vmrCurrentRef, allowMissingFiles);
 
-        var targetRepoChanges = FlatJsonComparer.CompareFlatJsons(
-            SimpleConfigJsonFlattener.FlattenSimpleConfigJsonToDictionary(targetRepoPreviousJson),
-            SimpleConfigJsonFlattener.FlattenSimpleConfigJsonToDictionary(targetRepoCurrentJson));
-        var vmrChanges = FlatJsonComparer.CompareFlatJsons(
-            SimpleConfigJsonFlattener.FlattenSimpleConfigJsonToDictionary(vmrPreviousJson),
-            SimpleConfigJsonFlattener.FlattenSimpleConfigJsonToDictionary(vmrCurrentJson));
+        var targetRepoChanges = SimpleConfigJson.Parse(targetRepoPreviousJson).GetDiff(SimpleConfigJson.Parse(targetRepoCurrentJson));
+        var vmrChanges = SimpleConfigJson.Parse(vmrPreviousJson).GetDiff(SimpleConfigJson.Parse(vmrCurrentJson));
 
-        var finalChanges = MergeDependencyChanges(targetRepoChanges, vmrChanges, JsonVersionProperty.SelectJsonProperty);
+        var mergedChanges = MergeDependencyChanges(targetRepoChanges, vmrChanges, JsonVersionProperty.SelectJsonProperty);
 
         var currentJson = await GetJsonFromGit(targetRepo, jsonRelativePath, "HEAD", allowMissingFiles);
-        var mergedJson = ApplyJsonChanges(currentJson, finalChanges);
+        var mergedJson = SimpleConfigJson.ApplyJsonChanges(currentJson, mergedChanges);
 
         var newJson = new GitFile(targetRepo.Path / jsonRelativePath, mergedJson);
         await _localGitRepoFactory.Create(targetRepo.Path).StageAsync(["."]);
@@ -237,7 +230,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             }
         }
 
-        return (removals, additions, updates);
+        return new VersionFileChanges(removals, additions, updates);
     }
 
     private async Task<VersionDetails> GetRepoDependencies(ILocalGitRepo repo, string commit)
@@ -287,83 +280,14 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             .ToList();
     }
 
-    private string ApplyJsonChanges(
-        string file,
-        VersionFileChanges changes)
-    {
-        JsonNode rootNode = JsonNode.Parse(file) ?? throw new InvalidOperationException("Failed to parse JSON file.");
-
-        foreach (string removal in changes.removals)
-        {
-            RemoveJsonProperty(rootNode, removal);
-        }
-        foreach (var change in changes.additions.Concat(changes.updates))
-        {
-            AddOrUpdateJsonProperty(rootNode, (JsonVersionProperty)change);
-        }
-
-        return rootNode.ToJsonString(new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            TypeInfoResolver = new DefaultJsonTypeInfoResolver()
-        });
-    }
-
-    private static void RemoveJsonProperty(JsonNode root, string path)
-    {
-        var segments = path.Split(':', StringSplitOptions.RemoveEmptyEntries);
-
-        JsonNode currentNode = root;
-        for (int i = 0; i < segments.Length - 1; i++)
-        {
-            if (currentNode is not JsonObject obj || !obj.ContainsKey(segments[i]))
-            {
-                throw new InvalidOperationException($"Cannot navigate to {segments[i]} in JSON structure.");
-            }
-
-            currentNode = obj[segments[i]]!;
-        }
-
-        // Remove the property from its parent
-        if (currentNode is JsonObject parentObject)
-        {
-            string propertyToRemove = segments[segments.Length - 1];
-            parentObject.Remove(propertyToRemove);
-        }
-    }
-
-    private static void AddOrUpdateJsonProperty(JsonNode root, JsonVersionProperty property)
-    {
-        var segments = property.Name.Split(':', StringSplitOptions.RemoveEmptyEntries);
-        JsonNode currentNode = root;
-        for (int i = 0; i < segments.Length - 1; i++)
-        {
-            if (currentNode is not JsonObject obj)
-            {
-                throw new InvalidOperationException($"Cannot navigate to {segments[i]} in JSON structure.");
-            }
-            if (!obj.ContainsKey(segments[i]))
-            {
-                obj[segments[i]] = new JsonObject();
-            }
-            currentNode = obj[segments[i]]!;
-        }
-        // Add the property to its parent
-        if (currentNode is JsonObject parentObject)
-        {
-            string propertyToAdd = segments[segments.Length - 1];
-            parentObject[propertyToAdd] = JsonValue.Create(property.Value);
-        }
-    }
-
     private async Task ApplyVersionDetailsChangesAsync(string repoPath, VersionFileChanges changes)
     {
-        foreach (var removal in changes.removals)
+        foreach (var removal in changes.Removals)
         {
             // Remove the property from the version details
             await _dependencyFileManager.RemoveDependencyAsync(removal, repoPath, null!);
         }
-        foreach (var update in changes.additions.Concat(changes.updates))
+        foreach (var update in changes.Additions.Concat(changes.Updates))
         {
             await _dependencyFileManager.AddDependencyAsync(
                 (DependencyDetail)update.Value!,

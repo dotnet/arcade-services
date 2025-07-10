@@ -218,7 +218,7 @@ public class BackflowConflictResolverTests
             It.IsAny<string>(),
             It.IsAny<ILocalGitRepo>(),
             It.IsAny<string>()))
-            .ReturnsAsync(([], [new DependencyUpdate() { From = null, To = new DependencyDetail { Name = "Package.Added.In.Repo", Version = "1.0.1" } }], []));
+            .ReturnsAsync(new VersionFileChanges([], [new DependencyUpdate() { From = null, To = new DependencyDetail { Name = "Package.Added.In.Repo", Version = "1.0.1" } }], []));
 
         // Simulate dependency manager
         _assetLocationResolver.Setup(a => a.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))

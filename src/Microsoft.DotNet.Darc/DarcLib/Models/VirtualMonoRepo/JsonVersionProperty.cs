@@ -90,3 +90,10 @@ public class JsonVersionProperty : IVersionFileProperty
         throw new ArgumentException($"Cannot compare properties with {repoProp.Value!.GetType()} values.");
     }
 }
+
+public enum NodeComparisonResult
+{
+    Added,
+    Removed,
+    Updated
+}
