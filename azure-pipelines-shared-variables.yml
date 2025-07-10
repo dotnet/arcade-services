@@ -5,7 +5,7 @@ variables:
 - name: _TeamName
   value: DotNetCore
 - name: _PublishUsingPipelines
-  value: trueN
+  value: true
 - name: _DotNetArtifactsCategory
   value: .NETCore
 - name: AzdoOrgUri
