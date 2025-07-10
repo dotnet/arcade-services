@@ -289,7 +289,7 @@ public class VmrPatchHandlerTests
         // Verify diff for the submodule
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName, Constants.EmptyGitObject, SubmoduleSha1, null)
-            .Take(7)
+            .Take(8)
             .Append(VmrPatchHandler.GetInclusionRule("**/*"))
             .Append(VmrPatchHandler.GetExclusionRule("LICENSE.md"));
 
@@ -380,7 +380,7 @@ public class VmrPatchHandlerTests
         // Verify diff for the submodule
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName, Constants.EmptyGitObject, SubmoduleSha1, new[] { nestedSubmoduleInfo.Path })
-            .Take(7)
+            .Take(8)
             .Append(VmrPatchHandler.GetInclusionRule("**/*"))
             .Append(VmrPatchHandler.GetExclusionRule("LICENSE.md"))
             .Append(":(exclude)external-2");
@@ -400,7 +400,7 @@ public class VmrPatchHandlerTests
         // Verify diff for the nested submodule
         expectedArgs = GetExpectedGitDiffArguments(
             expectedNestedSubmodulePatchName, Constants.EmptyGitObject, nestedSubmoduleSha1, null)
-            .Take(7)
+            .Take(8)
             .Append(VmrPatchHandler.GetInclusionRule("**/*"));
 
         _processManager
@@ -487,7 +487,7 @@ public class VmrPatchHandlerTests
         // Verify diff for the submodule
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName, SubmoduleSha1, Constants.EmptyGitObject, null)
-            .Take(7)
+            .Take(8)
             .Append(VmrPatchHandler.GetInclusionRule("**/*"))
             .Append(VmrPatchHandler.GetExclusionRule("LICENSE.md"));
 
@@ -564,7 +564,7 @@ public class VmrPatchHandlerTests
         // Verify diff for the submodule
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName, SubmoduleSha1, SubmoduleSha2, null)
-            .Take(7)
+            .Take(8)
             .Append(VmrPatchHandler.GetInclusionRule("**/*"))
             .Append(VmrPatchHandler.GetExclusionRule("LICENSE.md"));
 
@@ -642,7 +642,7 @@ public class VmrPatchHandlerTests
         // Verify diff for the submodule
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName1, SubmoduleSha1, Constants.EmptyGitObject, null)
-            .Take(7)
+            .Take(8)
             .Append(VmrPatchHandler.GetInclusionRule("**/*"))
             .Append(VmrPatchHandler.GetExclusionRule("LICENSE.md"));
 
@@ -657,7 +657,7 @@ public class VmrPatchHandlerTests
 
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName2, Constants.EmptyGitObject, SubmoduleSha2, null)
-            .Take(7)
+            .Take(8)
             .Append(VmrPatchHandler.GetInclusionRule("**/*"))
             .Append(VmrPatchHandler.GetExclusionRule("LICENSE.md"));
 
@@ -891,6 +891,7 @@ public class VmrPatchHandlerTests
             "diff",
             "--patch",
             "--binary",
+            "--no-color",
             "--output",
             new NativePath(patchPath),
             $"{Sha1}..{Sha2}",
