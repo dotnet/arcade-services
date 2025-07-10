@@ -1,3 +1,8 @@
+parameters:
+- name: isOfficial
+  displayName: Indicates whether to use official or unofficial 1ES templates
+  type: boolean
+  
 stages:
   - stage: Build
     dependsOn: []
@@ -85,22 +90,45 @@ stages:
     parameters:
       isProd: ${{ eq(variables['Build.SourceBranch'], 'refs/heads/production') }}
   - ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
-    - template: /eng/common/templates-official/post-build/post-build.yml@self
-      parameters:
-        enableSymbolValidation: true
-        enableSigningValidation: false
-        artifactsPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
-        symbolPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
-        SDLValidationParameters:
-          enable: true
-          params: '-SourceToolsList @("policheck","credscan")
-          -TsaInstanceURL $(_TsaInstanceURL)
-          -TsaProjectName $(_TsaProjectName)
-          -TsaNotificationEmail $(_TsaNotificationEmail)
-          -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
-          -TsaBugAreaPath $(_TsaBugAreaPath)
-          -TsaIterationPath $(_TsaIterationPath)
-          -TsaRepositoryName "Arcade-Services"
-          -TsaCodebaseName "Arcade-Services"
-          -TsaPublish $True
-          -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")'
+      - ${{ if eq(parameters.isOfficial, true) }}:
+          - template: /eng/common/templates-official/post-build/post-build.yml@self
+            parameters:
+              enableSymbolValidation: true
+              enableSigningValidation: false
+              artifactsPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
+              symbolPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
+              SDLValidationParameters:
+                enable: true
+                params: |
+                  -SourceToolsList @("policheck","credscan")
+                  -TsaInstanceURL $(_TsaInstanceURL)
+                  -TsaProjectName $(_TsaProjectName)
+                  -TsaNotificationEmail $(_TsaNotificationEmail)
+                  -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
+                  -TsaBugAreaPath $(_TsaBugAreaPath)
+                  -TsaIterationPath $(_TsaIterationPath)
+                  -TsaRepositoryName "Arcade-Services"
+                  -TsaCodebaseName "Arcade-Services"
+                  -TsaPublish $True
+                  -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")
+      - ${{ else }}:
+          - template: /eng/common/templates/post-build/post-build.yml@self
+            parameters:
+              enableSymbolValidation: true
+              enableSigningValidation: false
+              artifactsPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
+              symbolPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
+              SDLValidationParameters:
+                enable: true
+                params: |
+                  -SourceToolsList @("policheck","credscan")
+                  -TsaInstanceURL $(_TsaInstanceURL)
+                  -TsaProjectName $(_TsaProjectName)
+                  -TsaNotificationEmail $(_TsaNotificationEmail)
+                  -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
+                  -TsaBugAreaPath $(_TsaBugAreaPath)
+                  -TsaIterationPath $(_TsaIterationPath)
+                  -TsaRepositoryName "Arcade-Services"
+                  -TsaCodebaseName "Arcade-Services"
+                  -TsaPublish $True
+                  -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")

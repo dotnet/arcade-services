@@ -24,3 +24,5 @@ extends:
       os: windows
     stages:
     - template: azure-pipelines-shared-jobs.yml
+      parameters:
+        isOfficial: true
