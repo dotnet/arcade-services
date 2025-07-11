@@ -1111,7 +1111,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 subscription.Id);
             return;
         }
-        catch (ManualChangesWouldGetOverwrittenException exception)
+        catch (ManualCommitsInFlowException exception)
         {
             if (pr != null)
             {
@@ -1382,6 +1382,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var prComments = await remote.GetPullRequestCommentsAsync(pr.Url);
         if (!prComments.Any(c => c.Contains(OverwrittenCommitMessage)))
         {
+            _logger.LogInformation(
+                "Codeflow would overwrite manual PR changes. Stoping updates for subscription {subscriptionId} until the PR is merged",
+                update.SubscriptionId);
             StringBuilder sb = new();
             sb.AppendLine(OverwrittenCommitMessage);
             foreach (var commit in commits)
@@ -1392,8 +1395,14 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             sb.AppendLine("Codeflow will resume after this PR is merged");
             await remote.CommentPullRequestAsync(pr.Url, sb.ToString());
         }
+        else
+        {
+            _logger.LogInformation(
+                "Codeflow for subscription {subscriptionId} is already stopped as it would overwrite manual changes",
+                update.SubscriptionId);
+        }
 
-        pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
+            pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
         await _pullRequestState.SetAsync(pr);
         await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
         await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);

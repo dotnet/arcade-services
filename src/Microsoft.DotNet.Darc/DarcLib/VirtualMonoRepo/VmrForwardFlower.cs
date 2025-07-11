@@ -274,7 +274,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         // TODO https://github.com/dotnet/arcade-services/issues/5030
         // This is only a temporary band aid solution, we should figure out the best way to fix the algorithm so the flow continues as expected 
-        await ValidateNothingGetsOverwritten(sourceRepo, headBranch, targetBranch);
+        await CheckManualCommitsInBranch(sourceRepo, headBranch, targetBranch);
 
         // We will remove everything not-cloaked and replace it with current contents of the source repo
         // When flowing to the VMR, we remove all files but the cloaked files
@@ -330,7 +330,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             : null;
     }
 
-    public async Task ValidateNothingGetsOverwritten(ILocalGitRepo sourceRepo, string headBranch, string targetBranch)
+    public async Task CheckManualCommitsInBranch(ILocalGitRepo sourceRepo, string headBranch, string targetBranch)
     {
         var result = await _processManager.ExecuteGit(
             _vmrInfo.VmrPath,
@@ -355,9 +355,9 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             return;
         }
         var manualCommits = headBranchCommits.Where(c => c.commiter != Constants.DefaultCommitAuthor);
-        if (manualCommits.Count() > 0)
+        if (manualCommits.Any())
         {
-            throw new ManualChangesWouldGetOverwrittenException(manualCommits.Select(c => c.sha).ToList());
+            throw new ManualCommitsInFlowException(manualCommits.Select(c => c.sha).ToList());
         }
     }
 
