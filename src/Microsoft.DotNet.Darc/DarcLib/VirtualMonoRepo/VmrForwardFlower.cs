@@ -274,7 +274,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         // TODO https://github.com/dotnet/arcade-services/issues/5030
         // This is only a temporary band aid solution, we should figure out the best way to fix the algorithm so the flow continues as expected 
-        await CheckManualCommitsInBranch(sourceRepo, headBranch, targetBranch);
+        await ValidateNothingGetsOverwritten(sourceRepo, headBranch, targetBranch);
 
         // We will remove everything not-cloaked and replace it with current contents of the source repo
         // When flowing to the VMR, we remove all files but the cloaked files
