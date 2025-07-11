@@ -882,6 +882,12 @@ internal abstract partial class ScenarioTestBase
         await RunGitAsync("checkout", commit);
     }
 
+    protected static async Task FastForwardAsync()
+    {
+        await RunGitAsync("fetch", "origin");
+        await RunGitAsync("pull");
+    }
+
     protected static async Task CheckoutRemoteBranchAsync(string branchName)
     {
         await RunGitAsync("fetch", "origin", branchName);
