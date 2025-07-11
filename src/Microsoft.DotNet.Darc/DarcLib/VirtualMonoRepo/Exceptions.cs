@@ -95,7 +95,7 @@ public class ConflictInPrBranchException : Exception
     }
 }
 
-public class ManualCommitsInFlowException: Exception
+public class ManualChangesWouldGetOverwrittenException : Exception
 {
     public ManualChangesWouldGetOverwrittenException(List<string> overwrittenCommits)
         : base("Failed to flow changes as they would overwrite manual changes to the PR")
