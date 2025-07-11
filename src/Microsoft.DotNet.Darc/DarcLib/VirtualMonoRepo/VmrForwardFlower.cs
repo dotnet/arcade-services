@@ -350,7 +350,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             .ToList();
 
         // if the first commit in the head branch wasn't made by the bot don't check, we might be in a test
-        if (headBranchCommits[0].commiter != Constants.DefaultCommitAuthor)
+        if (headBranchCommits.Any() && headBranchCommits[0].commiter != Constants.DefaultCommitAuthor)
         {
             return;
         }
