@@ -179,14 +179,14 @@ public class ProcessManager : IProcessManager
     }
 
     /// <summary>
-    /// Traverses the directory structure from given path up until it finds a .git folder.
+    /// Traverses the directory structure from given path up until it finds a git repository root.
     /// </summary>
-    /// <param name="path">tarting directory</param>
+    /// <param name="path">Starting directory</param>
     /// <returns>A root of a git repository (throws when no .git found)</returns>
     public string FindGitRoot(string path)
     {
         var dir = new DirectoryInfo(path);
-        while (!Directory.Exists(Path.Combine(dir.FullName, ".git")))
+        while (!HasGitRepository(dir.FullName))
         {
             dir = dir.Parent;
 
@@ -197,5 +197,24 @@ public class ProcessManager : IProcessManager
         }
 
         return dir.FullName;
+    }
+
+    private static bool HasGitRepository(string directoryPath)
+    {
+        var gitPath = Path.Combine(directoryPath, ".git");
+        
+        // Check for .git directory (regular repository)
+        if (Directory.Exists(gitPath))
+        {
+            return true;
+        }
+        
+        // Check for .git file (worktree)
+        if (File.Exists(gitPath))
+        {
+            return true;
+        }
+        
+        return false;
     }
 }
