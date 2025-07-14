@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using FluentAssertions;
+using Maestro.MergePolicies;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models;
@@ -1017,36 +1018,41 @@ internal abstract partial class ScenarioTestBase
         Octokit.PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
         Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepoName);
 
-        return await ValidateGithubMaestroCheckRunsSuccessful(targetRepoName, targetBranch, pullRequest, repo);
-    }
-
-    protected static async Task<bool> ValidateGithubMaestroCheckRunsSuccessful(string targetRepoName, string targetBranch, Octokit.PullRequest pullRequest, Octokit.Repository repo)
-    {
-        // Waiting 5 minutes 30 seconds for maestro to add the checks to the PR (it takes 5 minutes for the checks to be added)
         await Task.Delay(TimeSpan.FromSeconds(5 * 60 + 30));
-        TestContext.WriteLine($"Checking maestro merge policies check in {targetBranch} {targetRepoName}");
-        Octokit.CheckRunsResponse existingCheckRuns = await GitHubApi.Check.Run.GetAllForReference(repo.Id, pullRequest.Head.Sha);
-        var cnt = 0;
-        foreach (var checkRun in existingCheckRuns.CheckRuns)
+
+        List<Octokit.CheckRun> maestroChecks = await WaitForPullRequestMaestroChecksAsync(targetRepoName, targetBranch, pullRequest.Url, pullRequest.Head.Sha, repo.Id);
+
+        foreach (var checkRun in maestroChecks)
         {
-            if (checkRun.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix))
+            if (checkRun.Status != "completed" && !checkRun.Output.Title.Contains(AllChecksSuccessfulMergePolicy.WaitingForChecksMsg))
             {
-                cnt++;
-                if (checkRun.Status != "completed" && !checkRun.Output.Title.Contains("Waiting for checks."))
-                {
-                    TestContext.WriteLine($"Check '{checkRun.Output.Title}' with id {checkRun.Id} on PR {pullRequest.Url} has not completed in time. Check's status: {checkRun.Status}");
-                    return false;
-                }
+                TestContext.WriteLine($"Check '{checkRun.Output.Title}' with id {checkRun.Id} on PR {pullRequest.Url} has not completed in time. Check's status: {checkRun.Status}");
+                return false;
             }
         }
-
-        if (cnt == 0)
-        {
-            TestContext.WriteLine($"No maestro merge policy checks found in PR {pullRequest.Url}");
-            return false;
-        }
-
+        TestContext.WriteLine($"All maestro merge policy checks found in the PR ({pullRequest.Url}) have completed.");
         return true;
+    }
+
+    protected static async Task<List<Octokit.CheckRun>> WaitForPullRequestMaestroChecksAsync(string targetRepoName, string targetBranch, string prUrl, string commitSha, long repoId, int attempts = 2)
+    {
+        while (attempts-- > 0)
+        {
+            TestContext.WriteLine($"Waiting for maestro checks to be added to the PR, attempts remaining {attempts}");
+            Octokit.CheckRunsResponse prChecks = await GitHubApi.Check.Run.GetAllForReference(repoId, commitSha);
+
+            List<Octokit.CheckRun> maestroChecks = prChecks.CheckRuns
+                .Where(cr => cr.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix))
+                .ToList();
+
+            if (maestroChecks.Count > 0)
+            {
+                TestContext.WriteLine($"Found {maestroChecks.Count} Maestro Merge Policy checks for PR {prUrl}");
+                return maestroChecks;
+            }
+            await Task.Delay(WAIT_DELAY);
+        }
+        throw new ScenarioTestException($"No Maestro Merge Policy checks were found in the PR ({prUrl}) during the allotted time.");
     }
 
     protected static string GetTestChannelName([CallerMemberName] string testName = "")
