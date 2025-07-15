@@ -32,8 +32,8 @@
     <MicrosoftDotNetMetricsVersion>1.1.0-beta.25052.1</MicrosoftDotNetMetricsVersion>
     <MicrosoftDotNetServicesUtilityVersion>1.1.0-beta.25215.1</MicrosoftDotNetServicesUtilityVersion>
     <MicrosoftDotNetWebAuthenticationVersion>1.1.0-beta.25053.1</MicrosoftDotNetWebAuthenticationVersion>
-    <MicrosoftDncEngSecretManagerVersion>1.1.0-beta.25325.1</MicrosoftDncEngSecretManagerVersion>
-    <MicrosoftDncEngConfigurationBootstrapVersion>1.1.0-beta.25325.1</MicrosoftDncEngConfigurationBootstrapVersion>
+    <MicrosoftDncEngSecretManagerVersion>1.1.0-beta.25360.1</MicrosoftDncEngSecretManagerVersion>
+    <MicrosoftDncEngConfigurationBootstrapVersion>1.1.0-beta.25360.1</MicrosoftDncEngConfigurationBootstrapVersion>
   </PropertyGroup>
   <!--Package names-->
   <PropertyGroup>
