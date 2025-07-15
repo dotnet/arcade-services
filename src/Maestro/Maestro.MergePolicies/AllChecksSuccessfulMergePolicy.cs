@@ -19,6 +19,8 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
 {
     private readonly HashSet<string> _ignoreChecks;
 
+    public const string WaitingForChecksMsg = "Waiting for checks.";
+
     public AllChecksSuccessfulMergePolicy(HashSet<string> ignoreChecks)
     {
         _ignoreChecks = ignoreChecks;
@@ -35,7 +37,7 @@ public class AllChecksSuccessfulMergePolicy : MergePolicy
 
         if (!notIgnoredChecks.Any())
         {
-            return Pending("Waiting for checks.");
+            return Pending(WaitingForChecksMsg);
         }
 
         // Group check statuses to success, pending and error
