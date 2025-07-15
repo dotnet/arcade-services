@@ -332,13 +332,23 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
     public async Task CheckManualCommitsInBranch(ILocalGitRepo sourceRepo, string headBranch, string targetBranch)
     {
+        // If we have the target branch checked out as a local use it (in darc scenarios), otherwise use the remote one
         var result = await _processManager.ExecuteGit(
+            _vmrInfo.VmrPath,
+            [
+                "rev-parse",
+                targetBranch,
+            ]);
+
+        var fullTargetBranch = result.Succeeded ? targetBranch : $"origin/{targetBranch}";
+
+        result = await _processManager.ExecuteGit(
             _vmrInfo.VmrPath,
             [
                 "log",
                 "--reverse",
                 "--pretty=format:\"%H %an\"",
-                $"origin/{targetBranch}..{headBranch}"]);
+                $"{fullTargetBranch}..{headBranch}"]);
 
         result.ThrowIfFailed($"Failed to get commits from {targetBranch} to HEAD in {sourceRepo.Path}");
         // splits the output into 
