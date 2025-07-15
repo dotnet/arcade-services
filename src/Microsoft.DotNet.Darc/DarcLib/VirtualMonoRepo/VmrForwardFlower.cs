@@ -338,7 +338,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 "log",
                 "--reverse",
                 "--pretty=format:\"%H %an\"",
-                $"{targetBranch}..{headBranch}"]);
+                $"origin/{targetBranch}..{headBranch}"]);
 
         result.ThrowIfFailed($"Failed to get commits from {targetBranch} to HEAD in {sourceRepo.Path}");
         // splits the output into 
