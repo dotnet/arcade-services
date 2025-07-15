@@ -12,7 +12,7 @@ jobs:
   timeoutInMinutes: 60
   pool:
       name: NetCore1ESPool-Internal
-      demands: ImageOverride -equals 1es-windows-2019
+      demands: ImageOverride -equals 1es-windows-2022
   variables:
     # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=20&path=Publish-Build-Assets
     # Required for MaestroAppClientId, MaestroStagingAppClientId
