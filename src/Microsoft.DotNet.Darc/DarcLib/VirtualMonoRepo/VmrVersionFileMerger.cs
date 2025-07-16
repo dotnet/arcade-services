@@ -52,6 +52,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IDependencyFileManager _dependencyFileManager;
+    private readonly IVersionPropertySelectorRegistry _mergerRegistry;
     private const string EmptyJsonString = "{}";
 
     public VmrVersionFileMerger(
@@ -60,7 +61,8 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         IVmrInfo vmrInfo,
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
-        IDependencyFileManager dependencyFileManager)
+        IDependencyFileManager dependencyFileManager,
+        IVersionPropertySelectorRegistry mergerRegistry)
     {
         _gitRepoFactory = gitRepoFactory;
         _logger = logger;
@@ -68,6 +70,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
         _dependencyFileManager = dependencyFileManager;
+        _mergerRegistry = mergerRegistry;
     }
 
     public async Task MergeJsonAsync(
@@ -94,7 +97,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         var targetRepoChanges = SimpleConfigJson.Parse(targetRepoPreviousJson).GetDiff(SimpleConfigJson.Parse(targetRepoCurrentJson));
         var vmrChanges = SimpleConfigJson.Parse(vmrPreviousJson).GetDiff(SimpleConfigJson.Parse(vmrCurrentJson));
 
-        var mergedChanges = MergeDependencyChanges(targetRepoChanges, vmrChanges, JsonVersionProperty.JsonPropertySelector);
+        var mergedChanges = MergeDependencyChanges(targetRepoChanges, vmrChanges);
 
         var currentJson = await GetJsonFromGit(targetRepo, jsonRelativePath, "HEAD", allowMissingFiles);
         var mergedJson = SimpleConfigJson.ApplyJsonChanges(currentJson, mergedChanges);
@@ -145,7 +148,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             previousVmrDependencies,
             currentVmrDependencies);
 
-        var mergedChanges = MergeDependencyChanges(repoChanges, vmrChanges, VersionDetailsSelector);
+        var mergedChanges = MergeDependencyChanges(repoChanges, vmrChanges);
 
         await ApplyVersionDetailsChangesAsync(targetRepo.Path, mergedChanges);
 
@@ -154,8 +157,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
     private VersionFileChanges MergeDependencyChanges(
         IReadOnlyCollection<IVersionFileProperty> repoChanges,
-        IReadOnlyCollection<IVersionFileProperty> vmrChanges,
-        Func<IVersionFileProperty, IVersionFileProperty, IVersionFileProperty> select)
+        IReadOnlyCollection<IVersionFileProperty> vmrChanges)
     {
         var changedProperties = repoChanges
             .Concat(vmrChanges)
@@ -199,7 +201,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
             if (addedInRepo && addedInVmr)
             {
-                additions[property] = (select(repoChange!, vmrChange!));
+                additions[property] = _mergerRegistry.SelectProperty(repoChange!, vmrChange!);
                 continue;
             }
             if (addedInRepo)
@@ -215,7 +217,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
             if (updatedInRepo && updatedInVmr)
             {
-                updates[property] = (select(repoChange!, vmrChange!));
+                updates[property] = _mergerRegistry.SelectProperty(repoChange!, vmrChange!);
                 continue;
             }
             if (updatedInRepo)
@@ -294,23 +296,6 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 repoPath,
                 null!);
         }
-    }
-
-    public IVersionFileProperty VersionDetailsSelector(IVersionFileProperty repoChange, IVersionFileProperty vmrChange)
-    {
-        if (repoChange.GetType() != typeof(DependencyUpdate) || vmrChange.GetType() != typeof(DependencyUpdate))
-        {
-            throw new ArgumentException($"Provided updates are not {typeof(DependencyUpdate)}");
-        }
-        var repoUpdate = (DependencyUpdate)repoChange;
-        var vmrUpdate = (DependencyUpdate)vmrChange;
-
-        if (SemanticVersion.TryParse(repoUpdate.To?.Version!, out var repoVersion) &&
-            SemanticVersion.TryParse(vmrUpdate.To?.Version!, out var vmrVersion))
-        {
-            return repoVersion > vmrVersion ? repoChange : vmrChange;
-        }
-        throw new ArgumentException($"Cannot compare {repoUpdate.To?.Version} with {vmrUpdate.To?.Version} because they are not valid semantic versions.");
     }
 
     private static async Task<string> GetJsonFromGit(ILocalGitRepo repo, string jsonRelativePath, string reference, bool allowMissingFile) =>
