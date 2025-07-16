@@ -36,7 +36,7 @@ public interface IVmrVersionFileMerger
         string jsonRelativePath,
         bool allowMissingFiles = false);
 
-    Task<VersionFileChanges> MergeVersionDetails(
+    Task<VersionFileChanges<DependencyUpdate>> MergeVersionDetails(
         Codeflow lastFlow,
         Codeflow currentFlow,
         string mappingName,
@@ -97,7 +97,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         var targetRepoChanges = SimpleConfigJson.Parse(targetRepoPreviousJson).GetDiff(SimpleConfigJson.Parse(targetRepoCurrentJson));
         var vmrChanges = SimpleConfigJson.Parse(vmrPreviousJson).GetDiff(SimpleConfigJson.Parse(vmrCurrentJson));
 
-        var mergedChanges = MergeDependencyChanges(targetRepoChanges, vmrChanges);
+        var mergedChanges = MergeJsonChanges(targetRepoChanges, vmrChanges);
 
         var currentJson = await GetJsonFromGit(targetRepo, jsonRelativePath, "HEAD", allowMissingFiles);
         var mergedJson = SimpleConfigJson.ApplyJsonChanges(currentJson, mergedChanges);
@@ -113,7 +113,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 $"Merge {jsonRelativePath} changes from VMR");
     }
 
-    public async Task<VersionFileChanges> MergeVersionDetails(
+    public async Task<VersionFileChanges<DependencyUpdate>> MergeVersionDetails(
         Codeflow lastFlow,
         Codeflow currentFlow,
         string mappingName,
@@ -148,16 +148,26 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             previousVmrDependencies,
             currentVmrDependencies);
 
-        var mergedChanges = MergeDependencyChanges(repoChanges, vmrChanges);
+        var mergedChanges = MergeDependencyUpdates(repoChanges, vmrChanges);
 
         await ApplyVersionDetailsChangesAsync(targetRepo.Path, mergedChanges);
 
         return mergedChanges;
     }
 
-    private VersionFileChanges MergeDependencyChanges(
-        IReadOnlyCollection<IVersionFileProperty> repoChanges,
-        IReadOnlyCollection<IVersionFileProperty> vmrChanges)
+    private VersionFileChanges<JsonVersionProperty> MergeJsonChanges(
+        List<JsonVersionProperty> repoChanges,
+        List<JsonVersionProperty> vmrChanges)
+        => MergeVersionFileChanges(repoChanges, vmrChanges);
+
+    private VersionFileChanges<DependencyUpdate> MergeDependencyUpdates(
+        List<DependencyUpdate> repoChanges,
+        List<DependencyUpdate> vmrChanges)
+        => MergeVersionFileChanges(repoChanges, vmrChanges);
+
+    private VersionFileChanges<T> MergeVersionFileChanges<T>(
+        List<T> repoChanges,
+        List<T> vmrChanges) where T : IVersionFileProperty
     {
         var changedProperties = repoChanges
             .Concat(vmrChanges)
@@ -165,8 +175,9 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             .Distinct(StringComparer.OrdinalIgnoreCase);
 
         var removals = new List<string>();
-        var additions = new Dictionary<string, IVersionFileProperty>();
-        var updates = new Dictionary<string, IVersionFileProperty>();
+        var additions = new Dictionary<string, T>();
+        var updates = new Dictionary<string, T>();
+        
         foreach (var property in changedProperties)
         {
             var repoChange = repoChanges.FirstOrDefault(c => c.Name == property);
@@ -201,38 +212,38 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
             if (addedInRepo && addedInVmr)
             {
-                additions[property] = _mergerRegistry.SelectProperty(repoChange!, vmrChange!);
+                additions[property] = (T)_mergerRegistry.SelectProperty(repoChange!, vmrChange!);
                 continue;
             }
             if (addedInRepo)
             {
-                additions[property] = (repoChange!);
+                additions[property] = repoChange!;
                 continue;
             }
             if (addedInVmr)
             {
-                additions[property] = (vmrChange!);
+                additions[property] = vmrChange!;
                 continue;
             }
 
             if (updatedInRepo && updatedInVmr)
             {
-                updates[property] = _mergerRegistry.SelectProperty(repoChange!, vmrChange!);
+                updates[property] = (T)_mergerRegistry.SelectProperty(repoChange!, vmrChange!);
                 continue;
             }
             if (updatedInRepo)
             {
-                updates[property] = (repoChange!);
+                updates[property] = repoChange!;
                 continue;
             }
             if (updatedInVmr)
             {
-                updates[property] = (vmrChange!);
+                updates[property] = vmrChange!;
                 continue;
             }
         }
 
-        return new VersionFileChanges(removals, additions, updates);
+        return new VersionFileChanges<T>(removals, additions, updates);
     }
 
     private async Task<VersionDetails> GetRepoDependencies(ILocalGitRepo repo, string commit)
@@ -282,7 +293,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             .ToList();
     }
 
-    private async Task ApplyVersionDetailsChangesAsync(string repoPath, VersionFileChanges changes)
+    private async Task ApplyVersionDetailsChangesAsync(string repoPath, VersionFileChanges<DependencyUpdate> changes)
     {
         foreach (var removal in changes.Removals)
         {

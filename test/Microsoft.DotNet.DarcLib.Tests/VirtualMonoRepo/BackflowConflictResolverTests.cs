@@ -212,7 +212,7 @@ public class BackflowConflictResolverTests
             _versionDetails[$"repo/{TargetBranch}"].Dependencies.ToArray(),
             _versionDetails[$"repo/{TargetBranch}"].Source);
 
-        Dictionary<string, IVersionFileProperty> expectedAddition = new()
+        Dictionary<string, DependencyUpdate> expectedAddition = new()
         {
             { "Package.Added.In.Repo", new DependencyUpdate() { From = null, To = new DependencyDetail { Name = "Package.Added.In.Repo", Version = "1.0.1" }}}
         };
@@ -223,7 +223,7 @@ public class BackflowConflictResolverTests
             It.IsAny<string>(),
             It.IsAny<ILocalGitRepo>(),
             It.IsAny<string>()))
-            .ReturnsAsync(new VersionFileChanges([], expectedAddition, []));
+            .ReturnsAsync(new VersionFileChanges<DependencyUpdate>([], expectedAddition, []));
 
         // Simulate dependency manager
         _assetLocationResolver.Setup(a => a.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))

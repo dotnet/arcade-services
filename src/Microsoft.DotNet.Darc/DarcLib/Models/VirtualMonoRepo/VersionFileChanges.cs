@@ -4,9 +4,11 @@
 using System.Collections.Generic;
 
 namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
-public record VersionFileChanges(
+
+public record VersionFileChanges<T>(
     List<string> Removals,
-    Dictionary<string, IVersionFileProperty> Additions,
-    Dictionary<string, IVersionFileProperty> Updates)
+    Dictionary<string, T> Additions,
+    Dictionary<string, T> Updates) 
+    where T : IVersionFileProperty
 {
 }

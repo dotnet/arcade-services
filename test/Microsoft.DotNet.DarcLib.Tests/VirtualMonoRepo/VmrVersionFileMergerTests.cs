@@ -13,7 +13,6 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
-using Microsoft.TeamFoundation.TestManagement.WebApi;
 using Moq;
 using NUnit.Framework;
 
@@ -52,7 +51,7 @@ public class VmrVersionFileMergerTests
         _gitRepoFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(_gitRepoMock.Object);
         _localGitRepoFactoryMock.Setup(f => f.Create(It.IsAny<NativePath>())).Returns(_vmrMock.Object);
         var registry = new VersionPropertySelectorRegistry();
-        // Register default mergers
+        // Register default selectors
         registry.RegisterSelector(new DependencyUpdateSelector());
         registry.RegisterSelector(new JsonVersionPropertySelector());
 

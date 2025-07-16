@@ -84,7 +84,7 @@ public class SimpleConfigJson
     /// <param name="changes">Changes we're applying</param>
     public static string ApplyJsonChanges(
         string file,
-        VersionFileChanges changes)
+        VersionFileChanges<JsonVersionProperty> changes)
     {
         JsonNode rootNode = JsonNode.Parse(file) ?? throw new InvalidOperationException("Failed to parse JSON file.");
 
@@ -94,7 +94,7 @@ public class SimpleConfigJson
         }
         foreach (var change in changes.Additions.Values.Concat(changes.Updates.Values))
         {
-            AddOrUpdateJsonProperty(rootNode, (JsonVersionProperty)change);
+            AddOrUpdateJsonProperty(rootNode, change);
         }
 
         return rootNode.ToJsonString(new JsonSerializerOptions

@@ -7,7 +7,6 @@ using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using ProductConstructionService.ReproTool.Options;
 using GitHubClient = Octokit.GitHubClient;
 
