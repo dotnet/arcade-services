@@ -4,7 +4,7 @@ jobs:
 
   pool:
       name: NetCore1ESPool-Internal
-      demands: ImageOverride -equals 1es-windows-2019
+      demands: ImageOverride -equals 1es-windows-2022
 
   variables:
     - ${{ if in(variables['Build.SourceBranch'], 'refs/heads/production') }}:

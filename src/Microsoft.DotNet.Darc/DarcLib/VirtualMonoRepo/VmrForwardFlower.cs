@@ -272,6 +272,10 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         var patchName = _vmrInfo.TmpPath / $"{headBranch.Replace('/', '-')}.patch";
         var branchName = currentFlow.GetBranchName();
 
+        // TODO https://github.com/dotnet/arcade-services/issues/5030
+        // This is only a temporary band aid solution, we should figure out the best way to fix the algorithm so the flow continues as expected 
+        await CheckManualCommitsInBranch(sourceRepo, headBranch, targetBranch);
+
         // We will remove everything not-cloaked and replace it with current contents of the source repo
         // When flowing to the VMR, we remove all files but the cloaked files
         List<string> removalFilters =
@@ -324,6 +328,47 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         return await vmr.IsAncestorCommit(bf.VmrSha, lastForwardFlow.VmrSha)
             ? lastForwardFlow
             : null;
+    }
+
+    public async Task CheckManualCommitsInBranch(ILocalGitRepo sourceRepo, string headBranch, string targetBranch)
+    {
+        // If we have the target branch checked out as a local use it (in darc scenarios), otherwise use the remote one
+        var result = await _processManager.ExecuteGit(
+            _vmrInfo.VmrPath,
+            [
+                "rev-parse",
+                targetBranch,
+            ]);
+
+        var fullTargetBranch = result.Succeeded ? targetBranch : $"origin/{targetBranch}";
+
+        result = await _processManager.ExecuteGit(
+            _vmrInfo.VmrPath,
+            [
+                "log",
+                "--reverse",
+                "--pretty=format:\"%H %an\"",
+                $"{fullTargetBranch}..{headBranch}"]);
+
+        result.ThrowIfFailed($"Failed to get commits from {targetBranch} to HEAD in {sourceRepo.Path}");
+        // splits the output into 
+        List<(string sha, string commiter)> headBranchCommits = result.StandardOutput
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries) // split by lines
+            .Select(line => line.Trim('\"'))
+            .Select(line => line.Split(' ', 2)) // split by space, but only once
+            .Select(l => (l[0], l[1]))
+            .ToList();
+
+        // if the first commit in the head branch wasn't made by the bot don't check, we might be in a test
+        if (headBranchCommits.Any() && headBranchCommits[0].commiter != Constants.DefaultCommitAuthor)
+        {
+            return;
+        }
+        var manualCommits = headBranchCommits.Where(c => c.commiter != Constants.DefaultCommitAuthor);
+        if (manualCommits.Any())
+        {
+            throw new ManualCommitsInFlowException(manualCommits.Select(c => c.sha).ToList());
+        }
     }
 
     private async Task<bool> RecreatePreviousFlowAndApplyBuild(

@@ -1334,4 +1334,15 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         return commitSha;
     }
+
+    public async Task<List<string>> GetPullRequestCommentsAsync(string pullRequestUrl)
+    {
+        (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
+        
+        _logger.LogInformation("Retrieving comments for pull request {PullRequestUrl}", pullRequestUrl);
+        
+        IReadOnlyList<IssueComment> comments = await GetClient(owner, repo).Issue.Comment.GetAllForIssue(owner, repo, id);
+        
+        return comments.Select(comment => comment.Body).ToList();
+    }
 }
