@@ -1,5 +1,7 @@
 variables:
-- template: /eng/templates/azure-pipelines-shared-variables.yml
+- template: /eng/templates/azure-pipelines-shared-variables.yml@self
+- name: devBranchSuffix
+  value:
 
 trigger:
   batch: true
@@ -20,9 +22,9 @@ extends:
   parameters:
     pool:
       name: $(DncEngInternalBuildPool)
-      image: 1es-windows-2019
+      image: 1es-windows-2022
       os: windows
     stages:
-    - template: /eng/templates/azure-pipelines-shared-jobs.yml
+    - template: /eng/templates/azure-pipelines-shared-jobs.yml@self
       parameters:
-        isOfficial: true
+        isProdPipeline: true

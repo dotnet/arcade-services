@@ -1,5 +1,4 @@
 variables:
-# For $(DncEngInternalBuildPool) used below
 - template: /eng/common/templates-official/variables/pool-providers.yml@self
 - group: SDL_Settings
 - name: _TeamName
@@ -31,10 +30,3 @@ variables:
     value: productconstructionint
   - name: serviceConnectionName
     value: ProductConstructionServiceDeploymentInt
-
-- ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
-  - name: devBranchSuffix
-    value:
-- ${{ else }}:
-  - name: devBranchSuffix
-    value: -dev
