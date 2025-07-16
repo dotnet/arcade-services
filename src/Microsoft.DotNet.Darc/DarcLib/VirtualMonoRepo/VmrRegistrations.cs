@@ -116,6 +116,7 @@ public static class VmrRegistrations
         services.TryAddTransient<ICodeFlowVmrUpdater, CodeFlowVmrUpdater>();
         services.TryAddTransient<IBackflowConflictResolver, BackflowConflictResolver>();
         services.TryAddTransient<IForwardFlowConflictResolver, ForwardFlowConflictResolver>();
+        services.TryAddTransient<IVmrVersionFileMerger, VmrVersionFileMerger>();
         services.TryAddTransient<ICodeflowChangeAnalyzer, CodeflowChangeAnalyzer>();
         services.TryAddTransient<IWorkBranchFactory, WorkBranchFactory>();
         services.TryAddTransient<IThirdPartyNoticesGenerator, ThirdPartyNoticesGenerator>();
@@ -128,7 +129,6 @@ public static class VmrRegistrations
         services.TryAddTransient<IDependencyFileManager, DependencyFileManager>();
         services.TryAddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
         services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
-
         services.TryAddScoped<IVmrCloneManager, VmrCloneManager>();
         services.TryAddScoped<IRepositoryCloneManager, RepositoryCloneManager>();
         services.TryAddScoped<IVmrDependencyTracker, VmrDependencyTracker>();

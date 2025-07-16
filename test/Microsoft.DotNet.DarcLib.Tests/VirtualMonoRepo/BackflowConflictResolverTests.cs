@@ -44,6 +44,7 @@ public class BackflowConflictResolverTests
     private readonly Mock<IAssetLocationResolver> _assetLocationResolver = new();
     private readonly Mock<IDependencyFileManager> _dependencyFileManager = new();
     private readonly Mock<IFileSystem> _fileSystem = new();
+    private readonly Mock<IVmrVersionFileMerger> _vmrVersionFileMergerMock = new();
 
     private readonly Mock<ILocalGitRepo> _localRepo = new();
     private readonly Mock<ILocalGitRepo> _localVmr = new();
@@ -75,7 +76,7 @@ public class BackflowConflictResolverTests
             .ReturnsAsync(true);
         _localRepo
             .Setup(x => x.GetFileFromGitAsync(It.Is<string>(s => s.Contains(VersionFiles.VersionDetailsXml)), It.IsAny<string>(), null))
-            .ReturnsAsync((string _, string commit, string __) => $"repo/{commit}");
+            .ReturnsAsync((string _, string _, string __) => $"repo/{TargetBranch}");
         _localRepo
             .SetReturnsDefault(Task.CompletedTask);
         _localRepo
@@ -139,6 +140,8 @@ public class BackflowConflictResolverTests
 
         _fileSystem.Reset();
 
+        _vmrVersionFileMergerMock.Reset();
+
         _conflictResolver = new(
             _vmrInfo.Object,
             _patchHandler.Object,
@@ -149,7 +152,8 @@ public class BackflowConflictResolverTests
             new CoherencyUpdateResolver(Mock.Of<IBasicBarClient>(), Mock.Of<IRemoteFactory>(), new NullLogger<CoherencyUpdateResolver>()),
             _dependencyFileManager.Object,
             _fileSystem.Object,
-            new NullLogger<BackflowConflictResolver>());
+            new NullLogger<BackflowConflictResolver>(),
+            _vmrVersionFileMergerMock.Object);
     }
 
     // Tests a case when packages were updated in the repo as well as in VMR and some created during the build.
@@ -160,50 +164,24 @@ public class BackflowConflictResolverTests
         var lastFlow = new ForwardFlow(LastRepoSha, LastVmrSha);
         var currentFlow = new Backflow(CurrentVmrSha, CurrentRepoSha);
 
-        // Dependencies in the repo after last flow
-        _versionDetails[$"repo/{lastFlow.RepoSha}"] = new VersionDetails(
-            [
-                CreateDependency("Package.From.Build", "1.0.0", LastVmrSha),
-                CreateDependency("Package.Excluded.From.Backflow", "1.0.0", LastVmrSha),
-                CreateDependency("Package.Also.Excluded.From.Backflow", "1.0.0", LastVmrSha),
-                CreateDependency("Package.Removed.In.Repo", "1.0.0", LastVmrSha),
-                CreateDependency("Package.Updated.In.Both", "1.0.0", LastVmrSha),
-                CreateDependency("Package.Removed.In.VMR", "1.0.0", LastVmrSha), // Will be removed in VMR
-            ],
-            new SourceDependency(VmrUri, MappingName, LastVmrSha, 123456));
-
-        // Dependencies in the target branch of the repo (what we are flowing to)
+        // Version details looks like this after merging with the VMR
         _versionDetails[$"repo/{TargetBranch}"] = new VersionDetails(
             [
-                CreateDependency("Package.From.Build", "1.0.1", LastVmrSha), // Updated
+                CreateDependency("Package.From.Build", "1.0.1", LastVmrSha),
+                CreateDependency("Another.Package.From.Build", "1.0.1", LastVmrSha),
+                CreateDependency("Yet.Another.Package.From.Build", "1.0.1", LastVmrSha),
                 CreateDependency("Package.Excluded.From.Backflow", "1.0.0", LastVmrSha),
                 CreateDependency("Package.Also.Excluded.From.Backflow", "1.0.0", LastVmrSha),
-                CreateDependency("Package.Updated.In.Both", "1.0.3", LastVmrSha), // Updated (vmr updated to 3.0.0)
-                CreateDependency("Package.Added.In.Repo", "1.0.0", LastVmrSha), // Added
-                CreateDependency("Package.Added.In.Both", "2.2.2", LastVmrSha), // Added in both
+                CreateDependency("Package.Updated.In.Both", "3.0.0", LastVmrSha),
+                CreateDependency("Package.Added.In.VMR", "2.0.0", LastVmrSha),
+                CreateDependency("Package.Added.In.Both", "2.2.2", LastVmrSha),
             ],
             new SourceDependency(VmrUri, MappingName, LastVmrSha, 123456));
 
-        // The PR branch was just created so it has the same dependencies as the target branch
-        _versionDetails[$"repo/{PrBranch}"] = _versionDetails["repo/main"];
-        _versionDetails["repo/"] = _versionDetails["repo/main"];
-
-        // Dependencies in the VMR after last flow (same as repo's - let's assume we forward flowed those)
-        _versionDetails[$"vmr/{lastFlow.VmrSha}"] = _versionDetails["repo/main"];
-
-        // Dependencies in the VMR commit we're flowing
-        _versionDetails[$"vmr/{CurrentVmrSha}"] = new VersionDetails(
-            [
-                CreateDependency("Package.From.Build", "1.0.0", LastVmrSha),
-                CreateDependency("Package.Excluded.From.Backflow", "1.0.0", LastVmrSha),
-                CreateDependency("Package.Also.Excluded.From.Backflow", "1.0.0", LastVmrSha),
-                CreateDependency("Package.Removed.In.Repo", "1.0.0", LastVmrSha),
-                CreateDependency("Package.Updated.In.Both", "3.0.0", LastVmrSha), // Updated (repo updated to 1.0.3)
-                CreateDependency("Package.Added.In.VMR", "2.0.0", LastVmrSha), // Added
-                CreateDependency("Package.Added.In.Both", "1.1.1", LastVmrSha), // Added in both
-                // Package.Removed.In.VMR removed
-            ],
-            new SourceDependency(VmrUri, MappingName, LastVmrSha, 123456));
+        // Set up the version details for the unspecified repository reference
+        _versionDetails["repo/"] = new VersionDetails(
+            _versionDetails[$"repo/{TargetBranch}"].Dependencies.ToArray(),
+            _versionDetails[$"repo/{TargetBranch}"].Source);
 
         var build = CreateNewBuild(CurrentVmrSha,
         [
@@ -211,20 +189,50 @@ public class BackflowConflictResolverTests
             ("Package.Excluded.From.Backflow", "1.0.2"),
             ("Package.Also.Excluded.From.Backflow", "1.0.2"),
             ("Another.Package.From.Build", "1.0.5"),
-            ("Yet.Another.Package.From.Build", "1.0.5")
+            ("Yet.Another.Package.From.Build", "1.0.5"),
+            ("Package.Removed.In.Repo", "1.0.5"),
+            ("Package.Added.In.Repo", "4.0.0") // package was added at some point, but then a newer version was produced in the build
         ]);
 
-        // The final set of updates should be following
-        // Package.From.Build 1.0.5 - Coming from the build
-        // Package.Updated.In.Both 3.0.0 - Updated in repo and VMR but VMR's update is higher
-        // Package.Added.In.Both 2.2.2 - Added in both repo and VMR but repo's update is higher
         // The following packages are not updated:
         //   - Package.Removed.In.Repo - removed in repo (not getting updated)
         //   - Package.Removed.In.VMR - removed in VMR (and thus in repo)
-        //   - Package.Added.In.Repo: 1.0.0 - added in repo, so already there
         //   - Package.Added.In.VMR - added in VMR, so it was just added in the repo (not getting updated)
         //   - Package.Excluded.From.Backflow - excluded from backflow
         //   - Package.Also.Excluded.From.Backflow - excluded from backflow
+        // Need to add Package.Added.In.Repo to emulate what the repo version would already have
+        _versionDetails[$"repo/{TargetBranch}"] = new VersionDetails(
+            _versionDetails[$"repo/{TargetBranch}"].Dependencies
+                .Append(CreateDependency("Package.Added.In.Repo", "1.0.0", LastVmrSha))
+                .ToArray(),
+            _versionDetails[$"repo/{TargetBranch}"].Source);
+
+        // Also update repo/ to match
+        _versionDetails["repo/"] = new VersionDetails(
+            _versionDetails[$"repo/{TargetBranch}"].Dependencies.ToArray(),
+            _versionDetails[$"repo/{TargetBranch}"].Source);
+
+        Dictionary<string, DependencyUpdate> expectedAddition = new()
+        {
+            { "Package.Added.In.Repo", new DependencyUpdate() { From = null, To = new DependencyDetail { Name = "Package.Added.In.Repo", Version = "1.0.1" }}}
+        };
+
+        _vmrVersionFileMergerMock.Setup(x => x.MergeVersionDetails(
+            It.IsAny<Codeflow>(),
+            It.IsAny<Codeflow>(),
+            It.IsAny<string>(),
+            It.IsAny<ILocalGitRepo>(),
+            It.IsAny<string>()))
+            .ReturnsAsync(new VersionFileChanges<DependencyUpdate>([], expectedAddition, []));
+
+        // Simulate dependency manager
+        _assetLocationResolver.Setup(a => a.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
+            .Callback((IEnumerable<DependencyDetail> deps) =>
+            {
+                // This would normally set locations, but we don't need that for the test
+            })
+            .Returns(Task.CompletedTask);
+            
         await TestConflictResolver(
             build,
             lastFlow,
@@ -235,122 +243,22 @@ public class BackflowConflictResolverTests
                 ("Package.Excluded.From.Backflow", "1.0.0"),
                 ("Package.Also.Excluded.From.Backflow", "1.0.0"),
                 ("Package.Updated.In.Both", "3.0.0"),
-                ("Package.Added.In.Repo", "1.0.0"),
+                ("Package.Added.In.Repo", "4.0.0"),
                 ("Package.Added.In.VMR", "2.0.0"),
                 ("Package.Added.In.Both", "2.2.2"),
+                ("Another.Package.From.Build", "1.0.5"),
+                ("Yet.Another.Package.From.Build", "1.0.5"),
+                // Note: Package.Removed.In.Repo is not included as it was removed in repo
             ],
             expectedUpdates:
             [
-                new("Package.Added.In.VMR", null, "2.0.0"),
                 new("Package.From.Build", "1.0.1", "1.0.5"),
-                new("Package.Updated.In.Both", "1.0.3", "3.0.0"),
+                new("Another.Package.From.Build", "1.0.1", "1.0.5"),
+                new("Yet.Another.Package.From.Build", "1.0.1", "1.0.5"),
+                new("Package.Added.In.Repo", null, "4.0.0"),
             ],
             headBranchExisted: false,
             excludedAssets: ["Package.Excluded.From.Backflow", "Package.Also.*"]);
-
-        // Now we will add a new dependency to the PR branch
-        // We will change a dependency in the repo too
-        // And we will flow a new build from the VMR to the existing PR
-        var newVmrSha = "new flow VMR SHA";
-        var newFlow = new Backflow(newVmrSha, CurrentRepoSha);
-        var newRepoDependency = CreateDependency("New.Package.In.Repo", "4.0.0", "sha does not matter");
-        var newPrDependency = CreateDependency("New.Package.In.Pr", "4.0.0", "sha does not matter");
-        var newVmrDependency = CreateDependency("New.Package.In.Vmr", "4.0.0", "sha does not matter");
-
-        // Current flow will become last flow for the next test
-        _versionDetails[$"repo/{currentFlow.RepoSha}"] = _versionDetails[$"repo/{LastRepoSha}"];
-
-        // Main branch will have the new package
-        await _dependencyFileManager.Object.AddDependencyAsync(newRepoDependency, _repoPath, TargetBranch);
-
-        // PR branch will have its own new package
-        await _dependencyFileManager.Object.AddDependencyAsync(newPrDependency, _repoPath, null);
-        _versionDetails[$"repo/{PrBranch}"] = _versionDetails["repo/"];
-
-        // VMR content will be the same as before plus the new VMR package
-        _versionDetails[$"vmr/{newVmrSha}"] = _versionDetails[$"vmr/{CurrentVmrSha}"];
-        await _dependencyFileManager.Object.AddDependencyAsync(newVmrDependency, _vmrPath, newVmrSha);
-
-        build = CreateNewBuild(newVmrSha, [..build.Assets.Select(a => (a.Name, "1.0.6"))]);
-
-        // This time, don't exclude the assets from an update.
-        // We should see the updates.
-        await TestConflictResolver(
-            build,
-            currentFlow,
-            newFlow,
-            expectedDependencies:
-            [
-                // Same as before
-                ("Package.From.Build", "1.0.6"),
-                ("Package.Excluded.From.Backflow", "1.0.6"),
-                ("Package.Also.Excluded.From.Backflow", "1.0.6"),
-                ("Package.Updated.In.Both", "3.0.0"),
-                ("Package.Added.In.Repo", "1.0.0"),
-                ("Package.Added.In.VMR", "2.0.0"),
-                ("Package.Added.In.Both", "2.2.2"),
-                // New packages
-                ("New.Package.In.Repo", "4.0.0"),
-                ("New.Package.In.Pr", "4.0.0"),
-                ("New.Package.In.Vmr", "4.0.0"),
-            ],
-            expectedUpdates:
-            [
-                new("New.Package.In.Vmr", null, To: "4.0.0"),
-                new("New.Package.In.Repo", null, To: "4.0.0"),
-                new("Package.Excluded.From.Backflow", "1.0.0", To: "1.0.6"),
-                new("Package.Also.Excluded.From.Backflow", "1.0.0", To: "1.0.6"),
-                new("Package.From.Build", "1.0.5", To: "1.0.6"),
-            ],
-            headBranchExisted: true,
-            excludedAssets: []);
-    }
-
-    // Tests a case when conflicting updates were made in the repo and VMR.
-    // There are two backflows in a row and in between those,
-    // a package was added in the VMR while at the same time removed in the repo.
-    [Test]
-    public async Task ConflictingChangesThrowTest()
-    {
-        var lastFlow = new Backflow(LastRepoSha, LastVmrSha);
-        var currentFlow = new Backflow(CurrentVmrSha, CurrentRepoSha);
-
-        var withPackage = new VersionDetails(
-        [
-            CreateDependency("Package", "1.0.0", LastVmrSha),
-            CreateDependency("Conflicting.Package", "1.0.0", LastVmrSha),
-        ],
-        Source: null);
-
-        var withoutPackage = new VersionDetails(
-        [
-            CreateDependency("Package", "1.0.0", LastVmrSha),
-        ],
-        Source: null);
-
-        // Package removed in the repo
-        _versionDetails[$"repo/{lastFlow.RepoSha}"] = withPackage;
-        _versionDetails[$"repo/{TargetBranch}"] = withoutPackage;
-        _versionDetails[$"repo/{PrBranch}"] = withoutPackage;
-        _versionDetails["repo/"] = withoutPackage;
-
-        // Package added in the VMR
-        _versionDetails[$"vmr/{lastFlow.VmrSha}"] = withoutPackage;
-        _versionDetails[$"vmr/{CurrentVmrSha}"] = withPackage;
-
-        var action = async () => await TestConflictResolver(
-            CreateNewBuild(CurrentVmrSha,
-            [
-                ("Package", "1.0.5")
-            ]),
-            lastFlow,
-            currentFlow,
-            [],
-            [],
-            headBranchExisted: false,
-            excludedAssets: []);
-
-        await action.Should().ThrowAsync<ConflictingDependencyUpdateException>();
     }
 
     [Test]
