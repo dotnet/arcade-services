@@ -25,4 +25,4 @@ extends:
     stages:
     - template: /eng/templates/azure-pipelines-shared-jobs.yml
       parameters:
-        isProd: false
+        isProdPipeline: false

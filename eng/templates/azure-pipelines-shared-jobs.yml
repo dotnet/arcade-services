@@ -1,5 +1,5 @@
 parameters:
-  - name: isProd
+  - name: isProdPipeline
     displayName: Indicates whether this template should be configured for a production or non-production pipeline.
     type: boolean
   
@@ -90,7 +90,7 @@ stages:
     parameters:
       isProd: ${{ eq(variables['Build.SourceBranch'], 'refs/heads/production') }}
   - ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
-      - ${{ if eq(parameters.isProd, true) }}:
+      - ${{ if eq(parameters.isProdPipeline, true) }}:
           - template: /eng/common/templates-official/post-build/post-build.yml@self
             parameters:
               enableSymbolValidation: true
