@@ -7,7 +7,7 @@ using FluentAssertions;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.DarcLib.Tests.Helpers;
+namespace Microsoft.DotNet.DarcLib.Tests.VirtualMonoRepo;
 
 public class SimpleConfigJsonTests
 {

@@ -4,12 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
-using System.Threading.Tasks;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 #nullable enable
@@ -95,7 +92,7 @@ public class SimpleConfigJson
         {
             RemoveJsonProperty(rootNode, removal);
         }
-        foreach (var change in changes.Additions.Concat(changes.Updates))
+        foreach (var change in changes.Additions.Values.Concat(changes.Updates.Values))
         {
             AddOrUpdateJsonProperty(rootNode, (JsonVersionProperty)change);
         }

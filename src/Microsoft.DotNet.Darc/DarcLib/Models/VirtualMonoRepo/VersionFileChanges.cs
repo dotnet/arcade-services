@@ -6,7 +6,7 @@ using System.Collections.Generic;
 namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 public record VersionFileChanges(
     List<string> Removals,
-    List<IVersionFileProperty> Additions,
-    List<IVersionFileProperty> Updates)
+    Dictionary<string, IVersionFileProperty> Additions,
+    Dictionary<string, IVersionFileProperty> Updates)
 {
 }

@@ -177,7 +177,7 @@ public class BackflowConflictResolverTests
                 CreateDependency("Package.Added.In.Both", "2.2.2", LastVmrSha),
             ],
             new SourceDependency(VmrUri, MappingName, LastVmrSha, 123456));
-        
+
         // Set up the version details for the unspecified repository reference
         _versionDetails["repo/"] = new VersionDetails(
             _versionDetails[$"repo/{TargetBranch}"].Dependencies.ToArray(),
@@ -206,11 +206,16 @@ public class BackflowConflictResolverTests
                 .Append(CreateDependency("Package.Added.In.Repo", "1.0.0", LastVmrSha))
                 .ToArray(),
             _versionDetails[$"repo/{TargetBranch}"].Source);
-        
+
         // Also update repo/ to match
         _versionDetails["repo/"] = new VersionDetails(
             _versionDetails[$"repo/{TargetBranch}"].Dependencies.ToArray(),
             _versionDetails[$"repo/{TargetBranch}"].Source);
+
+        Dictionary<string, IVersionFileProperty> expectedAddition = new()
+        {
+            { "Package.Added.In.Repo", new DependencyUpdate() { From = null, To = new DependencyDetail { Name = "Package.Added.In.Repo", Version = "1.0.1" }}}
+        };
 
         _vmrVersionFileMergerMock.Setup(x => x.MergeVersionDetails(
             It.IsAny<Codeflow>(),
@@ -218,7 +223,7 @@ public class BackflowConflictResolverTests
             It.IsAny<string>(),
             It.IsAny<ILocalGitRepo>(),
             It.IsAny<string>()))
-            .ReturnsAsync(new VersionFileChanges([], [new DependencyUpdate() { From = null, To = new DependencyDetail { Name = "Package.Added.In.Repo", Version = "1.0.1" } }], []));
+            .ReturnsAsync(new VersionFileChanges([], expectedAddition, []));
 
         // Simulate dependency manager
         _assetLocationResolver.Setup(a => a.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))

@@ -94,7 +94,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         var targetRepoChanges = SimpleConfigJson.Parse(targetRepoPreviousJson).GetDiff(SimpleConfigJson.Parse(targetRepoCurrentJson));
         var vmrChanges = SimpleConfigJson.Parse(vmrPreviousJson).GetDiff(SimpleConfigJson.Parse(vmrCurrentJson));
 
-        var mergedChanges = MergeDependencyChanges(targetRepoChanges, vmrChanges, JsonVersionProperty.SelectJsonProperty);
+        var mergedChanges = MergeDependencyChanges(targetRepoChanges, vmrChanges, JsonVersionProperty.JsonPropertySelector);
 
         var currentJson = await GetJsonFromGit(targetRepo, jsonRelativePath, "HEAD", allowMissingFiles);
         var mergedJson = SimpleConfigJson.ApplyJsonChanges(currentJson, mergedChanges);
@@ -163,8 +163,8 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             .Distinct(StringComparer.OrdinalIgnoreCase);
 
         var removals = new List<string>();
-        var additions = new List<IVersionFileProperty>();
-        var updates = new List<IVersionFileProperty>();
+        var additions = new Dictionary<string, IVersionFileProperty>();
+        var updates = new Dictionary<string, IVersionFileProperty>();
         foreach (var property in changedProperties)
         {
             var repoChange = repoChanges.FirstOrDefault(c => c.Name == property);
@@ -199,33 +199,33 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
             if (addedInRepo && addedInVmr)
             {
-                additions.Add(select(repoChange!, vmrChange!));
+                additions[property] = (select(repoChange!, vmrChange!));
                 continue;
             }
             if (addedInRepo)
             {
-                additions.Add(repoChange!);
+                additions[property] = (repoChange!);
                 continue;
             }
             if (addedInVmr)
             {
-                additions.Add(vmrChange!);
+                additions[property] = (vmrChange!);
                 continue;
             }
 
             if (updatedInRepo && updatedInVmr)
             {
-                updates.Add(select(repoChange!, vmrChange!));
+                updates[property] = (select(repoChange!, vmrChange!));
                 continue;
             }
             if (updatedInRepo)
             {
-                updates.Add(repoChange!);
+                updates[property] = (repoChange!);
                 continue;
             }
             if (updatedInVmr)
             {
-                updates.Add(vmrChange!);
+                updates[property] = (vmrChange!);
                 continue;
             }
         }
@@ -290,7 +290,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         foreach (var update in changes.Additions.Concat(changes.Updates))
         {
             await _dependencyFileManager.AddDependencyAsync(
-                (DependencyDetail)update.Value!,
+                (DependencyDetail)update.Value.Value!,
                 repoPath,
                 null!);
         }

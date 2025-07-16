@@ -430,7 +430,7 @@ public class VmrVersionFileMergerTests
             ("Package.Added.In.Repo", "1.0.0"),
             ("Package.Added.In.Both", "2.2.2"),
             ("Package.Added.In.VMR", "2.0.0")];
-        result.Additions
+        result.Additions.Values
             .Select(a => (DependencyDetail)a.Value!)
             .Select(d => (d.Name, d.Version))
             .Should()
@@ -438,7 +438,7 @@ public class VmrVersionFileMergerTests
         List<(string, string)> expectedUpdates = [
             ("Package.From.Build", "1.0.1"),
             ("Package.Updated.In.Both", "3.0.0")];
-        result.Updates
+        result.Updates.Values
             .Select(u => (DependencyDetail)u.Value!)
             .Select(d => (d.Name, d.Version))
             .Should()

@@ -250,7 +250,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         Backflow currentFlow,
         CancellationToken cancellationToken)
     {
-        var headBranchDependencies = await GetRepoDependencies(targetRepo, commit: null! /* working tree */);
+        var headBranchDependencies = (await GetRepoDependencies(targetRepo, commit: null! /* working tree */));
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
         // handle global.json
@@ -382,50 +382,53 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
         await targetRepo.StageAsync(["."], cancellationToken);
 
-        List<DependencyDetail> allUpdates = [.. buildUpdates];
+        Dictionary<string, DependencyDetail> allUpdates = buildUpdates.ToDictionary(u => u.Name, u => u);
         // if a repo was added during the merge and then updated, it's not an update, but an addition
         foreach (var addition in versionDetailsChanges.Additions)
         {
-            var update = allUpdates.FirstOrDefault(U => U.Name == addition.Name);
-
-            if (update != null)
+            if (allUpdates.TryGetValue(addition.Key, out var updatedDependencyDetail))
             {
-                allUpdates.Remove(update);
-                var depUpdate = (DependencyDetail)addition.Value!;
-                depUpdate.Version = update.Version;
-                depUpdate.Commit = update.Commit;
-                depUpdate.RepoUri = update.RepoUri;
+                var depDetail = (DependencyDetail)addition.Value.Value!;
+                depDetail.Version = updatedDependencyDetail.Version;
+                depDetail.Commit = updatedDependencyDetail.Commit;
+                depDetail.Pinned = updatedDependencyDetail.Pinned;
+                
+                allUpdates.Remove(addition.Key);
             }
         }
 
         // Add updates tha are not a part of the build updates
         foreach (var update in versionDetailsChanges.Updates)
         {
-            DependencyDetail updateDetail = (DependencyDetail)update.Value!;
-            if (!allUpdates.Any(u => u.Name == update.Name))
+            var updateDetail = (DependencyDetail)update.Value.Value!;
+            if (!allUpdates.ContainsKey(updateDetail.Name))
             {
-                allUpdates.Add(updateDetail);
+                allUpdates[updateDetail.Name] = updateDetail;
             }
         }
+
+        var headBranchDependencyDict = headBranchDependencies.Dependencies.ToDictionary(d => d.Name, d => d);
 
         List<DependencyUpdate> dependencyUpdates = [
             ..versionDetailsChanges.Additions
                 .Select(addition => new DependencyUpdate()
                 {
                     From = null,
-                    To = (DependencyDetail)addition.Value!
+                    To = (DependencyDetail)addition.Value.Value!
                 }),
             ..versionDetailsChanges.Removals
                 .Select(removal => new DependencyUpdate()
                 {
-                    From = headBranchDependencies.Dependencies.First(d => d.Name == removal),
+                    From = headBranchDependencyDict[removal],
                     To = null
                 }),
             ..allUpdates
                 .Select(update => new DependencyUpdate()
                 {
-                    From = headBranchDependencies.Dependencies.Concat(versionDetailsChanges.Additions.Select(a => (DependencyDetail)a.Value!)).First(d => d.Name == update.Name),
-                    To = update,
+                    From = headBranchDependencyDict.ContainsKey(update.Key)
+                        ? headBranchDependencyDict[update.Key]
+                        : (DependencyDetail)versionDetailsChanges.Additions[update.Key].Value!,
+                    To = update.Value,
                 }),
         ];
 

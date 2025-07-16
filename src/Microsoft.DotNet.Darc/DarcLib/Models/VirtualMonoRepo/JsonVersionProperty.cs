@@ -28,7 +28,8 @@ public class JsonVersionProperty : IVersionFileProperty
     public bool IsAdded() => _result == NodeComparisonResult.Added;
     public bool IsRemoved() => _result == NodeComparisonResult.Removed;
     public bool IsUpdated() => _result == NodeComparisonResult.Updated;
-    public static IVersionFileProperty SelectJsonProperty(IVersionFileProperty repoProp, IVersionFileProperty vmrProp)
+
+    public static IVersionFileProperty JsonPropertySelector(IVersionFileProperty repoProp, IVersionFileProperty vmrProp)
     {
         // Are these even comparable?
         if (repoProp.GetType() != typeof(JsonVersionProperty) || vmrProp.GetType() != typeof(JsonVersionProperty))
