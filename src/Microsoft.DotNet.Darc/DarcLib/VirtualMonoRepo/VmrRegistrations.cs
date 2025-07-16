@@ -129,15 +129,6 @@ public static class VmrRegistrations
         services.TryAddTransient<IDependencyFileManager, DependencyFileManager>();
         services.TryAddTransient<ICoherencyUpdateResolver, CoherencyUpdateResolver>();
         services.TryAddTransient<ITelemetryRecorder, NoTelemetryRecorder>();
-        services.AddSingleton<IVersionPropertySelectorRegistry>(provider =>
-        {
-            var registry = new VersionPropertySelectorRegistry();
-            
-            registry.RegisterSelector(new DependencyUpdateSelector());
-            registry.RegisterSelector(new JsonVersionPropertySelector());
-            
-            return registry;
-        });
         services.TryAddScoped<IVmrCloneManager, VmrCloneManager>();
         services.TryAddScoped<IRepositoryCloneManager, RepositoryCloneManager>();
         services.TryAddScoped<IVmrDependencyTracker, VmrDependencyTracker>();

@@ -28,13 +28,9 @@ public class JsonVersionProperty : IVersionFileProperty
     public bool IsAdded() => _result == NodeComparisonResult.Added;
     public bool IsRemoved() => _result == NodeComparisonResult.Removed;
     public bool IsUpdated() => _result == NodeComparisonResult.Updated;
-}
 
-public class JsonVersionPropertySelector : IVersionPropertySelector<JsonVersionProperty>
-{
-    public JsonVersionProperty Select(JsonVersionProperty repoProp, JsonVersionProperty vmrProp)
-    {        
-        // Is one of them null?
+    public static JsonVersionProperty SelectJsonVersionProperty(JsonVersionProperty repoProp, JsonVersionProperty vmrProp)
+    {
         if (repoProp.Value == null && vmrProp.Value == null)
         {
             throw new ArgumentException($"Compared values for '{repoProp.Name}' are null");

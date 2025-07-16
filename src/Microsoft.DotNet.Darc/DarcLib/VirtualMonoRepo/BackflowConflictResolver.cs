@@ -383,23 +383,23 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
         Dictionary<string, DependencyDetail> allUpdates = buildUpdates.ToDictionary(u => u.Name, u => u);
         // if a repo was added during the merge and then updated, it's not an update, but an addition
-        foreach (var addition in versionDetailsChanges.Additions)
+        foreach ((var key, var addition) in versionDetailsChanges.Additions)
         {
-            if (allUpdates.TryGetValue(addition.Key, out var updatedDependencyDetail))
+            if (allUpdates.TryGetValue(key, out var updatedDependencyDetail))
             {
-                var depDetail = (DependencyDetail)addition.Value.Value!;
+                var depDetail = (DependencyDetail)addition.Value!;
                 depDetail.Version = updatedDependencyDetail.Version;
                 depDetail.Commit = updatedDependencyDetail.Commit;
                 depDetail.Pinned = updatedDependencyDetail.Pinned;
                 
-                allUpdates.Remove(addition.Key);
+                allUpdates.Remove(key);
             }
         }
 
         // Add updates tha are not a part of the build updates
-        foreach (var update in versionDetailsChanges.Updates)
+        foreach ((var _, var update) in versionDetailsChanges.Updates)
         {
-            var updateDetail = (DependencyDetail)update.Value.Value!;
+            var updateDetail = (DependencyDetail)update.Value!;
             if (!allUpdates.ContainsKey(updateDetail.Name))
             {
                 allUpdates[updateDetail.Name] = updateDetail;
