@@ -3,7 +3,6 @@
 
 using System.Diagnostics;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
-using NuGet.Versioning;
 
 namespace Microsoft.DotNet.DarcLib.Models.Darc;
 

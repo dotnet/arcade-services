@@ -33,13 +33,7 @@ public class JsonVersionProperty : IVersionFileProperty
 public class JsonVersionPropertySelector : IVersionPropertySelector<JsonVersionProperty>
 {
     public JsonVersionProperty Select(JsonVersionProperty repoProp, JsonVersionProperty vmrProp)
-    {
-        // Are these even comparable?
-        if (repoProp.GetType() != typeof(JsonVersionProperty) || vmrProp.GetType() != typeof(JsonVersionProperty))
-        {
-            throw new ArgumentException($"Cannot compare {repoProp.GetType()} with {vmrProp.GetType()}");
-        }
-        
+    {        
         // Is one of them null?
         if (repoProp.Value == null && vmrProp.Value == null)
         {

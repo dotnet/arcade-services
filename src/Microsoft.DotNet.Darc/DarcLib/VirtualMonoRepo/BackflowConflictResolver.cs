@@ -13,7 +13,6 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.Services.Common;
 using NuGet.Versioning;
 
 #nullable enable

@@ -8,9 +8,6 @@ using NuGet.Versioning;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-/// <summary>
-/// Merger for DependencyUpdate objects that compares semantic versions and selects the higher version.
-/// </summary>
 public class DependencyUpdateSelector : IVersionPropertySelector<DependencyUpdate>
 {
     public DependencyUpdate Select(DependencyUpdate repoChange, DependencyUpdate vmrChange)
