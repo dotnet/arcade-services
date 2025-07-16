@@ -1,7 +1,7 @@
 variables:
 - template: /eng/templates/azure-pipelines-shared-variables.yml
-  parameters:
-    isProdPipeline: true
+- name: devBranchSuffix
+  value:
 
 trigger:
   batch: true
