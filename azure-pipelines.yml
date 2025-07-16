@@ -1,5 +1,5 @@
 variables:
-- template: /eng/templates/azure-pipelines-shared-variables.yml
+- template: /eng/templates/azure-pipelines-shared-variables.yml@self
 - name: devBranchSuffix
   value:
 
@@ -25,6 +25,6 @@ extends:
       image: 1es-windows-2022
       os: windows
     stages:
-    - template: /eng/templates/azure-pipelines-shared-jobs.yml
+    - template: /eng/templates/azure-pipelines-shared-jobs.yml@self
       parameters:
         isProdPipeline: true
