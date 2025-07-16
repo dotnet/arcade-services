@@ -1,3 +1,7 @@
+parameters:
+  - name: isProdPipeline
+    displayName: Indicates whether this template should be configured for a production or non-production pipeline.
+    type: boolean
 variables:
 - template: /eng/common/templates-official/variables/pool-providers.yml@self
 - group: SDL_Settings
@@ -31,9 +35,9 @@ variables:
   - name: serviceConnectionName
     value: ProductConstructionServiceDeploymentInt
 
-- ${{ if in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/production') }}:
+${{ if parameters.isProdPipeline }}:
   - name: devBranchSuffix
     value:
-- ${{ else }}:
+${{ else }}:
   - name: devBranchSuffix
     value: -dev

@@ -1,5 +1,7 @@
 variables:
 - template: /eng/templates/azure-pipelines-shared-variables.yml
+  parameters:
+    isProdPipeline: true
 
 trigger:
   batch: true
