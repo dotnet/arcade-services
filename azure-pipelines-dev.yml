@@ -22,7 +22,7 @@ extends:
   parameters:
     pool:
       name: $(DncEngInternalBuildPool)
-      image: 1es-windows-2019
+      image: 1es-windows-2022
       os: windows
     stages:
     - template: /eng/templates/azure-pipelines-shared-jobs.yml
