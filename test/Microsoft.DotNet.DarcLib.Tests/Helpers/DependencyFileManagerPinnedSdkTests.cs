@@ -17,13 +17,39 @@ namespace Microsoft.DotNet.DarcLib.Tests.Helpers;
 [TestFixture]
 public class DependencyFileManagerPinnedSdkTests
 {
+    private const string VersionDetails = """
+        <?xml version="1.0" encoding="utf-8"?>
+        <Dependencies>
+          <ProductDependencies>
+          </ProductDependencies>
+          <ToolsetDependencies>
+          </ToolsetDependencies>
+        </Dependencies>
+        """;
+
+    private const string VersionProps = """
+        <Project>
+          <PropertyGroup>
+          </PropertyGroup>
+        </Project>
+        """;
+
+    private const string NuGetConfig = """
+        <?xml version="1.0" encoding="utf-8"?>
+        <configuration>
+          <packageSources>
+            <add key="dotnet-public" value="https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json" />
+          </packageSources>
+        </configuration>
+        """;
+
     private void SetupCommonMocks(Mock<IGitRepo> repo, string globalJsonContent)
     {
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync(CreateVersionDetailsXml());
+            .ReturnsAsync(VersionDetails);
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionProps, It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync(CreateVersionProps());
-        repo.Setup(r => r.GetFileContentsAsync("global.json", It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(VersionProps);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.GlobalJson, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(globalJsonContent);
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, It.IsAny<string>(), It.IsAny<string>()))
             .Throws<DependencyFileNotFoundException>();
@@ -35,7 +61,7 @@ public class DependencyFileManagerPinnedSdkTests
             if (firstConfig)
             {
                 repo.Setup(r => r.GetFileContentsAsync(nugetConfigName, It.IsAny<string>(), It.IsAny<string>()))
-                    .ReturnsAsync(CreateNuGetConfig());
+                    .ReturnsAsync(NuGetConfig);
                 firstConfig = false;
             }
             else
@@ -291,40 +317,5 @@ public class DependencyFileManagerPinnedSdkTests
         
         // No metadata should indicate update
         result.GlobalJson.Metadata.Should().BeNull();
-    }
-
-    private static string CreateVersionDetailsXml()
-    {
-        return """
-            <?xml version="1.0" encoding="utf-8"?>
-            <Dependencies>
-              <ProductDependencies>
-              </ProductDependencies>
-              <ToolsetDependencies>
-              </ToolsetDependencies>
-            </Dependencies>
-            """;
-    }
-
-    private static string CreateVersionProps()
-    {
-        return """
-            <Project>
-              <PropertyGroup>
-              </PropertyGroup>
-            </Project>
-            """;
-    }
-
-    private static string CreateNuGetConfig()
-    {
-        return """
-            <?xml version="1.0" encoding="utf-8"?>
-            <configuration>
-              <packageSources>
-                <add key="dotnet-public" value="https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public/nuget/v3/index.json" />
-              </packageSources>
-            </configuration>
-            """;
     }
 }
