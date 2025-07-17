@@ -481,6 +481,14 @@ public class DependencyFileManager : IDependencyFileManager
     {
         try
         {
+            // Check if tools.pinned is set to true, if so skip update
+            JToken pinnedToken = globalJson.SelectToken("tools.pinned");
+            if (pinnedToken != null && pinnedToken.Type == JTokenType.Boolean && pinnedToken.Value<bool>())
+            {
+                _logger.LogInformation("Skipping dotnet SDK update because tools.pinned is set to true in global.json");
+                return null;
+            }
+
             if (SemanticVersion.TryParse(globalJson.SelectToken("tools.dotnet")?.ToString(), out SemanticVersion repoDotnetVersion))
             {
                 if (repoDotnetVersion.CompareTo(incomingDotnetVersion) < 0 || forceUpdate)
