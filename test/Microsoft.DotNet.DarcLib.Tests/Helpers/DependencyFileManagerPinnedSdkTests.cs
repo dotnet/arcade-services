@@ -1,29 +1,49 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Newtonsoft.Json.Linq;
 using NuGet.Versioning;
 using NUnit.Framework;
 
-namespace Microsoft.DotNet.Darc.Tests;
+namespace Microsoft.DotNet.DarcLib.Tests.Helpers;
 
 [TestFixture]
 public class DependencyFileManagerPinnedSdkTests
 {
-    private DependencyFileManager _dependencyFileManager;
-
-    [SetUp]
-    public void Setup()
+    private void SetupCommonMocks(Mock<IGitRepo> repo, string globalJsonContent)
     {
-        _dependencyFileManager = new DependencyFileManager((IGitRepo)null, new VersionDetailsParser(), NullLogger.Instance);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(CreateVersionDetailsXml());
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionProps, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(CreateVersionProps());
+        repo.Setup(r => r.GetFileContentsAsync("global.json", It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(globalJsonContent);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, It.IsAny<string>(), It.IsAny<string>()))
+            .Throws<DependencyFileNotFoundException>();
+        
+        // Mock NuGet.config files - provide the first one and let others throw exceptions
+        bool firstConfig = true;
+        foreach (var nugetConfigName in VersionFiles.NugetConfigNames)
+        {
+            if (firstConfig)
+            {
+                repo.Setup(r => r.GetFileContentsAsync(nugetConfigName, It.IsAny<string>(), It.IsAny<string>()))
+                    .ReturnsAsync(CreateNuGetConfig());
+                firstConfig = false;
+            }
+            else
+            {
+                repo.Setup(r => r.GetFileContentsAsync(nugetConfigName, It.IsAny<string>(), It.IsAny<string>()))
+                    .Throws<DependencyFileNotFoundException>();
+            }
+        }
     }
 
     [Test]
@@ -43,20 +63,18 @@ public class DependencyFileManagerPinnedSdkTests
             }
             """;
 
-        var globalJson = JObject.Parse(globalJsonContent);
         var incomingVersion = SemanticVersion.Parse("9.0.100");
 
-        // Create a mock git repo that returns our test files
-        var mockGitRepo = new MockGitRepo();
-        mockGitRepo.AddFile("eng/Version.Details.xml", CreateVersionDetailsXml());
-        mockGitRepo.AddFile("eng/Versions.props", CreateVersionProps());
-        mockGitRepo.AddFile("global.json", globalJsonContent);
-        mockGitRepo.AddFile("NuGet.config", CreateNuGetConfig());
+        Mock<IGitRepo> repo = new();
+        Mock<IGitRepoFactory> repoFactory = new();
 
-        var testFileManager = new DependencyFileManager(mockGitRepo, new VersionDetailsParser(), NullLogger.Instance);
+        SetupCommonMocks(repo, globalJsonContent);
+        repoFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(repo.Object);
+
+        var manager = new DependencyFileManager(repoFactory.Object, new VersionDetailsParser(), NullLogger.Instance);
 
         // Act
-        var result = await testFileManager.UpdateDependencyFiles(
+        var result = await manager.UpdateDependencyFiles(
             new List<DependencyDetail>(),
             null,
             "https://github.com/test/repo",
@@ -95,20 +113,18 @@ public class DependencyFileManagerPinnedSdkTests
             }
             """;
 
-        var globalJson = JObject.Parse(globalJsonContent);
         var incomingVersion = SemanticVersion.Parse("9.0.100");
 
-        // Create a mock git repo that returns our test files
-        var mockGitRepo = new MockGitRepo();
-        mockGitRepo.AddFile("eng/Version.Details.xml", CreateVersionDetailsXml());
-        mockGitRepo.AddFile("eng/Versions.props", CreateVersionProps());
-        mockGitRepo.AddFile("global.json", globalJsonContent);
-        mockGitRepo.AddFile("NuGet.config", CreateNuGetConfig());
+        Mock<IGitRepo> repo = new();
+        Mock<IGitRepoFactory> repoFactory = new();
 
-        var testFileManager = new DependencyFileManager(mockGitRepo, new VersionDetailsParser(), NullLogger.Instance);
+        SetupCommonMocks(repo, globalJsonContent);
+        repoFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(repo.Object);
+
+        var manager = new DependencyFileManager(repoFactory.Object, new VersionDetailsParser(), NullLogger.Instance);
 
         // Act
-        var result = await testFileManager.UpdateDependencyFiles(
+        var result = await manager.UpdateDependencyFiles(
             new List<DependencyDetail>(),
             null,
             "https://github.com/test/repo",
@@ -148,20 +164,18 @@ public class DependencyFileManagerPinnedSdkTests
             }
             """;
 
-        var globalJson = JObject.Parse(globalJsonContent);
         var incomingVersion = SemanticVersion.Parse("9.0.100");
 
-        // Create a mock git repo that returns our test files
-        var mockGitRepo = new MockGitRepo();
-        mockGitRepo.AddFile("eng/Version.Details.xml", CreateVersionDetailsXml());
-        mockGitRepo.AddFile("eng/Versions.props", CreateVersionProps());
-        mockGitRepo.AddFile("global.json", globalJsonContent);
-        mockGitRepo.AddFile("NuGet.config", CreateNuGetConfig());
+        Mock<IGitRepo> repo = new();
+        Mock<IGitRepoFactory> repoFactory = new();
 
-        var testFileManager = new DependencyFileManager(mockGitRepo, new VersionDetailsParser(), NullLogger.Instance);
+        SetupCommonMocks(repo, globalJsonContent);
+        repoFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(repo.Object);
+
+        var manager = new DependencyFileManager(repoFactory.Object, new VersionDetailsParser(), NullLogger.Instance);
 
         // Act
-        var result = await testFileManager.UpdateDependencyFiles(
+        var result = await manager.UpdateDependencyFiles(
             new List<DependencyDetail>(),
             null,
             "https://github.com/test/repo",
@@ -183,7 +197,7 @@ public class DependencyFileManagerPinnedSdkTests
     }
 
     [Test]
-    public async Task UpdateDependencyFiles_WithPinnedAsString_ShouldNotUpdate()
+    public async Task UpdateDependencyFiles_WithPinnedAsString_ShouldUpdate()
     {
         // Arrange - test edge case where pinned is a string "true"
         var globalJsonContent = """
@@ -199,20 +213,18 @@ public class DependencyFileManagerPinnedSdkTests
             }
             """;
 
-        var globalJson = JObject.Parse(globalJsonContent);
         var incomingVersion = SemanticVersion.Parse("9.0.100");
 
-        // Create a mock git repo that returns our test files
-        var mockGitRepo = new MockGitRepo();
-        mockGitRepo.AddFile("eng/Version.Details.xml", CreateVersionDetailsXml());
-        mockGitRepo.AddFile("eng/Versions.props", CreateVersionProps());
-        mockGitRepo.AddFile("global.json", globalJsonContent);
-        mockGitRepo.AddFile("NuGet.config", CreateNuGetConfig());
+        Mock<IGitRepo> repo = new();
+        Mock<IGitRepoFactory> repoFactory = new();
 
-        var testFileManager = new DependencyFileManager(mockGitRepo, new VersionDetailsParser(), NullLogger.Instance);
+        SetupCommonMocks(repo, globalJsonContent);
+        repoFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(repo.Object);
+
+        var manager = new DependencyFileManager(repoFactory.Object, new VersionDetailsParser(), NullLogger.Instance);
 
         // Act
-        var result = await testFileManager.UpdateDependencyFiles(
+        var result = await manager.UpdateDependencyFiles(
             new List<DependencyDetail>(),
             null,
             "https://github.com/test/repo",
@@ -234,7 +246,7 @@ public class DependencyFileManagerPinnedSdkTests
     }
 
     [Test]
-    public async Task UpdateDependencyFiles_WithForceUpdate_ShouldUpdateDespitePinned()
+    public async Task UpdateDependencyFiles_WithForceUpdate_ShouldSkipUpdateWhenPinned()
     {
         // Arrange
         var globalJsonContent = """
@@ -250,20 +262,18 @@ public class DependencyFileManagerPinnedSdkTests
             }
             """;
 
-        var globalJson = JObject.Parse(globalJsonContent);
         var incomingVersion = SemanticVersion.Parse("9.0.100");
 
-        // Create a mock git repo that returns our test files
-        var mockGitRepo = new MockGitRepo();
-        mockGitRepo.AddFile("eng/Version.Details.xml", CreateVersionDetailsXml());
-        mockGitRepo.AddFile("eng/Versions.props", CreateVersionProps());
-        mockGitRepo.AddFile("global.json", globalJsonContent);
-        mockGitRepo.AddFile("NuGet.config", CreateNuGetConfig());
+        Mock<IGitRepo> repo = new();
+        Mock<IGitRepoFactory> repoFactory = new();
 
-        var testFileManager = new DependencyFileManager(mockGitRepo, new VersionDetailsParser(), NullLogger.Instance);
+        SetupCommonMocks(repo, globalJsonContent);
+        repoFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(repo.Object);
+
+        var manager = new DependencyFileManager(repoFactory.Object, new VersionDetailsParser(), NullLogger.Instance);
 
         // Act
-        var result = await testFileManager.UpdateDependencyFiles(
+        var result = await manager.UpdateDependencyFiles(
             new List<DependencyDetail>(),
             null,
             "https://github.com/test/repo",
