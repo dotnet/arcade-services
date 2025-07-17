@@ -433,6 +433,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             "diff",
             "--patch",
             "--binary", // Include binary contents as base64
+            "--no-color", // Don't colorize the output, it will be stored in a file
             "--output", // Store the diff in a .patch file
             patchName,
         };
