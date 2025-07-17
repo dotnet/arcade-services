@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
+using System.Text;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -12,7 +13,6 @@ using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
@@ -48,6 +48,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private readonly IPcsVmrBackFlower _vmrBackFlower;
     private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly ILogger _logger;
+
+    private const string OverwrittenCommitMessage = "Stopping code flow updates for this pull request as the following commits would get overwritten:";
 
     protected readonly IReminderManager<SubscriptionUpdateWorkItem> _pullRequestUpdateReminders;
     protected readonly IReminderManager<PullRequestCheck> _pullRequestCheckReminders;
@@ -1109,6 +1111,16 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 subscription.Id);
             return;
         }
+        catch (ManualCommitsInFlowException exception)
+        {
+            if (pr != null)
+            {
+                // TODO https://github.com/dotnet/arcade-services/issues/5030
+                // This is only a temporary band aid solution, we should figure out the best way to fix the algorithm so the flow continues as expected 
+                await HandleOverwrittingChanges(subscription, exception.OverwrittenCommits, pr, update);
+            }
+            return;
+        }
         catch (Exception)
         {
             _logger.LogError("Failed to flow source changes for build {buildId} in subscription {subscriptionId}",
@@ -1359,6 +1371,38 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         pr.MergeState = InProgressPullRequestState.Conflict;
         pr.SourceSha = remoteCommit;
         pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
+        await _pullRequestState.SetAsync(pr);
+        await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
+        await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);
+    }
+
+    private async Task HandleOverwrittingChanges(SubscriptionDTO subscription, List<string> commits, InProgressPullRequest pr, SubscriptionUpdateWorkItem update)
+    {
+        var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
+        var prComments = await remote.GetPullRequestCommentsAsync(pr.Url);
+        if (!prComments.Any(c => c.Contains(OverwrittenCommitMessage)))
+        {
+            _logger.LogInformation(
+                "Codeflow would overwrite manual PR changes. Stoping updates for subscription {subscriptionId} until the PR is merged",
+                update.SubscriptionId);
+            StringBuilder sb = new();
+            sb.AppendLine(OverwrittenCommitMessage);
+            foreach (var commit in commits)
+            {
+                sb.AppendLine($"- {commit}");
+            }
+            sb.AppendLine();
+            sb.AppendLine("Codeflow will resume after this PR is merged");
+            await remote.CommentPullRequestAsync(pr.Url, sb.ToString());
+        }
+        else
+        {
+            _logger.LogInformation(
+                "Codeflow for subscription {subscriptionId} is already stopped as it would overwrite manual changes",
+                update.SubscriptionId);
+        }
+
+            pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
         await _pullRequestState.SetAsync(pr);
         await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
         await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);

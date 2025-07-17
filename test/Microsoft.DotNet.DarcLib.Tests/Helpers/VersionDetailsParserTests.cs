@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
@@ -173,5 +174,29 @@ public class VersionDetailsParserTests
         versionDetails.Source.Sha.Should().Be("86ba5fba7c39323011c2bfc6b713142affc76171");
         versionDetails.Source.Mapping.Should().Be("SomeRepo");
         versionDetails.Source.BarId.Should().Be(23412);
+    }
+
+    [Test]
+    public void XmlWithBomCharactersIsParsedTest()
+    {
+        // Create XML content without BOM
+        const string xmlWithoutBom =
+            """
+            <?xml version="1.0" encoding="utf-8"?>
+            <Dependencies>
+              <ProductDependencies>
+                <Dependency Name="NETStandard.Library.Ref" Version="2.1.0">
+                  <Uri>https://github.com/dotnet/core-setup</Uri>
+                  <Sha>7d57652f33493fa022125b7f63aad0d70c52d810</Sha>
+                </Dependency>
+              </ProductDependencies>
+            </Dependencies>
+            """;
+
+        var parser = new VersionDetailsParser();
+        
+        string xmlWithBom = "∩╗┐" + xmlWithoutBom;
+        var action = () => parser.ParseVersionDetailsXml(xmlWithBom);
+        action.Should().NotThrow<Exception>();
     }
 }

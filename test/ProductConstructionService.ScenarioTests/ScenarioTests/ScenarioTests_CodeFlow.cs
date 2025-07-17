@@ -5,6 +5,8 @@ using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using NUnit.Framework;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using FluentAssertions;
 
 #nullable enable
 namespace ProductConstructionService.ScenarioTests.ScenarioTests;
@@ -302,6 +304,168 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                                     $"src/{TestRepository.TestRepo2Name}/{TestFile1Name}"
                                 ],
                                 TestFilePatches);
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    [Test]
+    public async Task Vmr_ForwardFlowManualPRChangesDontGetOverwritten()
+    {
+        var channelName = GetTestChannelName();
+        var vmrBranchName = GetTestBranchName();
+        var productRepo = GetGitHubRepoUrl(TestRepository.TestRepo1Name);
+        var repoBranchName = GetTestBranchName();
+
+        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(channelName);
+
+        await using AsyncDisposableValue<string> backflowSubscriptionId = await CreateBackwardFlowSubscriptionAsync(
+            channelName,
+            TestRepository.VmrTestRepoName,
+            TestRepository.TestRepo1Name,
+            repoBranchName,
+            UpdateFrequency.None.ToString(),
+            TestParameters.GitHubTestOrg,
+            sourceDirectory: TestRepository.TestRepo1Name);
+
+        await using AsyncDisposableValue<string> forwardFlowSubscriptionId = await CreateForwardFlowSubscriptionAsync(
+            channelName,
+            TestRepository.TestRepo1Name,
+            TestRepository.VmrTestRepoName,
+            vmrBranchName,
+            UpdateFrequency.None.ToString(),
+            TestParameters.GitHubTestOrg,
+            targetDirectory: TestRepository.TestRepo1Name);
+
+        TemporaryDirectory testRepoFolder = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
+        string sourceRepoUri = GetGitHubRepoUrl(TestRepository.VmrTestRepoName);
+        TemporaryDirectory vmrFolder = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
+        var backflowNewFilePath = vmrFolder.Directory / VmrInfo.GetRelativeRepoSourcesPath(TestRepository.TestRepo1Name) /  TestFile1Name;
+        var forwardFlowNewFilePath = Path.Combine(testRepoFolder.Directory, "forwardFlowFile.txt");
+
+        await CreateTargetBranchAndExecuteTest(repoBranchName, testRepoFolder.Directory, async () =>
+        {
+            using (ChangeDirectory(vmrFolder.Directory))
+            {
+                await using (await CheckoutBranchAsync(vmrBranchName))
+                {
+                    // Make a change in the VMR
+                    TestContext.WriteLine("Making code changes in the VMR");
+                    File.WriteAllText(backflowNewFilePath, TestFilesContent[TestFile1Name]);
+
+                    await GitAddAllAsync();
+                    await GitCommitAsync("Add new file");
+
+                    // Push it to github
+                    await using (await PushGitBranchAsync("origin", vmrBranchName))
+                    {
+                        var repoSha = (await GitGetCurrentSha()).TrimEnd();
+
+                        // Create a new build from the commit and add it to a channel
+                        Build build = await CreateBuildAsync(
+                            GetGitHubRepoUrl(TestRepository.VmrTestRepoName),
+                            vmrBranchName,
+                            repoSha,
+                            "1",
+                            []);
+
+                        TestContext.WriteLine("Adding build to channel");
+                        await AddBuildToChannelAsync(build.Id, channelName);
+
+                        TestContext.WriteLine("Triggering the subscription");
+                        // Now trigger the subscription
+                        await TriggerSubscriptionAsync(backflowSubscriptionId.Value);
+
+                        var backflowPr = await WaitForPullRequestAsync(
+                            TestRepository.TestRepo1Name,
+                            repoBranchName);
+
+                        // now make some changes in the product repo and open up a Forward flow PR
+                        using (ChangeDirectory(testRepoFolder.Directory))
+                        {
+                            await CheckoutRemoteBranchAsync(repoBranchName);
+
+                            // Make a change in a product repo
+                            TestContext.WriteLine("Making code changes to the repo");
+                            await File.WriteAllTextAsync(forwardFlowNewFilePath, "not important");
+                            await GitAddAllAsync();
+                            await GitCommitAsync("Add new file");
+                            // Push it to github
+                            await using (await PushGitBranchAsync("origin", repoBranchName))
+                            {
+                                repoSha = (await GitGetCurrentSha()).TrimEnd();
+
+                                // Create a new build from the commit and add it to a channel
+                                Build productBuild = await CreateBuildAsync(
+                                    GetGitHubRepoUrl(TestRepository.TestRepo1Name),
+                                    repoBranchName,
+                                    repoSha,
+                                    "1",
+                                    []);
+                                TestContext.WriteLine("Adding build to channel");
+                                await AddBuildToChannelAsync(productBuild.Id, channelName);
+                                TestContext.WriteLine("Triggering the subscription");
+                                // Now trigger the subscription
+                                await TriggerSubscriptionAsync(forwardFlowSubscriptionId.Value);
+                                var forwardFlowPR = await WaitForPullRequestAsync(TestRepository.VmrTestRepoName, vmrBranchName);
+
+                                // merge the backflow PR
+                                await MergePullRequestAsync(TestRepository.TestRepo1Name, backflowPr);
+
+                                // Push manual changes to the forward flow PR
+                                using (ChangeDirectory(vmrFolder.Directory))
+                                {
+                                    await CheckoutRemoteBranchAsync(forwardFlowPR.Head.Ref);
+                                    var newFileInPr = vmrFolder.Directory / VmrInfo.GetRelativeRepoSourcesPath(TestRepository.TestRepo1Name) / "pr-file.txt";
+                                    await File.WriteAllTextAsync(newFileInPr, "changes made in PR");
+                                    await GitAddAllAsync();
+                                    await GitCommitAsync("Add changes to PR file");
+                                    var manualChangeSha = (await GitGetCurrentSha()).TrimEnd();
+
+                                    await using (await PushGitBranchAsync("origin", forwardFlowPR.Head.Ref))
+                                    {
+                                        TestContext.WriteLine("Changes pushed to forward flow PR");
+
+                                        // and now make changes in the repo and forward flow them
+                                        using (ChangeDirectory(testRepoFolder.Directory))
+                                        {
+                                            await FastForwardAsync();
+                                            // Make a change in a product repo
+                                            TestContext.WriteLine("Making code changes to the repo");
+                                            await File.WriteAllTextAsync(forwardFlowNewFilePath, "not important again");
+                                            await GitAddAllAsync();
+                                            await GitCommitAsync("Add new file again");
+                                            // Push it to github
+                                            await using (await PushGitBranchAsync("origin", repoBranchName))
+                                            {
+                                                repoSha = (await GitGetCurrentSha()).TrimEnd();
+                                                // Create a new build from the commit and add it to a channel
+                                                Build productBuild2 = await CreateBuildAsync(
+                                                    GetGitHubRepoUrl(TestRepository.TestRepo1Name),
+                                                    repoBranchName,
+                                                    repoSha,
+                                                    "1",
+                                                    []);
+                                                TestContext.WriteLine("Adding build to channel");
+                                                await AddBuildToChannelAsync(productBuild2.Id, channelName);
+                                                TestContext.WriteLine("Triggering the subscription");
+                                                // Now trigger the subscription
+                                                await TriggerSubscriptionAsync(forwardFlowSubscriptionId.Value);
+                                                TestContext.WriteLine("Verifying subscription PR");
+                                                var pr = await WaitForPullRequestComment(
+                                                    TestRepository.VmrTestRepoName,
+                                                    vmrBranchName,
+                                                    "Stopping code flow updates for this pull request as the following commits would get overwritten");
+                                                pr.Head.Sha.Should().Be(manualChangeSha);
+                                            }
+                                        }
+                                    }
+                                }
+
+                                
+                            }
                         }
                     }
                 }

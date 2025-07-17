@@ -39,7 +39,7 @@ internal class AuthenticateEditorPopUp : EditorPopUp
         // Initialize line contents.
         Contents =
         [
-            new("Create new GitHub personal access tokens at https://github.com/settings/tokens (no scopes needed but needs SSO enabled on the PAT)", isComment: true),
+            new("Create new GitHub personal access tokens at https://github.com/settings/personal-access-tokens (choose 'dotnet' as the resource owner)", isComment: true),
             new($"{GithubTokenElement}={GetCurrentSettingForDisplay(settings.GitHubToken, string.Empty, true)}"),
             new(string.Empty),
             new("[OPTIONAL]", isComment: true),

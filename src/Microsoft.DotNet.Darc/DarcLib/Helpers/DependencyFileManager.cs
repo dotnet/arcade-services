@@ -1041,6 +1041,13 @@ public class DependencyFileManager : IDependencyFileManager
         {
             PreserveWhitespace = true
         };
+
+        // Remove BOM character if present
+        if (fileContent.StartsWith("∩╗┐"))
+        {
+            fileContent = fileContent.Substring(3);
+        }
+
         document.LoadXml(fileContent);
 
         return document;

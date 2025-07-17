@@ -44,6 +44,13 @@ public interface IRemote
     Task<IEnumerable<Review>> GetPullRequestReviewsAsync(string pullRequestUrl);
 
     /// <summary>
+    ///     Get the comments for the specified pull request.
+    /// </summary>
+    /// <param name="pullRequestUrl">Url of pull request.</param>
+    /// <returns>List of comments</returns>
+    Task<List<string>> GetPullRequestCommentsAsync(string pullRequestUrl);
+
+    /// <summary>
     ///     Retrieve information about a pull request.
     /// </summary>
     /// <param name="pullRequestUri">URI of pull request.</param>

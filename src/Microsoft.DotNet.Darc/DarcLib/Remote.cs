@@ -394,6 +394,11 @@ public sealed class Remote : IRemote
         await _remoteGitClient.CommentPullRequestAsync(pullRequestUri, comment);
     }
 
+    public async Task<List<string>> GetPullRequestCommentsAsync(string pullRequestUrl)
+    {
+        return await _remoteGitClient.GetPullRequestCommentsAsync(pullRequestUrl);
+    }
+
     public async Task<SourceManifest> GetSourceManifestAsync(string vmrUri, string branch)
     {
         var fileContent = await _remoteGitClient.GetFileContentsAsync(

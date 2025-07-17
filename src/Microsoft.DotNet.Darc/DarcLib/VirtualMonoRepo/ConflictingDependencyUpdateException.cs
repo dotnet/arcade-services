@@ -4,6 +4,7 @@
 using System;
 using System.Text;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -11,16 +12,16 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 public class ConflictingDependencyUpdateException : Exception
 {
     public ConflictingDependencyUpdateException(
-            DependencyUpdate repoUpdate,
-            DependencyUpdate vmrUpdate)
+            IVersionFileProperty repoUpdate,
+            IVersionFileProperty vmrUpdate)
         : base(ConstructMessage(repoUpdate, vmrUpdate))
     {
     }
 
-    private static string ConstructMessage(DependencyUpdate repoUpdate, DependencyUpdate vmrUpdate)
+    private static string ConstructMessage(IVersionFileProperty repoUpdate, IVersionFileProperty vmrUpdate)
     {
         var message = new StringBuilder();
-        message.AppendLine($"Conflicting updates of asset {repoUpdate.From?.Name ?? repoUpdate.To?.Name} found between a repo and a VMR");
+        message.AppendLine($"Conflicting updates of asset {repoUpdate.Name} found between a repo and a VMR");
         message.Append("Repo: ");
         message.AppendLine(ConstructMessageForUpdate(repoUpdate));
         message.Append("VMR: ");
@@ -28,18 +29,18 @@ public class ConflictingDependencyUpdateException : Exception
         return message.ToString();
     }
 
-    private static string ConstructMessageForUpdate(DependencyUpdate update)
+    private static string ConstructMessageForUpdate(IVersionFileProperty update)
     {
-        if (update.To == null)
+        if (update.IsRemoved())
         {
             return "removed";
         }
 
-        if (update.From == null)
+        if (update.IsAdded())
         {
             return "added";
         }
 
-        return $"updated to {update.To.Version}";
+        return $"updated to {update.Value}";
     }
 }
