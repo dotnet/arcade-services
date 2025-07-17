@@ -1,0 +1,92 @@
+@using Microsoft.DotNet.ProductConstructionService.Client;
+@using Microsoft.DotNet.ProductConstructionService.Client.Models;
+@using TextCopy;
+@inject IClipboard Clipboard
+@inject IProductConstructionServiceApi PcsApi
+
+@if (_filteredSourceManifest != null && _filteredSourceManifest.Any())
+{
+    <FluentDivider Style="margin: 20px 0;" />
+    <FluentStack Orientation="Orientation.Vertical" VerticalGap="10">
+        <FluentLabel Typo="Typography.H4">VMR Source Manifest</FluentLabel>
+        <FluentTextField @bind-Value="_repoFilter" @oninput="OnRepoFilterChanged" placeholder="Filter repositories..." style="width: 300px;" />
+        <FluentDataGrid Items="@_filteredSourceManifest" Style="width: 100%;">
+            <PropertyColumn Property="@(p => p.Path)" Title="Path" Sortable="true" />
+            <PropertyColumn Property="@(p => p.RemoteUri)" Title="Repository" Sortable="true" />
+            <TemplateColumn Title="Commit SHA" Sortable="true" SortBy="@(GridSort<SourceManifestEntry>.ByAscending(p => p.CommitSha))">
+                <FluentStack VerticalAlignment="VerticalAlignment.Center">
+                    <span style="font-family: monospace;">@(context.CommitSha.Substring(0, Math.Min(8, context.CommitSha.Length)))</span>
+                    <FluentButton IconStart="@(new Icons.Regular.Size16.Copy())" Appearance="Appearance.Stealth" OnClick="@(() => SetBarClipboard(context.CommitSha))" Title="Copy commit SHA" />
+                </FluentStack>
+            </TemplateColumn>
+            <TemplateColumn Title="BAR ID" Sortable="true" SortBy="@(GridSort<SourceManifestEntry>.ByAscending(p => p.BarId))">
+                @if (context.BarId.HasValue)
+                {
+                    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+                        <span>@context.BarId.Value</span>
+                        <FluentButton IconStart="@(new Icons.Regular.Size16.Copy())" Appearance="Appearance.Stealth" OnClick="@(() => SetBarClipboard(context.BarId.Value.ToString()))" Title="Copy BAR ID" />
+                    </FluentStack>
+                }
+                else
+                {
+                    <span>-</span>
+                }
+            </TemplateColumn>
+        </FluentDataGrid>
+    </FluentStack>
+}
+
+@code {
+    [Parameter]
+    public int BuildId { get; set; }
+
+    private List<SourceManifestEntry>? _sourceManifest = null;
+    private string _repoFilter = string.Empty;
+    private IQueryable<SourceManifestEntry>? _filteredSourceManifest = null;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadSourceManifestAsync();
+    }
+
+    private async Task LoadSourceManifestAsync()
+    {
+        try
+        {
+            _sourceManifest = await PcsApi.Builds.GetSourceManifestAsync(BuildId);
+            UpdateFilteredSourceManifest();
+        }
+        catch
+        {
+            // Source manifest not available for non-VMR builds or builds without source manifest
+            _sourceManifest = null;
+            _filteredSourceManifest = null;
+        }
+    }
+
+    private void UpdateFilteredSourceManifest()
+    {
+        if (_sourceManifest == null)
+        {
+            _filteredSourceManifest = null;
+            return;
+        }
+
+        _filteredSourceManifest = _sourceManifest
+            .Where(entry => string.IsNullOrEmpty(_repoFilter) || 
+                           entry.RemoteUri.Contains(_repoFilter, StringComparison.OrdinalIgnoreCase) ||
+                           entry.Path.Contains(_repoFilter, StringComparison.OrdinalIgnoreCase))
+            .AsQueryable();
+    }
+
+    private void OnRepoFilterChanged(ChangeEventArgs e)
+    {
+        _repoFilter = e.Value?.ToString() ?? string.Empty;
+        UpdateFilteredSourceManifest();
+    }
+
+    private async Task SetBarClipboard(string text)
+    {
+        await Clipboard.SetTextAsync(text);
+    }
+}
