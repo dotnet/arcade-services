@@ -1737,7 +1737,18 @@ public class DependencyFileManager : IDependencyFileManager
     private static XmlDocument GenerateVersionDetailsProps(VersionDetails versionDetails)
     {
         XmlDocument output = new();
+        
+        // Add XML declaration
+        XmlDeclaration xmlDeclaration = output.CreateXmlDeclaration("1.0", "utf-8", null);
+        output.AppendChild(xmlDeclaration);
+        
+        // Create the root Project element
+        XmlElement projectElement = output.CreateElement("Project");
+        output.AppendChild(projectElement);
+        
+        // Create the PropertyGroup element
         XmlElement propertyGroup = output.CreateElement("PropertyGroup");
+        projectElement.AppendChild(propertyGroup);
 
         var versionDetailsLookup = versionDetails.Dependencies.ToLookup(dep => dep.RepoUri, dep => dep);
 
@@ -1748,7 +1759,7 @@ public class DependencyFileManager : IDependencyFileManager
             foreach (var dependency in repoDependencies.OrderBy(d => d.Name))
             {
                 var packageVersionElementName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
-                XmlElement element = output.CreateElement(dependency.Name);
+                XmlElement element = output.CreateElement(packageVersionElementName);
                 element.InnerText = dependency.Version;
                 propertyGroup.AppendChild(element);
             }
