@@ -98,6 +98,19 @@ public class DependencyFileManager : IDependencyFileManager
         return await ReadXmlFileAsync(VersionFiles.VersionProps, repoUri, branch);
     }
 
+    public async Task<bool> VersionDetailsPropsExists(string repoUri, string branch)
+    {
+        try
+        {
+            await ReadXmlFileAsync(VersionFiles.VersionDetailsProps, repoUri, branch);
+            return true;
+        }
+        catch (DependencyFileNotFoundException)
+        {
+            return false;
+        }
+    }
+
     public async Task<JObject> ReadGlobalJsonAsync(string repoUri, string branch, bool repoIsVmr)
     {
         var path = repoIsVmr ?
@@ -197,9 +210,15 @@ public class DependencyFileManager : IDependencyFileManager
     public async Task AddDependencyAsync(
         DependencyDetail dependency,
         string repoUri,
-        string branch)
+        string branch,
+        bool? repoHasVersionDetailsProps = null)
     {
-        // Should the dependency go to Versions.props or global.json?
+        if (!repoHasVersionDetailsProps.HasValue)
+        {
+            repoHasVersionDetailsProps = await VersionDetailsPropsExists(repoUri, branch);
+        }
+
+        // Should the dependency go to global.json?
         if (_knownAssetNames.ContainsKey(dependency.Name))
         {
             if (!_sdkMapping.TryGetValue(dependency.Name, out var parent))
@@ -209,21 +228,38 @@ public class DependencyFileManager : IDependencyFileManager
 
             await AddDependencyToGlobalJson(repoUri, branch, parent, dependency);
         }
-        else
+        else if (!repoHasVersionDetailsProps.Value)
         {
             await AddDependencyToVersionsPropsAsync(repoUri, branch, dependency);
         }
 
-        await AddDependencyToVersionDetailsAsync(repoUri, branch, dependency);
+        await AddDependencyToVersionDetailsAsync(repoUri, branch, dependency, repoHasVersionDetailsProps.Value);
     }
 
-    public async Task RemoveDependencyAsync(string dependencyName, string repoUri, string branch, bool repoIsVmr = false)
+    public async Task RemoveDependencyAsync(string dependencyName, string repoUri, string branch, bool repoIsVmr = false, bool? repoHasVersionDetailsProps = null)
     {
+        if (!repoHasVersionDetailsProps.HasValue)
+        {
+            repoHasVersionDetailsProps = await VersionDetailsPropsExists(repoUri, branch);
+        }
+
+        var updatedVersionDetails = await RemoveDependencyFromVersionDetailsAsync(dependencyName, repoUri, branch);
         var updatedDependencyVersionFile =
-            new GitFile(VersionFiles.VersionDetailsXml, await RemoveDependencyFromVersionDetailsAsync(dependencyName, repoUri, branch));
-        var updatedVersionPropsFile =
-            new GitFile(VersionFiles.VersionProps, await RemoveDependencyFromVersionPropsAsync(dependencyName, repoUri, branch));
-        List<GitFile> gitFiles = [updatedDependencyVersionFile, updatedVersionPropsFile];
+            new GitFile(VersionFiles.VersionDetailsXml, updatedVersionDetails);
+        List<GitFile> gitFiles = new List<GitFile> { updatedDependencyVersionFile };
+
+        if (repoHasVersionDetailsProps.Value)
+        {
+            gitFiles.Add(new GitFile(
+                VersionFiles.VersionDetailsProps,
+                GenerateVersionDetailsProps(_versionDetailsParser.ParseVersionDetailsXml(updatedVersionDetails))));
+        }
+        else
+        {
+            gitFiles.Add(new GitFile(
+                VersionFiles.VersionProps,
+                await RemoveDependencyFromVersionPropsAsync(dependencyName, repoUri, branch)));
+        }
 
         var updatedDotnetTools = await RemoveDotnetToolsDependencyAsync(dependencyName, repoUri, branch, repoIsVmr);
         if (updatedDotnetTools != null)
@@ -318,37 +354,6 @@ public class DependencyFileManager : IDependencyFileManager
         return element;
     }
 
-    public void UpdateVersionDetails(
-        XmlDocument versionDetails,
-        IEnumerable<DependencyDetail> itemsToUpdate,
-        SourceDependency sourceDependency,
-        IEnumerable<DependencyDetail> oldDependencies)
-    {
-        // Adds/updates the <Source> element
-        if (sourceDependency != null)
-        {
-            var sourceNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.SourceElementName}");
-            if (sourceNode == null)
-            {
-                sourceNode = versionDetails.CreateElement(VersionDetailsParser.SourceElementName);
-                var dependenciesNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.DependenciesElementName}");
-                dependenciesNode.PrependChild(sourceNode);
-            }
-
-            SetAttribute(versionDetails, sourceNode, VersionDetailsParser.UriElementName, sourceDependency.Uri);
-            SetAttribute(versionDetails, sourceNode, VersionDetailsParser.MappingElementName, sourceDependency.Mapping);
-            SetAttribute(versionDetails, sourceNode, VersionDetailsParser.ShaElementName, sourceDependency.Sha);
-            if (sourceDependency.BarId != null) {
-                SetAttribute(versionDetails, sourceNode, VersionDetailsParser.BarIdElementName, sourceDependency.BarId.ToString());
-            }
-        }
-
-        foreach (DependencyDetail itemToUpdate in itemsToUpdate)
-        {
-            UpdateVersionDetailsDependency(versionDetails, itemToUpdate);
-        }
-    }
-
     private static void UpdateVersionDetailsDependency(XmlDocument versionDetails, DependencyDetail itemToUpdate)
     {
         itemToUpdate.Validate();
@@ -396,7 +401,8 @@ public class DependencyFileManager : IDependencyFileManager
         string branch,
         IEnumerable<DependencyDetail> oldDependencies,
         SemanticVersion incomingDotNetSdkVersion,
-        bool forceGlobalJsonUpdate = false)
+        bool forceGlobalJsonUpdate = false,
+        bool? repoHasVersionDetailsProps = null)
     {
         // When updating version files, we always want to look in the base folder, even when we're updating it in the VMR
         // src/arcade version files only get updated during arcade forward flows
@@ -406,6 +412,10 @@ public class DependencyFileManager : IDependencyFileManager
         JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, repoIsVmr);
         JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, repoIsVmr);
         (string nugetConfigName, XmlDocument nugetConfig) = await ReadNugetConfigAsync(repoUri, branch);
+        if (!repoHasVersionDetailsProps.HasValue)
+        {
+            repoHasVersionDetailsProps = await VersionDetailsPropsExists(repoUri, branch);
+        }
 
         foreach (DependencyDetail itemToUpdate in itemsToUpdate)
         {
@@ -418,10 +428,43 @@ public class DependencyFileManager : IDependencyFileManager
                 throw new DarcException(e.Message + $" in repo '{repoUri}' and branch '{branch}'", e);
             }
 
-            UpdateVersionFiles(versionProps, globalJson, toolsConfigurationJson, itemToUpdate);
+            UpdateVersionDetailsDependency(versionDetails, itemToUpdate);
+
+            if (!repoHasVersionDetailsProps.Value)
+            {
+                UpdateVersionProps(versionProps, itemToUpdate);
+            }
+
+            // Update the global json too, even if there was an element in the props file, in case
+            // it was listed in both
+            UpdateVersionGlobalJson(itemToUpdate, globalJson);
+
+            // If there is a .config/dotnet-tools.json file and this dependency exists there, update it too
+            if (toolsConfigurationJson != null)
+            {
+                UpdateDotNetToolsManifest(itemToUpdate, toolsConfigurationJson);
+            }
         }
 
-        UpdateVersionDetails(versionDetails, itemsToUpdate, sourceDependency, oldDependencies);
+        // Adds/updates the <Source> element
+        if (sourceDependency != null)
+        {
+            var sourceNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.SourceElementName}");
+            if (sourceNode == null)
+            {
+                sourceNode = versionDetails.CreateElement(VersionDetailsParser.SourceElementName);
+                var dependenciesNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.DependenciesElementName}");
+                dependenciesNode.PrependChild(sourceNode);
+            }
+
+            SetAttribute(versionDetails, sourceNode, VersionDetailsParser.UriElementName, sourceDependency.Uri);
+            SetAttribute(versionDetails, sourceNode, VersionDetailsParser.MappingElementName, sourceDependency.Mapping);
+            SetAttribute(versionDetails, sourceNode, VersionDetailsParser.ShaElementName, sourceDependency.Sha);
+            if (sourceDependency.BarId != null)
+            {
+                SetAttribute(versionDetails, sourceNode, VersionDetailsParser.BarIdElementName, sourceDependency.BarId.ToString());
+            }
+        }
 
         // Combine the two sets of dependencies. If an asset is present in the itemsToUpdate,
         // prefer that one over the old dependencies
@@ -462,6 +505,13 @@ public class DependencyFileManager : IDependencyFileManager
         if (toolsConfigurationJson != null)
         {
             fileContainer.DotNetToolsJson = new GitFile(VersionFiles.DotnetToolsConfigJson, toolsConfigurationJson);
+        }
+
+        if (repoHasVersionDetailsProps.Value)
+        {
+            fileContainer.VersionDetailsProps = new GitFile(
+                VersionFiles.VersionDetailsProps,
+                GenerateVersionDetailsProps(_versionDetailsParser.ParseVersionDetailsXml(versionDetails)));
         }
 
         return fileContainer;
@@ -836,7 +886,8 @@ public class DependencyFileManager : IDependencyFileManager
     private async Task AddDependencyToVersionDetailsAsync(
         string repo,
         string branch,
-        DependencyDetail dependency)
+        DependencyDetail dependency,
+        bool repoHasVersionDetailsProps)
     {
         XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repo, null);
 
@@ -882,8 +933,15 @@ public class DependencyFileManager : IDependencyFileManager
         // who will gather up all updates and then call the git client to write the files all at once:
         // https://github.com/dotnet/arcade/issues/1095.  Today this is only called from the Local interface so
         // it's okay for now.
-        var file = new GitFile(VersionFiles.VersionDetailsXml, versionDetails);
-        await GetGitClient(repo).CommitFilesAsync([file], repo, branch, $"Add {dependency} to " +
+        List<GitFile> updatedGitFiles = [new GitFile(VersionFiles.VersionDetailsXml, versionDetails)];
+        if (repoHasVersionDetailsProps)
+        {
+            updatedGitFiles.Add(new GitFile(
+                VersionFiles.VersionDetailsProps,
+                GenerateVersionDetailsProps(_versionDetailsParser.ParseVersionDetailsXml(versionDetails))));
+        }
+
+        await GetGitClient(repo).CommitFilesAsync(updatedGitFiles, repo, branch, $"Add {dependency} to " +
             $"'{VersionFiles.VersionDetailsXml}'");
 
         _logger.LogInformation(
@@ -1084,17 +1142,7 @@ public class DependencyFileManager : IDependencyFileManager
         }
     }
 
-    /// <summary>
-    ///     Update well-known version files.
-    /// </summary>
-    /// <param name="versionProps">Versions.props xml document</param>
-    /// <param name="globalJsonToken">Global.json document</param>
-    /// <param name="dotNetToolJsonToken">.config/dotnet-tools.json document</param>
-    /// <param name="itemToUpdate">Item that needs an update.</param>
-    /// <remarks>
-    ///     TODO: https://github.com/dotnet/arcade/issues/1095
-    /// </remarks>
-    private void UpdateVersionFiles(XmlDocument versionProps, JToken globalJsonToken, JToken dotNetToolJsonToken, DependencyDetail itemToUpdate)
+    private static void UpdateVersionProps(XmlDocument versionProps, DependencyDetail itemToUpdate)
     {
         var versionElementName = VersionFiles.GetVersionPropsPackageVersionElementName(itemToUpdate.Name);
         var alternateVersionElementName = VersionFiles.GetVersionPropsAlternatePackageVersionElementName(itemToUpdate.Name);
@@ -1130,16 +1178,6 @@ public class DependencyFileManager : IDependencyFileManager
                     parentNode.ReplaceChild(newPackageVersionElement, packageVersionNode);
                 }
             }
-        }
-
-        // Update the global json too, even if there was an element in the props file, in case
-        // it was listed in both
-        UpdateVersionGlobalJson(itemToUpdate, globalJsonToken);
-
-        // If there is a .config/dotnet-tools.json file and this dependency exists there, update it too
-        if (dotNetToolJsonToken != null)
-        {
-            UpdateDotNetToolsManifest(itemToUpdate, dotNetToolJsonToken);
         }
     }
 
@@ -1247,25 +1285,29 @@ public class DependencyFileManager : IDependencyFileManager
         [
             VerifyNoDuplicatedProperties(await versionProps),
             VerifyNoDuplicatedDependencies((await versionDetails).Dependencies),
-            VerifyMatchingVersionProps(
-                (await versionDetails).Dependencies,
-                await versionProps,
-                out Task<HashSet<string>> utilizedVersionPropsDependencies),
             VerifyMatchingGlobalJson(
                 (await versionDetails).Dependencies,
                 await globalJson,
                 out Task<HashSet<string>> utilizedGlobalJsonDependencies),
-            VerifyUtilizedDependencies(
+            VerifyMatchingDotNetToolsJson(
+                (await versionDetails).Dependencies,
+                await dotnetToolsJson)
+        ];
+
+        if (await VersionDetailsPropsExists(repo, branch))
+        {
+            verificationTasks.Add(VerifyMatchingVersionProps(
+                (await versionDetails).Dependencies,
+                await versionProps,
+                out Task<HashSet<string>> utilizedVersionPropsDependencies));
+            verificationTasks.Add(VerifyUtilizedDependencies(
                 (await versionDetails).Dependencies,
                 new List<HashSet<string>>
                 {
                     await utilizedVersionPropsDependencies,
                     await utilizedGlobalJsonDependencies
-                }),
-            VerifyMatchingDotNetToolsJson(
-                (await versionDetails).Dependencies,
-                await dotnetToolsJson)
-        ];
+                }));
+        }
 
         var results = await Task.WhenAll(verificationTasks);
         return results.All(result => result);
@@ -1690,6 +1732,29 @@ public class DependencyFileManager : IDependencyFileManager
         }
 
         return assetLocationMappings;
+    }
+
+    private static XmlDocument GenerateVersionDetailsProps(VersionDetails versionDetails)
+    {
+        XmlDocument output = new();
+        XmlElement propertyGroup = output.CreateElement("PropertyGroup");
+
+        var versionDetailsLookup = versionDetails.Dependencies.ToLookup(dep => dep.RepoUri, dep => dep);
+
+        foreach (var repoDependencies in versionDetailsLookup)
+        {
+            var repoName = repoDependencies.Key.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
+            propertyGroup.AppendChild(output.CreateComment($" {repoName} dependencies "));
+            foreach (var dependency in repoDependencies.OrderBy(d => d.Name))
+            {
+                var packageVersionElementName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
+                XmlElement element = output.CreateElement(dependency.Name);
+                element.InnerText = dependency.Version;
+                propertyGroup.AppendChild(element);
+            }
+        }
+
+        return output;
     }
 
     public static XmlNode GetVersionPropsNode(XmlDocument versionProps, string nodeName) =>
