@@ -657,7 +657,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 string url = $"/repos/{repoIdentity}/commits/{manifest.Commit}";
                 HttpResponseMessage response = client.GetAsync(url).Result;
 
-                for (int retry = 1; retry <= 5 && response.StatusCode == System.Net.HttpStatusCode.TooManyRequests; retry++)
+                const int MaxRetries = 5;
+                for (int retry = 1; retry <= MaxRetries && response.StatusCode == System.Net.HttpStatusCode.TooManyRequests; retry++)
                 {
                     TimeSpan timeSpan;
                     if (response.Headers.RetryAfter?.Delta != null)
@@ -670,7 +671,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     }
                     else
                     {
-                        timeSpan = TimeSpan.FromSeconds(5);
+                        const int defaultRetryAfterSeconds = 10;
+                        timeSpan = TimeSpan.FromSeconds(defaultRetryAfterSeconds);
                     }
 
                     Log.LogMessage(MessageImportance.High,
