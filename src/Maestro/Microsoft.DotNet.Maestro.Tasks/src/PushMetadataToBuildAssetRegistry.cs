@@ -654,8 +654,30 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 client.BaseAddress = new Uri($"https://api.{gitHubHost}");
                 client.DefaultRequestHeaders.Add("User-Agent", "PushToBarTask");
 
-                HttpResponseMessage response =
-                    client.GetAsync($"/repos/{repoIdentity}/commits/{manifest.Commit}").Result;
+                string url = $"/repos/{repoIdentity}/commits/{manifest.Commit}";
+                HttpResponseMessage response = client.GetAsync(url).Result;
+
+                for (int retry = 1; retry <= 5 && response.StatusCode == System.Net.HttpStatusCode.TooManyRequests; retry++)
+                {
+                    TimeSpan timeSpan;
+                    if (response.Headers.RetryAfter?.Delta != null)
+                    {
+                        timeSpan = response.Headers.RetryAfter.Delta.Value;
+                    }
+                    else if (response.Headers.RetryAfter?.Date != null)
+                    {
+                        timeSpan = response.Headers.RetryAfter.Date.Value - DateTimeOffset.UtcNow;
+                    }
+                    else
+                    {
+                        timeSpan = TimeSpan.FromSeconds(5);
+                    }
+
+                    Log.LogMessage(MessageImportance.High,
+                        $"API rate limit exceeded, retrying in {timeSpan.TotalSeconds} seconds. Retry attempt: {retry}");
+                    Thread.Sleep(timeSpan);
+                    response = client.GetAsync(url).Result;
+                }
 
                 if (response.IsSuccessStatusCode)
                 {
