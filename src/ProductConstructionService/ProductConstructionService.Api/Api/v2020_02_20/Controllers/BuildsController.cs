@@ -213,7 +213,7 @@ public class BuildsController : v2019_01_16.Controllers.BuildsController
         try
         {
             IRemote remote = await _factory.CreateRemoteAsync(repository);
-            SourceManifest sourceManifest = await remote.GetSourceManifestAsync(repository, build.Commit);
+            SourceManifest sourceManifest = await remote.GetSourceManifestAtCommitAsync(repository, build.Commit);
             
             var entries = sourceManifest.Repositories
                 .Select(r => new SourceManifestEntry(r.Path, r.RemoteUri, r.CommitSha, r.BarId))
