@@ -426,10 +426,6 @@ public sealed class Remote : IRemote
         }
 
         var sourceManifest = await GetSourceManifestAsync(vmrUri, commitSha);
-        if (sourceManifest == null)
-        {
-            return null;
-        }
 
         await _cache.TrySetAsync(commitSha, sourceManifest.ToWrapper());
 

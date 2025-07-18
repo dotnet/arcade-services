@@ -5,10 +5,10 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
 namespace ProductConstructionService.Common;
 
-// <summary>
-// This class acts as a delegate for RedisCache and RedisCacheFactory.
-// It is needed is because DarcLib does not depend on ProductConstructionService and can only access caching through a delegate.
-// </summary>
+/// <summary>
+/// This class acts as a delegate for RedisCache and RedisCacheFactory.
+/// It is needed because DarcLib does not depend on ProductConstructionService and can only access caching through a delegate.
+/// </summary>
 internal class RedisCacheClient : IRedisCacheClient
 {
     private readonly IRedisCacheFactory _factory;

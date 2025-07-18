@@ -219,13 +219,17 @@ public class BuildsController : v2019_01_16.Controllers.BuildsController
                 .Select(r => new SourceManifestEntry(r.Path, r.RemoteUri, r.CommitSha, r.BarId))
                 .OrderBy(e => e.Path)
                 .ToList();
-            
+
             return Ok(entries);
         }
-        catch (Exception ex)
+        catch (DependencyFileNotFoundException)
         {
             // Source manifest may not exist for non-VMR builds
-            return NotFound($"Source manifest not found: {ex.Message}");
+            return NotFound("There is no source manifest associated with this build.");
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "An unexpected error occurred.");
         }
     }
 
