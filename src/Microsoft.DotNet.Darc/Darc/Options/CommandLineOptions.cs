@@ -182,6 +182,7 @@ public abstract class CommandLineOptions : ICommandLineOptions
         {
             return new VmrInfo(string.Empty, string.Empty);
         });
+        services.TryAddSingleton<IRedisCacheClient, NoOpRedisClient>();
 
         return services;
     }
