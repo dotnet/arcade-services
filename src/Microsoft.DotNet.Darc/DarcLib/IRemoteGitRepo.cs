@@ -4,7 +4,6 @@
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -168,6 +167,7 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// </summary>
     Task<IReadOnlyCollection<string>> GetGitTreeNames(string path, string repoUri, string branch);
 }
+<<<<<<< HEAD
 
 #nullable disable
 public class PullRequest
@@ -181,3 +181,5 @@ public class PullRequest
     public DateTimeOffset UpdatedAt { get; set; }
     public string HeadBranchSha { get; set; }
 }
+=======
+>>>>>>> d1b9ef6de ([REFACTORING] Move PullRequest to DarcLib.Models)

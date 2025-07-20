@@ -300,7 +300,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// </summary>
     /// <param name="pullRequestUrl">Uri of the pull request</param>
     /// <returns>Information on the pull request.</returns>
-    public async Task<PullRequest> GetPullRequestAsync(string pullRequestUrl)
+    public async Task<Models.PullRequest> GetPullRequestAsync(string pullRequestUrl)
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
         Octokit.PullRequest pr = await GetClient(owner, repo).PullRequest.Get(owner, repo, id);
@@ -312,7 +312,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// </summary>
     /// <param name="repoUri">Repo to create the pull request for.</param>
     /// <param name="pullRequest">Pull request data</param>
-    public async Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest)
+    public async Task<Models.PullRequest> CreatePullRequestAsync(string repoUri, Models.PullRequest pullRequest)
     {
         (string owner, string repo) = ParseRepoUri(repoUri);
 
@@ -339,7 +339,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// </summary>
     /// <param name="pullRequestUri">Uri of pull request to update</param>
     /// <param name="pullRequest">Pull request info to update</param>
-    public async Task UpdatePullRequestAsync(string pullRequestUri, PullRequest pullRequest)
+    public async Task UpdatePullRequestAsync(string pullRequestUri, Models.PullRequest pullRequest)
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUri);
 
@@ -1289,7 +1289,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// <returns>Async task</returns>
     public async Task DeletePullRequestBranchAsync(string pullRequestUri)
     {
-        PullRequest pr = await GetPullRequestAsync(pullRequestUri);
+        Models.PullRequest pr = await GetPullRequestAsync(pullRequestUri);
         (string owner, string repo, int id) prInfo = ParsePullRequestUri(pullRequestUri);
         await DeleteBranchAsync(prInfo.owner, prInfo.repo, pr.HeadBranch);
     }
@@ -1467,7 +1467,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         }
     }
 
-    private static PullRequest ToDarcLibPullRequest(Octokit.PullRequest pr)
+    private static Models.PullRequest ToDarcLibPullRequest(Octokit.PullRequest pr)
     {
         PrStatus status;
         if (pr.State == ItemState.Closed)
@@ -1479,7 +1479,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             status = PrStatus.Open;
         }
 
-        return new PullRequest
+        return new Models.PullRequest
         {
             Url = pr.Url,
             Title = pr.Title,
