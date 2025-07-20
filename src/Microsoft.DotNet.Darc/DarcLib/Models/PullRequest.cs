@@ -5,7 +5,7 @@ using System;
 
 namespace Microsoft.DotNet.DarcLib.Models;
 
-public class PullRequest
+public class PullRequest : IGithubEtagResource
 {
     public string Url { get; set; }
     public string Title { get; set; }
@@ -15,4 +15,5 @@ public class PullRequest
     public PrStatus Status { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
     public string HeadBranchSha { get; set; }
+    public string Etag { get; set; }
 }

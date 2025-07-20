@@ -167,19 +167,3 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// </summary>
     Task<IReadOnlyCollection<string>> GetGitTreeNames(string path, string repoUri, string branch);
 }
-<<<<<<< HEAD
-
-#nullable disable
-public class PullRequest
-{
-    public string Url { get; set; }
-    public string Title { get; set; }
-    public string Description { get; set; }
-    public string BaseBranch { get; set; }
-    public string HeadBranch { get; set; }
-    public PrStatus Status { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; }
-    public string HeadBranchSha { get; set; }
-}
-=======
->>>>>>> d1b9ef6de ([REFACTORING] Move PullRequest to DarcLib.Models)
