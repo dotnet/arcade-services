@@ -6,7 +6,6 @@ using System.IO;
 using System.Threading.Tasks;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -18,15 +17,18 @@ internal class RemoteFactory : IRemoteFactory
     private readonly IProcessManager _processManager;
     private readonly ILoggerFactory _loggerFactory;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IRedisCacheClient _redisCacheClient;
 
     public RemoteFactory(
         IProcessManager processManager,
         ILoggerFactory loggerFactory,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        IRedisCacheClient redisCacheClient)
     {
         _processManager = processManager;
         _loggerFactory = loggerFactory;
         _serviceProvider = serviceProvider;
+        _redisCacheClient = redisCacheClient;
     }
 
 
@@ -54,10 +56,10 @@ internal class RemoteFactory : IRemoteFactory
                 new GitHubClient(
                     new ResolvedTokenProvider(null),
                     _processManager,
-                    _loggerFactory.CreateLogger<GitHubClient>(),
                     temporaryRepositoryRoot,
-                    // Caching not in use for Darc local client.
-                    null),
+                    null, // Caching not in use for Darc local client.
+                    _redisCacheClient,
+                    _loggerFactory.CreateLogger<GitHubClient>()),
 
             GitRepoType.AzureDevOps =>
                 new AzureDevOpsClient(
