@@ -34,11 +34,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     private const string DarcLibVersion = "1.0.0";
     private static readonly ProductHeaderValue _product;
 
-    private static readonly string CommentMarker =
-        "\n\n[//]: # (This identifies this comment as a Maestro++ comment)\n";
-
     private static readonly Regex RepositoryUriPattern = new(@"^/(?<owner>[^/]+)/(?<repo>[^/]+)/?$");
-
     private static readonly Regex PullRequestUriPattern =
         new(@"^/repos/(?<owner>[^/]+)/(?<repo>[^/]+)/pulls/(?<id>\d+)$");
 
@@ -438,25 +434,6 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         }
     }
 
-    /// <summary>
-    ///     Create a new comment, or update the last comment with an updated message,
-    ///     if that comment was created by Darc.
-    /// </summary>
-    /// <param name="pullRequestUrl">Url of pull request</param>
-    /// <param name="message">Message to post</param>
-    public async Task CreateOrUpdatePullRequestCommentAsync(string pullRequestUrl, string message)
-    {
-        (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
-        IssueComment lastComment = (await GetClient(owner, repo).Issue.Comment.GetAllForIssue(owner, repo, id))[^1];
-        if (lastComment != null && lastComment.Body.EndsWith(CommentMarker))
-        {
-            await GetClient(owner, repo).Issue.Comment.Update(owner, repo, lastComment.Id, message + CommentMarker);
-        }
-        else
-        {
-            await GetClient(owner, repo).Issue.Comment.Create(owner, repo, id, message + CommentMarker);
-        }
-    }
 
     /// <summary>
     ///     Returns the ID used to identify the maestro merge policies checks in a PR
