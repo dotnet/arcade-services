@@ -12,5 +12,5 @@ public class PullRequest
     public string HeadBranch { get; set; }
     public PrStatus Status { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
-    public string TargetBranchCommitSha { get; set; }
+    public string HeadBranchCommitSha { get; set; }
 }
