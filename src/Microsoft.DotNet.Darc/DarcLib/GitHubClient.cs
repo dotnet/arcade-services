@@ -915,21 +915,14 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         var reviews = await GetClient(owner, repo).Repository.PullRequest.Review.GetAll(owner, repo, id);
 
-        // Filter out comments because they could come after Approved/ChangedRequested, and they don't change the decision.
-        reviews = reviews.Where(r => r.State != PullRequestReviewState.Commented).ToImmutableList();
+        var actionableReviews = reviews
+            .Where(r => r.State != PullRequestReviewState.Commented) // filter out reviews that don't affect approval/RFC
+            .GroupBy(r => r.User.Login)
+            .Select(g => g.OrderByDescending(r => r.SubmittedAt).First()) // pick each user's most recent review
+            .Select(review => new Review(TranslateReviewState(review.State.Value), pullRequestUrl))
+            .ToList();
 
-        // Grab the top review by SubmittedAt from what remains
-        var newestActionableReviews = reviews.GroupBy(r => r.User.Login)
-            .ToDictionary(g => g.Key,
-                g => (from r in reviews
-                      where r.User.Login == g.Key
-                      select r)
-                    .OrderByDescending(r => r.SubmittedAt)
-                    .First())
-            .Values;
-
-        return newestActionableReviews.Select(review =>
-            new Review(TranslateReviewState(review.State.Value), pullRequestUrl)).ToList();
+        return actionableReviews;
     }
 
     private static ReviewState TranslateReviewState(PullRequestReviewState state)
