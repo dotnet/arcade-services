@@ -79,4 +79,21 @@ public class StringUtils
         byte[] hashBytes = hasher.GetCurrentHash();
         return Convert.ToHexString(hashBytes);
     }
+    public static bool IsValidLongCommitSha(string input)
+    {
+        if (input == null || input.Length != 40)
+        {
+            return false;
+        }
+
+        foreach (char c in input)
+        {
+            if (!Uri.IsHexDigit(c))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }

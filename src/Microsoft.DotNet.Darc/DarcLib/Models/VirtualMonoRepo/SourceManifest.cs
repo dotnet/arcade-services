@@ -110,13 +110,10 @@ public class SourceManifest : ISourceManifest
             WriteIndented = true,
         };
 
-        var data = new SourceManifestWrapper
-        {
-            Repositories = _repositories,
-            Submodules = _submodules,
-        };
+        // Wrap SourceManifest for serialization
+        var sourceManifestWrapper = ToWrapper(this);
 
-        return JsonSerializer.Serialize(data, options);
+        return JsonSerializer.Serialize(sourceManifestWrapper, options);
     }
 
     public void Refresh(string sourceManifestPath)
@@ -157,8 +154,16 @@ public class SourceManifest : ISourceManifest
         var wrapper = JsonSerializer.Deserialize<SourceManifestWrapper>(json, options)
             ?? throw new Exception("Failed to deserialize source-manifest.json");
 
-        return new SourceManifest(wrapper.Repositories, wrapper.Submodules);
+        return SourceManifestWrapper.ToSourceManifest(wrapper);
     }
+
+    internal static SourceManifestWrapper ToWrapper(SourceManifest sourceManifest) =>
+        new()
+        {
+            Repositories = sourceManifest._repositories,
+            Submodules = sourceManifest._submodules,
+        };
+
 
     public VmrDependencyVersion? GetVersion(string repository)
     {
@@ -178,13 +183,15 @@ public class SourceManifest : ISourceManifest
         return _repositories.FirstOrDefault(r => r.Path == mapppingName)
             ?? throw new Exception($"No repository record named {mapppingName} found");
     }
+}
 
-    /// <summary>
-    /// We use this for JSON deserialization because we're on .NET 6.0 and the ctor deserialization doesn't work.
-    /// </summary>
-    private class SourceManifestWrapper
-    {
-        public ICollection<RepositoryRecord> Repositories { get; init; } = [];
-        public ICollection<SubmoduleRecord> Submodules { get; init; } = [];
-    }
+/// <summary>
+/// We use this for JSON deserialization because we're on .NET 6.0 and the ctor deserialization doesn't work.
+/// </summary>
+internal class SourceManifestWrapper
+{
+    public ICollection<RepositoryRecord> Repositories { get; init; } = [];
+    public ICollection<SubmoduleRecord> Submodules { get; init; } = [];
+    internal static SourceManifest ToSourceManifest(SourceManifestWrapper sourceManifestWrapper) =>
+        new (sourceManifestWrapper.Repositories, sourceManifestWrapper.Submodules);
 }

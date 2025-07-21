@@ -196,7 +196,12 @@ public interface IRemote
     /// <summary>
     /// Returns the SourceManifest of a VMR on a given branch
     /// </summary>
-    Task<SourceManifest> GetSourceManifestAsync(string vmrUri, string branch);
+    Task<SourceManifest> GetSourceManifestAsync(string vmrUri, string branchOrCommit);
+
+    /// <summary>
+    /// Returns the SourceManifest of a VMR on a given commit, using cached data if available
+    /// </summary>
+    Task<SourceManifest> GetSourceManifestAtCommitAsync(string vmrUri, string commitSha);
 
     /// <summary>
     /// Returns the list of Source Mappings for a VMR on a given branch
