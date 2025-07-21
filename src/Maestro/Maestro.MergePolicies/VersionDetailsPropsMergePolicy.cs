@@ -81,7 +81,25 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
                 return FailDecisively(messageBuilder.ToString());
             }
 
-            return SucceedDecisively("No properties from VersionDetailsProps are present in VersionProps");
+            // Check if VersionProps contains the required import statement
+            var hasImport = CheckForVersionDetailsPropsImport(versionProps);
+            if (!hasImport)
+            {
+                var messageBuilder = new StringBuilder();
+                messageBuilder.AppendLine("### ❌ Version Details Properties Validation Failed");
+                messageBuilder.AppendLine();
+                messageBuilder.AppendLine("The `VersionProps` file is missing the required import statement for `Version.Details.props`.");
+                messageBuilder.AppendLine();
+                messageBuilder.AppendLine("**Action Required:** Please add the following import statement at the beginning of your `VersionProps` file:");
+                messageBuilder.AppendLine();
+                messageBuilder.AppendLine("```xml");
+                messageBuilder.AppendLine("<Import Project=\"Version.Details.props\" Condition=\"Exists('Version.Details.props')\" />");
+                messageBuilder.AppendLine("```");
+
+                return FailDecisively(messageBuilder.ToString());
+            }
+
+            return SucceedDecisively("No properties from VersionDetailsProps are present in VersionProps and required import statement is present");
         }
         catch (Exception ex)
         {
@@ -111,6 +129,28 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
         }
         
         return properties;
+    }
+
+    private static bool CheckForVersionDetailsPropsImport(XmlDocument xmlDocument)
+    {
+        // Get all Import elements
+        var importElements = xmlDocument.GetElementsByTagName("Import");
+        
+        foreach (XmlNode importElement in importElements)
+        {
+            var projectAttribute = importElement.Attributes?["Project"];
+            if (projectAttribute != null)
+            {
+                var projectValue = projectAttribute.Value;
+                // Check for various forms of the import (with or without path, with or without condition)
+                if (projectValue.Contains("Version.Details.props"))
+                {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
     }
 }
 
