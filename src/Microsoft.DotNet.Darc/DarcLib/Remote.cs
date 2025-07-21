@@ -418,16 +418,18 @@ public sealed class Remote : IRemote
         {
             throw new ArgumentException($"The provided commit SHA `{commitSha}` is either not of length 40 or contains illegal characters.", nameof(commitSha));
         }
-        var cachedManifest = (await _cache.TryGetAsync<SourceManifestWrapper>(commitSha))?.ToSourceManifest();
 
-        if (cachedManifest != null)
+        var cachedManifestData = await _cache.TryGetAsync<SourceManifestWrapper>(commitSha);
+
+        if (cachedManifestData != null)
         {
+            var cachedManifest = SourceManifestWrapper.ToSourceManifest(cachedManifestData);
             return cachedManifest;
         }
 
         var sourceManifest = await GetSourceManifestAsync(vmrUri, commitSha);
 
-        await _cache.TrySetAsync(commitSha, sourceManifest.ToWrapper());
+        await _cache.TrySetAsync(commitSha, SourceManifest.ToWrapper(sourceManifest));
 
         return sourceManifest;
     }

@@ -4,11 +4,13 @@
 using System;
 using System.Threading.Tasks;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib;
+
 public interface IRedisCacheClient
 {
     Task<bool> TrySetAsync<T>(string key, T value, TimeSpan? expiration = null) where T : class;
-    Task<T> TryGetAsync<T>(string key) where T : class;
+    Task<T?> TryGetAsync<T>(string key) where T : class;
     Task<bool> DeleteAsync(string key);
 }
 
@@ -19,9 +21,9 @@ public class NoOpRedisClient : IRedisCacheClient
     {
         return Task.FromResult(false);
     }
-    public Task<T> TryGetAsync<T>(string key) where T : class
+    public Task<T?> TryGetAsync<T>(string key) where T : class
     {
-        return Task.FromResult<T>(null);
+        return Task.FromResult<T?>(null);
     }
     public Task<bool> DeleteAsync(string key)
     {

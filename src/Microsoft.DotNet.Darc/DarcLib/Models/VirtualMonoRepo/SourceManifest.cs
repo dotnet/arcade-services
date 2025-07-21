@@ -111,7 +111,7 @@ public class SourceManifest : ISourceManifest
         };
 
         // Wrap SourceManifest for serialization
-        var sourceManifestWrapper = ToWrapper();
+        var sourceManifestWrapper = ToWrapper(this);
 
         return JsonSerializer.Serialize(sourceManifestWrapper, options);
     }
@@ -154,16 +154,16 @@ public class SourceManifest : ISourceManifest
         var wrapper = JsonSerializer.Deserialize<SourceManifestWrapper>(json, options)
             ?? throw new Exception("Failed to deserialize source-manifest.json");
 
-        return wrapper.ToSourceManifest();
+        return SourceManifestWrapper.ToSourceManifest(wrapper);
     }
-    internal SourceManifestWrapper ToWrapper()
-    {
-        return new SourceManifestWrapper
+
+    internal static SourceManifestWrapper ToWrapper(SourceManifest sourceManifest) =>
+        new()
         {
-            Repositories = _repositories,
-            Submodules = _submodules,
+            Repositories = sourceManifest._repositories,
+            Submodules = sourceManifest._submodules,
         };
-    }
+
 
     public VmrDependencyVersion? GetVersion(string repository)
     {
@@ -192,8 +192,6 @@ internal class SourceManifestWrapper
 {
     public ICollection<RepositoryRecord> Repositories { get; init; } = [];
     public ICollection<SubmoduleRecord> Submodules { get; init; } = [];
-    internal SourceManifest ToSourceManifest()
-    {
-        return new SourceManifest(Repositories, Submodules);
-    }
+    internal static SourceManifest ToSourceManifest(SourceManifestWrapper sourceManifestWrapper) =>
+        new (sourceManifestWrapper.Repositories, sourceManifestWrapper.Submodules);
 }

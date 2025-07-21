@@ -3,6 +3,7 @@
 
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
+
 namespace ProductConstructionService.Common;
 
 /// <summary>
