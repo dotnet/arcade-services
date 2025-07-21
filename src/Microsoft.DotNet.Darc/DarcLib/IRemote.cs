@@ -208,5 +208,14 @@ public interface IRemote
     /// </summary>
     Task<SourceDependency> GetSourceDependencyAsync(string repoUri, string branch);
 
+    /// <summary>
+    ///     Retrieve the contents of a repository file as a string
+    /// </summary>
+    /// <param name="filePath">Path to file</param>
+    /// <param name="repoUri">Repository URI</param>
+    /// <param name="branch">Branch to get file contents from</param>
+    /// <returns>File contents or throws on file not found.</returns>
+    Task<string> GetFileContentsAsync(string filePath, string repoUri, string branch);
+
     #endregion
 }

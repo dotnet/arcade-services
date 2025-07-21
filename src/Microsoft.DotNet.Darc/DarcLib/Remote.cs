@@ -408,6 +408,9 @@ public sealed class Remote : IRemote
         return SourceManifest.FromJson(fileContent);
     }
 
+    public async Task<string> GetFileContentsAsync(string filePath, string repoUri, string branch)
+        => await _remoteGitClient.GetFileContentsAsync(filePath, repoUri, branch);
+
     public async Task<IReadOnlyCollection<SourceMapping>> GetSourceMappingsAsync(string vmrUri, string branch)
     {
         var fileContent = await _remoteGitClient.GetFileContentsAsync(
