@@ -62,5 +62,5 @@ public interface IDependencyFileManager
 
     Task<bool> VerifyNoDuplicatedProperties(XmlDocument versionProps);
 
-    Task<bool> VersionDetailsPropsExists(string repoUri, string branch);
+    Task<bool> VersionDetailsPropsExistsAsync(string repoUri, string branch);
 }

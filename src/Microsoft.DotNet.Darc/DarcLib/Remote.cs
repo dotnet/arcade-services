@@ -26,6 +26,7 @@ public sealed class Remote : IRemote
     private readonly ISourceMappingParser _sourceMappingParser;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IAssetLocationResolver _locationResolver;
+    private readonly IRedisCacheClient _cache;
     private readonly ILogger _logger;
 
     //[DependencyUpdate]: <> (Begin)
@@ -42,6 +43,7 @@ public sealed class Remote : IRemote
         ISourceMappingParser sourceMappingParser,
         IRemoteFactory remoteFactory,
         IAssetLocationResolver locationResolver,
+        IRedisCacheClient cacheClient,
         ILogger logger)
     {
         _logger = logger;
@@ -51,6 +53,7 @@ public sealed class Remote : IRemote
         _remoteFactory = remoteFactory;
         _locationResolver = locationResolver;
         _fileManager = new DependencyFileManager(remoteGitClient, _versionDetailsParser, _logger);
+        _cache = cacheClient;
     }
 
     public async Task CreateNewBranchAsync(string repoUri, string baseBranch, string newBranch)
@@ -399,17 +402,40 @@ public sealed class Remote : IRemote
         return await _remoteGitClient.GetPullRequestCommentsAsync(pullRequestUrl);
     }
 
-    public async Task<SourceManifest> GetSourceManifestAsync(string vmrUri, string branch)
+
+    public async Task<SourceManifest> GetSourceManifestAsync(string vmrUri, string branchOrCommit)
     {
         var fileContent = await _remoteGitClient.GetFileContentsAsync(
             VmrInfo.DefaultRelativeSourceManifestPath,
             vmrUri,
-            branch);
+            branchOrCommit);
         return SourceManifest.FromJson(fileContent);
     }
 
     public async Task<string> GetFileContentsAsync(string filePath, string repoUri, string branch)
         => await _remoteGitClient.GetFileContentsAsync(filePath, repoUri, branch);
+
+    public async Task<SourceManifest> GetSourceManifestAtCommitAsync(string vmrUri, string commitSha)
+    {
+        if (!StringUtils.IsValidLongCommitSha(commitSha))
+        {
+            throw new ArgumentException($"The provided commit SHA `{commitSha}` is either not of length 40 or contains illegal characters.", nameof(commitSha));
+        }
+
+        var cachedManifestData = await _cache.TryGetAsync<SourceManifestWrapper>(commitSha);
+
+        if (cachedManifestData != null)
+        {
+            var cachedManifest = SourceManifestWrapper.ToSourceManifest(cachedManifestData);
+            return cachedManifest;
+        }
+
+        var sourceManifest = await GetSourceManifestAsync(vmrUri, commitSha);
+
+        await _cache.TrySetAsync(commitSha, SourceManifest.ToWrapper(sourceManifest));
+
+        return sourceManifest;
+    }
 
     public async Task<IReadOnlyCollection<SourceMapping>> GetSourceMappingsAsync(string vmrUri, string branch)
     {

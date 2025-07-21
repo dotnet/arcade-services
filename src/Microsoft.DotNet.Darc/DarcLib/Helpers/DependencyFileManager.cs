@@ -104,7 +104,7 @@ public class DependencyFileManager : IDependencyFileManager
         return await ReadXmlFileAsync(VersionFiles.VersionProps, repoUri, branch);
     }
 
-    public async Task<bool> VersionDetailsPropsExists(string repoUri, string branch)
+    public async Task<bool> VersionDetailsPropsExistsAsync(string repoUri, string branch)
     {
         try
         {
@@ -221,7 +221,7 @@ public class DependencyFileManager : IDependencyFileManager
     {
         if (!repoHasVersionDetailsProps.HasValue)
         {
-            repoHasVersionDetailsProps = await VersionDetailsPropsExists(repoUri, branch);
+            repoHasVersionDetailsProps = await VersionDetailsPropsExistsAsync(repoUri, branch);
         }
 
         // Should the dependency go to global.json?
@@ -246,7 +246,7 @@ public class DependencyFileManager : IDependencyFileManager
     {
         if (!repoHasVersionDetailsProps.HasValue)
         {
-            repoHasVersionDetailsProps = await VersionDetailsPropsExists(repoUri, branch);
+            repoHasVersionDetailsProps = await VersionDetailsPropsExistsAsync(repoUri, branch);
         }
 
         var updatedVersionDetails = await RemoveDependencyFromVersionDetailsAsync(dependencyName, repoUri, branch);
@@ -420,7 +420,7 @@ public class DependencyFileManager : IDependencyFileManager
         (string nugetConfigName, XmlDocument nugetConfig) = await ReadNugetConfigAsync(repoUri, branch);
         if (!repoHasVersionDetailsProps.HasValue)
         {
-            repoHasVersionDetailsProps = await VersionDetailsPropsExists(repoUri, branch);
+            repoHasVersionDetailsProps = await VersionDetailsPropsExistsAsync(repoUri, branch);
         }
 
         foreach (DependencyDetail itemToUpdate in itemsToUpdate)
@@ -1300,7 +1300,7 @@ public class DependencyFileManager : IDependencyFileManager
                 await dotnetToolsJson)
         ];
 
-        if (await VersionDetailsPropsExists(repo, branch))
+        if (await VersionDetailsPropsExistsAsync(repo, branch))
         {
             verificationTasks.Add(VerifyMatchingVersionProps(
                 (await versionDetails).Dependencies,
