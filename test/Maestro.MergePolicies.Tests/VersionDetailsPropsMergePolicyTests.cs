@@ -126,7 +126,14 @@ public class VersionDetailsPropsMergePolicyTests
 
         // Assert
         result.Status.Should().Be(MergePolicyEvaluationStatus.DecisiveFailure);
-        result.Title.Should().Be("### ❌ Version Details Properties Validation Failed\r\n\r\nProperties from `VersionDetailsProps` should not be present in `VersionProps`. The following conflicting properties were found:\r\n\r\n- `FooPackageVersion`\r\n- `BarPackageVersion`\r\n\r\n**Action Required:** Please remove these properties from `VersionProps` to ensure proper separation of concerns between the two files.\r\n");
+        result.Title.Should().Be("#### ❌ Version Details Properties Validation Failed");
+        result.Message.Trim().Should().Be("""
+            Properties from `VersionDetailsProps` should not be present in `VersionProps`.
+            The following conflicting properties were found:
+            - `FooPackageVersion`
+            - `BarPackageVersion`
+            **Action Required:** Please remove these properties from `VersionProps` to ensure proper separation of concerns between the two files.
+            """);
         result.MergePolicyName.Should().Be("VersionDetailsProps");
         result.MergePolicyDisplayName.Should().Be("Version Details Properties Merge Policy");
     }
@@ -152,14 +159,20 @@ public class VersionDetailsPropsMergePolicyTests
 
         // Assert
         result.Status.Should().Be(MergePolicyEvaluationStatus.DecisiveFailure);
-        result.Title.Should().Contain("The `VersionProps` file is missing the required import statement for `Version.Details.props`");
-        result.Title.Should().Contain("<Import Project=\"Version.Details.props\" Condition=\"Exists('Version.Details.props')\" />");
+        result.Title.Should().Be("#### ❌ Version Details Properties Validation Failed");
+        result.Message.Should().Be("""
+            The `VersionProps` file is missing the required import statement for `Version.Details.props`.
+            **Action Required:** Please add the following import statement at the beginning of your `VersionProps` file:
+            ```xml
+            <Import Project="Version.Details.props" Condition="Exists('Version.Details.props')" />
+            ```
+            """);
         result.MergePolicyName.Should().Be("VersionDetailsProps");
         result.MergePolicyDisplayName.Should().Be("Version Details Properties Merge Policy");
     }
 
     [Test]
-    public async Task EvaluateAsync_WhenNotBackFlow_ShouldSucceed()
+    public async Task EvaluateAsync_WhenForwardFlow_ShouldSucceed()
     {
         // Arrange
         var forwardFlowPr = new PullRequestUpdateSummary(

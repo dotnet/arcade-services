@@ -19,7 +19,7 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
 
     public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote remote)
     {
-        if (pr.CodeFlowDirection != CodeFlowDirection.BackFlow)
+        if (pr.CodeFlowDirection == CodeFlowDirection.ForwardFlow)
         {
             // TODO: https://github.com/dotnet/arcade-services/issues/4998 Make the check work for forward flow PRs once we implement the issue
             return SucceedDecisively("Version Details Properties Merge Policy: Not a backflow PR");
@@ -64,39 +64,32 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
 
             if (foundProperties.Count > 0)
             {
-                var messageBuilder = new StringBuilder();
-                messageBuilder.AppendLine("### ❌ Version Details Properties Validation Failed");
-                messageBuilder.AppendLine();
-                messageBuilder.AppendLine("Properties from `VersionDetailsProps` should not be present in `VersionProps`. The following conflicting properties were found:");
-                messageBuilder.AppendLine();
-                
+                StringBuilder str = new();
+                str.AppendLine("Properties from `VersionDetailsProps` should not be present in `VersionProps`.");
+                str.AppendLine("The following conflicting properties were found:");
                 foreach (var property in foundProperties)
                 {
-                    messageBuilder.AppendLine($"- `{property}`");
+                    str.AppendLine($"- `{property}`");
                 }
-                
-                messageBuilder.AppendLine();
-                messageBuilder.AppendLine("**Action Required:** Please remove these properties from `VersionProps` to ensure proper separation of concerns between the two files.");
-
-                return FailDecisively(messageBuilder.ToString());
+                str.AppendLine("**Action Required:** Please remove these properties from `VersionProps` to ensure proper separation of concerns between the two files.");
+                return FailDecisively(
+                    "#### ❌ Version Details Properties Validation Failed",
+                    str.ToString());
             }
 
             // Check if VersionProps contains the required import statement
             var hasImport = CheckForVersionDetailsPropsImport(versionProps);
             if (!hasImport)
             {
-                var messageBuilder = new StringBuilder();
-                messageBuilder.AppendLine("### ❌ Version Details Properties Validation Failed");
-                messageBuilder.AppendLine();
-                messageBuilder.AppendLine("The `VersionProps` file is missing the required import statement for `Version.Details.props`.");
-                messageBuilder.AppendLine();
-                messageBuilder.AppendLine("**Action Required:** Please add the following import statement at the beginning of your `VersionProps` file:");
-                messageBuilder.AppendLine();
-                messageBuilder.AppendLine("```xml");
-                messageBuilder.AppendLine("<Import Project=\"Version.Details.props\" Condition=\"Exists('Version.Details.props')\" />");
-                messageBuilder.AppendLine("```");
-
-                return FailDecisively(messageBuilder.ToString());
+                return FailDecisively(
+                    "#### ❌ Version Details Properties Validation Failed",
+                    """
+                    The `VersionProps` file is missing the required import statement for `Version.Details.props`.
+                    **Action Required:** Please add the following import statement at the beginning of your `VersionProps` file:
+                    ```xml
+                    <Import Project="Version.Details.props" Condition="Exists('Version.Details.props')" />
+                    ```
+                    """);
             }
 
             return SucceedDecisively("No properties from VersionDetailsProps are present in VersionProps and required import statement is present");
