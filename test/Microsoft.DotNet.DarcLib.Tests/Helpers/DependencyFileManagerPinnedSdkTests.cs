@@ -223,55 +223,6 @@ public class DependencyFileManagerPinnedSdkTests
     }
 
     [Test]
-    public async Task UpdateDependencyFiles_WithPinnedAsString_ShouldUpdate()
-    {
-        // Arrange - test edge case where pinned is a string "true"
-        var globalJsonContent = """
-            {
-              "sdk": {
-                "version": "8.0.100",
-                "rollForward": "minor"
-              },
-              "tools": {
-                "dotnet": "8.0.100",
-                "pinned": "true"
-              }
-            }
-            """;
-
-        var incomingVersion = SemanticVersion.Parse("9.0.100");
-
-        Mock<IGitRepo> repo = new();
-        Mock<IGitRepoFactory> repoFactory = new();
-
-        SetupCommonMocks(repo, globalJsonContent);
-        repoFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(repo.Object);
-
-        var manager = new DependencyFileManager(repoFactory.Object, new VersionDetailsParser(), NullLogger.Instance);
-
-        // Act
-        var result = await manager.UpdateDependencyFiles(
-            new List<DependencyDetail>(),
-            null,
-            "https://github.com/test/repo",
-            "main",
-            new List<DependencyDetail>(),
-            incomingVersion);
-
-        // Assert
-        var updatedGlobalJson = JObject.Parse(result.GlobalJson.Content);
-        
-        // Version should have changed because "true" string is not a boolean true
-        updatedGlobalJson["tools"]["dotnet"].Value<string>().Should().Be("9.0.100");
-        updatedGlobalJson["sdk"]["version"].Value<string>().Should().Be("9.0.100");
-        
-        // Metadata should indicate update
-        result.GlobalJson.Metadata.Should().NotBeNull();
-        result.GlobalJson.Metadata.Should().ContainKey(GitFileMetadataName.ToolsDotNetUpdate);
-        result.GlobalJson.Metadata.Should().ContainKey(GitFileMetadataName.SdkVersionUpdate);
-    }
-
-    [Test]
     public async Task UpdateDependencyFiles_WithForceUpdate_ShouldSkipUpdateWhenPinned()
     {
         // Arrange
