@@ -8,6 +8,7 @@ using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.GitHub;
 using Octokit;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib.Helpers;
 
 internal class GithubResourceConverters
@@ -17,7 +18,6 @@ internal class GithubResourceConverters
         var status = pr.State == ItemState.Closed ?
                     pr.Merged == true ? PrStatus.Merged : PrStatus.Closed :
                     PrStatus.Open;
-
         return new()
         {
             Title = pr.Title,
@@ -46,7 +46,6 @@ internal class GithubResourceConverters
         };
     }
 
-
     private static ReviewState TranslateReviewState(PullRequestReviewState state)
     {
         return state switch
@@ -61,5 +60,4 @@ internal class GithubResourceConverters
             _ => throw new NotImplementedException($"Unexpected pull request review state {state}"),
         };
     }
-
 }
