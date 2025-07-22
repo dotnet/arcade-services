@@ -3,7 +3,7 @@
 
 using System;
 
-namespace Microsoft.DotNet.DarcLib.Models;
+namespace Microsoft.DotNet.DarcLib.Models.GitHub;
 
 public class GithubReview : Review
 {
