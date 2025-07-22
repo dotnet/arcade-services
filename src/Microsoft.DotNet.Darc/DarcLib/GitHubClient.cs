@@ -928,7 +928,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         IGitHubClient client = GetClient(owner, repo);
         var pullRequestReviewsUri = ApiUrls.PullRequestReviews(owner, repo, id);
 
-        var pullRequestReviews = await RequestResourceUsingEtagsAsync<PullRequestReviews, List<PullRequestReview>>(
+        var pullRequestReviews = await RequestResourceUsingEtagsAsync<GithubPullRequestReviews, List<PullRequestReview>>(
             pullRequestUrl,
             pullRequestReviewsUri,
             client,

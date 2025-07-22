@@ -5,9 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.GitHub;
 using Octokit;
 
-namespace Microsoft.DotNet.DarcLib;
+namespace Microsoft.DotNet.DarcLib.Helpers;
 
 internal class GithubResourceConverters
 {
@@ -38,7 +39,7 @@ internal class GithubResourceConverters
         };
     }
 
-    internal static PullRequestReviews ConvertPullRequestReviews(IEnumerable<PullRequestReview> pullRequestReviews)
+    internal static GithubPullRequestReviews ConvertPullRequestReviews(IEnumerable<PullRequestReview> pullRequestReviews)
     {
         IEnumerable<GithubReview> reviews = pullRequestReviews
             .Select(r => new GithubReview(
@@ -48,7 +49,7 @@ internal class GithubResourceConverters
                 r.SubmittedAt))
             .ToList();
 
-        return new PullRequestReviews
+        return new GithubPullRequestReviews
         {
             Reviews = reviews
         };

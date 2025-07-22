@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using Microsoft.DotNet.DarcLib.Models.GitHub;
 
 namespace Microsoft.DotNet.DarcLib.Models;
 
