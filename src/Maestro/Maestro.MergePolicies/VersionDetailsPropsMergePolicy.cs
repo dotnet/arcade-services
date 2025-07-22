@@ -135,7 +135,6 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
             if (projectAttribute != null)
             {
                 var projectValue = projectAttribute.Value;
-                // Check for various forms of the import (with or without path, with or without condition)
                 if (projectValue.Contains("Version.Details.props"))
                 {
                     return true;
