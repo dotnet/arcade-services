@@ -10,6 +10,7 @@ using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 
+#nullable enable
 namespace Maestro.MergePolicies;
 public class VersionDetailsPropsMergePolicy : MergePolicy
 {
