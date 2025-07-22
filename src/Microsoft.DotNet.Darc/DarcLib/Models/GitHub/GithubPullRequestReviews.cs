@@ -2,9 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
+using Microsoft.DotNet.DarcLib.Models.GitHub;
 
 namespace Microsoft.DotNet.DarcLib.Models;
-public class PullRequestReviews : IGithubEtagResource
+public class GithubPullRequestReviews : IGithubEtagResource
 {
     public IEnumerable<GithubReview> Reviews { get; set; }
     public string Etag { get; set; }
