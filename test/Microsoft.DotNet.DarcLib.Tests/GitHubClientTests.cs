@@ -139,7 +139,7 @@ internal class TestGitHubClient : GitHubClient
     private IGitHubClient _client;
     private Dictionary<Tuple<string, string, int>, List<PullRequestReview>> _reviewData = [];
     private static readonly Regex ReviewsUriPattern =
-    new(@"^/?repos/(?<owner>[^/]+)/(?<repo>[^/]+)/pulls/(?<id>\d+)/reviews/?$");
+        new(@"^/?repos/(?<owner>[^/]+)/(?<repo>[^/]+)/pulls/(?<id>\d+)/reviews/?$");
 
     public void SetReviewData(Dictionary<Tuple<string, string, int>, List<PullRequestReview>> data)
     {
