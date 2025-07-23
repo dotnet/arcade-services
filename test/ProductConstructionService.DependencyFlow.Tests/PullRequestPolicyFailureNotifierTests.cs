@@ -101,7 +101,7 @@ internal class PullRequestPolicyFailureNotifierTests
             SourceMappingParser.Object,
             RemoteFactory.Object,
             new AssetLocationResolver(BarClient.Object),
-            new NoOpRedisClient(),
+            new NoOpCacheClient(),
             NullLogger.Instance);
         RemoteFactory.Setup(m => m.CreateRemoteAsync(It.IsAny<string>())).ReturnsAsync(MockRemote);
 

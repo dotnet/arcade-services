@@ -20,13 +20,14 @@ namespace Microsoft.DotNet.DarcLib;
 
 public sealed class Remote : IRemote
 {
+    private readonly ICache _cacheClient;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly DependencyFileManager _fileManager;
     private readonly IRemoteGitRepo _remoteGitClient;
     private readonly ISourceMappingParser _sourceMappingParser;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IAssetLocationResolver _locationResolver;
-    private readonly IRedisCacheClient _cache;
+    private readonly IDistributedCacheClient _cache;
     private readonly ILogger _logger;
 
     //[DependencyUpdate]: <> (Begin)
@@ -43,7 +44,7 @@ public sealed class Remote : IRemote
         ISourceMappingParser sourceMappingParser,
         IRemoteFactory remoteFactory,
         IAssetLocationResolver locationResolver,
-        IRedisCacheClient cacheClient,
+        IDistributedCacheClient cacheClient,
         ILogger logger)
     {
         _logger = logger;
@@ -53,7 +54,9 @@ public sealed class Remote : IRemote
         _remoteFactory = remoteFactory;
         _locationResolver = locationResolver;
         _fileManager = new DependencyFileManager(remoteGitClient, _versionDetailsParser, _logger);
-        _cache = cacheClient ?? new NoOpRedisClient(); // caching is disabled by default, only used in by specific consumers
+        _cache = cacheClient ?? throw new ArgumentNullException(
+            nameof(cacheClient),
+            "The cache client must not be null. Please use the no-op implementation of IDistributedCacheClient provided in this package.");
     }
 
     public async Task CreateNewBranchAsync(string repoUri, string baseBranch, string newBranch)
