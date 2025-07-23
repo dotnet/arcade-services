@@ -53,7 +53,7 @@ public sealed class Remote : IRemote
         _remoteFactory = remoteFactory;
         _locationResolver = locationResolver;
         _fileManager = new DependencyFileManager(remoteGitClient, _versionDetailsParser, _logger);
-        _cache = cacheClient;
+        _cache = cacheClient ?? new NoOpRedisClient(); // caching is disabled by default, only used in by specific consumers
     }
 
     public async Task CreateNewBranchAsync(string repoUri, string baseBranch, string newBranch)
