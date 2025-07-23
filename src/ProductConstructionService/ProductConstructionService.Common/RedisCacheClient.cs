@@ -27,7 +27,7 @@ internal class RedisCacheClient : IDistributedCacheClient
         return await _factory.Create<T>(key).TryGetStateAsync();
     }
 
-    public async Task<bool> TrySetAsync<T>(string key, T value, TimeSpan? expiration ) where T : class
+    public async Task<bool> TrySetAsync<T>(string key, T value, TimeSpan? expiration) where T : class
     {
         try
         {
