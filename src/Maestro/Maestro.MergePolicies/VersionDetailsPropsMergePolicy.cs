@@ -26,22 +26,27 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
             return SucceedDecisively("Version Details Properties Merge Policy: Not a backflow PR");
         }
 
+        XmlDocument versionDetailsProps;
         try
         {
-            XmlDocument versionDetailsProps;
-            try
-            {
-                versionDetailsProps = DependencyFileManager.GetXmlDocument(await remote.GetFileContentsAsync(
-                    VersionFiles.VersionDetailsProps,
-                    pr.TargetRepoUrl,
-                    pr.HeadBranch));
-            }
-            catch (DependencyFileNotFoundException)
-            {
-                // TODO: this should only be in for the transition period until we add VersionDetailsProps to all codeflow repos
-                return SucceedDecisively("Version Details Properties Merge Policy: VersionDetailsProps file not found, skipping validation.");
-            }
+            versionDetailsProps = DependencyFileManager.GetXmlDocument(await remote.GetFileContentsAsync(
+                VersionFiles.VersionDetailsProps,
+                pr.TargetRepoUrl,
+                pr.HeadBranch));
+        }
+        catch (DependencyFileNotFoundException)
+        {
+            // TODO: this should only be in for the transition period until we add VersionDetailsProps to all codeflow repos
+            return SucceedDecisively("Version Details Properties Merge Policy: VersionDetailsProps file not found, skipping validation.");
+        }
+        catch
+        {
+            return FailTransiently("Failed to evaluate VersionDetailsProps merge policy",
+                $"An error occurred while trying to read the {VersionFiles.VersionDetailsProps} file");
+        }
 
+        try
+        {
             var versionProps = DependencyFileManager.GetXmlDocument(await remote.GetFileContentsAsync(
                 VersionFiles.VersionProps,
                 pr.TargetRepoUrl,
@@ -95,11 +100,11 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
 
             return SucceedDecisively("No properties from VersionDetailsProps are present in VersionProps and required import statement is present");
         }
-        catch (Exception ex)
+        catch
         {
             return FailTransiently(
                 "Failed to evaluate VersionDetailsProps merge policy",
-                $"An error occurred while comparing VersionDetailsProps and VersionProps: {ex.Message}");
+                $"An error occurred while comparing VersionDetailsProps and VersionProps");
         }
     }
 
