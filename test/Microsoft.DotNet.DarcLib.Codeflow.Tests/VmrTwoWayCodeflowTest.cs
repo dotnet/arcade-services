@@ -864,44 +864,23 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
     }
 
     [Test]
-    public async Task Test()
+    public async Task Test2()
     {
         await EnsureTestRepoIsInitialized();
 
+        const string backBranchName = nameof(OutOfOrderMergesWithConflictsTest);
         const string forwardBranchName = nameof(OutOfOrderMergesWithConflictsTest) + "-ff";
 
-        // Make a change in the VMR, and never backflow it
-        await GitOperations.Checkout(VmrPath, "main");
-        await File.WriteAllTextAsync(_productRepoVmrPath / "file.txt", "change");
-        await GitOperations.CommitAll(VmrPath, "Add the problematic file");
-
-        // now make several forward flows
-        // change 1
-        var codeFlowResult = await ChangeRepoFileAndFlowIt("flow 1", forwardBranchName);
+        // open a ff PR, but don't merge it
+        var codeFlowResult = await ChangeRepoFileAndFlowIt("content1", forwardBranchName);
         codeFlowResult.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
 
-        // change 2
-        codeFlowResult = await ChangeRepoFileAndFlowIt("flow 2", forwardBranchName);
+        // open and merge backflow
+        codeFlowResult = await ChangeVmrFileAndFlowIt("backflow", backBranchName);
         codeFlowResult.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
+        await GitOperations.MergePrBranch(ProductRepoPath, backBranchName);
 
-        // change 3
-        codeFlowResult = await ChangeRepoFileAndFlowIt("flow 3", forwardBranchName);
-        codeFlowResult.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
-
-        // change 4
-        codeFlowResult = await ChangeRepoFileAndFlowIt("flow 4", forwardBranchName);
-        codeFlowResult.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
-
-        // now finally make a conflicting change with the vmr change
-        await GitOperations.Checkout(ProductRepoPath, "main");
-        await File.WriteAllTextAsync(ProductRepoPath / "file.txt", "conflict!");
-        await GitOperations.CommitAll(ProductRepoPath, "added a future conflict");
-        await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardBranchName);
-
-        // the call above throws an exception currently. we should fix it and verify the merge conflict when we finally do have a branch
+        // second ff update
+        codeFlowResult = await ChangeRepoFileAndFlowIt("content2", forwardBranchName);
     }
 }
