@@ -31,6 +31,7 @@ public class VersionDetailsPropsMergePolicyTests
           <PropertyGroup>
             <DifferentPackageVersion>2.0.0</DifferentPackageVersion>
             <AnotherPackageVersion>3.0.0</AnotherPackageVersion>
+            <BarPackageVersion></BarPackageVersion>
           </PropertyGroup>
         </Project>
         """;

@@ -65,16 +65,22 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
                 pr.TargetRepoUrl,
                 pr.HeadBranch));
 
-            var versionDetailsPropsProperties = ExtractPropertiesFromXml(versionDetailsProps);
+            var versionDetailsPropsProperties = ExtractPropertiesFromXml(versionDetailsProps).Keys.ToHashSet();
             
-            var versionPropsProperties = ExtractPropertiesFromXml(versionProps);
+            var versionPropsDictionary = ExtractPropertiesFromXml(versionProps);
 
             // Check if any properties from VersionDetailsProps exist in VersionsProps
             var foundProperties = new List<string>();
             foreach (var versionDetailsPropsProperty in versionDetailsPropsProperties)
             {
-                if (versionPropsProperties.Contains(versionDetailsPropsProperty))
+                if (versionPropsDictionary.TryGetValue(versionDetailsPropsProperty, out var version))
                 {
+                    if (version == string.Empty)
+                    {
+                        // Versions.props is allowed to have duplicate properties, only if their values are empty
+                        // since this is needed for source build
+                        continue;
+                    }
                     foundProperties.Add(versionDetailsPropsProperty);
                 }
             }
@@ -157,9 +163,9 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
         }
     }
 
-    private static HashSet<string> ExtractPropertiesFromXml(XmlDocument xmlDocument)
+    private static Dictionary<string, string> ExtractPropertiesFromXml(XmlDocument xmlDocument)
     {
-        var properties = new HashSet<string>();
+        Dictionary<string, string> properties = [];
         
         // Get all PropertyGroup elements
         var propertyGroups = xmlDocument.GetElementsByTagName("PropertyGroup");
@@ -171,7 +177,7 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
                 // Skip comments and whitespace
                 if (child.NodeType == XmlNodeType.Element)
                 {
-                    properties.Add(child.Name);
+                    properties.Add(child.Name, child.InnerText);
                 }
             }
         }
