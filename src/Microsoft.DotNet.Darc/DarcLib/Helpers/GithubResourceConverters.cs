@@ -42,13 +42,13 @@ internal class GithubResourceConverters
 
     internal static GithubPullRequestReviews ConvertPullRequestReviews(IEnumerable<PullRequestReview> pullRequestReviews)
     {
-        IEnumerable<GithubReview> reviews = pullRequestReviews
+        var reviews = pullRequestReviews
             .Select(r => new GithubReview(
                 TranslateReviewState(r.State.Value),
                 r.PullRequestUrl,
                 r.User.Login,
                 r.SubmittedAt))
-            .ToList();
+            .ToArray();
 
         return new GithubPullRequestReviews
         {

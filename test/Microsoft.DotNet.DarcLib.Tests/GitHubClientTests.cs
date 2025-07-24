@@ -164,7 +164,6 @@ internal class TestGitHubClient : GitHubClient
         IGitHubClient client,
         Func<K, T> resourceConverter)
     {
-        await Task.FromResult<T>(null);
         if (typeof(K) == typeof(List<PullRequestReview>))
         {
             var match = ReviewsUriPattern.Match(resourceUri.ToString());
@@ -174,9 +173,9 @@ internal class TestGitHubClient : GitHubClient
             var key = Tuple.Create(owner, repo, id);
             if (_reviewData.TryGetValue(key, out var reviews))
             {
-                return resourceConverter((K)(object)reviews);
+                return await Task.FromResult(resourceConverter((K)(object)reviews));
             }
-            return resourceConverter((K)(object)new List<PullRequestReview>());
+            return await Task.FromResult(resourceConverter((K)(object)new List<PullRequestReview>()));
         }
         throw new NotImplementedException($"The test client has no implementation for the requested resources of type {typeof(K)}");
     }
