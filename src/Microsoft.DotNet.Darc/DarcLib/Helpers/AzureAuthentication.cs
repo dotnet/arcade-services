@@ -16,8 +16,7 @@ public static class AzureAuthentication
             new AzureCliCredential(),
             new DefaultAzureCredential()); // CodeQL [SM05137] This is non-production testing code which is not deployed
 #else
-    public static TokenCredential GetCliCredential()
-        => new AzureCliCredential(); // CodeQL [SM05137] This is non-production testing code which is not deployed
+    public static TokenCredential GetCliCredential() => new AzureCliCredential();
 #endif
 
     public static TokenCredential GetServiceCredential(bool isDevelopment, string? managedIdentityClientId)
