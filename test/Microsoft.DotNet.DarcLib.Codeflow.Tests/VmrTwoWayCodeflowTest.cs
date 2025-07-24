@@ -11,6 +11,7 @@ using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.TeamFoundation.WorkItemTracking.Process.WebApi.Models.Process;
 using Moq;
 using NUnit.Framework;
 
@@ -861,5 +862,46 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         vmrVersionProps = await File.ReadAllTextAsync(_productRepoVmrPath / VersionFiles.VersionProps);
         CheckFileContents(ProductRepoPath / VersionFiles.VersionProps, expected: vmrVersionProps);
     }
-}
 
+    [Test]
+    public async Task Test()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        const string forwardBranchName = nameof(OutOfOrderMergesWithConflictsTest) + "-ff";
+
+        // Make a change in the VMR, and never backflow it
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / "file.txt", "change");
+        await GitOperations.CommitAll(VmrPath, "Add the problematic file");
+
+        // now make several forward flows
+        // change 1
+        var codeFlowResult = await ChangeRepoFileAndFlowIt("flow 1", forwardBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
+
+        // change 2
+        codeFlowResult = await ChangeRepoFileAndFlowIt("flow 2", forwardBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
+
+        // change 3
+        codeFlowResult = await ChangeRepoFileAndFlowIt("flow 3", forwardBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
+
+        // change 4
+        codeFlowResult = await ChangeRepoFileAndFlowIt("flow 4", forwardBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
+
+        // now finally make a conflicting change with the vmr change
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / "file.txt", "conflict!");
+        await GitOperations.CommitAll(ProductRepoPath, "added a future conflict");
+        await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardBranchName);
+
+        // the call above throws an exception currently. we should fix it and verify the merge conflict when we finally do have a branch
+    }
+}
