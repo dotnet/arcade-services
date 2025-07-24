@@ -7,7 +7,7 @@ using Microsoft.DotNet.DarcLib.Models.GitHub;
 namespace Microsoft.DotNet.DarcLib.Models;
 public class GithubPullRequestReviews : IGithubEtagResource
 {
-    public IEnumerable<GithubReview> Reviews { get; set; }
+    public IReadOnlyCollection<GithubReview> Reviews { get; set; }
     public string Etag { get; set; }
 
 }
