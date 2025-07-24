@@ -62,7 +62,11 @@ public class StandardMergePolicyBuilder : IMergePolicyBuilder
         if (pr.CodeFlowDirection != CodeFlowDirection.None)
         {
             policies.AddRange(await new CodeFlowMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
-            policies.AddRange(await new VersionDetailsPropsMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
+            if (pr.CodeFlowDirection != CodeFlowDirection.ForwardFlow)
+            {
+                // TODO: https://github.com/dotnet/arcade-services/issues/4998 Make the check work for forward flow PRs once we implement the issue
+                policies.AddRange(await new VersionDetailsPropsMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
+            }
         }
 
         return policies;

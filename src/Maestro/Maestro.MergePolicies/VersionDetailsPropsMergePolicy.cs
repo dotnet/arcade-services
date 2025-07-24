@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,14 +17,14 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
 {
     public override string Name => "VersionDetailsProps";
 
-    public override string DisplayName => "Version Details Properties Merge Policy";
+    public override string DisplayName => $"{Constants.VersionDetailsProps} Validation Merge Policy";
 
     public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote remote)
     {
         if (pr.CodeFlowDirection == CodeFlowDirection.ForwardFlow)
         {
             // TODO: https://github.com/dotnet/arcade-services/issues/4998 Make the check work for forward flow PRs once we implement the issue
-            return SucceedDecisively("Version Details Properties Merge Policy: Not a backflow PR");
+            return SucceedDecisively($"{DisplayName}: doesn't apply to forward flow PRs yet");
         }
 
         XmlDocument versionDetailsProps;
@@ -38,12 +37,24 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
         }
         catch (DependencyFileNotFoundException)
         {
-            // TODO: this should only be in for the transition period until we add VersionDetailsProps to all codeflow repos
-            return SucceedDecisively("Version Details Properties Merge Policy: VersionDetailsProps file not found, skipping validation.");
+            if (pr.CodeFlowDirection == CodeFlowDirection.None)
+            {
+                // If a dependency flow PR doesn't have the VersionDetailsProps file, it just means that the repo doesn't use it
+                return SucceedDecisively($"{DisplayName}: {Constants.VersionDetailsProps} file not found, skipping validation.");
+            }
+            else
+            {
+                return FailDecisively($"{DisplayName}: {Constants.VersionDetailsProps} file must exist in all VMR repos");
+            }
+        }
+        catch (XmlException)
+        {
+            return FailDecisively($"Failed to parse {Constants.VersionDetailsProps}",
+                $"The {VersionFiles.VersionDetailsProps} file is not a valid XML document. Please ensure it is well-formed.");
         }
         catch
         {
-            return FailTransiently("Failed to evaluate VersionDetailsProps merge policy",
+            return FailTransiently($"Failed to evaluate {DisplayName}",
                 $"An error occurred while trying to read the {VersionFiles.VersionDetailsProps} file");
         }
 
@@ -54,13 +65,11 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
                 pr.TargetRepoUrl,
                 pr.HeadBranch));
 
-            // Extract all properties from VersionDetailsProps
             var versionDetailsPropsProperties = ExtractPropertiesFromXml(versionDetailsProps);
             
-            // Extract all properties from VersionProps
             var versionPropsProperties = ExtractPropertiesFromXml(versionProps);
 
-            // Check if any properties from VersionDetailsProps exist in VersionProps
+            // Check if any properties from VersionDetailsProps exist in VersionsProps
             var foundProperties = new List<string>();
             foreach (var versionDetailsPropsProperty in versionDetailsPropsProperties)
             {
@@ -73,15 +82,15 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
             if (foundProperties.Count > 0)
             {
                 StringBuilder str = new();
-                str.AppendLine("Properties from `VersionDetailsProps` should not be present in `VersionProps`.");
+                str.AppendLine($"Properties from `{Constants.VersionDetailsProps}` should not be present in `{Constants.VersionsProps}`.");
                 str.AppendLine("The following conflicting properties were found:");
                 foreach (var property in foundProperties)
                 {
                     str.AppendLine($"- `{property}`");
                 }
-                str.AppendLine("**Action Required:** Please remove these properties from `VersionProps` to ensure proper separation of concerns between the two files.");
+                str.AppendLine($"**Action Required:** Please remove these properties from `{Constants.VersionsProps}` to ensure proper separation of concerns between the two files.");
                 return FailDecisively(
-                    "#### ❌ Version Details Properties Validation Failed",
+                    $"#### ❌ {DisplayName}: Validation Failed",
                     str.ToString());
             }
 
@@ -90,12 +99,12 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
             if (!hasImport)
             {
                 return FailDecisively(
-                    "#### ❌ Version Details Properties Validation Failed",
-                    """
-                    The `VersionProps` file is missing the required import statement for `Version.Details.props`.
+                    $"#### ❌ {DisplayName} Validation Failed",
+                    $"""
+                    The `VersionProps` file is missing the required import statement for `{Constants.VersionDetailsProps}`.
                     **Action Required:** Please add the following import statement at the beginning of your `VersionProps` file:
                     ```xml
-                    <Import Project="Version.Details.props" Condition="Exists('Version.Details.props')" />
+                    <Import Project="{Constants.VersionDetailsProps}" Condition="Exists('{Constants.VersionDetailsProps}')" />
                     ```
                     """);
             }
@@ -112,12 +121,12 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
             if (missingProperties.Count > 0 || orphanedProperties.Count > 0)
             {
                 StringBuilder str = new();
-                str.AppendLine("There is a mismatch between dependencies in `Version.Details.xml` and properties in `VersionDetailsProps`.");
+                str.AppendLine($"There is a mismatch between dependencies in `{Constants.VersionDetailsXml}` and properties in `{Constants.VersionDetailsProps}`.");
                 str.AppendLine();
                 
                     if (missingProperties.Count > 0)
                     {
-                        str.AppendLine("**Missing Properties:** The following dependencies are missing corresponding properties in `VersionDetailsProps`:");
+                        str.AppendLine($"**Missing Properties:** The following dependencies are missing corresponding properties in `{Constants.VersionDetailsProps}`:");
                         foreach (var (expectedPropertyName, version) in missingProperties)
                         {
                             str.AppendLine($"- Add `<{expectedPropertyName}>{version}</{expectedPropertyName}>`");
@@ -125,7 +134,7 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
                         str.AppendLine();
                     }                if (orphanedProperties.Count > 0)
                 {
-                    str.AppendLine("**Orphaned Properties:** The following properties in `VersionDetailsProps` do not correspond to any dependency:");
+                    str.AppendLine($"**Orphaned Properties:** The following properties in `{Constants.VersionDetailsProps}` do not correspond to any dependency:");
                     foreach (var orphanedProperty in orphanedProperties)
                     {
                         str.AppendLine($"- Remove `<{orphanedProperty}>...</{orphanedProperty}>`");
@@ -134,17 +143,17 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
                 }
                 
                 return FailDecisively(
-                    "#### ❌ Version Details Properties Validation Failed",
+                    $"#### ❌ {DisplayName}: Validation Failed",
                     str.ToString());
             }
 
-            return SucceedDecisively("All validation checks passed: no property conflicts, required import statement present, and dependency mapping is correct");
+            return SucceedDecisively($"{DisplayName}: All validation checks passed");
         }
         catch
         {
             return FailTransiently(
-                "Failed to evaluate VersionDetailsProps merge policy",
-                $"An error occurred while comparing VersionDetailsProps and VersionProps");
+                $"Failed to evaluate {DisplayName}",
+                $"An error occurred while evaluating {DisplayName}");
         }
     }
 
@@ -181,7 +190,7 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
             if (projectAttribute != null)
             {
                 var projectValue = projectAttribute.Value;
-                if (projectValue.Contains("Version.Details.props"))
+                if (projectValue.Contains(Constants.VersionDetailsProps))
                 {
                     return true;
                 }

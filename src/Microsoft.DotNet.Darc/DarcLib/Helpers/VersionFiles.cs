@@ -11,9 +11,9 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 public static class VersionFiles
 {
     // Locations of the version files within a repository
-    public const string VersionDetailsXml = "eng/Version.Details.xml";
-    public const string VersionProps = "eng/Versions.props";
-    public const string VersionDetailsProps = "eng/Version.Details.props";
+    public const string VersionDetailsXml = $"eng/{Constants.VersionDetailsXml}";
+    public const string VersionProps = $"eng/{Constants.VersionsProps}";
+    public const string VersionDetailsProps = $"eng/{Constants.VersionDetailsProps}";
     public const string GlobalJson = "global.json";
     public const string DotnetToolsConfigJson = ".config/dotnet-tools.json";
     public static readonly IReadOnlyCollection<string> NugetConfigNames = ["NuGet.config", "nuget.config", "NuGet.Config"];
