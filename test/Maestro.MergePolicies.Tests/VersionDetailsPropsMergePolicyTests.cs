@@ -75,6 +75,22 @@ public class VersionDetailsPropsMergePolicyTests
         </Dependencies>
         """;
 
+    private const string VersionDetailsXmlMatchingProperties = """
+        <?xml version="1.0" encoding="utf-8"?>
+        <Dependencies>
+          <ProductDependencies>
+            <Dependency Name="Foo" Version="1.0.1">
+              <Uri>https://github.com/test/foo</Uri>
+              <Sha>abc123</Sha>
+            </Dependency>
+            <Dependency Name="Bar" Version="1.0.0">
+              <Uri>https://github.com/test/bar</Uri>
+              <Sha>def456</Sha>
+            </Dependency>
+          </ProductDependencies>
+        </Dependencies>
+        """;
+
     private const string VersionDetailsPropsWithOneMissingProperty = """
         <?xml version="1.0" encoding="utf-8"?>
         <Project>
@@ -122,14 +138,20 @@ public class VersionDetailsPropsMergePolicyTests
                 _prSummary.HeadBranch))
             .ReturnsAsync(VersionPropsWithoutConflictingProperties);
 
+        _mockRemote.Setup(r => r.GetFileContentsAsync(
+                VersionFiles.VersionDetailsXml,
+                _prSummary.TargetRepoUrl,
+                _prSummary.HeadBranch))
+            .ReturnsAsync(VersionDetailsXmlMatchingProperties);
+
         // Act
         var result = await _policy.EvaluateAsync(_prSummary, _mockRemote.Object);
 
         // Assert
         result.Status.Should().Be(MergePolicyEvaluationStatus.DecisiveSuccess);
-        result.Title.Should().Be("No properties from VersionDetailsProps are present in VersionProps and required import statement is present");
+        result.Title.Should().Be("Version.Details.props Validation Merge Policy: All validation checks passed");
         result.MergePolicyName.Should().Be("VersionDetailsProps");
-        result.MergePolicyDisplayName.Should().Be("Version Details Properties Merge Policy");
+        result.MergePolicyDisplayName.Should().Be("Version.Details.props Validation Merge Policy");
     }
 
     [Test]
@@ -153,16 +175,16 @@ public class VersionDetailsPropsMergePolicyTests
 
         // Assert
         result.Status.Should().Be(MergePolicyEvaluationStatus.DecisiveFailure);
-        result.Title.Should().Be("#### ❌ Version Details Properties Validation Failed");
+        result.Title.Should().Be("#### ❌ Version.Details.props Validation Merge Policy: Validation Failed");
         result.Message.Trim().Should().Be("""
-            Properties from `VersionDetailsProps` should not be present in `VersionProps`.
+            Properties from `Version.Details.props` should not be present in `Versions.props`.
             The following conflicting properties were found:
             - `FooPackageVersion`
             - `BarPackageVersion`
-            **Action Required:** Please remove these properties from `VersionProps` to ensure proper separation of concerns between the two files.
+            **Action Required:** Please remove these properties from `Versions.props` to ensure proper separation of concerns between the two files.
             """);
         result.MergePolicyName.Should().Be("VersionDetailsProps");
-        result.MergePolicyDisplayName.Should().Be("Version Details Properties Merge Policy");
+        result.MergePolicyDisplayName.Should().Be("Version.Details.props Validation Merge Policy");
     }
 
     [Test]
@@ -186,7 +208,7 @@ public class VersionDetailsPropsMergePolicyTests
 
         // Assert
         result.Status.Should().Be(MergePolicyEvaluationStatus.DecisiveFailure);
-        result.Title.Should().Be("#### ❌ Version Details Properties Validation Failed");
+        result.Title.Should().Be("#### ❌ Version.Details.props Validation Merge Policy Validation Failed");
         result.Message.Should().Be("""
             The `VersionProps` file is missing the required import statement for `Version.Details.props`.
             **Action Required:** Please add the following import statement at the beginning of your `VersionProps` file:
@@ -195,7 +217,7 @@ public class VersionDetailsPropsMergePolicyTests
             ```
             """);
         result.MergePolicyName.Should().Be("VersionDetailsProps");
-        result.MergePolicyDisplayName.Should().Be("Version Details Properties Merge Policy");
+        result.MergePolicyDisplayName.Should().Be("Version.Details.props Validation Merge Policy");
     }
 
     [Test]
@@ -217,9 +239,9 @@ public class VersionDetailsPropsMergePolicyTests
 
         // Assert
         result.Status.Should().Be(MergePolicyEvaluationStatus.DecisiveSuccess);
-        result.Title.Should().Be("Version Details Properties Merge Policy: Not a backflow PR");
+        result.Title.Should().Be("Version.Details.props Validation Merge Policy: doesn't apply to forward flow PRs yet");
         result.MergePolicyName.Should().Be("VersionDetailsProps");
-        result.MergePolicyDisplayName.Should().Be("Version Details Properties Merge Policy");
+        result.MergePolicyDisplayName.Should().Be("Version.Details.props Validation Merge Policy");
 
         // Verify no file content calls were made
         _mockRemote.Verify(r => r.GetFileContentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -252,11 +274,11 @@ public class VersionDetailsPropsMergePolicyTests
 
         // Assert
         result.Status.Should().Be(MergePolicyEvaluationStatus.DecisiveFailure);
-        result.Title.Should().Be("#### ❌ Version Details Properties Validation Failed");
-        result.Message.Should().Contain("There is a mismatch between dependencies in `Version.Details.xml` and properties in `VersionDetailsProps`.");
-        result.Message.Should().Contain("**Missing Properties:** The following dependencies are missing corresponding properties in `VersionDetailsProps`:");
+        result.Title.Should().Be("#### ❌ Version.Details.props Validation Merge Policy: Validation Failed");
+        result.Message.Should().Contain("There is a mismatch between dependencies in `Version.Details.xml` and properties in `Version.Details.props`.");
+        result.Message.Should().Contain("**Missing Properties:** The following dependencies are missing corresponding properties in `Version.Details.props`:");
         result.Message.Should().Contain("- Add `<MissingPackagePackageVersion>2.0.0</MissingPackagePackageVersion>`");
         result.MergePolicyName.Should().Be("VersionDetailsProps");
-        result.MergePolicyDisplayName.Should().Be("Version Details Properties Merge Policy");
+        result.MergePolicyDisplayName.Should().Be("Version.Details.props Validation Merge Policy");
     }
 }
