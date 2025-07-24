@@ -59,6 +59,33 @@ public class VersionDetailsPropsMergePolicyTests
         </Project>
         """;
 
+    private const string VersionDetailsXmlWithTwoDependencies = """
+        <?xml version="1.0" encoding="utf-8"?>
+        <Dependencies>
+          <ProductDependencies>
+            <Dependency Name="Foo" Version="1.0.1">
+              <Uri>https://github.com/test/foo</Uri>
+              <Sha>abc123</Sha>
+            </Dependency>
+            <Dependency Name="Missing.Package" Version="2.0.0">
+              <Uri>https://github.com/test/missing</Uri>
+              <Sha>def456</Sha>
+            </Dependency>
+          </ProductDependencies>
+        </Dependencies>
+        """;
+
+    private const string VersionDetailsPropsWithOneMissingProperty = """
+        <?xml version="1.0" encoding="utf-8"?>
+        <Project>
+          <PropertyGroup>
+            <!-- foo dependencies -->
+            <FooPackageVersion>1.0.1</FooPackageVersion>
+            <!-- MissingPackagePackageVersion is missing -->
+          </PropertyGroup>
+        </Project>
+        """;
+
     private Mock<IRemote> _mockRemote = null!;
     private VersionDetailsPropsMergePolicy _policy = null!;
     private PullRequestUpdateSummary _prSummary = null!;
@@ -196,5 +223,40 @@ public class VersionDetailsPropsMergePolicyTests
 
         // Verify no file content calls were made
         _mockRemote.Verify(r => r.GetFileContentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Test]
+    public async Task EvaluateAsync_WhenDependencyMappingIncomplete_ShouldFail()
+    {
+        // Arrange
+        _mockRemote.Setup(r => r.GetFileContentsAsync(
+                VersionFiles.VersionDetailsProps,
+                _prSummary.TargetRepoUrl,
+                _prSummary.HeadBranch))
+            .ReturnsAsync(VersionDetailsPropsWithOneMissingProperty);
+
+        _mockRemote.Setup(r => r.GetFileContentsAsync(
+                VersionFiles.VersionProps,
+                _prSummary.TargetRepoUrl,
+                _prSummary.HeadBranch))
+            .ReturnsAsync(VersionPropsWithoutConflictingProperties);
+
+        _mockRemote.Setup(r => r.GetFileContentsAsync(
+                VersionFiles.VersionDetailsXml,
+                _prSummary.TargetRepoUrl,
+                _prSummary.HeadBranch))
+            .ReturnsAsync(VersionDetailsXmlWithTwoDependencies);
+
+        // Act
+        var result = await _policy.EvaluateAsync(_prSummary, _mockRemote.Object);
+
+        // Assert
+        result.Status.Should().Be(MergePolicyEvaluationStatus.DecisiveFailure);
+        result.Title.Should().Be("#### ❌ Version Details Properties Validation Failed");
+        result.Message.Should().Contain("There is a mismatch between dependencies in `Version.Details.xml` and properties in `VersionDetailsProps`.");
+        result.Message.Should().Contain("**Missing Properties:** The following dependencies are missing corresponding properties in `VersionDetailsProps`:");
+        result.Message.Should().Contain("- Add `<MissingPackagePackageVersion>2.0.0</MissingPackagePackageVersion>`");
+        result.MergePolicyName.Should().Be("VersionDetailsProps");
+        result.MergePolicyDisplayName.Should().Be("Version Details Properties Merge Policy");
     }
 }

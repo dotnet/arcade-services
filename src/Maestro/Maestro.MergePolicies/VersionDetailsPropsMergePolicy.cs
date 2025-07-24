@@ -3,12 +3,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 
 #nullable enable
 namespace Maestro.MergePolicies;
@@ -98,7 +100,45 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
                     """);
             }
 
-            return SucceedDecisively("No properties from VersionDetailsProps are present in VersionProps and required import statement is present");
+            var versionDetailsXml = DependencyFileManager.GetXmlDocument(await remote.GetFileContentsAsync(
+                VersionFiles.VersionDetailsXml,
+                pr.TargetRepoUrl,
+                pr.HeadBranch));
+
+            var versionDetailsParser = new VersionDetailsParser();
+            var versionDetails = versionDetailsParser.ParseVersionDetailsXml(versionDetailsXml, includePinned: true);
+
+            var (missingProperties, orphanedProperties) = CheckDependencyPropertyMapping(versionDetails.Dependencies, versionDetailsPropsProperties);
+            if (missingProperties.Count > 0 || orphanedProperties.Count > 0)
+            {
+                StringBuilder str = new();
+                str.AppendLine("There is a mismatch between dependencies in `Version.Details.xml` and properties in `VersionDetailsProps`.");
+                str.AppendLine();
+                
+                    if (missingProperties.Count > 0)
+                    {
+                        str.AppendLine("**Missing Properties:** The following dependencies are missing corresponding properties in `VersionDetailsProps`:");
+                        foreach (var (expectedPropertyName, version) in missingProperties)
+                        {
+                            str.AppendLine($"- Add `<{expectedPropertyName}>{version}</{expectedPropertyName}>`");
+                        }
+                        str.AppendLine();
+                    }                if (orphanedProperties.Count > 0)
+                {
+                    str.AppendLine("**Orphaned Properties:** The following properties in `VersionDetailsProps` do not correspond to any dependency:");
+                    foreach (var orphanedProperty in orphanedProperties)
+                    {
+                        str.AppendLine($"- Remove `<{orphanedProperty}>...</{orphanedProperty}>`");
+                    }
+                    str.AppendLine();
+                }
+                
+                return FailDecisively(
+                    "#### ❌ Version Details Properties Validation Failed",
+                    str.ToString());
+            }
+
+            return SucceedDecisively("All validation checks passed: no property conflicts, required import statement present, and dependency mapping is correct");
         }
         catch
         {
@@ -149,6 +189,30 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
         }
         
         return false;
+    }
+
+    private static (List<(string ExpectedPropertyName, string Version)> MissingProperties, List<string> OrphanedProperties) 
+        CheckDependencyPropertyMapping(IReadOnlyCollection<DependencyDetail> dependencies, HashSet<string> versionDetailsPropsProperties)
+    {
+        var missingProperties = new List<(string ExpectedPropertyName, string Version)>();
+        var orphanedProperties = new List<string>();
+        
+        // Check for missing properties (dependencies without corresponding properties)
+        foreach (var dependency in dependencies)
+        {
+            var expectedPropertyName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
+            
+            if (!versionDetailsPropsProperties.Contains(expectedPropertyName))
+            {
+                missingProperties.Add((expectedPropertyName, dependency.Version ?? "VERSION"));
+            }
+        }
+        
+        // Check for orphaned properties (properties that don't correspond to any dependency)
+        var expectedProperties = dependencies.Select(d => VersionFiles.GetVersionPropsPackageVersionElementName(d.Name)).ToHashSet();
+        orphanedProperties.AddRange(versionDetailsPropsProperties.Where(prop => !expectedProperties.Contains(prop)));
+        
+        return (missingProperties, orphanedProperties);
     }
 }
 
