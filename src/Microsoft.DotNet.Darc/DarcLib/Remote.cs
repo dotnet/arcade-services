@@ -20,7 +20,6 @@ namespace Microsoft.DotNet.DarcLib;
 
 public sealed class Remote : IRemote
 {
-    private readonly ICache _cacheClient;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly DependencyFileManager _fileManager;
     private readonly IRemoteGitRepo _remoteGitClient;
