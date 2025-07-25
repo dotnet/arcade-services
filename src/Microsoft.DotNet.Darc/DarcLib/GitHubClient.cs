@@ -307,9 +307,10 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         IGitHubClient client = GetClient(owner, repo);
 
         var resourceUri = ApiUrls.PullRequest(owner, repo, id);
+        string cacheKey = $"{owner}_{repo}_{id}";
 
         Models.PullRequest result = await RequestResourceUsingEtagsAsync<Models.PullRequest, Octokit.PullRequest>(
-            pullRequestUrl,
+            cacheKey,
             resourceUri,
             client,
             GithubResourceConverters.ConvertPullRequest);
@@ -923,9 +924,10 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         IGitHubClient client = GetClient(owner, repo);
         var pullRequestReviewsUri = ApiUrls.PullRequestReviews(owner, repo, id);
+        string cacheKey = $"{owner}_{repo}_id";
 
         var pullRequestReviews = await RequestResourceUsingEtagsAsync<GithubPullRequestReviews, List<PullRequestReview>>(
-            pullRequestUrl,
+            cacheKey,
             pullRequestReviewsUri,
             client,
             GithubResourceConverters.ConvertPullRequestReviews);
