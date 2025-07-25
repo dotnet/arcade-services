@@ -19,9 +19,9 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 /// </summary>
 public interface IDependencyFileManager
 {
-    Task AddDependencyAsync(DependencyDetail dependency, string repoUri, string? branch);
+    Task AddDependencyAsync(DependencyDetail dependency, string repoUri, string? branch, bool? repoHasVersionDetailsProps = null);
 
-    Task RemoveDependencyAsync(string dependencyName, string repoUri, string branch, bool repoIsVmr = false);
+    Task RemoveDependencyAsync(string dependencyName, string repoUri, string branch, bool repoIsVmr = false, bool? repoHasVersionDetailsProps = null);
 
     Dictionary<string, HashSet<string>> FlattenLocationsAndSplitIntoGroups(Dictionary<string, HashSet<string>> assetLocationMap);
 
@@ -46,12 +46,6 @@ public interface IDependencyFileManager
 
     Task<XmlDocument> ReadVersionPropsAsync(string repoUri, string branch);
 
-    void UpdateVersionDetails(
-        XmlDocument versionDetails,
-        IEnumerable<DependencyDetail> itemsToUpdate,
-        SourceDependency sourceDependency,
-        IEnumerable<DependencyDetail> oldDependencies);
-
     Task<GitFileContentContainer> UpdateDependencyFiles(
         IEnumerable<DependencyDetail> itemsToUpdate,
         SourceDependency? sourceDependency,
@@ -59,11 +53,14 @@ public interface IDependencyFileManager
         string? branch,
         IEnumerable<DependencyDetail> oldDependencies,
         SemanticVersion? incomingDotNetSdkVersion,
-        bool forceGlobalJsonUpdate = false);
+        bool forceGlobalJsonUpdate = false,
+        bool? repoHasVersionDetailsProps = null);
 
     XmlDocument UpdatePackageSources(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo);
 
     Task<bool> Verify(string repo, string branch);
 
     Task<bool> VerifyNoDuplicatedProperties(XmlDocument versionProps);
+
+    Task<bool> VersionDetailsPropsExistsAsync(string repoUri, string branch);
 }

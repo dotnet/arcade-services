@@ -440,6 +440,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             .Select(s => s.Path.Substring(mapping.Name.Length + 1));
 
         // Exclude version files as those will be handled manually
+        // TODO: once all codeflow repos/branches add VersionDetailsProps, we should remove Version.props from this list
+        // https://github.com/dotnet/arcade-services/issues/4998
         exclusions = exclusions
             .Concat(DependencyFileManager.DependencyFiles);
 

@@ -109,8 +109,8 @@ public class BackflowConflictResolverTests
 
         _dependencyFileManager.Reset();
         _dependencyFileManager
-            .Setup(x => x.AddDependencyAsync(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>()))
-            .Callback((DependencyDetail dep, string repo, string commit) =>
+            .Setup(x => x.AddDependencyAsync(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
+            .Callback((DependencyDetail dep, string repo, string commit, bool? _) =>
             {
                 var key = (repo == _vmrPath ? "vmr" : "repo") + "/" + commit;
                 VersionDetails versionDetails = _versionDetails.TryGetValue(key, out var vd) ? vd : new([], null);
@@ -127,8 +127,8 @@ public class BackflowConflictResolverTests
             .Returns(Task.CompletedTask);
 
         _dependencyFileManager
-            .Setup(x => x.RemoveDependencyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
-            .Callback((string name, string repo, string commit, bool _) =>
+            .Setup(x => x.RemoveDependencyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .Callback((string name, string repo, string commit, bool _, bool? _) =>
             {
                 var key = (repo == _vmrPath ? "vmr" : "repo") + "/" + commit;
                 var versionDetails = _versionDetails[key];
@@ -356,14 +356,16 @@ public class BackflowConflictResolverTests
                 It.IsAny<string>(),
                 It.IsAny<IEnumerable<DependencyDetail>>(),
                 null,
-                It.IsAny<bool>()))
+                It.IsAny<bool>(),
+                It.IsAny<bool?>()))
             .Callback((IEnumerable<DependencyDetail> itemsToUpdate,
                        SourceDependency? sourceDependency,
                        string repo,
                        string? commit,
                        IEnumerable<DependencyDetail> oldDependencies,
                        SemanticVersion? incomingDotNetSdkVersion,
-                       bool forceUpdate) =>
+                       bool forceUpdate,
+                       bool? _) =>
             {
                 // Update dependencies in-memory
                 var key = (repo == _vmrPath ? "vmr" : "repo") + "/" + commit;

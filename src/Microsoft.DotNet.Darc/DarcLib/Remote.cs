@@ -412,6 +412,9 @@ public sealed class Remote : IRemote
         return SourceManifest.FromJson(fileContent);
     }
 
+    public async Task<string> GetFileContentsAsync(string filePath, string repoUri, string branch)
+        => await _remoteGitClient.GetFileContentsAsync(filePath, repoUri, branch);
+
     public async Task<SourceManifest> GetSourceManifestAtCommitAsync(string vmrUri, string commitSha)
     {
         if (!StringUtils.IsValidLongCommitSha(commitSha))
@@ -433,7 +436,6 @@ public sealed class Remote : IRemote
 
         return sourceManifest;
     }
-
 
     public async Task<IReadOnlyCollection<SourceMapping>> GetSourceMappingsAsync(string vmrUri, string branch)
     {
