@@ -1,12 +1,12 @@
 variables:
 - template: /eng/templates/azure-pipelines-shared-variables.yml@self
 - name: devBranchSuffix
-  value:
+  value: -dev
 
 trigger:
   batch: true
   branches:
-    include:
+    exclude:
     - main
     - production
 
@@ -18,7 +18,7 @@ resources:
     ref: refs/tags/release
 
 extends:
-  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  template: v1/1ES.Unofficial.PipelineTemplate.yml@1ESPipelineTemplates
   parameters:
     pool:
       name: $(DncEngInternalBuildPool)
@@ -27,4 +27,4 @@ extends:
     stages:
     - template: /eng/templates/azure-pipelines-shared-jobs.yml@self
       parameters:
-        isProdPipeline: true
+        isProdPipeline: false
