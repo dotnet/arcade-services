@@ -17,15 +17,18 @@ internal class RemoteFactory : IRemoteFactory
     private readonly ILoggerFactory _loggerFactory;
     private readonly ICommandLineOptions _options;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IRedisCacheClient _redisCacheClient;
 
     public RemoteFactory(
         ILoggerFactory loggerFactory,
         ICommandLineOptions options,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        IRedisCacheClient redisCacheClient)
     {
         _loggerFactory = loggerFactory;
         _options = options;
         _serviceProvider = serviceProvider;
+        _redisCacheClient = redisCacheClient;
     }
 
     public Task<IRemote> CreateRemoteAsync(string repoUrl)
@@ -52,10 +55,10 @@ internal class RemoteFactory : IRemoteFactory
                 new GitHubClient(
                     options.GetGitHubTokenProvider(),
                     new ProcessManager(_loggerFactory.CreateLogger<IProcessManager>(), options.GitLocation),
-                    _loggerFactory.CreateLogger<GitHubClient>(),
                     temporaryRepositoryRoot,
-                    // Caching not in use for Darc local client.
-                    null),
+                    null, // Memory Caching not in use for Darc local client.
+                    _redisCacheClient,
+                    _loggerFactory.CreateLogger<GitHubClient>()),
 
             GitRepoType.AzureDevOps =>
                 new AzureDevOpsClient(

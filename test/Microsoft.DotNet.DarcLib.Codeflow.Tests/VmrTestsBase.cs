@@ -96,7 +96,8 @@ internal abstract class VmrTestsBase
         .AddLogging(b => b.AddConsole().AddFilter(l => l >= LogLevel.Debug))
         .AddSingleVmrSupport("git", VmrPath, TmpPath, null, null)
         .AddSingleton(_basicBarClient.Object)
-        .AddTransient<IRemoteFactory, RemoteFactory>();
+        .AddTransient<IRemoteFactory, RemoteFactory>()
+        .AddSingleton<IRedisCacheClient, NoOpRedisClient>();
 
     protected static List<NativePath> GetExpectedFilesInVmr(
         NativePath vmrPath,
