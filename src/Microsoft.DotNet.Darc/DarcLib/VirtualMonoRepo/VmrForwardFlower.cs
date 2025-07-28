@@ -331,7 +331,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             }
             catch (WorkBranchInConflictException e)
             {
-                _logger.LogInformation("Failed to merge back the work branch into {mainBranch}: {error}",
+                _logger.LogInformation("Failed to merge back the work branch into {headBranch}: {error}",
                     headBranch,
                     e.Message);
                 throw new ConflictInPrBranchException(e.ExecutionResult.StandardError, targetBranch, mapping.Name, isForwardFlow: true);
