@@ -36,7 +36,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
 
             files.Count.Should().Be(
                 testFiles.Length
-                + 35); // source-manifest.json and eng/common changes
+                + 34); // source-manifest.json and eng/common changes
 
             // Verify source-manifest has changes
             files.Should().Contain(file => file.FileName == VmrInfo.DefaultRelativeSourceManifestPath);
