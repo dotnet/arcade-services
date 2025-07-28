@@ -4,7 +4,8 @@
 using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Humanizer;
+using Kusto.Data.Common;
 using NUnit.Framework;
 
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
@@ -118,6 +119,48 @@ internal class VmrCodeFlowUpdatingPRsTests : VmrCodeFlowTests
         // Check that the changes from the VMR are also present
         var repoFileContent = await File.ReadAllTextAsync(ProductRepoPath / "repo.txt");
         repoFileContent.Should().Be("New file in the repo", "The changes from the VMR should be present in the repo after the forward flow merge.");
+    }
+
+    // This test simulates the following scenario:
+    //   1. A change is made directly in the VMR, touching file Foo in repo A
+    //   2. A number forward flows come from repo A but they're not touching the file Foo
+    //   3. Finally, Foo is changed in the repo A, and we try to open a FF PR.
+    //   4. This fails because there's a conflict in file Foo, so we recreate the last FF and try to apply the diff again,
+    //      but it fails again, because the last FF isn't old enough.
+    //      This test tests that we can go deeper in the past and recreate the flows correctly.
+    [Test]
+    public async Task ForwardFlowWithConflictsDeepInPastTest()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        const string forwardFlowBranch = nameof(ForwardFlowWithConflictsDeepInPastTest);
+
+        // 1. Create the Foo changes in the VMR
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / "Foo.txt", "A new file in the VMR");
+        await GitOperations.CommitAll(VmrPath, "A new file in the VMR");
+
+        // 2. Make a number of forward flows
+        await ChangeRepoFileAndFlowIt("Change one", forwardFlowBranch);
+        await GitOperations.MergePrBranch(VmrPath, forwardFlowBranch);
+
+        await ChangeRepoFileAndFlowIt("Change two", forwardFlowBranch);
+        await GitOperations.MergePrBranch(VmrPath, forwardFlowBranch);
+
+        await ChangeRepoFileAndFlowIt("Change three", forwardFlowBranch);
+        await GitOperations.MergePrBranch(VmrPath, forwardFlowBranch);
+
+        // 3. Foo is changed in the repo A, and we try to open a FF PR
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / "Foo.txt", "Foo is changed in the repo");
+        await GitOperations.CommitAll(ProductRepoPath, "Foo is changed in the repo");
+
+        // 4. Try to open a forward flow PR
+        var result = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardFlowBranch);
+        result.ShouldHaveUpdates();
+
+        // Verify that there is a conflict in Foo.txt
+        await GitOperations.VerifyMergeConflict(VmrPath, forwardFlowBranch, "Foo.txt", mergeTheirs: true);
     }
 }
 

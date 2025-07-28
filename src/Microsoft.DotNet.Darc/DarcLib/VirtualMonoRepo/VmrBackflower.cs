@@ -160,7 +160,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
     protected override async Task<bool> SameDirectionFlowAsync(
         SourceMapping mapping,
-        Codeflow lastFlow,
+        LastFlows lastFlows,
         Codeflow currentFlow,
         ILocalGitRepo targetRepo,
         Build build,
@@ -171,12 +171,13 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         CancellationToken cancellationToken)
     {
         string newBranchName = currentFlow.GetBranchName();
-        var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-{Commit.GetShortSha(lastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}.patch";
+        var lastFlownSha = lastFlows.LastFlow.VmrSha;
+        var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-{Commit.GetShortSha(lastFlownSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}.patch";
 
         // When flowing from the VMR, ignore all submodules
         List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
             patchName,
-            lastFlow.VmrSha,
+            lastFlownSha,
             currentFlow.VmrSha,
             path: null,
             filters: GetPatchExclusions(mapping),
@@ -189,7 +190,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         if (patches.Count == 0 || patches.All(p => _fileSystem.GetFileInfo(p.Path).Length == 0))
         {
             _logger.LogInformation("There are no new changes for VMR between {sha1} and {sha2}",
-                lastFlow.VmrSha,
+                lastFlownSha,
                 currentFlow.VmrSha);
 
             foreach (VmrIngestionPatch patch in patches)
@@ -235,7 +236,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             await RecreatePreviousFlowAndApplyBuild(
                 mapping,
                 targetRepo,
-                lastFlow,
+                lastFlows.LastFlow,
                 headBranch,
                 newBranchName,
                 excludedAssets,
@@ -248,7 +249,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         await CommitAndMergeWorkBranch(
             mapping,
-            lastFlow,
+            lastFlows.LastFlow,
             currentFlow,
             targetRepo,
             targetBranch,

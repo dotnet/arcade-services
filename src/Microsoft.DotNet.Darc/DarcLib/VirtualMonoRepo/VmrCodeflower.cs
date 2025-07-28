@@ -101,7 +101,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             _logger.LogInformation("Current flow is in the same direction");
             hasChanges = await SameDirectionFlowAsync(
                 mapping,
-                lastFlow,
+                lastFlows,
                 currentFlow,
                 repo,
                 build,
@@ -139,7 +139,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// The changes that are flown are taken from a simple patch of changes that occurred since the last flow.
     /// </summary>
     /// <param name="mapping">Mapping to flow</param>
-    /// <param name="lastFlow">Last flow that happened for the given mapping</param>
+    /// <param name="lastFlows">Last flows that happened for the given mapping</param>
     /// <param name="currentFlow">Current flow that is being flown</param>
     /// <param name="repo">Local git repo clone of the source repo</param>
     /// <param name="build">Build with assets (dependencies) that is being flown</param>
@@ -150,7 +150,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// <returns>True if there were changes to flow</returns>
     protected abstract Task<bool> SameDirectionFlowAsync(
         SourceMapping mapping,
-        Codeflow lastFlow,
+        LastFlows lastFlows,
         Codeflow currentFlow,
         ILocalGitRepo repo,
         Build build,
