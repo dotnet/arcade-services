@@ -160,7 +160,7 @@ internal class VmrCodeFlowUpdatingPRsTests : VmrCodeFlowTests
         result.ShouldHaveUpdates();
 
         // Verify that there is a conflict in Foo.txt
-        await GitOperations.VerifyMergeConflict(VmrPath, forwardFlowBranch, "Foo.txt", mergeTheirs: true);
+        await GitOperations.VerifyMergeConflict(VmrPath, forwardFlowBranch, $"src/{Constants.ProductRepoName}/Foo.txt", mergeTheirs: true);
     }
 }
 

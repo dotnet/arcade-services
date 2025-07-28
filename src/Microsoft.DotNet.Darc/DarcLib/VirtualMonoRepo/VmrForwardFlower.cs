@@ -404,6 +404,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 resetToRemote: false,
                 cancellationToken);
 
+            await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
+
             // Create a fake previously applied build. We only care about the sha here, because it will get overwritten anyway
             Build previouslyAppliedBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastFlows.LastForwardFlow.RepoSha, [], [], [], [])
             {
