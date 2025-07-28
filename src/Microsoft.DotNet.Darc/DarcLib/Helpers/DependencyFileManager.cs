@@ -229,6 +229,8 @@ public class DependencyFileManager : IDependencyFileManager
             repoHasVersionDetailsProps = await VersionDetailsPropsExistsAsync(repoUri, branch);
         }
 
+        await AddDependencyToVersionDetailsAsync(repoUri, branch, dependency, repoHasVersionDetailsProps.Value);
+
         if (!versionDetailsOnly)
         {
             // Should the dependency go to global.json?
@@ -246,8 +248,6 @@ public class DependencyFileManager : IDependencyFileManager
                 await AddDependencyToVersionsPropsAsync(repoUri, branch, dependency);
             }
         }
-
-        await AddDependencyToVersionDetailsAsync(repoUri, branch, dependency, repoHasVersionDetailsProps.Value);
     }
 
     public async Task RemoveDependencyAsync(string dependencyName, string repoUri, string branch, bool repoIsVmr = false, bool? repoHasVersionDetailsProps = null)
