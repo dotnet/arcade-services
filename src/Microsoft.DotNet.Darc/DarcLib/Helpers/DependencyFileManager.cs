@@ -216,7 +216,7 @@ public class DependencyFileManager : IDependencyFileManager
     /// <param name="repoUri">Repository URI to add the dependency to.</param>
     /// <param name="branch">Branch to add the dependency to.</param>
     /// <param name="versionDetailsOnly">Only adds the dependency to Version.Details.xml</param>
-    /// <param name="repoHasVersionDetailsProps">Weather or not the repository we're adding the dependency to has Version.Details.props</param>
+    /// <param name="repoHasVersionDetailsProps">Whether or not the repository we're adding the dependency to has Version.Details.props</param>
     public async Task AddDependencyAsync(
         DependencyDetail dependency,
         string repoUri,
