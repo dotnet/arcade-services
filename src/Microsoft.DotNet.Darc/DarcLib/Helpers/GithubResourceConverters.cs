@@ -37,12 +37,11 @@ internal class GithubResourceConverters
                 TranslateReviewState(r.State.Value),
                 r.PullRequestUrl,
                 r.User.Login,
-                r.SubmittedAt))
-            .ToArray();
-
+                r.SubmittedAt));
+                
         return new GithubPullRequestReviews
         {
-            Reviews = reviews
+            Reviews = [.. reviews]
         };
     }
 
