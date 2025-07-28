@@ -215,11 +215,13 @@ public class DependencyFileManager : IDependencyFileManager
     /// <param name="dependency">Dependency to add.</param>
     /// <param name="repoUri">Repository URI to add the dependency to.</param>
     /// <param name="branch">Branch to add the dependency to.</param>
-    /// <returns>Async task.</returns>
+    /// <param name="versionDetailsOnly">Only adds the dependency to Version.Details.xml</param>
+    /// <param name="repoHasVersionDetailsProps">Weather or not the repository we're adding the dependency to has Version.Details.props</param>
     public async Task AddDependencyAsync(
         DependencyDetail dependency,
         string repoUri,
         string branch,
+        bool versionDetailsOnly = false,
         bool? repoHasVersionDetailsProps = null)
     {
         if (!repoHasVersionDetailsProps.HasValue)
@@ -227,19 +229,22 @@ public class DependencyFileManager : IDependencyFileManager
             repoHasVersionDetailsProps = await VersionDetailsPropsExistsAsync(repoUri, branch);
         }
 
-        // Should the dependency go to global.json?
-        if (_knownAssetNames.ContainsKey(dependency.Name))
+        if (!versionDetailsOnly)
         {
-            if (!_sdkMapping.TryGetValue(dependency.Name, out var parent))
+            // Should the dependency go to global.json?
+            if (_knownAssetNames.ContainsKey(dependency.Name))
             {
-                throw new Exception($"Dependency '{dependency.Name}' has no parent mapping defined.");
-            }
+                if (!_sdkMapping.TryGetValue(dependency.Name, out var parent))
+                {
+                    throw new Exception($"Dependency '{dependency.Name}' has no parent mapping defined.");
+                }
 
-            await AddDependencyToGlobalJson(repoUri, branch, parent, dependency);
-        }
-        else if (!repoHasVersionDetailsProps.Value)
-        {
-            await AddDependencyToVersionsPropsAsync(repoUri, branch, dependency);
+                await AddDependencyToGlobalJson(repoUri, branch, parent, dependency);
+            }
+            else if (!repoHasVersionDetailsProps.Value)
+            {
+                await AddDependencyToVersionsPropsAsync(repoUri, branch, dependency);
+            }
         }
 
         await AddDependencyToVersionDetailsAsync(repoUri, branch, dependency, repoHasVersionDetailsProps.Value);
