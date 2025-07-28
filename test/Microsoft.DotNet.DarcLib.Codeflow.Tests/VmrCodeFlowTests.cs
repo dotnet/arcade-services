@@ -151,11 +151,11 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
             .Where(d => d.Type == DependencyType.Product)
             .Should().BeEquivalentTo(expectedDependencies);
 
-        var versionProps = await File.ReadAllTextAsync(repo / VersionFiles.VersionProps);
+        var versionDetailsProps = await File.ReadAllTextAsync(repo / VersionFiles.VersionDetailsProps);
         foreach (var dependency in expectedDependencies)
         {
             var tagName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
-            versionProps.Should().Contain($"<{tagName}>{dependency.Version}</{tagName}>");
+            versionDetailsProps.Should().Contain($"<{tagName}>{dependency.Version}</{tagName}>");
         }
     }
 

@@ -122,6 +122,7 @@ internal abstract class VmrTestsBase
     protected static string[] GetExpectedVersionFiles() =>
     [
         VersionFiles.VersionDetailsXml,
+        VersionFiles.VersionDetailsProps,
         VersionFiles.VersionProps,
         VersionFiles.GlobalJson,
         VersionFiles.NugetConfigNames.First(),
@@ -337,6 +338,7 @@ internal abstract class VmrTestsBase
 
             var versionProps = string.Format(Constants.VersionPropsTemplate, propsString);
             File.WriteAllText(repoPath / VersionFiles.VersionProps, versionProps);
+            File.WriteAllText(repoPath / VersionFiles.VersionDetailsProps, "");
             File.WriteAllText(repoPath/ VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
             File.WriteAllText(repoPath / VersionFiles.NugetConfigNames.First(), Constants.NuGetConfigTemplate);
 
