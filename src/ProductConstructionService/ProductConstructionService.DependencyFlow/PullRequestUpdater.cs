@@ -1111,16 +1111,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 subscription.Id);
             return;
         }
-        catch (ManualCommitsInFlowException exception)
-        {
-            if (pr != null)
-            {
-                // TODO https://github.com/dotnet/arcade-services/issues/5030
-                // This is only a temporary band aid solution, we should figure out the best way to fix the algorithm so the flow continues as expected 
-                await HandleOverwrittingChanges(subscription, exception.OverwrittenCommits, pr, update);
-            }
-            return;
-        }
         catch (Exception)
         {
             _logger.LogError("Failed to flow source changes for build {buildId} in subscription {subscriptionId}",
