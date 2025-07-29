@@ -295,6 +295,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 (DependencyDetail)update.Value!,
                 repoPath,
                 null!,
+                versionDetailsOnly: true,
                 repoHasVersionDetailsProps: versionDetailsPropsExists);
         }
     }

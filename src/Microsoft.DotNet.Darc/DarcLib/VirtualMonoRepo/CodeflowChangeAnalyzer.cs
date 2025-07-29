@@ -84,6 +84,8 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         string[] ignoredFiles =
         [
             VmrInfo.DefaultRelativeSourceManifestPath,
+            // we ignore VersionDetailsProps because it is generated from VersionDetails.xml
+            VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.VersionDetailsProps,
         ];
 
         IEnumerable<string> changedFiles = result.GetOutputLines()

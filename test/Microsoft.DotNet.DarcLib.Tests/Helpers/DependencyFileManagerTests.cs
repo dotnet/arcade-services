@@ -541,5 +541,64 @@ public class DependencyFileManagerTests
             .Be(NormalizeLineEndings(VersionProps));
     }
 
+    [Test]
+    public async Task AddDependencyAddsOnlyVersionDetailsProps()
+    {
+        Mock<IGitRepo> repo = new();
+        Mock<IGitRepoFactory> repoFactory = new();
+
+        var versionDetails = VersionDetails;
+
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(() => versionDetails);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsProps, It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new DependencyFileNotFoundException());
+        repoFactory.Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>())).Returns(repo.Object);
+
+        DependencyFileManager manager = new(
+            repoFactory.Object,
+            new VersionDetailsParser(),
+            NullLogger.Instance);
+
+        await manager.AddDependencyAsync(
+            new DependencyDetail()
+            {
+                Name = "Foo",
+                Version = "1.0.1",
+                Commit = "abc123",
+                Type = DependencyType.Product,
+                RepoUri = "https://github.com/dotnet/arcade"
+            },
+            string.Empty,
+            string.Empty,
+            versionDetailsOnly: true
+        );
+
+        repo.Verify(r => r.CommitFilesAsync(
+            It.Is<List<GitFile>>(files => files.Any(f => f.FilePath == VersionFiles.VersionDetailsXml)),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()),
+            Times.Once);
+        repo.Verify(r => r.CommitFilesAsync(
+            It.Is<List<GitFile>>(files => files.Any(f => f.FilePath == VersionFiles.VersionProps)),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()),
+            Times.Never);
+        repo.Verify(r => r.CommitFilesAsync(
+            It.Is<List<GitFile>>(files => files.Any(f => f.FilePath == VersionFiles.GlobalJson)),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()),
+            Times.Never);
+        repo.Verify(r => r.CommitFilesAsync(
+            It.Is<List<GitFile>>(files => files.Any(f => f.FilePath == VersionFiles.DotnetToolsConfigJson)),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()),
+            Times.Never);
+    }
+
     private string NormalizeLineEndings(string input) => input.Replace("\r\n", "\n").TrimEnd();
 }

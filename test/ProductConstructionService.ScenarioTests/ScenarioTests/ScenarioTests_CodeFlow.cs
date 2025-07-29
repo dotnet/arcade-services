@@ -9,7 +9,7 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using FluentAssertions;
 
 #nullable enable
-namespace ProductConstructionService.ScenarioTests.ScenarioTests;
+namespace ProductConstructionService.ScenarioTests;
 
 [TestFixture]
 [Category("PostDeployment")]

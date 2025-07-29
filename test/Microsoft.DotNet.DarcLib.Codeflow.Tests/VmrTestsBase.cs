@@ -121,6 +121,7 @@ internal abstract class VmrTestsBase
     protected static string[] GetExpectedVersionFiles() =>
     [
         VersionFiles.VersionDetailsXml,
+        VersionFiles.VersionDetailsProps,
         VersionFiles.VersionProps,
         VersionFiles.GlobalJson,
         VersionFiles.NugetConfigNames.First(),
@@ -307,7 +308,6 @@ internal abstract class VmrTestsBase
         var repoPath = CurrentTestDirectory / repoName;
 
         var dependenciesString = new StringBuilder();
-        var propsString = new StringBuilder();
         if (dependencies != null && dependencies.TryGetValue(repoName, out List<string>? repoDependencies))
         {
             foreach (var dependencyName in repoDependencies)
@@ -317,9 +317,6 @@ internal abstract class VmrTestsBase
                     string.Format(
                         Constants.DependencyTemplate,
                         new[] { dependencyName, CurrentTestDirectory / dependencyName, sha }));
-
-                var propsName = VersionFiles.GetVersionPropsPackageVersionElementName(dependencyName);
-                propsString.AppendLine($"<{propsName}>8.0.0</{propsName}>");
             }
         }
 
@@ -331,8 +328,8 @@ internal abstract class VmrTestsBase
             Directory.CreateDirectory(repoPath / "eng");
             File.WriteAllText(repoPath / VersionFiles.VersionDetailsXml, versionDetails);
 
-            var versionProps = string.Format(Constants.VersionPropsTemplate, propsString);
-            File.WriteAllText(repoPath / VersionFiles.VersionProps, versionProps);
+            File.WriteAllText(repoPath / VersionFiles.VersionProps, Constants.VersionPropsTemplate);
+            File.WriteAllText(repoPath / VersionFiles.VersionDetailsProps, "");
             File.WriteAllText(repoPath / VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
             File.WriteAllText(repoPath / VersionFiles.NugetConfigNames.First(), Constants.NuGetConfigTemplate);
 
