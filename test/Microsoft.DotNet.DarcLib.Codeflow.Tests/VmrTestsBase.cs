@@ -11,7 +11,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -33,7 +32,7 @@ internal abstract class VmrTestsBase
     protected NativePath DependencyRepoPath { get; private set; } = null!;
     protected NativePath SyncDisabledRepoPath { get; private set; } = null!;
     protected NativePath InstallerRepoPath { get; private set; } = null!;
-    protected NativePath ArcadeInVmrPath { get; private set;} = null!;
+    protected NativePath ArcadeInVmrPath { get; private set; } = null!;
     protected GitOperationsHelper GitOperations { get; } = new();
     protected IServiceProvider ServiceProvider { get; private set; } = null!;
 
@@ -66,7 +65,7 @@ internal abstract class VmrTestsBase
 
         ServiceProvider = CreateServiceProvider().BuildServiceProvider();
         ServiceProvider.GetRequiredService<IVmrInfo>().VmrUri = VmrPath;
-    
+
         _basicBarClient.Setup(x => x.GetBuildAsync(It.IsAny<int>()))
              .ReturnsAsync((int id) => _builds[id]);
     }
@@ -122,6 +121,7 @@ internal abstract class VmrTestsBase
     protected static string[] GetExpectedVersionFiles() =>
     [
         VersionFiles.VersionDetailsXml,
+        VersionFiles.VersionDetailsProps,
         VersionFiles.VersionProps,
         VersionFiles.GlobalJson,
         VersionFiles.NugetConfigNames.First(),
@@ -221,7 +221,7 @@ internal abstract class VmrTestsBase
             buildToFlow = await _basicBarClient.Object.GetBuildAsync(_buildId);
         }
 
-        CodeFlowResult codeFlowResult = await codeflower.FlowBackAsync(
+        return await codeflower.FlowBackAsync(
             mappingName,
             repoPath,
             buildToFlow ?? await CreateNewVmrBuild([]),
@@ -229,7 +229,6 @@ internal abstract class VmrTestsBase
             "main",
             branch,
             cancellationToken: _cancellationToken.Token);
-        return codeFlowResult;
     }
 
     protected async Task<CodeFlowResult> CallDarcForwardflow(
@@ -242,7 +241,7 @@ internal abstract class VmrTestsBase
     {
         using var scope = ServiceProvider.CreateScope();
         var codeflower = scope.ServiceProvider.GetRequiredService<IVmrForwardFlower>();
-        CodeFlowResult codeFlowRes = await codeflower.FlowForwardAsync(
+        return await codeflower.FlowForwardAsync(
             mappingName,
             repoPath,
             buildToFlow ?? await CreateNewRepoBuild(repoPath, []),
@@ -252,8 +251,6 @@ internal abstract class VmrTestsBase
             VmrPath,
             skipMeaninglessUpdates,
             cancellationToken: _cancellationToken.Token);
-
-        return codeFlowRes;
     }
 
     protected async Task<List<string>> CallDarcCloakedFileScan(string baselinesFilePath)
@@ -311,7 +308,6 @@ internal abstract class VmrTestsBase
         var repoPath = CurrentTestDirectory / repoName;
 
         var dependenciesString = new StringBuilder();
-        var propsString = new StringBuilder();
         if (dependencies != null && dependencies.TryGetValue(repoName, out List<string>? repoDependencies))
         {
             foreach (var dependencyName in repoDependencies)
@@ -321,9 +317,6 @@ internal abstract class VmrTestsBase
                     string.Format(
                         Constants.DependencyTemplate,
                         new[] { dependencyName, CurrentTestDirectory / dependencyName, sha }));
-
-                var propsName = VersionFiles.GetVersionPropsPackageVersionElementName(dependencyName);
-                propsString.AppendLine($"<{propsName}>8.0.0</{propsName}>");
             }
         }
 
@@ -335,9 +328,9 @@ internal abstract class VmrTestsBase
             Directory.CreateDirectory(repoPath / "eng");
             File.WriteAllText(repoPath / VersionFiles.VersionDetailsXml, versionDetails);
 
-            var versionProps = string.Format(Constants.VersionPropsTemplate, propsString);
-            File.WriteAllText(repoPath / VersionFiles.VersionProps, versionProps);
-            File.WriteAllText(repoPath/ VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
+            File.WriteAllText(repoPath / VersionFiles.VersionProps, Constants.VersionPropsTemplate);
+            File.WriteAllText(repoPath / VersionFiles.VersionDetailsProps, "");
+            File.WriteAllText(repoPath / VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
             File.WriteAllText(repoPath / VersionFiles.NugetConfigNames.First(), Constants.NuGetConfigTemplate);
 
             await GitOperations.CommitAll(repoPath, "Update version files");

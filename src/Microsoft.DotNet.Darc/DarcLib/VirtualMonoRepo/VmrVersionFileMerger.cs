@@ -283,17 +283,20 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
     private async Task ApplyVersionDetailsChangesAsync(string repoPath, VersionFileChanges<DependencyUpdate> changes)
     {
+        bool versionDetailsPropsExists = await _dependencyFileManager.VersionDetailsPropsExistsAsync(repoPath, null!);
         foreach (var removal in changes.Removals)
         {
             // Remove the property from the version details
-            await _dependencyFileManager.RemoveDependencyAsync(removal, repoPath, null!);
+            await _dependencyFileManager.RemoveDependencyAsync(removal, repoPath, null!, repoHasVersionDetailsProps: versionDetailsPropsExists);
         }
         foreach ((var _, var update) in changes.Additions.Concat(changes.Updates))
         {
             await _dependencyFileManager.AddDependencyAsync(
                 (DependencyDetail)update.Value!,
                 repoPath,
-                null!);
+                null!,
+                versionDetailsOnly: true,
+                repoHasVersionDetailsProps: versionDetailsPropsExists);
         }
     }
 

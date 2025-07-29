@@ -7,17 +7,23 @@ using Azure.Identity;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Helpers;
+
 public static class AzureAuthentication
 {
-    public static TokenCredential GetCliCredential() => new ChainedTokenCredential(
+#if DEBUG
+    public static TokenCredential GetCliCredential()
+        => new ChainedTokenCredential(
             new AzureCliCredential(),
-            new DefaultAzureCredential());
+            new DefaultAzureCredential()); // CodeQL [SM05137] This is non-production testing code which is not deployed
+#else
+    public static TokenCredential GetCliCredential() => new AzureCliCredential();
+#endif
 
     public static TokenCredential GetServiceCredential(bool isDevelopment, string? managedIdentityClientId)
     {
         if (isDevelopment)
         {
-            return new DefaultAzureCredential();
+            return new DefaultAzureCredential(); // CodeQL [SM05137] This is non-production testing code which is not deployed
         }
         else
         {

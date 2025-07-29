@@ -253,8 +253,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetRepo,
             targetBranch,
             headBranch,
-            headBranchExisted,
-            newBranchName,
             workBranch,
             cancellationToken);
 
@@ -263,7 +261,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
     protected override async Task<bool> OppositeDirectionFlowAsync(
         SourceMapping mapping,
-        Codeflow lastFlow,
+        LastFlows lastFlows,
         Codeflow currentFlow,
         ILocalGitRepo targetRepo,
         Build build,
@@ -272,15 +270,19 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        await targetRepo.CheckoutAsync(lastFlow.RepoSha);
-
-        // If the target branch did not exist, we need to make sure it is created in the right location
         if (!headBranchExisted)
         {
+            // If the target branch did not exist, we need to make sure it is created in the right location
+            await targetRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
             await targetRepo.CreateBranchAsync(headBranch, true);
         }
+        else
+        {
+            // If it did, we need to check out the last point of synchronization on it
+            await targetRepo.CheckoutAsync(lastFlows.LastBackFlow!.RepoSha);
+        }
 
-        var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-{Commit.GetShortSha(lastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}.patch";
+        var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-{Commit.GetShortSha(lastFlows.LastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}.patch";
         var branchName = currentFlow.GetBranchName();
         IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, branchName, headBranch);
         _logger.LogInformation("Created temporary branch {branchName} in {repoDir}", branchName, targetRepo);
@@ -342,13 +344,11 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         await CommitAndMergeWorkBranch(
             mapping,
-            lastFlow,
+            lastFlows.LastFlow,
             currentFlow,
             targetRepo,
             targetBranch,
             headBranch,
-            headBranchExisted,
-            branchName,
             workBranch,
             cancellationToken);
 
@@ -440,6 +440,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             .Select(s => s.Path.Substring(mapping.Name.Length + 1));
 
         // Exclude version files as those will be handled manually
+        // TODO: once all codeflow repos/branches add VersionDetailsProps, we should remove Version.props from this list
+        // https://github.com/dotnet/arcade-services/issues/4998
         exclusions = exclusions
             .Concat(DependencyFileManager.DependencyFiles);
 
@@ -525,8 +527,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         ILocalGitRepo targetRepo,
         string targetBranch,
         string headBranch,
-        bool headBranchExisted,
-        string newBranchName,
         IWorkBranch workBranch,
         CancellationToken cancellationToken)
     {
@@ -543,12 +543,9 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             await workBranch.MergeBackAsync(commitMessage);
         }
-        catch (ProcessFailedException e) when (headBranchExisted && e.ExecutionResult.StandardError.Contains("CONFLICT (content): Merge conflict"))
+        catch (WorkBranchInConflictException e)
         {
-            _logger.LogWarning("Failed to merge back the work branch {branchName} into {mainBranch}: {error}",
-                newBranchName,
-                headBranch,
-                e.Message);
+            _logger.LogInformation(e.Message);
             throw new ConflictInPrBranchException(e.ExecutionResult.StandardError, targetBranch, mapping.Name, isForwardFlow: false);
         }
 

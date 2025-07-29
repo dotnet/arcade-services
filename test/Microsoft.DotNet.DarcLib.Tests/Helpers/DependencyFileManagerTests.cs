@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
-using FluentAssertions.Specialized;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -36,6 +35,12 @@ public class DependencyFileManagerTests
           <ToolsetDependencies>
           </ToolsetDependencies>
         </Dependencies>
+        """;
+
+    private const string VersionDetailsProps = """
+        <?xml version="1.0" encoding="utf-8"?>
+        <Project>
+        </Project>
         """;
 
     private const string VersionProps = """
@@ -144,6 +149,8 @@ public class DependencyFileManagerTests
             .ReturnsAsync(VersionDetails);
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionProps, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(VersionProps);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsProps, It.IsAny<string>(), It.IsAny<string>()))
+            .Throws<DependencyFileNotFoundException>();
         if (!dotnetToolsExists)
         {
             repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, It.IsAny<string>(), It.IsAny<string>()))
@@ -183,14 +190,14 @@ public class DependencyFileManagerTests
         {
             await manager.RemoveDependencyAsync(dependency.Name, string.Empty, string.Empty);
 
-            File.ReadAllText(tmpVersionDetailsPath).Replace("\r\n", "\n").TrimEnd().Should()
-                .Be(expectedVersionDetails.Replace("\r\n", "\n").TrimEnd());
-            File.ReadAllText(tmpVersionPropsPath).Replace("\r\n", "\n").TrimEnd().Should()
-                .Be(expectedVersionProps.Replace("\r\n", "\n").TrimEnd());
+            NormalizeLineEndings(File.ReadAllText(tmpVersionDetailsPath)).Should()
+                .Be(NormalizeLineEndings(expectedVersionDetails ));
+            NormalizeLineEndings(File.ReadAllText(tmpVersionPropsPath)).Should()
+                .Be(NormalizeLineEndings(expectedVersionProps));
             if (dotnetToolsExists)
             {
-                File.ReadAllText(tmpDotnetToolsPath).Replace("\r\n", "\n").TrimEnd().Should()
-                    .Be(expectedDotNetTools.Replace("\r\n", "\n").TrimEnd());
+                NormalizeLineEndings(File.ReadAllText(tmpDotnetToolsPath)).Should()
+                    .Be(NormalizeLineEndings(expectedDotNetTools));
             }
         }
         finally
@@ -276,6 +283,8 @@ public class DependencyFileManagerTests
             .ReturnsAsync(() => versionDetails);
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionProps, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(() => versionProps);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsProps, It.IsAny<string>(), It.IsAny<string>()))
+            .Throws<DependencyFileNotFoundException>();
         repoFactory
             .Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>()))
             .Returns(repo.Object);
@@ -359,8 +368,8 @@ public class DependencyFileManagerTests
             </Project>
             """;
 
-        versionDetails.Replace("\r\n", "\n").TrimEnd().Should().Be(expectedVersionDetails.Replace("\r\n", "\n").TrimEnd());
-        versionProps.Replace("\r\n", "\n").TrimEnd().Should().Be(expectedVersionProps.Replace("\r\n", "\n").TrimEnd());
+        NormalizeLineEndings(versionDetails).Should().Be(NormalizeLineEndings(expectedVersionDetails));
+        NormalizeLineEndings(versionProps).Should().Be(NormalizeLineEndings(expectedVersionProps));
     }
 
     [Test]
@@ -384,4 +393,212 @@ public class DependencyFileManagerTests
         var f = () => DependencyFileManager.GetXmlDocument(xmlWithBom);
         f.Should().NotThrow<Exception>();
     }
+
+    [Test]
+    public async Task AddDependencyShouldAddToVersionDetailsPropsWhenItExists()
+    {
+        Mock<IGitRepo> repo = new();
+        Mock<IGitRepoFactory> repoFactory = new();
+
+        var versionDetails = VersionDetails;
+        var versionProps = VersionProps;
+        var versionDetailsProps = VersionDetailsProps;
+
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(() => versionDetails);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionProps, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(() => versionProps);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsProps, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(() => versionDetailsProps);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, It.IsAny<string>(), It.IsAny<string>()))
+                .Throws<DependencyFileNotFoundException>();
+        repoFactory.Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>())).Returns(repo.Object);
+
+        repo.Setup(r => r.CommitFilesAsync(
+            It.IsAny<List<GitFile>>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()))
+            .Callback<List<GitFile>, string, string, string>((files, repoUri, branch, commitMessage) =>
+            {
+                foreach (var file in files)
+                {
+                    if (file.FilePath == VersionFiles.VersionDetailsXml)
+                    {
+                        versionDetails = file.Content;
+                    }
+                    else if (file.FilePath == VersionFiles.VersionProps)
+                    {
+                        versionProps = file.Content;
+                    }
+                    else if (file.FilePath == VersionFiles.VersionDetailsProps)
+                    {
+                        versionDetailsProps = file.Content;
+                    }
+                }
+            });
+
+        DependencyFileManager manager = new(
+            repoFactory.Object,
+            new VersionDetailsParser(),
+            NullLogger.Instance);
+
+        await manager.AddDependencyAsync(
+            new DependencyDetail()
+            {
+                Name = "Foo",
+                Version = "1.0.1",
+                Commit = "abc123",
+                Type = DependencyType.Product,
+                RepoUri = "https://github.com/dotnet/arcade"
+            },
+            string.Empty,
+            string.Empty
+        );
+
+        var expectedVersionDetails = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <Dependencies>
+              <!-- Elements contains all product dependencies -->
+              <ProductDependencies>
+                <Dependency Name="Foo" Version="1.0.1">
+                  <Uri>https://github.com/dotnet/arcade</Uri>
+                  <Sha>abc123</Sha>
+                </Dependency>
+                <Dependency Name="Bar" Version="1.0.0">
+                  <Uri>https://github.com/dotnet/bar</Uri>
+                  <Sha>sha1</Sha>
+                </Dependency>
+              </ProductDependencies>
+              <ToolsetDependencies>
+              </ToolsetDependencies>
+            </Dependencies>
+            """;
+
+        var expectedVersionDetailsProps = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <!--
+            This file is auto-generated by the Maestro dependency flow system.
+            Do not edit it manually, as it will get overwritten by automation.
+            This file should be imported by eng/Versions.props
+            -->
+            <Project>
+              <PropertyGroup>
+                <!-- arcade dependencies -->
+                <FooPackageVersion>1.0.1</FooPackageVersion>
+                <!-- bar dependencies -->
+                <BarPackageVersion>1.0.0</BarPackageVersion>
+              </PropertyGroup>
+            </Project>
+            """;
+
+        NormalizeLineEndings(expectedVersionDetails).Should()
+            .Be(NormalizeLineEndings(versionDetails));
+        NormalizeLineEndings(expectedVersionDetailsProps).Should()
+            .Be(NormalizeLineEndings(versionDetailsProps));
+        // VersionProps should not change
+        NormalizeLineEndings(versionProps).Should()
+            .Be(NormalizeLineEndings(VersionProps));
+
+        await manager.RemoveDependencyAsync("Bar", string.Empty, string.Empty);
+
+        expectedVersionDetails = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <Dependencies>
+              <!-- Elements contains all product dependencies -->
+              <ProductDependencies>
+                <Dependency Name="Foo" Version="1.0.1">
+                  <Uri>https://github.com/dotnet/arcade</Uri>
+                  <Sha>abc123</Sha>
+                </Dependency>
+              </ProductDependencies>
+              <ToolsetDependencies>
+              </ToolsetDependencies>
+            </Dependencies>
+            """;
+
+        expectedVersionDetailsProps = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <!--
+            This file is auto-generated by the Maestro dependency flow system.
+            Do not edit it manually, as it will get overwritten by automation.
+            This file should be imported by eng/Versions.props
+            -->
+            <Project>
+              <PropertyGroup>
+                <!-- arcade dependencies -->
+                <FooPackageVersion>1.0.1</FooPackageVersion>
+              </PropertyGroup>
+            </Project>
+            """;
+
+        NormalizeLineEndings(expectedVersionDetails).Should()
+            .Be(NormalizeLineEndings(versionDetails));
+        NormalizeLineEndings(expectedVersionDetailsProps).Should()
+            .Be(NormalizeLineEndings(versionDetailsProps));
+        // VersionProps should not change
+        NormalizeLineEndings(versionProps).Should()
+            .Be(NormalizeLineEndings(VersionProps));
+    }
+
+    [Test]
+    public async Task AddDependencyAddsOnlyVersionDetailsProps()
+    {
+        Mock<IGitRepo> repo = new();
+        Mock<IGitRepoFactory> repoFactory = new();
+
+        var versionDetails = VersionDetails;
+
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(() => versionDetails);
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsProps, It.IsAny<string>(), It.IsAny<string>()))
+            .ThrowsAsync(new DependencyFileNotFoundException());
+        repoFactory.Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>())).Returns(repo.Object);
+
+        DependencyFileManager manager = new(
+            repoFactory.Object,
+            new VersionDetailsParser(),
+            NullLogger.Instance);
+
+        await manager.AddDependencyAsync(
+            new DependencyDetail()
+            {
+                Name = "Foo",
+                Version = "1.0.1",
+                Commit = "abc123",
+                Type = DependencyType.Product,
+                RepoUri = "https://github.com/dotnet/arcade"
+            },
+            string.Empty,
+            string.Empty,
+            versionDetailsOnly: true
+        );
+
+        repo.Verify(r => r.CommitFilesAsync(
+            It.Is<List<GitFile>>(files => files.Any(f => f.FilePath == VersionFiles.VersionDetailsXml)),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()),
+            Times.Once);
+        repo.Verify(r => r.CommitFilesAsync(
+            It.Is<List<GitFile>>(files => files.Any(f => f.FilePath == VersionFiles.VersionProps)),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()),
+            Times.Never);
+        repo.Verify(r => r.CommitFilesAsync(
+            It.Is<List<GitFile>>(files => files.Any(f => f.FilePath == VersionFiles.GlobalJson)),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()),
+            Times.Never);
+        repo.Verify(r => r.CommitFilesAsync(
+            It.Is<List<GitFile>>(files => files.Any(f => f.FilePath == VersionFiles.DotnetToolsConfigJson)),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()),
+            Times.Never);
+    }
+
+    private string NormalizeLineEndings(string input) => input.Replace("\r\n", "\n").TrimEnd();
 }

@@ -9,6 +9,8 @@ public class GitFileContentContainer
 {
     public GitFile VersionDetailsXml { get; set; }
 
+    public GitFile VersionDetailsProps { get; set; } = null;
+
     public GitFile VersionProps { get; set; }
 
     public GitFile GlobalJson { get; set; }
@@ -30,6 +32,11 @@ public class GitFileContentContainer
         if (DotNetToolsJson != null)
         {
             gitHubCommitsMap.Add(DotNetToolsJson);
+        }
+
+        if (VersionDetailsProps != null)
+        {
+            gitHubCommitsMap.Add(VersionDetailsProps);
         }
 
         return gitHubCommitsMap;

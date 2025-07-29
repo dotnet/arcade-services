@@ -57,6 +57,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly ICodeflowChangeAnalyzer _codeflowChangeAnalyzer;
     private readonly IForwardFlowConflictResolver _conflictResolver;
+    private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IProcessManager _processManager;
     private readonly ILogger<VmrCodeFlower> _logger;
 
@@ -71,6 +72,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             IVersionDetailsParser versionDetailsParser,
             ICodeflowChangeAnalyzer codeflowChangeAnalyzer,
             IForwardFlowConflictResolver conflictResolver,
+            IWorkBranchFactory workBranchFactory,
             IProcessManager processManager,
             IBasicBarClient barClient,
             ILogger<VmrCodeFlower> logger)
@@ -85,6 +87,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         _localGitRepoFactory = localGitRepoFactory;
         _codeflowChangeAnalyzer = codeflowChangeAnalyzer;
         _conflictResolver = conflictResolver;
+        _workBranchFactory = workBranchFactory;
         _processManager = processManager;
         _logger = logger;
     }
@@ -258,7 +261,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
     protected override async Task<bool> OppositeDirectionFlowAsync(
         SourceMapping mapping,
-        Codeflow lastFlow,
+        LastFlows lastFlows,
         Codeflow currentFlow,
         ILocalGitRepo sourceRepo,
         Build build,
@@ -267,14 +270,20 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        await sourceRepo.CheckoutAsync(lastFlow.RepoSha);
+        // When updating an existing PR, we create a work branch to make the changes on
+        IWorkBranch? workBranch = null;
+        var branchName = currentFlow.GetBranchName();
+        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+        if (headBranchExisted)
+        {
+            // Check out the last flow's commit in the PR branch to create the work branch on
+            await vmr.CheckoutAsync(lastFlows.LastForwardFlow.VmrSha);
+            workBranch = await _workBranchFactory.CreateWorkBranchAsync(vmr, branchName);
+        }
+
+        await sourceRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
 
         var patchName = _vmrInfo.TmpPath / $"{headBranch.Replace('/', '-')}.patch";
-        var branchName = currentFlow.GetBranchName();
-
-        // TODO https://github.com/dotnet/arcade-services/issues/5030
-        // This is only a temporary band aid solution, we should figure out the best way to fix the algorithm so the flow continues as expected 
-        await CheckManualCommitsInBranch(sourceRepo, headBranch, targetBranch);
 
         // We will remove everything not-cloaked and replace it with current contents of the source repo
         // When flowing to the VMR, we remove all files but the cloaked files
@@ -305,12 +314,31 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             build.AzureDevOpsBuildNumber,
             build.Id));
 
-        return await _vmrUpdater.UpdateRepository(
+        bool hadChanges = await _vmrUpdater.UpdateRepository(
             mapping,
             build,
             fromSha: currentSha,
             resetToRemoteWhenCloningRepo: ShouldResetClones,
             cancellationToken: cancellationToken);
+
+        if (hadChanges && headBranchExisted)
+        {
+            try
+            {
+                // Re-use the previous commit message
+                var commitMessage = (await vmr.RunGitCommandAsync(["log", "-1", "--pretty=%B"], CancellationToken.None)).StandardOutput;
+                await workBranch!.MergeBackAsync(commitMessage);
+            }
+            catch (WorkBranchInConflictException e)
+            {
+                _logger.LogInformation("Failed to merge back the work branch into {headBranch}: {error}",
+                    headBranch,
+                    e.Message);
+                throw new ConflictInPrBranchException(e.ExecutionResult.StandardError, targetBranch, mapping.Name, isForwardFlow: true);
+            }
+        }
+
+        return hadChanges;
     }
 
     protected override async Task<Codeflow?> DetectCrossingFlow(
@@ -328,47 +356,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         return await vmr.IsAncestorCommit(bf.VmrSha, lastForwardFlow.VmrSha)
             ? lastForwardFlow
             : null;
-    }
-
-    public async Task CheckManualCommitsInBranch(ILocalGitRepo sourceRepo, string headBranch, string targetBranch)
-    {
-        // If we have the target branch checked out as a local use it (in darc scenarios), otherwise use the remote one
-        var result = await _processManager.ExecuteGit(
-            _vmrInfo.VmrPath,
-            [
-                "rev-parse",
-                targetBranch,
-            ]);
-
-        var fullTargetBranch = result.Succeeded ? targetBranch : $"origin/{targetBranch}";
-
-        result = await _processManager.ExecuteGit(
-            _vmrInfo.VmrPath,
-            [
-                "log",
-                "--reverse",
-                "--pretty=format:\"%H %an\"",
-                $"{fullTargetBranch}..{headBranch}"]);
-
-        result.ThrowIfFailed($"Failed to get commits from {targetBranch} to HEAD in {sourceRepo.Path}");
-        // splits the output into 
-        List<(string sha, string commiter)> headBranchCommits = result.StandardOutput
-            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries) // split by lines
-            .Select(line => line.Trim('\"'))
-            .Select(line => line.Split(' ', 2)) // split by space, but only once
-            .Select(l => (l[0], l[1]))
-            .ToList();
-
-        // if the first commit in the head branch wasn't made by the bot don't check, we might be in a test
-        if (headBranchCommits.Any() && headBranchCommits[0].commiter != Constants.DefaultCommitAuthor)
-        {
-            return;
-        }
-        var manualCommits = headBranchCommits.Where(c => c.commiter != Constants.DefaultCommitAuthor);
-        if (manualCommits.Any())
-        {
-            throw new ManualCommitsInFlowException(manualCommits.Select(c => c.sha).ToList());
-        }
     }
 
     private async Task<bool> RecreatePreviousFlowAndApplyBuild(
