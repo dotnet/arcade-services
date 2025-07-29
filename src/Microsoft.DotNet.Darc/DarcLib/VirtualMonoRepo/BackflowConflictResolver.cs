@@ -256,13 +256,13 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         await _vmrVersionFileMerger.MergeJsonAsync(
             lastFlow,
             targetRepo,
+            VersionFiles.GlobalJson,
             lastFlow.RepoSha,
             targetBranch,
             vmr,
+            VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.GlobalJson,
             lastFlow.VmrSha,
-            currentFlow.VmrSha,
-            mappingName,
-            VersionFiles.GlobalJson);
+            currentFlow.VmrSha);
 
         // and handle dotnet-tools.json if it exists
         bool dotnetToolsConfigExists =
@@ -275,22 +275,26 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             await _vmrVersionFileMerger.MergeJsonAsync(
                     lastFlow,
                     targetRepo,
+                    VersionFiles.DotnetToolsConfigJson,
                     lastFlow.RepoSha,
                     targetBranch,
                     vmr,
+                    VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.DotnetToolsConfigJson,
                     lastFlow.VmrSha,
                     currentFlow.VmrSha,
-                    mappingName,
-                    VersionFiles.DotnetToolsConfigJson,
                     allowMissingFiles: true);
         }
 
         var versionDetailsChanges = await _vmrVersionFileMerger.MergeVersionDetails(
             lastFlow,
-            currentFlow,
-            mappingName,
             targetRepo,
-            targetBranch);
+            VersionFiles.VersionDetailsXml,
+            lastFlow.RepoSha,
+            targetBranch,
+            vmr,
+            VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.VersionDetailsXml,
+            lastFlow.VmrSha,
+            currentFlow.VmrSha);
 
         var excludedAssetsMatcher = excludedAssets.GetAssetMatcher();
         List<AssetData> buildAssets = build.Assets

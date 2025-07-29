@@ -63,19 +63,25 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
     private readonly ISourceManifest _sourceManifest;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<ForwardFlowConflictResolver> _logger;
+    private readonly IVmrVersionFileMerger _versionFileMerger;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory;
 
     public ForwardFlowConflictResolver(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
         IVmrPatchHandler patchHandler,
         IFileSystem fileSystem,
-        ILogger<ForwardFlowConflictResolver> logger)
+        ILogger<ForwardFlowConflictResolver> logger,
+        IVmrVersionFileMerger versionFileMerger,
+        ILocalGitRepoFactory localGitRepoFactory)
         : base(vmrInfo, patchHandler, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
         _fileSystem = fileSystem;
         _logger = logger;
+        _versionFileMerger = versionFileMerger;
+        _localGitRepoFactory = localGitRepoFactory;
     }
 
     public async Task<IReadOnlyCollection<UnixPath>> TryMergingBranch(
@@ -255,5 +261,58 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, theirSourceManifest.ToJson());
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
         await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
+    }
+
+    private async Task BackflowDependenciesAndToolset(
+        string mappingName,
+        ILocalGitRepo sourceRepo,
+        string targetBranch,
+        Codeflow lastFlow,
+        ForwardFlow currentFlow)
+    {
+        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+
+        await _versionFileMerger.MergeJsonAsync(
+            lastFlow,
+            vmr,
+            VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.GlobalJson,
+            lastFlow.VmrSha,
+            targetBranch,
+            sourceRepo,
+            VersionFiles.GlobalJson,
+            lastFlow.RepoSha,
+            currentFlow.RepoSha);
+
+        // and handle dotnet-tools.json if it exists
+        bool dotnetToolsConfigExists =
+            (await sourceRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, lastFlow.RepoSha) != null) ||
+            (await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.DotnetToolsConfigJson, currentFlow.VmrSha) != null ||
+            (await sourceRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, targetBranch) != null) ||
+            (await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.DotnetToolsConfigJson, lastFlow.VmrSha) != null));
+        if (dotnetToolsConfigExists)
+        {
+            await _versionFileMerger.MergeJsonAsync(
+            lastFlow,
+            vmr,
+            VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.DotnetToolsConfigJson,
+            lastFlow.VmrSha,
+            targetBranch,
+            sourceRepo,
+            VersionFiles.DotnetToolsConfigJson,
+            lastFlow.RepoSha,
+            currentFlow.RepoSha,
+            allowMissingFiles: true);
+        }
+
+        var versionDetailsChanges = await _versionFileMerger.MergeVersionDetails(
+            lastFlow,
+            vmr,
+            VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.VersionDetailsXml,
+            lastFlow.VmrSha,
+            targetBranch,
+            sourceRepo,
+            VersionFiles.VersionDetailsXml,
+            lastFlow.RepoSha,
+            currentFlow.RepoSha);
     }
 }

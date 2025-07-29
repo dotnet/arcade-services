@@ -5,9 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -27,21 +24,25 @@ public interface IVmrVersionFileMerger
     Task MergeJsonAsync(
         Codeflow lastFlow,
         ILocalGitRepo targetRepo,
+        string targetRepoJsonRelativePath,
         string targetRepoPreviousRef,
         string targetRepoCurrentRef,
-        ILocalGitRepo vmr,
-        string vmrPreviousRef,
-        string vmrCurrentRef,
-        string mapping,
-        string jsonRelativePath,
+        ILocalGitRepo sourceRepo,
+        string sourceRepoJsonRelativePath,
+        string sourceRepoPreviousRef,
+        string sourceRepoCurrentRef,
         bool allowMissingFiles = false);
 
     Task<VersionFileChanges<DependencyUpdate>> MergeVersionDetails(
         Codeflow lastFlow,
-        Codeflow currentFlow,
-        string mappingName,
         ILocalGitRepo targetRepo,
-        string targetBranch);
+        string targetRepoVersionDetailsRelativePath,
+        string targetRepoPreviousRef,
+        string targetRepoCurrentRef,
+        ILocalGitRepo sourceRepo,
+        string sourceRepoVersionDetailsRelativePath,
+        string sourceRepoPreviousRef,
+        string sourceRepoCurrentRef);
 }
 
 public class VmrVersionFileMerger : IVmrVersionFileMerger
@@ -73,33 +74,32 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
     public async Task MergeJsonAsync(
         Codeflow lastFlow,
         ILocalGitRepo targetRepo,
+        string targetRepoJsonRelativePath,
         string targetRepoPreviousRef,
         string targetRepoCurrentRef,
-        ILocalGitRepo vmr,
-        string vmrPreviousRef,
-        string vmrCurrentRef,
-        string mappingName,
-        string jsonRelativePath,
+        ILocalGitRepo sourceRepo,
+        string sourceRepoJsonRelativePath,
+        string sourceRepoPreviousRef,
+        string sourceRepoCurrentRef,
         bool allowMissingFiles = false)
     {
-        var targetRepoPreviousJson = await GetJsonFromGit(targetRepo, jsonRelativePath, targetRepoPreviousRef, allowMissingFiles);
-        var targetRepoCurrentJson = await GetJsonFromGit(targetRepo, jsonRelativePath, targetRepoCurrentRef, allowMissingFiles);
+        var targetRepoPreviousJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, targetRepoPreviousRef, allowMissingFiles);
+        var targetRepoCurrentJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, targetRepoCurrentRef, allowMissingFiles);
 
-        var vmrJsonPath = VmrInfo.GetRelativeRepoSourcesPath(mappingName) / jsonRelativePath;
         var vmrPreviousJson = lastFlow is Backflow
-            ? await GetJsonFromGit(vmr, vmrJsonPath, vmrPreviousRef, allowMissingFiles)
+            ? await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoPreviousRef, allowMissingFiles)
             : targetRepoPreviousJson;
-        var vmrCurrentJson = await GetJsonFromGit(vmr, vmrJsonPath, vmrCurrentRef, allowMissingFiles);
+        var vmrCurrentJson = await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoCurrentRef, allowMissingFiles);
 
         var targetRepoChanges = SimpleConfigJson.Parse(targetRepoPreviousJson).GetDiff(SimpleConfigJson.Parse(targetRepoCurrentJson));
         var vmrChanges = SimpleConfigJson.Parse(vmrPreviousJson).GetDiff(SimpleConfigJson.Parse(vmrCurrentJson));
 
         VersionFileChanges<JsonVersionProperty> mergedChanges = MergeVersionFileChanges(targetRepoChanges, vmrChanges, JsonVersionProperty.SelectJsonVersionProperty);
 
-        var currentJson = await GetJsonFromGit(targetRepo, jsonRelativePath, "HEAD", allowMissingFiles);
+        var currentJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, "HEAD", allowMissingFiles);
         var mergedJson = SimpleConfigJson.ApplyJsonChanges(currentJson, mergedChanges);
 
-        var newJson = new GitFile(targetRepo.Path / jsonRelativePath, mergedJson);
+        var newJson = new GitFile(targetRepo.Path / targetRepoJsonRelativePath, mergedJson);
         await _localGitRepoFactory.Create(targetRepo.Path).StageAsync(["."]);
 
         await _gitRepoFactory.CreateClient(targetRepo.Path)
@@ -107,35 +107,40 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 [newJson],
                 targetRepo.Path,
                 targetRepoCurrentRef,
-                $"Merge {jsonRelativePath} changes from VMR");
+                $"Merge {targetRepoJsonRelativePath} changes");
     }
 
     public async Task<VersionFileChanges<DependencyUpdate>> MergeVersionDetails(
         Codeflow lastFlow,
-        Codeflow currentFlow,
-        string mappingName,
         ILocalGitRepo targetRepo,
-        string targetBranch)
+        string targetRepoVersionDetailsRelativePath,
+        string targetRepoPreviousRef,
+        string targetRepoCurrentRef,
+        ILocalGitRepo sourceRepo,
+        string sourceRepoVersionDetailsRelativePath,
+        string sourceRepoPreviousRef,
+        string sourceRepoCurrentRef)
     {
         _logger.LogInformation(
-            "Resolving backflow dependency updates between VMR {vmrSha1}..{vmrSha2} and {repo} {repoSha1}..{repoSha2}",
-            lastFlow.VmrSha,
+            "Resolving dependency updates between {sourceRepo} {vmrSha1}..{vmrSha2} and {targetRepo} {repoSha1}..{repoSha2}",
+            sourceRepo.Path,
+            sourceRepoPreviousRef,
             Constants.HEAD,
-            mappingName,
-            lastFlow.RepoSha,
-            targetBranch);
+            targetRepo.Path,
+            targetRepoPreviousRef,
+            targetRepoCurrentRef);
 
-        var previousRepoDependencies = await GetRepoDependencies(targetRepo, lastFlow.RepoSha);
-        var currentRepoDependencies = await GetRepoDependencies(targetRepo, targetBranch);
+        var previousRepoDependencies = await GetDependencies(targetRepo, targetRepoPreviousRef, targetRepoVersionDetailsRelativePath);
+        var currentRepoDependencies = await GetDependencies(targetRepo, targetRepoCurrentRef, targetRepoVersionDetailsRelativePath);
 
         // Similarly to the code flow algorithm, we compare the corresponding commits
         // and the contents of the version files inside.
         // We distinguish the direction of the previous flow vs the current flow.
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         var previousVmrDependencies = lastFlow is Backflow
-            ? await GetVmrDependencies(vmr, mappingName, lastFlow.VmrSha)
+            ? await GetDependencies(sourceRepo, sourceRepoPreviousRef, sourceRepoVersionDetailsRelativePath)
             : previousRepoDependencies;
-        var currentVmrDependencies = await GetVmrDependencies(vmr, mappingName, currentFlow.VmrSha);
+        var currentVmrDependencies = await GetDependencies(sourceRepo, sourceRepoCurrentRef, sourceRepoVersionDetailsRelativePath);
 
         List<DependencyUpdate> repoChanges = ComputeChanges(
             previousRepoDependencies,
@@ -245,6 +250,14 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             ? new VersionDetails([], null)
             : _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: false);
 
+    private async Task<VersionDetails> GetDependencies(ILocalGitRepo repo, string commit, string relativePath)
+    {
+        var content = await repo.GetFileFromGitAsync(relativePath, commit);
+        return content == null
+            ? new VersionDetails([], null)
+            : _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: false);
+    }
+
     private static List<DependencyUpdate> ComputeChanges(VersionDetails before, VersionDetails after)
     {
         var dependencyChanges = before.Dependencies
@@ -281,7 +294,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             .ToList();
     }
 
-    private async Task ApplyVersionDetailsChangesAsync(string repoPath, VersionFileChanges<DependencyUpdate> changes)
+    private async Task ApplyVersionDetailsChangesAsync(string repoPath, VersionFileChanges<DependencyUpdate> changes, string? mapping)
     {
         bool versionDetailsPropsExists = await _dependencyFileManager.VersionDetailsPropsExistsAsync(repoPath, null!);
         foreach (var removal in changes.Removals)
