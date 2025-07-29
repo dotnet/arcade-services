@@ -477,11 +477,11 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         // We recursively try to re-create previous flows until we find the one that introduced the conflict with the current flown
         int flowsToRecreate = 1;
-        while (true)
+        while (flowsToRecreate < 100)
         {
             _logger.LogInformation("Trying to recreate {count} previous flow(s)..", flowsToRecreate);
 
-            Backflow firstFlowToRecreate = lastFlows.LastBackFlow
+            Backflow deepestFlowToRecreate = lastFlows.LastBackFlow
                     ?? throw new DarcException("No more backflows found to recreate");
             LastFlows previousFlows = lastFlows;
 
@@ -489,25 +489,25 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             {
                 var previousFlowRepoSha = await _localGitClient.BlameLineAsync(
                     targetRepo.Path / VersionFiles.VersionDetailsXml,
-                    line => line.Contains(VersionDetailsParser.SourceElementName) && line.Contains(firstFlowToRecreate.VmrSha),
-                    firstFlowToRecreate.RepoSha);
+                    line => line.Contains(VersionDetailsParser.SourceElementName) && line.Contains(deepestFlowToRecreate.VmrSha),
+                    deepestFlowToRecreate.RepoSha);
 
                 await targetRepo.ResetWorkingTree();
                 await targetRepo.CheckoutAsync(previousFlowRepoSha);
                 await _vmrCloneManager.PrepareVmrAsync(
                     [_vmrInfo.VmrUri],
-                    [firstFlowToRecreate.VmrSha],
-                    firstFlowToRecreate.VmrSha,
+                    [deepestFlowToRecreate.VmrSha],
+                    deepestFlowToRecreate.VmrSha,
                     resetToRemote: false,
                     cancellationToken);
 
                 previousFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
-                firstFlowToRecreate = previousFlows.LastBackFlow
+                deepestFlowToRecreate = previousFlows.LastBackFlow
                     ?? throw new DarcException($"No more backflows found to recreate from {previousFlowRepoSha}");
             }
 
             // Check out the repo before the flows we want to recreate
-            await targetRepo.CheckoutAsync(firstFlowToRecreate.RepoSha);
+            await targetRepo.CheckoutAsync(deepestFlowToRecreate.RepoSha);
             await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
             // Create a fake previously applied build. We only care about the sha here, because it will get overwritten anyway
@@ -520,7 +520,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             // We reconstruct the previous flow's branch
             await FlowCodeAsync(
                 previousFlows,
-                new Backflow(previouslyAppliedBuild.Commit, firstFlowToRecreate.RepoSha),
+                new Backflow(previouslyAppliedBuild.Commit, deepestFlowToRecreate.RepoSha),
                 targetRepo,
                 mapping,
                 previouslyAppliedBuild,
@@ -559,6 +559,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 throw;
             }
         }
+
+        throw new DarcException($"Failed to apply changes due to conflicts even after {flowsToRecreate} previous flows were recreated");
     }
 
     private async Task CommitAndMergeWorkBranch(

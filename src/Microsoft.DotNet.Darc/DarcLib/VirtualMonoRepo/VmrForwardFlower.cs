@@ -367,20 +367,20 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         // We recursively try to re-create previous flows until we find the one that introduced the conflict with the current flown
         int flowsToRecreate = 1;
-        while (true)
+        while (flowsToRecreate < 100)
         {
             _logger.LogInformation("Trying to recreate {count} previous flow(s)..", flowsToRecreate);
             ILocalGitRepo vmr;
 
-            ForwardFlow firstFlowToRecreate = lastFlows.LastForwardFlow;
+            ForwardFlow deepestFlowToRecreate = lastFlows.LastForwardFlow;
             LastFlows previousFlows = lastFlows;
 
             for (int i = 1; i < flowsToRecreate; i++)
             {
                 var previousFlowVmrSha = await _localGitClient.BlameLineAsync(
                     _vmrInfo.SourceManifestPath,
-                    line => line.Contains(firstFlowToRecreate.RepoSha),
-                    firstFlowToRecreate.VmrSha);
+                    line => line.Contains(deepestFlowToRecreate.RepoSha),
+                    deepestFlowToRecreate.VmrSha);
 
                 await _localGitClient.ResetWorkingTree(_vmrInfo.VmrPath);
                 vmr = await _vmrCloneManager.PrepareVmrAsync(
@@ -392,15 +392,15 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
                 await sourceRepo.CheckoutAsync(_sourceManifest.GetRepoVersion(mapping.Name).CommitSha);
                 previousFlows = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
-                firstFlowToRecreate = previousFlows.LastForwardFlow;
+                deepestFlowToRecreate = previousFlows.LastForwardFlow;
             }
 
             // Check out the VMR before the flows we want to recreate
             await _localGitClient.ResetWorkingTree(_vmrInfo.VmrPath);
             vmr = await _vmrCloneManager.PrepareVmrAsync(
                 [_vmrInfo.VmrUri],
-                [firstFlowToRecreate.VmrSha],
-                firstFlowToRecreate.VmrSha,
+                [deepestFlowToRecreate.VmrSha],
+                deepestFlowToRecreate.VmrSha,
                 resetToRemote: false,
                 cancellationToken);
 
@@ -416,7 +416,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             // We reconstruct the previous flow's branch
             await FlowCodeAsync(
                 previousFlows,
-                new ForwardFlow(previouslyAppliedBuild.Commit, firstFlowToRecreate.VmrSha),
+                new ForwardFlow(previouslyAppliedBuild.Commit, deepestFlowToRecreate.VmrSha),
                 sourceRepo,
                 mapping,
                 previouslyAppliedBuild,
@@ -453,6 +453,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 throw;
             }
         }
+
+        throw new DarcException($"Failed to apply changes due to conflicts even after {flowsToRecreate} previous flows were recreated");
     }
 
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / Constants.CommonScriptFilesPath;
