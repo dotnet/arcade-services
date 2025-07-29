@@ -238,7 +238,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
             // Otherwise, we have a conflicting change in the last backflow PR (before merging)
             // The scenario is described here: https://github.com/dotnet/dotnet/tree/main/docs/VMR-Full-Code-Flow.md#conflicts
-            await RecreatePreviousFlowAndApplyChanges(
+            await RecreatePreviousFlowsAndApplyChanges(
                 mapping,
                 build,
                 targetRepo,
@@ -462,7 +462,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return [.. exclusions.Select(VmrPatchHandler.GetExclusionRule)];
     }
 
-    private async Task RecreatePreviousFlowAndApplyChanges(
+    private async Task RecreatePreviousFlowsAndApplyChanges(
         SourceMapping mapping,
         Build build,
         ILocalGitRepo targetRepo,

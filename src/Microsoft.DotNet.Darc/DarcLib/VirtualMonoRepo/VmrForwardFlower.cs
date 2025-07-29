@@ -242,7 +242,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
             // This happens when a conflicting change was made in the last backflow PR (before merging)
             // The scenario is described here: https://github.com/dotnet/dotnet/tree/main/docs/VMR-Full-Code-Flow.md#conflicts
-            return await RecreatePreviousFlowAndApplyChanges(
+            return await RecreatePreviousFlowsAndApplyChanges(
                 mapping,
                 build,
                 sourceRepo,
@@ -353,7 +353,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             : null;
     }
 
-    private async Task<bool> RecreatePreviousFlowAndApplyChanges(
+    private async Task<bool> RecreatePreviousFlowsAndApplyChanges(
         SourceMapping mapping,
         Build build,
         ILocalGitRepo sourceRepo,
