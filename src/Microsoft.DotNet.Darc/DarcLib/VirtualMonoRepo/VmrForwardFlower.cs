@@ -242,14 +242,14 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
             // This happens when a conflicting change was made in the last backflow PR (before merging)
             // The scenario is described here: https://github.com/dotnet/dotnet/tree/main/docs/VMR-Full-Code-Flow.md#conflicts
-            return await RecreatePreviousFlowAndApplyBuild(
+            return await RecreatePreviousFlowAndApplyChanges(
                 mapping,
+                build,
+                sourceRepo,
                 lastFlows,
                 headBranch,
-                sourceRepo,
-                excludedAssets,
                 targetBranch,
-                build,
+                excludedAssets,
                 cancellationToken);
         }
     }
@@ -353,17 +353,17 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             : null;
     }
 
-    private async Task<bool> RecreatePreviousFlowAndApplyBuild(
+    private async Task<bool> RecreatePreviousFlowAndApplyChanges(
         SourceMapping mapping,
+        Build build,
+        ILocalGitRepo sourceRepo,
         LastFlows lastFlows,
         string headBranch,
-        ILocalGitRepo sourceRepo,
-        IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
-        Build build,
+        IReadOnlyCollection<string>? excludedAssets,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating the previous flow..");
+        _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating previous flows..");
 
         // We recursively try to re-create previous flows until we find the one that introduced the conflict with the current flown
         int flowsToRecreate = 1;
@@ -379,7 +379,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             {
                 var previousFlowVmrSha = await _localGitClient.BlameLineAsync(
                     _vmrInfo.SourceManifestPath,
-                    line => line.Contains(firstFlowToRecreate.SourceSha),
+                    line => line.Contains(firstFlowToRecreate.RepoSha),
                     firstFlowToRecreate.VmrSha);
 
                 await _localGitClient.ResetWorkingTree(_vmrInfo.VmrPath);
@@ -429,11 +429,17 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             // We apply the current changes on top again to check if they apply now
             try
             {
-                return await _vmrUpdater.UpdateRepository(
+                var hadChanges = await _vmrUpdater.UpdateRepository(
                     mapping,
                     build,
                     resetToRemoteWhenCloningRepo: ShouldResetClones,
                     cancellationToken: cancellationToken);
+
+                _logger.LogInformation("Successfully recreated {count} flows and applied new changes from {sha}",
+                    flowsToRecreate,
+                    build.Commit);
+
+                return hadChanges;
             }
             catch (PatchApplicationFailedException)
             {

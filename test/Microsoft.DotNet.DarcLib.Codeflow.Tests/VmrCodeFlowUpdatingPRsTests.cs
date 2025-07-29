@@ -4,8 +4,6 @@
 using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Humanizer;
-using Kusto.Data.Common;
 using NUnit.Framework;
 
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
@@ -123,7 +121,7 @@ internal class VmrCodeFlowUpdatingPRsTests : VmrCodeFlowTests
 
     // This test simulates the following scenario:
     //   1. A change is made directly in the VMR, touching file Foo in repo A
-    //   2. A number forward flows come from repo A but they're not touching the file Foo
+    //   2. A number of forward flows come from repo A but they're not touching the file Foo
     //   3. Finally, Foo is changed in the repo A, and we try to open a FF PR.
     //   4. This fails because there's a conflict in file Foo, so we recreate the last FF and try to apply the diff again,
     //      but it fails again, because the last FF isn't old enough.
@@ -160,7 +158,67 @@ internal class VmrCodeFlowUpdatingPRsTests : VmrCodeFlowTests
         result.ShouldHaveUpdates();
 
         // Verify that there is a conflict in Foo.txt
-        await GitOperations.VerifyMergeConflict(VmrPath, forwardFlowBranch, $"src/{Constants.ProductRepoName}/Foo.txt", mergeTheirs: true);
+        await GitOperations.VerifyMergeConflict(
+            VmrPath,
+            forwardFlowBranch,
+            $"src/{Constants.ProductRepoName}/Foo.txt",
+            mergeTheirs: true);
+
+        var content = await File.ReadAllTextAsync(VmrPath / "src" / Constants.ProductRepoName / "Foo.txt");
+        content.Should().Be("Foo is changed in the repo");
+        content = await File.ReadAllTextAsync(_productRepoVmrFilePath);
+        content.Should().Be("Change three");
+    }
+
+    // This test simulates the following scenario:
+    //   1. A change is made directly in the product repo, touching file Foo
+    //   2. A number of backflows come from the VMR but they're not touching the file Foo
+    //   3. Finally, Foo is changed in the VMR, and we try to open a backflow PR.
+    //   4. This fails because there's a conflict in file Foo, so we recreate the last backflow and try to apply the diff again,
+    //      but it fails again, because the last backflow isn't old enough.
+    //      This test tests that we can go deeper in the past and recreate the flows correctly.
+    [Test]
+    public async Task BackflowWithConflictsDeepInPastTest()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        const string backflowBranch = nameof(BackflowWithConflictsDeepInPastTest);
+
+        // 0. Make a baseline backflow as the pre-prepared repos don't have one
+        await ChangeVmrFileAndFlowIt("Baseline change", backflowBranch);
+        await GitOperations.MergePrBranch(ProductRepoPath, backflowBranch);
+
+        // 1. Create the Foo changes in the product repo
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / "Foo.txt", "A new file in the product repo");
+        await GitOperations.CommitAll(ProductRepoPath, "A new file in the product repo");
+
+        // 2. Make a number of backflows
+        await ChangeVmrFileAndFlowIt("Change one", backflowBranch);
+        await GitOperations.MergePrBranch(ProductRepoPath, backflowBranch);
+
+        await ChangeVmrFileAndFlowIt("Change two", backflowBranch);
+        await GitOperations.MergePrBranch(ProductRepoPath, backflowBranch);
+
+        await ChangeVmrFileAndFlowIt("Change three", backflowBranch);
+        await GitOperations.MergePrBranch(ProductRepoPath, backflowBranch);
+
+        // 3. Foo is changed in the VMR, and we try to open a backflow PR
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / "Foo.txt", "Foo is changed in the VMR");
+        await GitOperations.CommitAll(VmrPath, "Foo is changed in the VMR");
+
+        // 4. Try to open a backflow PR
+        var result = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch);
+        result.ShouldHaveUpdates();
+
+        // Verify that there is a conflict in Foo.txt
+        await GitOperations.VerifyMergeConflict(ProductRepoPath, backflowBranch, "Foo.txt", mergeTheirs: true);
+
+        var content = await File.ReadAllTextAsync(ProductRepoPath / "Foo.txt");
+        content.Should().Be("Foo is changed in the VMR");
+        content = await File.ReadAllTextAsync(_productRepoFilePath);
+        content.Should().Be("Change three");
     }
 }
 
