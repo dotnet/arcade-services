@@ -2,11 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using Maestro.MergePolicyEvaluation;
+using Microsoft.Build.Construction;
+using Microsoft.Build.Exceptions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
@@ -26,14 +29,21 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
             // TODO: https://github.com/dotnet/arcade-services/issues/4998 Make the check work for forward flow PRs once we implement the issue
             return SucceedDecisively($"{DisplayName}: doesn't apply to forward flow PRs yet");
         }
+        if (pr.CodeFlowDirection == CodeFlowDirection.None)
+        {
+            // Ignore dependency flow PRs, for now
+            return SucceedDecisively($"{DisplayName}: doesn't apply to dependency flow PRs");
+        }
 
-        XmlDocument versionDetailsProps;
+        ProjectRootElement versionDetailsProps;
         try
         {
-            versionDetailsProps = DependencyFileManager.GetXmlDocument(await remote.GetFileContentsAsync(
+            var versionDetailsPropsContent = await remote.GetFileContentsAsync(
                 VersionFiles.VersionDetailsProps,
                 pr.TargetRepoUrl,
-                pr.HeadBranch));
+                pr.HeadBranch);
+            versionDetailsProps = ProjectRootElement.Create(
+                XmlReader.Create(new StringReader(versionDetailsPropsContent)));
         }
         catch (DependencyFileNotFoundException)
         {
@@ -47,7 +57,7 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
                 return FailDecisively($"{DisplayName}: {Constants.VersionDetailsProps} file must exist in all VMR repos");
             }
         }
-        catch (XmlException)
+        catch (InvalidProjectFileException)
         {
             return FailDecisively($"Failed to parse {Constants.VersionDetailsProps}",
                 $"The {VersionFiles.VersionDetailsProps} file is not a valid XML document. Please ensure it is well-formed.");
@@ -60,14 +70,16 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
 
         try
         {
-            var versionProps = DependencyFileManager.GetXmlDocument(await remote.GetFileContentsAsync(
-                VersionFiles.VersionProps,
+            var versionsPropsContent = await remote.GetFileContentsAsync(
+                VersionFiles.VersionsProps,
                 pr.TargetRepoUrl,
-                pr.HeadBranch));
+                pr.HeadBranch);
+            var versionsProps = ProjectRootElement.Create(
+                XmlReader.Create(new StringReader(versionsPropsContent)));
 
-            var versionDetailsPropsProperties = ExtractPropertiesFromXml(versionDetailsProps).Keys.ToHashSet();
+            var versionDetailsPropsProperties = ExtractNonConditionalProperties(versionDetailsProps).Keys.ToHashSet();
             
-            var versionPropsDictionary = ExtractPropertiesFromXml(versionProps);
+            var versionPropsDictionary = ExtractNonConditionalProperties(versionsProps);
 
             // Check if any properties from VersionDetailsProps exist in VersionsProps
             var foundProperties = new List<string>();
@@ -101,8 +113,7 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
             }
 
             // Check if VersionProps contains the required import statement
-            var hasImport = CheckForVersionDetailsPropsImport(versionProps);
-            if (!hasImport)
+            if (!CheckForVersionDetailsPropsImport(versionsProps))
             {
                 return FailDecisively(
                     $"#### ❌ {DisplayName} Validation Failed",
@@ -163,48 +174,36 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
         }
     }
 
-    private static Dictionary<string, string> ExtractPropertiesFromXml(XmlDocument xmlDocument)
+    private static Dictionary<string, string> ExtractNonConditionalProperties(ProjectRootElement versionsProps)
     {
-        Dictionary<string, string> properties = [];
-        
-        // Get all PropertyGroup elements
-        var propertyGroups = xmlDocument.GetElementsByTagName("PropertyGroup");
-        
-        foreach (XmlNode propertyGroup in propertyGroups)
+        Dictionary<string, string> nonConditionalProperties = [];
+        foreach (var propertyGroup in versionsProps.PropertyGroups)
         {
-            foreach (XmlNode child in propertyGroup.ChildNodes)
+            if (!string.IsNullOrEmpty(propertyGroup.Condition))
             {
-                // Skip comments and whitespace
-                if (child.NodeType == XmlNodeType.Element)
+                // Skip conditional property groups
+                continue;
+            }
+            foreach (var property in propertyGroup.Properties)
+            {
+                if (!string.IsNullOrEmpty(property.Condition))
                 {
-                    properties.Add(child.Name, child.InnerText);
+                    // Skip conditional properties
+                    continue;
+                }
+                if (!string.IsNullOrEmpty(property.Value))
+                {
+                    nonConditionalProperties[property.Name] = property.Value;
                 }
             }
         }
-        
-        return properties;
+
+        return nonConditionalProperties;
     }
 
-    private static bool CheckForVersionDetailsPropsImport(XmlDocument xmlDocument)
-    {
-        // Get all Import elements
-        var importElements = xmlDocument.GetElementsByTagName("Import");
-        
-        foreach (XmlNode importElement in importElements)
-        {
-            var projectAttribute = importElement.Attributes?["Project"];
-            if (projectAttribute != null)
-            {
-                var projectValue = projectAttribute.Value;
-                if (projectValue.Contains(Constants.VersionDetailsProps))
-                {
-                    return true;
-                }
-            }
-        }
-        
-        return false;
-    }
+    private static bool CheckForVersionDetailsPropsImport(ProjectRootElement versionsProps) =>
+        versionsProps.Imports.Any(import =>
+            import.Project.Equals(Constants.VersionDetailsProps) && import.Condition == $"Exists('{Constants.VersionDetailsProps}')");
 
     private static (List<(string ExpectedPropertyName, string Version)> MissingProperties, List<string> OrphanedProperties) 
         CheckDependencyPropertyMapping(IReadOnlyCollection<DependencyDetail> dependencies, HashSet<string> versionDetailsPropsProperties)

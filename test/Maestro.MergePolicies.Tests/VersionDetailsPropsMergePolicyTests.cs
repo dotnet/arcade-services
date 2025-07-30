@@ -32,6 +32,10 @@ public class VersionDetailsPropsMergePolicyTests
             <DifferentPackageVersion>2.0.0</DifferentPackageVersion>
             <AnotherPackageVersion>3.0.0</AnotherPackageVersion>
             <BarPackageVersion></BarPackageVersion>
+            <FooPackageVersion Condition="some condition">1.0.0</FooPackageVersion>
+          </PropertyGroup>
+          <PropertyGroup Condition="some condition">
+            <FooPackageVersion>1.0.0</FooPackageVersion>
           </PropertyGroup>
         </Project>
         """;
@@ -134,7 +138,7 @@ public class VersionDetailsPropsMergePolicyTests
             .ReturnsAsync(VersionDetailsPropsWithProperties);
 
         _mockRemote.Setup(r => r.GetFileContentsAsync(
-                VersionFiles.VersionProps,
+                VersionFiles.VersionsProps,
                 _prSummary.TargetRepoUrl,
                 _prSummary.HeadBranch))
             .ReturnsAsync(VersionPropsWithoutConflictingProperties);
@@ -166,7 +170,7 @@ public class VersionDetailsPropsMergePolicyTests
             .ReturnsAsync(VersionDetailsPropsWithProperties);
 
         _mockRemote.Setup(r => r.GetFileContentsAsync(
-                VersionFiles.VersionProps,
+                VersionFiles.VersionsProps,
                 _prSummary.TargetRepoUrl,
                 _prSummary.HeadBranch))
             .ReturnsAsync(VersionPropsWithConflictingProperties);
@@ -199,7 +203,7 @@ public class VersionDetailsPropsMergePolicyTests
             .ReturnsAsync(VersionDetailsPropsWithProperties);
 
         _mockRemote.Setup(r => r.GetFileContentsAsync(
-                VersionFiles.VersionProps,
+                VersionFiles.VersionsProps,
                 _prSummary.TargetRepoUrl,
                 _prSummary.HeadBranch))
             .ReturnsAsync(VersionPropsWithoutImport);
@@ -259,7 +263,7 @@ public class VersionDetailsPropsMergePolicyTests
             .ReturnsAsync(VersionDetailsPropsWithOneMissingProperty);
 
         _mockRemote.Setup(r => r.GetFileContentsAsync(
-                VersionFiles.VersionProps,
+                VersionFiles.VersionsProps,
                 _prSummary.TargetRepoUrl,
                 _prSummary.HeadBranch))
             .ReturnsAsync(VersionPropsWithoutConflictingProperties);

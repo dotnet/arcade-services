@@ -122,7 +122,7 @@ internal abstract class VmrTestsBase
     [
         VersionFiles.VersionDetailsXml,
         VersionFiles.VersionDetailsProps,
-        VersionFiles.VersionProps,
+        VersionFiles.VersionsProps,
         VersionFiles.GlobalJson,
         VersionFiles.NugetConfigNames.First(),
     ];
@@ -328,7 +328,7 @@ internal abstract class VmrTestsBase
             Directory.CreateDirectory(repoPath / "eng");
             File.WriteAllText(repoPath / VersionFiles.VersionDetailsXml, versionDetails);
 
-            File.WriteAllText(repoPath / VersionFiles.VersionProps, Constants.VersionPropsTemplate);
+            File.WriteAllText(repoPath / VersionFiles.VersionsProps, Constants.VersionPropsTemplate);
             File.WriteAllText(repoPath / VersionFiles.VersionDetailsProps, "");
             File.WriteAllText(repoPath / VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
             File.WriteAllText(repoPath / VersionFiles.NugetConfigNames.First(), Constants.NuGetConfigTemplate);
