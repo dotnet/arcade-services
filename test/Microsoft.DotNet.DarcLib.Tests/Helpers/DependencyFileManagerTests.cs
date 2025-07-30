@@ -147,7 +147,7 @@ public class DependencyFileManagerTests
 
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(VersionDetails);
-        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionProps, It.IsAny<string>(), It.IsAny<string>()))
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionsProps, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(VersionProps);
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsProps, It.IsAny<string>(), It.IsAny<string>()))
             .Throws<DependencyFileNotFoundException>();
@@ -165,7 +165,7 @@ public class DependencyFileManagerTests
         repo.Setup(r => r.CommitFilesAsync(
             It.Is<List<GitFile>>(files =>
                 files.Count == (dotnetToolsExists ? 3 : 2) &&
-                files.Any(f => f.FilePath == VersionFiles.VersionDetailsXml) && files.Any(f => f.FilePath == VersionFiles.VersionProps)),
+                files.Any(f => f.FilePath == VersionFiles.VersionDetailsXml) && files.Any(f => f.FilePath == VersionFiles.VersionsProps)),
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<string>()))
@@ -230,7 +230,7 @@ public class DependencyFileManagerTests
 
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(VersionDetails);
-        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionProps, It.IsAny<string>(), It.IsAny<string>()))
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionsProps, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(VersionProps);
         repoFactory.Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>())).Returns(repo.Object);
 
@@ -281,7 +281,7 @@ public class DependencyFileManagerTests
 
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(() => versionDetails);
-        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionProps, It.IsAny<string>(), It.IsAny<string>()))
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionsProps, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(() => versionProps);
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsProps, It.IsAny<string>(), It.IsAny<string>()))
             .Throws<DependencyFileNotFoundException>();
@@ -302,7 +302,7 @@ public class DependencyFileManagerTests
                     {
                         versionDetails = file.Content;
                     }
-                    else if (file.FilePath == VersionFiles.VersionProps)
+                    else if (file.FilePath == VersionFiles.VersionsProps)
                     {
                         versionProps = file.Content;
                     }
@@ -406,7 +406,7 @@ public class DependencyFileManagerTests
 
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(() => versionDetails);
-        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionProps, It.IsAny<string>(), It.IsAny<string>()))
+        repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionsProps, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(() => versionProps);
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsProps, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(() => versionDetailsProps);
@@ -427,7 +427,7 @@ public class DependencyFileManagerTests
                     {
                         versionDetails = file.Content;
                     }
-                    else if (file.FilePath == VersionFiles.VersionProps)
+                    else if (file.FilePath == VersionFiles.VersionsProps)
                     {
                         versionProps = file.Content;
                     }
@@ -486,8 +486,10 @@ public class DependencyFileManagerTests
               <PropertyGroup>
                 <!-- arcade dependencies -->
                 <FooPackageVersion>1.0.1</FooPackageVersion>
+                <FooVersion>1.0.1</FooVersion>
                 <!-- bar dependencies -->
                 <BarPackageVersion>1.0.0</BarPackageVersion>
+                <BarVersion>1.0.0</BarVersion>
               </PropertyGroup>
             </Project>
             """;
@@ -528,6 +530,7 @@ public class DependencyFileManagerTests
               <PropertyGroup>
                 <!-- arcade dependencies -->
                 <FooPackageVersion>1.0.1</FooPackageVersion>
+                <FooVersion>1.0.1</FooVersion>
               </PropertyGroup>
             </Project>
             """;
@@ -581,7 +584,7 @@ public class DependencyFileManagerTests
             It.IsAny<string>()),
             Times.Once);
         repo.Verify(r => r.CommitFilesAsync(
-            It.Is<List<GitFile>>(files => files.Any(f => f.FilePath == VersionFiles.VersionProps)),
+            It.Is<List<GitFile>>(files => files.Any(f => f.FilePath == VersionFiles.VersionsProps)),
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<string>()),

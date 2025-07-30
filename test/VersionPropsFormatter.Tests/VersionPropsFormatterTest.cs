@@ -94,7 +94,7 @@ public class VersionPropsFormatterTest
             Directory.CreateDirectory(tmpFolder / Constants.EngFolderName);
 
             File.WriteAllText(tmpFolder / VersionFiles.VersionDetailsXml, VersionDetails);
-            File.WriteAllText(tmpFolder / VersionFiles.VersionProps, VersionProps);
+            File.WriteAllText(tmpFolder / VersionFiles.VersionsProps, VersionProps);
 
             await processManager.ExecuteGit(tmpFolder, "config", "user.name", "test");
             await processManager.ExecuteGit(tmpFolder, "config", "user.email", "user.email=test@example.com");
