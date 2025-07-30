@@ -1,0 +1,75 @@
+using FluentAssertions;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using NUnit.Framework;
+
+namespace ProductConstructionService.DependencyFlow.Tests;
+
+[TestFixture]
+public class BuildBranchLinkTests
+{
+    [Test]
+    public void GetBranchLink_ShouldReturnGitHubLink_ForGitHubRepository()
+    {
+        // Arrange
+        var build = new Build(1, DateTimeOffset.Now, 0, false, false, "abc123", [], [], [], [])
+        {
+            GitHubRepository = "https://github.com/dotnet/aspnetcore",
+            GitHubBranch = "release/10.0-preview7"
+        };
+
+        // Act
+        var result = build.GetBranchLink();
+
+        // Assert
+        result.Should().Be("https://github.com/dotnet/aspnetcore/tree/release/10.0-preview7");
+    }
+
+    [Test]
+    public void GetBranchLink_ShouldReturnAzureDevOpsLink_ForAzureDevOpsRepository()
+    {
+        // Arrange
+        var build = new Build(2, DateTimeOffset.Now, 0, false, false, "def456", [], [], [], [])
+        {
+            AzureDevOpsRepository = "https://dev.azure.com/dnceng/internal/_git/dotnet-aspnetcore",
+            AzureDevOpsBranch = "release/10.0-preview7"
+        };
+
+        // Act
+        var result = build.GetBranchLink();
+
+        // Assert
+        result.Should().Be("https://dev.azure.com/dnceng/internal/_git/dotnet-aspnetcore?version=GBrelease/10.0-preview7");
+    }
+
+    [Test]
+    public void GetBranchLink_ShouldThrowException_WhenNoBranchIsSet()
+    {
+        // Arrange
+        var build = new Build(3, DateTimeOffset.Now, 0, false, false, "ghi789", [], [], [], [])
+        {
+            GitHubRepository = "https://github.com/dotnet/aspnetcore"
+            // No branch set
+        };
+
+        // Act & Assert
+        build.Invoking(b => b.GetBranchLink())
+            .Should().Throw<InvalidOperationException>()
+            .WithMessage("Cannot get branch link of build with id 3 because it does not have a branch name.");
+    }
+
+    [Test]
+    public void GetBranchLink_ShouldThrowException_WhenNoRepositoryIsSet()
+    {
+        // Arrange
+        var build = new Build(4, DateTimeOffset.Now, 0, false, false, "jkl012", [], [], [], [])
+        {
+            GitHubBranch = "main"
+            // No repository set
+        };
+
+        // Act & Assert
+        build.Invoking(b => b.GetBranchLink())
+            .Should().Throw<InvalidOperationException>()
+            .WithMessage("Cannot get branch link of build with id 4 because it does not have a repo URL.");
+    }
+}

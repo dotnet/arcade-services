@@ -181,7 +181,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Commit**: [{commitSha}]({build.GitHubRepository}/commit/{commitSha})
             - **Commit Diff**: [{shortPreviousCommitSha}...{shortCommitSha}]({build.GitHubRepository}/compare/{mockPreviousCommitSha}...{commitSha})
-            - **Branch**: main
+            - **Branch**: [main]({build.GitHubRepository}/tree/main)
 
             **Updated Dependencies**
             - From [1.0.0 to 2.0.0]({build.GitHubRepository}/compare/abc123...def456)
@@ -263,7 +263,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Commit**: [{commitSha}]({build.GitHubRepository}/commit/{commitSha})
             - **Commit Diff**: [{shortPreviousCommitSha}...{shortCommitSha}]({build.GitHubRepository}/compare/{mockPreviousCommitSha}...{commitSha})
-            - **Branch**: main
+            - **Branch**: [main]({build.GitHubRepository}/tree/main)
 
             **Updated Dependencies**
             - From [1.0.0 to 3.0.0]({build.GitHubRepository}/compare/abc123...{commitSha.Substring(0, PullRequestBuilder.GitHubComparisonShaLength)})
@@ -351,7 +351,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Date Produced**: {build1.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Commit**: [{commitSha}]({build1.GitHubRepository}/commit/{commitSha})
             - **Commit Diff**: [{shortPreviousCommitSha}...{shortCommitSha}]({build1.GitHubRepository}/compare/{previousCommitSha}...{commitSha})
-            - **Branch**: main
+            - **Branch**: [main]({build1.GitHubRepository}/tree/main)
             
             [marker]: <> (End:{subscriptionGuid})
             
@@ -363,7 +363,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - **Date Produced**: {build2.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Commit**: [{commitSha2}]({build2.GitHubRepository}/commit/{commitSha2})
             - **Commit Diff**: [{shortPreviousCommitSha2}...{shortCommitSha2}]({build2.GitHubRepository}/compare/{previousCommitSha2}...{commitSha2})
-            - **Branch**: main
+            - **Branch**: [main]({build2.GitHubRepository}/tree/main)
 
             [marker]: <> (End:{subscriptionGuid2})
 
@@ -584,7 +584,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         - **Date Produced**: června 18, 2025 11:12:39 dop. UTC
         - **Commit**: [abc1234567](https://github.com/foo/foobar/commit/abc1234567)
         - **Commit Diff**: [SHA1234...abc1234](https://github.com/foo/foobar/compare/SHA1234567890...abc1234567)
-        - **Branch**: main
+        - **Branch**: [main](https://github.com/foo/foobar/tree/main)
 
         **Updated Dependencies**
         - **Foo.Bar**: [from 1.0.0 to 2.0.0](https://github.com/foo/foobar/compare/abc123...def456)
