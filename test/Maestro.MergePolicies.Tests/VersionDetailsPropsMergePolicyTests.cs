@@ -244,7 +244,7 @@ public class VersionDetailsPropsMergePolicyTests
 
         // Assert
         result.Status.Should().Be(MergePolicyEvaluationStatus.DecisiveSuccess);
-        result.Title.Should().Be("Version.Details.props Validation Merge Policy: doesn't apply to forward flow PRs yet");
+        result.Title.Should().Be("Version.Details.props Validation Merge Policy: doesn't apply to this subscription");
         result.MergePolicyName.Should().Be("VersionDetailsProps");
         result.MergePolicyDisplayName.Should().Be("Version.Details.props Validation Merge Policy");
 
