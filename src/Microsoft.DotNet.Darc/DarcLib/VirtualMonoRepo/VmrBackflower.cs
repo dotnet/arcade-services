@@ -246,7 +246,14 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 headBranch,
                 targetBranch,
                 excludedAssets,
-                patches,
+                reapplyChanges: async () =>
+                {
+                    foreach (VmrIngestionPatch patch in patches)
+                    {
+                        await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, removePatchAfter: true, reverseApply: false, cancellationToken);
+                    }
+                },
+                currentIsBackflow: true,
                 cancellationToken);
 
             // We no longer need the work branch as we recreated the previous flow in a new head branch directly
@@ -462,100 +469,22 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return [.. exclusions.Select(VmrPatchHandler.GetExclusionRule)];
     }
 
-    private async Task RecreatePreviousFlowsAndApplyChanges(
-        SourceMapping mapping,
-        Build build,
-        ILocalGitRepo targetRepo,
-        LastFlows lastFlows,
-        string headBranch,
-        string targetBranch,
-        IReadOnlyCollection<string>? excludedAssets,
-        List<VmrIngestionPatch> patches,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating previous flows..");
-
-        // We recursively try to re-create previous flows until we find the one that introduced the conflict with the current flown
-        int flowsToRecreate = 1;
-        while (flowsToRecreate < 100)
-        {
-            _logger.LogInformation("Trying to recreate {count} previous flow(s)..", flowsToRecreate);
-
-            (Backflow flowToRecreate, LastFlows previousFlows) = await FindPreviousFlowAsync(
-                mapping,
-                targetRepo,
-                flowsToRecreate,
-                lastFlows,
-                cancellationToken);
-
-            // Check out the repo before the flows we want to recreate
-            await targetRepo.CheckoutAsync(flowToRecreate.RepoSha);
-            await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
-
-            // Create a fake previously applied build. We only care about the sha here, because it will get overwritten anyway
-            Build previouslyAppliedBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastFlows.LastBackFlow!.VmrSha, [], [], [], [])
-            {
-                GitHubRepository = build.GitHubRepository,
-                AzureDevOpsRepository = build.AzureDevOpsRepository
-            };
-
-            // We reconstruct the previous flow's branch
-            await FlowCodeAsync(
-                previousFlows,
-                new Backflow(previouslyAppliedBuild.Commit, flowToRecreate.RepoSha),
-                targetRepo,
-                mapping,
-                previouslyAppliedBuild,
-                excludedAssets,
-                targetBranch,
-                headBranch,
-                headBranchExisted: false,
-                cancellationToken);
-
-            // We apply the current changes on top again to check if they apply now
-            try
-            {
-                // The current patches should apply now
-                foreach (VmrIngestionPatch patch in patches)
-                {
-                    await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, removePatchAfter: true, reverseApply: false, cancellationToken);
-                }
-
-                _logger.LogInformation("Successfully recreated {count} flows and applied new changes from {sha}",
-                    flowsToRecreate,
-                    build.Commit);
-
-                return;
-            }
-            catch (PatchApplicationFailedException)
-            {
-                _logger.LogInformation("Recreated {count} flows but conflict with a previous flow still exists. Recreating deeper...", flowsToRecreate);
-                flowsToRecreate++;
-                await targetRepo.ResetWorkingTree();
-                await targetRepo.CheckoutAsync(targetBranch);
-                continue;
-            }
-            catch (Exception e)
-            {
-                _logger.LogCritical("Failed to apply changes on top of previously recreated code flow: {message}", e.Message);
-                throw;
-            }
-        }
-
-        throw new DarcException($"Failed to apply changes due to conflicts even after {flowsToRecreate} previous flows were recreated");
-    }
-
     /// <summary>
-    /// Traverses the current branch's history to find {depth}-th last backflow.
+    /// Traverses the current branch's history to find {depth}-th last backflow and creates a branch there.
     /// </summary>
     /// <returns>The {depth}-th last flow and its previous flows.</returns>
-    private async Task<(Backflow, LastFlows)> FindPreviousFlowAsync(
+    protected override async Task<(Codeflow, LastFlows)> RewindToPreviousFlowAsync(
         SourceMapping mapping,
         ILocalGitRepo targetRepo,
         int depth,
         LastFlows previousFlows,
+        string branchToCreate,
+        string targetBranch,
         CancellationToken cancellationToken)
     {
+        await targetRepo.ResetWorkingTree();
+        await targetRepo.CheckoutAsync(targetBranch);
+
         Backflow previousFlow = previousFlows.LastBackFlow
             ?? throw new DarcException("No more backflows found to recreate");
 
@@ -579,6 +508,10 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             previousFlow = previousFlows.LastBackFlow
                 ?? throw new DarcException($"No more backflows found to recreate from {previousFlowSha}");
         }
+
+        // Check out the repo before the flows we want to recreate
+        await targetRepo.CheckoutAsync(previousFlow.RepoSha);
+        await targetRepo.CreateBranchAsync(branchToCreate, overwriteExistingBranch: true);
 
         return (previousFlow, previousFlows);
     }

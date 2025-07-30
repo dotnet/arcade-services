@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -321,6 +322,101 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             LastForwardFlow: lastForwardFlow,
             await DetectCrossingFlow(lastFlow, lastBackflow, lastForwardFlow, repoClone));
     }
+
+    /// <summary>
+    /// Tries to find how many previous flows need to be recreated in order to apply the current changes.
+    /// Iteratively rewinds through previous flows until it finds the one that introduced the conflict with the current changes.
+    /// Then it creates a given branch there and applies the current changes on top of the recreated previous flows.
+    /// </summary>
+    protected async Task RecreatePreviousFlowsAndApplyChanges(
+        SourceMapping mapping,
+        Build build,
+        ILocalGitRepo repo,
+        LastFlows lastFlows,
+        string headBranch,
+        string targetBranch,
+        IReadOnlyCollection<string>? excludedAssets,
+        Func<Task> reapplyChanges,
+        bool currentIsBackflow,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating previous flows..");
+
+        // Create a fake previously applied build that we will use when reapplying the previous flow.
+        // We only care about the sha here, because it will get overwritten anyway with the current build which will be applied on top.
+        var currentFlowSha = currentIsBackflow ? lastFlows.LastBackFlow!.VmrSha : lastFlows.LastForwardFlow.RepoSha;
+        Build previouslyAppliedBuild = new(-1, DateTimeOffset.Now, 0, false, false, currentFlowSha, [], [], [], [])
+        {
+            GitHubRepository = build.GitHubRepository,
+            AzureDevOpsRepository = build.AzureDevOpsRepository
+        };
+
+        // We recursively try to re-create previous flows until we find the one that introduced the conflict with the current flown
+        int flowsToRecreate = 1;
+        while (flowsToRecreate < 50)
+        {
+            _logger.LogInformation("Trying to recreate {count} previous flow(s)..", flowsToRecreate);
+
+            // We rewing to the previous flow and create a branch there
+            (Codeflow previousFlow, LastFlows previousFlows) = await RewindToPreviousFlowAsync(
+                mapping,
+                repo,
+                flowsToRecreate,
+                lastFlows,
+                headBranch,
+                targetBranch,
+                cancellationToken);
+
+            // We reconstruct the previous flow's branch
+            await FlowCodeAsync(
+                previousFlows,
+                currentIsBackflow
+                    ? new Backflow(previouslyAppliedBuild.Commit, previousFlow.RepoSha)
+                    : new ForwardFlow(previouslyAppliedBuild.Commit, previousFlow.VmrSha),
+                repo,
+                mapping,
+                previouslyAppliedBuild,
+                excludedAssets,
+                targetBranch,
+                headBranch,
+                headBranchExisted: false,
+                cancellationToken);
+
+            // We apply the current changes on top again to check if they apply now
+            try
+            {
+                await reapplyChanges();
+
+                _logger.LogInformation("Successfully recreated {count} flows and applied new changes from {sha}",
+                    flowsToRecreate,
+                    build.Commit);
+
+                return;
+            }
+            catch (PatchApplicationFailedException)
+            {
+                _logger.LogInformation("Recreated {count} flows but conflict with a previous flow still exists. Recreating deeper...", flowsToRecreate);
+                flowsToRecreate++;
+                continue;
+            }
+            catch (Exception e)
+            {
+                _logger.LogCritical("Failed to apply changes on top of previously recreated code flow: {message}", e.Message);
+                throw;
+            }
+        }
+
+        throw new DarcException($"Failed to apply changes due to conflicts even after {flowsToRecreate} previous flows were recreated");
+    }
+
+    protected abstract Task<(Codeflow, LastFlows)> RewindToPreviousFlowAsync(
+        SourceMapping mapping,
+        ILocalGitRepo targetRepo,
+        int depth,
+        LastFlows previousFlows,
+        string branchToCreate,
+        string targetBranch,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Finds the last backflow between a repo and a VMR.
