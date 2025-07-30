@@ -21,6 +21,10 @@ public class VersionDetailsPropsMergePolicyTests
             <!-- bar dependencies -->
             <BarPackageVersion>1.0.0</BarPackageVersion>
           </PropertyGroup>
+          <PropertyGroup>
+            <FooVersion>$(FooPackageVersion)</FooVersion>
+            <BarVersion>$(BarPackageVersion)</BarVersion>
+          </PropertyGroup>
         </Project>
         """;
 

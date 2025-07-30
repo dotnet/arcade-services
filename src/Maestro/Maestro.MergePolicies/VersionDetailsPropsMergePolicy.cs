@@ -200,15 +200,24 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
         foreach (var dependency in dependencies)
         {
             var expectedPropertyName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
-            
+            var alternateExpectedPropertyName = VersionFiles.GetVersionPropsAlternatePackageVersionElementName(dependency.Name);
+
             if (!versionDetailsPropsProperties.Contains(expectedPropertyName))
             {
                 missingProperties.Add((expectedPropertyName, dependency.Version ?? "VERSION"));
             }
+            if (!versionDetailsPropsProperties.Contains(alternateExpectedPropertyName))
+            {
+                missingProperties.Add((alternateExpectedPropertyName, $"$({expectedPropertyName})"));
+            }
         }
         
         // Check for orphaned properties (properties that don't correspond to any dependency)
-        var expectedProperties = dependencies.Select(d => VersionFiles.GetVersionPropsPackageVersionElementName(d.Name)).ToHashSet();
+        var expectedProperties = dependencies
+            .Select(d => VersionFiles.GetVersionPropsPackageVersionElementName(d.Name))
+            .Concat(dependencies
+                .Select(d => VersionFiles.GetVersionPropsAlternatePackageVersionElementName(d.Name)))
+            .ToHashSet();
         orphanedProperties.AddRange(versionDetailsPropsProperties.Where(prop => !expectedProperties.Contains(prop)));
         
         return (missingProperties, orphanedProperties);
