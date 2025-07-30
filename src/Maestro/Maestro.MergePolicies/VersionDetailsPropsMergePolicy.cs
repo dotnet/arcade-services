@@ -24,15 +24,11 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
 
     public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote remote)
     {
-        if (pr.CodeFlowDirection == CodeFlowDirection.ForwardFlow)
+        if (pr.CodeFlowDirection != CodeFlowDirection.BackFlow)
         {
             // TODO: https://github.com/dotnet/arcade-services/issues/4998 Make the check work for forward flow PRs once we implement the issue
-            return SucceedDecisively($"{DisplayName}: doesn't apply to forward flow PRs yet");
-        }
-        if (pr.CodeFlowDirection == CodeFlowDirection.None)
-        {
-            // Ignore dependency flow PRs, for now
-            return SucceedDecisively($"{DisplayName}: doesn't apply to dependency flow PRs");
+            // TODO: https://github.com/dotnet/arcade-services/issues/5092 Also run it for dependency flow subscriptions
+            return SucceedDecisively($"{DisplayName}: doesn't apply to this subscription");
         }
 
         ProjectRootElement versionDetailsProps;
@@ -77,25 +73,14 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
             var versionsProps = ProjectRootElement.Create(
                 XmlReader.Create(new StringReader(versionsPropsContent)));
 
-            var versionDetailsPropsProperties = ExtractNonConditionalProperties(versionDetailsProps).Keys.ToHashSet();
+            var versionDetailsPropsProperties = ExtractNonConditionalNonEmptyProperties(versionDetailsProps);
             
-            var versionPropsDictionary = ExtractNonConditionalProperties(versionsProps);
+            var versionPropsDictionary = ExtractNonConditionalNonEmptyProperties(versionsProps);
 
             // Check if any properties from VersionDetailsProps exist in VersionsProps
-            var foundProperties = new List<string>();
-            foreach (var versionDetailsPropsProperty in versionDetailsPropsProperties)
-            {
-                if (versionPropsDictionary.TryGetValue(versionDetailsPropsProperty, out var version))
-                {
-                    if (version == string.Empty)
-                    {
-                        // Versions.props is allowed to have duplicate properties, only if their values are empty
-                        // since this is needed for source build
-                        continue;
-                    }
-                    foundProperties.Add(versionDetailsPropsProperty);
-                }
-            }
+            var foundProperties = versionDetailsPropsProperties
+                .Intersect(versionPropsDictionary)
+                .ToList();
 
             if (foundProperties.Count > 0)
             {
@@ -174,9 +159,9 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
         }
     }
 
-    private static Dictionary<string, string> ExtractNonConditionalProperties(ProjectRootElement versionsProps)
+    private static HashSet<string> ExtractNonConditionalNonEmptyProperties(ProjectRootElement versionsProps)
     {
-        Dictionary<string, string> nonConditionalProperties = [];
+        HashSet<string> nonConditionalProperties = [];
         foreach (var propertyGroup in versionsProps.PropertyGroups)
         {
             if (!string.IsNullOrEmpty(propertyGroup.Condition))
@@ -193,7 +178,7 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
                 }
                 if (!string.IsNullOrEmpty(property.Value))
                 {
-                    nonConditionalProperties[property.Name] = property.Value;
+                    nonConditionalProperties.Add(property.Name);
                 }
             }
         }
