@@ -372,35 +372,19 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             _logger.LogInformation("Trying to recreate {count} previous flow(s)..", flowsToRecreate);
             ILocalGitRepo vmr;
 
-            ForwardFlow deepestFlowToRecreate = lastFlows.LastForwardFlow;
-            LastFlows previousFlows = lastFlows;
-
-            for (int i = 1; i < flowsToRecreate; i++)
-            {
-                var previousFlowVmrSha = await _localGitClient.BlameLineAsync(
-                    _vmrInfo.SourceManifestPath,
-                    line => line.Contains(deepestFlowToRecreate.RepoSha),
-                    deepestFlowToRecreate.VmrSha);
-
-                await _localGitClient.ResetWorkingTree(_vmrInfo.VmrPath);
-                vmr = await _vmrCloneManager.PrepareVmrAsync(
-                    [_vmrInfo.VmrUri],
-                    [previousFlowVmrSha],
-                    previousFlowVmrSha,
-                    resetToRemote: false,
-                    cancellationToken);
-
-                await sourceRepo.CheckoutAsync(_sourceManifest.GetRepoVersion(mapping.Name).CommitSha);
-                previousFlows = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
-                deepestFlowToRecreate = previousFlows.LastForwardFlow;
-            }
+            (ForwardFlow flowToRecreate, LastFlows previousFlows) = await FindPreviousFlowAsync(
+                mapping,
+                sourceRepo,
+                flowsToRecreate,
+                lastFlows,
+                cancellationToken);
 
             // Check out the VMR before the flows we want to recreate
             await _localGitClient.ResetWorkingTree(_vmrInfo.VmrPath);
             vmr = await _vmrCloneManager.PrepareVmrAsync(
                 [_vmrInfo.VmrUri],
-                [deepestFlowToRecreate.VmrSha],
-                deepestFlowToRecreate.VmrSha,
+                [flowToRecreate.VmrSha],
+                flowToRecreate.VmrSha,
                 resetToRemote: false,
                 cancellationToken);
 
@@ -416,7 +400,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             // We reconstruct the previous flow's branch
             await FlowCodeAsync(
                 previousFlows,
-                new ForwardFlow(previouslyAppliedBuild.Commit, deepestFlowToRecreate.VmrSha),
+                new ForwardFlow(previouslyAppliedBuild.Commit, flowToRecreate.VmrSha),
                 sourceRepo,
                 mapping,
                 previouslyAppliedBuild,
@@ -455,6 +439,42 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         }
 
         throw new DarcException($"Failed to apply changes due to conflicts even after {flowsToRecreate} previous flows were recreated");
+    }
+
+    /// <summary>
+    /// Traverses the current branch's history to find {depth}-th last backflow.
+    /// </summary>
+    /// <returns>The {depth}-th last flow and its previous flows.</returns>
+    private async Task<(ForwardFlow deepestFlowToRecreate, LastFlows previousFlows)> FindPreviousFlowAsync(
+        SourceMapping mapping,
+        ILocalGitRepo sourceRepo,
+        int depth,
+        LastFlows previousFlows,
+        CancellationToken cancellationToken)
+    {
+        var previousFlow = previousFlows.LastForwardFlow;
+
+        for (int i = 1; i < depth; i++)
+        {
+            var previousFlowSha = await _localGitClient.BlameLineAsync(
+                _vmrInfo.SourceManifestPath,
+                line => line.Contains(previousFlow.RepoSha),
+                previousFlow.VmrSha);
+
+            await _localGitClient.ResetWorkingTree(_vmrInfo.VmrPath);
+            var vmr = await _vmrCloneManager.PrepareVmrAsync(
+                [_vmrInfo.VmrUri],
+                [previousFlowSha],
+                previousFlowSha,
+                resetToRemote: false,
+                cancellationToken);
+
+            await sourceRepo.CheckoutAsync(_sourceManifest.GetRepoVersion(mapping.Name).CommitSha);
+            previousFlows = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
+            previousFlow = previousFlows.LastForwardFlow;
+        }
+
+        return (previousFlow, previousFlows);
     }
 
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / Constants.CommonScriptFilesPath;
