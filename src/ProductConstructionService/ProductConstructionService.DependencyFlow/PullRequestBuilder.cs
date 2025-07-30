@@ -356,7 +356,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Commit**: [{build.Commit}]({build.GetCommitLink()})
             - **Commit Diff**: {sourceDiffText}
-            - **Branch**: {build.GetBranch()}
+            - **Branch**: [{build.GetBranch()}]({build.GetBranchLink()})
             {dependencyUpdateBlock}
             {GetEndMarker(subscriptionId)}
 
@@ -581,10 +581,10 @@ internal class PullRequestBuilder : IPullRequestBuilder
             // This is duplicated from the files changed, but is easier to read here.
             .AppendLine($"- **Commit**: [{build.Commit}]({build.GetCommitLink()})");
 
-        var branch = build.AzureDevOpsBranch ?? build.GitHubBranch;
+        var branch = build.GetBranch();
         if (!string.IsNullOrEmpty(branch))
         {
-            subscriptionSection.AppendLine($"- **Branch**: {branch}");
+            subscriptionSection.AppendLine($"- **Branch**: [{branch}]({build.GetBranchLink()})");
         }
 
         subscriptionSection

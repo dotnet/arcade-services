@@ -51,5 +51,31 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
             }
             throw new InvalidOperationException($"Failed to construct a commit link for build with id {Id} with repo url {repoUrl}.");
         }
+
+        public string GetBranchLink()
+        {
+            string repoUrl = GetRepository();
+            if (repoUrl == null)
+            {
+                throw new InvalidOperationException($"Cannot get branch link of build with id {Id} because it does not have a repo URL.");
+            }
+            
+            string branch = GetBranch();
+            if (string.IsNullOrEmpty(branch))
+            {
+                throw new InvalidOperationException($"Cannot get branch link of build with id {Id} because it does not have a branch name.");
+            }
+            
+            string baseUrl = repoUrl.TrimEnd('/');
+            if (baseUrl.Contains("github.com"))
+            {
+                return $"{baseUrl}/tree/{branch}";
+            }
+            else if (baseUrl.Contains("dev.azure.com"))
+            {
+                return $"{baseUrl}?version=GB{branch}";
+            }
+            throw new InvalidOperationException($"Failed to construct a branch link for build with id {Id} with repo url {repoUrl}.");
+        }
     }
 }
