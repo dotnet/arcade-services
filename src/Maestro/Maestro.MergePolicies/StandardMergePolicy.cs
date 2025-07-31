@@ -67,7 +67,6 @@ public class StandardMergePolicyBuilder : IMergePolicyBuilder
         if (pr.CodeFlowDirection != CodeFlowDirection.None)
         {
             policies.AddRange(await new CodeFlowMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
-            
         }
 
         return policies;
