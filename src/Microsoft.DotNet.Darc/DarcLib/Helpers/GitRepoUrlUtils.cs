@@ -130,6 +130,22 @@ public static class GitRepoUrlUtils
             _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri)),
         };
 
+    public static string GetRepoAtBranchUri(string repoUri, string branch)
+        => ParseTypeFromUri(repoUri) switch
+        {
+            GitRepoType.AzureDevOps => $"{repoUri}?version=GB{branch}",
+            GitRepoType.GitHub => $"{repoUri}/tree/{branch}",
+            _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri)),
+        };
+
+    public static string GetCommitLinkUri(string repoUri, string commit)
+        => ParseTypeFromUri(repoUri) switch
+        {
+            GitRepoType.AzureDevOps => $"{repoUri}?_a=history&version=GC{commit}",
+            GitRepoType.GitHub => $"{repoUri}/commit/{commit}",
+            _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri)),
+        };
+
     public static string GetRepoFileAtCommitUri(string repoUri, string commit, string filePath)
         => ParseTypeFromUri(repoUri) switch
         {
