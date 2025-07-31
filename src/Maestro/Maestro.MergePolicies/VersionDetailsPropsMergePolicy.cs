@@ -27,7 +27,6 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
         if (pr.CodeFlowDirection == CodeFlowDirection.ForwardFlow)
         {
             // TODO: https://github.com/dotnet/arcade-services/issues/4998 Make the check work for forward flow PRs once we implement the issue
-            // TODO: https://github.com/dotnet/arcade-services/issues/5092 Also run it for dependency flow subscriptions
             return SucceedDecisively($"{DisplayName}: doesn't apply to this subscription");
         }
 
