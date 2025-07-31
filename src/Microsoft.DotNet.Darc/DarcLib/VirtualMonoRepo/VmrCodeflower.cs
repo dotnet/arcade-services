@@ -367,7 +367,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 targetBranch,
                 cancellationToken);
 
-            // We reconstruct the previous flow's branch
+            // We replay the previous flows, excluding manual changes that might have caused the conflict
             await FlowCodeAsync(
                 previousFlows,
                 currentIsBackflow
