@@ -24,7 +24,7 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
 
     public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote remote)
     {
-        if (pr.CodeFlowDirection != CodeFlowDirection.BackFlow)
+        if (pr.CodeFlowDirection == CodeFlowDirection.ForwardFlow)
         {
             // TODO: https://github.com/dotnet/arcade-services/issues/4998 Make the check work for forward flow PRs once we implement the issue
             // TODO: https://github.com/dotnet/arcade-services/issues/5092 Also run it for dependency flow subscriptions
