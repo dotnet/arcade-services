@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
+using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using NUnit.Framework;
 
@@ -94,6 +95,6 @@ public class GitRepoUrlParserTest
     [TestCase("https://dev.azure.com/dnceng/internal/_git/dotnet-aspnetcore", "def456789", "https://dev.azure.com/dnceng/internal/_git/dotnet-aspnetcore?_a=history&version=GCdef456789")]
     public void GetCommitLinkUriTest(string repoUri, string commit, string expectedUri)
     {
-        GitRepoUrlUtils.GetCommitLinkUri(repoUri, commit).Should().Be(expectedUri);
+        GitRepoUrlUtils.GetCommitUri(repoUri, commit).Should().Be(expectedUri);
     }
 }
