@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.IO;
 
 namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
@@ -40,16 +41,19 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
             {
                 throw new InvalidOperationException($"Cannot get commit link of build with id {Id} because it does not have a repo URL.");
             }
-            string baseUrl = repoUrl.TrimEnd('/');
-            if (baseUrl.Contains("github.com"))
+            
+            if (!Uri.TryCreate(repoUrl, UriKind.Absolute, out Uri parsedUri))
             {
-                return $"{baseUrl}/commit/{Commit}";
+                throw new InvalidOperationException($"Failed to construct a commit link for build with id {Id} with repo url {repoUrl}.");
             }
-            else if (baseUrl.Contains("dev.azure.com"))
+
+            return parsedUri.Host switch
             {
-                return $"{baseUrl}?_a=history&version=GC{Commit}";
-            }
-            throw new InvalidOperationException($"Failed to construct a commit link for build with id {Id} with repo url {repoUrl}.");
+                "github.com" => $"{repoUrl.TrimEnd('/')}/commit/{Commit}",
+                "dev.azure.com" => $"{repoUrl.TrimEnd('/')}?_a=history&version=GC{Commit}",
+                var host when host.EndsWith("visualstudio.com") => $"{repoUrl.TrimEnd('/')}?_a=history&version=GC{Commit}",
+                _ => throw new InvalidOperationException($"Failed to construct a commit link for build with id {Id} with repo url {repoUrl}.")
+            };
         }
 
         public string GetBranchLink()
@@ -66,16 +70,18 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
                 throw new InvalidOperationException($"Cannot get branch link of build with id {Id} because it does not have a branch name.");
             }
             
-            string baseUrl = repoUrl.TrimEnd('/');
-            if (baseUrl.Contains("github.com"))
+            if (!Uri.TryCreate(repoUrl, UriKind.Absolute, out Uri parsedUri))
             {
-                return $"{baseUrl}/tree/{branch}";
+                throw new InvalidOperationException($"Failed to construct a branch link for build with id {Id} with repo url {repoUrl}.");
             }
-            else if (baseUrl.Contains("dev.azure.com"))
+
+            return parsedUri.Host switch
             {
-                return $"{baseUrl}?version=GB{branch}";
-            }
-            throw new InvalidOperationException($"Failed to construct a branch link for build with id {Id} with repo url {repoUrl}.");
+                "github.com" => $"{repoUrl.TrimEnd('/')}/tree/{branch}",
+                "dev.azure.com" => $"{repoUrl.TrimEnd('/')}?version=GB{branch}",
+                var host when host.EndsWith("visualstudio.com") => $"{repoUrl.TrimEnd('/')}?version=GB{branch}",
+                _ => throw new InvalidOperationException($"Failed to construct a branch link for build with id {Id} with repo url {repoUrl}.")
+            };
         }
     }
 }
