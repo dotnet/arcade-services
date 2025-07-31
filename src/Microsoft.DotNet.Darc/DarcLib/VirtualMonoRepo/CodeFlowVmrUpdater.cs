@@ -31,6 +31,7 @@ public interface ICodeFlowVmrUpdater
     Task<bool> UpdateRepository(
         SourceMapping mapping,
         Build build,
+        string[]? patchExclusionFilters = null,
         string? fromSha = null,
         bool resetToRemoteWhenCloningRepo = false,
         CancellationToken cancellationToken = default);
@@ -86,6 +87,7 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
     public async Task<bool> UpdateRepository(
         SourceMapping mapping,
         Build build,
+        string[]? patchExclusionFilters = null,
         string? fromSha = null,
         bool resetToRemoteWhenCloningRepo = false,
         CancellationToken cancellationToken = default)
@@ -164,6 +166,7 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
                     TpnTemplatePath: _vmrInfo.ThirdPartyNoticesTemplateFullPath,
                     GenerateCodeOwners: false,
                     GenerateCredScanSuppressions: true),
+                patchExclusionFilters,
                 cancellationToken);
 
             return true;

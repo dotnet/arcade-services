@@ -294,7 +294,9 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             vmr,
             VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.VersionDetailsXml,
             lastFlow.VmrSha,
-            currentFlow.VmrSha);
+            currentFlow.VmrSha,
+            // we're applying the changes to a product repo, so no mapping
+            mappingToApplyChanges: null);
 
         var excludedAssetsMatcher = excludedAssets.GetAssetMatcher();
         List<AssetData> buildAssets = build.Assets
@@ -335,7 +337,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         if (arcadeItem != null || mappingName == VmrInfo.ArcadeMappingName)
         {
             // Even tho we are backflowing from the VMR, we want to get the sdk version from VMR`s global.json, not src/arcade's
-            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(build.GetRepository(), build.Commit, repoIsVmr: false);
+            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(build.GetRepository(), build.Commit);
         }
 
         GitFileContentContainer updatedFiles = await _dependencyFileManager.UpdateDependencyFiles(
@@ -524,9 +526,6 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
     private async Task<VersionDetails> GetRepoDependencies(ILocalGitRepo repo, string commit)
         => GetDependencies(await repo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml, commit));
-
-    private async Task<VersionDetails> GetVmrDependencies(ILocalGitRepo vmr, string mapping, string commit)
-        => GetDependencies(await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mapping) / VersionFiles.VersionDetailsXml, commit));
 
     private VersionDetails GetDependencies(string? content)
         => content == null

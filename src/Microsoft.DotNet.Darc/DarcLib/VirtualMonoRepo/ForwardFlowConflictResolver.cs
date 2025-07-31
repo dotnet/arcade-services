@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
@@ -53,7 +54,7 @@ public interface IForwardFlowConflictResolver
         string headBranch,
         string branchToMerge,
         ForwardFlow currentFlow,
-        Codeflow? crossingFlow,
+        LastFlows lastFlows,
         CancellationToken cancellationToken);
 }
 
@@ -91,7 +92,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         string headBranch,
         string branchToMerge,
         ForwardFlow currentFlow,
-        Codeflow? crossingFlow,
+        LastFlows lastFlows,
         CancellationToken cancellationToken)
     {
         var conflictedFiles = await TryMergingBranch(vmr, headBranch, branchToMerge, cancellationToken);
@@ -107,7 +108,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             sourceRepo,
             conflictedFiles,
             currentFlow,
-            crossingFlow,
+            lastFlows.CrossingFlow,
             cancellationToken))
         {
             return conflictedFiles;
@@ -127,6 +128,26 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         catch (Exception e) when (e.Message.Contains("Your branch is ahead of"))
         {
             // There was no reason to merge, we're fast-forward ahead from the target branch
+        }
+
+        try
+        {
+            await BackflowDependenciesAndToolset(
+                mappingName,
+                sourceRepo,
+                headBranch,
+                lastFlows.LastFlow,
+                currentFlow,
+                cancellationToken);
+        }
+        catch (Exception e)
+        {
+            // We don't want to push this as there is some problem
+            _logger.LogError(e, "Failed to update dependencies after merging {branchToMerge} into {headBranch} in {repoPath}",
+                branchToMerge,
+                headBranch,
+                vmr.Path);
+            throw;
         }
 
         return [];
@@ -268,7 +289,8 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         ILocalGitRepo sourceRepo,
         string targetBranch,
         Codeflow lastFlow,
-        ForwardFlow currentFlow)
+        ForwardFlow currentFlow,
+        CancellationToken cancellationToken)
     {
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
@@ -313,6 +335,12 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             sourceRepo,
             VersionFiles.VersionDetailsXml,
             lastFlow.RepoSha,
-            currentFlow.RepoSha);
+            currentFlow.RepoSha,
+            mappingName);
+
+        await vmr.CommitAsync(
+            "Update dependencies",
+            allowEmpty: false,
+            cancellationToken: cancellationToken);
     }
 }

@@ -19,32 +19,32 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 /// </summary>
 public interface IDependencyFileManager
 {
-    Task AddDependencyAsync(DependencyDetail dependency, string repoUri, string? branch, bool? repoHasVersionDetailsProps = null);
+    Task AddDependencyAsync(DependencyDetail dependency, string repoUri, string? branch, string? mapping = null, bool? repoHasVersionDetailsProps = null);
 
-    Task RemoveDependencyAsync(string dependencyName, string repoUri, string branch, bool repoIsVmr = false, bool? repoHasVersionDetailsProps = null);
+    Task RemoveDependencyAsync(string dependencyName, string repoUri, string branch, string? mapping = null, bool? repoHasVersionDetailsProps = null);
 
     Dictionary<string, HashSet<string>> FlattenLocationsAndSplitIntoGroups(Dictionary<string, HashSet<string>> assetLocationMap);
 
     List<(string key, string feed)> GetPackageSources(XmlDocument nugetConfig, Func<string, bool>? filter = null);
 
-    Task<VersionDetails> ParseVersionDetailsXmlAsync(string repoUri, string branch, bool includePinned = true);
+    Task<VersionDetails> ParseVersionDetailsXmlAsync(string repoUri, string branch, bool includePinned = true, string? mapping = null);
 
-    Task<JObject> ReadDotNetToolsConfigJsonAsync(string repoUri, string branch, bool repoIsVmr);
+    Task<JObject> ReadDotNetToolsConfigJsonAsync(string repoUri, string branch, string? mapping = null);
 
     /// <summary>
     /// Get the tools.dotnet section of the global.json from a target repo URI
     /// </summary>
     /// <param name="repoUri">repo to get the version from</param>
     /// <param name="commit">commit sha to query</param>
-    Task<SemanticVersion> ReadToolsDotnetVersionAsync(string repoUri, string commit, bool repoIsVmr);
+    Task<SemanticVersion> ReadToolsDotnetVersionAsync(string repoUri, string commit, string? mapping = null);
 
-    Task<JObject> ReadGlobalJsonAsync(string repoUri, string branch, bool repoIsVmr);
+    Task<JObject> ReadGlobalJsonAsync(string repoUri, string branch, string? mapping = null);
 
     Task<(string Name, XmlDocument Content)> ReadNugetConfigAsync(string repoUri, string branch);
 
-    Task<XmlDocument> ReadVersionDetailsXmlAsync(string repoUri, string branch);
+    Task<XmlDocument> ReadVersionDetailsXmlAsync(string repoUri, string branch, string? mapping = null);
 
-    Task<XmlDocument> ReadVersionPropsAsync(string repoUri, string branch);
+    Task<XmlDocument> ReadVersionPropsAsync(string repoUri, string branch, string? mapping = null);
 
     Task<GitFileContentContainer> UpdateDependencyFiles(
         IEnumerable<DependencyDetail> itemsToUpdate,
@@ -62,5 +62,5 @@ public interface IDependencyFileManager
 
     Task<bool> VerifyNoDuplicatedProperties(XmlDocument versionProps);
 
-    Task<bool> VersionDetailsPropsExistsAsync(string repoUri, string branch);
+    Task<bool> VersionDetailsPropsExistsAsync(string repoUri, string branch, string? mapping = null);
 }

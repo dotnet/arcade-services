@@ -42,7 +42,8 @@ public interface IVmrVersionFileMerger
         ILocalGitRepo sourceRepo,
         string sourceRepoVersionDetailsRelativePath,
         string sourceRepoPreviousRef,
-        string sourceRepoCurrentRef);
+        string sourceRepoCurrentRef,
+        string? mappingToApplyChanges);
 }
 
 public class VmrVersionFileMerger : IVmrVersionFileMerger
@@ -119,7 +120,8 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         ILocalGitRepo sourceRepo,
         string sourceRepoVersionDetailsRelativePath,
         string sourceRepoPreviousRef,
-        string sourceRepoCurrentRef)
+        string sourceRepoCurrentRef,
+        string? mappingToApplyChanges)
     {
         _logger.LogInformation(
             "Resolving dependency updates between {sourceRepo} {vmrSha1}..{vmrSha2} and {targetRepo} {repoSha1}..{repoSha2}",
@@ -239,17 +241,6 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         return new VersionFileChanges<T>(removals, additions, updates);
     }
 
-    private async Task<VersionDetails> GetRepoDependencies(ILocalGitRepo repo, string commit)
-        => GetDependencies(await repo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml, commit));
-
-    private async Task<VersionDetails> GetVmrDependencies(ILocalGitRepo vmr, string mapping, string commit)
-        => GetDependencies(await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mapping) / VersionFiles.VersionDetailsXml, commit));
-
-    private VersionDetails GetDependencies(string? content)
-        => content == null
-            ? new VersionDetails([], null)
-            : _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: false);
-
     private async Task<VersionDetails> GetDependencies(ILocalGitRepo repo, string commit, string relativePath)
     {
         var content = await repo.GetFileFromGitAsync(relativePath, commit);
@@ -294,13 +285,13 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             .ToList();
     }
 
-    private async Task ApplyVersionDetailsChangesAsync(string repoPath, VersionFileChanges<DependencyUpdate> changes, string? mapping)
+    private async Task ApplyVersionDetailsChangesAsync(string repoPath, VersionFileChanges<DependencyUpdate> changes, string? mapping = null)
     {
         bool versionDetailsPropsExists = await _dependencyFileManager.VersionDetailsPropsExistsAsync(repoPath, null!);
         foreach (var removal in changes.Removals)
         {
             // Remove the property from the version details
-            await _dependencyFileManager.RemoveDependencyAsync(removal, repoPath, null!, repoHasVersionDetailsProps: versionDetailsPropsExists);
+            await _dependencyFileManager.RemoveDependencyAsync(removal, repoPath, null!, mapping, versionDetailsPropsExists);
         }
         foreach ((var _, var update) in changes.Additions.Concat(changes.Updates))
         {
@@ -308,7 +299,8 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 (DependencyDetail)update.Value!,
                 repoPath,
                 null!,
-                repoHasVersionDetailsProps: versionDetailsPropsExists);
+                mapping,
+                versionDetailsPropsExists);
         }
     }
 
