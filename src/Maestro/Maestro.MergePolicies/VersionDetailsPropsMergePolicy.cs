@@ -81,34 +81,47 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
             var foundProperties = versionDetailsPropsProperties
                 .Intersect(versionPropsDictionary)
                 .ToList();
+            bool versionDetailPropsImported = CheckForVersionDetailsPropsImport(versionsProps);
 
-            if (foundProperties.Count > 0)
+            if (foundProperties.Count > 0 || !versionDetailPropsImported)
             {
                 StringBuilder str = new();
-                str.AppendLine($"Properties from `{Constants.VersionDetailsProps}` should not be present in `{Constants.VersionsProps}`.");
-                str.AppendLine("The following conflicting properties were found:");
-                foreach (var property in foundProperties)
+                str.AppendLine($"Validation issues found with `{Constants.VersionsProps}` file:");
+                str.AppendLine();
+                
+                if (foundProperties.Count > 0)
                 {
-                    str.AppendLine($"- `{property}`");
+                    str.AppendLine($"**Conflicting Properties:** Properties from `{Constants.VersionDetailsProps}` should not be present in `{Constants.VersionsProps}`.");
+                    str.AppendLine("The following conflicting properties were found:");
+                    foreach (var property in foundProperties)
+                    {
+                        str.AppendLine($"- `{property}`");
+                    }
+                    str.AppendLine();
                 }
-                str.AppendLine($"**Action Required:** Please remove these properties from `{Constants.VersionsProps}` to ensure proper separation of concerns between the two files.");
+                
+                if (!versionDetailPropsImported)
+                {
+                    str.AppendLine($"**Missing Import:** The `{Constants.VersionsProps}` file is missing the required import statement for `{Constants.VersionDetailsProps}`.");
+                    str.AppendLine();
+                }
+                
+                str.AppendLine("**Action Required:**");
+                if (foundProperties.Count > 0)
+                {
+                    str.AppendLine($"- Remove the conflicting properties from `{Constants.VersionsProps}` to ensure proper separation of concerns between the two files.");
+                }
+                if (!versionDetailPropsImported)
+                {
+                    str.AppendLine($"- Add the following import statement at the beginning of your `{Constants.VersionsProps}` file:");
+                    str.AppendLine("  ```xml");
+                    str.AppendLine($"  <Import Project=\"{Constants.VersionDetailsProps}\" Condition=\"Exists('{Constants.VersionDetailsProps}')\" />");
+                    str.AppendLine("  ```");
+                }
+                
                 return FailDecisively(
                     $"#### ❌ {DisplayName}: Validation Failed",
                     str.ToString());
-            }
-
-            // Check if VersionProps contains the required import statement
-            if (!CheckForVersionDetailsPropsImport(versionsProps))
-            {
-                return FailDecisively(
-                    $"#### ❌ {DisplayName} Validation Failed",
-                    $"""
-                    The `VersionProps` file is missing the required import statement for `{Constants.VersionDetailsProps}`.
-                    **Action Required:** Please add the following import statement at the beginning of your `VersionProps` file:
-                    ```xml
-                    <Import Project="{Constants.VersionDetailsProps}" Condition="Exists('{Constants.VersionDetailsProps}')" />
-                    ```
-                    """);
             }
 
             var versionDetailsXml = DependencyFileManager.GetXmlDocument(await remote.GetFileContentsAsync(
