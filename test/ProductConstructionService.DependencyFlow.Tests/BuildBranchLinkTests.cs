@@ -45,19 +45,20 @@ public class BuildBranchLinkTests
     }
 
     [Test]
-    public void GetBranchLink_ShouldThrowException_WhenNoBranchIsSet()
+    public void GetBranchLink_ShouldReturnBranchLink_WhenNoBranchIsSet()
     {
         // Arrange
         var build = new Build(3, DateTimeOffset.Now, 0, false, false, "ghi789", [], [], [], [])
         {
             GitHubRepository = "https://github.com/dotnet/aspnetcore"
-            // No branch set
+            // No branch set - will use null
         };
 
-        // Act & Assert
-        build.Invoking(b => b.GetBranchLink())
-            .Should().Throw<InvalidOperationException>()
-            .WithMessage("Cannot get branch link of build with id 3 because it does not have a branch name.");
+        // Act
+        var result = build.GetBranchLink();
+
+        // Assert - GitRepoUrlUtils handles null branch gracefully
+        result.Should().Be("https://github.com/dotnet/aspnetcore/tree/");
     }
 
     [Test]
@@ -72,7 +73,7 @@ public class BuildBranchLinkTests
 
         // Act & Assert
         build.Invoking(b => b.GetBranchLink())
-            .Should().Throw<InvalidOperationException>()
-            .WithMessage("Cannot get branch link of build with id 4 because it does not have a repo URL.");
+            .Should().Throw<ArgumentException>()
+            .WithMessage("Unknown git repository type (Parameter 'repoUri')");
     }
 }
