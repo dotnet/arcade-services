@@ -3,6 +3,7 @@
 
 using System.Text;
 using System.Text.RegularExpressions;
+using Maestro.Common;
 using Maestro.Data;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
@@ -354,9 +355,9 @@ internal class PullRequestBuilder : IPullRequestBuilder
             - **Subscription**: {GetSubscriptionLink(subscriptionId)}
             - **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
-            - **Commit**: [{build.Commit}]({build.GetCommitLink()})
+            - **Commit**: [{build.Commit}]({GitRepoUrlUtils.GetCommitUri(build.GetRepository(), build.Commit)})
             - **Commit Diff**: {sourceDiffText}
-            - **Branch**: {build.GetBranch()}
+            - **Branch**: [{build.GetBranch()}]({GitRepoUrlUtils.GetRepoAtBranchUri(build.GetRepository(), build.GetBranch())})
             {dependencyUpdateBlock}
             {GetEndMarker(subscriptionId)}
 
@@ -579,12 +580,12 @@ internal class PullRequestBuilder : IPullRequestBuilder
             .AppendLine($"- **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})")
             .AppendLine($"- **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}")
             // This is duplicated from the files changed, but is easier to read here.
-            .AppendLine($"- **Commit**: [{build.Commit}]({build.GetCommitLink()})");
+            .AppendLine($"- **Commit**: [{build.Commit}]({GitRepoUrlUtils.GetCommitUri(build.GetRepository(), build.Commit)})");
 
-        var branch = build.AzureDevOpsBranch ?? build.GitHubBranch;
+        var branch = build.GetBranch();
         if (!string.IsNullOrEmpty(branch))
         {
-            subscriptionSection.AppendLine($"- **Branch**: {branch}");
+            subscriptionSection.AppendLine($"- **Branch**: [{branch}]({GitRepoUrlUtils.GetRepoAtBranchUri(build.GetRepository(), branch)})");
         }
 
         subscriptionSection

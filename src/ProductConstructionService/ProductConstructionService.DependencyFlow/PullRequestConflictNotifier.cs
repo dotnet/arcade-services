@@ -3,6 +3,7 @@
 
 using System.Text;
 using System.Text.Json;
+using Maestro.Common;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
