@@ -153,7 +153,7 @@ internal class DependencyTestDriver
             if (compareOutput)
             {
                 await dependencyTestDriver.AssertEqual(VersionFiles.VersionDetailsXml, VersionFiles.VersionDetailsXml);
-                await dependencyTestDriver.AssertEqual(VersionFiles.VersionProps, VersionFiles.VersionProps);
+                await dependencyTestDriver.AssertEqual(VersionFiles.VersionsProps, VersionFiles.VersionsProps);
                 await dependencyTestDriver.AssertEqual(VersionFiles.GlobalJson, VersionFiles.GlobalJson);
             }
         }

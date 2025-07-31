@@ -12,7 +12,7 @@ public static class VersionFiles
 {
     // Locations of the version files within a repository
     public const string VersionDetailsXml = $"eng/{Constants.VersionDetailsXml}";
-    public const string VersionProps = $"eng/{Constants.VersionsProps}";
+    public const string VersionsProps = $"eng/{Constants.VersionsProps}";
     public const string VersionDetailsProps = $"eng/{Constants.VersionDetailsProps}";
     public const string GlobalJson = "global.json";
     public const string DotnetToolsConfigJson = ".config/dotnet-tools.json";
