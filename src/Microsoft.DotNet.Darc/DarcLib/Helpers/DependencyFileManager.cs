@@ -1772,12 +1772,24 @@ public class DependencyFileManager : IDependencyFileManager
         XmlElement propertyGroup = output.CreateElement("PropertyGroup");
         projectElement.AppendChild(propertyGroup);
 
+        comment = output.CreateComment("Property group for alternate package version names");
+        projectElement.AppendChild(comment);
+
+        XmlElement alternatePropertyGroup = output.CreateElement("PropertyGroup");
+        projectElement.AppendChild(alternatePropertyGroup);
+
         var versionDetailsLookup = versionDetails.Dependencies.ToLookup(dep => dep.RepoUri, dep => dep);
 
         foreach (var repoDependencies in versionDetailsLookup)
         {
-            var repoName = repoDependencies.Key.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
+            var repoUriParts = repoDependencies.Key.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            var repoName = repoUriParts.Last();
+            if (repoUriParts.Length > 1)
+            {
+                repoName = $"{repoUriParts[repoUriParts.Length - 2]}/{repoName}";
+            }
             propertyGroup.AppendChild(output.CreateComment($" {repoName} dependencies "));
+            alternatePropertyGroup.AppendChild(output.CreateComment($" {repoName} dependencies "));
             foreach (var dependency in repoDependencies.OrderBy(d => d.Name))
             {
                 var packageVersionElementName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
@@ -1785,9 +1797,9 @@ public class DependencyFileManager : IDependencyFileManager
                 XmlElement element = output.CreateElement(packageVersionElementName);
                 XmlElement alternateElement = output.CreateElement(packageVersionAlternateElementName);
                 element.InnerText = dependency.Version;
-                alternateElement.InnerText = dependency.Version;
+                alternateElement.InnerText = $"$({packageVersionElementName})";
                 propertyGroup.AppendChild(element);
-                propertyGroup.AppendChild(alternateElement);
+                alternatePropertyGroup.AppendChild(alternateElement);
             }
         }
 

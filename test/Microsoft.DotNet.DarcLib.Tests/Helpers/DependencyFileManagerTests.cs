@@ -484,12 +484,17 @@ public class DependencyFileManagerTests
             -->
             <Project>
               <PropertyGroup>
-                <!-- arcade dependencies -->
+                <!-- dotnet/arcade dependencies -->
                 <FooPackageVersion>1.0.1</FooPackageVersion>
-                <FooVersion>1.0.1</FooVersion>
-                <!-- bar dependencies -->
+                <!-- dotnet/bar dependencies -->
                 <BarPackageVersion>1.0.0</BarPackageVersion>
-                <BarVersion>1.0.0</BarVersion>
+              </PropertyGroup>
+              <!--Property group for alternate package version names-->
+              <PropertyGroup>
+                <!-- dotnet/arcade dependencies -->
+                <FooVersion>$(FooPackageVersion)</FooVersion>
+                <!-- dotnet/bar dependencies -->
+                <BarVersion>$(BarPackageVersion)</BarVersion>
               </PropertyGroup>
             </Project>
             """;
@@ -528,9 +533,13 @@ public class DependencyFileManagerTests
             -->
             <Project>
               <PropertyGroup>
-                <!-- arcade dependencies -->
+                <!-- dotnet/arcade dependencies -->
                 <FooPackageVersion>1.0.1</FooPackageVersion>
-                <FooVersion>1.0.1</FooVersion>
+              </PropertyGroup>
+              <!--Property group for alternate package version names-->
+              <PropertyGroup>
+                <!-- dotnet/arcade dependencies -->
+                <FooVersion>$(FooPackageVersion)</FooVersion>
               </PropertyGroup>
             </Project>
             """;
