@@ -90,11 +90,10 @@ internal class FlowCommitOperation : Operation
                     null)
                 {
                     SourceEnabled = isBackflow.HasValue,
-                    SourceDirectory = isBackflow.HasValue && isBackflow.Value ? repoName : null,
-                    TargetDirectory = isBackflow.HasValue && !isBackflow.Value ? repoName : null,
+                    TargetDirectory = "winforms",
                 });
 
-        var commit = (await _ghClient.Repository.Branch.Get(owner, repoName, _options.SourceBranch)).Commit;
+        var commit = (await _ghClient.Repository.Branch.Get(owner, "winforms", _options.SourceBranch)).Commit;
 
         _logger.LogInformation("Creating build for {repo}@{branch} (commit {commit})",
             _options.SourceRepository,

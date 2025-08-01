@@ -99,6 +99,25 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
 
         if (!conflictedFiles.Any())
         {
+            try
+            {
+                await ForwardFlowDependenciesAndToolset(
+                    mappingName,
+                    sourceRepo,
+                    headBranch,
+                    lastFlows.LastFlow,
+                    currentFlow,
+                    cancellationToken);
+            }
+            catch (Exception e)
+            {
+                // We don't want to push this as there is some problem
+                _logger.LogError(e, "Failed to update dependencies after merging {branchToMerge} into {headBranch} in {repoPath}",
+                    branchToMerge,
+                    headBranch,
+                    vmr.Path);
+                throw;
+            }
             return [];
         }
 
@@ -132,7 +151,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
 
         try
         {
-            await BackflowDependenciesAndToolset(
+            await ForwardFlowDependenciesAndToolset(
                 mappingName,
                 sourceRepo,
                 headBranch,
@@ -284,7 +303,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
     }
 
-    private async Task BackflowDependenciesAndToolset(
+    private async Task ForwardFlowDependenciesAndToolset(
         string mappingName,
         ILocalGitRepo sourceRepo,
         string targetBranch,
@@ -338,6 +357,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             currentFlow.RepoSha,
             mappingName);
 
+        await vmr.StageAsync(["."], cancellationToken);
         await vmr.CommitAsync(
             "Update dependencies",
             allowEmpty: false,

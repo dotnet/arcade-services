@@ -50,7 +50,6 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 {
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly ILogger<VmrVersionFileMerger> _logger;
-    private readonly IVmrInfo _vmrInfo;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IDependencyFileManager _dependencyFileManager;
@@ -59,14 +58,12 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
     public VmrVersionFileMerger(
         IGitRepoFactory gitRepoFactory,
         ILogger<VmrVersionFileMerger> logger,
-        IVmrInfo vmrInfo,
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
         IDependencyFileManager dependencyFileManager)
     {
         _gitRepoFactory = gitRepoFactory;
         _logger = logger;
-        _vmrInfo = vmrInfo;
         _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
         _dependencyFileManager = dependencyFileManager;
@@ -132,27 +129,26 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             targetRepoPreviousRef,
             targetRepoCurrentRef);
 
-        var previousRepoDependencies = await GetDependencies(targetRepo, targetRepoPreviousRef, targetRepoVersionDetailsRelativePath);
-        var currentRepoDependencies = await GetDependencies(targetRepo, targetRepoCurrentRef, targetRepoVersionDetailsRelativePath);
+        var previousTargetRepoChanges = await GetDependencies(targetRepo, targetRepoPreviousRef, targetRepoVersionDetailsRelativePath);
+        var currentTargetRepoChanges = await GetDependencies(targetRepo, targetRepoCurrentRef, targetRepoVersionDetailsRelativePath);
 
         // Similarly to the code flow algorithm, we compare the corresponding commits
         // and the contents of the version files inside.
         // We distinguish the direction of the previous flow vs the current flow.
-        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        var previousVmrDependencies = lastFlow is Backflow
+        var previousSourceRepoChanges = lastFlow is Backflow
             ? await GetDependencies(sourceRepo, sourceRepoPreviousRef, sourceRepoVersionDetailsRelativePath)
-            : previousRepoDependencies;
-        var currentVmrDependencies = await GetDependencies(sourceRepo, sourceRepoCurrentRef, sourceRepoVersionDetailsRelativePath);
+            : previousTargetRepoChanges;
+        var currentSourceRepoChanges = await GetDependencies(sourceRepo, sourceRepoCurrentRef, sourceRepoVersionDetailsRelativePath);
 
-        List<DependencyUpdate> repoChanges = ComputeChanges(
-            previousRepoDependencies,
-            currentRepoDependencies);
+        List<DependencyUpdate> targetChanges = ComputeChanges(
+            previousTargetRepoChanges,
+            currentTargetRepoChanges);
 
         List<DependencyUpdate> vmrChanges = ComputeChanges(
-            previousVmrDependencies,
-            currentVmrDependencies);
+            previousSourceRepoChanges,
+            currentSourceRepoChanges);
 
-        VersionFileChanges<DependencyUpdate> mergedChanges = MergeVersionFileChanges(repoChanges, vmrChanges, SelectDependencyUpdate);
+        VersionFileChanges<DependencyUpdate> mergedChanges = MergeVersionFileChanges(targetChanges, vmrChanges, SelectDependencyUpdate);
 
         await ApplyVersionDetailsChangesAsync(targetRepo.Path, mergedChanges);
 
@@ -160,12 +156,12 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
     }
 
     private VersionFileChanges<T> MergeVersionFileChanges<T>(
-        IReadOnlyCollection<T> repoChanges,
-        IReadOnlyCollection<T> vmrChanges,
+        IReadOnlyCollection<T> targetChanges,
+        IReadOnlyCollection<T> sourceChanges,
         Func<T, T, T> selector) where T : IVersionFileProperty
     {
-        var changedProperties = repoChanges
-            .Concat(vmrChanges)
+        var changedProperties = targetChanges
+            .Concat(sourceChanges)
             .Select(c => c.Name)
             .Distinct(StringComparer.OrdinalIgnoreCase);
 
@@ -175,65 +171,65 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         
         foreach (var property in changedProperties)
         {
-            var repoChange = repoChanges.FirstOrDefault(c => c.Name == property);
-            var vmrChange = vmrChanges.FirstOrDefault(c => c.Name == property);
+            var targetChange = targetChanges.FirstOrDefault(c => c.Name == property);
+            var sourceChange = sourceChanges.FirstOrDefault(c => c.Name == property);
 
-            var addedInRepo = repoChange != null && repoChange.IsAdded();
-            var addedInVmr = vmrChange != null && vmrChange.IsAdded();
-            var removedInRepo = repoChange != null && repoChange.IsRemoved();
-            var removedInVmr = vmrChange != null && vmrChange.IsRemoved();
-            var updatedInRepo = repoChange != null && repoChange.IsUpdated();
-            var updatedInVmr = vmrChange != null && vmrChange.IsUpdated();
+            var addedInTarget = targetChange != null && targetChange.IsAdded();
+            var addedInSource = sourceChange != null && sourceChange.IsAdded();
+            var removedInTarget = targetChange != null && targetChange.IsRemoved();
+            var removedInSource = sourceChange != null && sourceChange.IsRemoved();
+            var updateInTarget = targetChange != null && targetChange.IsUpdated();
+            var updatedInSource = sourceChange != null && sourceChange.IsUpdated();
 
-            if (removedInRepo)
+            if (removedInTarget)
             {
-                if (addedInVmr)
+                if (addedInSource)
                 {
-                    throw new ConflictingDependencyUpdateException(repoChange!, vmrChange!);
+                    throw new ConflictingDependencyUpdateException(targetChange!, sourceChange!);
                 }
                 // we don't have to do anything since the property is removed in the repo
                 continue;
             }
 
-            if (removedInVmr)
+            if (removedInSource)
             {
-                if (addedInRepo)
+                if (addedInTarget)
                 {
-                    throw new ConflictingDependencyUpdateException(repoChange!, vmrChange!);
+                    throw new ConflictingDependencyUpdateException(targetChange!, sourceChange!);
                 }
                 removals.Add(property);
                 continue;
             }
 
-            if (addedInRepo && addedInVmr)
+            if (addedInTarget && addedInSource)
             {
-                additions[property] = selector(repoChange!, vmrChange!);
+                additions[property] = selector(targetChange!, sourceChange!);
                 continue;
             }
-            if (addedInRepo)
+            if (addedInTarget)
             {
-                additions[property] = repoChange!;
+                additions[property] = targetChange!;
                 continue;
             }
-            if (addedInVmr)
+            if (addedInSource)
             {
-                additions[property] = vmrChange!;
+                additions[property] = sourceChange!;
                 continue;
             }
 
-            if (updatedInRepo && updatedInVmr)
+            if (updateInTarget && updatedInSource)
             {
-                updates[property] = selector(repoChange!, vmrChange!);
+                updates[property] = selector(targetChange!, sourceChange!);
                 continue;
             }
-            if (updatedInRepo)
+            if (updateInTarget)
             {
-                updates[property] = repoChange!;
+                updates[property] = targetChange!;
                 continue;
             }
-            if (updatedInVmr)
+            if (updatedInSource)
             {
-                updates[property] = vmrChange!;
+                updates[property] = sourceChange!;
                 continue;
             }
         }
