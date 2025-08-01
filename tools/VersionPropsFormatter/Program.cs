@@ -9,5 +9,5 @@ VersionPropsFormatter.VersionPropsFormatter.RegisterServices(serviceCollection);
 
 using var serviceProvider = serviceCollection.BuildServiceProvider();
 
-await ActivatorUtilities.CreateInstance<VersionPropsFormatter.VersionPropsFormatter>(serviceProvider).RunAsync(Directory.GetCurrentDirectory());
+ActivatorUtilities.CreateInstance<VersionPropsFormatter.VersionPropsFormatter>(serviceProvider).Run(Directory.GetCurrentDirectory());
 

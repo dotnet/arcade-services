@@ -103,7 +103,7 @@ public class VersionPropsFormatterTest
                 "commit",
                 "-m", "Initial commit"]);
 
-            await ActivatorUtilities.CreateInstance<VersionPropsFormatter>(_serviceProvider).RunAsync(tmpFolder);
+            await ActivatorUtilities.CreateInstance<VersionPropsFormatter>(_serviceProvider).Run(tmpFolder);
 
             // Verify logger calls
             _loggerMock.Verify(

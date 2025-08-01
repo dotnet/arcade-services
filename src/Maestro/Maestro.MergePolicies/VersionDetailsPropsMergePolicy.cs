@@ -171,32 +171,13 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
         }
     }
 
-    private static HashSet<string> ExtractNonConditionalNonEmptyProperties(ProjectRootElement versionsProps)
-    {
-        HashSet<string> nonConditionalProperties = [];
-        foreach (var propertyGroup in versionsProps.PropertyGroups)
-        {
-            if (!string.IsNullOrEmpty(propertyGroup.Condition))
-            {
-                // Skip conditional property groups
-                continue;
-            }
-            foreach (var property in propertyGroup.Properties)
-            {
-                if (!string.IsNullOrEmpty(property.Condition))
-                {
-                    // Skip conditional properties
-                    continue;
-                }
-                if (!string.IsNullOrEmpty(property.Value))
-                {
-                    nonConditionalProperties.Add(property.Name);
-                }
-            }
-        }
-
-        return nonConditionalProperties;
-    }
+    private static HashSet<string> ExtractNonConditionalNonEmptyProperties(ProjectRootElement msbuildFile)
+        => msbuildFile.PropertyGroups
+            .Where(group => !string.IsNullOrEmpty(group.Condition))
+            .SelectMany(group => group.Properties)
+            .Where(prop => !string.IsNullOrEmpty(prop.Condition))
+            .Select(prop => prop.Name)
+            .ToHashSet();
 
     private static bool CheckForVersionDetailsPropsImport(ProjectRootElement versionsProps) =>
         versionsProps.Imports.Any(import =>
