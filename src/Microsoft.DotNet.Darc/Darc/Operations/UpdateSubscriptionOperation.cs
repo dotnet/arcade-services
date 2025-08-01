@@ -347,7 +347,7 @@ internal class UpdateSubscriptionOperation : Operation
             mergePolicies.Add(
                 new MergePolicy
                 {
-                    Name = MergePolicyConstants.AllCheckSuccessfulMergePolicyName,
+                    Name = policy,
                     Properties = new()
                     {
                         [MergePolicyConstants.IgnoreChecksMergePolicyPropertyName]
