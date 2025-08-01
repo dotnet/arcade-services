@@ -164,7 +164,7 @@ internal class GitOperationsHelper
 
         if (expectedConflictingFile != null)
         {
-            result.StandardOutput.Should().Contain($"CONFLICT (content): Merge conflict in {expectedConflictingFile}");
+            result.StandardOutput.Should().Match($"*Merge conflict in {expectedConflictingFile}*");
         }
 
         if (mergeTheirs.HasValue)

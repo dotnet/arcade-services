@@ -59,15 +59,14 @@ public class StandardMergePolicyBuilder : IMergePolicyBuilder
         policies.AddRange(await new DontAutomergeDowngradesMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
         policies.AddRange(await new ValidateCoherencyMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
 
+        if (pr.CodeFlowDirection != CodeFlowDirection.ForwardFlow)
+        {
+            // TODO: https://github.com/dotnet/arcade-services/issues/4998 Make the check work for all PRs once we implement the issue
+            policies.AddRange(await new VersionDetailsPropsMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
+        }
         if (pr.CodeFlowDirection != CodeFlowDirection.None)
         {
             policies.AddRange(await new CodeFlowMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
-            if (pr.CodeFlowDirection == CodeFlowDirection.BackFlow)
-            {
-                // TODO: https://github.com/dotnet/arcade-services/issues/4998 Make the check work for forward flow PRs once we implement the issue
-                // TODO: https://github.com/dotnet/arcade-services/issues/5092 Also make the check work for dependency flow subscriptions
-                policies.AddRange(await new VersionDetailsPropsMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
-            }
         }
 
         return policies;

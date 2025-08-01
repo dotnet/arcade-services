@@ -1,18 +1,22 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Security.Policy;
-using Octokit;
-
 #nullable enable
-namespace Microsoft.DotNet.DarcLib.Helpers;
+namespace Maestro.Common;
+
+public enum GitRepoType
+{
+    GitHub,
+    AzureDevOps,
+    Local,
+    None
+}
 
 public static class GitRepoUrlUtils
 {
+    private const string GitHubUrlPrefix = "https://github.com/";
+    private const string AzureDevOpsUrlPrefix = "https://dev.azure.com/";
+
     public static GitRepoType ParseTypeFromUri(string pathOrUri)
     {
         if (!Uri.TryCreate(pathOrUri, UriKind.RelativeOrAbsolute, out Uri? parsedUri))
@@ -76,7 +80,7 @@ public static class GitRepoUrlUtils
 
         if (repoType == GitRepoType.AzureDevOps)
         {
-            string[] repoParts = uri.Substring(uri.LastIndexOf('/') + 1).Split('-', 2);
+            string[] repoParts = uri.Substring(uri.LastIndexOf('/') + 1).Split(['-'], 2);
 
             if (repoParts.Length != 2)
             {
@@ -98,7 +102,7 @@ public static class GitRepoUrlUtils
 
         if (repoType == GitRepoType.GitHub)
         {
-            string[] repoParts = uri.Substring(Constants.GitHubUrlPrefix.Length).Split('/', StringSplitOptions.RemoveEmptyEntries);
+            string[] repoParts = uri.Substring(GitHubUrlPrefix.Length).Split(['/'], StringSplitOptions.RemoveEmptyEntries);
 
             if (repoParts.Length != 2)
             {
@@ -113,13 +117,13 @@ public static class GitRepoUrlUtils
 
     public static string ConvertInternalUriToPublic(string uri)
     {
-        if (!uri.StartsWith(Constants.AzureDevOpsUrlPrefix, StringComparison.OrdinalIgnoreCase))
+        if (!uri.StartsWith(AzureDevOpsUrlPrefix, StringComparison.OrdinalIgnoreCase))
         {
             return uri;
         }
 
         var (repo, org) = GetRepoNameAndOwner(uri);
-        return $"{Constants.GitHubUrlPrefix}{org}/{repo}";
+        return $"{GitHubUrlPrefix}{org}/{repo}";
     }
 
     public static string GetRepoAtCommitUri(string repoUri, string commit)
@@ -127,6 +131,22 @@ public static class GitRepoUrlUtils
         {
             GitRepoType.AzureDevOps => $"{repoUri}?version=GC{commit}",
             GitRepoType.GitHub => $"{repoUri}/tree/{commit}",
+            _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri)),
+        };
+
+    public static string GetRepoAtBranchUri(string repoUri, string branch)
+        => ParseTypeFromUri(repoUri) switch
+        {
+            GitRepoType.AzureDevOps => $"{repoUri}?version=GB{branch}",
+            GitRepoType.GitHub => $"{repoUri}/tree/{branch}",
+            _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri)),
+        };
+
+    public static string GetCommitUri(string repoUri, string commit)
+        => ParseTypeFromUri(repoUri) switch
+        {
+            GitRepoType.AzureDevOps => $"{repoUri}?_a=history&version=GC{commit}",
+            GitRepoType.GitHub => $"{repoUri}/commit/{commit}",
             _ => throw new ArgumentException("Unknown git repository type", nameof(repoUri)),
         };
 

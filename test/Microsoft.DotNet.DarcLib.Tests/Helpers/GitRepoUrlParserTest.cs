@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
+using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using NUnit.Framework;
 
@@ -75,5 +76,25 @@ public class GitRepoUrlParserTest
     public void ConvertInternalUriToPublicTest(string internalUri, string publicUri)
     {
         GitRepoUrlUtils.ConvertInternalUriToPublic(internalUri).Should().Be(publicUri);
+    }
+
+    [Test]
+    [TestCase("https://github.com/dotnet/aspnetcore", "main", "https://github.com/dotnet/aspnetcore/tree/main")]
+    [TestCase("https://github.com/dotnet/aspnetcore", "release/8.0", "https://github.com/dotnet/aspnetcore/tree/release/8.0")]
+    [TestCase("https://dev.azure.com/dnceng/internal/_git/dotnet-aspnetcore", "main", "https://dev.azure.com/dnceng/internal/_git/dotnet-aspnetcore?version=GBmain")]
+    [TestCase("https://dev.azure.com/dnceng/internal/_git/dotnet-aspnetcore", "release/8.0", "https://dev.azure.com/dnceng/internal/_git/dotnet-aspnetcore?version=GBrelease/8.0")]
+    public void GetRepoAtBranchUriTest(string repoUri, string branch, string expectedUri)
+    {
+        GitRepoUrlUtils.GetRepoAtBranchUri(repoUri, branch).Should().Be(expectedUri);
+    }
+
+    [Test]
+    [TestCase("https://github.com/dotnet/aspnetcore", "abc123", "https://github.com/dotnet/aspnetcore/commit/abc123")]
+    [TestCase("https://github.com/dotnet/aspnetcore", "def456789", "https://github.com/dotnet/aspnetcore/commit/def456789")]
+    [TestCase("https://dev.azure.com/dnceng/internal/_git/dotnet-aspnetcore", "abc123", "https://dev.azure.com/dnceng/internal/_git/dotnet-aspnetcore?_a=history&version=GCabc123")]
+    [TestCase("https://dev.azure.com/dnceng/internal/_git/dotnet-aspnetcore", "def456789", "https://dev.azure.com/dnceng/internal/_git/dotnet-aspnetcore?_a=history&version=GCdef456789")]
+    public void GetCommitLinkUriTest(string repoUri, string commit, string expectedUri)
+    {
+        GitRepoUrlUtils.GetCommitUri(repoUri, commit).Should().Be(expectedUri);
     }
 }
