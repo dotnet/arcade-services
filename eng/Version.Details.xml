@@ -17,10 +17,6 @@
       <Uri>https://github.com/dotnet/dnceng-shared</Uri>
       <Sha>8249eb96d727905698d84329c88094a1036f1f3c</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DncEng.CommandLineLib" Version="1.1.0-beta.25215.1">
-      <Uri>https://github.com/dotnet/dnceng-shared</Uri>
-      <Sha>8249eb96d727905698d84329c88094a1036f1f3c</Sha>
-    </Dependency>
     <Dependency Name="Microsoft.DncEng.Configuration.Extensions" Version="1.1.0-beta.25215.1">
       <Uri>https://github.com/dotnet/dnceng-shared</Uri>
       <Sha>8249eb96d727905698d84329c88094a1036f1f3c</Sha>
@@ -72,10 +68,6 @@
       <Sha>8dca4f8ae100b102230287f8cc1b75264c9f1a6f</Sha>
     </Dependency>
     <Dependency Name="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="8.0.0-beta.25378.1">
-      <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>8dca4f8ae100b102230287f8cc1b75264c9f1a6f</Sha>
-    </Dependency>
-    <Dependency Name="Microsoft.DotNet.Git.IssueManager" Version="8.0.0-beta.25378.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>8dca4f8ae100b102230287f8cc1b75264c9f1a6f</Sha>
     </Dependency>
