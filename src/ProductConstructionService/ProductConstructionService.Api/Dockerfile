@@ -9,6 +9,7 @@ WORKDIR /src
 
 COPY ["Directory.Packages.props", "Directory.Build.props", "Directory.Build.targets", "NuGet.config", "global.json", "./"]
 COPY ["eng/Versions.props", "./eng/"]
+COPY ["eng/Version.Details.props", "./eng/"]
 
 WORKDIR /src/Maestro
 COPY ["src/Maestro/Maestro.Common/Maestro.Common.csproj",                               "./Maestro.Common/"]
