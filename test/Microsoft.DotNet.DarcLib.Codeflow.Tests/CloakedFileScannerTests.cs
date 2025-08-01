@@ -10,17 +10,16 @@ using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
-#nullable enable 
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 
 [TestFixture]
-internal class VmrCloakedFileScannerTest : VmrTestsBase
+internal class CloakedFileScannerTests : CodeFlowTestsBase
 {
     [Test]
     public async Task VmrCloakedFileScannerTests()
     {
         var testFileName = "test.dll";
-        var baselinesFilePath = VmrTestsOneTimeSetUp.TestsDirectory / "baselineFiles.txt";
+        var baselinesFilePath = CodeflowTestsOneTimeSetUp.TestsDirectory / "baselineFiles.txt";
         File.Create(baselinesFilePath).Close();
 
         await InitializeRepoAtLastCommit(Constants.ProductRepoName, ProductRepoPath);
@@ -58,7 +57,7 @@ internal class VmrCloakedFileScannerTest : VmrTestsBase
 
     protected override async Task CopyVmrForCurrentTest()
     {
-        CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, VmrPath);
+        CopyDirectory(CodeflowTestsOneTimeSetUp.CommonVmrPath, VmrPath);
 
         var sourceMappings = new SourceMappingFile()
         {

@@ -8,7 +8,7 @@ using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
+namespace Microsoft.DotNet.DarcLib.Codeflow.Tests.Helpers;
 
 internal class GitOperationsHelper
 {

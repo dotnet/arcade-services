@@ -11,6 +11,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.DotNet.DarcLib.Codeflow.Tests.Helpers;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -22,7 +23,7 @@ using NUnit.Framework;
 
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 
-internal abstract class VmrTestsBase
+internal abstract class CodeFlowTestsBase
 {
     protected NativePath CurrentTestDirectory { get; private set; } = null!;
     protected NativePath ProductRepoPath { get; private set; } = null!;
@@ -46,7 +47,7 @@ internal abstract class VmrTestsBase
     public async Task Setup()
     {
         var testsDirName = "_tests";
-        CurrentTestDirectory = VmrTestsOneTimeSetUp.TestsDirectory / testsDirName / Path.GetRandomFileName();
+        CurrentTestDirectory = CodeflowTestsOneTimeSetUp.TestsDirectory / testsDirName / Path.GetRandomFileName();
         Directory.CreateDirectory(CurrentTestDirectory);
 
         TmpPath = CurrentTestDirectory;
@@ -78,7 +79,7 @@ internal abstract class VmrTestsBase
         {
             if (CurrentTestDirectory is not null)
             {
-                VmrTestsOneTimeSetUp.DeleteDirectory(CurrentTestDirectory.ToString());
+                CodeflowTestsOneTimeSetUp.DeleteDirectory(CurrentTestDirectory.ToString());
             }
         }
         catch
@@ -150,7 +151,7 @@ internal abstract class VmrTestsBase
 
     protected static void CompareFileContents(NativePath filePath, string resourceFileName)
     {
-        var resourceContent = File.ReadAllLines(VmrTestsOneTimeSetUp.ResourcesPath / resourceFileName);
+        var resourceContent = File.ReadAllLines(CodeflowTestsOneTimeSetUp.ResourcesPath / resourceFileName);
         CheckFileContents(filePath, resourceContent);
     }
 
@@ -322,7 +323,7 @@ internal abstract class VmrTestsBase
 
         if (!Directory.Exists(repoPath))
         {
-            CopyDirectory(VmrTestsOneTimeSetUp.TestsDirectory / repoName, repoPath);
+            CopyDirectory(CodeflowTestsOneTimeSetUp.TestsDirectory / repoName, repoPath);
 
             var versionDetails = string.Format(Constants.VersionDetailsTemplate, dependenciesString);
             Directory.CreateDirectory(repoPath / "eng");

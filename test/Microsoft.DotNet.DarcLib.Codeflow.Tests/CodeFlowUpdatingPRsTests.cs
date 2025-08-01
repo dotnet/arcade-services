@@ -4,13 +4,12 @@
 using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 
 [TestFixture]
-internal class VmrCodeFlowUpdatingPRsTests : VmrCodeFlowTests
+internal class CodeFlowUpdatingPRsTests : CodeFlowTests
 {
     // This test simulates the following scenario:
     //   1. We open a backflow PR.
