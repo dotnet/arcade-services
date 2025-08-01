@@ -861,5 +861,95 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         vmrVersionProps = await File.ReadAllTextAsync(_productRepoVmrPath / VersionFiles.VersionsProps);
         CheckFileContents(ProductRepoPath / VersionFiles.VersionsProps, expected: vmrVersionProps);
     }
+
+    /*
+         This test verifies a scenario where a file is added and later reverted
+         while there are unrelated conflicts at the same time.
+            repo                   VMR
+              O────────────────────►O 0. 
+              │                 2.  │
+            1.O─────────────────O   │
+              │                 │   │
+              │                 └──►O 3.
+              │                     │
+            4.O─────────────────x   │
+              │                  5. │
+
+        0. Repo and VMR are initialized
+        1. Two files (conflict.txt and revert.txt) are added in the repo
+        2. FF is opened and in the PR branch, we change conflict.txt to something
+        3. FF PR is merged
+        4. The revert.txt file is reverted in the repo, the conflict.txt is changed to something else
+        5. The next forward flow will conflict over the conflict.txt file
+           This means the FF branch will be based on 0.
+           This means the FF branch needs to have all the changes from the repo (1-4)
+           BUT the revert.txt won't be part of the changes because it was reverted
+           That means the PR branch won't remove it and it will stay in the VMR (even after we resolve the conflict)
+    */
+    [Test]
+    public async Task RevertingFileAndConflictsTest()
+    {
+        const string branchName = nameof(RevertingFileAndConflictsTest);
+        const string conflictFileContent1 = "Initial conflict file content";
+        const string conflictFileContent2 = "Modified conflict file content in PR";
+        const string conflictFileContent3 = "Final conflict file content";
+        const string revertFileContent = "This file will be reverted";
+
+        await EnsureTestRepoIsInitialized();
+
+        // 1. Two files (conflict.txt and revert.txt) are added in the repo
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / "conflict.txt", conflictFileContent1);
+        await File.WriteAllTextAsync(ProductRepoPath / "revert.txt", revertFileContent);
+        await GitOperations.CommitAll(ProductRepoPath, "Add conflict.txt and revert.txt files");
+
+        // 2. FF is opened and in the PR branch, we change conflict.txt to something
+        var codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult.ShouldHaveUpdates();
+
+        // Modify conflict.txt in the PR branch (VMR)
+        await GitOperations.Checkout(VmrPath, branchName);
+        await File.WriteAllTextAsync(_productRepoVmrPath / "conflict.txt", conflictFileContent2);
+        await GitOperations.CommitAll(VmrPath, "Modify conflict.txt in PR branch");
+
+        // 3. FF PR is merged
+        await GitOperations.MergePrBranch(VmrPath, branchName);
+
+        // Verify both files are in the VMR
+        CheckFileContents(_productRepoVmrPath / "conflict.txt", conflictFileContent2);
+        CheckFileContents(_productRepoVmrPath / "revert.txt", revertFileContent);
+
+        // 4. The revert.txt file is reverted in the repo, the conflict.txt is changed to something else
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        File.Delete(ProductRepoPath / "revert.txt");
+        await GitOperations.CommitAll(ProductRepoPath, "Revert revert.txt file");
+
+        // Change conflict.txt to something else in the repo
+        await File.WriteAllTextAsync(ProductRepoPath / "conflict.txt", conflictFileContent3);
+        await GitOperations.CommitAll(ProductRepoPath, "Change conflict.txt to final content");
+
+        // 5. The next forward flow will conflict over the conflict.txt file
+        // This means the FF branch will be based on 0.
+        // This means the FF branch needs to have all the changes from the repo (1-4)
+        // BUT the revert.txt won't be part of the changes because it was reverted
+        // That means the PR branch won't remove it and it will stay in the VMR (even after we resolve the conflict)
+        await GitOperations.Checkout(VmrPath, "main");
+        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult.ShouldHaveUpdates();
+
+        // Verify we have a conflict and resolve it using theirs (repo content)
+        await GitOperations.VerifyMergeConflict(VmrPath, branchName,
+            mergeTheirs: true,
+            expectedConflictingFile: VmrInfo.SourcesDir / Constants.ProductRepoName / "conflict.txt");
+
+        await GitOperations.CheckAllIsCommitted(VmrPath);
+        await GitOperations.CheckAllIsCommitted(ProductRepoPath);
+
+        // After resolving the conflict, verify the state:
+        // - conflict.txt should have the repo's final content
+        // - revert.txt should still exist in the VMR (because it wasn't part of the reverted changes)
+        CheckFileContents(_productRepoVmrPath / "conflict.txt", conflictFileContent3);
+        File.Exists(_productRepoVmrPath / "revert.txt").Should().BeFalse("revert.txt should not exist in VMR after conflict resolution");
+    }
 }
 
