@@ -17,7 +17,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 
 [TestFixture]
-internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
+internal class TwoWayCodeflowTests : CodeFlowTests
 {
     [Test]
     public async Task ZigZagCodeflowTest()

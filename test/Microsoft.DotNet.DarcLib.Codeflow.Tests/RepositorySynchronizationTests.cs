@@ -4,7 +4,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -13,7 +12,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 
 [TestFixture]
-internal class VmrSyncRepoChangesTest : VmrTestsBase
+internal class RepositorySynchronizationTests : CodeFlowTestsBase
 {
     private readonly string _dependencyFileName = "dependency-file.txt";
     private readonly string _productRepoFileName = Constants.GetRepoFileName(Constants.ProductRepoName);
@@ -280,12 +279,12 @@ internal class VmrSyncRepoChangesTest : VmrTestsBase
 
         await CopyRepoAndCreateVersionFiles(Constants.ProductRepoName, dependenciesMap);
 
-        CopyDirectory(VmrTestsOneTimeSetUp.CommonExternalRepoPath, SecondRepoPath);
+        CopyDirectory(CodeflowTestsOneTimeSetUp.CommonExternalRepoPath, SecondRepoPath);
     }
 
     protected override async Task CopyVmrForCurrentTest()
     {
-        CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, VmrPath);
+        CopyDirectory(CodeflowTestsOneTimeSetUp.CommonVmrPath, VmrPath);
 
         var sourceMappings = new SourceMappingFile()
         {

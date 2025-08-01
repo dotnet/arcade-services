@@ -6,12 +6,11 @@ using System.IO;
 using System.Threading.Tasks;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
+namespace Microsoft.DotNet.DarcLib.Codeflow.Tests.Helpers;
 
 internal class RemoteFactory : IRemoteFactory
 {
