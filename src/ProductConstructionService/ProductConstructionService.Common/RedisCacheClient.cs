@@ -14,6 +14,7 @@ internal class RedisCacheClient : IRedisCacheClient
 {
     private readonly IRedisCacheFactory _factory;
     private readonly ILogger<RedisCacheClient> _logger;
+    private readonly TimeSpan _defaultExpiration = TimeSpan.FromDays(15);
 
     public RedisCacheClient(IRedisCacheFactory factory, ILogger<RedisCacheClient> logger)
     {
@@ -30,7 +31,7 @@ internal class RedisCacheClient : IRedisCacheClient
     {
         try
         {
-            await _factory.Create<T>(key).SetAsync(value, expiration);
+            await _factory.Create<T>(key).SetAsync(value, expiration ?? _defaultExpiration);
         }
         catch (Exception ex)
         {

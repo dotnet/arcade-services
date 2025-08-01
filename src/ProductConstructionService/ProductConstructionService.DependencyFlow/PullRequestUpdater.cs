@@ -414,11 +414,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         PullRequestUpdateSummary prSummary = CreatePrSummaryFromInProgressPr(pr, targetRepository);
         MergePolicyEvaluationResults? cachedResults = await _mergePolicyEvaluationState.TryGetStateAsync();
 
-        IEnumerable<MergePolicyEvaluationResult> updatedMergePolicyResults = await _mergePolicyEvaluator.EvaluateAsync(prSummary, remote, policyDefinitions, cachedResults, prInfo.TargetBranchCommitSha);
+        IEnumerable<MergePolicyEvaluationResult> updatedMergePolicyResults = await _mergePolicyEvaluator.EvaluateAsync(prSummary, remote, policyDefinitions, cachedResults, prInfo.HeadBranchCommitSha);
 
         MergePolicyEvaluationResults updatedResult = new MergePolicyEvaluationResults(
             updatedMergePolicyResults.ToImmutableList(),
-            prInfo.TargetBranchCommitSha);
+            prInfo.HeadBranchCommitSha);
 
         await _mergePolicyEvaluationState.SetAsync(updatedResult);
 
