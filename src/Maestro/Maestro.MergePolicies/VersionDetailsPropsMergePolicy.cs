@@ -173,9 +173,9 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
 
     private static HashSet<string> ExtractNonConditionalNonEmptyProperties(ProjectRootElement msbuildFile)
         => msbuildFile.PropertyGroups
-            .Where(group => !string.IsNullOrEmpty(group.Condition))
+            .Where(group => string.IsNullOrEmpty(group.Condition))
             .SelectMany(group => group.Properties)
-            .Where(prop => !string.IsNullOrEmpty(prop.Condition))
+            .Where(prop => string.IsNullOrEmpty(prop.Condition))
             .Select(prop => prop.Name)
             .ToHashSet();
 

@@ -13,12 +13,12 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using ProductConstructionService.Common;
 
-namespace VersionPropsFormatter;
+namespace VersionDetailsPropsFormatter;
 
-public class VersionPropsFormatter(
+public class VersionDetailsPropsFormatter(
     IVersionDetailsParser versionDetailsParser,
     IProcessManager processManager,
-    ILogger<VersionPropsFormatter> logger)
+    ILogger<VersionDetailsPropsFormatter> logger)
 {
     public void Run(string path)
     {
@@ -28,8 +28,8 @@ public class VersionPropsFormatter(
         var versionDetailsPropsContent = DependencyFileManager.GenerateVersionDetailsProps(versionDetails);
         WriteXml(repoPath / VersionFiles.VersionDetailsProps, versionDetailsPropsContent);
 
-        var versionDetailsProps = ProjectRootElement.Create(repoPath / VersionFiles.VersionDetailsProps);
-        var versionProps = ProjectRootElement.Create(repoPath / VersionFiles.VersionsProps);
+        var versionDetailsProps = ProjectRootElement.Open(repoPath / VersionFiles.VersionDetailsProps);
+        var versionProps = ProjectRootElement.Open(repoPath / VersionFiles.VersionsProps);
 
         var conflictingProps = ExtractNonConditionalNonEmptyProperties(versionProps)
             .Intersect(ExtractNonConditionalNonEmptyProperties(versionDetailsProps))
@@ -37,7 +37,8 @@ public class VersionPropsFormatter(
 
         if (conflictingProps.Count > 0)
         {
-            StringBuilder sb = new("Conflicting properties found in Versions.props, please delete them");
+            StringBuilder sb = new();
+            sb.AppendLine("Conflicting properties found in Versions.props, please delete them");
             foreach (var conflictingProp in conflictingProps)
             {
                 sb.AppendLine($"- {conflictingProp}");
@@ -45,23 +46,23 @@ public class VersionPropsFormatter(
             logger.LogWarning(sb.ToString());
         }
 
-        if (CheckForVersionDetailsPropsImport(versionProps))
+        if (!CheckForVersionDetailsPropsImport(versionProps))
         {
-            logger.LogWarning("Please add to the beginning of Versions.props `<Import Project=\"Version.Details.props\" Condition=\"Exists('Version.Details.props')\" />`");
+            logger.LogWarning("Please import `Version.Details.props` in the beginning of Versions.props");
         }
     }
 
     private static HashSet<string> ExtractNonConditionalNonEmptyProperties(ProjectRootElement msbuildFile)
         => msbuildFile.PropertyGroups
-            .Where(group => !string.IsNullOrEmpty(group.Condition))
+            .Where(group => string.IsNullOrEmpty(group.Condition))
             .SelectMany(group => group.Properties)
-            .Where(prop => !string.IsNullOrEmpty(prop.Condition))
+            .Where(prop => string.IsNullOrEmpty(prop.Condition))
             .Select(prop => prop.Name)
             .ToHashSet();
 
     private static bool CheckForVersionDetailsPropsImport(ProjectRootElement versionsProps) =>
         versionsProps.Imports.Any(import =>
-            import.Project.Equals(Constants.VersionDetailsProps) && import.Condition == $"Exists('{Constants.VersionDetailsProps}')");
+            import.Project.Equals(Constants.VersionDetailsProps));
 
     private void WriteXml(string path, XmlDocument document)
     {
@@ -75,8 +76,7 @@ public class VersionPropsFormatter(
             OmitXmlDeclaration = true
         };
 
-        using StringWriter stringWriter = new();
-        using var xmlWriter = XmlWriter.Create(stringWriter, xmlWriterSettings);
+        using var xmlWriter = XmlWriter.Create(path, xmlWriterSettings);
         document.Save(xmlWriter);
     }
 
