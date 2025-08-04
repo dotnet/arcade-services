@@ -1756,7 +1756,7 @@ public class DependencyFileManager : IDependencyFileManager
         return assetLocationMappings;
     }
 
-    private static XmlDocument GenerateVersionDetailsProps(VersionDetails versionDetails)
+    public static XmlDocument GenerateVersionDetailsProps(VersionDetails versionDetails)
     {
         XmlDocument output = new();
 
