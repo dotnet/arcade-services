@@ -27,8 +27,8 @@ This file should be imported by eng/Versions.props
     <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>8.0.0-beta.25378.1</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
     <MicrosoftDotNetVersionToolsPackageVersion>8.0.0-beta.25378.1</MicrosoftDotNetVersionToolsPackageVersion>
     <!-- dotnet/dnceng dependencies -->
-    <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.25360.1</MicrosoftDncEngConfigurationBootstrapPackageVersion>
-    <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.25360.1</MicrosoftDncEngSecretManagerPackageVersion>
+    <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.25381.1</MicrosoftDncEngConfigurationBootstrapPackageVersion>
+    <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.25381.1</MicrosoftDncEngSecretManagerPackageVersion>
   </PropertyGroup>
   <!--Property group for alternate package version names-->
   <PropertyGroup>
