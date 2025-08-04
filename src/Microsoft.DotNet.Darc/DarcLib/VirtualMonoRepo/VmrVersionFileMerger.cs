@@ -19,7 +19,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 public interface IVmrVersionFileMerger
 {
     /// <summary>
-    /// Merges the changes in a JSON file between two references in the target repo and the VMR.
+    /// Merges the changes in a JSON file between two references in the source and target repo.
     /// </summary>
     Task MergeJsonAsync(
         Codeflow lastFlow,
@@ -84,15 +84,15 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         var targetRepoPreviousJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, targetRepoPreviousRef, allowMissingFiles);
         var targetRepoCurrentJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, targetRepoCurrentRef, allowMissingFiles);
 
-        var vmrPreviousJson = lastFlow is Backflow
+        var sourcePreviousJson = lastFlow is Backflow
             ? await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoPreviousRef, allowMissingFiles)
             : targetRepoPreviousJson;
-        var vmrCurrentJson = await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoCurrentRef, allowMissingFiles);
+        var sourceCurrentJson = await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoCurrentRef, allowMissingFiles);
 
         var targetRepoChanges = SimpleConfigJson.Parse(targetRepoPreviousJson).GetDiff(SimpleConfigJson.Parse(targetRepoCurrentJson));
-        var vmrChanges = SimpleConfigJson.Parse(vmrPreviousJson).GetDiff(SimpleConfigJson.Parse(vmrCurrentJson));
+        var sourceChanges = SimpleConfigJson.Parse(sourcePreviousJson).GetDiff(SimpleConfigJson.Parse(sourceCurrentJson));
 
-        VersionFileChanges<JsonVersionProperty> mergedChanges = MergeVersionFileChanges(targetRepoChanges, vmrChanges, JsonVersionProperty.SelectJsonVersionProperty);
+        VersionFileChanges<JsonVersionProperty> mergedChanges = MergeVersionFileChanges(targetRepoChanges, sourceChanges, JsonVersionProperty.SelectJsonVersionProperty);
 
         var currentJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, "HEAD", allowMissingFiles);
         var mergedJson = SimpleConfigJson.ApplyJsonChanges(currentJson, mergedChanges);
@@ -121,7 +121,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         string? mappingToApplyChanges)
     {
         _logger.LogInformation(
-            "Resolving dependency updates between {sourceRepo} {vmrSha1}..{vmrSha2} and {targetRepo} {repoSha1}..{repoSha2}",
+            "Resolving dependency updates between {sourceRepo} {sourceSha1}..{sourceSha2} and {targetRepo} {targetSha1}..{targetSha2}",
             sourceRepo.Path,
             sourceRepoPreviousRef,
             Constants.HEAD,
@@ -144,11 +144,11 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             previousTargetRepoChanges,
             currentTargetRepoChanges);
 
-        List<DependencyUpdate> vmrChanges = ComputeChanges(
+        List<DependencyUpdate> sourceChanges = ComputeChanges(
             previousSourceRepoChanges,
             currentSourceRepoChanges);
 
-        VersionFileChanges<DependencyUpdate> mergedChanges = MergeVersionFileChanges(targetChanges, vmrChanges, SelectDependencyUpdate);
+        VersionFileChanges<DependencyUpdate> mergedChanges = MergeVersionFileChanges(targetChanges, sourceChanges, SelectDependencyUpdate);
 
         await ApplyVersionDetailsChangesAsync(targetRepo.Path, mergedChanges, mappingToApplyChanges);
 
@@ -306,15 +306,15 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 ? EmptyJsonString
                 : throw new FileNotFoundException($"File not found at {repo.Path / jsonRelativePath} for reference {reference}"));
 
-    private static DependencyUpdate SelectDependencyUpdate(DependencyUpdate repoChange, DependencyUpdate vmrChange)
+    private static DependencyUpdate SelectDependencyUpdate(DependencyUpdate repo1Change, DependencyUpdate repo2Change)
     {
-        if (SemanticVersion.TryParse(repoChange.To?.Version!, out var repoVersion) &&
-            SemanticVersion.TryParse(vmrChange.To?.Version!, out var vmrVersion))
+        if (SemanticVersion.TryParse(repo1Change.To?.Version!, out var repo1Version) &&
+            SemanticVersion.TryParse(repo2Change.To?.Version!, out var repo2Version))
         {
-            return repoVersion > vmrVersion ? repoChange : vmrChange;
+            return repo1Version > repo2Version ? repo1Change : repo2Change;
         }
         
-        throw new ArgumentException($"Cannot compare {repoChange.To?.Version} with {vmrChange.To?.Version} because they are not valid semantic versions.");
+        throw new ArgumentException($"Cannot compare {repo1Change.To?.Version} with {repo2Change.To?.Version} because they are not valid semantic versions.");
     }
 }
 
