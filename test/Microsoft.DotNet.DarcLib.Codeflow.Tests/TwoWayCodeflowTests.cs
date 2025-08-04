@@ -964,7 +964,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // - full-revert.txt should still exist in the VMR (because it wasn't part of the reverted changes)
         CheckFileContents(_productRepoVmrPath / "conflict.txt", conflictFileContent3);
         CheckFileContents(_productRepoVmrPath / "partial-revert.txt", revertFileContent);
-        File.ReadAllText(_productRepoVmrPath / "full-revert.txt").Contains("PLEASE READ");
+        File.ReadAllText(_productRepoVmrPath / "full-revert.txt").Should().Contain("PLEASE READ");
     }
 
     // Same test as above but mirrored.
@@ -1043,7 +1043,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // - full-revert.txt should still exist in the repo (because it wasn't part of the reverted changes)
         CheckFileContents(ProductRepoPath / "conflict.txt", conflictFileContent3);
         CheckFileContents(ProductRepoPath / "partial-revert.txt", revertFileContent);
-        File.ReadAllText(ProductRepoPath / "full-revert.txt").Contains("PLEASE READ");
+        File.ReadAllText(ProductRepoPath / "full-revert.txt").Should().Contain("PLEASE READ");
     }
 }
 
