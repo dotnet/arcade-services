@@ -243,7 +243,7 @@ public class DependencyFileManager : IDependencyFileManager
 
                 await AddDependencyToGlobalJson(repoUri, branch, parent, dependency);
             }
-            else if (!repoHasVersionDetailsProps.Value)
+            else if (!repoHasVersionDetailsProps.Value && !dependency.SkipProperty)
             {
                 await AddDependencyToVersionsPropsAsync(repoUri, branch, dependency);
             }
