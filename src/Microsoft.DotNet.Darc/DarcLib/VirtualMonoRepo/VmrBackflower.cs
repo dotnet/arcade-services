@@ -68,7 +68,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             IFileSystem fileSystem,
             IBasicBarClient barClient,
             ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
@@ -243,6 +243,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 mapping,
                 build,
                 targetRepo,
+                currentFlow,
                 lastFlows,
                 headBranch,
                 targetBranch,
@@ -254,7 +255,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                         await _vmrPatchHandler.ApplyPatch(patch, targetRepo.Path, removePatchAfter: true, reverseApply: false, cancellationToken);
                     }
                 },
-                currentIsBackflow: true,
                 cancellationToken);
 
             // We no longer need the work branch as we recreated the previous flow in a new head branch directly

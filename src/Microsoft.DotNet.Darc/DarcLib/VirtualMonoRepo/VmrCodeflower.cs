@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -46,6 +47,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     private readonly ILocalGitClient _localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
+    private readonly IFileSystem _fileSystem;
     private readonly ILogger<VmrCodeFlower> _logger;
 
     protected VmrCodeFlower(
@@ -55,6 +57,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         ILocalGitClient localGitClient,
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
+        IFileSystem fileSystem,
         ILogger<VmrCodeFlower> logger)
     {
         _vmrInfo = vmrInfo;
@@ -63,6 +66,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         _localGitClient = localGitClient;
         _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
+        _fileSystem = fileSystem;
         _logger = logger;
     }
 
@@ -306,7 +310,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     "Ignoring backflow and considering the last forward flow to be the last flow.",
                     lastBackflow.VmrSha,
                     currentVmrSha);
-                
+
                 return new LastFlows(
                     LastFlow: lastForwardFlow,
                     LastBackFlow: lastBackflow,
@@ -332,20 +336,21 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         SourceMapping mapping,
         Build build,
         ILocalGitRepo repo,
+        Codeflow currentFlow,
         LastFlows lastFlows,
         string headBranch,
         string targetBranch,
         IReadOnlyCollection<string>? excludedAssets,
         Func<Task> reapplyChanges,
-        bool currentIsBackflow,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating previous flows..");
 
         // Create a fake previously applied build that we will use when reapplying the previous flow.
         // We only care about the sha here, because it will get overwritten anyway with the current build which will be applied on top.
-        var currentFlowSha = currentIsBackflow ? lastFlows.LastBackFlow!.VmrSha : lastFlows.LastForwardFlow.RepoSha;
-        Build previouslyAppliedBuild = new(-1, DateTimeOffset.Now, 0, false, false, currentFlowSha, [], [], [], [])
+        bool currentIsBackflow = currentFlow is Backflow;
+        var lastFlownSha = currentIsBackflow ? lastFlows.LastBackFlow!.VmrSha : lastFlows.LastForwardFlow.RepoSha;
+        Build previouslyAppliedBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastFlownSha, [], [], [], [])
         {
             GitHubRepository = build.GitHubRepository,
             AzureDevOpsRepository = build.AzureDevOpsRepository
@@ -367,6 +372,11 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 targetBranch,
                 cancellationToken);
 
+            // We store the SHA where the head branch originates from so that later we can diff it
+            var shaBeforeRecreation = currentIsBackflow
+                ? await repo.GetShaForRefAsync()
+                : await _localGitClient.GetShaForRefAsync(_vmrInfo.VmrPath);
+
             // We replay the previous flows, excluding manual changes that might have caused the conflict
             await FlowCodeAsync(
                 previousFlows,
@@ -382,10 +392,24 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 headBranchExisted: false,
                 cancellationToken);
 
+            var changedFilesAfterRecreation = await GetChangesInHeadBranch(
+                mapping,
+                repo,
+                currentIsBackflow,
+                shaBeforeRecreation,
+                cancellationToken);
+
             // We apply the current changes on top again to check if they apply now
             try
             {
                 await reapplyChanges();
+                await HandleRevertedFiles(
+                    mapping,
+                    repo,
+                    currentFlow,
+                    shaBeforeRecreation,
+                    changedFilesAfterRecreation,
+                    cancellationToken);
 
                 _logger.LogInformation("Successfully recreated {count} flows and applied new changes from {sha}",
                     flowsToRecreate,
@@ -452,6 +476,133 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             line => line.Contains(lastForwardRepoSha));
 
         return new ForwardFlow(lastForwardRepoSha, lastForwardVmrSha);
+    }
+
+    private async Task<IReadOnlyCollection<string>> GetChangesInHeadBranch(
+        SourceMapping mapping,
+        ILocalGitRepo repo,
+        bool currentIsBackflow,
+        string shaBeforeRecreation,
+        CancellationToken cancellationToken)
+    {
+        ProcessExecutionResult diffResult = await _localGitClient.RunGitCommandAsync(
+            currentIsBackflow ? repo.Path : _vmrInfo.VmrPath,
+            ["diff", "--name-only", shaBeforeRecreation],
+            cancellationToken);
+        diffResult.ThrowIfFailed("Failed to diff changed files after flow re-creation");
+
+        IReadOnlyCollection<string> changedFiles = diffResult.GetOutputLines();
+        if (!currentIsBackflow)
+        {
+            var prefix = VmrInfo.GetRelativeRepoSourcesPath(mapping.Name).ToString();
+            changedFiles = [.. changedFiles
+                .Where(f => f.StartsWith(prefix, StringComparison.InvariantCultureIgnoreCase))
+                .Select(f => f.Substring(prefix.Length + 1))];
+        }
+
+        return changedFiles;
+    }
+
+    /// <summary>
+    /// Handles files that were reverted in the source repository and would not be included in the PR branch changes.
+    /// Works around a problem that happens in the following scenario:
+    /// 
+    ///   repo                   VMR
+    ///     O───────────────────►O 0. 
+    ///     │                 2. │
+    ///   1.O────────────────O   │
+    ///     │                │   │
+    ///     │                └──►O 3.
+    ///     │                    │
+    ///   4.O─────────────────x  │
+    ///     │                 5. │
+    ///
+    /// The following happens:
+    ///    0. Repo and VMR are initialized
+    ///    1. Two files(`conflict.txt` and `revert.txt`) are added in the repo
+    ///    2. FF is opened and in the PR branch, we change `conflict.txt` to something
+    ///    3. FF PR is merged
+    ///    4. The `revert.txt` file is reverted in the repo, the `conflict.txt` is changed to something else
+    ///    5. The next forward flow will conflict over the `conflict.txt` file
+    ///       This means the FF branch will be based on 0.
+    ///       This means the FF branch needs to have all the changes from the repo(1-4)
+    ///       BUT the revert.txt won't be part of the changes because it was reverted
+    ///       That means the PR branch won't remove it and it will stay in the VMR (even after we resolve the conflict)
+    ///
+    /// This method detects such reverts and resets the file so they match the source repository.
+    /// </summary>
+    private async Task HandleRevertedFiles(
+        SourceMapping mapping,
+        ILocalGitRepo repo,
+        Codeflow currentFlow,
+        string shaBeforeRecreation,
+        IReadOnlyCollection<string> changedFilesAfterRecreation,
+        CancellationToken cancellationToken)
+    {
+        bool currentIsBackflow = currentFlow is Backflow;
+        var changedFilesAfterCurrentChanges = await GetChangesInHeadBranch(
+            mapping,
+            repo,
+            currentIsBackflow,
+            shaBeforeRecreation,
+            cancellationToken);
+
+        // We compare changed files before and after current changes to see if a file was reverted in between
+        // Such file would not appear in the PR branch changes, so we'd need to handle it ourselves
+        var revertedFiles = changedFilesAfterRecreation
+            .Where(f => !changedFilesAfterCurrentChanges.Contains(f))
+            .ToList();
+
+        if (revertedFiles.Count == 0)
+        {
+            return;
+        }
+
+        _logger.LogInformation("Reverted files detected after applying changes: {files}. Resetting the files to their current state.",
+            string.Join(", ", revertedFiles));
+
+        string vmrPrefix = VmrInfo.GetRelativeRepoSourcesPath(mapping.Name).ToString();
+
+        var (sourceRepo, targetRepo) = (_localGitRepoFactory.Create(_vmrInfo.VmrPath), repo);
+        if (!currentIsBackflow)
+        {
+            (sourceRepo, targetRepo) = (targetRepo, sourceRepo);
+        }
+
+        foreach (string revertedFile in revertedFiles)
+        {
+            var (sourceFile, targetFile) = ($"{vmrPrefix}/{revertedFile}", revertedFile);
+            if (!currentIsBackflow)
+            {
+                (sourceFile, targetFile) = (targetFile, $"{vmrPrefix}/{revertedFile}");
+            }
+
+            // Set the file to the current state in the source repo
+            var sourceContent = await sourceRepo.GetFileFromGitAsync(sourceFile, currentFlow.SourceSha);
+            if (sourceContent is null)
+            {
+                // TODO: We cannot delete the file because it does not exist yet in the target branch
+                //       Instead, we should maybe write an empty file? Or file with an error message?
+                await targetRepo.RunGitCommandAsync(["rm", targetFile], cancellationToken);
+            }
+            else
+            {
+                var slashPosition = targetFile.LastIndexOf('/');
+                if (slashPosition != -1)
+                {
+                    _fileSystem.CreateDirectory(targetRepo.Path / targetFile.Substring(0, slashPosition));
+                }
+
+                _fileSystem.WriteToFile(targetRepo.Path / targetFile, sourceContent);
+                await targetRepo.StageAsync([targetFile], cancellationToken);
+            }
+        }
+
+        // TODO: This is not great and possibly should be done in VmrForwardFlower
+        if (!currentIsBackflow)
+        {
+            await targetRepo.CommitAmendAsync(cancellationToken);
+        }
     }
 
     protected abstract NativePath GetEngCommonPath(NativePath sourceRepo);
