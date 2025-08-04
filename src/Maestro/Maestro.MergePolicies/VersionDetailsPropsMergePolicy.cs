@@ -176,6 +176,7 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
             .Where(group => string.IsNullOrEmpty(group.Condition))
             .SelectMany(group => group.Properties)
             .Where(prop => string.IsNullOrEmpty(prop.Condition))
+            .Where(prop => !string.IsNullOrEmpty(prop.Value))
             .Select(prop => prop.Name)
             .ToHashSet();
 
