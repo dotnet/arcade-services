@@ -530,4 +530,26 @@ public class DependencyAddUpdateTests
         });
     }
 
+    /// <summary>
+    /// Add a dependency with SkipProperty=true to verify that no properties are generated.
+    /// </summary>
+    [Test]
+    public async Task AddProductDependencyWithSkipProperty()
+    {
+        await DependencyTestDriver.TestAndCompareOutput(nameof(AddProductDependencyWithSkipProperty), async driver =>
+        {
+            await driver.AddDependencyAsync(
+                new DependencyDetail
+                {
+                    Commit = "12345",
+                    Name = "Test.Package.WithSkipProperty",
+                    RepoUri = "https://github.com/dotnet/test",
+                    Version = "1.2.3",
+                    SkipProperty = true,
+                    Type = DependencyType.Product
+                });
+            await driver.VerifyAsync();
+        });
+    }
+
 }
