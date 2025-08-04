@@ -103,9 +103,9 @@ public class DependencyFileManager : IDependencyFileManager
     public async Task<XmlDocument> ReadVersionPropsAsync(string repoUri, string branch, string mapping)
         => await ReadXmlFileAsync(GetVersionFilePath(VersionFiles.VersionProps, mapping), repoUri, branch);
 
-    public async Task<bool> VersionDetailsPropsExistsAsync(string repoUri, string branch, string mappping = null)
+    public async Task<bool> VersionDetailsPropsExistsAsync(string repoUri, string branch, string mapping = null)
     {
-        var path = GetVersionFilePath(VersionFiles.VersionDetailsProps, mappping);
+        var path = GetVersionFilePath(VersionFiles.VersionDetailsProps, mapping);
         try
         {
             await GetGitClient(repoUri).GetFileContentsAsync(path, repoUri, branch);

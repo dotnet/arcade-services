@@ -97,31 +97,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
     {
         var conflictedFiles = await TryMergingBranch(vmr, headBranch, branchToMerge, cancellationToken);
 
-        if (!conflictedFiles.Any())
-        {
-            try
-            {
-                await ForwardFlowDependenciesAndToolset(
-                    mappingName,
-                    sourceRepo,
-                    headBranch,
-                    lastFlows.LastFlow,
-                    currentFlow,
-                    cancellationToken);
-            }
-            catch (Exception e)
-            {
-                // We don't want to push this as there is some problem
-                _logger.LogError(e, "Failed to update dependencies after merging {branchToMerge} into {headBranch} in {repoPath}",
-                    branchToMerge,
-                    headBranch,
-                    vmr.Path);
-                throw;
-            }
-            return [];
-        }
-
-        if (!await TryResolvingConflicts(
+        if (conflictedFiles.Any() && await TryResolvingConflicts(
             mappingName,
             vmr,
             sourceRepo,
@@ -130,24 +106,21 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             lastFlows.CrossingFlow,
             cancellationToken))
         {
-            return conflictedFiles;
-        }
-
-        _logger.LogInformation("Successfully resolved file conflicts between branches {headBranch} and {headBranch}",
-            branchToMerge,
-            headBranch);
-
-        try
-        {
-            await vmr.CommitAsync(
-                $"Merge branch {branchToMerge} into {headBranch}",
-                allowEmpty: true,
-                cancellationToken: CancellationToken.None);
-        }
-        catch (Exception e) when (e.Message.Contains("Your branch is ahead of"))
-        {
-            // There was no reason to merge, we're fast-forward ahead from the target branch
-        }
+            _logger.LogInformation("Successfully resolved file conflicts between branches {headBranch} and {headBranch}",
+                branchToMerge,
+                headBranch);
+            try
+            {
+                await vmr.CommitAsync(
+                    $"Merge branch {branchToMerge} into {headBranch}",
+                    allowEmpty: true,
+                    cancellationToken: CancellationToken.None);
+            }
+            catch (Exception e) when (e.Message.Contains("Your branch is ahead of"))
+            {
+                // There was no reason to merge, we're fast-forward ahead from the target branch
+            }
+        }     
 
         try
         {
@@ -169,7 +142,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             throw;
         }
 
-        return [];
+        return conflictedFiles;
     }
 
     private async Task<bool> TryResolvingConflicts(

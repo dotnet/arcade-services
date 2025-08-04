@@ -283,7 +283,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
     private async Task ApplyVersionDetailsChangesAsync(string repoPath, VersionFileChanges<DependencyUpdate> changes, string? mapping = null)
     {
-        bool versionDetailsPropsExists = await _dependencyFileManager.VersionDetailsPropsExistsAsync(repoPath, null!);
+        bool versionDetailsPropsExists = await _dependencyFileManager.VersionDetailsPropsExistsAsync(repoPath, null!, mapping);
         foreach (var removal in changes.Removals)
         {
             // Remove the property from the version details
