@@ -952,11 +952,11 @@ public class DependencyFileManager : IDependencyFileManager
         // who will gather up all updates and then call the git client to write the files all at once:
         // https://github.com/dotnet/arcade/issues/1095.  Today this is only called from the Local interface so
         // it's okay for now.
-        List<GitFile> updatedGitFiles = [new GitFile(VersionFiles.VersionDetailsXml, versionDetails)];
+        List<GitFile> updatedGitFiles = [new GitFile(GetVersionFilePath(VersionFiles.VersionDetailsXml, mapping), versionDetails)];
         if (repoHasVersionDetailsProps)
         {
             updatedGitFiles.Add(new GitFile(
-                VersionFiles.VersionDetailsProps,
+                GetVersionFilePath(VersionFiles.VersionDetailsProps, mapping),
                 GenerateVersionDetailsProps(_versionDetailsParser.ParseVersionDetailsXml(versionDetails))));
         }
 

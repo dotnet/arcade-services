@@ -150,7 +150,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
         VersionFileChanges<DependencyUpdate> mergedChanges = MergeVersionFileChanges(targetChanges, vmrChanges, SelectDependencyUpdate);
 
-        await ApplyVersionDetailsChangesAsync(targetRepo.Path, mergedChanges);
+        await ApplyVersionDetailsChangesAsync(targetRepo.Path, mergedChanges, mappingToApplyChanges);
 
         return mergedChanges;
     }

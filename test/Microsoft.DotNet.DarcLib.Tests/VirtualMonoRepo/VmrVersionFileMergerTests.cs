@@ -22,7 +22,6 @@ public class VmrVersionFileMergerTests
 {
     private readonly Mock<IGitRepoFactory> _gitRepoFactoryMock = new();
     private readonly Mock<ILogger<VmrVersionFileMerger>> _loggerMock = new();
-    private readonly Mock<IVmrInfo> _vmrInfoMock = new();
     private readonly Mock<ILocalGitRepoFactory> _localGitRepoFactoryMock = new();
     private readonly Mock<IVersionDetailsParser> _versionDetailsParserMock = new();
     private readonly Mock<IDependencyFileManager> _dependencyFileManagerMock = new();
@@ -46,7 +45,6 @@ public class VmrVersionFileMergerTests
     {
         _targetRepoMock.Setup(r => r.Path).Returns(new NativePath(TargetRepoPath));
         _vmrMock.Setup(r => r.Path).Returns(new NativePath(VmrPath));
-        _vmrInfoMock.Setup(v => v.VmrPath).Returns(new NativePath(VmrPath));
 
         _gitRepoFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(_gitRepoMock.Object);
         _localGitRepoFactoryMock.Setup(f => f.Create(It.IsAny<NativePath>())).Returns(_vmrMock.Object);
@@ -54,7 +52,6 @@ public class VmrVersionFileMergerTests
         _vmrVersionFileMerger = new VmrVersionFileMerger(
             _gitRepoFactoryMock.Object,
             _loggerMock.Object,
-            _vmrInfoMock.Object,
             _localGitRepoFactoryMock.Object,
             _versionDetailsParserMock.Object,
             _dependencyFileManagerMock.Object);
@@ -199,16 +196,17 @@ public class VmrVersionFileMergerTests
             .ReturnsAsync(vmrCurrentJson);
 
         // Act
+
         await _vmrVersionFileMerger.MergeJsonAsync(
             lastFlow,
             _targetRepoMock.Object,
+            TestJsonPath,
             TargetPreviousSha,
             TargetCurrentSha,
             _vmrMock.Object,
+            TestJsonPath,
             VmrPreviousSha,
-            VmrCurrentSha,
-            TestMappingName,
-            TestJsonPath);
+            VmrCurrentSha);
 
         // Assert
         _vmrMock.Verify(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()), Times.Once);

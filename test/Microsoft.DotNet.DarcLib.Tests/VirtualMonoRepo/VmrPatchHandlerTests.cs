@@ -174,7 +174,8 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            CancellationToken.None);
+            patchExclusionFilters: [],
+            cancellationToken: CancellationToken.None);
 
         var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName, Sha1, Sha2, null);
 
@@ -217,7 +218,8 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            CancellationToken.None);
+            patchExclusionFilters: [],
+            cancellationToken: CancellationToken.None);
 
         var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName, Sha1, Sha2, new[] { _submoduleInfo.Path });
 
@@ -271,7 +273,8 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            CancellationToken.None);
+            patchExclusionFilters: [],
+            cancellationToken: CancellationToken.None);
 
         // Verify diff for the individual repo
         var expectedArgs = GetExpectedGitDiffArguments(
@@ -362,7 +365,8 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            CancellationToken.None);
+            patchExclusionFilters: [],
+            cancellationToken: CancellationToken.None);
 
         // Verify diff for the individual repo
         var expectedArgs = GetExpectedGitDiffArguments(
@@ -469,7 +473,8 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            CancellationToken.None);
+            patchExclusionFilters: [],
+            cancellationToken: CancellationToken.None);
 
         // Verify diff for the individual repo
         var expectedArgs = GetExpectedGitDiffArguments(
@@ -546,7 +551,8 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            CancellationToken.None);
+            patchExclusionFilters: [],
+            cancellationToken: CancellationToken.None);
 
         // Verify diff for the individual repo
         var expectedArgs = GetExpectedGitDiffArguments(
@@ -624,7 +630,8 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            CancellationToken.None);
+            patchExclusionFilters: [],
+            cancellationToken: CancellationToken.None);
 
         // Verify diff for the individual repo
         var expectedArgs = GetExpectedGitDiffArguments(
@@ -807,7 +814,8 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            CancellationToken.None);
+            patchExclusionFilters: [],
+            cancellationToken: CancellationToken.None);
 
         var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName, Sha1, Sha2, null);
 
@@ -866,7 +874,8 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            CancellationToken.None);
+            patchExclusionFilters: [],
+            cancellationToken: CancellationToken.None);
 
         // Verify
         await action.Should().ThrowAsync<Exception>().WithMessage($"File {_clone.Path / "big-file"} is too big (>1GB) to be ingested into VMR*");
