@@ -890,9 +890,9 @@ internal class TwoWayCodeflowTests : CodeFlowTests
            That means the PR branch won't have those change and will stay unchanged the VMR after the PR
     */
     [Test]
-    public async Task RevertingFileAndConflictsTest()
+    public async Task RevertingFileAndConflictsForwardFlowTest()
     {
-        const string branchName = nameof(RevertingFileAndConflictsTest);
+        const string branchName = nameof(RevertingFileAndConflictsForwardFlowTest);
         const string conflictFileContent1 = "Initial conflict file content";
         const string conflictFileContent2 = "Modified conflict file content in PR";
         const string conflictFileContent3 = "Final conflict file content";
@@ -964,7 +964,86 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // - full-revert.txt should still exist in the VMR (because it wasn't part of the reverted changes)
         CheckFileContents(_productRepoVmrPath / "conflict.txt", conflictFileContent3);
         CheckFileContents(_productRepoVmrPath / "partial-revert.txt", revertFileContent);
-        CheckFileContents(_productRepoVmrPath / "full-revert.txt", "");
+        File.ReadAllText(_productRepoVmrPath / "full-revert.txt").Contains("PLEASE READ");
+    }
+
+    // Same test as above but mirrored.
+    [Test]
+    public async Task RevertingFileAndConflictsBackflowTest()
+    {
+        const string branchName = nameof(RevertingFileAndConflictsBackflowTest);
+        const string conflictFileContent1 = "Initial conflict file content";
+        const string conflictFileContent2 = "Modified conflict file content in PR";
+        const string conflictFileContent3 = "Final conflict file content";
+        const string revertFileContent = "This file will be reverted";
+
+        await EnsureTestRepoIsInitialized();
+
+        // 0. VMR gets a file partial-revert.txt and flows back to the repo
+        await File.WriteAllTextAsync(_productRepoVmrPath / "partial-revert.txt", revertFileContent);
+        await GitOperations.CommitAll(VmrPath, "Add partial-revert.txt files");
+        var codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(ProductRepoPath, branchName);
+
+        // 1. Two files (conflict.txt, full-revert.txt) are added in the VMR, partial-revert.txt is changed
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / "conflict.txt", conflictFileContent1);
+        await File.WriteAllTextAsync(_productRepoVmrPath / "full-revert.txt", revertFileContent);
+        await File.WriteAllTextAsync(_productRepoVmrPath / "partial-revert.txt", conflictFileContent1);
+        await GitOperations.CommitAll(VmrPath, "Add conflict.txt and full-revert.txt files, change partial-revert.txt");
+
+        // 2. Backflow PR is opened and in the PR branch, we change conflict.txt to something
+        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult.ShouldHaveUpdates();
+
+        // Modify conflict.txt in the PR branch (repo)
+        await GitOperations.Checkout(ProductRepoPath, branchName);
+        await File.WriteAllTextAsync(ProductRepoPath / "conflict.txt", conflictFileContent2);
+        await GitOperations.CommitAll(ProductRepoPath, "Modify conflict.txt in PR branch");
+
+        // 3. Backflow PR is merged
+        await GitOperations.MergePrBranch(ProductRepoPath, branchName);
+
+        // Verify all files are in the repo
+        CheckFileContents(ProductRepoPath / "conflict.txt", conflictFileContent2);
+        CheckFileContents(ProductRepoPath / "partial-revert.txt", conflictFileContent1);
+        CheckFileContents(ProductRepoPath / "full-revert.txt", revertFileContent);
+
+        // 4. The revert files are reverted, the conflict.txt is changed to something else
+        await GitOperations.Checkout(VmrPath, "main");
+        File.Delete(_productRepoVmrPath / "full-revert.txt");
+        await File.WriteAllTextAsync(_productRepoVmrPath / "partial-revert.txt", revertFileContent);
+        await GitOperations.CommitAll(VmrPath, "Revert files");
+
+        // Change conflict.txt to something else in the VMR
+        await File.WriteAllTextAsync(_productRepoVmrPath / "conflict.txt", conflictFileContent3);
+        await GitOperations.CommitAll(VmrPath, "Change conflict.txt to final content");
+
+        // 5. The next backflow will conflict over the conflict.txt file
+        // This means the backflow branch will be based on 0.
+        // This means the backflow branch needs to have all the changes from the VMR (1-4)
+        // BUT the full-revert.txt won't be part of the changes because it was reverted
+        // That means the PR branch won't have those changes and will stay unchanged in the repo after the PR
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult.ShouldHaveUpdates();
+
+        // Verify we have a conflict and resolve it using theirs (VMR content)
+        await GitOperations.VerifyMergeConflict(ProductRepoPath, branchName,
+            mergeTheirs: true,
+            expectedConflictingFile: "conflict.txt");
+
+        await GitOperations.CheckAllIsCommitted(VmrPath);
+        await GitOperations.CheckAllIsCommitted(ProductRepoPath);
+
+        // After resolving the conflict, verify the state:
+        // - conflict.txt should have the VMR's final content
+        // - partial-revert.txt should have the original content
+        // - full-revert.txt should still exist in the repo (because it wasn't part of the reverted changes)
+        CheckFileContents(ProductRepoPath / "conflict.txt", conflictFileContent3);
+        CheckFileContents(ProductRepoPath / "partial-revert.txt", revertFileContent);
+        File.ReadAllText(ProductRepoPath / "full-revert.txt").Contains("PLEASE READ");
     }
 }
 

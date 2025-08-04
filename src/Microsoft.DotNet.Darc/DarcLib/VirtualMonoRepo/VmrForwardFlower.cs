@@ -264,6 +264,12 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 },
                 cancellationToken);
 
+            if (hadChanges)
+            {
+                // Commit anything staged only (e.g. reset reverted files)
+                await _localGitClient.CommitAmendAsync(_vmrInfo.VmrPath, cancellationToken);
+            }
+
             return hadChanges;
         }
     }

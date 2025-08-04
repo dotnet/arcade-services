@@ -581,27 +581,33 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             var sourceContent = await sourceRepo.GetFileFromGitAsync(sourceFile, currentFlow.SourceSha);
             if (sourceContent is null)
             {
-                // TODO: We cannot delete the file because it does not exist yet in the target branch
-                //       Instead, we should maybe write an empty file? Or file with an error message?
-                await targetRepo.RunGitCommandAsync(["rm", targetFile], cancellationToken);
-            }
-            else
-            {
-                var slashPosition = targetFile.LastIndexOf('/');
-                if (slashPosition != -1)
+                // If the file exists in the target repo, we can just remove it
+                // as the source repo reverted it adding it
+                if (_fileSystem.FileExists(targetRepo.Path / targetFile))
                 {
-                    _fileSystem.CreateDirectory(targetRepo.Path / targetFile.Substring(0, slashPosition));
+                    _fileSystem.DeleteFile(targetRepo.Path / targetFile);
+                    await targetRepo.StageAsync([targetFile], cancellationToken);
+                    continue;
                 }
 
-                _fileSystem.WriteToFile(targetRepo.Path / targetFile, sourceContent);
-                await targetRepo.StageAsync([targetFile], cancellationToken);
-            }
-        }
+                // If the file was added and then removed again in the original repo it won't exist in the head branch
+                // Because the head branch is likely based on the previous flow (so before it was added in the target repo)
+                // The target branch will have the file in it and we need to make sure it will get removed in the PR
+                // Since the target branch and head branch will be in conflict anyway, we can leave a conflicting content
+                // in the file that will hint the user to remove the file during conflict resolution.
+                sourceContent =
+                    $"""
+                    PLEASE READ
 
-        // TODO: This is not great and possibly should be done in VmrForwardFlower
-        if (!currentIsBackflow)
-        {
-            await targetRepo.CommitAmendAsync(cancellationToken);
+                    Please remove this file during conflict resolution in your PR.
+                    This file has been reverted (removed) in the {(currentIsBackflow ? "VMR" : "source repository")} but the PR branch
+                    does not have the file yet as it's based on an older commit. This means the file is
+                    not getting removed in the PR due to the other conflicts.
+                    """;
+            }
+
+            _fileSystem.WriteToFile(targetRepo.Path / targetFile, sourceContent);
+            await targetRepo.StageAsync([targetFile], cancellationToken);
         }
     }
 
