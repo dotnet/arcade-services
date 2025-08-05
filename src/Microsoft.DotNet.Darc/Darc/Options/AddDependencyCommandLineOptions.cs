@@ -27,6 +27,10 @@ internal class AddDependencyCommandLineOptions : CommandLineOptions<AddDependenc
     [Option("pinned", HelpText = "Whether the dependency is pinned or not.")]
     public bool Pinned { get; set; }
 
+    [Option("skip-property", HelpText = "Whether to skip generating properties for this dependency in Version.Details.props. " +
+                                        "Useful for dependencies that aren't referenced as NuGet packages (e.g., MSBuild SDK packages).")]
+    public bool SkipProperty { get; set; }
+
     [Option("coherent-parent", HelpText = "Restrict updates to this dependency based on version of a dependency from another repo. " +
                                           "See https://github.com/dotnet/arcade/blob/main/Documentation/DependencyDescriptionFormat.md#dependency-description-overview for more information.")]
     public string CoherentParentDependencyName { get; set; }

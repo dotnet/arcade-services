@@ -21,6 +21,7 @@ public class DependencyDetail
         RepoUri = other.RepoUri;
         Commit = other.Commit;
         Pinned = other.Pinned;
+        SkipProperty = other.SkipProperty;
         Type = other.Type;
         CoherentParentDependencyName = other.CoherentParentDependencyName;
         Locations = other.Locations;
@@ -47,6 +48,13 @@ public class DependencyDetail
     ///     True if the dependency should not be updated, false otherwise.
     /// </summary>
     public bool Pinned { get; set; }
+
+    /// <summary>
+    ///     True if the dependency property should not be generated in Version.Details.props, false otherwise.
+    ///     This is useful for dependencies that aren't referenced as NuGet packages (e.g., MSBuild SDK packages)
+    ///     to avoid unused property warnings.
+    /// </summary>
+    public bool SkipProperty { get; set; }
 
     /// <summary>
     ///     Type of dependency (e.g. Product or Toolset).

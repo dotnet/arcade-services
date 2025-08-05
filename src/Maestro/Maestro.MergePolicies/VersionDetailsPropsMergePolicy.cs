@@ -193,6 +193,12 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
         // Check for missing properties (dependencies without corresponding properties)
         foreach (var dependency in dependencies)
         {
+            // Skip checking for dependencies marked with SkipProperty
+            if (dependency.SkipProperty)
+            {
+                continue;
+            }
+
             var expectedPropertyName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
             var alternateExpectedPropertyName = VersionFiles.GetVersionPropsAlternatePackageVersionElementName(dependency.Name);
 
@@ -208,8 +214,10 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
         
         // Check for orphaned properties (properties that don't correspond to any dependency)
         var expectedProperties = dependencies
+            .Where(d => !d.SkipProperty) // Only consider dependencies that should have properties
             .Select(d => VersionFiles.GetVersionPropsPackageVersionElementName(d.Name))
             .Concat(dependencies
+                .Where(d => !d.SkipProperty)
                 .Select(d => VersionFiles.GetVersionPropsAlternatePackageVersionElementName(d.Name)))
             .ToHashSet();
         orphanedProperties.AddRange(versionDetailsPropsProperties.Where(prop => !expectedProperties.Contains(prop)));
