@@ -5,9 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -52,6 +49,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IDependencyFileManager _dependencyFileManager;
+    private readonly IFileSystem _fileSystem;
     private const string EmptyJsonString = "{}";
 
     public VmrVersionFileMerger(
@@ -60,7 +58,8 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         IVmrInfo vmrInfo,
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
-        IDependencyFileManager dependencyFileManager)
+        IDependencyFileManager dependencyFileManager,
+        IFileSystem fileSystem)
     {
         _gitRepoFactory = gitRepoFactory;
         _logger = logger;
@@ -68,6 +67,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
         _dependencyFileManager = dependencyFileManager;
+        _fileSystem = fileSystem;
     }
 
     public async Task MergeJsonAsync(
@@ -91,23 +91,32 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             : targetRepoPreviousJson;
         var vmrCurrentJson = await GetJsonFromGit(vmr, vmrJsonPath, vmrCurrentRef, allowMissingFiles);
 
-        var targetRepoChanges = SimpleConfigJson.Parse(targetRepoPreviousJson).GetDiff(SimpleConfigJson.Parse(targetRepoCurrentJson));
-        var vmrChanges = SimpleConfigJson.Parse(vmrPreviousJson).GetDiff(SimpleConfigJson.Parse(vmrCurrentJson));
+        if (!(allowMissingFiles && DeleteJsonFileIfRequiredAsync(
+                targetRepoPreviousJson,
+                targetRepoCurrentJson,
+                vmrPreviousJson,
+                vmrCurrentJson,
+                targetRepo.Path / jsonRelativePath)))
+        {
+            var targetRepoChanges = SimpleConfigJson.Parse(targetRepoPreviousJson).GetDiff(SimpleConfigJson.Parse(targetRepoCurrentJson));
+            var vmrChanges = SimpleConfigJson.Parse(vmrPreviousJson).GetDiff(SimpleConfigJson.Parse(vmrCurrentJson));
 
-        VersionFileChanges<JsonVersionProperty> mergedChanges = MergeVersionFileChanges(targetRepoChanges, vmrChanges, JsonVersionProperty.SelectJsonVersionProperty);
+            VersionFileChanges<JsonVersionProperty> mergedChanges = MergeVersionFileChanges(targetRepoChanges, vmrChanges, JsonVersionProperty.SelectJsonVersionProperty);
 
-        var currentJson = await GetJsonFromGit(targetRepo, jsonRelativePath, "HEAD", allowMissingFiles);
-        var mergedJson = SimpleConfigJson.ApplyJsonChanges(currentJson, mergedChanges);
+            var currentJson = await GetJsonFromGit(targetRepo, jsonRelativePath, "HEAD", allowMissingFiles);
+            var mergedJson = SimpleConfigJson.ApplyJsonChanges(currentJson, mergedChanges);
 
-        var newJson = new GitFile(targetRepo.Path / jsonRelativePath, mergedJson);
+            var newJson = new GitFile(targetRepo.Path / jsonRelativePath, mergedJson);
+
+            await _gitRepoFactory.CreateClient(targetRepo.Path)
+                .CommitFilesAsync(
+                    [newJson],
+                    targetRepo.Path,
+                    targetRepoCurrentRef,
+                    $"Merge {jsonRelativePath} changes from VMR");
+        }
+      
         await _localGitRepoFactory.Create(targetRepo.Path).StageAsync(["."]);
-
-        await _gitRepoFactory.CreateClient(targetRepo.Path)
-            .CommitFilesAsync(
-                [newJson],
-                targetRepo.Path,
-                targetRepoCurrentRef,
-                $"Merge {jsonRelativePath} changes from VMR");
     }
 
     public async Task<VersionFileChanges<DependencyUpdate>> MergeVersionDetails(
@@ -150,6 +159,29 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         await ApplyVersionDetailsChangesAsync(targetRepo.Path, mergedChanges);
 
         return mergedChanges;
+    }
+
+    private bool DeleteJsonFileIfRequiredAsync(
+        string targetRepoPreviousJson,
+        string targetRepoCurrentJson,
+        string sourceRepoPreviousJson,
+        string sourceRepoCurrentJson,
+        string targetRepoJsonAbsolutPath)
+    {
+        // was it deleted in the target repo?
+        if (targetRepoPreviousJson != EmptyJsonString &&  targetRepoCurrentJson == EmptyJsonString)
+        {
+            // no need to do anything, it's already deleted
+            return true;
+        }
+        // was it deleted in the source repo?
+        if (sourceRepoPreviousJson != EmptyJsonString && sourceRepoCurrentJson == EmptyJsonString)
+        {
+            _fileSystem.DeleteFile(targetRepoJsonAbsolutPath);
+            return true;
+        }
+
+        return false;
     }
 
     private VersionFileChanges<T> MergeVersionFileChanges<T>(
