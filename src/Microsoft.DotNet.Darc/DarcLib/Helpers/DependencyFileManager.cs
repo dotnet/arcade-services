@@ -101,7 +101,7 @@ public class DependencyFileManager : IDependencyFileManager
         => await ReadXmlFileAsync(GetVersionFilePath(VersionFiles.VersionDetailsXml, mapping), repoUri, branch);
 
     public async Task<XmlDocument> ReadVersionPropsAsync(string repoUri, string branch, string mapping)
-        => await ReadXmlFileAsync(GetVersionFilePath(VersionFiles.VersionProps, mapping), repoUri, branch);
+        => await ReadXmlFileAsync(GetVersionFilePath(VersionFiles.VersionsProps, mapping), repoUri, branch);
 
     public async Task<bool> VersionDetailsPropsExistsAsync(string repoUri, string branch, string mapping = null)
     {
@@ -258,7 +258,7 @@ public class DependencyFileManager : IDependencyFileManager
 
         var updatedVersionDetails = await RemoveDependencyFromVersionDetailsAsync(dependencyName, repoUri, branch, mapping);
         var updatedDependencyVersionFile =
-            new GitFile(VersionFiles.VersionDetailsXml, updatedVersionDetails);
+            new GitFile(GetVersionFilePath(VersionFiles.VersionDetailsXml, mapping), updatedVersionDetails);
         List<GitFile> gitFiles = [updatedDependencyVersionFile];
 
         if (repoHasVersionDetailsProps.Value)
@@ -270,7 +270,7 @@ public class DependencyFileManager : IDependencyFileManager
         else
         {
             gitFiles.Add(new GitFile(
-                GetVersionFilePath(VersionFiles.VersionProps, mapping),
+                GetVersionFilePath(VersionFiles.VersionsProps, mapping),
                 await RemoveDependencyFromVersionPropsAsync(dependencyName, repoUri, branch, mapping)));
         }
 
@@ -1072,7 +1072,7 @@ public class DependencyFileManager : IDependencyFileManager
         // https://github.com/dotnet/arcade/issues/1095.  Today this is only called from the Local interface so
         // it's okay for now.
         var file = new GitFile(
-            GetVersionFilePath(VersionFiles.VersionProps, mapping),
+            GetVersionFilePath(VersionFiles.VersionsProps, mapping),
             versionProps);
         await GetGitClient(repo).CommitFilesAsync([file], repo, branch, $"Add {dependency} to " +
             $"'{VersionFiles.VersionsProps}'");
