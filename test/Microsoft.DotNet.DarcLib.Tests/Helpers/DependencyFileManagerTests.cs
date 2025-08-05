@@ -8,7 +8,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
@@ -610,6 +612,44 @@ public class DependencyFileManagerTests
             It.IsAny<string>(),
             It.IsAny<string>()),
             Times.Never);
+    }
+
+    [Test]
+    public async Task AddDependencyShouldAddToVmrRepo()
+    {
+        Mock<IGitRepo> repo = new();
+        Mock<IGitRepoFactory> repoFactory = new();
+
+        repo.Setup(r => r.GetFileContentsAsync(VmrInfo.GetRelativeRepoSourcesPath("mapping") / VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(() => VersionDetails);
+        repoFactory.Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>())).Returns(repo.Object);
+
+        DependencyFileManager manager = new(
+            repoFactory.Object,
+            new VersionDetailsParser(),
+            NullLogger.Instance);
+
+        await manager.AddDependencyAsync(
+            new DependencyDetail()
+            {
+                Name = "Foo",
+                Version = "1.0.1",
+                Commit = "abc123",
+                Type = DependencyType.Product,
+                RepoUri = "uri"
+            },
+            "uri",
+            "branch",
+            versionDetailsOnly: true,
+            mapping: "mapping",
+            repoHasVersionDetailsProps: true);
+
+        repo.Verify(r => r.CommitFilesAsync(
+            It.Is<List<GitFile>>(files => files.Any(f => f.FilePath == VmrInfo.GetRelativeRepoSourcesPath("mapping") / VersionFiles.VersionDetailsXml)),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()),
+            Times.Once);
     }
 
     private string NormalizeLineEndings(string input) => input.Replace("\r\n", "\n").TrimEnd();
