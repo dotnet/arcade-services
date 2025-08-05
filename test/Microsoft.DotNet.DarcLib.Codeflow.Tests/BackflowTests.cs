@@ -19,7 +19,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 
 [TestFixture]
-internal class VmrBackflowTest : VmrCodeFlowTests
+internal class BackflowTests : CodeFlowTests
 {
     [Test]
     public async Task OnlyBackflowsTest()

@@ -17,7 +17,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 
 [TestFixture]
-internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
+internal class TwoWayCodeflowTests : CodeFlowTests
 {
     [Test]
     public async Task ZigZagCodeflowTest()
@@ -709,7 +709,7 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         // The Versions.props file intentionally contains padding comment lines like in real repos
         // These lines make sure that neighboring lines are not getting in conflict when used as context during patch application
         // Repos like SDK have figured out that this is a good practice to avoid conflicts in the version files
-        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionProps,
+        await File.WriteAllTextAsync(ProductRepoPath / VersionFiles.VersionsProps,
             """
             <?xml version="1.0" encoding="utf-8"?>
             <Project>
@@ -780,7 +780,7 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
         await GitOperations.CommitAll(ProductRepoPath, "Update repo1 and repo3 dependencies in the product repo");
 
         var vmrVersionDetails = await File.ReadAllTextAsync(_productRepoVmrPath / VersionFiles.VersionDetailsXml);
-        var vmrVersionProps = await File.ReadAllTextAsync(_productRepoVmrPath / VersionFiles.VersionProps);
+        var vmrVersionProps = await File.ReadAllTextAsync(_productRepoVmrPath / VersionFiles.VersionsProps);
 
         // Update repo2 dependencies in the VMR
         vmrVersionDetails = vmrVersionDetails
@@ -791,7 +791,7 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
             .Replace("PackageC2PackageVersion>1.0.0", "PackageC2PackageVersion>2.0.0");
 
         await File.WriteAllTextAsync(_productRepoVmrPath / VersionFiles.VersionDetailsXml, vmrVersionDetails);
-        await File.WriteAllTextAsync(_productRepoVmrPath / VersionFiles.VersionProps, vmrVersionProps);
+        await File.WriteAllTextAsync(_productRepoVmrPath / VersionFiles.VersionsProps, vmrVersionProps);
         await GitOperations.CommitAll(VmrPath, "Update repo2 dependencies in the VMR");
 
         // Flow repo to the VMR
@@ -858,8 +858,8 @@ internal class VmrTwoWayCodeflowTest : VmrCodeFlowTests
             .Dependencies
             .Should().BeEquivalentTo(expectedDependencies);
 
-        vmrVersionProps = await File.ReadAllTextAsync(_productRepoVmrPath / VersionFiles.VersionProps);
-        CheckFileContents(ProductRepoPath / VersionFiles.VersionProps, expected: vmrVersionProps);
+        vmrVersionProps = await File.ReadAllTextAsync(_productRepoVmrPath / VersionFiles.VersionsProps);
+        CheckFileContents(ProductRepoPath / VersionFiles.VersionsProps, expected: vmrVersionProps);
     }
 }
 

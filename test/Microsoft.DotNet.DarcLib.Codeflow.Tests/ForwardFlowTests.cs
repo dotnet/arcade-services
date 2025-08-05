@@ -16,7 +16,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 
 [TestFixture]
-internal class VmrForwardFlowTest : VmrCodeFlowTests
+internal class ForwardFlowTests : CodeFlowTests
 {
 
     [Test]
@@ -117,7 +117,7 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
     }
 
     [Test]
-    public async Task MeaninglessChangesAreSkipped()
+    public async Task MeaninglessChangesAreSkippedTest()
     {
         await EnsureTestRepoIsInitialized();
 
@@ -145,7 +145,7 @@ internal class VmrForwardFlowTest : VmrCodeFlowTests
         await GitOperations.CommitAll(ProductRepoPath, "Set up version files");
 
         // Level the repo and the VMR
-        const string branchName = nameof(MeaninglessChangesAreSkipped);
+        const string branchName = nameof(MeaninglessChangesAreSkippedTest);
         var codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);

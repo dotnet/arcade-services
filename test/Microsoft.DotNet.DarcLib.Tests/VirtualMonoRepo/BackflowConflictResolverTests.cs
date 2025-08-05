@@ -109,8 +109,8 @@ public class BackflowConflictResolverTests
 
         _dependencyFileManager.Reset();
         _dependencyFileManager
-            .Setup(x => x.AddDependencyAsync(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
-            .Callback((DependencyDetail dep, string repo, string commit, string? _, bool? _) =>
+            .Setup(x => x.AddDependencyAsync(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .Callback((DependencyDetail dep, string repo, string commit, string? _, bool _, bool? _) =>
             {
                 var key = (repo == _vmrPath ? "vmr" : "repo") + "/" + commit;
                 VersionDetails versionDetails = _versionDetails.TryGetValue(key, out var vd) ? vd : new([], null);

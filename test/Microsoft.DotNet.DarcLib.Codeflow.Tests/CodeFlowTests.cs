@@ -16,7 +16,7 @@ using NUnit.Framework;
 
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 
-internal abstract class VmrCodeFlowTests : VmrTestsBase
+internal abstract class CodeFlowTests : CodeFlowTestsBase
 {
     protected const string FakePackageName = "Fake.Package";
     protected const string FakePackageVersion = "1.0.0";
@@ -151,11 +151,11 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
             .Where(d => d.Type == DependencyType.Product)
             .Should().BeEquivalentTo(expectedDependencies);
 
-        var versionProps = await File.ReadAllTextAsync(repo / VersionFiles.VersionProps);
+        var versionDetailsProps = await File.ReadAllTextAsync(repo / VersionFiles.VersionDetailsProps);
         foreach (var dependency in expectedDependencies)
         {
             var tagName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
-            versionProps.Should().Contain($"<{tagName}>{dependency.Version}</{tagName}>");
+            versionDetailsProps.Should().Contain($"<{tagName}>{dependency.Version}</{tagName}>");
         }
     }
 
@@ -166,7 +166,7 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
 
     protected override async Task CopyReposForCurrentTest()
     {
-        CopyDirectory(VmrTestsOneTimeSetUp.TestsDirectory / Constants.SecondRepoName, SecondRepoPath);
+        CopyDirectory(CodeflowTestsOneTimeSetUp.TestsDirectory / Constants.SecondRepoName, SecondRepoPath);
 
         await CopyRepoAndCreateVersionFiles(Constants.ProductRepoName);
     }
@@ -174,7 +174,7 @@ internal abstract class VmrCodeFlowTests : VmrTestsBase
     protected override async Task CopyVmrForCurrentTest()
     {
         var repoPath = CurrentTestDirectory / "vmr";
-        CopyDirectory(VmrTestsOneTimeSetUp.TestsDirectory / "vmr", repoPath);
+        CopyDirectory(CodeflowTestsOneTimeSetUp.TestsDirectory / "vmr", repoPath);
 
         var sourceMappings = new SourceMappingFile()
         {

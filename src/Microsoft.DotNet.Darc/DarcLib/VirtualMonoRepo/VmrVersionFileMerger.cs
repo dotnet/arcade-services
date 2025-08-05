@@ -296,6 +296,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 repoPath,
                 null!,
                 mapping,
+                versionDetailsOnly: true,
                 versionDetailsPropsExists);
         }
     }

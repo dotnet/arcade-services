@@ -28,9 +28,9 @@ public class Constants
         <?xml version="1.0" encoding="utf-8"?>
         <Project>
           <PropertyGroup>
-            {0}
           </PropertyGroup>
         </Project>
+
         """;
 
     public const string GlobalJsonTemplate = """

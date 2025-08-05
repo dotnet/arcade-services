@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
+  <Import Project="Version.Details.props" Condition="Exists('Version.Details.props')" />
   <PropertyGroup>
     <!-- This repo version -->
     <VersionPrefix Condition=" '$(VersionPrefix)' == '' ">0.0.99</VersionPrefix>
@@ -8,38 +9,5 @@
     <UsingToolXliff>false</UsingToolXliff>
     <UsingToolNetFrameworkReferenceAssemblies>true</UsingToolNetFrameworkReferenceAssemblies>
     <MicrosoftNetFrameworkReferenceAssembliesVersion>1.0.0-preview.1</MicrosoftNetFrameworkReferenceAssembliesVersion>
-    <!-- Libs -->
-    <MicrosoftDotNetSignToolVersion>8.0.0-beta.25366.2</MicrosoftDotNetSignToolVersion>
-    <MicrosoftDotNetBuildTasksFeedVersion>8.0.0-beta.25366.2</MicrosoftDotNetBuildTasksFeedVersion>
-    <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>8.0.0-beta.25366.2</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
-    <MicrosoftDotNetGitIssueManagerVersion>8.0.0-beta.25366.2</MicrosoftDotNetGitIssueManagerVersion>
-    <MicrosoftDotNetVersionToolsVersion>8.0.0-beta.25366.2</MicrosoftDotNetVersionToolsVersion>
-    <MicrosoftNetTestSdkVersion>17.4.1</MicrosoftNetTestSdkVersion>
-    <MicrosoftDotNetInternalLoggingVersion>1.1.0-beta.25215.1</MicrosoftDotNetInternalLoggingVersion>
-    <MicrosoftAspNetCoreApiPaginationVersion>1.1.0-beta.25215.1</MicrosoftAspNetCoreApiPaginationVersion>
-    <MicrosoftAspNetCoreApiVersioningVersion>1.1.0-beta.25215.1</MicrosoftAspNetCoreApiVersioningVersion>
-    <MicrosoftAspNetCoreApiVersioningSwashbuckleVersion>1.1.0-beta.25215.1</MicrosoftAspNetCoreApiVersioningSwashbuckleVersion>
-    <MicrosoftDncEngConfigurationExtensionsVersion>1.1.0-beta.25215.1</MicrosoftDncEngConfigurationExtensionsVersion>
-    <MicrosoftDotNetAuthenticationAlgorithmsVersion>1.1.0-beta.25052.1</MicrosoftDotNetAuthenticationAlgorithmsVersion>
-    <MicrosoftDotNetGitHubAuthenticationVersion>1.1.0-beta.25215.1</MicrosoftDotNetGitHubAuthenticationVersion>
-    <MicrosoftDotNetInternalDependencyInjectionTestingVersion>1.1.0-beta.25215.1</MicrosoftDotNetInternalDependencyInjectionTestingVersion>
-    <MicrosoftDotNetInternalDependencyInjectionVersion>1.1.0-beta.25215.1</MicrosoftDotNetInternalDependencyInjectionVersion>
-    <MicrosoftDotNetInternalHealthVersion>1.1.0-beta.25052.1</MicrosoftDotNetInternalHealthVersion>
-    <MicrosoftDotNetInternalTestingDependencyInjectionAbstractionsVersion>1.1.0-beta.25215.1</MicrosoftDotNetInternalTestingDependencyInjectionAbstractionsVersion>
-    <MicrosoftDotNetInternalTestingDependencyInjectionCodeGenVersion>1.1.0-beta.25215.1</MicrosoftDotNetInternalTestingDependencyInjectionCodeGenVersion>
-    <MicrosoftDotNetInternalTestingUtilityVersion>1.1.0-beta.25215.1</MicrosoftDotNetInternalTestingUtilityVersion>
-    <MicrosoftDotNetKustoVersion>1.1.0-beta.25215.1</MicrosoftDotNetKustoVersion>
-    <MicrosoftDotNetMetricsVersion>1.1.0-beta.25052.1</MicrosoftDotNetMetricsVersion>
-    <MicrosoftDotNetServicesUtilityVersion>1.1.0-beta.25215.1</MicrosoftDotNetServicesUtilityVersion>
-    <MicrosoftDotNetWebAuthenticationVersion>1.1.0-beta.25053.1</MicrosoftDotNetWebAuthenticationVersion>
-    <MicrosoftDncEngSecretManagerVersion>1.1.0-beta.25360.1</MicrosoftDncEngSecretManagerVersion>
-    <MicrosoftDncEngConfigurationBootstrapVersion>1.1.0-beta.25360.1</MicrosoftDncEngConfigurationBootstrapVersion>
-  </PropertyGroup>
-  <!--Package names-->
-  <PropertyGroup>
-    <MicrosoftDotNetSignToolPackage>Microsoft.DotNet.SignTool</MicrosoftDotNetSignToolPackage>
-    <MicrosoftDotNetBuildTasksFeedPackage>Microsoft.DotNet.Build.Tasks.Feed</MicrosoftDotNetBuildTasksFeedPackage>
-    <MicrosoftDotNetMaestroTasksPackage>Microsoft.DotNet.Maestro.Tasks</MicrosoftDotNetMaestroTasksPackage>
-    <MicrosoftDotNetSwaggerGeneratorMSBuildPackage>Microsoft.DotNet.SwaggerGenerator.MSBuild</MicrosoftDotNetSwaggerGeneratorMSBuildPackage>
   </PropertyGroup>
 </Project>

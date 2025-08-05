@@ -388,8 +388,8 @@ public class VmrVersionFileMergerTests
             })
             .Returns(Task.CompletedTask);
 
-        _dependencyFileManagerMock.Setup(d => d.AddDependencyAsync(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>()))
-            .Callback((DependencyDetail dependency, string repo, string commit, string? _, bool? _) =>
+        _dependencyFileManagerMock.Setup(d => d.AddDependencyAsync(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .Callback((DependencyDetail dependency, string repo, string commit, string? _, bool _, bool? _) =>
             {
                 var versionDetails = versionDetailsDictionary[targetCurrentKey];
                 var dep = versionDetails.Dependencies.FirstOrDefault(d => d.Name == dependency.Name);

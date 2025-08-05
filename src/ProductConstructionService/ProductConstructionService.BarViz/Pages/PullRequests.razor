@@ -67,20 +67,14 @@
                 <TemplateColumn Title="Target branch" Sortable="true" SortBy="SortBy(pr => pr.TargetBranch)" Align="Align.Center">
                     <FluentLabel>@(context.TargetBranch ?? "N/A")</FluentLabel>
                 </TemplateColumn>
-                <TemplateColumn Title="Last Update" Sortable="true" SortBy="SortBy(pr => pr.LastUpdate.ToString())" Align="Align.Center">
+                <TemplateColumn Title="Last Update" Sortable="true" SortBy="@SortBy(pr => pr.LastUpdate.ToString("o"))" Align="Align.Center">
                     <FluentLabel Title="@(context.LastUpdate == default ? "N/A" : context.LastUpdate.ToString("f"))">
                         @(context.LastUpdate == default ? "N/A" : (DateTime.UtcNow - context.LastUpdate).ToTimeAgo())
                     </FluentLabel>
                 </TemplateColumn>
-                <TemplateColumn Sortable="true" SortBy="SortBy(pr => pr.LastCheck.ToString())" Align="Align.Center" Title="Last Check">
+                <TemplateColumn Sortable="true" SortBy="@SortBy(pr => pr.LastCheck.ToString("o"))" Align="Align.Center" Title="Last Check">
                     <FluentLabel Id="@("lastCheck_" + context.Id)">
                         @(context.LastCheck == default ? "N/A" : (DateTime.UtcNow - context.LastCheck).ToTimeAgo())
-                        @if (DateTime.UtcNow - context.LastCheck > TimeSpan.FromHours(1))
-                        {
-                            <FluentIcon Value="@(new Icons.Filled.Size20.Warning())"
-                                        Color="Color.Warning"
-                                        Title="PR has not been checked on by PCS in a while" />
-                        }
                         @if (!context.NextCheck.HasValue)
                         {
                             <FluentIcon Value="@(new Icons.Filled.Size20.Warning())"
@@ -89,7 +83,7 @@
                         }
                     </FluentLabel>
                 </TemplateColumn>
-                <TemplateColumn Style="width:60px">
+                <TemplateColumn Width="60px">
                     <PullRequestContextMenu PullRequest="@context" Refresh="@LoadDataAsync" />
                 </TemplateColumn>
             </ChildContent>

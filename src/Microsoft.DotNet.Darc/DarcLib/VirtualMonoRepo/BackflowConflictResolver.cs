@@ -321,13 +321,6 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
         await _assetLocationResolver.AddAssetLocationToDependenciesAsync(buildUpdates);
 
-        // We add all of the packages since it's a harmless operation just to be sure they made through all the merging
-        // Later we update them
-        foreach (var update in buildUpdates)
-        {
-            await _dependencyFileManager.AddDependencyAsync(new DependencyDetail(update), targetRepo.Path, branch: null!);
-        }
-
         // If we are updating the arcade sdk we need to update the eng/common files as well
         DependencyDetail? arcadeItem = buildUpdates.GetArcadeUpdate();
 

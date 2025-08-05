@@ -4,13 +4,13 @@
 using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
-internal class VmrRepositoryCloningTest : VmrTestsBase
+
+internal class RepositoryCloningTests : CodeFlowTestsBase
 {
     [Test]
     [TestCase(true)]
@@ -47,7 +47,7 @@ internal class VmrRepositoryCloningTest : VmrTestsBase
         using var scope = ServiceProvider.CreateScope();
         var repoCloneManager = scope.ServiceProvider.GetRequiredService<IRepositoryCloneManager>();
 
-        return await repoCloneManager.PrepareCloneAsync(VmrTestsOneTimeSetUp.CommonProductRepoPath, branchName, resetToRemote);
+        return await repoCloneManager.PrepareCloneAsync(CodeflowTestsOneTimeSetUp.CommonProductRepoPath, branchName, resetToRemote);
     }
 
     protected override Task CopyReposForCurrentTest() => Task.CompletedTask;
