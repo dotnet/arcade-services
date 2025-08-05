@@ -243,7 +243,7 @@ public class DependencyFileManager : IDependencyFileManager
 
                 await AddDependencyToGlobalJson(repoUri, branch, parent, dependency);
             }
-            else if (!repoHasVersionDetailsProps.Value && !dependency.SkipProperty)
+            else if (!repoHasVersionDetailsProps.Value)
             {
                 await AddDependencyToVersionsPropsAsync(repoUri, branch, dependency);
             }
@@ -351,15 +351,6 @@ public class DependencyFileManager : IDependencyFileManager
             node.Attributes.Append(attribute = document.CreateAttribute(name));
         }
         attribute.Value = value;
-    }
-
-    private static void RemoveAttribute(XmlNode node, string name)
-    {
-        XmlAttribute attribute = node.Attributes[name];
-        if (attribute != null)
-        {
-            node.Attributes.Remove(attribute);
-        }
     }
 
     private static XmlNode SetElement(XmlDocument document, XmlNode node, string name, string value = null, bool replace = true)

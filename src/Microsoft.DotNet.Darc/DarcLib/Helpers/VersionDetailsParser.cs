@@ -112,7 +112,6 @@ public class VersionDetailsParser : IVersionDetailsParser
             // If the 'Pinned' attribute does not exist or if it is set to false we just not update it
             var isPinned = ParseBooleanAttribute(dependency.Attributes, PinnedAttributeName);
 
-            // If the 'SkipProperty' attribute does not exist or if it is set to false we just not skip property generation
             var skipProperty = ParseBooleanAttribute(dependency.Attributes, SkipPropertyAttributeName);
 
             XmlNode? sourceBuildNode = dependency.SelectSingleNode(SourceBuildElementName)

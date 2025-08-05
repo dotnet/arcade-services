@@ -551,6 +551,47 @@ public class DependencyFileManagerTests
         // VersionProps should not change
         NormalizeLineEndings(versionProps).Should()
             .Be(NormalizeLineEndings(VersionProps));
+
+        // now add a dependency with `SkipProperty = true`
+        await manager.AddDependencyAsync(
+            new DependencyDetail()
+            {
+                Name = "Bar",
+                Version = "1.0.1",
+                Commit = "abc123",
+                Type = DependencyType.Product,
+                RepoUri = "https://github.com/dotnet/arcade",
+                SkipProperty = true
+            },
+            string.Empty,
+            string.Empty);
+
+        expectedVersionDetails = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <Dependencies>
+              <!-- Elements contains all product dependencies -->
+              <ProductDependencies>
+                <Dependency Name="Foo" Version="1.0.1">
+                  <Uri>https://github.com/dotnet/arcade</Uri>
+                  <Sha>abc123</Sha>
+                </Dependency>
+                <Dependency Name="Bar" Version="1.0.1" SkipProperty="True">
+                  <Uri>https://github.com/dotnet/arcade</Uri>
+                  <Sha>abc123</Sha>
+                </Dependency>
+              </ProductDependencies>
+              <ToolsetDependencies>
+              </ToolsetDependencies>
+            </Dependencies>
+            """;
+
+        NormalizeLineEndings(expectedVersionDetails).Should()
+            .Be(NormalizeLineEndings(versionDetails));
+        NormalizeLineEndings(expectedVersionDetailsProps).Should()
+            .Be(NormalizeLineEndings(versionDetailsProps));
+        // VersionProps should not change
+        NormalizeLineEndings(versionProps).Should()
+            .Be(NormalizeLineEndings(VersionProps));
     }
 
     [Test]
