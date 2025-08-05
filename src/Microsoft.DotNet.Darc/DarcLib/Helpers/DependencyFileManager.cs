@@ -411,36 +411,19 @@ public class DependencyFileManager : IDependencyFileManager
         SetElement(versionDetails, node, VersionDetailsParser.UriElementName, dependency.RepoUri);
         SetElement(versionDetails, node, VersionDetailsParser.ShaElementName, dependency.Commit);
 
-        // Handle optional boolean attributes
         if (dependency.Pinned)
         {
             SetAttribute(versionDetails, node, VersionDetailsParser.PinnedAttributeName, "True");
-        }
-        else
-        {
-            // Remove the attribute if it was previously set but is now false
-            RemoveAttribute(node, VersionDetailsParser.PinnedAttributeName);
         }
 
         if (dependency.SkipProperty)
         {
             SetAttribute(versionDetails, node, VersionDetailsParser.SkipPropertyAttributeName, "True");
         }
-        else
-        {
-            // Remove the attribute if it was previously set but is now false
-            RemoveAttribute(node, VersionDetailsParser.SkipPropertyAttributeName);
-        }
 
-        // Handle coherent parent dependency
         if (!string.IsNullOrEmpty(dependency.CoherentParentDependencyName))
         {
             SetAttribute(versionDetails, node, VersionDetailsParser.CoherentParentAttributeName, dependency.CoherentParentDependencyName);
-        }
-        else
-        {
-            // Remove the attribute if it was previously set but is now empty
-            RemoveAttribute(node, VersionDetailsParser.CoherentParentAttributeName);
         }
     }
 
