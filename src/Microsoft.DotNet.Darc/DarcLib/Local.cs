@@ -73,6 +73,7 @@ public class Local
         // If we are updating the arcade sdk we need to update the eng/common files as well
         DependencyDetail arcadeItem = dependencies.GetArcadeUpdate();
         SemanticVersion targetDotNetVersion = null;
+        var repoIsVmr = true;
         var relativeBasePath = VmrInfo.ArcadeRepoDir;
 
         if (arcadeItem != null)
@@ -85,6 +86,7 @@ public class Local
             catch (DependencyFileNotFoundException)
             {
                 // global.json not found in src/arcade meaning that repo is not the VMR
+                repoIsVmr = false;
                 relativeBasePath = null;
                 targetDotNetVersion = await fileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, relativeBasePath);
             }
@@ -101,7 +103,7 @@ public class Local
                 List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit, relativeBasePath);
                 // If we're updating arcade from a VMR build, the eng/common files will be in the src/arcade repo
                 // so we need to strip the src/arcade prefix from the file paths.
-                if (relativeBasePath == VmrInfo.ArcadeMappingName)
+                if (repoIsVmr)
                 {
                     engCommonFiles = engCommonFiles
                         .Select(f => new GitFile(

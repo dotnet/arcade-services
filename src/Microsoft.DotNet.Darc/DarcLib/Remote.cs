@@ -181,6 +181,7 @@ public sealed class Remote : IRemote
         SemanticVersion targetDotNetVersion = null;
         var mayNeedArcadeUpdate = arcadeItem != null && repoUri != arcadeItem.RepoUri;
         // If we find version files in src/arcade, we know we're working with a VMR
+        var repoIsVmr = true;
         var relativeBasePath = VmrInfo.ArcadeRepoDir;
 
         if (mayNeedArcadeUpdate)
@@ -194,6 +195,7 @@ public sealed class Remote : IRemote
             {
                 // global.json not found in src/arcade meaning that repo is not the VMR
                 relativeBasePath = null;
+                repoIsVmr = false;
                 targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, relativeBasePath);
             }
         }
@@ -215,7 +217,7 @@ public sealed class Remote : IRemote
             IRemote arcadeRemote = await _remoteFactory.CreateRemoteAsync(arcadeItem.RepoUri);
             List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit, relativeBasePath);
             // If the engCommon files are coming from the VMR, we have to remove 'src/arcade/' from the file paths
-            if (relativeBasePath.Path == VmrInfo.ArcadeRepoDir.Path)
+            if (repoIsVmr)
             {
                 engCommonFiles = engCommonFiles
                     .Select(f => new GitFile(
