@@ -26,7 +26,7 @@ public interface IVmrPatchHandler
         string sha2,
         NativePath destDir,
         NativePath tmpPath,
-        string[]? patchExclusionFilters = null,
+        string[]? patchFileExclusionFilters = null,
         CancellationToken cancellationToken = default);
 
     Task<List<VmrIngestionPatch>> CreatePatches(

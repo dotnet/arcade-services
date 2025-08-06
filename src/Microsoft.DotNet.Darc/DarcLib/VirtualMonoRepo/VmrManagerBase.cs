@@ -60,7 +60,7 @@ public abstract class VmrManagerBase
         string commitMessage,
         bool restoreVmrPatches,
         CodeFlowParameters codeFlowParameters,
-        string[]? patchExclusionFilters = null,
+        string[]? updateFileExclusionList = null,
         CancellationToken cancellationToken = default)
     {
         IReadOnlyCollection<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
@@ -70,7 +70,7 @@ public abstract class VmrManagerBase
             update.TargetRevision,
             _vmrInfo.TmpPath,
             _vmrInfo.TmpPath,
-            patchExclusionFilters,
+            updateFileExclusionList,
             cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 

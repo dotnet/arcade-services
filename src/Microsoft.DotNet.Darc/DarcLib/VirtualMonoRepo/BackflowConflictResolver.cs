@@ -308,7 +308,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             })
             .ToList();
 
-        var currentRepoDependencies = await GetRepoDependencies(targetRepo, null!);
+        var currentRepoDependencies = await GetRepoDependencies(targetRepo, string.Empty);
 
         List<DependencyDetail> buildUpdates = _coherencyUpdateResolver
             .GetRequiredNonCoherencyUpdates(

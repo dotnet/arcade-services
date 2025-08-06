@@ -174,7 +174,7 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            patchExclusionFilters: [],
+            patchFileExclusionFilters: [],
             cancellationToken: CancellationToken.None);
 
         var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName, Sha1, Sha2, null);
@@ -218,7 +218,7 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            patchExclusionFilters: [],
+            patchFileExclusionFilters: [],
             cancellationToken: CancellationToken.None);
 
         var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName, Sha1, Sha2, new[] { _submoduleInfo.Path });
@@ -273,7 +273,7 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            patchExclusionFilters: [],
+            patchFileExclusionFilters: [],
             cancellationToken: CancellationToken.None);
 
         // Verify diff for the individual repo
@@ -365,7 +365,7 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            patchExclusionFilters: [],
+            patchFileExclusionFilters: [],
             cancellationToken: CancellationToken.None);
 
         // Verify diff for the individual repo
@@ -473,7 +473,7 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            patchExclusionFilters: [],
+            patchFileExclusionFilters: [],
             cancellationToken: CancellationToken.None);
 
         // Verify diff for the individual repo
@@ -551,7 +551,7 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            patchExclusionFilters: [],
+            patchFileExclusionFilters: [],
             cancellationToken: CancellationToken.None);
 
         // Verify diff for the individual repo
@@ -630,7 +630,7 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            patchExclusionFilters: [],
+            patchFileExclusionFilters: [],
             cancellationToken: CancellationToken.None);
 
         // Verify diff for the individual repo
@@ -814,7 +814,7 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            patchExclusionFilters: [],
+            patchFileExclusionFilters: [],
             cancellationToken: CancellationToken.None);
 
         var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName, Sha1, Sha2, null);
@@ -874,7 +874,7 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            patchExclusionFilters: [],
+            patchFileExclusionFilters: [],
             cancellationToken: CancellationToken.None);
 
         // Verify

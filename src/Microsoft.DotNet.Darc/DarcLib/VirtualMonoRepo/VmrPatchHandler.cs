@@ -78,7 +78,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         string sha2,
         NativePath destDir,
         NativePath tmpPath,
-        string[]? patchExclusionFilters = null,
+        string[]? patchFileExclusionFilters = null,
         CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Creating patches for {mapping} in {path}..", mapping.Name, destDir);
@@ -91,7 +91,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             destDir,
             tmpPath,
             new UnixPath(mapping.Name),
-            patchExclusionFilters,
+            patchFileExclusionFilters,
             cancellationToken);
 
         _logger.LogInformation("{count} patch{s} created", patches.Count, patches.Count == 1 ? string.Empty : "es");
@@ -107,7 +107,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         NativePath destDir,
         NativePath tmpPath,
         UnixPath relativePath,
-        string[]? patchExclusionFilters = null,
+        string[]? patchFileExclusionFilters = null,
         CancellationToken cancellationToken = default)
     {
         var repoPath = clone.Path;
@@ -134,7 +134,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         List<string> filters =
         [
-            .. patchExclusionFilters?.Select(GetExclusionRule) ?? [],
+            .. patchFileExclusionFilters?.Select(GetExclusionRule) ?? [],
             .. mapping.Include.Select(GetInclusionRule),
             .. mapping.Exclude.Select(GetExclusionRule),
         ];

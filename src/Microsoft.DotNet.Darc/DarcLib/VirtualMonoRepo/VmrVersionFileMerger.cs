@@ -89,23 +89,35 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             : targetRepoPreviousJson;
         var sourceCurrentJson = await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoCurrentRef, allowMissingFiles);
 
-        var targetRepoChanges = SimpleConfigJson.Parse(targetRepoPreviousJson).GetDiff(SimpleConfigJson.Parse(targetRepoCurrentJson));
-        var sourceChanges = SimpleConfigJson.Parse(sourcePreviousJson).GetDiff(SimpleConfigJson.Parse(sourceCurrentJson));
-
-        VersionFileChanges<JsonVersionProperty> mergedChanges = MergeVersionFileChanges(targetRepoChanges, sourceChanges, JsonVersionProperty.SelectJsonVersionProperty);
-
-        var currentJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, "HEAD", allowMissingFiles);
-        var mergedJson = SimpleConfigJson.ApplyJsonChanges(currentJson, mergedChanges);
-
-        var newJson = new GitFile(targetRepo.Path / targetRepoJsonRelativePath, mergedJson);
-        await _localGitRepoFactory.Create(targetRepo.Path).StageAsync(["."]);
-
-        await _gitRepoFactory.CreateClient(targetRepo.Path)
-            .CommitFilesAsync(
-                [newJson],
+        if (!allowMissingFiles || !(await DeleteFileIfRequiredAsync(
+                targetRepoPreviousJson,
+                targetRepoCurrentJson,
+                sourcePreviousJson,
+                sourceCurrentJson,
                 targetRepo.Path,
+                targetRepoJsonRelativePath,
                 targetRepoCurrentRef,
-                $"Merge {targetRepoJsonRelativePath} changes");
+                EmptyJsonString)))
+        {
+            var targetRepoChanges = SimpleConfigJson.Parse(targetRepoPreviousJson).GetDiff(SimpleConfigJson.Parse(targetRepoCurrentJson));
+            var vmrChanges = SimpleConfigJson.Parse(sourcePreviousJson).GetDiff(SimpleConfigJson.Parse(sourceCurrentJson));
+
+            VersionFileChanges<JsonVersionProperty> mergedChanges = MergeVersionFileChanges(targetRepoChanges, vmrChanges, JsonVersionProperty.SelectJsonVersionProperty);
+
+            var currentJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, "HEAD", allowMissingFiles);
+            var mergedJson = SimpleConfigJson.ApplyJsonChanges(currentJson, mergedChanges);
+
+            var newJson = new GitFile(targetRepo.Path / targetRepoJsonRelativePath, mergedJson);
+
+            await _gitRepoFactory.CreateClient(targetRepo.Path)
+                .CommitFilesAsync(
+                    [newJson],
+                    targetRepo.Path,
+                    targetRepoCurrentRef,
+                    $"Merge {targetRepoJsonRelativePath} changes from VMR");
+        }
+      
+        await targetRepo.StageAsync(["."]);
     }
 
     public async Task<VersionFileChanges<DependencyUpdate>> MergeVersionDetails(
@@ -150,9 +162,41 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
         VersionFileChanges<DependencyUpdate> mergedChanges = MergeVersionFileChanges(targetChanges, sourceChanges, SelectDependencyUpdate);
 
-        await ApplyVersionDetailsChangesAsync(targetRepo.Path, mergedChanges, mappingToApplyChanges);
+        await ApplyVersionDetailsChangesAsync(targetRepo, mergedChanges, mappingToApplyChanges);
 
         return mergedChanges;
+    }
+
+    private async Task<bool> DeleteFileIfRequiredAsync(
+        string targetRepoPreviousJson,
+        string targetRepoCurrentJson,
+        string sourceRepoPreviousJson,
+        string sourceRepoCurrentJson,
+        NativePath repoPath,
+        string filePath,
+        string targetRepoCurrentRef,
+        string emptyContent)
+    {
+        // was it deleted in the target repo?
+        if (targetRepoPreviousJson != emptyContent && targetRepoCurrentJson == emptyContent)
+        {
+            // no need to do anything, it's already deleted
+            return true;
+        }
+        // was it deleted in the source repo?
+        if (sourceRepoPreviousJson != emptyContent && sourceRepoCurrentJson == emptyContent)
+        {
+            var deletedJson = new GitFile(repoPath / filePath, targetRepoCurrentJson, ContentEncoding.Utf8, operation: GitFileOperation.Delete);
+            await _gitRepoFactory.CreateClient(repoPath)
+                .CommitFilesAsync(
+                    [deletedJson],
+                    repoPath,
+                    targetRepoCurrentRef,
+                    $"Delete {filePath} in target repo");
+            return true;
+        }
+
+        return false;
     }
 
     private VersionFileChanges<T> MergeVersionFileChanges<T>(
@@ -281,27 +325,29 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             .ToList();
     }
 
-    private async Task ApplyVersionDetailsChangesAsync(string repoPath, VersionFileChanges<DependencyUpdate> changes, string? mapping = null)
+    private async Task ApplyVersionDetailsChangesAsync(ILocalGitRepo repo, VersionFileChanges<DependencyUpdate> changes, string? mapping = null)
     {
         var versionFilesBasePath = mapping != null
             ? VmrInfo.GetRelativeRepoSourcesPath(mapping)
             : null;
-        bool versionDetailsPropsExists = await _dependencyFileManager.VersionDetailsPropsExistsAsync(repoPath, null!, versionFilesBasePath);
+        bool versionDetailsPropsExists = await _dependencyFileManager.VersionDetailsPropsExistsAsync(repo.Path, null!, versionFilesBasePath);
         foreach (var removal in changes.Removals)
         {
             // Remove the property from the version details
-            await _dependencyFileManager.RemoveDependencyAsync(removal, repoPath, null!, versionFilesBasePath, versionDetailsPropsExists);
+            await _dependencyFileManager.RemoveDependencyAsync(removal, repo.Path, null!, versionFilesBasePath, versionDetailsPropsExists);
         }
         foreach ((var _, var update) in changes.Additions.Concat(changes.Updates))
         {
             await _dependencyFileManager.AddDependencyAsync(
                 (DependencyDetail)update.Value!,
-                repoPath,
+                repo.Path,
                 null!,
                 versionFilesBasePath,
                 versionDetailsOnly: true,
                 versionDetailsPropsExists);
         }
+
+        await repo.StageAsync(["."]);
     }
 
     private static async Task<string> GetJsonFromGit(ILocalGitRepo repo, string jsonRelativePath, string reference, bool allowMissingFile) =>
