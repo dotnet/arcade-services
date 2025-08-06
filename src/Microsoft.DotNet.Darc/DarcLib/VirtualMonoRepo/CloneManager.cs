@@ -116,6 +116,10 @@ public abstract class CloneManager
             // reset the branch to the remote one
             result = await _localGitRepo.RunGitCommandAsync(path, ["reset", "--hard", upstream], cancellationToken);
             result.ThrowIfFailed($"Couldn't reset to remote ref {upstream}");
+
+            // also clean the repo
+            result = await _localGitRepo.RunGitCommandAsync(path, ["clean", "-f", "."], cancellationToken);
+            result.ThrowIfFailed("Couldn't clean the repository");
         }
 
         return repo;
