@@ -161,10 +161,10 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         string targetRepoCurrentJson,
         string sourceRepoPreviousJson,
         string sourceRepoCurrentJson,
-        string targetRepoJsonAbsolutPath)
+        string targetRepoJsonFullPath)
     {
         // was it deleted in the target repo?
-        if (targetRepoPreviousJson != EmptyJsonString &&  targetRepoCurrentJson == EmptyJsonString)
+        if (targetRepoPreviousJson != EmptyJsonString && targetRepoCurrentJson == EmptyJsonString)
         {
             // no need to do anything, it's already deleted
             return true;
@@ -172,7 +172,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         // was it deleted in the source repo?
         if (sourceRepoPreviousJson != EmptyJsonString && sourceRepoCurrentJson == EmptyJsonString)
         {
-            _fileSystem.DeleteFile(targetRepoJsonAbsolutPath);
+            _fileSystem.DeleteFile(targetRepoJsonFullPath);
             return true;
         }
 
