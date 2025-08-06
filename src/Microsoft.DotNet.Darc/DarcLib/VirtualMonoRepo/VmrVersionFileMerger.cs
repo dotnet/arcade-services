@@ -49,7 +49,6 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IDependencyFileManager _dependencyFileManager;
-    private readonly IFileSystem _fileSystem;
     private const string EmptyJsonString = "{}";
 
     public VmrVersionFileMerger(
@@ -58,8 +57,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         IVmrInfo vmrInfo,
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
-        IDependencyFileManager dependencyFileManager,
-        IFileSystem fileSystem)
+        IDependencyFileManager dependencyFileManager)
     {
         _gitRepoFactory = gitRepoFactory;
         _logger = logger;
@@ -67,7 +65,6 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
         _dependencyFileManager = dependencyFileManager;
-        _fileSystem = fileSystem;
     }
 
     public async Task MergeJsonAsync(
@@ -91,12 +88,14 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             : targetRepoPreviousJson;
         var vmrCurrentJson = await GetJsonFromGit(vmr, vmrJsonPath, vmrCurrentRef, allowMissingFiles);
 
-        if (!(allowMissingFiles && DeleteJsonFileIfRequiredAsync(
+        if (!allowMissingFiles || !(await DeleteJsonFileIfRequiredAsync(
                 targetRepoPreviousJson,
                 targetRepoCurrentJson,
                 vmrPreviousJson,
                 vmrCurrentJson,
-                targetRepo.Path / jsonRelativePath)))
+                targetRepo.Path,
+                jsonRelativePath,
+                targetRepoCurrentRef)))
         {
             var targetRepoChanges = SimpleConfigJson.Parse(targetRepoPreviousJson).GetDiff(SimpleConfigJson.Parse(targetRepoCurrentJson));
             var vmrChanges = SimpleConfigJson.Parse(vmrPreviousJson).GetDiff(SimpleConfigJson.Parse(vmrCurrentJson));
@@ -105,13 +104,19 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
             var currentJson = await GetJsonFromGit(targetRepo, jsonRelativePath, "HEAD", allowMissingFiles);
             var mergedJson = SimpleConfigJson.ApplyJsonChanges(currentJson, mergedChanges);
+            mergedJson += targetRepoCurrentJson.Last() == '}' ? string.Empty : Environment.NewLine; // Ensure the JSON ends with a newline
 
-            _fileSystem.WriteToFile(
-                targetRepo.Path / jsonRelativePath,
-                mergedJson);
+            var newJson = new GitFile(targetRepo.Path / jsonRelativePath, mergedJson);
+
+            await _gitRepoFactory.CreateClient(targetRepo.Path)
+                .CommitFilesAsync(
+                    [newJson],
+                    targetRepo.Path,
+                    targetRepoCurrentRef,
+                    $"Merge {jsonRelativePath} changes from VMR");
         }
       
-        await _localGitRepoFactory.Create(targetRepo.Path).StageAsync(["."]);
+        await targetRepo.StageAsync(["."]);
     }
 
     public async Task<VersionFileChanges<DependencyUpdate>> MergeVersionDetails(
@@ -156,12 +161,14 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         return mergedChanges;
     }
 
-    private bool DeleteJsonFileIfRequiredAsync(
+    private async Task<bool> DeleteJsonFileIfRequiredAsync(
         string targetRepoPreviousJson,
         string targetRepoCurrentJson,
         string sourceRepoPreviousJson,
         string sourceRepoCurrentJson,
-        string targetRepoJsonFullPath)
+        NativePath repoPath,
+        string jsonRelativePath,
+        string targetRepoCurrentRef)
     {
         // was it deleted in the target repo?
         if (targetRepoPreviousJson != EmptyJsonString && targetRepoCurrentJson == EmptyJsonString)
@@ -172,7 +179,13 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         // was it deleted in the source repo?
         if (sourceRepoPreviousJson != EmptyJsonString && sourceRepoCurrentJson == EmptyJsonString)
         {
-            _fileSystem.DeleteFile(targetRepoJsonFullPath);
+            var deletedJson = new GitFile(repoPath / jsonRelativePath, targetRepoCurrentJson, ContentEncoding.Utf8, operation: GitFileOperation.Delete);
+            await _gitRepoFactory.CreateClient(repoPath)
+                .CommitFilesAsync(
+                    [deletedJson],
+                    repoPath,
+                    targetRepoCurrentRef,
+                    $"Delete {jsonRelativePath} in target repo");
             return true;
         }
 

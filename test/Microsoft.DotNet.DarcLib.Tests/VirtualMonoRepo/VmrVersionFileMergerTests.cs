@@ -29,7 +29,6 @@ public class VmrVersionFileMergerTests
     private readonly Mock<ILocalGitRepo> _targetRepoMock = new();
     private readonly Mock<ILocalGitRepo> _vmrMock = new();
     private readonly Mock<IGitRepo> _gitRepoMock = new();
-    private readonly Mock<IFileSystem> _fileSystemMock = new();
     
     private VmrVersionFileMerger _vmrVersionFileMerger = null!;
     
@@ -47,7 +46,7 @@ public class VmrVersionFileMergerTests
     {
         _targetRepoMock.Reset();
         _vmrMock.Reset();
-        _fileSystemMock.Reset();
+        _gitRepoMock.Reset();
 
         _targetRepoMock.Setup(r => r.Path).Returns(new NativePath(TargetRepoPath));
         _vmrMock.Setup(r => r.Path).Returns(new NativePath(VmrPath));
@@ -62,8 +61,7 @@ public class VmrVersionFileMergerTests
             _vmrInfoMock.Object,
             _localGitRepoFactoryMock.Object,
             _versionDetailsParserMock.Object,
-            _dependencyFileManagerMock.Object,
-            _fileSystemMock.Object);
+            _dependencyFileManagerMock.Object);
     }
 
     [Test]
@@ -218,11 +216,11 @@ public class VmrVersionFileMergerTests
 
         // Assert
         _vmrMock.Verify(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()), Times.Once);
-        _fileSystemMock.Verify(f =>
-            f.WriteToFile(
-                new NativePath(TargetRepoPath) / TestJsonPath,
-                expectedJson),
-            Times.Once);
+        _gitRepoMock.Verify(g => g.CommitFilesAsync(
+            It.Is<List<GitFile>>(files => files.Count == 1 && ValidateGitFile(files[0], expectedJson, GitFileOperation.Add)),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()), Times.Once);
     }
 
     [Test]
@@ -303,18 +301,18 @@ public class VmrVersionFileMergerTests
             TestJsonPath,
             allowMissingFiles: true);
 
-        _fileSystemMock.Verify(f =>
-            f.WriteToFile(
-                new NativePath(TargetRepoPath) / TestJsonPath,
-                expectedJson),
-            Times.Once);
+        _gitRepoMock.Verify(g => g.CommitFilesAsync(
+            It.Is<List<GitFile>>(files => files.Count == 1 && ValidateGitFile(files[0], expectedJson, GitFileOperation.Add)),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()), Times.Once);
     }
 
-    private bool ValidateGitFile(GitFile file, string expectedContent)
+    private bool ValidateGitFile(GitFile file, string expectedContent, GitFileOperation operation)
     {
         var normalizedFileContent = file.Content.Trim().Replace("\r\n", "\n");
         var expectedContentNormalized = expectedContent.Trim().Replace("\r\n", "\n");
-        return normalizedFileContent == expectedContentNormalized;
+        return normalizedFileContent == expectedContentNormalized && file.Operation == operation;
     }
 
     [Test]
@@ -617,8 +615,11 @@ public class VmrVersionFileMergerTests
             allowMissingFiles: true);
 
         // Nothing was deleted because the target branch already has the file deleted
-        _fileSystemMock.Verify(f => f.DeleteFile(It.IsAny<string>()), Times.Never);
-        _fileSystemMock.Verify(f => f.WriteToFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _gitRepoMock.Verify(g => g.CommitFilesAsync(
+            It.IsAny<List<GitFile>>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()), Times.Never);
     }
 
     [Test]
@@ -678,8 +679,11 @@ public class VmrVersionFileMergerTests
             allowMissingFiles: true);
 
         // Assert - File should be deleted from target repo and no merge should occur
-        _fileSystemMock.Verify(f => f.DeleteFile(new NativePath(TargetRepoPath) / TestJsonPath), Times.Once);
-        _fileSystemMock.Verify(f => f.WriteToFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _gitRepoMock.Verify(g => g.CommitFilesAsync(
+            It.Is<List<GitFile>>(files => files.Count == 1 && ValidateGitFile(files[0], targetCurrentJson, GitFileOperation.Delete)),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()), Times.Once);
     }
 
     private static DependencyDetail CreateDependency(string name, string version, string commit, DependencyType type = DependencyType.Product)
