@@ -73,20 +73,20 @@ public class Local
         // If we are updating the arcade sdk we need to update the eng/common files as well
         DependencyDetail arcadeItem = dependencies.GetArcadeUpdate();
         SemanticVersion targetDotNetVersion = null;
-        string mapping = VmrInfo.ArcadeMappingName;
+        var relativeBasePath = VmrInfo.ArcadeRepoDir;
 
         if (arcadeItem != null)
         {
             var fileManager = new DependencyFileManager(gitRepoFactory, _versionDetailsParser, _logger);
             try
             {
-                targetDotNetVersion = await fileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, mapping);
+                targetDotNetVersion = await fileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, relativeBasePath);
             }
             catch (DependencyFileNotFoundException)
             {
                 // global.json not found in src/arcade meaning that repo is not the VMR
-                mapping = null;
-                targetDotNetVersion = await fileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, mapping);
+                relativeBasePath = null;
+                targetDotNetVersion = await fileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, relativeBasePath);
             }
         }
 
@@ -98,10 +98,10 @@ public class Local
             try
             {
                 IRemote arcadeRemote = await remoteFactory.CreateRemoteAsync(arcadeItem.RepoUri);
-                List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit, mapping);
+                List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit, relativeBasePath);
                 // If we're updating arcade from a VMR build, the eng/common files will be in the src/arcade repo
                 // so we need to strip the src/arcade prefix from the file paths.
-                if (mapping == VmrInfo.ArcadeMappingName)
+                if (relativeBasePath == VmrInfo.ArcadeMappingName)
                 {
                     engCommonFiles = engCommonFiles
                         .Select(f => new GitFile(

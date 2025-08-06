@@ -620,7 +620,9 @@ public class DependencyFileManagerTests
         Mock<IGitRepo> repo = new();
         Mock<IGitRepoFactory> repoFactory = new();
 
-        repo.Setup(r => r.GetFileContentsAsync(VmrInfo.GetRelativeRepoSourcesPath("mapping") / VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
+        UnixPath relativeBasePath = VmrInfo.GetRelativeRepoSourcesPath("path");
+
+        repo.Setup(r => r.GetFileContentsAsync(relativeBasePath / VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(() => VersionDetails);
         repoFactory.Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>())).Returns(repo.Object);
 
@@ -641,11 +643,17 @@ public class DependencyFileManagerTests
             "uri",
             "branch",
             versionDetailsOnly: true,
-            mapping: "mapping",
+            relativeBasePath: relativeBasePath,
             repoHasVersionDetailsProps: true);
 
         repo.Verify(r => r.CommitFilesAsync(
-            It.Is<List<GitFile>>(files => files.Any(f => f.FilePath == VmrInfo.GetRelativeRepoSourcesPath("mapping") / VersionFiles.VersionDetailsXml)),
+            It.Is<List<GitFile>>(files => files.Any(f => f.FilePath == relativeBasePath / VersionFiles.VersionDetailsXml)),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()),
+            Times.Once);
+        repo.Verify(r => r.CommitFilesAsync(
+            It.Is<List<GitFile>>(files => files.Any(f => f.FilePath == relativeBasePath / VersionFiles.VersionDetailsProps)),
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<string>()),
