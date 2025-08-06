@@ -88,14 +88,15 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             : targetRepoPreviousJson;
         var vmrCurrentJson = await GetJsonFromGit(vmr, vmrJsonPath, vmrCurrentRef, allowMissingFiles);
 
-        if (!allowMissingFiles || !(await DeleteJsonFileIfRequiredAsync(
+        if (!allowMissingFiles || !(await DeleteFileIfRequiredAsync(
                 targetRepoPreviousJson,
                 targetRepoCurrentJson,
                 vmrPreviousJson,
                 vmrCurrentJson,
                 targetRepo.Path,
                 jsonRelativePath,
-                targetRepoCurrentRef)))
+                targetRepoCurrentRef,
+                EmptyJsonString)))
         {
             var targetRepoChanges = SimpleConfigJson.Parse(targetRepoPreviousJson).GetDiff(SimpleConfigJson.Parse(targetRepoCurrentJson));
             var vmrChanges = SimpleConfigJson.Parse(vmrPreviousJson).GetDiff(SimpleConfigJson.Parse(vmrCurrentJson));
@@ -104,7 +105,6 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
             var currentJson = await GetJsonFromGit(targetRepo, jsonRelativePath, "HEAD", allowMissingFiles);
             var mergedJson = SimpleConfigJson.ApplyJsonChanges(currentJson, mergedChanges);
-            mergedJson += targetRepoCurrentJson.Last() == '}' ? string.Empty : Environment.NewLine; // Ensure the JSON ends with a newline
 
             var newJson = new GitFile(targetRepo.Path / jsonRelativePath, mergedJson);
 
@@ -161,31 +161,32 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         return mergedChanges;
     }
 
-    private async Task<bool> DeleteJsonFileIfRequiredAsync(
+    private async Task<bool> DeleteFileIfRequiredAsync(
         string targetRepoPreviousJson,
         string targetRepoCurrentJson,
         string sourceRepoPreviousJson,
         string sourceRepoCurrentJson,
         NativePath repoPath,
-        string jsonRelativePath,
-        string targetRepoCurrentRef)
+        string filePath,
+        string targetRepoCurrentRef,
+        string emptyContent)
     {
         // was it deleted in the target repo?
-        if (targetRepoPreviousJson != EmptyJsonString && targetRepoCurrentJson == EmptyJsonString)
+        if (targetRepoPreviousJson != EmptyJsonString && targetRepoCurrentJson == emptyContent)
         {
             // no need to do anything, it's already deleted
             return true;
         }
         // was it deleted in the source repo?
-        if (sourceRepoPreviousJson != EmptyJsonString && sourceRepoCurrentJson == EmptyJsonString)
+        if (sourceRepoPreviousJson != EmptyJsonString && sourceRepoCurrentJson == emptyContent)
         {
-            var deletedJson = new GitFile(repoPath / jsonRelativePath, targetRepoCurrentJson, ContentEncoding.Utf8, operation: GitFileOperation.Delete);
+            var deletedJson = new GitFile(repoPath / filePath, targetRepoCurrentJson, ContentEncoding.Utf8, operation: GitFileOperation.Delete);
             await _gitRepoFactory.CreateClient(repoPath)
                 .CommitFilesAsync(
                     [deletedJson],
                     repoPath,
                     targetRepoCurrentRef,
-                    $"Delete {jsonRelativePath} in target repo");
+                    $"Delete {filePath} in target repo");
             return true;
         }
 
