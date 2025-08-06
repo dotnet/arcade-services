@@ -29,6 +29,7 @@ public class VmrVersionFileMergerTests
     private readonly Mock<ILocalGitRepo> _targetRepoMock = new();
     private readonly Mock<ILocalGitRepo> _vmrMock = new();
     private readonly Mock<IGitRepo> _gitRepoMock = new();
+    private readonly Mock<IFileSystem> _fileSystemMock = new();
     
     private VmrVersionFileMerger _vmrVersionFileMerger = null!;
     
@@ -44,6 +45,10 @@ public class VmrVersionFileMergerTests
     [SetUp]
     public void SetUp()
     {
+        _targetRepoMock.Reset();
+        _vmrMock.Reset();
+        _fileSystemMock.Reset();
+
         _targetRepoMock.Setup(r => r.Path).Returns(new NativePath(TargetRepoPath));
         _vmrMock.Setup(r => r.Path).Returns(new NativePath(VmrPath));
         _vmrInfoMock.Setup(v => v.VmrPath).Returns(new NativePath(VmrPath));
@@ -57,7 +62,8 @@ public class VmrVersionFileMergerTests
             _vmrInfoMock.Object,
             _localGitRepoFactoryMock.Object,
             _versionDetailsParserMock.Object,
-            _dependencyFileManagerMock.Object);
+            _dependencyFileManagerMock.Object,
+            _fileSystemMock.Object);
     }
 
     [Test]
@@ -212,11 +218,11 @@ public class VmrVersionFileMergerTests
 
         // Assert
         _vmrMock.Verify(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()), Times.Once);
-        _gitRepoMock.Verify(g => g.CommitFilesAsync(
-            It.Is<List<GitFile>>(files => files.Count == 1 && ValidateGitFile(files[0], expectedJson)),
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>()), Times.Once);   
+        _fileSystemMock.Verify(f =>
+            f.WriteToFile(
+                new NativePath(TargetRepoPath) / TestJsonPath,
+                expectedJson),
+            Times.Once);
     }
 
     [Test]
@@ -297,11 +303,11 @@ public class VmrVersionFileMergerTests
             TestJsonPath,
             allowMissingFiles: true);
 
-        _gitRepoMock.Verify(g => g.CommitFilesAsync(
-            It.Is<List<GitFile>>(files => files.Count == 1 && ValidateGitFile(files[0], expectedJson)),
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>()), Times.Once);
+        _fileSystemMock.Verify(f =>
+            f.WriteToFile(
+                new NativePath(TargetRepoPath) / TestJsonPath,
+                expectedJson),
+            Times.Once);
     }
 
     private bool ValidateGitFile(GitFile file, string expectedContent)
@@ -554,6 +560,126 @@ public class VmrVersionFileMergerTests
                 TestJsonPath);
 
         await action.Should().ThrowAsync<ConflictingDependencyUpdateException>();
+    }
+
+    [Test]
+    public async Task MergeJsonAsync_FileDeletedInTargetRepo_DoesNothing()
+    {
+        var lastFlow = new Backflow("previous-vmr-sha", "previous-repo-sha");
+        
+        var targetPreviousJson = """
+            {
+              "sdk": {
+                "version": "8.0.303"
+              }
+            }
+            """;
+        
+        string? targetCurrentJson = null; // File deleted in target repo
+        
+        var vmrPreviousJson = """
+            {
+              "sdk": {
+                "version": "8.0.303"
+              }
+            }
+            """;
+        
+        var vmrCurrentJson = """
+            {
+              "sdk": {
+                "version": "8.0.304"
+              }
+            }
+            """;
+
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, TargetPreviousSha, It.IsAny<string>()))
+            .ReturnsAsync(targetPreviousJson);
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, TargetCurrentSha, It.IsAny<string>()))
+            .ReturnsAsync(targetCurrentJson);
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, "HEAD", It.IsAny<string>()))
+            .ReturnsAsync(targetCurrentJson);
+        _vmrMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()))
+            .ReturnsAsync(vmrPreviousJson);
+        _vmrMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
+            .ReturnsAsync(vmrCurrentJson);
+
+        await _vmrVersionFileMerger.MergeJsonAsync(
+            lastFlow,
+            _targetRepoMock.Object,
+            TargetPreviousSha,
+            TargetCurrentSha,
+            _vmrMock.Object,
+            VmrPreviousSha,
+            VmrCurrentSha,
+            TestMappingName,
+            TestJsonPath,
+            allowMissingFiles: true);
+
+        // Nothing was deleted because the target branch already has the file deleted
+        _fileSystemMock.Verify(f => f.DeleteFile(It.IsAny<string>()), Times.Never);
+        _fileSystemMock.Verify(f => f.WriteToFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Test]
+    public async Task MergeJsonAsync_FileDeletedInSourceRepo_DeletesFileAsync()
+    {
+        // Arrange
+        var lastFlow = new Backflow("previous-vmr-sha", "previous-repo-sha");
+        
+        var targetPreviousJson = """
+            {
+              "sdk": {
+                "version": "8.0.303"
+              }
+            }
+            """;
+        
+        var targetCurrentJson = """
+            {
+              "sdk": {
+                "version": "8.0.304"
+              }
+            }
+            """;
+        
+        var vmrPreviousJson = """
+            {
+              "sdk": {
+                "version": "8.0.303"
+              }
+            }
+            """;
+        
+        string? vmrCurrentJson = null; // File deleted in VMR (source repo)
+
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, TargetPreviousSha, It.IsAny<string>()))
+            .ReturnsAsync(targetPreviousJson);
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, TargetCurrentSha, It.IsAny<string>()))
+            .ReturnsAsync(targetCurrentJson);
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, "HEAD", It.IsAny<string>()))
+            .ReturnsAsync(targetCurrentJson);
+        _vmrMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()))
+            .ReturnsAsync(vmrPreviousJson);
+        _vmrMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
+            .ReturnsAsync(vmrCurrentJson);
+
+        // Act
+        await _vmrVersionFileMerger.MergeJsonAsync(
+            lastFlow,
+            _targetRepoMock.Object,
+            TargetPreviousSha,
+            TargetCurrentSha,
+            _vmrMock.Object,
+            VmrPreviousSha,
+            VmrCurrentSha,
+            TestMappingName,
+            TestJsonPath,
+            allowMissingFiles: true);
+
+        // Assert - File should be deleted from target repo and no merge should occur
+        _fileSystemMock.Verify(f => f.DeleteFile(new NativePath(TargetRepoPath) / TestJsonPath), Times.Once);
+        _fileSystemMock.Verify(f => f.WriteToFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
 
     private static DependencyDetail CreateDependency(string name, string version, string commit, DependencyType type = DependencyType.Product)
