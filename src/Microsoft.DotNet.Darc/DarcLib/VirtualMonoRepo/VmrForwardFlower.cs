@@ -64,9 +64,9 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private static readonly string[] PatchExclusions =
     [
         VersionFiles.VersionDetailsXml,
-            VersionFiles.VersionDetailsProps,
-            VersionFiles.GlobalJson,
-            VersionFiles.DotnetToolsConfigJson
+        VersionFiles.VersionDetailsProps,
+        VersionFiles.GlobalJson,
+        VersionFiles.DotnetToolsConfigJson
     ];
 
     public VmrForwardFlower(
@@ -236,7 +236,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             return await _vmrUpdater.UpdateRepository(
                 mapping,
                 build,
-                patchExclusionFilters: PatchExclusions,
+                updateFileExclusionList: PatchExclusions,
                 resetToRemoteWhenCloningRepo: ShouldResetClones,
                 cancellationToken: cancellationToken);
         }
