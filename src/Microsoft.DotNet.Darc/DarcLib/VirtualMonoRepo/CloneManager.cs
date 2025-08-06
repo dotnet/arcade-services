@@ -118,7 +118,7 @@ public abstract class CloneManager
             result.ThrowIfFailed($"Couldn't reset to remote ref {upstream}");
 
             // also clean the repo
-            result = await _localGitRepo.RunGitCommandAsync(path, ["clean", "-fdx", "."], cancellationToken);
+            result = await _localGitRepo.RunGitCommandAsync(path, ["clean", "-fdqx", "."], cancellationToken);
             result.ThrowIfFailed("Couldn't clean the repository");
         }
 
