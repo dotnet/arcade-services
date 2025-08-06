@@ -330,6 +330,12 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             currentFlow.RepoSha,
             mappingName);
 
+        if (!await vmr.HasWorkingTreeChangesAsync())
+        {
+            _logger.LogInformation("No changes to dependencies in this forward flow update");
+            return;
+        }
+
         await vmr.StageAsync(["."], cancellationToken);
         await vmr.CommitAsync(
             "Update dependencies",
