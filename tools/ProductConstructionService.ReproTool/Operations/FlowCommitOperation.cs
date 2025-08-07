@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Common;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,15 +18,13 @@ internal class FlowCommitOperation : Operation
     private readonly GitHubClient _ghClient;
     private readonly DarcProcessManager _darc;
     private readonly IProductConstructionServiceApi _localPcsApi;
-    private readonly IBarApiClient _barApiClient;
 
     public FlowCommitOperation(
             FlowCommitOptions options,
             ILogger<FlowCommitOperation> logger,
             GitHubClient ghClient,
             DarcProcessManager darc,
-            [FromKeyedServices("local")] IProductConstructionServiceApi localPcsApi,
-            IBarApiClient barApiClient)
+            [FromKeyedServices("local")] IProductConstructionServiceApi localPcsApi)
         : base(logger, ghClient, localPcsApi)
     {
         _options = options;
@@ -35,7 +32,6 @@ internal class FlowCommitOperation : Operation
         _ghClient = ghClient;
         _darc = darc;
         _localPcsApi = localPcsApi;
-        _barApiClient = barApiClient;
     }
 
     internal override async Task RunAsync()
@@ -94,17 +90,17 @@ internal class FlowCommitOperation : Operation
                     null)
                 {
                     SourceEnabled = isBackflow.HasValue,
-                    TargetDirectory = "winforms",
+                    SourceDirectory = isBackflow.HasValue && isBackflow.Value ? repoName : null,
+                    TargetDirectory = isBackflow.HasValue && !isBackflow.Value ? repoName : null,
                 });
 
-        var commit = (await _ghClient.Repository.Branch.Get(owner, "winforms", _options.SourceBranch)).Commit;
+        var commit = (await _ghClient.Repository.Branch.Get(owner, repoName, _options.SourceBranch)).Commit;
 
         _logger.LogInformation("Creating build for {repo}@{branch} (commit {commit})",
             _options.SourceRepository,
             _options.SourceBranch,
             Microsoft.DotNet.DarcLib.Commit.GetShortSha(commit.Sha));
 
-        //var prod = await _barApiClient.GetBuildAsync(278102);
         var build = await _localPcsApi.Builds.CreateAsync(new BuildData(
             commit.Sha,
             "dnceng",
@@ -117,7 +113,14 @@ internal class FlowCommitOperation : Operation
         {
             GitHubRepository = _options.SourceRepository,
             GitHubBranch = _options.SourceBranch,
-            //Assets = CreateAssetDataFromBuild(prod),
+            Assets =
+            [
+                .._options.Packages.Select(p => new AssetData(true)
+                {
+                    Name = p,
+                    Version = $"1.0.0-{Guid.NewGuid().ToString().Substring(0, 8)}",
+                })
+            ],
         });
 
         await using var _ = await _darc.AddBuildToChannelAsync(build.Id, channel.Name, skipCleanup: true);
