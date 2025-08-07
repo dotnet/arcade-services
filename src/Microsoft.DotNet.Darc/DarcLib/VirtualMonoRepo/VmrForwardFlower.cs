@@ -236,7 +236,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             return await _vmrUpdater.UpdateRepository(
                 mapping,
                 build,
-                updateFileExclusionList: PatchExclusions,
+                additionalFileExclusions: PatchExclusions,
                 resetToRemoteWhenCloningRepo: ShouldResetClones,
                 cancellationToken: cancellationToken);
         }
