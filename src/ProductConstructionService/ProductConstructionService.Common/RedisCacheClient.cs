@@ -7,11 +7,12 @@ using Microsoft.Extensions.Logging;
 namespace ProductConstructionService.Common;
 
 /// <summary>
-/// This class acts as a delegate for RedisCache and RedisCacheFactory.
-/// It is needed because DarcLib does not depend on ProductConstructionService and can only access caching through a delegate.
+/// This class acts as a delegate for RedisCache and RedisCacheFactory. It is needed because DarcLib
+/// does not depend on ProductConstructionService and can only implement caching there through a delegate.
 /// </summary>
-internal class RedisCacheClient : IRedisCacheClient
+internal class RedisCacheClient : IDistributedCacheClient
 {
+    private static readonly TimeSpan DefaultExpiration = TimeSpan.FromDays(15);
     private readonly IRedisCacheFactory _factory;
     private readonly ILogger<RedisCacheClient> _logger;
 
@@ -26,11 +27,11 @@ internal class RedisCacheClient : IRedisCacheClient
         return await _factory.Create<T>(key).TryGetStateAsync();
     }
 
-    public async Task<bool> TrySetAsync<T>(string key, T value, TimeSpan? expiration = null) where T : class
+    public async Task<bool> TrySetAsync<T>(string key, T value, TimeSpan? expiration) where T : class
     {
         try
         {
-            await _factory.Create<T>(key).SetAsync(value, expiration);
+            await _factory.Create<T>(key).SetAsync(value, expiration ?? DefaultExpiration);
         }
         catch (Exception ex)
         {
