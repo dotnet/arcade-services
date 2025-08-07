@@ -94,17 +94,17 @@ internal class FlowCommitOperation : Operation
                     null)
                 {
                     SourceEnabled = isBackflow.HasValue,
-                    SourceDirectory = "arcade",
+                    TargetDirectory = "winforms",
                 });
 
-        var commit = (await _ghClient.Repository.Branch.Get(owner, "dotnet", _options.SourceBranch)).Commit;
+        var commit = (await _ghClient.Repository.Branch.Get(owner, "winforms", _options.SourceBranch)).Commit;
 
         _logger.LogInformation("Creating build for {repo}@{branch} (commit {commit})",
             _options.SourceRepository,
             _options.SourceBranch,
             Microsoft.DotNet.DarcLib.Commit.GetShortSha(commit.Sha));
 
-        var prod = await _barApiClient.GetBuildAsync(278102);
+        //var prod = await _barApiClient.GetBuildAsync(278102);
         var build = await _localPcsApi.Builds.CreateAsync(new BuildData(
             commit.Sha,
             "dnceng",
@@ -117,7 +117,7 @@ internal class FlowCommitOperation : Operation
         {
             GitHubRepository = _options.SourceRepository,
             GitHubBranch = _options.SourceBranch,
-            Assets = CreateAssetDataFromBuild(prod),
+            //Assets = CreateAssetDataFromBuild(prod),
         });
 
         await using var _ = await _darc.AddBuildToChannelAsync(build.Id, channel.Name, skipCleanup: true);

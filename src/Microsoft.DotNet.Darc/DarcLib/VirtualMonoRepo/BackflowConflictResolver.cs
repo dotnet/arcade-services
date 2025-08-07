@@ -372,7 +372,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             }
         }
 
-        if (!await targetRepo.HasWorkingTreeChangesAsync())
+        if (!await targetRepo.HasWorkingTreeChangesAsync() && !await targetRepo.HasStagedChangesAsync())
         {
             _logger.LogInformation("No changes to dependencies in this backflow update");
             return [];
