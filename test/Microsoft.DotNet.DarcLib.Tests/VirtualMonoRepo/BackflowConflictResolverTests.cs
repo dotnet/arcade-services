@@ -167,7 +167,7 @@ public class BackflowConflictResolverTests
         // Version details looks like this after merging with the VMR
         _versionDetails[$"repo/{TargetBranch}"] = new VersionDetails(
             [
-                CreateDependency("Package.From.Build", "1.0.1", LastVmrSha),
+                CreateDependency("Package.from.build", "1.0.1", LastVmrSha),
                 CreateDependency("Another.Package.From.Build", "1.0.1", LastVmrSha),
                 CreateDependency("Yet.Another.Package.From.Build", "1.0.1", LastVmrSha),
                 CreateDependency("Package.Excluded.From.Backflow", "1.0.0", LastVmrSha),
@@ -371,7 +371,7 @@ public class BackflowConflictResolverTests
                 var key = (repo == _vmrPath ? "vmr" : "repo") + "/" + commit;
                 _versionDetails[key] = new VersionDetails(
                     oldDependencies
-                        .Select(dep => itemsToUpdate.FirstOrDefault(d => d.Name == dep.Name) ?? dep)
+                        .Select(dep => itemsToUpdate.FirstOrDefault(d => d.Name.Equals(dep.Name, StringComparison.OrdinalIgnoreCase)) ?? dep)
                         .ToArray(),
                     new SourceDependency(build, MappingName));
 
@@ -395,7 +395,7 @@ public class BackflowConflictResolverTests
         mergeResult.ConflictedFiles.Should().BeEmpty();
         mergeResult.DependencyUpdates
             .Select(update => new ExpectedUpdate(
-                update.From?.Name ?? update.To.Name,
+                update.To.Name,
                 update.From?.Version,
                 update.To?.Version))
             .Should().BeEquivalentTo(expectedUpdates, options => options.WithoutStrictOrdering());
