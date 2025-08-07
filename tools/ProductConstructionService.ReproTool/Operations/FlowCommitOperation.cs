@@ -91,8 +91,8 @@ internal class FlowCommitOperation : Operation
                     null)
                 {
                     SourceEnabled = isBackflow.HasValue,
-                    SourceDirectory = isBackflow.HasValue && isBackflow.Value ? repoName : null,
-                    TargetDirectory = isBackflow.HasValue && !isBackflow.Value ? sourceRepoName : null,
+                    SourceDirectory = isBackflow == true ? repoName : null,
+                    TargetDirectory = isBackflow == false ? sourceRepoName : null,
                 });
 
         var commit = (await _ghClient.Repository.Branch.Get(sourceOwner, sourceRepoName, _options.SourceBranch)).Commit;
