@@ -529,5 +529,4 @@ public class DependencyAddUpdateTests
             await driver.VerifyAsync();
         });
     }
-
 }

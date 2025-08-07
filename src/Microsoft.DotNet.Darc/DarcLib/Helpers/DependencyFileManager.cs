@@ -401,6 +401,21 @@ public class DependencyFileManager : IDependencyFileManager
         SetAttribute(versionDetails, node, VersionDetailsParser.VersionAttributeName, dependency.Version);
         SetElement(versionDetails, node, VersionDetailsParser.UriElementName, dependency.RepoUri);
         SetElement(versionDetails, node, VersionDetailsParser.ShaElementName, dependency.Commit);
+
+        if (dependency.Pinned)
+        {
+            SetAttribute(versionDetails, node, VersionDetailsParser.PinnedAttributeName, "True");
+        }
+
+        if (dependency.SkipProperty)
+        {
+            SetAttribute(versionDetails, node, VersionDetailsParser.SkipPropertyAttributeName, "True");
+        }
+
+        if (!string.IsNullOrEmpty(dependency.CoherentParentDependencyName))
+        {
+            SetAttribute(versionDetails, node, VersionDetailsParser.CoherentParentAttributeName, dependency.CoherentParentDependencyName);
+        }
     }
 
     private static XmlNodeList FindDependencyElement(XmlDocument versionDetails, DependencyDetail itemToUpdate)
@@ -928,18 +943,6 @@ public class DependencyFileManager : IDependencyFileManager
             XmlNode newDependency = versionDetails.CreateElement(VersionDetailsParser.DependencyElementName);
 
             PopulateVersionDetailsDependency(versionDetails, newDependency, dependency);
-
-            // Only add the pinned attribute if the pinned option is set to true
-            if (dependency.Pinned)
-            {
-                SetAttribute(versionDetails, newDependency, VersionDetailsParser.PinnedAttributeName, "True");
-            }
-
-            // Only add the coherent parent attribute if it is set
-            if (!string.IsNullOrEmpty(dependency.CoherentParentDependencyName))
-            {
-                SetAttribute(versionDetails, newDependency, VersionDetailsParser.CoherentParentAttributeName, dependency.CoherentParentDependencyName);
-            }
 
             XmlNode dependenciesNode = versionDetails.SelectSingleNode($"//{dependency.Type}{VersionDetailsParser.DependenciesElementName}");
             if (dependenciesNode == null)
@@ -1756,7 +1759,7 @@ public class DependencyFileManager : IDependencyFileManager
         return assetLocationMappings;
     }
 
-    private static XmlDocument GenerateVersionDetailsProps(VersionDetails versionDetails)
+    public static XmlDocument GenerateVersionDetailsProps(VersionDetails versionDetails)
     {
         XmlDocument output = new();
 
@@ -1792,6 +1795,12 @@ public class DependencyFileManager : IDependencyFileManager
             alternatePropertyGroup.AppendChild(output.CreateComment($" {repoName} dependencies "));
             foreach (var dependency in repoDependencies.OrderBy(d => d.Name))
             {
+                // Skip generating properties for dependencies marked with SkipProperty
+                if (dependency.SkipProperty)
+                {
+                    continue;
+                }
+
                 var packageVersionElementName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
                 var packageVersionAlternateElementName = VersionFiles.GetVersionPropsAlternatePackageVersionElementName(dependency.Name);
                 XmlElement element = output.CreateElement(packageVersionElementName);

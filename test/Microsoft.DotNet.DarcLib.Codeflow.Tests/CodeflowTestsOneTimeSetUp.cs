@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib.Codeflow.Tests.Helpers;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
@@ -12,7 +13,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 
 [SetUpFixture]
-public class VmrTestsOneTimeSetUp
+public class CodeflowTestsOneTimeSetUp
 {
     public static readonly NativePath TestsDirectory;
     public static readonly NativePath CommonVmrPath;
@@ -25,9 +26,9 @@ public class VmrTestsOneTimeSetUp
 
     private readonly GitOperationsHelper _gitOperations = new();
 
-    static VmrTestsOneTimeSetUp()
+    static CodeflowTestsOneTimeSetUp()
     {
-        var assembly = Assembly.GetAssembly(typeof(VmrTestsBase)) ?? throw new Exception("Assembly not found");
+        var assembly = Assembly.GetAssembly(typeof(CodeFlowTestsBase)) ?? throw new Exception("Assembly not found");
         ResourcesPath = new NativePath(Path.Join(Path.GetDirectoryName(assembly.Location), "Resources"));
         TestsDirectory = new NativePath(Path.GetTempPath()) / "_vmrTests" / Path.GetRandomFileName();
         CommonVmrPath = TestsDirectory / Constants.VmrName;

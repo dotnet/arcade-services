@@ -11,7 +11,7 @@ using NUnit.Framework;
 
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 
-internal class VmrMultipleRemotesTests : VmrTestsBase
+internal class AdditionalRemotesTests : CodeFlowTestsBase
 {
     private NativePath FirstDependencyPath => CurrentTestDirectory / (Constants.DependencyRepoName + "1");
     private NativePath SecondDependencyPath => CurrentTestDirectory / (Constants.DependencyRepoName + "2");
@@ -75,7 +75,7 @@ internal class VmrMultipleRemotesTests : VmrTestsBase
 
     protected override async Task CopyVmrForCurrentTest()
     {
-        CopyDirectory(VmrTestsOneTimeSetUp.CommonVmrPath, VmrPath);
+        CopyDirectory(CodeflowTestsOneTimeSetUp.CommonVmrPath, VmrPath);
 
         var sourceMappings = new SourceMappingFile
         {

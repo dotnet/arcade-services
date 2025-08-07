@@ -109,6 +109,10 @@ public class VersionDetailsPropsMergePolicyTests
               <Uri>https://github.com/test/bar</Uri>
               <Sha>def456</Sha>
             </Dependency>
+            <Dependency Name="dependency" Version="1.0.0" SkipProperty="True">
+              <Uri>https://github.com/test/bar</Uri>
+              <Sha>def456</Sha>
+            </Dependency>
           </ProductDependencies>
         </Dependencies>
         """;
