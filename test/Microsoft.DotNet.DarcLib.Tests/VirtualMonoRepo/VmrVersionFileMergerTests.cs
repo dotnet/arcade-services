@@ -423,8 +423,7 @@ public class VmrVersionFileMergerTests
             _vmrRepoMock.Object,
             "VMR VERSION.DETAILS PATH",
             VmrPreviousSha,
-            VmrCurrentSha
-            ,
+            VmrCurrentSha,
             mappingToApplyChanges: null);
 
         versionDetailsDictionary[targetCurrentKey].Dependencies
