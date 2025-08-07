@@ -75,8 +75,9 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             IWorkBranchFactory workBranchFactory,
             IProcessManager processManager,
             IBasicBarClient barClient,
+            IFileSystem fileSystem,
             ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
@@ -248,6 +249,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 mapping,
                 build,
                 sourceRepo,
+                currentFlow,
                 lastFlows,
                 headBranch,
                 targetBranch,
@@ -260,8 +262,13 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                         resetToRemoteWhenCloningRepo: ShouldResetClones,
                         cancellationToken: cancellationToken);
                 },
-                currentIsBackflow: false,
                 cancellationToken);
+
+            if (hadChanges)
+            {
+                // Commit anything staged only (e.g. reset reverted files)
+                await _localGitClient.CommitAmendAsync(_vmrInfo.VmrPath, cancellationToken);
+            }
 
             return hadChanges;
         }
