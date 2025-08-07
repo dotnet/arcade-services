@@ -7,7 +7,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
@@ -55,6 +54,14 @@ public interface IForwardFlowConflictResolver
         string branchToMerge,
         ForwardFlow currentFlow,
         LastFlows lastFlows,
+        CancellationToken cancellationToken);
+
+    Task MergeDependenciesAsync(
+        string mappingName,
+        ILocalGitRepo sourceRepo,
+        string targetBranch,
+        Codeflow lastFlow,
+        ForwardFlow currentFlow,
         CancellationToken cancellationToken);
 }
 
@@ -124,7 +131,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
 
         try
         {
-            await ForwardFlowDependenciesAndToolset(
+            await MergeDependenciesAsync(
                 mappingName,
                 sourceRepo,
                 headBranch,
@@ -276,7 +283,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
     }
 
-    private async Task ForwardFlowDependenciesAndToolset(
+    public async Task MergeDependenciesAsync(
         string mappingName,
         ILocalGitRepo sourceRepo,
         string targetBranch,
