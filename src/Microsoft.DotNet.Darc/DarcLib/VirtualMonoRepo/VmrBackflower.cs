@@ -458,7 +458,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // TODO: once all codeflow repos/branches add VersionDetailsProps, we should remove Version.props from this list
         // https://github.com/dotnet/arcade-services/issues/4998
         exclusions = exclusions
-            .Concat(DependencyFileManager.DependencyFiles);
+            .Concat(DependencyFileManager.DependencyFiles.Where(file => file != VersionFiles.VersionsProps));
 
         // Exclude eng/common for non-arcade mappings (it will be copied separately based on the Arcade.Sdk package version)
         if (mapping.Name != VmrInfo.ArcadeMappingName)
