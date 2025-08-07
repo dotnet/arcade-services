@@ -399,7 +399,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             }
         }
 
-        var headBranchDependencyDict = headBranchDependencies.Dependencies.ToDictionary(d => d.Name, d => d);
+        var headBranchDependencyDict = headBranchDependencies.Dependencies.ToDictionary(d => d.Name, d => d, comparer: StringComparer.OrdinalIgnoreCase);
 
         List<DependencyUpdate> dependencyUpdates = [
             ..versionDetailsChanges.Additions
