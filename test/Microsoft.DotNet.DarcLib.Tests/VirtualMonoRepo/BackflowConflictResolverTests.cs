@@ -109,8 +109,8 @@ public class BackflowConflictResolverTests
 
         _dependencyFileManager.Reset();
         _dependencyFileManager
-            .Setup(x => x.AddDependencyAsync(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
-            .Callback((DependencyDetail dep, string repo, string commit, bool _, bool? _) =>
+            .Setup(x => x.AddDependencyAsync(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .Callback((DependencyDetail dep, string repo, string commit, UnixPath? _, bool _, bool? _) =>
             {
                 var key = (repo == _vmrPath ? "vmr" : "repo") + "/" + commit;
                 VersionDetails versionDetails = _versionDetails.TryGetValue(key, out var vd) ? vd : new([], null);
@@ -127,8 +127,8 @@ public class BackflowConflictResolverTests
             .Returns(Task.CompletedTask);
 
         _dependencyFileManager
-            .Setup(x => x.RemoveDependencyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
-            .Callback((string name, string repo, string commit, bool _, bool? _) =>
+            .Setup(x => x.RemoveDependencyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>()))
+            .Callback((string name, string repo, string commit, UnixPath? _, bool? _) =>
             {
                 var key = (repo == _vmrPath ? "vmr" : "repo") + "/" + commit;
                 var versionDetails = _versionDetails[key];
@@ -218,11 +218,16 @@ public class BackflowConflictResolverTests
         };
 
         _vmrVersionFileMergerMock.Setup(x => x.MergeVersionDetails(
-            It.IsAny<Codeflow>(),
-            It.IsAny<Codeflow>(),
-            It.IsAny<string>(),
-            It.IsAny<ILocalGitRepo>(),
-            It.IsAny<string>()))
+                It.IsAny<Codeflow>(),
+                It.IsAny<ILocalGitRepo>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<ILocalGitRepo>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string?>()))
             .ReturnsAsync(new VersionFileChanges<DependencyUpdate>([], expectedAddition, []));
 
         // Simulate dependency manager

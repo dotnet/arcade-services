@@ -61,6 +61,14 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly IProcessManager _processManager;
     private readonly ILogger<VmrCodeFlower> _logger;
 
+    private static readonly string[] PatchExclusions =
+    [
+        VersionFiles.VersionDetailsXml,
+        VersionFiles.VersionDetailsProps,
+        VersionFiles.GlobalJson,
+        VersionFiles.DotnetToolsConfigJson
+    ];
+
     public VmrForwardFlower(
             IVmrInfo vmrInfo,
             ISourceManifest sourceManifest,
@@ -138,7 +146,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 headBranch,
                 targetBranch,
                 currentFlow,
-                lastFlows.CrossingFlow,
+                lastFlows,
                 cancellationToken);
         }
 
@@ -228,6 +236,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             return await _vmrUpdater.UpdateRepository(
                 mapping,
                 build,
+                additionalFileExclusions: PatchExclusions,
                 resetToRemoteWhenCloningRepo: ShouldResetClones,
                 cancellationToken: cancellationToken);
         }
