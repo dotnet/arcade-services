@@ -49,6 +49,7 @@ internal class FlowCommitOperation : Operation
             ?? await _localPcsApi.Channels.CreateChannelAsync("test", _options.Channel);
 
         var (repoName, owner) = GitRepoUrlUtils.GetRepoNameAndOwner(_options.SourceRepository);
+        var (sourceRepoName, sourceOwner) = (repoName, owner);
 
         bool? isBackflow = null;
         try
@@ -90,11 +91,11 @@ internal class FlowCommitOperation : Operation
                     null)
                 {
                     SourceEnabled = isBackflow.HasValue,
-                    SourceDirectory = isBackflow.HasValue && isBackflow.Value ? repoName : null,
-                    TargetDirectory = isBackflow.HasValue && !isBackflow.Value ? repoName : null,
+                    SourceDirectory = isBackflow == true ? repoName : null,
+                    TargetDirectory = isBackflow == false ? sourceRepoName : null,
                 });
 
-        var commit = (await _ghClient.Repository.Branch.Get(owner, repoName, _options.SourceBranch)).Commit;
+        var commit = (await _ghClient.Repository.Branch.Get(sourceOwner, sourceRepoName, _options.SourceBranch)).Commit;
 
         _logger.LogInformation("Creating build for {repo}@{branch} (commit {commit})",
             _options.SourceRepository,
