@@ -105,7 +105,7 @@ public interface IRemote
     /// <param name="repoUri">URI of repo containing script files.</param>
     /// <param name="commit">Common to get script files at.</param>
     /// <returns>Script files.</returns>
-    Task<List<GitFile>> GetCommonScriptFilesAsync(string repoUri, string commit, string mapping = null);
+    Task<List<GitFile>> GetCommonScriptFilesAsync(string repoUri, string commit, LocalPath relativeBasePath = null);
 
     /// <summary>
     ///     Create a new branch in the specified repository.
