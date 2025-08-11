@@ -550,7 +550,7 @@ public class DependencyFileManager : IDependencyFileManager
             fileContainer.VersionProps = new GitFile(VersionFiles.VersionsProps, versionProps);
         }
 
-            return fileContainer;
+        return fileContainer;
     }
 
     /// <summary>
