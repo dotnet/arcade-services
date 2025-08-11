@@ -24,7 +24,6 @@ public class GitFileContentContainer
         var gitHubCommitsMap = new List<GitFile>
         {
             VersionDetailsXml,
-            VersionProps,
             GlobalJson,
             NugetConfig
         };
@@ -37,6 +36,11 @@ public class GitFileContentContainer
         if (VersionDetailsProps != null)
         {
             gitHubCommitsMap.Add(VersionDetailsProps);
+        }
+
+        if (VersionProps != null)
+        {
+            gitHubCommitsMap.Add(VersionProps);
         }
 
         return gitHubCommitsMap;

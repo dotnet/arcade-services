@@ -530,7 +530,6 @@ public class DependencyFileManager : IDependencyFileManager
         {
             GlobalJson = new GitFile(VersionFiles.GlobalJson, globalJson, globalJsonMetadata),
             VersionDetailsXml = new GitFile(VersionFiles.VersionDetailsXml, versionDetails),
-            VersionProps = new GitFile(VersionFiles.VersionsProps, versionProps),
             NugetConfig = new GitFile(nugetConfigName, nugetConfig),
         };
 
@@ -545,6 +544,10 @@ public class DependencyFileManager : IDependencyFileManager
             fileContainer.VersionDetailsProps = new GitFile(
                 VersionFiles.VersionDetailsProps,
                 GenerateVersionDetailsProps(_versionDetailsParser.ParseVersionDetailsXml(versionDetails)));
+        }
+        else
+        {
+            fileContainer.VersionProps = new GitFile(VersionFiles.VersionsProps, versionProps);
         }
 
         return fileContainer;
