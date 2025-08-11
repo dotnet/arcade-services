@@ -27,11 +27,13 @@ public interface ICodeFlowVmrUpdater
     /// <param name="fromSha">The actual sha of the repository we're updating from.
     /// In some cases, we set the source-manifest json current sha to the git empty commit.
     /// When this happens, this parameter should be used to generate the correct commit message</param>
+    /// <param name="additionalFileExclusions">List of files we don't want to update</param>
     /// <param name="resetToRemoteWhenCloningRepo">Weather or not to reset the branch to remote during cloning.
     /// Should be set to false when cloning a specific sha</param>
     Task<bool> UpdateRepository(
         SourceMapping mapping,
         Build build,
+        string[]? additionalFileExclusions = null,
         string? fromSha = null,
         bool resetToRemoteWhenCloningRepo = false,
         CancellationToken cancellationToken = default);
@@ -87,6 +89,7 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
     public async Task<bool> UpdateRepository(
         SourceMapping mapping,
         Build build,
+        string[]? additionalFileExclusions = null,
         string? fromSha = null,
         bool resetToRemoteWhenCloningRepo = false,
         CancellationToken cancellationToken = default)
@@ -165,6 +168,7 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
                     TpnTemplatePath: _vmrInfo.ThirdPartyNoticesTemplateFullPath,
                     GenerateCodeOwners: false,
                     GenerateCredScanSuppressions: true),
+                additionalFileExclusions,
                 cancellationToken);
 
             return true;

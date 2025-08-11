@@ -185,7 +185,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             commitMessage,
             restoreVmrPatches: false,
             codeFlowParameters,
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         _logger.LogInformation("Initialization of {name} finished", update.Mapping.Name);
     }

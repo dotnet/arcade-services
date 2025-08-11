@@ -3,6 +3,7 @@
 
 #nullable enable
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -22,17 +23,15 @@ public class VmrVersionFileMergerTests
 {
     private readonly Mock<IGitRepoFactory> _gitRepoFactoryMock = new();
     private readonly Mock<ILogger<VmrVersionFileMerger>> _loggerMock = new();
-    private readonly Mock<IVmrInfo> _vmrInfoMock = new();
     private readonly Mock<ILocalGitRepoFactory> _localGitRepoFactoryMock = new();
     private readonly Mock<IVersionDetailsParser> _versionDetailsParserMock = new();
     private readonly Mock<IDependencyFileManager> _dependencyFileManagerMock = new();
     private readonly Mock<ILocalGitRepo> _targetRepoMock = new();
-    private readonly Mock<ILocalGitRepo> _vmrMock = new();
+    private readonly Mock<ILocalGitRepo> _vmrRepoMock = new();
     private readonly Mock<IGitRepo> _gitRepoMock = new();
     
     private VmrVersionFileMerger _vmrVersionFileMerger = null!;
     
-    private const string TestMappingName = "test-repo";
     private const string TestJsonPath = "test.json";
     private const string TargetPreviousSha = "target-previous-sha";
     private const string TargetCurrentSha = "target-current-sha";
@@ -45,20 +44,18 @@ public class VmrVersionFileMergerTests
     public void SetUp()
     {
         _targetRepoMock.Reset();
-        _vmrMock.Reset();
+        _vmrRepoMock.Reset();
         _gitRepoMock.Reset();
 
         _targetRepoMock.Setup(r => r.Path).Returns(new NativePath(TargetRepoPath));
-        _vmrMock.Setup(r => r.Path).Returns(new NativePath(VmrPath));
-        _vmrInfoMock.Setup(v => v.VmrPath).Returns(new NativePath(VmrPath));
+        _vmrRepoMock.Setup(r => r.Path).Returns(new NativePath(VmrPath));
 
         _gitRepoFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(_gitRepoMock.Object);
-        _localGitRepoFactoryMock.Setup(f => f.Create(It.IsAny<NativePath>())).Returns(_vmrMock.Object);
+        _localGitRepoFactoryMock.Setup(f => f.Create(It.IsAny<NativePath>())).Returns(_vmrRepoMock.Object);
 
         _vmrVersionFileMerger = new VmrVersionFileMerger(
             _gitRepoFactoryMock.Object,
             _loggerMock.Object,
-            _vmrInfoMock.Object,
             _localGitRepoFactoryMock.Object,
             _versionDetailsParserMock.Object,
             _dependencyFileManagerMock.Object);
@@ -117,7 +114,7 @@ public class VmrVersionFileMergerTests
             }
             """;
         
-        var vmrPreviousJson = """
+        var sourcePreviousJson = """
             {
               "sdk": {
                 "version": "8.0.303",
@@ -140,7 +137,7 @@ public class VmrVersionFileMergerTests
             }
             """;
         
-        var vmrCurrentJson = """
+        var sourceCurrentJson = """
             {
               "sdk": {
                 "version": "8.0.305",
@@ -191,31 +188,32 @@ public class VmrVersionFileMergerTests
             }
             """;
 
-        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, TargetPreviousSha, It.IsAny<string>()))
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), TargetPreviousSha, It.IsAny<string>()))
             .ReturnsAsync(targetPreviousJson);
-        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, TargetCurrentSha, It.IsAny<string>()))
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), TargetCurrentSha, It.IsAny<string>()))
             .ReturnsAsync(targetCurrentJson);
-        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, "HEAD", It.IsAny<string>()))
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), "HEAD", It.IsAny<string>()))
             .ReturnsAsync(targetCurrentJson);
-        _vmrMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()    ))
-            .ReturnsAsync(vmrPreviousJson);
-        _vmrMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
-            .ReturnsAsync(vmrCurrentJson);
+        _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()    ))
+            .ReturnsAsync(sourcePreviousJson);
+        _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
+            .ReturnsAsync(sourceCurrentJson);
 
         // Act
+
         await _vmrVersionFileMerger.MergeJsonAsync(
             lastFlow,
             _targetRepoMock.Object,
+            TestJsonPath,
             TargetPreviousSha,
             TargetCurrentSha,
-            _vmrMock.Object,
+            _vmrRepoMock.Object,
+            TestJsonPath,
             VmrPreviousSha,
-            VmrCurrentSha,
-            TestMappingName,
-            TestJsonPath);
+            VmrCurrentSha);
 
         // Assert
-        _vmrMock.Verify(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()), Times.Once);
+        _vmrRepoMock.Verify(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()), Times.Once);
         _gitRepoMock.Verify(g => g.CommitFilesAsync(
             It.Is<List<GitFile>>(files => files.Count == 1 && ValidateGitFile(files[0], expectedJson, GitFileOperation.Add)),
             It.IsAny<string>(),
@@ -231,7 +229,7 @@ public class VmrVersionFileMergerTests
         string? targetPreviousJson = null;
         string? targetCurrentJson = null;
         string? vmrPreviousJson = null;
-        var vmrCurrentJson = """
+        var sourceCurrentJson = """
             {
               "sdk": {
                 "version": "8.0.305",
@@ -277,28 +275,28 @@ public class VmrVersionFileMergerTests
             }
             """;
 
-        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, TargetPreviousSha, It.IsAny<string>()))
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), TargetPreviousSha, It.IsAny<string>()))
             .ReturnsAsync(targetPreviousJson);
-        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, TargetCurrentSha, It.IsAny<string>()))
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), TargetCurrentSha, It.IsAny<string>()))
             .ReturnsAsync(targetCurrentJson);
-        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, "HEAD", It.IsAny<string>()))
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), "HEAD", It.IsAny<string>()))
             .ReturnsAsync(targetCurrentJson);
-        _vmrMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()))
+        _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()))
             .ReturnsAsync(vmrPreviousJson);
-        _vmrMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
-            .ReturnsAsync(vmrCurrentJson);
+        _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
+            .ReturnsAsync(sourceCurrentJson);
 
         // Act
         await _vmrVersionFileMerger.MergeJsonAsync(
             lastFlow,
             _targetRepoMock.Object,
+            TestJsonPath,
             TargetPreviousSha,
             TargetCurrentSha,
-            _vmrMock.Object,
+            _vmrRepoMock.Object,
+            TestJsonPath,
             VmrPreviousSha,
             VmrCurrentSha,
-            TestMappingName,
-            TestJsonPath,
             allowMissingFiles: true);
 
         _gitRepoMock.Verify(g => g.CommitFilesAsync(
@@ -377,16 +375,16 @@ public class VmrVersionFileMergerTests
             .ReturnsAsync(targetCurrentKey);
         _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), "HEAD", It.IsAny<string>()))
             .ReturnsAsync(targetCurrentKey);
-        _vmrMock.Setup(v => v.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()))
+        _vmrRepoMock.Setup(v => v.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()))
             .ReturnsAsync(vmrPreviousKey);
-        _vmrMock.Setup(v => v.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
+        _vmrRepoMock.Setup(v => v.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
             .ReturnsAsync(vmrCurrentKey);
 
         _versionDetailsParserMock.Setup(p => p.ParseVersionDetailsXml(It.IsAny<string>(), It.IsAny<bool>()))
             .Returns((string key, bool _) => versionDetailsDictionary[key]);
 
-        _dependencyFileManagerMock.Setup(d => d.RemoveDependencyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
-            .Callback((string name, string repo, string commit, bool _, bool? _) =>
+        _dependencyFileManagerMock.Setup(d => d.RemoveDependencyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>()))
+            .Callback((string name, string repo, string commit, UnixPath? _, bool? _) =>
             {
                 var versionDetails = versionDetailsDictionary[targetCurrentKey];
                 versionDetailsDictionary[targetCurrentKey] = new VersionDetails(
@@ -395,8 +393,8 @@ public class VmrVersionFileMergerTests
             })
             .Returns(Task.CompletedTask);
 
-        _dependencyFileManagerMock.Setup(d => d.AddDependencyAsync(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
-            .Callback((DependencyDetail dependency, string repo, string commit, bool _, bool? _) =>
+        _dependencyFileManagerMock.Setup(d => d.AddDependencyAsync(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .Callback((DependencyDetail dependency, string repo, string commit, UnixPath? _, bool _, bool? _) =>
             {
                 var versionDetails = versionDetailsDictionary[targetCurrentKey];
                 var dep = versionDetails.Dependencies.FirstOrDefault(d => d.Name == dependency.Name);
@@ -418,10 +416,15 @@ public class VmrVersionFileMergerTests
 
         var result = await _vmrVersionFileMerger.MergeVersionDetails(
             new ForwardFlow(TargetPreviousSha, VmrPreviousSha),
-            new Backflow(VmrCurrentSha, TargetCurrentSha),
-            TestMappingName,
             _targetRepoMock.Object,
-            targetBranch);
+            "TARGET VERSION.DETAILS PATH",
+            TargetPreviousSha,
+            TargetCurrentSha,
+            _vmrRepoMock.Object,
+            "VMR VERSION.DETAILS PATH",
+            VmrPreviousSha,
+            VmrCurrentSha,
+            mappingToApplyChanges: null);
 
         versionDetailsDictionary[targetCurrentKey].Dependencies
             .Select(d => (d.Name, d.Version))
@@ -537,25 +540,25 @@ public class VmrVersionFileMergerTests
             }
             """;
 
-        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, TargetPreviousSha, It.IsAny<string>()))
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), TargetPreviousSha, It.IsAny<string>()))
             .ReturnsAsync(targetPreviousJson);
-        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, TargetCurrentSha, It.IsAny<string>()))
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), TargetCurrentSha, It.IsAny<string>()))
             .ReturnsAsync(targetCurrentJson);
-        _vmrMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()))
+        _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()))
             .ReturnsAsync(vmrPreviousJson);
-        _vmrMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
+        _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
             .ReturnsAsync(vmrCurrentJson);
 
         var action = async () => await _vmrVersionFileMerger.MergeJsonAsync(
                 lastFlow,
                 _targetRepoMock.Object,
+                TestJsonPath,
                 TargetPreviousSha,
                 TargetCurrentSha,
-                _vmrMock.Object,
+                _vmrRepoMock.Object,
+                TestJsonPath,
                 VmrPreviousSha,
-                VmrCurrentSha,
-                TestMappingName,
-                TestJsonPath);
+                VmrCurrentSha);
 
         await action.Should().ThrowAsync<ConflictingDependencyUpdateException>();
     }
@@ -597,21 +600,21 @@ public class VmrVersionFileMergerTests
             .ReturnsAsync(targetCurrentJson);
         _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, "HEAD", It.IsAny<string>()))
             .ReturnsAsync(targetCurrentJson);
-        _vmrMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()))
+        _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()))
             .ReturnsAsync(vmrPreviousJson);
-        _vmrMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
+        _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
             .ReturnsAsync(vmrCurrentJson);
 
         await _vmrVersionFileMerger.MergeJsonAsync(
             lastFlow,
             _targetRepoMock.Object,
+            TestJsonPath,
             TargetPreviousSha,
             TargetCurrentSha,
-            _vmrMock.Object,
+            _vmrRepoMock.Object,
+            TestJsonPath,
             VmrPreviousSha,
             VmrCurrentSha,
-            TestMappingName,
-            TestJsonPath,
             allowMissingFiles: true);
 
         // Nothing was deleted because the target branch already has the file deleted
@@ -660,22 +663,22 @@ public class VmrVersionFileMergerTests
             .ReturnsAsync(targetCurrentJson);
         _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, "HEAD", It.IsAny<string>()))
             .ReturnsAsync(targetCurrentJson);
-        _vmrMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()))
+        _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()))
             .ReturnsAsync(vmrPreviousJson);
-        _vmrMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
+        _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
             .ReturnsAsync(vmrCurrentJson);
 
         // Act
         await _vmrVersionFileMerger.MergeJsonAsync(
             lastFlow,
             _targetRepoMock.Object,
+            TestJsonPath,
             TargetPreviousSha,
             TargetCurrentSha,
-            _vmrMock.Object,
+            _vmrRepoMock.Object,
+            TestJsonPath,
             VmrPreviousSha,
             VmrCurrentSha,
-            TestMappingName,
-            TestJsonPath,
             allowMissingFiles: true);
 
         // Assert - File should be deleted from target repo and no merge should occur

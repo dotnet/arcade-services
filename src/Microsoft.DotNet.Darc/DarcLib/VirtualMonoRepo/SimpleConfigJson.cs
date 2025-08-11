@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
@@ -100,7 +101,8 @@ public class SimpleConfigJson
         return rootNode.ToJsonString(new JsonSerializerOptions
         {
             WriteIndented = true,
-            TypeInfoResolver = new DefaultJsonTypeInfoResolver()
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         });
     }
 
