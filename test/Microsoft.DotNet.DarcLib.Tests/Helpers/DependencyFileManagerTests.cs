@@ -8,7 +8,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
@@ -551,6 +553,47 @@ public class DependencyFileManagerTests
         // VersionProps should not change
         NormalizeLineEndings(versionProps).Should()
             .Be(NormalizeLineEndings(VersionProps));
+
+        // now add a dependency with `SkipProperty = true`
+        await manager.AddDependencyAsync(
+            new DependencyDetail()
+            {
+                Name = "Bar",
+                Version = "1.0.1",
+                Commit = "abc123",
+                Type = DependencyType.Product,
+                RepoUri = "https://github.com/dotnet/arcade",
+                SkipProperty = true
+            },
+            string.Empty,
+            string.Empty);
+
+        expectedVersionDetails = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <Dependencies>
+              <!-- Elements contains all product dependencies -->
+              <ProductDependencies>
+                <Dependency Name="Foo" Version="1.0.1">
+                  <Uri>https://github.com/dotnet/arcade</Uri>
+                  <Sha>abc123</Sha>
+                </Dependency>
+                <Dependency Name="Bar" Version="1.0.1" SkipProperty="True">
+                  <Uri>https://github.com/dotnet/arcade</Uri>
+                  <Sha>abc123</Sha>
+                </Dependency>
+              </ProductDependencies>
+              <ToolsetDependencies>
+              </ToolsetDependencies>
+            </Dependencies>
+            """;
+
+        NormalizeLineEndings(expectedVersionDetails).Should()
+            .Be(NormalizeLineEndings(versionDetails));
+        NormalizeLineEndings(expectedVersionDetailsProps).Should()
+            .Be(NormalizeLineEndings(versionDetailsProps));
+        // VersionProps should not change
+        NormalizeLineEndings(versionProps).Should()
+            .Be(NormalizeLineEndings(VersionProps));
     }
 
     [Test]
@@ -610,6 +653,52 @@ public class DependencyFileManagerTests
             It.IsAny<string>(),
             It.IsAny<string>()),
             Times.Never);
+    }
+
+    [Test]
+    public async Task AddDependencyShouldAddToVmrRepo()
+    {
+        Mock<IGitRepo> repo = new();
+        Mock<IGitRepoFactory> repoFactory = new();
+
+        UnixPath relativeBasePath = VmrInfo.GetRelativeRepoSourcesPath("path");
+
+        repo.Setup(r => r.GetFileContentsAsync(relativeBasePath / VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(() => VersionDetails);
+        repoFactory.Setup(repoFactory => repoFactory.CreateClient(It.IsAny<string>())).Returns(repo.Object);
+
+        DependencyFileManager manager = new(
+            repoFactory.Object,
+            new VersionDetailsParser(),
+            NullLogger.Instance);
+
+        await manager.AddDependencyAsync(
+            new DependencyDetail()
+            {
+                Name = "Foo",
+                Version = "1.0.1",
+                Commit = "abc123",
+                Type = DependencyType.Product,
+                RepoUri = "uri"
+            },
+            "uri",
+            "branch",
+            versionDetailsOnly: true,
+            relativeBasePath: relativeBasePath,
+            repoHasVersionDetailsProps: true);
+
+        repo.Verify(r => r.CommitFilesAsync(
+            It.Is<List<GitFile>>(files => files.Any(f => f.FilePath == relativeBasePath / VersionFiles.VersionDetailsXml)),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()),
+            Times.Once);
+        repo.Verify(r => r.CommitFilesAsync(
+            It.Is<List<GitFile>>(files => files.Any(f => f.FilePath == relativeBasePath / VersionFiles.VersionDetailsProps)),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()),
+            Times.Once);
     }
 
     private string NormalizeLineEndings(string input) => input.Replace("\r\n", "\n").TrimEnd();

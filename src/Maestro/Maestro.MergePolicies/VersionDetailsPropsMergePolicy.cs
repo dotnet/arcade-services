@@ -171,32 +171,14 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
         }
     }
 
-    private static HashSet<string> ExtractNonConditionalNonEmptyProperties(ProjectRootElement versionsProps)
-    {
-        HashSet<string> nonConditionalProperties = [];
-        foreach (var propertyGroup in versionsProps.PropertyGroups)
-        {
-            if (!string.IsNullOrEmpty(propertyGroup.Condition))
-            {
-                // Skip conditional property groups
-                continue;
-            }
-            foreach (var property in propertyGroup.Properties)
-            {
-                if (!string.IsNullOrEmpty(property.Condition))
-                {
-                    // Skip conditional properties
-                    continue;
-                }
-                if (!string.IsNullOrEmpty(property.Value))
-                {
-                    nonConditionalProperties.Add(property.Name);
-                }
-            }
-        }
-
-        return nonConditionalProperties;
-    }
+    private static HashSet<string> ExtractNonConditionalNonEmptyProperties(ProjectRootElement msbuildFile)
+        => msbuildFile.PropertyGroups
+            .Where(group => string.IsNullOrEmpty(group.Condition))
+            .SelectMany(group => group.Properties)
+            .Where(prop => string.IsNullOrEmpty(prop.Condition))
+            .Where(prop => !string.IsNullOrEmpty(prop.Value))
+            .Select(prop => prop.Name)
+            .ToHashSet();
 
     private static bool CheckForVersionDetailsPropsImport(ProjectRootElement versionsProps) =>
         versionsProps.Imports.Any(import =>
@@ -211,6 +193,12 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
         // Check for missing properties (dependencies without corresponding properties)
         foreach (var dependency in dependencies)
         {
+            // Skip checking for dependencies marked with SkipProperty
+            if (dependency.SkipProperty)
+            {
+                continue;
+            }
+
             var expectedPropertyName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
             var alternateExpectedPropertyName = VersionFiles.GetVersionPropsAlternatePackageVersionElementName(dependency.Name);
 
@@ -226,8 +214,10 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
         
         // Check for orphaned properties (properties that don't correspond to any dependency)
         var expectedProperties = dependencies
+            .Where(d => !d.SkipProperty) // Only consider dependencies that should have properties
             .Select(d => VersionFiles.GetVersionPropsPackageVersionElementName(d.Name))
             .Concat(dependencies
+                .Where(d => !d.SkipProperty)
                 .Select(d => VersionFiles.GetVersionPropsAlternatePackageVersionElementName(d.Name)))
             .ToHashSet();
         orphanedProperties.AddRange(versionDetailsPropsProperties.Where(prop => !expectedProperties.Contains(prop)));
