@@ -380,12 +380,12 @@ public sealed class Remote : IRemote
         await _remoteGitClient.CloneAsync(repoUri, commit, targetDirectory, checkoutSubmodules, gitDirectory);
     }
 
-    public async Task<List<GitFile>> GetCommonScriptFilesAsync(string repoUri, string commit, string mapping = null)
+    public async Task<List<GitFile>> GetCommonScriptFilesAsync(string repoUri, string commit, LocalPath relativeBasePath = null)
     {
         _logger.LogInformation("Generating commits for script files");
-        string path = mapping == null
+        string path = relativeBasePath == null
             ? Constants.CommonScriptFilesPath
-            : VmrInfo.ArcadeRepoDir / Constants.CommonScriptFilesPath;
+            : relativeBasePath / Constants.CommonScriptFilesPath;
 
         List<GitFile> files = await _remoteGitClient.GetFilesAtCommitAsync(repoUri, commit, path);
 
