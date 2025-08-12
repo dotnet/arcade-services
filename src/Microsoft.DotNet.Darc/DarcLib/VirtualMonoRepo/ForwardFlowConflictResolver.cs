@@ -118,6 +118,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                 headBranch);
             try
             {
+                conflictedFiles = [];
                 await vmr.CommitAsync(
                     $"Merge branch {branchToMerge} into {headBranch}",
                     allowEmpty: true,
