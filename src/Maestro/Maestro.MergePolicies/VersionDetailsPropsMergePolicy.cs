@@ -182,7 +182,7 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
 
     private static bool CheckForVersionDetailsPropsImport(ProjectRootElement versionsProps) =>
         versionsProps.Imports.Any(import =>
-            import.Project.Equals(Constants.VersionDetailsProps) && import.Condition == $"Exists('{Constants.VersionDetailsProps}')");
+            import.Project.Equals(Constants.VersionDetailsProps));
 
     private static (List<(string ExpectedPropertyName, string Version)> MissingProperties, List<string> OrphanedProperties) 
         CheckDependencyPropertyMapping(IReadOnlyCollection<DependencyDetail> dependencies, HashSet<string> versionDetailsPropsProperties)
