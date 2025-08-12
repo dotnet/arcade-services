@@ -13,7 +13,7 @@ namespace ProductConstructionService.ScenarioTests;
 internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 {
     [Test]
-    public async Task ConflictPrClosedTest()
+    public async Task Vmr_ForwardFlowConflictPrClosedTest()
     {
         var channelName = GetTestChannelName();
         var branchName = GetTestBranchName();
@@ -71,7 +71,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
     }
 
     [Test]
-    public async Task ConflictResolvedTest()
+    public async Task Vmr_ForwardFlowConflictResolvedTest()
     {
         var channelName = GetTestChannelName();
         var branchName = GetTestBranchName();

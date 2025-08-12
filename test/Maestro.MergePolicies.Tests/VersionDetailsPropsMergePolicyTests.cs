@@ -31,7 +31,7 @@ public class VersionDetailsPropsMergePolicyTests
     private const string VersionPropsWithoutConflictingProperties = """
         <?xml version="1.0" encoding="utf-8"?>
         <Project>
-          <Import Project="Version.Details.props" Condition="Exists('Version.Details.props')" />
+          <Import Project="Version.Details.props" />
           <PropertyGroup>
             <DifferentPackageVersion>2.0.0</DifferentPackageVersion>
             <AnotherPackageVersion>3.0.0</AnotherPackageVersion>
