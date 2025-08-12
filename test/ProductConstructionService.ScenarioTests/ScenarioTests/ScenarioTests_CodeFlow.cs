@@ -303,7 +303,6 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                                 [
                                     $"src/{TestRepository.TestRepo1Name}/{TestFile1Name}",
                                     $"src/{TestRepository.TestRepo2Name}/{TestFile1Name}",
-                                    $"src/{TestRepository.TestRepo2Name}/{VersionFiles.VersionDetailsProps}",
                                 ],
                                 TestFilePatches);
                         }

@@ -40,6 +40,11 @@ internal class FlowCommitOperation : Operation
 
     internal override async Task RunAsync()
     {
+        if (_options.Packages.Count() > 0 && _options.RealBuildId > 0)
+        {
+            throw new ArgumentException("Cannot specify both --packages and --realBuildId options.");
+        }
+
         await _darc.InitializeAsync();
 
         _logger.LogInformation("Flowing commit from {sourceRepo}@{sourceBranch} to {targetRepo}@{targetBranch}",
@@ -53,6 +58,7 @@ internal class FlowCommitOperation : Operation
             ?? await _localPcsApi.Channels.CreateChannelAsync("test", _options.Channel);
 
         var (repoName, owner) = GitRepoUrlUtils.GetRepoNameAndOwner(_options.SourceRepository);
+        var (sourceRepoName, sourceOwner) = (repoName, owner);
 
         bool? isBackflow = null;
         try
@@ -94,31 +100,46 @@ internal class FlowCommitOperation : Operation
                     null)
                 {
                     SourceEnabled = isBackflow.HasValue,
-                    SourceDirectory = "arcade",
+                    SourceDirectory = isBackflow == true ? repoName : null,
+                    TargetDirectory = isBackflow == false ? sourceRepoName : null,
                 });
 
-        var commit = (await _ghClient.Repository.Branch.Get(owner, "dotnet", _options.SourceBranch)).Commit;
+        var commit = (await _ghClient.Repository.Branch.Get(sourceOwner, sourceRepoName, _options.SourceBranch)).Commit;
 
         _logger.LogInformation("Creating build for {repo}@{branch} (commit {commit})",
             _options.SourceRepository,
             _options.SourceBranch,
             Microsoft.DotNet.DarcLib.Commit.GetShortSha(commit.Sha));
-
-        var prod = await _barApiClient.GetBuildAsync(278102);
-        var build = await _localPcsApi.Builds.CreateAsync(new BuildData(
-            commit.Sha,
-            "dnceng",
-            "internal",
-            $"{DateTime.UtcNow:yyyyMMdd}.{new Random().Next(1, 75)}",
-            $"https://dev.azure.com/dnceng/internal/_git/{owner}-{repoName}",
-            _options.SourceBranch,
-            released: false,
-            stable: false)
+        List<AssetData> assets;
+        if (_options.RealBuildId > 0)
         {
-            GitHubRepository = _options.SourceRepository,
-            GitHubBranch = _options.SourceBranch,
-            Assets = CreateAssetDataFromBuild(prod),
-        });
+            assets = CreateAssetDataFromBuild(await _barApiClient.GetBuildAsync(_options.RealBuildId));
+        }
+        else
+        {
+            assets = [
+                .._options.Packages.Select(p => new AssetData(true)
+                {
+                    Name = p,
+                    Version = $"1.0.0-{Guid.NewGuid().ToString().Substring(0, 8)}",
+                })
+            ];
+        }
+
+        var build = await _localPcsApi.Builds.CreateAsync(new BuildData(
+                commit.Sha,
+                "dnceng",
+                "internal",
+                $"{DateTime.UtcNow:yyyyMMdd}.{new Random().Next(1, 75)}",
+                $"https://dev.azure.com/dnceng/internal/_git/{owner}-{repoName}",
+                _options.SourceBranch,
+                released: false,
+                stable: false)
+            {
+                GitHubRepository = _options.SourceRepository,
+                GitHubBranch = _options.SourceBranch,
+                Assets = assets
+            });
 
         await using var _ = await _darc.AddBuildToChannelAsync(build.Id, channel.Name, skipCleanup: true);
 

@@ -109,8 +109,8 @@ public class BackflowConflictResolverTests
 
         _dependencyFileManager.Reset();
         _dependencyFileManager
-            .Setup(x => x.AddDependencyAsync(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
-            .Callback((DependencyDetail dep, string repo, string commit, bool _, bool? _) =>
+            .Setup(x => x.AddDependencyAsync(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .Callback((DependencyDetail dep, string repo, string commit, UnixPath? _, bool _, bool? _) =>
             {
                 var key = (repo == _vmrPath ? "vmr" : "repo") + "/" + commit;
                 VersionDetails versionDetails = _versionDetails.TryGetValue(key, out var vd) ? vd : new([], null);
@@ -127,8 +127,8 @@ public class BackflowConflictResolverTests
             .Returns(Task.CompletedTask);
 
         _dependencyFileManager
-            .Setup(x => x.RemoveDependencyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
-            .Callback((string name, string repo, string commit, bool _, bool? _) =>
+            .Setup(x => x.RemoveDependencyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>()))
+            .Callback((string name, string repo, string commit, UnixPath? _, bool? _) =>
             {
                 var key = (repo == _vmrPath ? "vmr" : "repo") + "/" + commit;
                 var versionDetails = _versionDetails[key];
@@ -167,7 +167,7 @@ public class BackflowConflictResolverTests
         // Version details looks like this after merging with the VMR
         _versionDetails[$"repo/{TargetBranch}"] = new VersionDetails(
             [
-                CreateDependency("Package.From.Build", "1.0.1", LastVmrSha),
+                CreateDependency("Package.from.build", "1.0.1", LastVmrSha),
                 CreateDependency("Another.Package.From.Build", "1.0.1", LastVmrSha),
                 CreateDependency("Yet.Another.Package.From.Build", "1.0.1", LastVmrSha),
                 CreateDependency("Package.Excluded.From.Backflow", "1.0.0", LastVmrSha),
@@ -218,11 +218,16 @@ public class BackflowConflictResolverTests
         };
 
         _vmrVersionFileMergerMock.Setup(x => x.MergeVersionDetails(
-            It.IsAny<Codeflow>(),
-            It.IsAny<Codeflow>(),
-            It.IsAny<string>(),
-            It.IsAny<ILocalGitRepo>(),
-            It.IsAny<string>()))
+                It.IsAny<Codeflow>(),
+                It.IsAny<ILocalGitRepo>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<ILocalGitRepo>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string?>()))
             .ReturnsAsync(new VersionFileChanges<DependencyUpdate>([], expectedAddition, []));
 
         // Simulate dependency manager
@@ -371,7 +376,7 @@ public class BackflowConflictResolverTests
                 var key = (repo == _vmrPath ? "vmr" : "repo") + "/" + commit;
                 _versionDetails[key] = new VersionDetails(
                     oldDependencies
-                        .Select(dep => itemsToUpdate.FirstOrDefault(d => d.Name == dep.Name) ?? dep)
+                        .Select(dep => itemsToUpdate.FirstOrDefault(d => d.Name.Equals(dep.Name, StringComparison.OrdinalIgnoreCase)) ?? dep)
                         .ToArray(),
                     new SourceDependency(build, MappingName));
 
@@ -395,7 +400,7 @@ public class BackflowConflictResolverTests
         mergeResult.ConflictedFiles.Should().BeEmpty();
         mergeResult.DependencyUpdates
             .Select(update => new ExpectedUpdate(
-                update.From?.Name ?? update.To.Name,
+                update.To.Name,
                 update.From?.Version,
                 update.To?.Version))
             .Should().BeEquivalentTo(expectedUpdates, options => options.WithoutStrictOrdering());

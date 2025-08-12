@@ -53,6 +53,11 @@ The following dependency updates appear to be downgrades or invalid versions: {s
         foreach (var dependency in pr.RequiredUpdates)
         {
             bool gotValidVersions = true;
+            // check if the dependency was just added (this can happen in a backflow)
+            if (dependency.FromVersion == null)
+            {
+                continue;
+            }
             if (!SemanticVersion.TryParse(dependency.FromVersion, out var fromVersion))
             {
                 messages.Add($" Could not parse the 'from' version '{dependency.FromVersion}' of {dependency.DependencyName} as a Semantic Version string");
