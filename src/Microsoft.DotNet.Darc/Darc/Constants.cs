@@ -99,5 +99,9 @@ public class Constants
         $"{MergePolicyConstants.CodeflowMergePolicyName} - If code flow metadata have been corrupted, it will not be merged.",
         "YAML format:",
         $"- Name: {MergePolicyConstants.CodeflowMergePolicyName}",
+        "",
+        $"{MergePolicyConstants.VersionDetailsPropsMergePolicyName} - If Version.Details.props validation fails, it will not be merged.",
+        "YAML format:",
+        $"- Name: {MergePolicyConstants.VersionDetailsPropsMergePolicyName}",
     ];
 }
