@@ -7,15 +7,22 @@ using System.Threading.Tasks;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
 
-public interface IRedisCacheClient
+/// <summary>
+/// Generic interface for caching POCOs. Implementations should create keys based on the provided key and
+/// object type to avoid collisions.
+/// </summary>
+public interface IDistributedCacheClient
 {
     Task<bool> TrySetAsync<T>(string key, T value, TimeSpan? expiration = null) where T : class;
     Task<T?> TryGetAsync<T>(string key) where T : class;
     Task<bool> DeleteAsync(string key);
 }
 
-// This no-op redis client is used when DarcLib is invoked through CLI operations where redis is not available.
-public class NoOpRedisClient : IRedisCacheClient
+/// <summary>
+/// This no-op cache client the default implementation of IDistributedCacheClient in DarcLib. Caching is not mandatory
+/// and requires explicit implemnetation if used.
+/// </summary>
+public class NoOpCacheClient : IDistributedCacheClient
 {
     public Task<bool> TrySetAsync<T>(string key, T value, TimeSpan? expiration = null) where T : class
     {
