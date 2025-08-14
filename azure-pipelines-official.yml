@@ -2,6 +2,20 @@ variables:
 - template: /eng/templates/azure-pipelines-shared-variables.yml@self
 - name: devBranchSuffix
   value:
+- ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+  - name: dockerRegistryUrl
+    value: productconstructionprod.azurecr.io
+  - name: containerRegistryName
+    value: productconstructionprod
+  - name: serviceConnectionName
+    value: ProductConstructionServiceDeploymentProd
+- ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+  - name: dockerRegistryUrl
+    value: productconstructionint.azurecr.io
+  - name: containerRegistryName
+    value: productconstructionint
+  - name: serviceConnectionName
+    value: ProductConstructionServiceDeploymentInt
 
 trigger:
   batch: true

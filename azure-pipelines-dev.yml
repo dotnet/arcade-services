@@ -2,6 +2,12 @@ variables:
 - template: /eng/templates/azure-pipelines-shared-variables.yml@self
 - name: devBranchSuffix
   value: '-dev'
+- name: dockerRegistryUrl
+  value: productconstructionint.azurecr.io
+- name: containerRegistryName
+  value: productconstructionint
+- name: serviceConnectionName
+  value: ProductConstructionServiceDeploymentInt
 
 trigger: none
 
