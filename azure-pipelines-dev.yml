@@ -1,14 +1,9 @@
 variables:
 - template: /eng/templates/azure-pipelines-shared-variables.yml@self
 - name: devBranchSuffix
-  value: -dev
+  value: '-dev'
 
-trigger:
-  batch: true
-  branches:
-    exclude:
-    - main
-    - production
+trigger: none
 
 resources:
   repositories:
@@ -25,6 +20,6 @@ extends:
       image: 1es-windows-2022
       os: windows
     stages:
-    - template: /eng/templates/azure-pipelines-shared-jobs.yml@self
+    - template: /eng/templates/arcade-services.yml@self
       parameters:
         isProdPipeline: false
