@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
@@ -184,7 +185,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             commitMessage,
             restoreVmrPatches: false,
             codeFlowParameters,
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         _logger.LogInformation("Initialization of {name} finished", update.Mapping.Name);
     }

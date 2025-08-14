@@ -78,7 +78,8 @@ public class VmrPatchHandler : IVmrPatchHandler
         string sha2,
         NativePath destDir,
         NativePath tmpPath,
-        CancellationToken cancellationToken)
+        string[]? patchFileExclusionFilters = null,
+        CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Creating patches for {mapping} in {path}..", mapping.Name, destDir);
 
@@ -90,6 +91,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             destDir,
             tmpPath,
             new UnixPath(mapping.Name),
+            patchFileExclusionFilters,
             cancellationToken);
 
         _logger.LogInformation("{count} patch{s} created", patches.Count, patches.Count == 1 ? string.Empty : "es");
@@ -105,7 +107,8 @@ public class VmrPatchHandler : IVmrPatchHandler
         NativePath destDir,
         NativePath tmpPath,
         UnixPath relativePath,
-        CancellationToken cancellationToken)
+        string[]? patchFileExclusionFilters = null,
+        CancellationToken cancellationToken = default)
     {
         var repoPath = clone.Path;
         if (_fileSystem.GetFileName(repoPath) == ".git")
@@ -131,6 +134,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         List<string> filters =
         [
+            .. patchFileExclusionFilters?.Select(GetExclusionRule) ?? [],
             .. mapping.Include.Select(GetInclusionRule),
             .. mapping.Exclude.Select(GetExclusionRule),
         ];
@@ -433,6 +437,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             "diff",
             "--patch",
             "--binary", // Include binary contents as base64
+            "--no-color", // Don't colorize the output, it will be stored in a file
             "--output", // Store the diff in a .patch file
             patchName,
         };
@@ -590,7 +595,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             destDir,
             tmpPath,
             new UnixPath(submodulePath),
-            cancellationToken);
+            cancellationToken: cancellationToken);
     }
 
     public static string GetInclusionRule(string path) => $":(glob,attr:!{VmrInfo.IgnoreAttribute}){path}";

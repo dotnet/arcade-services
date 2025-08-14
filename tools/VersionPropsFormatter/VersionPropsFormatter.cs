@@ -4,6 +4,7 @@
 using System.Text;
 using System.Xml;
 using Maestro.Common;
+using Microsoft.Build.Construction;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -12,69 +13,59 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using ProductConstructionService.Common;
 
-namespace VersionPropsFormatter;
+namespace VersionDetailsPropsFormatter;
 
-public class VersionPropsFormatter(
+public class VersionDetailsPropsFormatter(
     IVersionDetailsParser versionDetailsParser,
-    IDependencyFileManager dependencyFileManager,
     IProcessManager processManager,
-    ILogger<VersionPropsFormatter> logger)
+    ILogger<VersionDetailsPropsFormatter> logger)
 {
-    public async Task RunAsync(string path)
+    public void Run(string path)
     {
         NativePath repoPath = new(processManager.FindGitRoot(path));
         VersionDetails versionDetails = versionDetailsParser.ParseVersionDetailsFile(repoPath / VersionFiles.VersionDetailsXml, includePinned: true);
-        var versionDetailsLookup = versionDetails.Dependencies.ToLookup(dep => dep.RepoUri, dep => dep);
 
-        XmlDocument versionProps = await dependencyFileManager.ReadVersionPropsAsync(repoPath, "HEAD");
+        var versionDetailsPropsContent = DependencyFileManager.GenerateVersionDetailsProps(versionDetails);
+        WriteXml(repoPath / VersionFiles.VersionDetailsProps, versionDetailsPropsContent);
 
-        XmlDocument output = new();
-        XmlElement propertyGroup = output.CreateElement("PropertyGroup");
+        var versionDetailsProps = ProjectRootElement.Open(repoPath / VersionFiles.VersionDetailsProps);
+        var versionProps = ProjectRootElement.Open(repoPath / VersionFiles.VersionsProps);
 
-        bool TryGetExistingDependencyNameInVersionProps(string dependencyName, out string nodeName)
+        var conflictingProps = ExtractNonConditionalNonEmptyProperties(versionProps)
+            .Intersect(ExtractNonConditionalNonEmptyProperties(versionDetailsProps))
+            .ToList();
+
+        if (conflictingProps.Count > 0)
         {
-            nodeName = VersionFiles.GetVersionPropsPackageVersionElementName(dependencyName);
-            if (DependencyFileManager.GetVersionPropsNode(versionProps, nodeName) != null)
+            StringBuilder sb = new();
+            sb.AppendLine("Conflicting properties found in Versions.props, please delete them");
+            foreach (var conflictingProp in conflictingProps)
             {
-                return true;
+                sb.AppendLine($"- {conflictingProp}");
             }
-            nodeName = VersionFiles.GetVersionPropsAlternatePackageVersionElementName(dependencyName);
-            return DependencyFileManager.GetVersionPropsNode(versionProps, nodeName) != null;
+            logger.LogWarning(sb.ToString());
         }
 
-        List<string> missingDependencies = [];
-        foreach (var repoDependencies in versionDetailsLookup)
+        if (!CheckForVersionDetailsPropsImport(versionProps))
         {
-            var repoName = repoDependencies.Key.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
-            repoName = char.ToUpper(repoName[0]) + repoName.Substring(1);
-            List<(string, string)> dependenciesToOutput = [];
-
-            foreach (var dependency in repoDependencies.OrderBy(dep => dep.Name))
-            {
-                if (TryGetExistingDependencyNameInVersionProps(dependency.Name, out var nodeName))
-                {
-                    dependenciesToOutput.Add((nodeName, dependency.Version));
-                }
-                else
-                {
-                    missingDependencies.Add(dependency.Name);
-                }
-            }
-
-            if (dependenciesToOutput.Count > 0)
-            {
-                propertyGroup.AppendChild(output.CreateComment($" {repoName} dependencies "));
-                foreach (var (name, version) in dependenciesToOutput)
-                {
-                    XmlElement element = output.CreateElement(name);
-                    element.InnerText = version;
-                    propertyGroup.AppendChild(element);
-                }
-            }
+            logger.LogWarning("Please import `Version.Details.props` in the beginning of Versions.props");
         }
+    }
 
-        output.AppendChild(propertyGroup);
+    private static HashSet<string> ExtractNonConditionalNonEmptyProperties(ProjectRootElement msbuildFile)
+        => msbuildFile.PropertyGroups
+            .Where(group => string.IsNullOrEmpty(group.Condition))
+            .SelectMany(group => group.Properties)
+            .Where(prop => string.IsNullOrEmpty(prop.Condition))
+            .Select(prop => prop.Name)
+            .ToHashSet();
 
+    private static bool CheckForVersionDetailsPropsImport(ProjectRootElement versionsProps) =>
+        versionsProps.Imports.Any(import =>
+            import.Project.Equals(Constants.VersionDetailsProps));
+
+    private void WriteXml(string path, XmlDocument document)
+    {
         XmlWriterSettings xmlWriterSettings = new()
         {
             Indent = true,
@@ -85,22 +76,8 @@ public class VersionPropsFormatter(
             OmitXmlDeclaration = true
         };
 
-        using StringWriter stringWriter = new();
-        using var xmlWriter = XmlWriter.Create(stringWriter, xmlWriterSettings);
-        output.Save(xmlWriter);
-
-        if (missingDependencies.Count > 0)
-        {
-            StringBuilder sb = new();
-            sb.AppendLine("The following dependencies were found in Version.Details.xml, but not in Version.props. Consider removing them");
-            foreach (var dep in missingDependencies.Order())
-            {
-                sb.AppendLine($"  {dep}");
-            }
-            logger.LogWarning(sb.ToString());
-        }
-
-        logger.LogInformation(stringWriter.ToString());
+        using var xmlWriter = XmlWriter.Create(path, xmlWriterSettings);
+        document.Save(xmlWriter);
     }
 
     public static IServiceCollection RegisterServices(IServiceCollection services)

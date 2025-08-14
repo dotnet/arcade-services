@@ -1,7 +1,3 @@
-parameters:
-- name: isProd
-  type: boolean
-
 stages:
 - template: /eng/templates/stages/secret-validation.yml@self
   parameters:
@@ -10,12 +6,12 @@ stages:
 - stage: Approval
   dependsOn:
   - Build
-  - ${{ if parameters.isProd }}:
+  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
     - publish_using_darc
   jobs:
   - deployment: approval
     displayName: deployment approval (conditional)
-    ${{ if parameters.isProd }}:
+    ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
       environment: Production
     ${{ else }}:
       environment: Staging
@@ -31,7 +27,7 @@ stages:
   - name: currentDate
     value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
 
-  - ${{ if parameters.isProd }}:
+  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
     # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=202&path=Arcade-Services-Scenario-Tests
     # Required for dotnet-bot-arcade-services-content-write
     - group: Arcade-Services-Release
@@ -113,7 +109,7 @@ stages:
     - updateDatabase
     pool:
       name: NetCore1ESPool-Internal
-      demands: ImageOverride -equals 1es-windows-2019
+      demands: ImageOverride -equals 1es-windows-2022
     variables:
       newDockerImageTag: $[stageDependencies.Build.BuildAndPublishDocker.outputs['DockerTag.newDockerImageTag']]
 
@@ -154,7 +150,7 @@ stages:
           --redisConnectionString $(redisConnectionString)
       displayName: Deploy container app
 
-    - ${{ if parameters.isProd }}:
+    - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
       - download: current
         artifact: AssetManifests
 

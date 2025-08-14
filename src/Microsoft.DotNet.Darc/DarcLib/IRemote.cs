@@ -44,6 +44,13 @@ public interface IRemote
     Task<IEnumerable<Review>> GetPullRequestReviewsAsync(string pullRequestUrl);
 
     /// <summary>
+    ///     Get the comments for the specified pull request.
+    /// </summary>
+    /// <param name="pullRequestUrl">Url of pull request.</param>
+    /// <returns>List of comments</returns>
+    Task<List<string>> GetPullRequestCommentsAsync(string pullRequestUrl);
+
+    /// <summary>
     ///     Retrieve information about a pull request.
     /// </summary>
     /// <param name="pullRequestUri">URI of pull request.</param>
@@ -98,7 +105,7 @@ public interface IRemote
     /// <param name="repoUri">URI of repo containing script files.</param>
     /// <param name="commit">Common to get script files at.</param>
     /// <returns>Script files.</returns>
-    Task<List<GitFile>> GetCommonScriptFilesAsync(string repoUri, string commit, bool repoIsVmr = false);
+    Task<List<GitFile>> GetCommonScriptFilesAsync(string repoUri, string commit, LocalPath relativeBasePath = null);
 
     /// <summary>
     ///     Create a new branch in the specified repository.
@@ -189,7 +196,12 @@ public interface IRemote
     /// <summary>
     /// Returns the SourceManifest of a VMR on a given branch
     /// </summary>
-    Task<SourceManifest> GetSourceManifestAsync(string vmrUri, string branch);
+    Task<SourceManifest> GetSourceManifestAsync(string vmrUri, string branchOrCommit);
+
+    /// <summary>
+    /// Returns the SourceManifest of a VMR on a given commit, using cached data if available
+    /// </summary>
+    Task<SourceManifest> GetSourceManifestAtCommitAsync(string vmrUri, string commitSha);
 
     /// <summary>
     /// Returns the list of Source Mappings for a VMR on a given branch
@@ -200,6 +212,15 @@ public interface IRemote
     /// Returns the SourceDependency tag from Version.Details.xml from a given repo/branch
     /// </summary>
     Task<SourceDependency> GetSourceDependencyAsync(string repoUri, string branch);
+
+    /// <summary>
+    ///     Retrieve the contents of a repository file as a string
+    /// </summary>
+    /// <param name="filePath">Path to file</param>
+    /// <param name="repoUri">Repository URI</param>
+    /// <param name="branch">Branch to get file contents from</param>
+    /// <returns>File contents or throws on file not found.</returns>
+    Task<string> GetFileContentsAsync(string filePath, string repoUri, string branch);
 
     #endregion
 }

@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Diagnostics;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 namespace Microsoft.DotNet.DarcLib.Models.Darc;
 
@@ -10,7 +11,7 @@ namespace Microsoft.DotNet.DarcLib.Models.Darc;
 ///     dependency detail to a new dependency detail
 /// </summary>
 [DebuggerDisplay("{From} -> {To}")]
-public class DependencyUpdate
+public class DependencyUpdate : IVersionFileProperty
 {
     /// <summary>
     ///     Current dependency
@@ -23,4 +24,12 @@ public class DependencyUpdate
     public DependencyDetail To { get; set; }
 
     public string DependencyName => From?.Name ?? To?.Name;
+
+    public string Name => DependencyName;
+
+    public object Value => To;
+
+    public bool IsAdded() => From == null;
+    public  bool IsRemoved() => To == null;
+    public  bool IsUpdated() => From != null && To != null;
 }

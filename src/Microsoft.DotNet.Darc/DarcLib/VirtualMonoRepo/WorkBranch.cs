@@ -3,6 +3,7 @@
 
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -53,14 +54,20 @@ public class WorkBranch(
                 result = await _repo.ExecuteGitCommand(["add", "-A"]);
                 result.ThrowIfFailed($"Failed to stage whitespace-only EOL changes while merging work branch {_workBranch} into {OriginalBranch}");
                 result = await _repo.ExecuteGitCommand(mergeArgs);
-                result.ThrowIfFailed($"Failed to merge work branch {_workBranch} into {OriginalBranch}");
             }
-            else
-            {
-                result.ThrowIfFailed($"Failed to merge work branch {_workBranch} into {OriginalBranch}");
-            }
+        }
+
+        if (!result.Succeeded && result.StandardError.Contains("CONFLICT (content): Merge conflict"))
+        {
+            // If we failed, it might be because of a merge conflict
+            throw new WorkBranchInConflictException(_workBranch, OriginalBranch, result);
         }
 
         await _repo.CommitAsync(commitMessage, true);
     }
+}
+
+public class WorkBranchInConflictException(string workBranch, string targetBranch, ProcessExecutionResult executionResult)
+    : ProcessFailedException(executionResult, $"Failed to merge back the work branch {workBranch} into {targetBranch}")
+{
 }

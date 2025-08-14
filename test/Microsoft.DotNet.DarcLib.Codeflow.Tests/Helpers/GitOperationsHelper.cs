@@ -8,7 +8,7 @@ using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
+namespace Microsoft.DotNet.DarcLib.Codeflow.Tests.Helpers;
 
 internal class GitOperationsHelper
 {
@@ -164,7 +164,7 @@ internal class GitOperationsHelper
 
         if (expectedConflictingFile != null)
         {
-            result.StandardOutput.Should().Contain($"CONFLICT (content): Merge conflict in {expectedConflictingFile}");
+            result.StandardOutput.Should().Match($"*Merge conflict in {expectedConflictingFile}*");
         }
 
         if (mergeTheirs.HasValue)

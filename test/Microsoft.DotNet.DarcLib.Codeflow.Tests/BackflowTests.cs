@@ -19,7 +19,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 
 [TestFixture]
-internal class VmrBackflowTest : VmrCodeFlowTests
+internal class BackflowTests : CodeFlowTests
 {
     [Test]
     public async Task OnlyBackflowsTest()
@@ -261,11 +261,11 @@ internal class VmrBackflowTest : VmrCodeFlowTests
 
         // Verify that global.json got updated
         DependencyFileManager dependencyFileManager = GetDependencyFileManager();
-        JObject globalJson = await dependencyFileManager.ReadGlobalJsonAsync(ProductRepoPath, branchName + "-pr", repoIsVmr: false);
+        JObject globalJson = await dependencyFileManager.ReadGlobalJsonAsync(ProductRepoPath, branchName + "-pr", relativeBasePath: null);
         JToken? arcadeVersion = globalJson.SelectToken($"msbuild-sdks.['{DependencyFileManager.ArcadeSdkPackageName}']", true);
         arcadeVersion?.ToString().Should().Be("1.0.2");
 
-        var dotnetVersion = await dependencyFileManager.ReadToolsDotnetVersionAsync(ProductRepoPath, branchName + "-pr", repoIsVmr: false);
+        var dotnetVersion = await dependencyFileManager.ReadToolsDotnetVersionAsync(ProductRepoPath, branchName + "-pr", relativeBasePath: null);
         dotnetVersion.ToString().Should().Be(Constants.VmrBaseDotnetSdkVersion);
 
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-pr");

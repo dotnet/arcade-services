@@ -1,0 +1,44 @@
+variables:
+- template: /eng/templates/azure-pipelines-shared-variables.yml@self
+- name: devBranchSuffix
+  value:
+- ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+  - name: dockerRegistryUrl
+    value: productconstructionprod.azurecr.io
+  - name: containerRegistryName
+    value: productconstructionprod
+  - name: serviceConnectionName
+    value: ProductConstructionServiceDeploymentProd
+- ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+  - name: dockerRegistryUrl
+    value: productconstructionint.azurecr.io
+  - name: containerRegistryName
+    value: productconstructionint
+  - name: serviceConnectionName
+    value: ProductConstructionServiceDeploymentInt
+
+trigger:
+  batch: true
+  branches:
+    include:
+    - main
+    - production
+
+resources:
+  repositories:
+  - repository: 1ESPipelineTemplates
+    type: git
+    name: 1ESPipelineTemplates/1ESPipelineTemplates
+    ref: refs/tags/release
+
+extends:
+  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  parameters:
+    pool:
+      name: $(DncEngInternalBuildPool)
+      image: 1es-windows-2022
+      os: windows
+    stages:
+    - template: /eng/templates/arcade-services.yml@self
+      parameters:
+        isProdPipeline: true

@@ -174,7 +174,8 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            CancellationToken.None);
+            patchFileExclusionFilters: [],
+            cancellationToken: CancellationToken.None);
 
         var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName, Sha1, Sha2, null);
 
@@ -217,7 +218,8 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            CancellationToken.None);
+            patchFileExclusionFilters: [],
+            cancellationToken: CancellationToken.None);
 
         var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName, Sha1, Sha2, new[] { _submoduleInfo.Path });
 
@@ -271,7 +273,8 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            CancellationToken.None);
+            patchFileExclusionFilters: [],
+            cancellationToken: CancellationToken.None);
 
         // Verify diff for the individual repo
         var expectedArgs = GetExpectedGitDiffArguments(
@@ -289,7 +292,7 @@ public class VmrPatchHandlerTests
         // Verify diff for the submodule
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName, Constants.EmptyGitObject, SubmoduleSha1, null)
-            .Take(7)
+            .Take(8)
             .Append(VmrPatchHandler.GetInclusionRule("**/*"))
             .Append(VmrPatchHandler.GetExclusionRule("LICENSE.md"));
 
@@ -362,7 +365,8 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            CancellationToken.None);
+            patchFileExclusionFilters: [],
+            cancellationToken: CancellationToken.None);
 
         // Verify diff for the individual repo
         var expectedArgs = GetExpectedGitDiffArguments(
@@ -380,7 +384,7 @@ public class VmrPatchHandlerTests
         // Verify diff for the submodule
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName, Constants.EmptyGitObject, SubmoduleSha1, new[] { nestedSubmoduleInfo.Path })
-            .Take(7)
+            .Take(8)
             .Append(VmrPatchHandler.GetInclusionRule("**/*"))
             .Append(VmrPatchHandler.GetExclusionRule("LICENSE.md"))
             .Append(":(exclude)external-2");
@@ -400,7 +404,7 @@ public class VmrPatchHandlerTests
         // Verify diff for the nested submodule
         expectedArgs = GetExpectedGitDiffArguments(
             expectedNestedSubmodulePatchName, Constants.EmptyGitObject, nestedSubmoduleSha1, null)
-            .Take(7)
+            .Take(8)
             .Append(VmrPatchHandler.GetInclusionRule("**/*"));
 
         _processManager
@@ -469,7 +473,8 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            CancellationToken.None);
+            patchFileExclusionFilters: [],
+            cancellationToken: CancellationToken.None);
 
         // Verify diff for the individual repo
         var expectedArgs = GetExpectedGitDiffArguments(
@@ -487,7 +492,7 @@ public class VmrPatchHandlerTests
         // Verify diff for the submodule
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName, SubmoduleSha1, Constants.EmptyGitObject, null)
-            .Take(7)
+            .Take(8)
             .Append(VmrPatchHandler.GetInclusionRule("**/*"))
             .Append(VmrPatchHandler.GetExclusionRule("LICENSE.md"));
 
@@ -546,7 +551,8 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            CancellationToken.None);
+            patchFileExclusionFilters: [],
+            cancellationToken: CancellationToken.None);
 
         // Verify diff for the individual repo
         var expectedArgs = GetExpectedGitDiffArguments(
@@ -564,7 +570,7 @@ public class VmrPatchHandlerTests
         // Verify diff for the submodule
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName, SubmoduleSha1, SubmoduleSha2, null)
-            .Take(7)
+            .Take(8)
             .Append(VmrPatchHandler.GetInclusionRule("**/*"))
             .Append(VmrPatchHandler.GetExclusionRule("LICENSE.md"));
 
@@ -624,7 +630,8 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            CancellationToken.None);
+            patchFileExclusionFilters: [],
+            cancellationToken: CancellationToken.None);
 
         // Verify diff for the individual repo
         var expectedArgs = GetExpectedGitDiffArguments(
@@ -642,7 +649,7 @@ public class VmrPatchHandlerTests
         // Verify diff for the submodule
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName1, SubmoduleSha1, Constants.EmptyGitObject, null)
-            .Take(7)
+            .Take(8)
             .Append(VmrPatchHandler.GetInclusionRule("**/*"))
             .Append(VmrPatchHandler.GetExclusionRule("LICENSE.md"));
 
@@ -657,7 +664,7 @@ public class VmrPatchHandlerTests
 
         expectedArgs = GetExpectedGitDiffArguments(
             expectedSubmodulePatchName2, Constants.EmptyGitObject, SubmoduleSha2, null)
-            .Take(7)
+            .Take(8)
             .Append(VmrPatchHandler.GetInclusionRule("**/*"))
             .Append(VmrPatchHandler.GetExclusionRule("LICENSE.md"));
 
@@ -807,7 +814,8 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            CancellationToken.None);
+            patchFileExclusionFilters: [],
+            cancellationToken: CancellationToken.None);
 
         var expectedArgs = GetExpectedGitDiffArguments(expectedPatchName, Sha1, Sha2, null);
 
@@ -866,7 +874,8 @@ public class VmrPatchHandlerTests
             Sha2,
             _patchDir,
             TmpDir,
-            CancellationToken.None);
+            patchFileExclusionFilters: [],
+            cancellationToken: CancellationToken.None);
 
         // Verify
         await action.Should().ThrowAsync<Exception>().WithMessage($"File {_clone.Path / "big-file"} is too big (>1GB) to be ingested into VMR*");
@@ -891,6 +900,7 @@ public class VmrPatchHandlerTests
             "diff",
             "--patch",
             "--binary",
+            "--no-color",
             "--output",
             new NativePath(patchPath),
             $"{Sha1}..{Sha2}",
