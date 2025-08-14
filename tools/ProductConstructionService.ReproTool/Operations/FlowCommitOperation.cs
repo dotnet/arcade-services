@@ -1,7 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.DarcLib.Helpers;
+using Maestro.Common;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,13 +19,15 @@ internal class FlowCommitOperation : Operation
     private readonly GitHubClient _ghClient;
     private readonly DarcProcessManager _darc;
     private readonly IProductConstructionServiceApi _localPcsApi;
+    private readonly IBarApiClient _barApiClient;
 
     public FlowCommitOperation(
             FlowCommitOptions options,
             ILogger<FlowCommitOperation> logger,
             GitHubClient ghClient,
             DarcProcessManager darc,
-            [FromKeyedServices("local")] IProductConstructionServiceApi localPcsApi)
+            [FromKeyedServices("local")] IProductConstructionServiceApi localPcsApi,
+            IBarApiClient barApiClient)
         : base(logger, ghClient, localPcsApi)
     {
         _options = options;
@@ -32,10 +35,16 @@ internal class FlowCommitOperation : Operation
         _ghClient = ghClient;
         _darc = darc;
         _localPcsApi = localPcsApi;
+        _barApiClient = barApiClient;
     }
 
     internal override async Task RunAsync()
     {
+        if (_options.Packages.Count() > 0 && _options.RealBuildId > 0)
+        {
+            throw new ArgumentException("Cannot specify both --packages and --realBuildId options.");
+        }
+
         await _darc.InitializeAsync();
 
         _logger.LogInformation("Flowing commit from {sourceRepo}@{sourceBranch} to {targetRepo}@{targetBranch}",
@@ -49,6 +58,7 @@ internal class FlowCommitOperation : Operation
             ?? await _localPcsApi.Channels.CreateChannelAsync("test", _options.Channel);
 
         var (repoName, owner) = GitRepoUrlUtils.GetRepoNameAndOwner(_options.SourceRepository);
+        var (sourceRepoName, sourceOwner) = (repoName, owner);
 
         bool? isBackflow = null;
         try
@@ -90,38 +100,46 @@ internal class FlowCommitOperation : Operation
                     null)
                 {
                     SourceEnabled = isBackflow.HasValue,
-                    SourceDirectory = isBackflow.HasValue && isBackflow.Value ? repoName : null,
-                    TargetDirectory = isBackflow.HasValue && !isBackflow.Value ? repoName : null,
+                    SourceDirectory = isBackflow == true ? repoName : null,
+                    TargetDirectory = isBackflow == false ? sourceRepoName : null,
                 });
 
-        var commit = (await _ghClient.Repository.Branch.Get(owner, repoName, _options.SourceBranch)).Commit;
+        var commit = (await _ghClient.Repository.Branch.Get(sourceOwner, sourceRepoName, _options.SourceBranch)).Commit;
 
         _logger.LogInformation("Creating build for {repo}@{branch} (commit {commit})",
             _options.SourceRepository,
             _options.SourceBranch,
             Microsoft.DotNet.DarcLib.Commit.GetShortSha(commit.Sha));
-
-        var build = await _localPcsApi.Builds.CreateAsync(new BuildData(
-            commit.Sha,
-            "dnceng",
-            "internal",
-            $"{DateTime.UtcNow:yyyyMMdd}.{new Random().Next(1, 75)}",
-            $"https://dev.azure.com/dnceng/internal/_git/{owner}-{repoName}",
-            _options.SourceBranch,
-            released: false,
-            stable: false)
+        List<AssetData> assets;
+        if (_options.RealBuildId > 0)
         {
-            GitHubRepository = _options.SourceRepository,
-            GitHubBranch = _options.SourceBranch,
-            Assets =
-            [
+            assets = CreateAssetDataFromBuild(await _barApiClient.GetBuildAsync(_options.RealBuildId));
+        }
+        else
+        {
+            assets = [
                 .._options.Packages.Select(p => new AssetData(true)
                 {
                     Name = p,
                     Version = $"1.0.0-{Guid.NewGuid().ToString().Substring(0, 8)}",
                 })
-            ],
-        });
+            ];
+        }
+
+        var build = await _localPcsApi.Builds.CreateAsync(new BuildData(
+                commit.Sha,
+                "dnceng",
+                "internal",
+                $"{DateTime.UtcNow:yyyyMMdd}.{new Random().Next(1, 75)}",
+                $"https://dev.azure.com/dnceng/internal/_git/{owner}-{repoName}",
+                _options.SourceBranch,
+                released: false,
+                stable: false)
+            {
+                GitHubRepository = _options.SourceRepository,
+                GitHubBranch = _options.SourceBranch,
+                Assets = assets
+            });
 
         await using var _ = await _darc.AddBuildToChannelAsync(build.Id, channel.Name, skipCleanup: true);
 

@@ -5,9 +5,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 IServiceCollection serviceCollection = new ServiceCollection();
 
-VersionPropsFormatter.VersionPropsFormatter.RegisterServices(serviceCollection);
+VersionDetailsPropsFormatter.VersionDetailsPropsFormatter.RegisterServices(serviceCollection);
 
 using var serviceProvider = serviceCollection.BuildServiceProvider();
 
-await ActivatorUtilities.CreateInstance<VersionPropsFormatter.VersionPropsFormatter>(serviceProvider).RunAsync(Directory.GetCurrentDirectory());
+ActivatorUtilities.CreateInstance<VersionDetailsPropsFormatter.VersionDetailsPropsFormatter>(serviceProvider).Run(Directory.GetCurrentDirectory());
 

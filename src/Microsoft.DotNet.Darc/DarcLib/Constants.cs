@@ -23,9 +23,14 @@ public class Constants
     public const string AzureDevOpsUrlPrefix = "https://dev.azure.com/";
 
     public const string DefaultVmrUri = "https://github.com/dotnet/dotnet/";
+    
+    public const string VersionDetailsProps = "Version.Details.props";
+    public const string VersionDetailsXml = "Version.Details.xml";
+    public const string VersionsProps = "Versions.props";
 
     public static readonly LibGit2Sharp.Identity DotnetBotIdentity = new(DarcBotName, DarcBotEmail);
 
     public const string EngFolderName = "eng";
     public const string CommonScriptFilesPath = $"{EngFolderName}/common";
+    public const string DefaultCommitAuthor = "dotnet-maestro[bot]";
 }

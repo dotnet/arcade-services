@@ -5,9 +5,11 @@ using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using NUnit.Framework;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using FluentAssertions;
 
 #nullable enable
-namespace ProductConstructionService.ScenarioTests.ScenarioTests;
+namespace ProductConstructionService.ScenarioTests;
 
 [TestFixture]
 [Category("PostDeployment")]
@@ -29,7 +31,8 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         { $"{TestFile1Name}", DefaultPatch },
         { $"src/{TestRepository.TestRepo1Name}/{TestFile1Name}", DefaultPatch },
         { $"src/{TestRepository.TestRepo1Name}/{TestFile2Name}", DefaultPatch },
-        { $"src/{TestRepository.TestRepo2Name}/{TestFile1Name}", DefaultPatch }
+        { $"src/{TestRepository.TestRepo2Name}/{TestFile1Name}", DefaultPatch },
+        { $"src/{TestRepository.TestRepo2Name}/{VersionFiles.VersionDetailsProps}", "@@ -0,0 +1,2 @@\n+<Project>\n+</Project>" }
     };
 
 
@@ -299,7 +302,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                                 targetBranchName,
                                 [
                                     $"src/{TestRepository.TestRepo1Name}/{TestFile1Name}",
-                                    $"src/{TestRepository.TestRepo2Name}/{TestFile1Name}"
+                                    $"src/{TestRepository.TestRepo2Name}/{TestFile1Name}",
                                 ],
                                 TestFilePatches);
                         }

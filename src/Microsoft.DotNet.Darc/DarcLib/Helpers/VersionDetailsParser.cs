@@ -38,6 +38,7 @@ public class VersionDetailsParser : IVersionDetailsParser
     public const string ProductDependencyElementName = "ProductDependencies";
     public const string ToolsetDependencyElementName = "ToolsetDependencies";
     public const string PinnedAttributeName = "Pinned";
+    public const string SkipPropertyAttributeName = "SkipProperty";
     public const string AddElement = "add";
     public const string ClearElement = "clear";
     public const string KeyAttributeName = "key";
@@ -111,6 +112,8 @@ public class VersionDetailsParser : IVersionDetailsParser
             // If the 'Pinned' attribute does not exist or if it is set to false we just not update it
             var isPinned = ParseBooleanAttribute(dependency.Attributes, PinnedAttributeName);
 
+            var skipProperty = ParseBooleanAttribute(dependency.Attributes, SkipPropertyAttributeName);
+
             XmlNode? sourceBuildNode = dependency.SelectSingleNode(SourceBuildElementName)
                 ?? dependency.SelectSingleNode(SourceBuildOldElementName); // Workaround for https://github.com/dotnet/source-build/issues/2481
 
@@ -137,6 +140,7 @@ public class VersionDetailsParser : IVersionDetailsParser
                 Version = dependency.Attributes[VersionAttributeName]?.Value?.Trim(),
                 CoherentParentDependencyName = dependency.Attributes[CoherentParentAttributeName]?.Value?.Trim(),
                 Pinned = isPinned,
+                SkipProperty = skipProperty,
                 Type = type,
                 SourceBuild = sourceBuildInfo,
             };
@@ -190,6 +194,12 @@ public class VersionDetailsParser : IVersionDetailsParser
         {
             PreserveWhitespace = true
         };
+
+        // Remove BOM character if present
+        if (fileContent.StartsWith("∩╗┐"))
+        {
+            fileContent = fileContent.Substring(3);
+        }
 
         document.LoadXml(fileContent);
 

@@ -159,6 +159,7 @@ internal class DarcProcessManager(
                 "--target-repo", targetRepo,
                 "--target-branch", targetBranch,
                 "-q",
+                "--standard-automerge",
                 "--no-trigger",
                 "--source-enabled", directoryArg.Length > 0 ? "true" : "false",
                 "--update-frequency", "none",

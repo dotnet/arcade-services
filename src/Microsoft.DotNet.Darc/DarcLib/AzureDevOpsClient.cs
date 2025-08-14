@@ -458,6 +458,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             ex.Message.StartsWith("The pull request needs a minimum number of approvals") ||
             ex.Message == "Proof of presence is required" ||
             ex.Message == "Failure while attempting to queue Build." ||
+            ex.Message.Contains("The pull request needs to be approved by all required reviewers before it can be completed") ||
             ex.Message.Contains("Please re-approve the most recent pull request iteration"))
         {
             throw new PullRequestNotMergeableException(ex.Message);
@@ -1755,5 +1756,38 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         {
             throw new DarcException($"Failed to find commit '{commitSha}' in repository '{repoName}'", ex);
         }
+    }
+
+    public async Task<List<string>> GetPullRequestCommentsAsync(string pullRequestUrl)
+    {
+        (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
+
+        _logger.LogInformation("Retrieving comments for pull request {PullRequestUrl}", pullRequestUrl);
+
+        using VssConnection connection = CreateVssConnection(accountName);
+        using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
+
+        List<GitPullRequestCommentThread> commentThreads = await client.GetThreadsAsync(repoName, id);
+        var comments = new List<string>();
+
+        foreach (GitPullRequestCommentThread commentThread in commentThreads)
+        {
+            // Only get comments from active and unknown threads (active threads may appear as unknown)
+            if (commentThread.Status == CommentThreadStatus.Active || 
+                commentThread.Status == CommentThreadStatus.Unknown)
+            {
+                List<Comment> threadComments = await client.GetCommentsAsync(repoName, id, commentThread.Id);
+                
+                foreach (Comment comment in threadComments)
+                {
+                    if (comment.CommentType == CommentType.Text && !string.IsNullOrEmpty(comment.Content))
+                    {
+                        comments.Add(comment.Content);
+                    }
+                }
+            }
+        }
+
+        return comments;
     }
 }

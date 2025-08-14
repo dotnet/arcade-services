@@ -26,6 +26,7 @@ public sealed class Remote : IRemote
     private readonly ISourceMappingParser _sourceMappingParser;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IAssetLocationResolver _locationResolver;
+    private readonly IRedisCacheClient _cache;
     private readonly ILogger _logger;
 
     //[DependencyUpdate]: <> (Begin)
@@ -42,6 +43,7 @@ public sealed class Remote : IRemote
         ISourceMappingParser sourceMappingParser,
         IRemoteFactory remoteFactory,
         IAssetLocationResolver locationResolver,
+        IRedisCacheClient cacheClient,
         ILogger logger)
     {
         _logger = logger;
@@ -51,6 +53,7 @@ public sealed class Remote : IRemote
         _remoteFactory = remoteFactory;
         _locationResolver = locationResolver;
         _fileManager = new DependencyFileManager(remoteGitClient, _versionDetailsParser, _logger);
+        _cache = cacheClient;
     }
 
     public async Task CreateNewBranchAsync(string repoUri, string baseBranch, string newBranch)
@@ -178,20 +181,22 @@ public sealed class Remote : IRemote
         SemanticVersion targetDotNetVersion = null;
         var mayNeedArcadeUpdate = arcadeItem != null && repoUri != arcadeItem.RepoUri;
         // If we find version files in src/arcade, we know we're working with a VMR
-        bool sourceRepoIsVmr = true;
+        var repoIsVmr = true;
+        var relativeBasePath = VmrInfo.ArcadeRepoDir;
 
         if (mayNeedArcadeUpdate)
         {
             IDependencyFileManager arcadeFileManager = await _remoteFactory.CreateDependencyFileManagerAsync(arcadeItem.RepoUri);
             try
             {
-                targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, sourceRepoIsVmr);
+                targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, relativeBasePath);
             }
             catch (DependencyFileNotFoundException)
             {
                 // global.json not found in src/arcade meaning that repo is not the VMR
-                sourceRepoIsVmr = false;
-                targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, sourceRepoIsVmr);
+                relativeBasePath = null;
+                repoIsVmr = false;
+                targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, relativeBasePath);
             }
         }
 
@@ -210,9 +215,9 @@ public sealed class Remote : IRemote
             // Files in the source arcade repo. We use the remote factory because the
             // arcade repo may be in github while this remote is targeted at AzDO.
             IRemote arcadeRemote = await _remoteFactory.CreateRemoteAsync(arcadeItem.RepoUri);
-            List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit, repoIsVmr: sourceRepoIsVmr);
+            List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit, relativeBasePath);
             // If the engCommon files are coming from the VMR, we have to remove 'src/arcade/' from the file paths
-            if (sourceRepoIsVmr)
+            if (repoIsVmr)
             {
                 engCommonFiles = engCommonFiles
                     .Select(f => new GitFile(
@@ -375,12 +380,12 @@ public sealed class Remote : IRemote
         await _remoteGitClient.CloneAsync(repoUri, commit, targetDirectory, checkoutSubmodules, gitDirectory);
     }
 
-    public async Task<List<GitFile>> GetCommonScriptFilesAsync(string repoUri, string commit, bool repoIsVmr = false)
+    public async Task<List<GitFile>> GetCommonScriptFilesAsync(string repoUri, string commit, LocalPath relativeBasePath = null)
     {
         _logger.LogInformation("Generating commits for script files");
-        string path = repoIsVmr ?
-            VmrInfo.ArcadeRepoDir / Constants.CommonScriptFilesPath :
-            Constants.CommonScriptFilesPath;
+        string path = relativeBasePath == null
+            ? Constants.CommonScriptFilesPath
+            : relativeBasePath / Constants.CommonScriptFilesPath;
 
         List<GitFile> files = await _remoteGitClient.GetFilesAtCommitAsync(repoUri, commit, path);
 
@@ -394,13 +399,44 @@ public sealed class Remote : IRemote
         await _remoteGitClient.CommentPullRequestAsync(pullRequestUri, comment);
     }
 
-    public async Task<SourceManifest> GetSourceManifestAsync(string vmrUri, string branch)
+    public async Task<List<string>> GetPullRequestCommentsAsync(string pullRequestUrl)
+    {
+        return await _remoteGitClient.GetPullRequestCommentsAsync(pullRequestUrl);
+    }
+
+
+    public async Task<SourceManifest> GetSourceManifestAsync(string vmrUri, string branchOrCommit)
     {
         var fileContent = await _remoteGitClient.GetFileContentsAsync(
             VmrInfo.DefaultRelativeSourceManifestPath,
             vmrUri,
-            branch);
+            branchOrCommit);
         return SourceManifest.FromJson(fileContent);
+    }
+
+    public async Task<string> GetFileContentsAsync(string filePath, string repoUri, string branch)
+        => await _remoteGitClient.GetFileContentsAsync(filePath, repoUri, branch);
+
+    public async Task<SourceManifest> GetSourceManifestAtCommitAsync(string vmrUri, string commitSha)
+    {
+        if (!StringUtils.IsValidLongCommitSha(commitSha))
+        {
+            throw new ArgumentException($"The provided commit SHA `{commitSha}` is either not of length 40 or contains illegal characters.", nameof(commitSha));
+        }
+
+        var cachedManifestData = await _cache.TryGetAsync<SourceManifestWrapper>(commitSha);
+
+        if (cachedManifestData != null)
+        {
+            var cachedManifest = SourceManifestWrapper.ToSourceManifest(cachedManifestData);
+            return cachedManifest;
+        }
+
+        var sourceManifest = await GetSourceManifestAsync(vmrUri, commitSha);
+
+        await _cache.TrySetAsync(commitSha, SourceManifest.ToWrapper(sourceManifest));
+
+        return sourceManifest;
     }
 
     public async Task<IReadOnlyCollection<SourceMapping>> GetSourceMappingsAsync(string vmrUri, string branch)
