@@ -1,0 +1,31 @@
+variables:
+- template: /eng/templates/azure-pipelines-shared-variables.yml@self
+- name: devBranchSuffix
+  value: '-dev'
+- name: dockerRegistryUrl
+  value: productconstructionint.azurecr.io
+- name: containerRegistryName
+  value: productconstructionint
+- name: serviceConnectionName
+  value: ProductConstructionServiceDeploymentInt
+
+trigger: none
+
+resources:
+  repositories:
+  - repository: 1ESPipelineTemplates
+    type: git
+    name: 1ESPipelineTemplates/1ESPipelineTemplates
+    ref: refs/tags/release
+
+extends:
+  template: v1/1ES.Unofficial.PipelineTemplate.yml@1ESPipelineTemplates
+  parameters:
+    pool:
+      name: $(DncEngInternalBuildPool)
+      image: 1es-windows-2022
+      os: windows
+    stages:
+    - template: /eng/templates/arcade-services.yml@self
+      parameters:
+        isProdPipeline: false
