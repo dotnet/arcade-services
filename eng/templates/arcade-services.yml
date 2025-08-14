@@ -87,8 +87,6 @@ stages:
                   docker push "$(dockerRegistryUrl)/$(containerName):$(DockerTag.newDockerImageTag)"
               displayName: Push docker image
   - template: /eng/templates/stages/deploy.yaml@self
-    parameters:
-      isProd: ${{ eq(variables['Build.SourceBranch'], 'refs/heads/production') }}
   - ${{ if parameters.isProdPipeline }}:
       - template: /eng/common/templates-official/post-build/post-build.yml@self
         parameters:
