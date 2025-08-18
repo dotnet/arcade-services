@@ -118,13 +118,17 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
         try
         {
+            var lastFlow = headBranchExisted
+                ? lastFlows.LastFlow
+                : lastFlows.LastBackFlow ?? lastFlows.LastFlow;
+
             var updates = await BackflowDependenciesAndToolset(
                 mapping.Name,
                 targetRepo,
                 branchToMerge,
                 build,
                 excludedAssets,
-                lastFlows.LastBackFlow ?? lastFlows.LastFlow,
+                lastFlow,
                 currentFlow,
                 cancellationToken);
             return new VersionFileUpdateResult(conflictedFiles, updates);
