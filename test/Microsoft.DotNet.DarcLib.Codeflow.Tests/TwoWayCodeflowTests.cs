@@ -463,7 +463,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
             Commit = "abc",
             Type = DependencyType.Product,
         };
-            
+
         await productRepo.AddDependencyAsync(extraDependencyInPr);
         await GitOperations.CommitAll(ProductRepoPath, "Adding a new dependency");
 
