@@ -73,6 +73,8 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
     private readonly ILogger<ForwardFlowConflictResolver> _logger;
     private readonly IVmrVersionFileMerger _versionFileMerger;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
+    private readonly IDependencyFileManager _dependencyFileManager;
+    private readonly IGitRepoFactory _gitRepoFactory;
 
     public ForwardFlowConflictResolver(
         IVmrInfo vmrInfo,
@@ -81,7 +83,9 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         IFileSystem fileSystem,
         ILogger<ForwardFlowConflictResolver> logger,
         IVmrVersionFileMerger versionFileMerger,
-        ILocalGitRepoFactory localGitRepoFactory)
+        ILocalGitRepoFactory localGitRepoFactory,
+        IDependencyFileManager dependencyFileManager,
+        IGitRepoFactory gitRepoFactory)
         : base(vmrInfo, patchHandler, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
@@ -90,6 +94,8 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         _logger = logger;
         _versionFileMerger = versionFileMerger;
         _localGitRepoFactory = localGitRepoFactory;
+        _dependencyFileManager = dependencyFileManager;
+        _gitRepoFactory = gitRepoFactory;
     }
 
     public async Task<IReadOnlyCollection<UnixPath>> TryMergingBranch(
@@ -118,6 +124,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                 headBranch);
             try
             {
+                conflictedFiles = [];
                 await vmr.CommitAsync(
                     $"Merge branch {branchToMerge} into {headBranch}",
                     allowEmpty: true,
@@ -292,11 +299,12 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         CancellationToken cancellationToken)
     {
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+        var relativeSourceMappingPath = VmrInfo.GetRelativeRepoSourcesPath(mappingName);
 
         await _versionFileMerger.MergeJsonAsync(
             lastFlow,
             vmr,
-            VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.GlobalJson,
+            relativeSourceMappingPath / VersionFiles.GlobalJson,
             lastFlow.VmrSha,
             targetBranch,
             sourceRepo,
@@ -308,14 +316,14 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         bool dotnetToolsConfigExists =
             (await sourceRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, lastFlow.RepoSha) != null) ||
             (await sourceRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, targetBranch) != null) ||
-            (await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.DotnetToolsConfigJson, currentFlow.VmrSha) != null ||
-            (await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.DotnetToolsConfigJson, lastFlow.VmrSha) != null));
+            (await vmr.GetFileFromGitAsync(relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson, currentFlow.VmrSha) != null ||
+            (await vmr.GetFileFromGitAsync(relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson, lastFlow.VmrSha) != null));
         if (dotnetToolsConfigExists)
         {
             await _versionFileMerger.MergeJsonAsync(
             lastFlow,
             vmr,
-            VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.DotnetToolsConfigJson,
+            relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson,
             lastFlow.VmrSha,
             targetBranch,
             sourceRepo,
@@ -325,10 +333,20 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             allowMissingFiles: true);
         }
 
+        // If Version.Details.props exists in the source repo, but not in the VMR, we create it and fill it out later.
+        // This can happen if a repo was initialized inside of the vmr when it didn't have this file
+        bool versionDetailsPropsCreated = false;
+        if (await _dependencyFileManager.VersionDetailsPropsExistsAsync(sourceRepo.Path, branch: null!)
+                && !await _dependencyFileManager.VersionDetailsPropsExistsAsync(vmr.Path, branch: null!, VmrInfo.GetRelativeRepoSourcesPath(mappingName)))
+        {
+            _fileSystem.WriteToFile(vmr.Path / relativeSourceMappingPath / VersionFiles.VersionDetailsProps, string.Empty);
+            versionDetailsPropsCreated = true;
+        }
+
         var versionDetailsChanges = await _versionFileMerger.MergeVersionDetails(
             lastFlow,
             vmr,
-            VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.VersionDetailsXml,
+            relativeSourceMappingPath / VersionFiles.VersionDetailsXml,
             lastFlow.VmrSha,
             targetBranch,
             sourceRepo,
@@ -336,6 +354,27 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             lastFlow.RepoSha,
             currentFlow.RepoSha,
             mappingName);
+
+        // If we didn't have any changes, and we just added Version.Details.props, we need to generate it
+        if (!versionDetailsChanges.Additions.Any() &&
+            !versionDetailsChanges.Removals.Any() &&
+            !versionDetailsChanges.Updates.Any() &&
+            versionDetailsPropsCreated)
+        {
+            var vdp = new GitFile(
+                relativeSourceMappingPath / VersionFiles.VersionDetailsProps,
+                DependencyFileManager.GenerateVersionDetailsProps(
+                    await _dependencyFileManager.ParseVersionDetailsXmlAsync(
+                        vmr.Path,
+                        branch: null!,
+                        includePinned: true,
+                        relativeSourceMappingPath)));
+            await _gitRepoFactory.CreateClient(vmr.Path).CommitFilesAsync(
+                [vdp],
+                vmr.Path,
+                targetBranch,
+                "Initialize Version.Details.props");
+        }
 
         if (!await vmr.HasWorkingTreeChangesAsync() && !await vmr.HasStagedChangesAsync())
         {

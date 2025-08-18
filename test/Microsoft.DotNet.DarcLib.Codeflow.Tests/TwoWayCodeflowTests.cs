@@ -189,6 +189,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.Checkout(VmrPath, "main");
         codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName);
         codeFlowResult.ShouldHaveUpdates();
+        codeFlowResult.ConflictedFiles.Should().BeEmpty();
 
         // 8. Merge the forward flow PR - any conflicts in version files are dealt with automatically
         // The conflict is described in the ForwardFlowConflictResolver class
