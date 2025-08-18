@@ -379,7 +379,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 excludedAssets,
                 targetBranch,
                 headBranch,
-                headBranchExisted: false,
+                headBranchExisted: true, // Head branch was created when we rewound to the previous flow
                 cancellationToken);
 
             // We apply the current changes on top again to check if they apply now
