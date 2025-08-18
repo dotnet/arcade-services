@@ -47,6 +47,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private readonly IPcsVmrForwardFlower _vmrForwardFlower;
     private readonly IPcsVmrBackFlower _vmrBackFlower;
     private readonly ITelemetryRecorder _telemetryRecorder;
+    private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly ILogger _logger;
 
     private const string OverwrittenCommitMessage = "Stopping code flow updates for this pull request as the following commits would get overwritten:";
@@ -74,6 +75,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IPcsVmrForwardFlower vmrForwardFlower,
         IPcsVmrBackFlower vmrBackFlower,
         ITelemetryRecorder telemetryRecorder,
+        IVersionDetailsParser versionDetailsParser,
         ILogger logger)
     {
         Id = id;
@@ -89,6 +91,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _vmrForwardFlower = vmrForwardFlower;
         _vmrBackFlower = vmrBackFlower;
         _telemetryRecorder = telemetryRecorder;
+        _versionDetailsParser = versionDetailsParser;
         _logger = logger;
 
         var cacheKey = id.ToString();
@@ -1119,6 +1122,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             throw;
         }
 
+        var mergeBaseCommit = _gitClient.GetMergeBaseCommitSha(_vmrInfo.VmrPath, subscription.TargetBranch, prHeadBranch);
+        var dependencyUpdates = (await GetVersionDetailChangesAsync(mergeBaseCommit, prHeadBranch))
+            .Select(du => new DependencyUpdateSummary(du))
+            .ToList();
+
         if (codeFlowRes.HadUpdates)
         {
             _logger.LogInformation("Code changes for {subscriptionId} ready in local branch {branch}",
@@ -1145,7 +1153,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 previousSourceSha,
                 subscription,
                 prHeadBranch,
-                codeFlowRes.DependencyUpdates,
+                dependencyUpdates,
                 upstreamRepoDiffs,
                 isForwardFlow);
         }
@@ -1156,7 +1164,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 prInfo,
                 previousSourceSha,
                 subscription,
-                codeFlowRes.DependencyUpdates,
+                dependencyUpdates,
                 upstreamRepoDiffs,
                 isForwardFlow);
 
@@ -1183,7 +1191,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         PullRequest? prInfo,
         string? previousSourceSha,
         SubscriptionDTO subscription,
-        List<DependencyUpdate> newDependencyUpdates,
+        List<DependencyUpdateSummary> dependencyUpdates,
         IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
         bool isForwardFlow)
     {
@@ -1199,8 +1207,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             CommitSha = update.SourceSha
         });
 
-        pullRequest.RequiredUpdates = MergeExistingWithIncomingUpdates(pullRequest.RequiredUpdates, newDependencyUpdates);
-
         var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(
             subscription.TargetBranch,
             pullRequest.ContainedSubscriptions.Select(s => s.SourceRepo).ToList());
@@ -1209,7 +1215,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             update,
             build,
             previousSourceSha,
-            pullRequest.RequiredUpdates,
+            dependencyUpdates,
             upstreamRepoDiffs,
             prInfo?.Description,
             isForwardFlow: isForwardFlow);
@@ -1253,13 +1259,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         string? previousSourceSha,
         SubscriptionDTO subscription,
         string prBranch,
-        List<DependencyUpdate> dependencyUpdates,
+        List<DependencyUpdateSummary> dependencyUpdates,
         IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
         bool isForwardFlow)
     {
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         var build = await _sqlClient.GetBuildAsync(update.BuildId);
-        List<DependencyUpdateSummary> requiredUpdates = dependencyUpdates.Select(du => new DependencyUpdateSummary(du)).ToList();
         try
         {
             var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(subscription.TargetBranch, [update.SourceRepo]);
@@ -1267,7 +1272,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 update,
                 build,
                 previousSourceSha,
-                requiredUpdates,
+                dependencyUpdates,
                 upstreamRepoDiffs,
                 currentDescription: null,
                 isForwardFlow: isForwardFlow);
@@ -1298,7 +1303,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                         CommitSha = update.SourceSha
                     }
                 ],
-                RequiredUpdates = requiredUpdates,
                 CodeFlowDirection = !string.IsNullOrEmpty(subscription.TargetDirectory)
                     ? CodeFlowDirection.ForwardFlow
                     : CodeFlowDirection.BackFlow,
@@ -1435,6 +1439,21 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         return upstreamRepoDiffs;
         
+    }
+
+    private async Task<VersionDetails> GetDependencyDetailsAsync(string commitSha)
+    {
+        string fileContents = await _gitClient.GetFileFromGitAsync(_vmrInfo.VmrPath, VersionFiles.VersionDetailsXml, commitSha)
+            ?? throw new DependencyFileNotFoundException($"Could not find {VersionFiles.VersionDetailsXml} at commit {commitSha}");
+        return _versionDetailsParser.ParseVersionDetailsXml(fileContents);
+    }
+
+    public async Task<List<DependencyUpdate>> GetVersionDetailChangesAsync(string commit1, string commit2)
+    {
+        var oldVersionDetails = await GetDependencyDetailsAsync(commit1);
+        var newVersionDetails = await GetDependencyDetailsAsync(commit2);
+
+        return VmrVersionFileMerger.ComputeChanges(oldVersionDetails, newVersionDetails);
     }
 
     #endregion

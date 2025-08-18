@@ -643,4 +643,29 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
 
         return Task.FromResult(gitTreeItems);
     }
+
+    public string GetMergeBaseCommitSha(string repoPath, string branchOrCommit1, string branchOrCommit2)
+    {
+        if (string.IsNullOrWhiteSpace(repoPath))
+            throw new ArgumentException("Repository path must be provided.", nameof(repoPath));
+        if (string.IsNullOrWhiteSpace(branchOrCommit1))
+            throw new ArgumentException("First branch or commit must be provided.", nameof(branchOrCommit1));
+        if (string.IsNullOrWhiteSpace(branchOrCommit2))
+            throw new ArgumentException("Second branch or commit must be provided.", nameof(branchOrCommit2));
+
+        using var repo = new Repository(repoPath);
+
+        var commit1 = repo.Lookup<LibGit2Sharp.Commit>(branchOrCommit1)
+            ?? throw new ArgumentException($"Could not find commit or branch '{branchOrCommit1}' in repository '{repoPath}'.", nameof(branchOrCommit1));
+        var commit2 = repo.Lookup<LibGit2Sharp.Commit>(branchOrCommit2)
+            ?? throw new ArgumentException($"Could not find commit or branch '{branchOrCommit2}' in repository '{repoPath}'.", nameof(branchOrCommit2));
+
+        var mergeBase = repo.ObjectDatabase.FindMergeBase(commit1, commit2);
+        if (mergeBase == null)
+            throw new ArgumentException($"No merge base found between '{branchOrCommit1}' and '{branchOrCommit2}' in repository '{repoPath}'.");
+
+        _logger.LogDebug("Merge base between {Branch1} and {Branch2} is {MergeBaseSha}", branchOrCommit1, branchOrCommit2, mergeBase.Sha);
+
+        return mergeBase.Sha;
+    }
 }

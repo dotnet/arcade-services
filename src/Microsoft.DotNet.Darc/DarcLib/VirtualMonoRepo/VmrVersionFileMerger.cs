@@ -289,7 +289,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             : _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: false);
     }
 
-    private static List<DependencyUpdate> ComputeChanges(VersionDetails before, VersionDetails after)
+    public static List<DependencyUpdate> ComputeChanges(VersionDetails before, VersionDetails after)
     {
         var dependencyChanges = before.Dependencies
             .Select(dep => new DependencyUpdate()

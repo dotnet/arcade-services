@@ -51,4 +51,14 @@ public interface ILocalLibGit2Client : ILocalGitClient, IGitRepo
     /// <param name="commit">Commit, tag, or branch to checkout the files at</param>
     /// <param name="options">Checkout options - mostly whether to force</param>
     void SafeCheckout(Repository repo, string commit, CheckoutOptions options);
+
+    /// <summary>
+    /// Returns the SHA of the merge base commit between two branches or commits.
+    /// </summary>
+    /// <param name="repoPath">Path to the local git repository.</param>
+    /// <param name="branchOrCommit1">First branch name or commit SHA.</param>
+    /// <param name="branchOrCommit2">Second branch name or commit SHA.</param>
+    /// <returns>SHA of the merge base commit.</returns>
+    /// <exception cref="ArgumentException">Thrown if either branch/commit cannot be found or no merge base exists.</exception>
+    public string GetMergeBaseCommitSha(string repoPath, string branchOrCommit1, string branchOrCommit2);
 }
