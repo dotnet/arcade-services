@@ -162,6 +162,7 @@ public class BackflowConflictResolverTests
     public async Task VersionsAreMergedInBackflowAfterForwardFlowTest()
     {
         var lastFlow = new ForwardFlow(LastRepoSha, LastVmrSha);
+        var lastFlows = new LastFlows(lastFlow, null, lastFlow, null);
         var currentFlow = new Backflow(CurrentVmrSha, CurrentRepoSha);
 
         // Version details looks like this after merging with the VMR
@@ -240,7 +241,7 @@ public class BackflowConflictResolverTests
             
         await TestConflictResolver(
             build,
-            lastFlow,
+            lastFlows,
             currentFlow,
             expectedDependencies:
             [
@@ -345,7 +346,7 @@ public class BackflowConflictResolverTests
 
     private async Task TestConflictResolver(
         Build build,
-        Codeflow lastFlow,
+        LastFlows lastFlows,
         Backflow currentFlow,
         (string Name, string Version)[] expectedDependencies,
         ExpectedUpdate[] expectedUpdates,
@@ -386,15 +387,14 @@ public class BackflowConflictResolverTests
         var cancellationToken = new CancellationToken();
         VersionFileUpdateResult mergeResult = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
             new SourceMapping(MappingName, "https://github/repo1", "main", [], [], false),
-            lastFlow,
+            lastFlows,
             currentFlow,
-            crossingFlow: null,
             _localRepo.Object,
             build,
             PrBranch,
             TargetBranch,
             excludedAssets: excludedAssets,
-            headBranchExisted,
+            headBranchExisted: headBranchExisted,
             cancellationToken);
 
         mergeResult.ConflictedFiles.Should().BeEmpty();
