@@ -343,6 +343,21 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             versionDetailsPropsCreated = true;
         }
 
+        // the diff between the last flow and current flow repo sha won't contain updates from the previous backflow (if last flow was a backflow)
+        // just manual changes that came afterwards. We will parse version details after the 
+        var versionDetails = await _dependencyFileManager.ParseVersionDetailsXmlAsync(
+            sourceRepo.Path,
+            currentFlow.RepoSha,
+            includePinned: true);
+        foreach(var dep in versionDetails.Dependencies)
+        {
+            await _dependencyFileManager.AddDependencyAsync(
+                dep,
+                vmr.Path,
+                branch: targetBranch,
+                relativeSourceMappingPath);
+        }
+
         var versionDetailsChanges = await _versionFileMerger.MergeVersionDetails(
             lastFlow,
             vmr,
@@ -354,6 +369,9 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             lastFlow.RepoSha,
             currentFlow.RepoSha,
             mappingName);
+
+        // If the last flow was a backflow, the dependency changes we just merged won't contain the dependency updates from the backflow
+        // We'll go over Version.Details
 
         // If we didn't have any changes, and we just added Version.Details.props, we need to generate it
         if (!versionDetailsChanges.Additions.Any() &&
