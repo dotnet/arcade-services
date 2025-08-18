@@ -427,7 +427,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                         ? headBranchDependencyDict[update.Key]
                         : (DependencyDetail)versionDetailsChanges.Additions[update.Key].Value!,
                     To = update.Value,
-                }),
+                })
+                .Where(update => update.From.Version != update.To.Version),
         ];
 
         string commitMessage = string.Concat(
