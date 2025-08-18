@@ -308,7 +308,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         List<string> removalFilters =
         [
             .. mapping.Include.Select(VmrPatchHandler.GetInclusionRule),
-            .. mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule)
+            .. mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule),
+            .. PatchExclusions.Select(VmrPatchHandler.GetExclusionRule),
         ];
 
         var result = await _processManager.Execute(
