@@ -21,11 +21,11 @@ This file should be imported by eng/Versions.props
     <MicrosoftDotNetKustoPackageVersion>1.1.0-beta.25215.1</MicrosoftDotNetKustoPackageVersion>
     <MicrosoftDotNetServicesUtilityPackageVersion>1.1.0-beta.25215.1</MicrosoftDotNetServicesUtilityPackageVersion>
     <!-- dotnet/arcade dependencies -->
-    <MicrosoftDotNetArcadeSdkPackageVersion>8.0.0-beta.25407.1</MicrosoftDotNetArcadeSdkPackageVersion>
-    <MicrosoftDotNetBuildTasksFeedPackageVersion>8.0.0-beta.25407.1</MicrosoftDotNetBuildTasksFeedPackageVersion>
-    <MicrosoftDotNetSignToolPackageVersion>8.0.0-beta.25407.1</MicrosoftDotNetSignToolPackageVersion>
-    <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>8.0.0-beta.25407.1</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
-    <MicrosoftDotNetVersionToolsPackageVersion>8.0.0-beta.25407.1</MicrosoftDotNetVersionToolsPackageVersion>
+    <MicrosoftDotNetArcadeSdkPackageVersion>8.0.0-beta.25415.2</MicrosoftDotNetArcadeSdkPackageVersion>
+    <MicrosoftDotNetBuildTasksFeedPackageVersion>8.0.0-beta.25415.2</MicrosoftDotNetBuildTasksFeedPackageVersion>
+    <MicrosoftDotNetSignToolPackageVersion>8.0.0-beta.25415.2</MicrosoftDotNetSignToolPackageVersion>
+    <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>8.0.0-beta.25415.2</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
+    <MicrosoftDotNetVersionToolsPackageVersion>8.0.0-beta.25415.2</MicrosoftDotNetVersionToolsPackageVersion>
     <!-- dotnet/dnceng dependencies -->
     <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.25381.1</MicrosoftDncEngConfigurationBootstrapPackageVersion>
     <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.25381.1</MicrosoftDncEngSecretManagerPackageVersion>
