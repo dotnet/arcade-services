@@ -1,15 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
@@ -27,6 +24,8 @@ public class ForwardFlowConflictResolverTests
         Mock<ILocalGitRepo> productRepo = new Mock<ILocalGitRepo>();
         Mock<IVmrVersionFileMerger> vmrVersionFileMergerMock = new();
         Mock<ILocalGitRepoFactory> localGitRepoFactoryMock = new();
+        Mock<IDependencyFileManager> dependencyFileManagerMock = new();
+        Mock<IGitRepoFactory> gitRepoFactoryMock = new();
 
         var lastFlowRepoSha = "lastFlowRepoSha";
         var lastFlowVmrSha = "lastFlowVmrSha";
@@ -41,14 +40,29 @@ public class ForwardFlowConflictResolverTests
             .ReturnsAsync("not important");
         productRepo.Setup(r => r.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, currentFlowRepoSha, It.IsAny<string>()))
             .ReturnsAsync("not important");
+        productRepo.Setup(r => r.Path).Returns(new NativePath("path"));
         vmrRepo.Setup(r => r.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mapping) / VersionFiles.DotnetToolsConfigJson, lastFlowVmrSha, It.IsAny<string>()))
             .ReturnsAsync("not important");
         vmrRepo.Setup(r => r.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mapping) / VersionFiles.DotnetToolsConfigJson, currentFlowVmrSha, It.IsAny<string>()))
             .ReturnsAsync("not important");
         vmrRepo.Setup(r => r.HasWorkingTreeChangesAsync())
             .ReturnsAsync(true);
+        vmrRepo.Setup(r => r.Path).Returns(new NativePath("vmrPath"));
         localGitRepoFactoryMock.Setup(f => f.Create(It.IsAny<NativePath>()))
             .Returns(vmrRepo.Object);
+
+        vmrVersionFileMergerMock.Setup(m => m.MergeVersionDetails(
+                It.IsAny<ForwardFlow>(),
+                It.IsAny<ILocalGitRepo>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<ILocalGitRepo>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>()))
+            .ReturnsAsync(new VersionFileChanges<DependencyUpdate>([], [], []));
 
         ForwardFlowConflictResolver resolver = new(
             new Mock<IVmrInfo>().Object,
@@ -57,7 +71,9 @@ public class ForwardFlowConflictResolverTests
             new Mock<IFileSystem>().Object,
             NullLogger<ForwardFlowConflictResolver>.Instance,
             vmrVersionFileMergerMock.Object,
-            localGitRepoFactoryMock.Object);
+            localGitRepoFactoryMock.Object,
+            dependencyFileManagerMock.Object,
+            gitRepoFactoryMock.Object);
 
         await resolver.MergeDependenciesAsync(
             mapping,
