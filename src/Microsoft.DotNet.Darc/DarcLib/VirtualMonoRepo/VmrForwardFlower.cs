@@ -266,6 +266,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                     hadChanges = await _vmrUpdater.UpdateRepository(
                         mapping,
                         build,
+                        additionalFileExclusions: PatchExclusions,
                         resetToRemoteWhenCloningRepo: ShouldResetClones,
                         cancellationToken: cancellationToken);
                 },
@@ -334,6 +335,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         bool hadChanges = await _vmrUpdater.UpdateRepository(
             mapping,
             build,
+            additionalFileExclusions: PatchExclusions,
             fromSha: currentSha,
             resetToRemoteWhenCloningRepo: ShouldResetClones,
             cancellationToken: cancellationToken);
