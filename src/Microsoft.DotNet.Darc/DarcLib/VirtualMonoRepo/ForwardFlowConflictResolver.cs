@@ -62,7 +62,6 @@ public interface IForwardFlowConflictResolver
         string mappingName,
         ILocalGitRepo sourceRepo,
         string targetBranch,
-        bool headBranchExisted,
         Codeflow lastFlow,
         ForwardFlow currentFlow,
         CancellationToken cancellationToken);
@@ -146,7 +145,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                 mappingName,
                 sourceRepo,
                 headBranch,
-                headBranchExisted,
                 lastFlows.LastForwardFlow,
                 currentFlow,
                 cancellationToken);
@@ -299,7 +297,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         string mappingName,
         ILocalGitRepo sourceRepo,
         string targetBranch,
-        bool headBranchExisted,
         Codeflow lastFlow,
         ForwardFlow currentFlow,
         CancellationToken cancellationToken)
