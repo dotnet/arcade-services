@@ -141,9 +141,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // We try to merge the target branch and we apply dependency updates
         VersionFileUpdateResult mergeResult = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
             mapping,
-            lastFlows.LastFlow,
+            lastFlows,
             currentFlow,
-            lastFlows.CrossingFlow,
             targetRepo,
             build,
             headBranch,

@@ -60,7 +60,7 @@ public interface IForwardFlowConflictResolver
         string mappingName,
         ILocalGitRepo sourceRepo,
         string targetBranch,
-        Codeflow lastFlow,
+        ForwardFlow lastForwardFlow,
         ForwardFlow currentFlow,
         CancellationToken cancellationToken);
 }
@@ -142,7 +142,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                 mappingName,
                 sourceRepo,
                 headBranch,
-                lastFlows.LastFlow,
+                lastFlows.LastForwardFlow,
                 currentFlow,
                 cancellationToken);
         }
@@ -294,7 +294,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         string mappingName,
         ILocalGitRepo sourceRepo,
         string targetBranch,
-        Codeflow lastFlow,
+        ForwardFlow lastForwardFlow,
         ForwardFlow currentFlow,
         CancellationToken cancellationToken)
     {
@@ -302,33 +302,33 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         var relativeSourceMappingPath = VmrInfo.GetRelativeRepoSourcesPath(mappingName);
 
         await _versionFileMerger.MergeJsonAsync(
-            lastFlow,
+            lastForwardFlow,
             vmr,
             relativeSourceMappingPath / VersionFiles.GlobalJson,
-            lastFlow.VmrSha,
+            lastForwardFlow.VmrSha,
             targetBranch,
             sourceRepo,
             VersionFiles.GlobalJson,
-            lastFlow.RepoSha,
+            lastForwardFlow.RepoSha,
             currentFlow.RepoSha);
 
         // and handle dotnet-tools.json if it exists
         bool dotnetToolsConfigExists =
-            (await sourceRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, lastFlow.RepoSha) != null) ||
+            (await sourceRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, lastForwardFlow.RepoSha) != null) ||
             (await sourceRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, targetBranch) != null) ||
             (await vmr.GetFileFromGitAsync(relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson, currentFlow.VmrSha) != null ||
-            (await vmr.GetFileFromGitAsync(relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson, lastFlow.VmrSha) != null));
+            (await vmr.GetFileFromGitAsync(relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson, lastForwardFlow.VmrSha) != null));
         if (dotnetToolsConfigExists)
         {
             await _versionFileMerger.MergeJsonAsync(
-            lastFlow,
+            lastForwardFlow,
             vmr,
             relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson,
-            lastFlow.VmrSha,
+            lastForwardFlow.VmrSha,
             targetBranch,
             sourceRepo,
             VersionFiles.DotnetToolsConfigJson,
-            lastFlow.RepoSha,
+            lastForwardFlow.RepoSha,
             currentFlow.RepoSha,
             allowMissingFiles: true);
         }
@@ -343,35 +343,17 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             versionDetailsPropsCreated = true;
         }
 
-        // the diff between the last flow and current flow repo sha won't contain updates from the previous backflow (if last flow was a backflow)
-        // just manual changes that came afterwards. We will parse version details after the 
-        var versionDetails = await _dependencyFileManager.ParseVersionDetailsXmlAsync(
-            sourceRepo.Path,
-            currentFlow.RepoSha,
-            includePinned: true);
-        foreach(var dep in versionDetails.Dependencies)
-        {
-            await _dependencyFileManager.AddDependencyAsync(
-                dep,
-                vmr.Path,
-                branch: targetBranch,
-                relativeSourceMappingPath);
-        }
-
         var versionDetailsChanges = await _versionFileMerger.MergeVersionDetails(
-            lastFlow,
+            lastForwardFlow,
             vmr,
             relativeSourceMappingPath / VersionFiles.VersionDetailsXml,
-            lastFlow.VmrSha,
+            lastForwardFlow.VmrSha,
             targetBranch,
             sourceRepo,
             VersionFiles.VersionDetailsXml,
-            lastFlow.RepoSha,
+            lastForwardFlow.RepoSha,
             currentFlow.RepoSha,
             mappingName);
-
-        // If the last flow was a backflow, the dependency changes we just merged won't contain the dependency updates from the backflow
-        // We'll go over Version.Details
 
         // If we didn't have any changes, and we just added Version.Details.props, we need to generate it
         if (!versionDetailsChanges.Additions.Any() &&

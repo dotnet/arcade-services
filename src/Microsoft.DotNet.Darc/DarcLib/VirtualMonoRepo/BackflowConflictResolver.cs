@@ -27,9 +27,8 @@ public interface IBackflowConflictResolver
     /// <returns>List of dependency updates made to the version files</returns>
     Task<VersionFileUpdateResult> TryMergingBranchAndUpdateDependencies(
         SourceMapping mapping,
-        Codeflow lastFlow,
+        LastFlows lastFlows,
         Backflow currentFlow,
-        Codeflow? crossingFlow,
         ILocalGitRepo targetRepo,
         Build build,
         string headBranch,
@@ -80,9 +79,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
     public async Task<VersionFileUpdateResult> TryMergingBranchAndUpdateDependencies(
         SourceMapping mapping,
-        Codeflow lastFlow,
+        LastFlows lastFlows,
         Backflow currentFlow,
-        Codeflow? crossingFlow,
         ILocalGitRepo targetRepo,
         Build build,
         string headBranch,
@@ -101,7 +99,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 conflictedFiles,
                 mapping,
                 currentFlow,
-                crossingFlow,
+                lastFlows.CrossingFlow,
                 targetRepo,
                 headBranch,
                 branchToMerge,
@@ -126,7 +124,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 branchToMerge,
                 build,
                 excludedAssets,
-                lastFlow,
+                lastFlows.LastBackFlow ?? lastFlows.LastFlow,
                 currentFlow,
                 cancellationToken);
             return new VersionFileUpdateResult(conflictedFiles, updates);
