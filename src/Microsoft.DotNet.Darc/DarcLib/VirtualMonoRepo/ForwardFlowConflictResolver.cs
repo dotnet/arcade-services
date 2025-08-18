@@ -121,6 +121,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             conflictedFiles,
             currentFlow,
             lastFlows.CrossingFlow,
+            headBranchExisted,
             cancellationToken))
         {
             _logger.LogInformation("Successfully resolved file conflicts between branches {headBranch} and {headBranch}",
@@ -171,6 +172,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         IReadOnlyCollection<UnixPath> conflictedFiles,
         ForwardFlow currentFlow,
         Codeflow? crossingFlow,
+        bool headBranchExisted,
         CancellationToken cancellationToken)
     {
         // TODO https://github.com/dotnet/arcade-services/issues/4792: Do not ignore conflicts in version files
@@ -191,6 +193,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                     allowedConflicts,
                     currentFlow,
                     crossingFlow,
+                    headBranchExisted,
                     cancellationToken))
                 {
                     continue;
@@ -220,6 +223,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         IReadOnlyCollection<UnixPath> allowedConflicts,
         ForwardFlow currentFlow,
         Codeflow? crossingFlow,
+        bool headBranchExisted,
         CancellationToken cancellationToken)
     {
         // Known conflict in source-manifest.json
@@ -233,7 +237,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         if (allowedConflicts.Any(allowed => conflictedFile.Path.Equals(allowed, StringComparison.OrdinalIgnoreCase)))
         {
             _logger.LogInformation("Auto-resolving conflict in {file} using PR version", conflictedFile);
-            await vmr.ResolveConflict(conflictedFile, ours: true);
+            await vmr.ResolveConflict(conflictedFile, ours: headBranchExisted);
             return true;
         }
 
