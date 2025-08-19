@@ -51,7 +51,6 @@ public interface IForwardFlowConflictResolver
         ILocalGitRepo vmr,
         ILocalGitRepo sourceRepo,
         string headBranch,
-        bool headBranchExisted,
         string branchToMerge,
         ForwardFlow currentFlow,
         LastFlows lastFlows,
@@ -104,7 +103,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         ILocalGitRepo vmr,
         ILocalGitRepo sourceRepo,
         string headBranch,
-        bool headBranchExisted,
         string branchToMerge,
         ForwardFlow currentFlow,
         LastFlows lastFlows,
@@ -119,7 +117,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             conflictedFiles,
             currentFlow,
             lastFlows.CrossingFlow,
-            headBranchExisted,
             cancellationToken))
         {
             _logger.LogInformation("Successfully resolved file conflicts between branches {headBranch} and {headBranch}",
@@ -169,14 +166,8 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         IReadOnlyCollection<UnixPath> conflictedFiles,
         ForwardFlow currentFlow,
         Codeflow? crossingFlow,
-        bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        // TODO https://github.com/dotnet/arcade-services/issues/4792: Do not ignore conflicts in version files
-        var allowedConflicts = DependencyFileManager.DependencyFiles
-            .Select(f => new UnixPath(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / f))
-            .ToList();
-
         foreach (var filePath in conflictedFiles)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -187,10 +178,8 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                     vmr,
                     sourceRepo,
                     filePath,
-                    allowedConflicts,
                     currentFlow,
                     crossingFlow,
-                    headBranchExisted,
                     cancellationToken))
                 {
                     continue;
@@ -217,24 +206,14 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         ILocalGitRepo vmr,
         ILocalGitRepo sourceRepo,
         UnixPath conflictedFile,
-        IReadOnlyCollection<UnixPath> allowedConflicts,
         ForwardFlow currentFlow,
         Codeflow? crossingFlow,
-        bool headBranchExisted,
         CancellationToken cancellationToken)
     {
         // Known conflict in source-manifest.json
         if (string.Equals(conflictedFile, VmrInfo.DefaultRelativeSourceManifestPath, StringComparison.OrdinalIgnoreCase))
         {
             await TryResolvingSourceManifestConflict(vmr, mappingName!, cancellationToken);
-            return true;
-        }
-
-        // Known conflicts are resolved to "ours" version (the PR version)
-        if (allowedConflicts.Any(allowed => conflictedFile.Path.Equals(allowed, StringComparison.OrdinalIgnoreCase)))
-        {
-            _logger.LogInformation("Auto-resolving conflict in {file} using PR version", conflictedFile);
-            await vmr.ResolveConflict(conflictedFile, ours: headBranchExisted);
             return true;
         }
 
