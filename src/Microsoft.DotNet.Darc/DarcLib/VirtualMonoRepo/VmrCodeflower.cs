@@ -571,7 +571,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         foreach (string revertedFile in revertedFiles)
         {
-            var (sourceFile, targetFile) = (vmrPrefix / revertedFile, revertedFile);
+            var (sourceFile, targetFile) = ((vmrPrefix / revertedFile).Path, revertedFile);
             if (!currentIsBackflow)
             {
                 (sourceFile, targetFile) = (targetFile, sourceFile);
