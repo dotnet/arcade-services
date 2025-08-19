@@ -237,7 +237,14 @@ public class BackflowConflictResolverTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string?>()))
-            .ReturnsAsync(new VersionFileChanges<DependencyUpdate>([], expectedAddition, new Dictionary<string, DependencyUpdate>(){ { repoDependencyUpdate.From.Name, repoDependencyUpdate } }));
+            .ReturnsAsync(new VersionFileChanges<DependencyUpdate>(
+                [],
+                expectedAddition,
+                new Dictionary<string, DependencyUpdate>()
+                {
+                    // this represents the repo-side update to Version.Details.xml prior to the current codeflow
+                    { repoDependencyUpdate.From.Name, repoDependencyUpdate } 
+                }));
 
         // Simulate dependency manager
         _assetLocationResolver.Setup(a => a.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
