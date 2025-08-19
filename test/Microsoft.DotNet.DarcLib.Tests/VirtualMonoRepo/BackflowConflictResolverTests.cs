@@ -167,7 +167,8 @@ public class BackflowConflictResolverTests
         // This represents a package being updated to a new version in the repo after the last flow
         var repoDependencyAtLastFlow = CreateDependency("Package.Updated.In.Repo.Before.Current.Flow", "2.0.0", LastVmrSha);
         var repoDependencyAtCurrentFlow = CreateDependency("Package.Updated.In.Repo.Before.Current.Flow", "2.0.2", "unspecifiedSha");
-        var repoDependencyUpdate = new DependencyUpdate{
+        var repoDependencyUpdate = new DependencyUpdate
+        {
             From = repoDependencyAtLastFlow,
             To = repoDependencyAtCurrentFlow,
         };
