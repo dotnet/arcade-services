@@ -144,7 +144,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 vmr,
                 sourceRepo,
                 headBranch,
-                headBranchExisted,
                 targetBranch,
                 currentFlow,
                 lastFlows,
