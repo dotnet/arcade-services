@@ -21,17 +21,6 @@ public static class MergePoliciesPopUpHelpers
     {
         if (mergePolicies != null)
         {
-            // Check for conflicts between Standard and VersionDetailsProps policies
-            bool hasStandardPolicy = mergePolicies.Any(p => p.Name.Equals(MergePolicyConstants.StandardMergePolicyName, StringComparison.OrdinalIgnoreCase));
-            bool hasVersionDetailsPolicyProps = mergePolicies.Any(p => p.Name.Equals(MergePolicyConstants.VersionDetailsPropsMergePolicyName, StringComparison.OrdinalIgnoreCase));
-
-            if (hasStandardPolicy && hasVersionDetailsPolicyProps)
-            {
-                logger.LogError($"Cannot combine {MergePolicyConstants.StandardMergePolicyName} and {MergePolicyConstants.VersionDetailsPropsMergePolicyName} merge policies. " +
-                               $"The {MergePolicyConstants.VersionDetailsPropsMergePolicyName} policy is already included in {MergePolicyConstants.StandardMergePolicyName}.");
-                return false;
-            }
-
             foreach (MergePolicy policy in mergePolicies)
             {
                 if (policy.Name.Equals(MergePolicyConstants.AllCheckSuccessfulMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
