@@ -561,7 +561,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         _logger.LogInformation("Reverted files detected after applying changes: {files}. Resetting the files to their current state.",
             string.Join(", ", revertedFiles));
 
-        string vmrPrefix = VmrInfo.GetRelativeRepoSourcesPath(mapping.Name).ToString();
+        UnixPath vmrPrefix = VmrInfo.GetRelativeRepoSourcesPath(mapping.Name);
 
         var (sourceRepo, targetRepo) = (_localGitRepoFactory.Create(_vmrInfo.VmrPath), repo);
         if (!currentIsBackflow)
@@ -571,10 +571,10 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         foreach (string revertedFile in revertedFiles)
         {
-            var (sourceFile, targetFile) = ($"{vmrPrefix}/{revertedFile}", revertedFile);
+            var (sourceFile, targetFile) = (vmrPrefix / revertedFile, revertedFile);
             if (!currentIsBackflow)
             {
-                (sourceFile, targetFile) = (targetFile, $"{vmrPrefix}/{revertedFile}");
+                (sourceFile, targetFile) = (targetFile, sourceFile);
             }
 
             // Set the file to the current state in the source repo
