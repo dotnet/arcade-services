@@ -389,7 +389,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 excludedAssets,
                 targetBranch,
                 headBranch,
-                headBranchExisted: false,
+                headBranchExisted: true, // Head branch was created when we rewound to the previous flow
                 cancellationToken);
 
             var changedFilesAfterRecreation = await GetChangesInHeadBranch(

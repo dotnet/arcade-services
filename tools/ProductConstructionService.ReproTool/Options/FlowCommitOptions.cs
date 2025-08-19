@@ -25,8 +25,11 @@ internal class FlowCommitOptions : Options
     [Option("target-branch", HelpText = "Branch to flow the commit into", Required = true)]
     public required string TargetBranch { get; init; }
 
-    [Option("package", HelpText = "Name(s) of package(s) to include in the flown build", Required = false)]
+    [Option("packages", HelpText = "Name(s) of package(s) to include in the flown build", Required = false)]
     public IEnumerable<string> Packages { get; init; } = [];
+
+    [Option("realBuildId", HelpText = "Build to take assets from. Shouldn't be combined with packages", Required = false)]
+    public int RealBuildId { get; init; }
 
     internal override Operation GetOperation(IServiceProvider sp)
         => ActivatorUtilities.CreateInstance<FlowCommitOperation>(sp, this);

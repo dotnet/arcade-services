@@ -31,7 +31,7 @@ public class VersionDetailsPropsMergePolicyTests
     private const string VersionPropsWithoutConflictingProperties = """
         <?xml version="1.0" encoding="utf-8"?>
         <Project>
-          <Import Project="Version.Details.props" Condition="Exists('Version.Details.props')" />
+          <Import Project="Version.Details.props" />
           <PropertyGroup>
             <DifferentPackageVersion>2.0.0</DifferentPackageVersion>
             <AnotherPackageVersion>3.0.0</AnotherPackageVersion>
@@ -106,6 +106,10 @@ public class VersionDetailsPropsMergePolicyTests
               <Sha>abc123</Sha>
             </Dependency>
             <Dependency Name="Bar" Version="1.0.0">
+              <Uri>https://github.com/test/bar</Uri>
+              <Sha>def456</Sha>
+            </Dependency>
+            <Dependency Name="dependency" Version="1.0.0" SkipProperty="True">
               <Uri>https://github.com/test/bar</Uri>
               <Sha>def456</Sha>
             </Dependency>

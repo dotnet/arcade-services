@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31808.319
+# Visual Studio Version 18
+VisualStudioVersion = 18.0.10816.19 main
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Maestro", "Maestro", "{AE791E26-78E1-4936-BCF4-1BF5152CBBD6}"
 EndProject
@@ -90,9 +90,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductConstructionService.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tools.Common", "tools\Tools.Common\Tools.Common.csproj", "{977060F4-EEEF-420D-02E8-5E58D3E51942}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VersionPropsFormatter", "tools\VersionPropsFormatter\VersionPropsFormatter.csproj", "{40B3EEE3-2B38-4264-A32F-173D129090F8}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VersionPropsFormatter.Tests", "test\VersionPropsFormatter.Tests\VersionPropsFormatter.Tests.csproj", "{9B43D741-AED1-42DA-88EA-19CB1D71C41C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VersionDetailsPropsFormatter", "tools\VersionPropsFormatter\VersionDetailsPropsFormatter.csproj", "{40B3EEE3-2B38-4264-A32F-173D129090F8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.DotNet.DarcLib.Codeflow.Tests", "test\Microsoft.DotNet.DarcLib.Codeflow.Tests\Microsoft.DotNet.DarcLib.Codeflow.Tests.csproj", "{A0F47A97-6763-8087-7359-CE0C4E5CF09D}"
 EndProject
@@ -492,18 +490,6 @@ Global
 		{40B3EEE3-2B38-4264-A32F-173D129090F8}.Release|x64.Build.0 = Release|Any CPU
 		{40B3EEE3-2B38-4264-A32F-173D129090F8}.Release|x86.ActiveCfg = Release|Any CPU
 		{40B3EEE3-2B38-4264-A32F-173D129090F8}.Release|x86.Build.0 = Release|Any CPU
-		{9B43D741-AED1-42DA-88EA-19CB1D71C41C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9B43D741-AED1-42DA-88EA-19CB1D71C41C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9B43D741-AED1-42DA-88EA-19CB1D71C41C}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{9B43D741-AED1-42DA-88EA-19CB1D71C41C}.Debug|x64.Build.0 = Debug|Any CPU
-		{9B43D741-AED1-42DA-88EA-19CB1D71C41C}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{9B43D741-AED1-42DA-88EA-19CB1D71C41C}.Debug|x86.Build.0 = Debug|Any CPU
-		{9B43D741-AED1-42DA-88EA-19CB1D71C41C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9B43D741-AED1-42DA-88EA-19CB1D71C41C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9B43D741-AED1-42DA-88EA-19CB1D71C41C}.Release|x64.ActiveCfg = Release|Any CPU
-		{9B43D741-AED1-42DA-88EA-19CB1D71C41C}.Release|x64.Build.0 = Release|Any CPU
-		{9B43D741-AED1-42DA-88EA-19CB1D71C41C}.Release|x86.ActiveCfg = Release|Any CPU
-		{9B43D741-AED1-42DA-88EA-19CB1D71C41C}.Release|x86.Build.0 = Release|Any CPU
 		{A0F47A97-6763-8087-7359-CE0C4E5CF09D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A0F47A97-6763-8087-7359-CE0C4E5CF09D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A0F47A97-6763-8087-7359-CE0C4E5CF09D}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -568,7 +554,6 @@ Global
 		{261CB211-6023-8025-48E1-D11953F4C61C} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{977060F4-EEEF-420D-02E8-5E58D3E51942} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{40B3EEE3-2B38-4264-A32F-173D129090F8} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
-		{9B43D741-AED1-42DA-88EA-19CB1D71C41C} = {1A456CF0-C09A-4DE6-89CE-1110EED31180}
 		{A0F47A97-6763-8087-7359-CE0C4E5CF09D} = {1A456CF0-C09A-4DE6-89CE-1110EED31180}
 		{98FB2A6D-582F-4C67-B22E-831733CC64FA} = {1A456CF0-C09A-4DE6-89CE-1110EED31180}
 	EndGlobalSection

@@ -256,13 +256,13 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         await _vmrVersionFileMerger.MergeJsonAsync(
             lastFlow,
             targetRepo,
+            VersionFiles.GlobalJson,
             lastFlow.RepoSha,
             targetBranch,
             vmr,
+            VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.GlobalJson,
             lastFlow.VmrSha,
-            currentFlow.VmrSha,
-            mappingName,
-            VersionFiles.GlobalJson);
+            currentFlow.VmrSha);
 
         // and handle dotnet-tools.json if it exists
         bool dotnetToolsConfigExists =
@@ -275,22 +275,28 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             await _vmrVersionFileMerger.MergeJsonAsync(
                     lastFlow,
                     targetRepo,
+                    VersionFiles.DotnetToolsConfigJson,
                     lastFlow.RepoSha,
                     targetBranch,
                     vmr,
+                    VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.DotnetToolsConfigJson,
                     lastFlow.VmrSha,
                     currentFlow.VmrSha,
-                    mappingName,
-                    VersionFiles.DotnetToolsConfigJson,
                     allowMissingFiles: true);
         }
 
         var versionDetailsChanges = await _vmrVersionFileMerger.MergeVersionDetails(
             lastFlow,
-            currentFlow,
-            mappingName,
             targetRepo,
-            targetBranch);
+            VersionFiles.VersionDetailsXml,
+            lastFlow.RepoSha,
+            targetBranch,
+            vmr,
+            VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.VersionDetailsXml,
+            lastFlow.VmrSha,
+            currentFlow.VmrSha,
+            // we're applying the changes to a product repo, so no mapping
+            mappingToApplyChanges: null);
 
         var excludedAssetsMatcher = excludedAssets.GetAssetMatcher();
         List<AssetData> buildAssets = build.Assets
@@ -302,7 +308,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             })
             .ToList();
 
-        var currentRepoDependencies = await GetRepoDependencies(targetRepo, null!);
+        var currentRepoDependencies = await GetRepoDependencies(targetRepo, string.Empty);
 
         List<DependencyDetail> buildUpdates = _coherencyUpdateResolver
             .GetRequiredNonCoherencyUpdates(
@@ -324,7 +330,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         if (arcadeItem != null || mappingName == VmrInfo.ArcadeMappingName)
         {
             // Even tho we are backflowing from the VMR, we want to get the sdk version from VMR`s global.json, not src/arcade's
-            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(build.GetRepository(), build.Commit, repoIsVmr: false);
+            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(build.GetRepository(), build.Commit);
         }
 
         GitFileContentContainer updatedFiles = await _dependencyFileManager.UpdateDependencyFiles(
@@ -366,7 +372,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             }
         }
 
-        if (!await targetRepo.HasWorkingTreeChangesAsync())
+        if (!await targetRepo.HasWorkingTreeChangesAsync() && !await targetRepo.HasStagedChangesAsync())
         {
             _logger.LogInformation("No changes to dependencies in this backflow update");
             return [];
@@ -399,7 +405,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             }
         }
 
-        var headBranchDependencyDict = headBranchDependencies.Dependencies.ToDictionary(d => d.Name, d => d);
+        var headBranchDependencyDict = headBranchDependencies.Dependencies.ToDictionary(d => d.Name, d => d, comparer: StringComparer.OrdinalIgnoreCase);
 
         List<DependencyUpdate> dependencyUpdates = [
             ..versionDetailsChanges.Additions
@@ -513,9 +519,6 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
     private async Task<VersionDetails> GetRepoDependencies(ILocalGitRepo repo, string commit)
         => GetDependencies(await repo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml, commit));
-
-    private async Task<VersionDetails> GetVmrDependencies(ILocalGitRepo vmr, string mapping, string commit)
-        => GetDependencies(await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mapping) / VersionFiles.VersionDetailsXml, commit));
 
     private VersionDetails GetDependencies(string? content)
         => content == null
