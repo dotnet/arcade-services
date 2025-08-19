@@ -482,21 +482,7 @@ public class DependencyFileManager : IDependencyFileManager
         // Adds/updates the <Source> element
         if (sourceDependency != null)
         {
-            var sourceNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.SourceElementName}");
-            if (sourceNode == null)
-            {
-                sourceNode = versionDetails.CreateElement(VersionDetailsParser.SourceElementName);
-                var dependenciesNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.DependenciesElementName}");
-                dependenciesNode.PrependChild(sourceNode);
-            }
-
-            SetAttribute(versionDetails, sourceNode, VersionDetailsParser.UriElementName, sourceDependency.Uri);
-            SetAttribute(versionDetails, sourceNode, VersionDetailsParser.MappingElementName, sourceDependency.Mapping);
-            SetAttribute(versionDetails, sourceNode, VersionDetailsParser.ShaElementName, sourceDependency.Sha);
-            if (sourceDependency.BarId != null)
-            {
-                SetAttribute(versionDetails, sourceNode, VersionDetailsParser.BarIdElementName, sourceDependency.BarId.ToString());
-            }
+            UpdateVersionDetailsXmlSourceTag(versionDetails, sourceDependency);
         }
 
         // Combine the two sets of dependencies. If an asset is present in the itemsToUpdate,
@@ -551,6 +537,25 @@ public class DependencyFileManager : IDependencyFileManager
         }
 
         return fileContainer;
+    }
+
+    public void UpdateVersionDetailsXmlSourceTag(XmlDocument versionDetails, SourceDependency sourceDependency)
+    {
+        var sourceNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.SourceElementName}");
+        if (sourceNode == null)
+        {
+            sourceNode = versionDetails.CreateElement(VersionDetailsParser.SourceElementName);
+            var dependenciesNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.DependenciesElementName}");
+            dependenciesNode.PrependChild(sourceNode);
+        }
+
+        SetAttribute(versionDetails, sourceNode, VersionDetailsParser.UriElementName, sourceDependency.Uri);
+        SetAttribute(versionDetails, sourceNode, VersionDetailsParser.MappingElementName, sourceDependency.Mapping);
+        SetAttribute(versionDetails, sourceNode, VersionDetailsParser.ShaElementName, sourceDependency.Sha);
+        if (sourceDependency.BarId != null)
+        {
+            SetAttribute(versionDetails, sourceNode, VersionDetailsParser.BarIdElementName, sourceDependency.BarId.ToString());
+        }
     }
 
     /// <summary>

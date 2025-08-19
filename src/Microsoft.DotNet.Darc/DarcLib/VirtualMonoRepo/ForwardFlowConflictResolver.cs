@@ -142,7 +142,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                 mappingName,
                 sourceRepo,
                 headBranch,
-                lastFlows.LastFlow,
+                lastFlows.LastForwardFlow,
                 currentFlow,
                 cancellationToken);
         }
@@ -168,11 +168,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         Codeflow? crossingFlow,
         CancellationToken cancellationToken)
     {
-        // TODO https://github.com/dotnet/arcade-services/issues/4792: Do not ignore conflicts in version files
-        var allowedConflicts = DependencyFileManager.DependencyFiles
-            .Select(f => new UnixPath(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / f))
-            .ToList();
-
         foreach (var filePath in conflictedFiles)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -183,7 +178,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                     vmr,
                     sourceRepo,
                     filePath,
-                    allowedConflicts,
                     currentFlow,
                     crossingFlow,
                     cancellationToken))
@@ -212,7 +206,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         ILocalGitRepo vmr,
         ILocalGitRepo sourceRepo,
         UnixPath conflictedFile,
-        IReadOnlyCollection<UnixPath> allowedConflicts,
         ForwardFlow currentFlow,
         Codeflow? crossingFlow,
         CancellationToken cancellationToken)
@@ -221,14 +214,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         if (string.Equals(conflictedFile, VmrInfo.DefaultRelativeSourceManifestPath, StringComparison.OrdinalIgnoreCase))
         {
             await TryResolvingSourceManifestConflict(vmr, mappingName!, cancellationToken);
-            return true;
-        }
-
-        // Known conflicts are resolved to "ours" version (the PR version)
-        if (allowedConflicts.Any(allowed => conflictedFile.Path.Equals(allowed, StringComparison.OrdinalIgnoreCase)))
-        {
-            _logger.LogInformation("Auto-resolving conflict in {file} using PR version", conflictedFile);
-            await vmr.ResolveConflict(conflictedFile, ours: true);
             return true;
         }
 
@@ -354,6 +339,36 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             lastFlow.RepoSha,
             currentFlow.RepoSha,
             mappingName);
+
+        // Also flow the Source tag if it changed
+        var repoVersionDetails = await _dependencyFileManager.ParseVersionDetailsXmlAsync(
+            sourceRepo.Path,
+            currentFlow.RepoSha);
+        var vmrVersionDetails = await _dependencyFileManager.ParseVersionDetailsXmlAsync(
+            vmr.Path,
+            targetBranch,
+            relativeBasePath: relativeSourceMappingPath);
+
+        if (repoVersionDetails.Source != null
+            && repoVersionDetails.Source.BarId != vmrVersionDetails.Source?.BarId)
+        {
+            var vmrVersionDetailsXml = await _dependencyFileManager.ReadVersionDetailsXmlAsync(
+                    vmr.Path,
+                    null!, // get the staged version details,
+                    relativeSourceMappingPath);
+            _dependencyFileManager.UpdateVersionDetailsXmlSourceTag(
+                vmrVersionDetailsXml,
+                repoVersionDetails.Source);
+            var gitFile = new GitFile(
+                relativeSourceMappingPath / VersionFiles.VersionDetailsXml,
+                vmrVersionDetailsXml);
+            await _gitRepoFactory.CreateClient(vmr.Path).CommitFilesAsync(
+                [gitFile],
+                vmr.Path,
+                targetBranch,
+                "Update source tag");
+        }
+            
 
         // If we didn't have any changes, and we just added Version.Details.props, we need to generate it
         if (!versionDetailsChanges.Additions.Any() &&

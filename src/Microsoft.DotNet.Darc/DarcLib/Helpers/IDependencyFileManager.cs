@@ -74,4 +74,6 @@ public interface IDependencyFileManager
     Task<bool> VerifyNoDuplicatedProperties(XmlDocument versionProps);
 
     Task<bool> VersionDetailsPropsExistsAsync(string repoUri, string branch, UnixPath? relativeBasePath = null);
+
+    void UpdateVersionDetailsXmlSourceTag(XmlDocument versionDetails, SourceDependency sourceDependency);
 }

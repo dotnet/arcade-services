@@ -121,7 +121,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
                 using (ChangeDirectory(reposFolder.Directory))
                 {
-                    await WaitForNewCommitInPullRequest(TestRepository.VmrTestRepoName, pr, 4);
+                    await WaitForNewCommitInPullRequest(TestRepository.VmrTestRepoName, pr, 5);
                     await CheckForwardFlowGitHubPullRequest(
                         [(TestRepository.TestRepo1Name, (await GitGetCurrentSha()).TrimEnd())],
                         TestRepository.VmrTestRepoName,
@@ -283,6 +283,9 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                TestContext.WriteLine("Merging the PR causing the conflict");
                await MergePullRequestAsync(TestRepository.VmrTestRepoName, pr);
 
+               TestContext.WriteLine("Triggering the subscription again (to speed things up)");
+               await TriggerSubscriptionAsync(subscriptionId.Value);
+
                try
                {
                    // The previous PR merged and the pending update should cause a new PR to open
@@ -409,6 +412,9 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
                         TestContext.WriteLine("Merging PR causing the conflict");
                         await MergePullRequestAsync(TestRepository.TestRepo1Name, pr);
+
+                        TestContext.WriteLine("Triggering the subscription again (to speed things up)");
+                        await TriggerSubscriptionAsync(subscriptionId.Value);
 
                         try
                         {

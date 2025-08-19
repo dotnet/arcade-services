@@ -110,7 +110,7 @@ internal class ForwardFlowTests : CodeFlowTests
         gitResult.Succeeded.Should().BeTrue("Git diff should succeed");
         var stagedFiles = gitResult.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
         var expectedFile = VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName;
-        stagedFiles.Should().BeEquivalentTo([expectedFile], "There should be staged files after backflow");
+        stagedFiles.Should().BeEquivalentTo([expectedFile], "There should be staged files after forward flow");
 
         gitResult = await processManager.ExecuteGit(VmrPath, "commit", "-m", "Commit staged files");
         await GitOperations.CheckAllIsCommitted(VmrPath);
