@@ -164,7 +164,7 @@ public class BackflowConflictResolverTests
         var lastFlow = new ForwardFlow(LastRepoSha, LastVmrSha);
         var currentFlow = new Backflow(CurrentVmrSha, CurrentRepoSha);
 
-        // This represent a package updated to a new version on the repo after the last flow
+        // This represents a package being updated to a new version in the repo after the last flow
         var repoDependencyAtLastFlow = CreateDependency("Package.Updated.In.Repo.Before.Current.Flow", "2.0.0", LastVmrSha);
         var repoDependencyAtCurrentFlow = CreateDependency("Package.Updated.In.Repo.Before.Current.Flow", "2.0.2", "unspecifiedSha");
         var repoDependencyUpdate = new DependencyUpdate{
