@@ -51,4 +51,7 @@ internal abstract class SubscriptionCommandLineOptions<T> : CommandLineOptions<T
 
     [Option("validate-coherency", HelpText = "PR is not merged if the coherency algorithm failed.")]
     public bool ValidateCoherencyCheckMergePolicy { get; set; }
+
+    [Option("version-details-props-check", HelpText = "PR is not merged if Version.Details.props validation fails.")]
+    public bool VersionDetailsPropsMergePolicy { get; set; }
 }

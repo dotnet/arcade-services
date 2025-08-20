@@ -39,7 +39,8 @@ public static class MergePoliciesPopUpHelpers
                 else if (policy.Name.Equals(MergePolicyConstants.CodeflowMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
                          policy.Name.Equals(MergePolicyConstants.NoRequestedChangesMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
                          policy.Name.Equals(MergePolicyConstants.DontAutomergeDowngradesPolicyName, StringComparison.OrdinalIgnoreCase) ||
-                         policy.Name.Equals(MergePolicyConstants.ValidateCoherencyMergePolicyName, StringComparison.OrdinalIgnoreCase))
+                         policy.Name.Equals(MergePolicyConstants.ValidateCoherencyMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
+                         policy.Name.Equals(MergePolicyConstants.VersionDetailsPropsMergePolicyName, StringComparison.OrdinalIgnoreCase))
                 {
                     // All good
                 }
