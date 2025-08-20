@@ -1,5 +1,5 @@
 stages:
-- template: /eng/templates/stages/secret-validation.yml@self
+- template: /eng/pipelines/templates/stages/secret-validation.yml@self
   parameters:
     verifyOnly: true
 
@@ -176,28 +176,28 @@ stages:
   - Deploy
 
   jobs:
-  - template: /eng/templates/jobs/e2e-pcs-tests.yml
+  - template: ../jobs/e2e-pcs-tests.yml
     parameters:
       name: scenarioTests_GitHub
       displayName: GitHub tests
       testFilter: 'TestCategory=GitHub'
 
-  - template: /eng/templates/jobs/e2e-pcs-tests.yml
+  - template: ../jobs/e2e-pcs-tests.yml
     parameters:
       name: scenarioTests_AzDO
       displayName: AzDO tests
       testFilter: 'TestCategory=AzDO'
 
-  - template: /eng/templates/jobs/e2e-pcs-tests.yml
+  - template: ../jobs/e2e-pcs-tests.yml
     parameters:
       name: scenarioTests_Other
       displayName: Other tests
       testFilter: 'TestCategory!=GitHub&TestCategory!=AzDO&TestCategory!=CodeFlow'
 
-  - template: /eng/templates/jobs/e2e-pcs-tests.yml
+  - template: ../jobs/e2e-pcs-tests.yml
     parameters:
       name: scenarioTests_CodeFlow
       displayName: Code Flow tests
       testFilter: 'TestCategory=CodeFlow'
 
-  - template: /eng/templates/jobs/darc-and-api-tests.yml
+  - template: ../jobs/darc-and-api-tests.yml

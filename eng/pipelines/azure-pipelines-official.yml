@@ -1,21 +1,11 @@
 variables:
-- template: /eng/templates/azure-pipelines-shared-variables.yml@self
+- template: /eng/pipelines/templates/variables/shared-variables.yml@self
 - name: devBranchSuffix
-  value:
+  value: dev
 - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-  - name: dockerRegistryUrl
-    value: productconstructionprod.azurecr.io
-  - name: containerRegistryName
-    value: productconstructionprod
-  - name: serviceConnectionName
-    value: ProductConstructionServiceDeploymentProd
+  - template: /eng/pipelines/templates/variables/prod.yml@self
 - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
-  - name: dockerRegistryUrl
-    value: productconstructionint.azurecr.io
-  - name: containerRegistryName
-    value: productconstructionint
-  - name: serviceConnectionName
-    value: ProductConstructionServiceDeploymentInt
+  - template: /eng/pipelines/templates/variables/int.yml@self
 
 trigger:
   batch: true
@@ -39,6 +29,6 @@ extends:
       image: 1es-windows-2022
       os: windows
     stages:
-    - template: /eng/templates/arcade-services.yml@self
+    - template: /eng/pipelines/templates/stages/build.yml@self
       parameters:
         isProdPipeline: true

@@ -76,11 +76,11 @@ stages:
         - checkout: self
           clean: true
 
-        - template: /eng/templates/steps/build.yml
+        - template: /eng/pipelines/templates/steps/build.yml
           parameters:
             configuration: $(configuration)
 
-        - template: /eng/templates/steps/test.yml
+        - template: /eng/pipelines/templates/steps/test.yml
           parameters:
             configuration: $(configuration)
 
@@ -94,6 +94,6 @@ stages:
         - checkout: self
           clean: true
 
-        - template: /eng/templates/steps/docker-build.yml
+        - template: /eng/pipelines/templates/steps/docker-build.yml
           parameters:
             dockerImageName: test

@@ -45,7 +45,7 @@ jobs:
       inputs:
         versionSpec: 5.3.x
 
-    - powershell: .\eng\common\build.ps1 -restore
+    - powershell: /eng/common/build.ps1 -restore
       displayName: Install .NET
 
     - powershell: |

@@ -1,13 +1,8 @@
 variables:
-- template: /eng/templates/azure-pipelines-shared-variables.yml@self
+- template: /eng/pipelines/templates/variables/shared-variables.yml@self
+- template: /eng/pipelines/templates/variables/int.yml@self
 - name: devBranchSuffix
   value: '-dev'
-- name: dockerRegistryUrl
-  value: productconstructionint.azurecr.io
-- name: containerRegistryName
-  value: productconstructionint
-- name: serviceConnectionName
-  value: ProductConstructionServiceDeploymentInt
 
 trigger: none
 
@@ -26,6 +21,6 @@ extends:
       image: 1es-windows-2022
       os: windows
     stages:
-    - template: /eng/templates/arcade-services.yml@self
+    - template: /eng/pipelines/templates/stages/build.yml@self
       parameters:
         isProdPipeline: false

@@ -49,11 +49,11 @@ stages:
     - task: CodeQL3000Init@0
       displayName: CodeQL Initialize
 
-    - template: /eng/templates/steps/build.yml
+    - template: ./templates/steps/build.yml
       parameters:
         configuration: Release
 
     - task: CodeQL3000Finalize@0
       displayName: CodeQL Finalize
 
-- template: /eng/templates/stages/secret-validation.yml
+- template: ./templates/stages/secret-validation.yml
