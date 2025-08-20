@@ -109,7 +109,7 @@ public class BackflowConflictResolverTests
 
         _dependencyFileManager.Reset();
         _dependencyFileManager
-            .Setup(x => x.AddDependencyAsync(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .Setup(x => x.TryAddDependencyAsync(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>(), It.IsAny<bool>()))
             .Callback((DependencyDetail dep, string repo, string commit, UnixPath? _, bool _, bool? _) =>
             {
                 var key = (repo == _vmrPath ? "vmr" : "repo") + "/" + commit;
@@ -124,10 +124,10 @@ public class BackflowConflictResolverTests
                     versionDetails.Dependencies.Append(dep).ToArray(),
                     versionDetails.Source);
             })
-            .Returns(Task.CompletedTask);
+            .Returns(Task.FromResult(true));
 
         _dependencyFileManager
-            .Setup(x => x.RemoveDependencyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>()))
+            .Setup(x => x.TryRemoveDependencyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>()))
             .Callback((string name, string repo, string commit, UnixPath? _, bool? _) =>
             {
                 var key = (repo == _vmrPath ? "vmr" : "repo") + "/" + commit;
@@ -136,7 +136,7 @@ public class BackflowConflictResolverTests
                     [..versionDetails.Dependencies.Where(d => d.Name != name)],
                     versionDetails.Source);
             })
-            .Returns(Task.CompletedTask);
+            .Returns(Task.FromResult(true));
 
         _fileSystem.Reset();
 

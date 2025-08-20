@@ -380,7 +380,7 @@ public class VmrVersionFileMergerTests
         _versionDetailsParserMock.Setup(p => p.ParseVersionDetailsXml(It.IsAny<string>(), It.IsAny<bool>()))
             .Returns((string key, bool _) => versionDetailsDictionary[key]);
 
-        _dependencyFileManagerMock.Setup(d => d.RemoveDependencyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>()))
+        _dependencyFileManagerMock.Setup(d => d.TryRemoveDependencyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>()))
             .Callback((string name, string repo, string commit, UnixPath? _, bool? _) =>
             {
                 var versionDetails = versionDetailsDictionary[targetCurrentKey];
@@ -388,9 +388,9 @@ public class VmrVersionFileMergerTests
                     versionDetails.Dependencies.Where(d => d.Name != name).ToList(),
                     versionDetails.Source);
             })
-            .Returns(Task.CompletedTask);
+            .Returns(Task.FromResult(true));
 
-        _dependencyFileManagerMock.Setup(d => d.AddDependencyAsync(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>(), It.IsAny<bool>()))
+        _dependencyFileManagerMock.Setup(d => d.TryAddDependencyAsync(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>(), It.IsAny<bool>()))
             .Callback((DependencyDetail dependency, string repo, string commit, UnixPath? _, bool _, bool? _) =>
             {
                 var versionDetails = versionDetailsDictionary[targetCurrentKey];
@@ -409,7 +409,7 @@ public class VmrVersionFileMergerTests
                     dep.Version = dependency.Version; 
                 }
             })
-            .Returns(Task.CompletedTask);
+            .Returns(Task.FromResult(true));
 
         var result = await _vmrVersionFileMerger.MergeVersionDetails(
             _targetRepoMock.Object,

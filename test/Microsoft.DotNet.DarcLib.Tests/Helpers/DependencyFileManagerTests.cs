@@ -190,7 +190,7 @@ public class DependencyFileManagerTests
 
         try
         {
-            await manager.RemoveDependencyAsync(dependency.Name, string.Empty, string.Empty);
+            await manager.TryRemoveDependencyAsync(dependency.Name, string.Empty, string.Empty);
 
             NormalizeLineEndings(File.ReadAllText(tmpVersionDetailsPath)).Should()
                 .Be(NormalizeLineEndings(expectedVersionDetails ));
@@ -241,7 +241,7 @@ public class DependencyFileManagerTests
             new VersionDetailsParser(),
             NullLogger.Instance);
 
-        Func<Task> act = async () => await manager.RemoveDependencyAsync(dependency.Name, string.Empty, string.Empty);
+        Func<Task> act = async () => await manager.TryRemoveDependencyAsync(dependency.Name, string.Empty, string.Empty);
         await act.Should().NotThrowAsync<DependencyException>();
     }
 
@@ -316,7 +316,7 @@ public class DependencyFileManagerTests
             new VersionDetailsParser(),
             NullLogger.Instance);
 
-        await manager.AddDependencyAsync(
+        await manager.TryAddDependencyAsync(
             new DependencyDetail()
             {
                 Name = "Microsoft.DotNet.Build.Tasks.Packaging",
@@ -328,7 +328,7 @@ public class DependencyFileManagerTests
             string.Empty,
             string.Empty);
 
-        await manager.AddDependencyAsync(
+        await manager.TryAddDependencyAsync(
             new DependencyDetail()
             {
                 Name = "Microsoft.DotNet.Build.Tasks.Installers",
@@ -445,7 +445,7 @@ public class DependencyFileManagerTests
             new VersionDetailsParser(),
             NullLogger.Instance);
 
-        await manager.AddDependencyAsync(
+        await manager.TryAddDependencyAsync(
             new DependencyDetail()
             {
                 Name = "Foo",
@@ -509,7 +509,7 @@ public class DependencyFileManagerTests
         NormalizeLineEndings(versionProps).Should()
             .Be(NormalizeLineEndings(VersionProps));
 
-        await manager.RemoveDependencyAsync("Bar", string.Empty, string.Empty);
+        await manager.TryRemoveDependencyAsync("Bar", string.Empty, string.Empty);
 
         expectedVersionDetails = """
             <?xml version="1.0" encoding="utf-8"?>
@@ -555,7 +555,7 @@ public class DependencyFileManagerTests
             .Be(NormalizeLineEndings(VersionProps));
 
         // now add a dependency with `SkipProperty = true`
-        await manager.AddDependencyAsync(
+        await manager.TryAddDependencyAsync(
             new DependencyDetail()
             {
                 Name = "Bar",
@@ -615,7 +615,7 @@ public class DependencyFileManagerTests
             new VersionDetailsParser(),
             NullLogger.Instance);
 
-        await manager.AddDependencyAsync(
+        await manager.TryAddDependencyAsync(
             new DependencyDetail()
             {
                 Name = "Foo",
@@ -672,7 +672,7 @@ public class DependencyFileManagerTests
             new VersionDetailsParser(),
             NullLogger.Instance);
 
-        await manager.AddDependencyAsync(
+        await manager.TryAddDependencyAsync(
             new DependencyDetail()
             {
                 Name = "Foo",

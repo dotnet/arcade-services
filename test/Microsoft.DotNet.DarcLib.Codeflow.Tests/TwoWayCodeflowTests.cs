@@ -1123,5 +1123,53 @@ internal class TwoWayCodeflowTests : CodeFlowTests
                 }
             ]);
     }
+
+    [Test]
+    public async Task Test()
+    {
+        const string forwardBranchName = nameof(BackflowingConflictingDependenciesWorks);
+        const string backfBranchName = nameof(BackflowingConflictingDependenciesWorks) + "-back";
+
+        await EnsureTestRepoIsInitialized();
+
+        var productRepo = GetLocal(ProductRepoPath);
+        var firstDependency = new DependencyDetail
+        {
+            Name = "Package.A1",
+            Version = "1.0.1",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "abc",
+            Type = DependencyType.Product,
+        };
+
+        // Add a new dependency
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await productRepo.AddDependencyAsync(firstDependency);
+        await GitOperations.CommitAll(ProductRepoPath, "Adding a new dependency in the PR branch");
+
+        // forward flow it and merge
+        var codeFlowResult = await ChangeRepoFileAndFlowIt("not important", forwardBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
+
+        // now open a backflow, but don't merge
+        codeFlowResult = await ChangeVmrFileAndFlowIt("not important1", backfBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+
+        // remove the first dependency and add a second one in the backflow PR and merge
+        await productRepo.RemoveDependencyAsync("Package.A1");
+        await GitOperations.CommitAll(ProductRepoPath, "Removing the dependency in the backflow PR");
+        await GitOperations.MergePrBranch(ProductRepoPath, backfBranchName);
+
+        // forward flow this
+        codeFlowResult = await ChangeRepoFileAndFlowIt("not important2", forwardBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
+
+        // now backflow
+        codeFlowResult = await ChangeVmrFileAndFlowIt("not important3", backfBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        codeFlowResult.DependencyUpdates.Should().BeEmpty();
+    }
 }
 

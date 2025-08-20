@@ -79,7 +79,7 @@ internal class DependencyTestDriver
 
     public async Task AddDependencyAsync(DependencyDetail dependency)
     {
-        await DependencyFileManager.AddDependencyAsync(
+        await DependencyFileManager.TryAddDependencyAsync(
             dependency,
             TemporaryRepositoryPath,
             null);
