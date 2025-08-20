@@ -1,0 +1,17 @@
+variables:
+- template: /eng/common/templates-official/variables/pool-providers.yml@self
+- group: SDL_Settings
+- name: _TeamName
+  value: DotNetCore
+- name: _PublishUsingPipelines
+  value: true
+- name: _DotNetArtifactsCategory
+  value: .NETCore
+- name: AzdoOrgUri
+  value: https://dev.azure.com/dnceng
+- name: AzdoProject
+  value: internal
+- name: resourceGroupName
+  value: product-construction-service
+- name: containerName
+  value: product-construction-service.api
