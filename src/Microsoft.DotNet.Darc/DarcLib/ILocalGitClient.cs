@@ -181,6 +181,15 @@ public interface ILocalGitClient
     Task<bool> GitRefExists(string repoPath, string gitRef, CancellationToken cancellationToken = default);
 
     /// <summary>
+    ///     Gets the type of a git reference (branch, tag, commit, remote branch, etc.).
+    /// </summary>
+    /// <param name="repoPath">Path to a git repository</param>
+    /// <param name="gitRef">Git reference to get the type for</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Type of the git reference, or Unknown if the reference doesn't exist</returns>
+    Task<GitObjectType> GetRefType(string repoPath, string gitRef, CancellationToken cancellationToken = default);
+
+    /// <summary>
     ///     Fetches from all remotes.
     /// </summary>
     /// <param name="repoPath">Path to a git repository</param>

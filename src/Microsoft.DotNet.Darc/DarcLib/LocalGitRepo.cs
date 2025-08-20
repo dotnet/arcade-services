@@ -114,6 +114,9 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
     public async Task<bool> IsAncestorCommit(string ancestor, string descendant)
         => await _localGitClient.IsAncestorCommit(Path, ancestor, descendant);
 
+    public async Task<GitObjectType> GetRefType(string gitRef, CancellationToken cancellationToken = default)
+        => await _localGitClient.GetRefType(Path, gitRef, cancellationToken);
+
     public override string ToString() => Path;
 }
 

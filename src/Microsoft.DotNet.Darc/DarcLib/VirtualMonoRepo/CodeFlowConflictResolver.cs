@@ -40,9 +40,7 @@ public abstract class CodeFlowConflictResolver
     {
         _logger.LogInformation("Trying to merge {branchToMerge} into {headBranch}...", branchToMerge, headBranch);
 
-        await repo.CheckoutAsync(branchToMerge); // Create a local branch (without having to track down its remote)
         await repo.CheckoutAsync(headBranch);
-
         var result = await repo.RunGitCommandAsync(["merge", "--no-commit", "--no-ff", branchToMerge], cancellationToken);
         if (result.Succeeded)
         {
