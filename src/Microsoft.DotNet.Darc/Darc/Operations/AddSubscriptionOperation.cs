@@ -126,6 +126,23 @@ internal class AddSubscriptionOperation : Operation
             }
         }
 
+        if (_options.VersionDetailsPropsMergePolicy)
+        {
+            if (_options.StandardAutoMergePolicies)
+            {
+                _logger.LogError("Version Details Props merge policy cannot be combined with standard auto-merge policies. " +
+                               "The Version Details Props policy is already included in standard auto-merge policies.");
+                return Constants.ErrorCode;
+            }
+            
+            mergePolicies.Add(
+                new MergePolicy
+                {
+                    Name = MergePolicyConstants.VersionDetailsPropsMergePolicyName,
+                    Properties = []
+                });
+        }
+
         if (_options.Batchable && mergePolicies.Count > 0)
         {
             Console.WriteLine("Batchable subscriptions cannot be combined with merge policies. " +

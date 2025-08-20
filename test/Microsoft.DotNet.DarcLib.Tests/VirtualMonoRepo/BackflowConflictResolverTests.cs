@@ -165,7 +165,16 @@ public class BackflowConflictResolverTests
         var lastFlows = new LastFlows(lastFlow, null, lastFlow, null);
         var currentFlow = new Backflow(CurrentVmrSha, CurrentRepoSha);
 
-        // Version details looks like this after merging with the VMR
+        // This represents a package being updated to a new version in the repo after the last flow
+        var repoDependencyAtLastFlow = CreateDependency("Package.Updated.In.Repo.Before.Current.Flow", "2.0.0", LastVmrSha);
+        var repoDependencyAtCurrentFlow = CreateDependency("Package.Updated.In.Repo.Before.Current.Flow", "2.0.2", "unspecifiedSha");
+        var repoDependencyUpdate = new DependencyUpdate
+        {
+            From = repoDependencyAtLastFlow,
+            To = repoDependencyAtCurrentFlow,
+        };
+
+        // Version details looks like this in the target branch
         _versionDetails[$"repo/{TargetBranch}"] = new VersionDetails(
             [
                 CreateDependency("Package.from.build", "1.0.1", LastVmrSha),
@@ -176,6 +185,7 @@ public class BackflowConflictResolverTests
                 CreateDependency("Package.Updated.In.Both", "3.0.0", LastVmrSha),
                 CreateDependency("Package.Added.In.VMR", "2.0.0", LastVmrSha),
                 CreateDependency("Package.Added.In.Both", "2.2.2", LastVmrSha),
+                repoDependencyAtCurrentFlow,
             ],
             new SourceDependency(VmrUri, MappingName, LastVmrSha, 123456));
 
@@ -228,7 +238,14 @@ public class BackflowConflictResolverTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string?>()))
-            .ReturnsAsync(new VersionFileChanges<DependencyUpdate>([], expectedAddition, []));
+            .ReturnsAsync(new VersionFileChanges<DependencyUpdate>(
+                [],
+                expectedAddition,
+                new Dictionary<string, DependencyUpdate>()
+                {
+                    // this represents the repo-side update to Version.Details.xml prior to the current codeflow
+                    { repoDependencyUpdate.From.Name, repoDependencyUpdate } 
+                }));
 
         // Simulate dependency manager
         _assetLocationResolver.Setup(a => a.AddAssetLocationToDependenciesAsync(It.IsAny<IEnumerable<DependencyDetail>>()))
@@ -253,6 +270,7 @@ public class BackflowConflictResolverTests
                 ("Package.Added.In.Both", "2.2.2"),
                 ("Another.Package.From.Build", "1.0.5"),
                 ("Yet.Another.Package.From.Build", "1.0.5"),
+                ("Package.Updated.In.Repo.Before.Current.Flow", "2.0.2"),
                 // Note: Package.Removed.In.Repo is not included as it was removed in repo
             ],
             expectedUpdates:

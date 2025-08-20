@@ -1,0 +1,7 @@
+variables:
+- name: dockerRegistryUrl
+  value: productconstructionprod.azurecr.io
+- name: containerRegistryName
+  value: productconstructionprod
+- name: serviceConnectionName
+  value: ProductConstructionServiceDeploymentProd

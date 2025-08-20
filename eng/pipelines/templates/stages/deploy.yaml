@@ -1,21 +1,17 @@
-parameters:
-- name: isProd
-  type: boolean
-
 stages:
-- template: /eng/templates/stages/secret-validation.yml@self
+- template: /eng/pipelines/templates/stages/secret-validation.yml@self
   parameters:
     verifyOnly: true
 
 - stage: Approval
   dependsOn:
   - Build
-  - ${{ if parameters.isProd }}:
+  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
     - publish_using_darc
   jobs:
   - deployment: approval
     displayName: deployment approval (conditional)
-    ${{ if parameters.isProd }}:
+    ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
       environment: Production
     ${{ else }}:
       environment: Staging
@@ -31,7 +27,7 @@ stages:
   - name: currentDate
     value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
 
-  - ${{ if parameters.isProd }}:
+  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
     # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=202&path=Arcade-Services-Scenario-Tests
     # Required for dotnet-bot-arcade-services-content-write
     - group: Arcade-Services-Release
@@ -154,7 +150,7 @@ stages:
           --redisConnectionString $(redisConnectionString)
       displayName: Deploy container app
 
-    - ${{ if parameters.isProd }}:
+    - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
       - download: current
         artifact: AssetManifests
 
@@ -180,28 +176,28 @@ stages:
   - Deploy
 
   jobs:
-  - template: /eng/templates/jobs/e2e-pcs-tests.yml
+  - template: ../jobs/e2e-pcs-tests.yml
     parameters:
       name: scenarioTests_GitHub
       displayName: GitHub tests
       testFilter: 'TestCategory=GitHub'
 
-  - template: /eng/templates/jobs/e2e-pcs-tests.yml
+  - template: ../jobs/e2e-pcs-tests.yml
     parameters:
       name: scenarioTests_AzDO
       displayName: AzDO tests
       testFilter: 'TestCategory=AzDO'
 
-  - template: /eng/templates/jobs/e2e-pcs-tests.yml
+  - template: ../jobs/e2e-pcs-tests.yml
     parameters:
       name: scenarioTests_Other
       displayName: Other tests
       testFilter: 'TestCategory!=GitHub&TestCategory!=AzDO&TestCategory!=CodeFlow'
 
-  - template: /eng/templates/jobs/e2e-pcs-tests.yml
+  - template: ../jobs/e2e-pcs-tests.yml
     parameters:
       name: scenarioTests_CodeFlow
       displayName: Code Flow tests
       testFilter: 'TestCategory=CodeFlow'
 
-  - template: /eng/templates/jobs/darc-and-api-tests.yml
+  - template: ../jobs/darc-and-api-tests.yml

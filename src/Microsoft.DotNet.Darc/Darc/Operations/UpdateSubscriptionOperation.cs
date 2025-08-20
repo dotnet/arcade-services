@@ -171,6 +171,23 @@ internal class UpdateSubscriptionOperation : Operation
                     });
             }
 
+            if (_options.VersionDetailsPropsMergePolicy && !mergePolicies.Any(p => p.Name == MergePolicyConstants.VersionDetailsPropsMergePolicyName))
+            {
+                if (_options.StandardAutoMergePolicies)
+                {
+                    _logger.LogError("Version Details Props merge policy cannot be combined with standard auto-merge policies. " +
+                                   "The Version Details Props policy is already included in standard auto-merge policies.");
+                    return Constants.ErrorCode;
+                }
+                
+                mergePolicies.Add(
+                    new MergePolicy
+                    {
+                        Name = MergePolicyConstants.VersionDetailsPropsMergePolicyName,
+                        Properties = []
+                    });
+            }
+
             if (_options.CodeFlowCheckMergePolicy && !mergePolicies.Any(p => p.Name == MergePolicyConstants.CodeflowMergePolicyName))
             {
                 if (_options.StandardAutoMergePolicies)
@@ -326,7 +343,8 @@ internal class UpdateSubscriptionOperation : Operation
            || _options.DontAutomergeDowngradesMergePolicy
            || _options.StandardAutoMergePolicies
            || _options.ValidateCoherencyCheckMergePolicy
-           || _options.CodeFlowCheckMergePolicy;
+           || _options.CodeFlowCheckMergePolicy
+           || _options.VersionDetailsPropsMergePolicy;
 
     private IEnumerable<string> GetExistingIgnoreChecks(MergePolicy mergePolicy) => mergePolicy
                     .Properties
