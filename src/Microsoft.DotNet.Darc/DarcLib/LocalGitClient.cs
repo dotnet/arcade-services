@@ -480,18 +480,29 @@ public class LocalGitClient : ILocalGitClient
 
     public async Task<bool> GitRefExists(string repoPath, string gitRef, CancellationToken cancellationToken = default)
     {
+        var objectType = await GetRefType(repoPath, gitRef, cancellationToken);
+        return objectType != GitObjectType.Unknown;
+    }
+
+    public async Task<GitObjectType> GetRefType(string repoPath, string gitRef, CancellationToken cancellationToken = default)
+    {
         // If the ref is a SHA or local branch/tag, we can check it directly via git cat-file -t
         var objectType = await GetObjectTypeAsync(repoPath, gitRef);
         if (objectType != GitObjectType.Unknown)
         {
-            return true;
+            return objectType;
         }
 
         // If it's a remote branch that has been fetched git cat-file -t won't work,
         // because we would have to query for [remote name]/gitRef
         var result = await RunGitCommandAsync(repoPath, ["branch", "-a", "--list", "*/" + gitRef], cancellationToken);
-        result.ThrowIfFailed($"Failed to verify if git ref '{gitRef}' exists in {repoPath}");
-        return result.StandardOutput.Contains(gitRef);
+        result.ThrowIfFailed($"Failed to determine git ref type for '{gitRef}' in {repoPath}");
+        if (result.StandardOutput.Contains(gitRef))
+        {
+            return GitObjectType.RemoteRef;
+        }
+
+        return GitObjectType.Unknown;
     }
 
     public async Task<bool> HasWorkingTreeChangesAsync(string repoPath)

@@ -10,4 +10,5 @@ public enum GitObjectType
     Tree,
     Commit,
     Tag,
+    RemoteRef,
 }

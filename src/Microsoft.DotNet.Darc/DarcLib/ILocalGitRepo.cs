@@ -223,4 +223,12 @@ public interface ILocalGitRepo
     ///     Resolves a conflict in a given file to ours/theirs.
     /// </summary>
     Task ResolveConflict(string filePath, bool ours);
+
+    /// <summary>
+    ///     Gets the type of a git reference (branch, tag, commit, remote branch, etc.).
+    /// </summary>
+    /// <param name="gitRef">Git reference to get the type for</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Type of the git reference, or Unknown if the reference doesn't exist</returns>
+    Task<GitObjectType> GetRefType(string gitRef, CancellationToken cancellationToken = default);
 }

@@ -83,9 +83,21 @@ public abstract class CloneManager
             // Verify that all requested commits are available
             foreach (string gitRef in refsToVerify.ToArray())
             {
-                if (await _localGitRepo.GitRefExists(path, gitRef, cancellationToken))
+                var gitRefType = await _localGitRepo.GetRefType(path, gitRef, cancellationToken);
+                if (gitRefType != GitObjectType.Unknown)
                 {
                     refsToVerify.Remove(gitRef);
+
+                    // Force-create the local branch to track the remote branch
+                    if (gitRefType == GitObjectType.RemoteRef)
+                    {
+                        var remoteName = await _localGitRepo.AddRemoteIfMissingAsync(path, remoteUri, cancellationToken);
+                        var result = await _localGitRepo.RunGitCommandAsync(
+                            path,
+                            ["branch", "-f", "--track", gitRef, $"{remoteName}/{gitRef}"],
+                            cancellationToken);
+                        result.ThrowIfFailed($"Couldn't create local branch for remote ref {gitRef} from {remoteName}");
+                    }
                 }
             }
 
