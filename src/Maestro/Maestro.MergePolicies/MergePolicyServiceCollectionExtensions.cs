@@ -15,6 +15,7 @@ public static class MergePolicyServiceCollectionExtensions
         services.AddTransient<IMergePolicyBuilder, StandardMergePolicyBuilder>();
         services.AddTransient<IMergePolicyBuilder, ValidateCoherencyMergePolicyBuilder>();
         services.AddTransient<IMergePolicyBuilder, CodeFlowMergePolicyBuilder>();
+        services.AddTransient<IMergePolicyBuilder, VersionDetailsPropsMergePolicyBuilder>();
         return services;
     }
 }

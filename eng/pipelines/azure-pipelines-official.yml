@@ -1,0 +1,34 @@
+variables:
+- template: /eng/pipelines/templates/variables/shared-variables.yml@self
+- name: devBranchSuffix
+  value: dev
+- ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+  - template: /eng/pipelines/templates/variables/prod.yml@self
+- ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
+  - template: /eng/pipelines/templates/variables/int.yml@self
+
+trigger:
+  batch: true
+  branches:
+    include:
+    - main
+    - production
+
+resources:
+  repositories:
+  - repository: 1ESPipelineTemplates
+    type: git
+    name: 1ESPipelineTemplates/1ESPipelineTemplates
+    ref: refs/tags/release
+
+extends:
+  template: v1/1ES.Official.PipelineTemplate.yml@1ESPipelineTemplates
+  parameters:
+    pool:
+      name: $(DncEngInternalBuildPool)
+      image: 1es-windows-2022
+      os: windows
+    stages:
+    - template: /eng/pipelines/templates/stages/build.yml@self
+      parameters:
+        isProdPipeline: true

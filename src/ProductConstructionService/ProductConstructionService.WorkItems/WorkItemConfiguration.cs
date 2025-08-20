@@ -81,7 +81,7 @@ public static class WorkItemConfiguration
 
     public static void AddWorkItemProducerFactory(this IHostApplicationBuilder builder, TokenCredential credential)
     {
-        builder.AddAzureQueueClient("queues", settings => settings.Credential = credential);
+        builder.AddAzureQueueServiceClient("queues", settings => settings.Credential = credential);
 
         var defaultWorkItemQueueName = builder.Configuration.GetRequiredValue(DefaultWorkItemQueueNameConfigurationKey);
         var codeFlowWorkItemQueueName = builder.Configuration.GetRequiredValue(CodeFlowWorkItemQueueNameConfigurationKey);
