@@ -219,7 +219,6 @@ public class BackflowConflictResolverTests
         };
 
         _vmrVersionFileMergerMock.Setup(x => x.MergeVersionDetails(
-                It.IsAny<Codeflow>(),
                 It.IsAny<ILocalGitRepo>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),

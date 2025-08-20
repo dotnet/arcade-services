@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -1045,6 +1046,82 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         CheckFileContents(ProductRepoPath / "conflict.txt", conflictFileContent3);
         CheckFileContents(ProductRepoPath / "partial-revert.txt", revertFileContent);
         File.ReadAllText(ProductRepoPath / "full-revert.txt").Should().Contain("PLEASE READ");
+    }
+
+    // This test verifies that backflows work if the target repo if since tha last backflow, the product repo has added or removed dependencies,
+    // while the VMR did the opposite
+    [Test]
+    public async Task BackflowingConflictingDependenciesWorks()
+    {
+        const string forwardBranchName = nameof(BackflowingConflictingDependenciesWorks);
+        const string backfBranchName = nameof(BackflowingConflictingDependenciesWorks) + "-back";
+
+        await EnsureTestRepoIsInitialized();
+
+        var productRepo = GetLocal(ProductRepoPath);
+        var vmrRepo = GetLocal(VmrPath);
+
+        var firstDependency = new DependencyDetail
+        {
+            Name = "Package.A1",
+            Version = "1.0.1",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "abc",
+            Type = DependencyType.Product,
+        };
+        var secondDependency = new DependencyDetail
+        {
+            Name = "Package.B1",
+            Version = "1.0.1",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "abc",
+            Type = DependencyType.Product,
+        };
+
+        // Add a new dependency
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await productRepo.AddDependencyAsync(firstDependency);
+        await GitOperations.CommitAll(ProductRepoPath, "Adding a new dependency in the PR branch");
+
+        // forward flow it and merge
+        var codeFlowResult = await ChangeRepoFileAndFlowIt("not important", forwardBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
+
+        // now open a backflow, but don't merge
+        codeFlowResult = await ChangeVmrFileAndFlowIt("not important1", backfBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+
+        // remove the first dependency and add a second one in the backflow PR and merge
+        await productRepo.RemoveDependencyAsync("Package.A1");
+        await productRepo.AddDependencyAsync(secondDependency);
+        await GitOperations.CommitAll(ProductRepoPath, "Removing the dependency in the backflow PR");
+        await GitOperations.MergePrBranch(ProductRepoPath, backfBranchName);
+
+        // now add the first dependency back and remove the second one from the product repo
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await productRepo.AddDependencyAsync(firstDependency);
+        await productRepo.RemoveDependencyAsync("Package.B1");
+        await GitOperations.CommitAll(ProductRepoPath, "Adding the dependency back in the main branch");
+
+        // remove the first dependency from the VMR and add the second one
+        await GitOperations.Checkout(VmrPath, "main");
+        await vmrRepo.AddDependencyAsync(secondDependency, VmrInfo.GetRelativeRepoSourcesPath(Constants.ProductRepoName));
+        await vmrRepo.RemoveDependencyAsync("Package.A1", VmrInfo.GetRelativeRepoSourcesPath(Constants.ProductRepoName));
+        await GitOperations.CommitAll(VmrPath, "Removing the dependency in the VMR repo");
+
+        // and now backflow, this will cause a conflict
+        codeFlowResult = await ChangeVmrFileAndFlowIt("not important2", backfBranchName);
+
+        codeFlowResult.ShouldHaveUpdates();
+        codeFlowResult.DependencyUpdates.Should().BeEquivalentTo(
+            [
+                new DependencyUpdate
+                {
+                    From = null,
+                    To = firstDependency
+                }
+            ]);
     }
 }
 

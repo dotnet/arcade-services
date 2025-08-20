@@ -256,7 +256,6 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
         // handle global.json
         await _vmrVersionFileMerger.MergeJsonAsync(
-            lastFlow,
             targetRepo,
             VersionFiles.GlobalJson,
             lastFlow.RepoSha,
@@ -275,7 +274,6 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         if (dotnetToolsConfigExists)
         {
             await _vmrVersionFileMerger.MergeJsonAsync(
-                    lastFlow,
                     targetRepo,
                     VersionFiles.DotnetToolsConfigJson,
                     lastFlow.RepoSha,
@@ -288,7 +286,6 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         }
 
         var versionDetailsChanges = await _vmrVersionFileMerger.MergeVersionDetails(
-            lastFlow,
             targetRepo,
             VersionFiles.VersionDetailsXml,
             lastFlow.RepoSha,
@@ -417,6 +414,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                     To = (DependencyDetail)addition.Value.Value!
                 }),
             ..versionDetailsChanges.Removals
+                .Where(removal => headBranchDependencyDict.ContainsKey(removal))
                 .Select(removal => new DependencyUpdate()
                 {
                     From = headBranchDependencyDict[removal],

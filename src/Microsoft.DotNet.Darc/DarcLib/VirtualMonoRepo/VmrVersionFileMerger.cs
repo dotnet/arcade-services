@@ -22,7 +22,6 @@ public interface IVmrVersionFileMerger
     /// Merges the changes in a JSON file between two references in the source and target repo.
     /// </summary>
     Task MergeJsonAsync(
-        Codeflow lastFlow,
         ILocalGitRepo targetRepo,
         string targetRepoJsonRelativePath,
         string targetRepoPreviousRef,
@@ -34,7 +33,6 @@ public interface IVmrVersionFileMerger
         bool allowMissingFiles = false);
 
     Task<VersionFileChanges<DependencyUpdate>> MergeVersionDetails(
-        Codeflow lastFlow,
         ILocalGitRepo targetRepo,
         string targetRepoVersionDetailsRelativePath,
         string targetRepoPreviousRef,
@@ -70,7 +68,6 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
     }
 
     public async Task MergeJsonAsync(
-        Codeflow lastFlow,
         ILocalGitRepo targetRepo,
         string targetRepoJsonRelativePath,
         string targetRepoPreviousRef,
@@ -84,9 +81,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         var targetRepoPreviousJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, targetRepoPreviousRef, allowMissingFiles);
         var targetRepoCurrentJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, targetRepoCurrentRef, allowMissingFiles);
 
-        var sourcePreviousJson = lastFlow is Backflow
-            ? await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoPreviousRef, allowMissingFiles)
-            : targetRepoPreviousJson;
+        var sourcePreviousJson = await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoPreviousRef, allowMissingFiles);
         var sourceCurrentJson = await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoCurrentRef, allowMissingFiles);
 
         if (!allowMissingFiles || !(await DeleteFileIfRequiredAsync(
@@ -121,7 +116,6 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
     }
 
     public async Task<VersionFileChanges<DependencyUpdate>> MergeVersionDetails(
-        Codeflow lastFlow,
         ILocalGitRepo targetRepo,
         string targetRepoVersionDetailsRelativePath,
         string targetRepoPreviousRef,
@@ -147,9 +141,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         // Similarly to the code flow algorithm, we compare the corresponding commits
         // and the contents of the version files inside.
         // We distinguish the direction of the previous flow vs the current flow.
-        var previousSourceRepoChanges = lastFlow is Backflow
-            ? await GetDependencies(sourceRepo, sourceRepoPreviousRef, sourceRepoVersionDetailsRelativePath)
-            : previousTargetRepoChanges;
+        var previousSourceRepoChanges = await GetDependencies(sourceRepo, sourceRepoPreviousRef, sourceRepoVersionDetailsRelativePath);
         var currentSourceRepoChanges = await GetDependencies(sourceRepo, sourceRepoCurrentRef, sourceRepoVersionDetailsRelativePath);
 
         List<DependencyUpdate> targetChanges = ComputeChanges(
@@ -227,11 +219,8 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
             if (removedInTarget)
             {
-                if (addedInSource)
-                {
-                    throw new ConflictingDependencyUpdateException(targetChange!, sourceChange!);
-                }
                 // we don't have to do anything since the property is removed in the repo
+                // even if the property was add in the source repo, we'll take what's in the target repo
                 continue;
             }
 
@@ -239,7 +228,9 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             {
                 if (addedInTarget)
                 {
-                    throw new ConflictingDependencyUpdateException(targetChange!, sourceChange!);
+                    // even if the property was removed in the source repo, we'll take whatever is in the target repo
+                    additions[property] = targetChange!;
+                    continue;
                 }
                 removals.Add(property);
                 continue;
