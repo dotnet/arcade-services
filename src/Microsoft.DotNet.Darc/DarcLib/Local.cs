@@ -45,7 +45,7 @@ public class Local
     /// </summary>
     public async Task AddDependencyAsync(DependencyDetail dependency, UnixPath relativeBasePath = null)
     {
-        await _fileManager.TryAddDependencyAsync(dependency, _repoRootDir.Value, null, relativeBasePath);
+        await _fileManager.AddDependencyAsync(dependency, _repoRootDir.Value, null, relativeBasePath);
     }
 
     /// <summary>
@@ -53,7 +53,7 @@ public class Local
     /// </summary>
     public async Task RemoveDependencyAsync(string dependencyName, UnixPath relativeBasePath = null)
     {
-        await _fileManager.TryRemoveDependencyAsync(dependencyName, _repoRootDir.Value, null, relativeBasePath);
+        await _fileManager.RemoveDependencyAsync(dependencyName, _repoRootDir.Value, null, relativeBasePath);
     }
 
     /// <summary>

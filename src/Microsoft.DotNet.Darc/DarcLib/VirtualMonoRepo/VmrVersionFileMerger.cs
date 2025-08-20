@@ -154,7 +154,9 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
         VersionFileChanges<DependencyUpdate> mergedChanges = MergeVersionFileChanges(targetChanges, sourceChanges, SelectDependencyUpdate);
 
-        return await TryApplyVersionDetailsChangesAsync(targetRepo, mergedChanges, mappingToApplyChanges);
+        await ApplyVersionDetailsChangesAsync(targetRepo, mergedChanges, mappingToApplyChanges);
+
+        return mergedChanges;
     }
 
     private async Task<bool> DeleteFileIfRequiredAsync(
@@ -314,63 +316,29 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             .ToList();
     }
 
-    /// <summary>
-    /// Applies changes to the version files in the target repo
-    /// </summary>
-    /// <returns>Changes that were actually applied, some might have been a non op</returns>
-    private async Task<VersionFileChanges<DependencyUpdate>> TryApplyVersionDetailsChangesAsync(ILocalGitRepo repo, VersionFileChanges<DependencyUpdate> changes, string? mapping = null)
+    private async Task ApplyVersionDetailsChangesAsync(ILocalGitRepo repo, VersionFileChanges<DependencyUpdate> changes, string? mapping = null)
     {
         var versionFilesBasePath = mapping != null
             ? VmrInfo.GetRelativeRepoSourcesPath(mapping)
             : null;
         bool versionDetailsPropsExists = await _dependencyFileManager.VersionDetailsPropsExistsAsync(repo.Path, null!, versionFilesBasePath);
-        List<string> falseRemovals = [];
-        List<string> falseAdditions = [];
-        List<string> falseUpdates = [];
-
         foreach (var removal in changes.Removals)
         {
             // Remove the property from the version details
-            if (!await _dependencyFileManager.TryRemoveDependencyAsync(removal, repo.Path, null!, versionFilesBasePath, versionDetailsPropsExists))
-            {
-                falseRemovals.Add(removal);
-            }
-            
+            await _dependencyFileManager.RemoveDependencyAsync(removal, repo.Path, null!, versionFilesBasePath, versionDetailsPropsExists);
         }
-        foreach ((var _, var addition) in changes.Additions)
+        foreach ((var _, var update) in changes.Additions.Concat(changes.Updates))
         {
-            if (!await _dependencyFileManager.TryAddDependencyAsync(
-                (DependencyDetail)addition.Value!,
-                repo.Path,
-                null!,
-                versionFilesBasePath,
-                versionDetailsOnly: true,
-                versionDetailsPropsExists))
-            {
-                falseAdditions.Add(addition.Name);
-            }
-        }
-        foreach ((var _, var update) in changes.Updates)
-        {
-            if (!await _dependencyFileManager.TryAddDependencyAsync(
+            await _dependencyFileManager.AddDependencyAsync(
                 (DependencyDetail)update.Value!,
                 repo.Path,
                 null!,
                 versionFilesBasePath,
                 versionDetailsOnly: true,
-                versionDetailsPropsExists))
-            {
-                falseAdditions.Add(update.Name);
-            }
+                versionDetailsPropsExists);
         }
 
         await repo.StageAsync(["."]);
-
-        return new VersionFileChanges<DependencyUpdate>(
-            changes.Removals.Except(falseRemovals).ToList(),
-            changes.Additions.Where(kvp => !falseAdditions.Contains(kvp.Key)).ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
-            changes.Updates.Where(kvp => !falseUpdates.Contains(kvp.Key)).ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
-        );
     }
 
     private static async Task<string> GetJsonFromGit(ILocalGitRepo repo, string jsonRelativePath, string reference, bool allowMissingFile) =>

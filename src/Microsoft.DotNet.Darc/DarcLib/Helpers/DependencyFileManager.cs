@@ -213,7 +213,7 @@ public class DependencyFileManager : IDependencyFileManager
     /// <param name="branch">Branch to add the dependency to.</param>
     /// <param name="versionDetailsOnly">Only adds the dependency to Version.Details.xml</param>
     /// <param name="repoHasVersionDetailsProps">Whether or not the repository we're adding the dependency to has Version.Details.props</param>
-    public async Task<bool> TryAddDependencyAsync(
+    public async Task AddDependencyAsync(
         DependencyDetail dependency,
         string repoUri,
         string branch,
@@ -226,10 +226,7 @@ public class DependencyFileManager : IDependencyFileManager
             repoHasVersionDetailsProps = await VersionDetailsPropsExistsAsync(repoUri, branch, relativeBasePath);
         }
 
-        if (!await TryAddDependencyToVersionDetailsAsync(repoUri, branch, dependency, repoHasVersionDetailsProps.Value, relativeBasePath))
-        {
-            return false;
-        }
+        await AddDependencyToVersionDetailsAsync(repoUri, branch, dependency, repoHasVersionDetailsProps.Value, relativeBasePath);
 
         if (!versionDetailsOnly)
         {
@@ -248,11 +245,9 @@ public class DependencyFileManager : IDependencyFileManager
                 await AddDependencyToVersionsPropsAsync(repoUri, branch, dependency, relativeBasePath);
             }
         }
-
-        return true;
     }
 
-    public async Task<bool> TryRemoveDependencyAsync(
+    public async Task RemoveDependencyAsync(
         string dependencyName,
         string repoUri,
         string branch,
@@ -264,21 +259,16 @@ public class DependencyFileManager : IDependencyFileManager
             repoHasVersionDetailsProps = await VersionDetailsPropsExistsAsync(repoUri, branch, relativeBasePath);
         }
 
-        var versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch, relativeBasePath);
-        if (!TryRemoveDependencyFromVersionDetails(versionDetails, dependencyName, relativeBasePath))
-        {
-            return false;
-        }
-
+        var updatedVersionDetails = await RemoveDependencyFromVersionDetailsAsync(dependencyName, repoUri, branch, relativeBasePath);
         var updatedDependencyVersionFile =
-            new GitFile(GetVersionFilePath(VersionFiles.VersionDetailsXml, relativeBasePath), versionDetails);
+            new GitFile(GetVersionFilePath(VersionFiles.VersionDetailsXml, relativeBasePath), updatedVersionDetails);
         List<GitFile> gitFiles = [updatedDependencyVersionFile];
 
         if (repoHasVersionDetailsProps.Value)
         {
             gitFiles.Add(new GitFile(
                 GetVersionFilePath(VersionFiles.VersionDetailsProps, relativeBasePath),
-                GenerateVersionDetailsProps(_versionDetailsParser.ParseVersionDetailsXml(versionDetails))));
+                GenerateVersionDetailsProps(_versionDetailsParser.ParseVersionDetailsXml(updatedVersionDetails))));
         }
         else
         {
@@ -302,8 +292,6 @@ public class DependencyFileManager : IDependencyFileManager
             $"Remove {dependencyName} from Version.Details.xml and Version.props'");
 
         _logger.LogInformation("Dependency '{dependencyName}' removed from " + VersionFiles.VersionDetailsXml, dependencyName);
-
-        return true;
     }
 
     private async Task<JObject> RemoveDotnetToolsDependencyAsync(string dependencyName, string repoUri, string branch, UnixPath relativeBasePath)
@@ -346,19 +334,17 @@ public class DependencyFileManager : IDependencyFileManager
         return versionProps;
     }
 
-    private bool TryRemoveDependencyFromVersionDetails(XmlDocument versionDetails, string dependencyName, UnixPath relativeBasePath = null)
+    private async Task<XmlDocument> RemoveDependencyFromVersionDetailsAsync(string dependencyName, string repoUri, string branch, UnixPath relativeBasePath = null)
     {
+        var versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch, relativeBasePath);
         XmlNode dependencyNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.DependencyElementName}[@Name='{dependencyName}']");
 
         if (dependencyNode != null)
         {
             dependencyNode.ParentNode.RemoveChild(dependencyNode);
-            return true;
         }
-        else
-        {
-            return false;
-        }
+
+        return versionDetails;
     }
 
     private static void SetAttribute(XmlDocument document, XmlNode node, string name, string value)
@@ -946,7 +932,7 @@ public class DependencyFileManager : IDependencyFileManager
         return null;
     }
 
-    private async Task<bool> TryAddDependencyToVersionDetailsAsync(
+    private async Task AddDependencyToVersionDetailsAsync(
         string repo,
         string branch,
         DependencyDetail dependency,
@@ -954,15 +940,6 @@ public class DependencyFileManager : IDependencyFileManager
         UnixPath relativeBasePath)
     {
         XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repo, null, relativeBasePath);
-        var versionDetailsParsed = _versionDetailsParser.ParseVersionDetailsXml(versionDetails);
-        if (versionDetailsParsed.Dependencies.Any(d =>
-            d.Name == dependency.Name
-            && d.Version == dependency.Version
-            && d.RepoUri == dependency.RepoUri
-            && d.Commit == dependency.Commit))
-        {
-            return false;
-        }
 
         var existingDependency = FindDependencyElement(versionDetails, dependency);
         if (existingDependency.Count > 1)
@@ -1008,7 +985,6 @@ public class DependencyFileManager : IDependencyFileManager
         _logger.LogInformation(
             $"Dependency '{dependency.Name}' with version '{dependency.Version}' successfully added to " +
             $"'{VersionFiles.VersionDetailsXml}'");
-        return true;
     }
 
     /// <summary>

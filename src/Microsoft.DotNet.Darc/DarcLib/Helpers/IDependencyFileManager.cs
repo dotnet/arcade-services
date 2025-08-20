@@ -19,7 +19,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 /// </summary>
 public interface IDependencyFileManager
 {
-    Task<bool> TryAddDependencyAsync(
+    Task AddDependencyAsync(
         DependencyDetail dependency,
         string repoUri,
         string? branch,
@@ -27,7 +27,7 @@ public interface IDependencyFileManager
         bool versionDetailsOnly = false,
         bool? repoHasVersionDetailsProps = null);
 
-    Task<bool> TryRemoveDependencyAsync(
+    Task RemoveDependencyAsync(
         string dependencyName,
         string repoUri,
         string branch,
