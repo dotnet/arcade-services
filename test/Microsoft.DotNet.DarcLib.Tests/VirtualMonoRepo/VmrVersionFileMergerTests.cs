@@ -318,6 +318,7 @@ public class VmrVersionFileMergerTests
         var vmrPreviousKey = "vmrPrevious";
         var vmrCurrentKey = "vmrCurrent";
         var targetBranch = "main";
+        var packageAlreadyRemovedInRepo = "Package.That.Is.Already.Removed.In.Repo";
 
         var sourceDependency = new SourceDependency("uri", "mapping", VmrPreviousSha, 1);
         var targetPreviousDependencies = new VersionDetails(
@@ -334,10 +335,15 @@ public class VmrVersionFileMergerTests
                 CreateDependency("Package.Updated.In.Both", "1.0.3", VmrPreviousSha), // Updated (vmr updated to 3.0.0)
                 CreateDependency("Package.Added.In.Repo", "1.0.0", VmrPreviousSha), // Added
                 CreateDependency("Package.Added.In.Both", "2.2.2", VmrPreviousSha), // Added in both
-                CreateDependency("Package.Removed.In.VMR", "1.0.0", VmrPreviousSha)
+                CreateDependency("Package.Removed.In.VMR", "1.0.0", VmrPreviousSha),
             ],
             sourceDependency);
-        var vmrPreviousDependencies = targetPreviousDependencies; // we forward flew before so they're the same
+        var vmrPreviousDependencies = new VersionDetails(
+            [
+                ..targetPreviousDependencies.Dependencies,
+                CreateDependency(packageAlreadyRemovedInRepo, "1.0.0", VmrPreviousSha),
+            ],
+            sourceDependency);
         var vmrCurrentDependencies = new VersionDetails(
             [
                 CreateDependency("Package.From.Build", "1.0.0", VmrPreviousSha),
@@ -346,6 +352,7 @@ public class VmrVersionFileMergerTests
                 CreateDependency("Package.Added.In.VMR", "2.0.0", VmrPreviousSha), // Added
                 CreateDependency("Package.Added.In.Both", "1.1.1", VmrPreviousSha), // Added in both
                 // Package.Removed.In.VMR removed
+                // Package.That.Is.Already.Removed.In.Repo is removed
             ],
             sourceDependency);
         List<(string, string)> expectedVersions = 
@@ -380,7 +387,9 @@ public class VmrVersionFileMergerTests
         _versionDetailsParserMock.Setup(p => p.ParseVersionDetailsXml(It.IsAny<string>(), It.IsAny<bool>()))
             .Returns((string key, bool _) => versionDetailsDictionary[key]);
 
-        _dependencyFileManagerMock.Setup(d => d.RemoveDependencyAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>()))
+        _dependencyFileManagerMock.Setup(d => d.TryRemoveDependencyAsync(packageAlreadyRemovedInRepo, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>()))
+            .ReturnsAsync(false);
+        _dependencyFileManagerMock.Setup(d => d.TryRemoveDependencyAsync(It.Is<string>(name => name != packageAlreadyRemovedInRepo), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>()))
             .Callback((string name, string repo, string commit, UnixPath? _, bool? _) =>
             {
                 var versionDetails = versionDetailsDictionary[targetCurrentKey];
@@ -388,9 +397,9 @@ public class VmrVersionFileMergerTests
                     versionDetails.Dependencies.Where(d => d.Name != name).ToList(),
                     versionDetails.Source);
             })
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(true);
 
-        _dependencyFileManagerMock.Setup(d => d.AddDependencyAsync(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>(), It.IsAny<bool>()))
+        _dependencyFileManagerMock.Setup(d => d.TryAddOrUpdateDependency(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>(), It.IsAny<bool>()))
             .Callback((DependencyDetail dependency, string repo, string commit, UnixPath? _, bool _, bool? _) =>
             {
                 var versionDetails = versionDetailsDictionary[targetCurrentKey];
@@ -409,7 +418,7 @@ public class VmrVersionFileMergerTests
                     dep.Version = dependency.Version; 
                 }
             })
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(true);
 
         var result = await _vmrVersionFileMerger.MergeVersionDetails(
             _targetRepoMock.Object,
@@ -427,6 +436,7 @@ public class VmrVersionFileMergerTests
             .Should()
             .BeEquivalentTo(expectedVersions, options => options.WithStrictOrdering());
         result.Additions.Should().HaveCount(3);
+        // there should only be one removal because Package.That.Is.Already.Removed.In.Repo was already removed in the target repo
         result.Removals.Should().HaveCount(1);
         result.Updates.Should().HaveCount(2);
         List<(string, string)> expectedAdditions = [
