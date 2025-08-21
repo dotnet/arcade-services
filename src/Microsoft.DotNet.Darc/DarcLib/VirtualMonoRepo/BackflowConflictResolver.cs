@@ -414,7 +414,6 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                     To = (DependencyDetail)addition.Value.Value!
                 }),
             ..versionDetailsChanges.Removals
-                .Where(removal => headBranchDependencyDict.ContainsKey(removal))
                 .Select(removal => new DependencyUpdate()
                 {
                     From = headBranchDependencyDict[removal],

@@ -206,6 +206,33 @@ public class DependencyFileManager : IDependencyFileManager
     }
 
     /// <summary>
+    /// Tries to add a new or update an existing dependency in the repository.
+    /// </summary>
+    /// <returns>True if the dependency is added or updated, false if it already existed in the desired version</returns>
+    public async Task<bool> TryAddOrUpdateDependency(
+        DependencyDetail dependency,
+        string repoUri,
+        string branch,
+        UnixPath relativeBasePath = null,
+        bool versionDetailsOnly = false,
+        bool? repoHasVersionDetailsProps = null)
+    {
+        var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(await ReadVersionDetailsXmlAsync(repoUri, branch, relativeBasePath));
+
+        if (versionDetails.Dependencies.Any(d =>
+            d.Name == dependency.Name
+            && d.Version == dependency.Version
+            && d.RepoUri == dependency.RepoUri
+            && d.Commit == dependency.Commit))
+        {
+            return false;
+        }
+
+        await AddDependencyAsync(dependency, repoUri, branch, relativeBasePath, versionDetailsOnly, repoHasVersionDetailsProps);
+        return true;
+    }
+
+    /// <summary>
     /// Add a new dependency to the repository
     /// </summary>
     /// <param name="dependency">Dependency to add.</param>
@@ -245,6 +272,25 @@ public class DependencyFileManager : IDependencyFileManager
                 await AddDependencyToVersionsPropsAsync(repoUri, branch, dependency, relativeBasePath);
             }
         }
+    }
+
+    public async Task<bool> TryRemoveDependencyAsync(
+        string dependencyName,
+        string repoUri,
+        string branch,
+        UnixPath relativeBasePath = null,
+        bool? repoHasVersionDetailsProps = null)
+    {
+        var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(await ReadVersionDetailsXmlAsync(repoUri, branch, relativeBasePath));
+
+        // we only look at the dependency name here couse that's what the removal does too
+        if (!versionDetails.Dependencies.Any(d => d.Name.Equals(dependencyName, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        await RemoveDependencyAsync(dependencyName, repoUri, branch, relativeBasePath, repoHasVersionDetailsProps);
+        return true;
     }
 
     public async Task RemoveDependencyAsync(
