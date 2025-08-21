@@ -330,7 +330,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 appliedChanges.Removals.Add(removal);
             }
         }
-        foreach ((var key, var addition) in changes.Additions)
+        foreach ((var assetName, var addition) in changes.Additions)
         {
             if (await _dependencyFileManager.TryAddOrUpdateDependency(
                 (DependencyDetail)addition.Value!,
@@ -340,10 +340,10 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 versionDetailsOnly: true,
                 versionDetailsPropsExists))
             {
-                appliedChanges.Additions[key] = addition;
+                appliedChanges.Additions[assetName] = addition;
             }
         }
-        foreach ((var key, var update) in changes.Updates)
+        foreach ((var assetName, var update) in changes.Updates)
         {
             if (await _dependencyFileManager.TryAddOrUpdateDependency(
                 (DependencyDetail)update.Value!,
@@ -353,7 +353,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 versionDetailsOnly: true,
                 versionDetailsPropsExists))
             {
-                appliedChanges.Updates[key] = update;
+                appliedChanges.Updates[assetName] = update;
             }
         }
 
