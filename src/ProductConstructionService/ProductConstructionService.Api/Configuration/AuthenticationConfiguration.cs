@@ -80,8 +80,11 @@ internal static class AuthenticationConfiguration
                     {
                         // The redirect_uri is set to the one we have in the configuration, but we need to
                         // redirect to the one that was used to authenticate.
-                        var returnUrl = Encoding.UTF8.GetString(Convert.FromBase64String(context.ProtocolMessage.State));
-                        context.Response.Redirect(returnUrl);
+                        if (!string.IsNullOrEmpty(context.ProtocolMessage.State))
+                        {
+                            var returnUrl = Encoding.UTF8.GetString(Convert.FromBase64String(context.ProtocolMessage.State));
+                            context.Response.Redirect(returnUrl);
+                        }
                         return Task.CompletedTask;
                     };
                 }
