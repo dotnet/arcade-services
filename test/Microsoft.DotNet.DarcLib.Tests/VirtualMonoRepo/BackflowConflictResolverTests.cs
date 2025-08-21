@@ -161,8 +161,9 @@ public class BackflowConflictResolverTests
     [Test]
     public async Task VersionsAreMergedInBackflowAfterForwardFlowTest()
     {
+        var lastBackflow = new Backflow(LastVmrSha, LastRepoSha);
         var lastFlow = new ForwardFlow(LastRepoSha, LastVmrSha);
-        var lastFlows = new LastFlows(lastFlow, null, lastFlow, null);
+        var lastFlows = new LastFlows(lastFlow, lastBackflow, lastFlow, null);
         var currentFlow = new Backflow(CurrentVmrSha, CurrentRepoSha);
 
         // This represents a package being updated to a new version in the repo after the last flow
