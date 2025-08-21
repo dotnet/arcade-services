@@ -284,7 +284,7 @@ public class DependencyFileManager : IDependencyFileManager
     {
         var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(await ReadVersionDetailsXmlAsync(repoUri, branch, relativeBasePath));
 
-        // we only look at the dependency name here couse that's what the removal does too
+        // we only look at the dependency name here because that's what the removal does too
         if (!versionDetails.Dependencies.Any(d => d.Name.Equals(dependencyName, StringComparison.OrdinalIgnoreCase)))
         {
             return false;
