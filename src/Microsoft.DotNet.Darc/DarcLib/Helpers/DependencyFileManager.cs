@@ -566,8 +566,7 @@ public class DependencyFileManager : IDependencyFileManager
     /// <returns>Updated global.json file if was able to update, or the unchanged global.json if unable to</returns>
     private Dictionary<GitFileMetadataName, string> UpdateDotnetVersionGlobalJson(
         SemanticVersion incomingDotnetVersion,
-        JObject targetGlobalJson,
-        bool forceUpdate = false)
+        JObject targetGlobalJson)
     {
         JToken pinnedToken = targetGlobalJson.SelectToken("tools.pinned");
         if (pinnedToken != null && pinnedToken.Type == JTokenType.Boolean && pinnedToken.Value<bool>())
@@ -577,7 +576,7 @@ public class DependencyFileManager : IDependencyFileManager
             return null;
         }
 
-        if (SemanticVersion.TryParse(targetGlobalJson.SelectToken("tools.dotnet")?.ToString(), out SemanticVersion repoDotnetVersion))
+        if (!SemanticVersion.TryParse(targetGlobalJson.SelectToken("tools.dotnet")?.ToString(), out SemanticVersion repoDotnetVersion))
         {
             _logger.LogError($"Could not find or parse token `tools.dotnet` in target repo's `{VersionFiles.GlobalJson}`." +
                 "Skipping dotnet SDK update.");
