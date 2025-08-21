@@ -274,6 +274,7 @@ public class DependencyFileManager : IDependencyFileManager
         }
     }
 
+    /// <returns>true if the dependency was removed successfully, false if it didn't exist</returns>
     public async Task<bool> TryRemoveDependencyAsync(
         string dependencyName,
         string repoUri,
