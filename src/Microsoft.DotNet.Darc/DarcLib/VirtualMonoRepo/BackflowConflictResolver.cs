@@ -148,13 +148,24 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
     private async Task<Codeflow> GetLastLastForwardFlowAsync(ILocalGitRepo productRepo, ILocalGitRepo vmr, Codeflow lastFlow, string mappingName)
     {
-        var vmrLastLastFlowSha = await vmr.BlameLineAsync(
-            _vmrInfo.SourceManifestPath,
-            line => line.Contains(lastFlow.RepoSha),
-            lastFlow.VmrSha);
-        var lastLastFlowSourceManifest = SourceManifest.FromJson(await vmr.GetFileFromGitAsync(VmrInfo.DefaultRelativeSourceManifestPath, vmrLastLastFlowSha) ??
-            throw new DarcException($"Couldn't find source-manifest at last last flow VMR commit {vmrLastLastFlowSha}"));
-        var lastlastFlowRepoSha = lastLastFlowSourceManifest.Repositories.First(r => r.Path == mappingName).CommitSha;
+        string vmrLastLastFlowSha, lastlastFlowRepoSha;
+        try
+        {
+            vmrLastLastFlowSha = await vmr.BlameLineAsync(
+                _vmrInfo.SourceManifestPath,
+                line => line.Contains(lastFlow.RepoSha),
+                lastFlow.VmrSha);
+            var lastLastFlowSourceManifest = SourceManifest.FromJson(await vmr.GetFileFromGitAsync(VmrInfo.DefaultRelativeSourceManifestPath, vmrLastLastFlowSha) ??
+                throw new DarcException($"Couldn't find source-manifest at last last flow VMR commit {vmrLastLastFlowSha}"));
+            lastlastFlowRepoSha = lastLastFlowSourceManifest.Repositories.First(r => r.Path == mappingName).CommitSha;
+        }
+        // if the the repo was just initialized, it won't have a lastLast forward flow. In that case pass an empty git object commit
+        catch (Exception e) when (e.Message.Contains("file src/source-manifest.json has only "))
+        {
+            vmrLastLastFlowSha = Constants.EmptyGitObject;
+            lastlastFlowRepoSha = Constants.EmptyGitObject;
+        }
+        
         return new ForwardFlow(lastlastFlowRepoSha, vmrLastLastFlowSha);
     }
 

@@ -363,10 +363,12 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
     }
 
     private static async Task<string> GetJsonFromGit(ILocalGitRepo repo, string jsonRelativePath, string reference, bool allowMissingFile) =>
-        await repo.GetFileFromGitAsync(jsonRelativePath, reference)
-            ?? (allowMissingFile
-                ? EmptyJsonString
-                : throw new FileNotFoundException($"File not found at {repo.Path / jsonRelativePath} for reference {reference}"));
+        reference == Constants.EmptyGitObject
+            ? EmptyJsonString
+            : await repo.GetFileFromGitAsync(jsonRelativePath, reference)
+                ?? (allowMissingFile
+                    ? EmptyJsonString
+                    : throw new FileNotFoundException($"File not found at {repo.Path / jsonRelativePath} for reference {reference}"));
 
     private static DependencyUpdate SelectDependencyUpdate(DependencyUpdate repo1Change, DependencyUpdate repo2Change)
     {
