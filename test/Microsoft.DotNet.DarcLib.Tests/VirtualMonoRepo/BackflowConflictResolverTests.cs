@@ -380,7 +380,6 @@ public class BackflowConflictResolverTests
                 It.IsAny<string>(),
                 It.IsAny<IEnumerable<DependencyDetail>>(),
                 null,
-                It.IsAny<bool>(),
                 It.IsAny<bool?>()))
             .Callback((IEnumerable<DependencyDetail> itemsToUpdate,
                        SourceDependency? sourceDependency,

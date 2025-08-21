@@ -434,7 +434,6 @@ public class DependencyFileManager : IDependencyFileManager
         string branch,
         IEnumerable<DependencyDetail> oldDependencies,
         SemanticVersion incomingDotNetSdkVersion,
-        bool forceGlobalJsonUpdate = false,
         bool? repoHasVersionDetailsProps = null)
     {
         // When updating version files, we always want to look in the base folder, even when we're updating it in the VMR
@@ -509,7 +508,7 @@ public class DependencyFileManager : IDependencyFileManager
         Dictionary<GitFileMetadataName, string> globalJsonMetadata = null;
         if (incomingDotNetSdkVersion != null)
         {
-            globalJsonMetadata = UpdateDotnetVersionGlobalJson(incomingDotNetSdkVersion, globalJson, forceGlobalJsonUpdate);
+            globalJsonMetadata = UpdateDotnetVersionGlobalJson(incomingDotNetSdkVersion, globalJson);
         }
 
         var fileContainer = new GitFileContentContainer
@@ -567,52 +566,45 @@ public class DependencyFileManager : IDependencyFileManager
     /// <returns>Updated global.json file if was able to update, or the unchanged global.json if unable to</returns>
     private Dictionary<GitFileMetadataName, string> UpdateDotnetVersionGlobalJson(
         SemanticVersion incomingDotnetVersion,
-        JObject globalJson,
+        JObject targetGlobalJson,
         bool forceUpdate = false)
     {
-        try
+        JToken pinnedToken = targetGlobalJson.SelectToken("tools.pinned");
+        if (pinnedToken != null && pinnedToken.Type == JTokenType.Boolean && pinnedToken.Value<bool>())
         {
-            // Check if tools.pinned is set to true, if so skip update
-            JToken pinnedToken = globalJson.SelectToken("tools.pinned");
-            if (pinnedToken != null && pinnedToken.Type == JTokenType.Boolean && pinnedToken.Value<bool>())
-            {
-                _logger.LogInformation("Skipping dotnet SDK update because tools.pinned is set to true in global.json");
-                return null;
-            }
-
-            if (SemanticVersion.TryParse(globalJson.SelectToken("tools.dotnet")?.ToString(), out SemanticVersion repoDotnetVersion))
-            {
-                if (repoDotnetVersion.CompareTo(incomingDotnetVersion) < 0 || forceUpdate)
-                {
-                    Dictionary<GitFileMetadataName, string> metadata = [];
-
-                    globalJson["tools"]["dotnet"] = incomingDotnetVersion.ToNormalizedString();
-                    metadata.Add(GitFileMetadataName.ToolsDotNetUpdate, incomingDotnetVersion.ToNormalizedString());
-
-                    // Also update and keep sdk.version in sync.
-                    JToken sdkVersion = globalJson.SelectToken("sdk.version");
-                    if (sdkVersion != null)
-                    {
-                        globalJson["sdk"]["version"] = incomingDotnetVersion.ToNormalizedString();
-                        metadata.Add(GitFileMetadataName.SdkVersionUpdate, incomingDotnetVersion.ToNormalizedString());
-                    }
-
-                    return metadata;
-                }
-            }
-            else
-            {
-                _logger.LogError("Could not parse the repo's dotnet version from the global.json. Skipping update to dotnet version sections");
-                return null;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update Dotnet version for global.json. Skipping update to version sections.");
+            _logger.LogInformation("Skipping dotnet SDK update because tools.pinned is set to true in the target." +
+                $"repo's {VersionFiles.GlobalJson}");
+            return null;
         }
 
-        // No updates
-        return null;
+        if (SemanticVersion.TryParse(targetGlobalJson.SelectToken("tools.dotnet")?.ToString(), out SemanticVersion repoDotnetVersion))
+        {
+            _logger.LogError($"Could not find or parse token `tools.dotnet` in target repo's `{VersionFiles.GlobalJson}`." +
+                "Skipping dotnet SDK update.");
+            return null;
+        }
+
+        if (repoDotnetVersion.CompareTo(incomingDotnetVersion) > 0)
+        {
+            _logger.LogError($"The dotnet SDK version in the target repo's `{VersionFiles.GlobalJson}` is higher than the " +
+                "incoming change. Skipping dotnet SDK update.");
+            return null;
+        }
+
+        Dictionary<GitFileMetadataName, string> metadata = [];
+
+        targetGlobalJson["tools"]["dotnet"] = incomingDotnetVersion.ToNormalizedString();
+        metadata.Add(GitFileMetadataName.ToolsDotNetUpdate, incomingDotnetVersion.ToNormalizedString());
+
+        // Also keep sdk.version in sync
+        JToken sdkVersion = targetGlobalJson.SelectToken("sdk.version");
+        if (sdkVersion != null)
+        {
+            targetGlobalJson["sdk"]["version"] = incomingDotnetVersion.ToNormalizedString();
+            metadata.Add(GitFileMetadataName.SdkVersionUpdate, incomingDotnetVersion.ToNormalizedString());
+        }
+
+        return metadata;
     }
 
     private static bool IsOnlyPresentInMaestroManagedFeed(HashSet<string> locations)
