@@ -120,7 +120,9 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         {
             var lastFlow = headBranchExisted
                 ? lastFlows.LastFlow
-                : lastFlows.LastBackFlow ?? lastFlows.LastFlow;
+                : lastFlows.LastBackFlow
+                    // If there were no backflows, we need to find the last last forward flow
+                    ?? await GetLastLastForwardFlowAsync(targetRepo, _localGitRepoFactory.Create(_vmrInfo.VmrPath), lastFlows.LastFlow, mapping.Name);
 
             var updates = await BackflowDependenciesAndToolset(
                 mapping.Name,
@@ -142,6 +144,18 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 targetRepo.Path);
             throw;
         }
+    }
+
+    private async Task<Codeflow> GetLastLastForwardFlowAsync(ILocalGitRepo productRepo, ILocalGitRepo vmr, Codeflow lastFlow, string mappingName)
+    {
+        var vmrLastLastFlowSha = await vmr.BlameLineAsync(
+            _vmrInfo.SourceManifestPath,
+            line => line.Contains(lastFlow.RepoSha),
+            lastFlow.VmrSha);
+        var lastLastFlowSourceManifest = SourceManifest.FromJson(await vmr.GetFileFromGitAsync(VmrInfo.DefaultRelativeSourceManifestPath, vmrLastLastFlowSha) ??
+            throw new DarcException($"Couldn't find source-manifest at last last flow VMR commit {vmrLastLastFlowSha}"));
+        var lastlastFlowRepoSha = lastLastFlowSourceManifest.Repositories.First(r => r.Path == mappingName).CommitSha;
+        return new ForwardFlow(lastlastFlowRepoSha, vmrLastLastFlowSha);
     }
 
     /// <summary>

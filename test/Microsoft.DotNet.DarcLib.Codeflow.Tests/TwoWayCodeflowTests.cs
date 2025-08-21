@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
-using System.Configuration;
 using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -1114,14 +1113,8 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         codeFlowResult = await ChangeVmrFileAndFlowIt("not important2", backfBranchName);
 
         codeFlowResult.ShouldHaveUpdates();
-        codeFlowResult.DependencyUpdates.Should().BeEquivalentTo(
-            [
-                new DependencyUpdate
-                {
-                    From = null,
-                    To = firstDependency
-                }
-            ]);
+        // both of the changes were conflicting, so we took whatever the target branch had, resulting in no updates
+        codeFlowResult.DependencyUpdates.Should().BeEmpty();
     }
 }
 
