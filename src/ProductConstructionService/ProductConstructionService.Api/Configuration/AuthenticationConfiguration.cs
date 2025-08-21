@@ -82,7 +82,6 @@ internal static class AuthenticationConfiguration
                         // redirect to the one that was used to authenticate.
                         if (!string.IsNullOrEmpty(context.ProtocolMessage.State))
                         {
-                            var returnUrl = Encoding.UTF8.GetString(Convert.FromBase64String(context.ProtocolMessage.State));
                             try
                             {
                                 var returnUrl = Encoding.UTF8.GetString(Convert.FromBase64String(context.ProtocolMessage.State));
@@ -95,6 +94,12 @@ internal static class AuthenticationConfiguration
                                 context.Response.Redirect("/");
                             }
                         }
+                        else
+                        {
+                            // If no state is provided, redirect to the root
+                            context.Response.Redirect("/");
+                        }
+
                         return Task.CompletedTask;
                     };
                 }
