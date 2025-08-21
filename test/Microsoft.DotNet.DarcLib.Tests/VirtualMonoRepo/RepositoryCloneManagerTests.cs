@@ -53,8 +53,8 @@ public class RepositoryCloneManagerTests
         {
             ExitCode = 0,
         }));
-        _localGitRepo.Setup(x => x.GitRefExists(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        _localGitRepo.Setup(x => x.GetRefType(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GitObjectType.Commit);
         _localGitRepoFactory
             .Setup(x => x.Create(It.IsAny<NativePath>()))
             .Returns((NativePath path) => new LocalGitRepo(path, _localGitRepo.Object, Mock.Of<IProcessManager>()));
@@ -158,13 +158,28 @@ public class RepositoryCloneManagerTests
             _localGitRepo.Invocations.Clear();
         }
 
+        void VerifyNoRepoReset()
+        {
+            _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "reset", "--hard" }, It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        void VerifyNoRepoUpdate()
+        {
+            _localGitRepo.Verify(x => x.UpdateRemoteAsync(clonePath, "new", default), Times.Never);
+        }
+
+        void VerifyCheckout(string reference)
+        {
+            _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, reference), Times.Once);
+        }
+
         // Clone for the first time
         var clone = await _manager.PrepareCloneAsync(mapping, [mapping.DefaultRemote], "main", default);
         clone.Path.Should().Be(clonePath);
 
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(mapping.DefaultRemote, clonePath, null), Times.Once);
         _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, "main"), Times.Once);
-        _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "reset", "--hard" }, It.IsAny<CancellationToken>()), Times.Never);
+        VerifyNoRepoReset();
 
         // A second clone of the same
         ResetCalls();
@@ -173,64 +188,67 @@ public class RepositoryCloneManagerTests
         clone.Path.Should().Be(clonePath);
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(mapping.DefaultRemote, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.UpdateRemoteAsync(clonePath, "default", default), Times.Never);
-        _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref), Times.Once);
-        _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "reset", "--hard" }, It.IsAny<CancellationToken>()), Times.Never);
+        VerifyCheckout(Ref);
+        VerifyNoRepoReset();
 
         // A third clone with a new remote
         ResetCalls();
+
         // We want to make it so we don't find all requested refs in the first remote
-        _localGitRepo.SetupSequence(x => x.GitRefExists(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false)
-            .ReturnsAsync(true);
+        _localGitRepo.SetupSequence(x => x.GetRefType(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GitObjectType.Unknown)
+            .ReturnsAsync(GitObjectType.RemoteRef);
+
         clone = await _manager.PrepareCloneAsync(mapping, new[] { mapping.DefaultRemote, newRemote }, Ref, default);
         
         clone.Path.Should().Be(clonePath);
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
-        _localGitRepo.Verify(x => x.AddRemoteIfMissingAsync(clonePath, newRemote, It.IsAny<CancellationToken>()), Times.Once);
-        _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref), Times.Once);
+        _localGitRepo.Verify(x => x.AddRemoteIfMissingAsync(clonePath, newRemote, It.IsAny<CancellationToken>()), Times.Exactly(2));
         _localGitRepo.Verify(x => x.UpdateRemoteAsync(clonePath, "new", default), Times.Once);
-        _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "reset", "--hard" }, It.IsAny<CancellationToken>()), Times.Never);
+        VerifyCheckout(Ref);
+        // Verify that a local branch was created to track the remote ref
+        _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "branch", "-f", "--track", Ref, $"new/{Ref}" }, It.IsAny<CancellationToken>()), Times.Once);
 
         // Same again, should be cached
         ResetCalls();
         // We want to make it so we don't find all requested refs in the first remote
-        _localGitRepo.SetupSequence(x => x.GitRefExists(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false)
-            .ReturnsAsync(true);
+        _localGitRepo.SetupSequence(x => x.GetRefType(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GitObjectType.Unknown)
+            .ReturnsAsync(GitObjectType.Commit);
         clone = await _manager.PrepareCloneAsync(mapping, new[] { mapping.DefaultRemote, newRemote }, Ref + "3", default);
         
         clone.Path.Should().Be(clonePath);
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissingAsync(clonePath, newRemote, It.IsAny<CancellationToken>()), Times.Never);
-        _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref + "3"), Times.Once);
-        _localGitRepo.Verify(x => x.UpdateRemoteAsync(clonePath, "new", default), Times.Never);
-        _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "reset", "--hard" }, It.IsAny<CancellationToken>()), Times.Never);
+        VerifyNoRepoUpdate();
+        VerifyCheckout(Ref + "3");
+        VerifyNoRepoReset();
 
         // Call with URI directly
         ResetCalls();
-        _localGitRepo.SetupSequence(x => x.GitRefExists(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        _localGitRepo.SetupSequence(x => x.GetRefType(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GitObjectType.Commit);
         clone = await _manager.PrepareCloneAsync(RepoUri, Ref + "4", default);
 
         clone.Path.Should().Be(clonePath);
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissingAsync(clonePath, RepoUri, It.IsAny<CancellationToken>()), Times.Never);
-        _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref + "4"), Times.Once);
-        _localGitRepo.Verify(x => x.UpdateRemoteAsync(clonePath, "new", default), Times.Never);
-        _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "reset", "--hard" }, It.IsAny<CancellationToken>()), Times.Never);
+        VerifyNoRepoUpdate();
+        VerifyCheckout(Ref + "4");
+        VerifyNoRepoReset();
 
         // Call with the second URI directly
         ResetCalls();
-        _localGitRepo.SetupSequence(x => x.GitRefExists(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+        _localGitRepo.SetupSequence(x => x.GetRefType(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GitObjectType.Commit);
         clone = await _manager.PrepareCloneAsync(newRemote, Ref + "5", default);
 
         clone.Path.Should().Be(clonePath);
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissingAsync(clonePath, newRemote, It.IsAny<CancellationToken>()), Times.Never);
-        _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref + "5"), Times.Once);
-        _localGitRepo.Verify(x => x.UpdateRemoteAsync(clonePath, "new", default), Times.Never);
-        _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "reset", "--hard" }, It.IsAny<CancellationToken>()), Times.Never);
+        VerifyNoRepoUpdate();
+        VerifyCheckout(Ref + "5");
+        VerifyNoRepoReset();
     }
 
     [Test]
@@ -320,7 +338,7 @@ public class RepositoryCloneManagerTests
         foreach (var sha in searchedRefs)
         {
             _localGitRepo
-                .Verify(x => x.GitRefExists(clonePath, sha, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+                .Verify(x => x.GetRefType(clonePath, sha, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
         }
     }
 
@@ -352,10 +370,12 @@ public class RepositoryCloneManagerTests
                 .Returns(Task.CompletedTask);
 
             _localGitRepo
-                .Setup(x => x.GitRefExists(clonePath, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Setup(x => x.GetRefType(clonePath, It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((string _, string sha, CancellationToken __) =>
                 {
-                    return configuration.Any(p => p.Value.CommitsContained.Contains(sha) && p.Value.IsCloned);
+                    return configuration.Any(p => p.Value.CommitsContained.Contains(sha) && p.Value.IsCloned)
+                        ? GitObjectType.Commit
+                        : GitObjectType.Unknown;
                 });
         }
     }
