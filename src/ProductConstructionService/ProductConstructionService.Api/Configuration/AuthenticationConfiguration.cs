@@ -83,7 +83,17 @@ internal static class AuthenticationConfiguration
                         if (!string.IsNullOrEmpty(context.ProtocolMessage.State))
                         {
                             var returnUrl = Encoding.UTF8.GetString(Convert.FromBase64String(context.ProtocolMessage.State));
-                            context.Response.Redirect(returnUrl);
+                            try
+                            {
+                                var returnUrl = Encoding.UTF8.GetString(Convert.FromBase64String(context.ProtocolMessage.State));
+                                context.Response.Redirect(returnUrl);
+                            }
+                            catch (FormatException)
+                            {
+                                // Handle malformed state value gracefully, e.g., redirect to a safe default or log the error
+                                // For now, redirect to root
+                                context.Response.Redirect("/");
+                            }
                         }
                         return Task.CompletedTask;
                     };
