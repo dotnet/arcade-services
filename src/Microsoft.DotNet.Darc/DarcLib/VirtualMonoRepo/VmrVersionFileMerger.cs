@@ -219,6 +219,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             {
                 // we don't have to do anything since the property is removed in the repo
                 // even if the property was add in the source repo, we'll take what's in the target repo
+                // TODO https://github.com/dotnet/arcade-services/issues/5176 check if the source repo is adding a dependency here and write a comment about the conflict
                 continue;
             }
 
@@ -227,7 +228,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 if (addedInTarget)
                 {
                     // even if the property was removed in the source repo, we'll take whatever is in the target repo
-                    additions[property] = targetChange!;
+                    // TODO https://github.com/dotnet/arcade-services/issues/5176 check if the source repo is adding a dependency here and write a comment about the conflict
                     continue;
                 }
                 removals.Add(property);
@@ -241,7 +242,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             }
             if (addedInTarget)
             {
-                additions[property] = targetChange!;
+                // the property is already in the targe repo, so we don't need to add it again
                 continue;
             }
             if (addedInSource)
@@ -257,7 +258,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             }
             if (updateInTarget)
             {
-                updates[property] = targetChange!;
+                // the property is already updated in the target repo, so we don't need to update it again
                 continue;
             }
             if (updatedInSource)

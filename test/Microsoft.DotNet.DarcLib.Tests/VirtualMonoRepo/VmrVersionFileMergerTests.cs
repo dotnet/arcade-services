@@ -435,12 +435,11 @@ public class VmrVersionFileMergerTests
             .Select(d => (d.Name, d.Version))
             .Should()
             .BeEquivalentTo(expectedVersions, options => options.WithStrictOrdering());
-        result.Additions.Should().HaveCount(3);
+        result.Additions.Should().HaveCount(2);
         // there should only be one removal because Package.That.Is.Already.Removed.In.Repo was already removed in the target repo
         result.Removals.Should().HaveCount(1);
-        result.Updates.Should().HaveCount(2);
+        result.Updates.Should().HaveCount(1);
         List<(string, string)> expectedAdditions = [
-            ("Package.Added.In.Repo", "1.0.0"),
             ("Package.Added.In.Both", "2.2.2"),
             ("Package.Added.In.VMR", "2.0.0")];
         result.Additions.Values
@@ -449,7 +448,6 @@ public class VmrVersionFileMergerTests
             .Should()
             .BeEquivalentTo(expectedAdditions, options => options.WithStrictOrdering());
         List<(string, string)> expectedUpdates = [
-            ("Package.From.Build", "1.0.1"),
             ("Package.Updated.In.Both", "3.0.0")];
         result.Updates.Values
             .Select(u => (DependencyDetail)u.Value!)
