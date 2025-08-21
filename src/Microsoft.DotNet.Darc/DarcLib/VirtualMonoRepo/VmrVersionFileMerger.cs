@@ -327,7 +327,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             if (await _dependencyFileManager.TryRemoveDependencyAsync(removal, repo.Path, null!, versionFilesBasePath, versionDetailsPropsExists))
             {
                 appliedChanges.Removals.Add(removal);
-            }   
+            }
         }
         foreach ((var key, var addition) in changes.Additions)
         {
@@ -339,7 +339,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 versionDetailsOnly: true,
                 versionDetailsPropsExists))
             {
-                 appliedChanges.Additions[key] = addition;
+                appliedChanges.Additions[key] = addition;
             }
         }
         foreach ((var key, var update) in changes.Updates)
