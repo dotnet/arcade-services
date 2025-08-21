@@ -218,7 +218,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             if (removedInTarget)
             {
                 // we don't have to do anything since the property is removed in the repo
-                // even if the property was add in the source repo, we'll take what's in the target repo
+                // even if the property was added in the source repo, we'll take what's in the target repo
                 // TODO https://github.com/dotnet/arcade-services/issues/5176 check if the source repo is adding a dependency here and write a comment about the conflict
                 continue;
             }
