@@ -67,7 +67,7 @@ internal class ResetOperation : Operation
         _vmrInfo.VmrPath = new NativePath(_options.VmrPath);
 
         // Validate that the mapping exists
-        await _dependencyTracker.RefreshMetadata();
+        await _dependencyTracker.RefreshMetadataAsync();
 
         SourceMapping mapping;
         try

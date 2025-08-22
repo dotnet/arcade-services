@@ -73,7 +73,7 @@ internal abstract class CodeFlowOperation(
             ? new ForwardFlow(_options.Ref, await targetRepo.GetShaForRefAsync())
             : new Backflow(_options.Ref, await targetRepo.GetShaForRefAsync());
 
-        await _dependencyTracker.RefreshMetadata();
+        await _dependencyTracker.RefreshMetadataAsync();
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
 

@@ -63,7 +63,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool resetToRemoteWhenCloningRepo = false,
         CancellationToken cancellationToken = default)
     {
-        await _dependencyTracker.RefreshMetadata();
+        await _dependencyTracker.RefreshMetadataAsync();
 
         var mapping = _dependencyTracker.GetMapping(mappingName);
 
