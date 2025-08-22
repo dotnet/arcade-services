@@ -121,7 +121,7 @@ internal class ResetOperation : Operation
             var targetDir = _vmrInfo.GetRepoSourcesPath(mapping);
             var result = await _processManager.Execute(
                 _processManager.GitExecutable,
-                ["rm", "-r", "-q", "--", .. removalFilters],
+                ["rm", "-r", "-q", "-f", "--", .. removalFilters],
                 workingDir: targetDir);
 
             result.ThrowIfFailed($"Failed to remove files in {targetDir}");
