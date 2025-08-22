@@ -321,7 +321,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         var result = await _processManager.Execute(
             _processManager.GitExecutable,
-            ["rm", "-r", "-q", "--", .. removalFilters],
+            ["rm", "-r", "-q", "-f", "--", .. removalFilters],
             workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
             cancellationToken: cancellationToken);
 
