@@ -64,7 +64,6 @@ public interface IDependencyFileManager
         string? branch,
         IEnumerable<DependencyDetail> oldDependencies,
         SemanticVersion? incomingDotNetSdkVersion,
-        bool forceGlobalJsonUpdate = false,
         bool? repoHasVersionDetailsProps = null);
 
     XmlDocument UpdatePackageSources(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo);

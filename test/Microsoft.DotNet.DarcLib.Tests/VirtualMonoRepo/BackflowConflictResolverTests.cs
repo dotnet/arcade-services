@@ -380,7 +380,6 @@ public class BackflowConflictResolverTests
                 It.IsAny<string>(),
                 It.IsAny<IEnumerable<DependencyDetail>>(),
                 null,
-                It.IsAny<bool>(),
                 It.IsAny<bool?>()))
             .Callback((IEnumerable<DependencyDetail> itemsToUpdate,
                        SourceDependency? sourceDependency,
@@ -388,7 +387,6 @@ public class BackflowConflictResolverTests
                        string? commit,
                        IEnumerable<DependencyDetail> oldDependencies,
                        SemanticVersion? incomingDotNetSdkVersion,
-                       bool forceUpdate,
                        bool? _) =>
             {
                 // Update dependencies in-memory
