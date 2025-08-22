@@ -387,7 +387,6 @@ public class BackflowConflictResolverTests
                        string? commit,
                        IEnumerable<DependencyDetail> oldDependencies,
                        SemanticVersion? incomingDotNetSdkVersion,
-                       bool forceUpdate,
                        bool? _) =>
             {
                 // Update dependencies in-memory
