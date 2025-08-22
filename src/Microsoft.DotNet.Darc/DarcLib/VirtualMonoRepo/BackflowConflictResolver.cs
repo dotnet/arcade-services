@@ -341,9 +341,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             targetRepo.Path,
             branch: null, // reads the working tree
             currentRepoDependencies.Dependencies,
-            targetDotNetVersion,
-            // make sure that we always backflow the VMRs root global.json sdk version
-            forceGlobalJsonUpdate: true);
+            targetDotNetVersion);
 
         // This actually does not commit but stages only
         await _libGit2Client.CommitFilesAsync(updatedFiles.GetFilesToCommit(), targetRepo.Path, null, null);

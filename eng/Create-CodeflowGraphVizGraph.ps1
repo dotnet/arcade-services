@@ -920,7 +920,7 @@ function Get-GitCommits {
     # Get the commit history in format: <sha> <parent-sha>
     # This gives us both the commit SHA and its parent commit SHA
     # We use the %P format to get all parent SHAs (important for merge commits)
-    $commits = git -C $repoPath log -n $count --format="%H %P" main
+    $commits = git -C $repoPath log -n $count --format="%H %P"
 
     # Convert the raw git log output into structured objects
     $commitObjects = @()

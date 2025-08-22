@@ -39,7 +39,7 @@ public abstract class VmrScanner : IVmrScanner
 
     public async Task<List<string>> ScanVmr(string? baselineFilePath, CancellationToken cancellationToken)
     {
-        await _dependencyTracker.RefreshMetadata();
+        await _dependencyTracker.RefreshMetadataAsync();
 
         var taskList = new List<Task<IEnumerable<string>>>();
 
