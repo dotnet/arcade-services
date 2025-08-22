@@ -71,7 +71,17 @@ internal class VmrDiffOperation : Operation
         var parts = _options.Repositories.Split("..", StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length == 1)
         {
-            var currentRepoPath = _processManager.FindGitRoot(Directory.GetCurrentDirectory());
+            string currentRepoPath;
+            try
+            {
+                currentRepoPath = _processManager.FindGitRoot(Directory.GetCurrentDirectory());
+            }
+            catch (Exception)
+            {
+                // Not in a git repository, proceed with normal parsing
+                goto normalParsing;
+            }
+
             var branch = await _localGitRepoFactory.Create(new NativePath(currentRepoPath)).GetCheckedOutBranchAsync();
             var isCurrentVmr = await IsRepoVmrAsync(currentRepoPath, branch);
             
@@ -81,6 +91,8 @@ internal class VmrDiffOperation : Operation
                 return await ExecuteSingleMappingDiffAsync(parts[0]);
             }
         }
+
+        normalParsing:
 
         (Repo repo, Repo vmr, bool fromRepoDirection) = await ParseInput();
         if (_options.NameOnly)
@@ -117,7 +129,16 @@ internal class VmrDiffOperation : Operation
 
     private async Task<int> ExecuteMultiRepoDiffAsync()
     {
-        var currentRepoPath = _processManager.FindGitRoot(Directory.GetCurrentDirectory());
+        string currentRepoPath;
+        try
+        {
+            currentRepoPath = _processManager.FindGitRoot(Directory.GetCurrentDirectory());
+        }
+        catch (Exception)
+        {
+            throw new ArgumentException("Default diff behavior (no repository specified) can only be used from within a git repository directory");
+        }
+
         var branch = await _localGitRepoFactory.Create(new NativePath(currentRepoPath)).GetCheckedOutBranchAsync();
         var isVmr = await IsRepoVmrAsync(currentRepoPath, branch);
         
