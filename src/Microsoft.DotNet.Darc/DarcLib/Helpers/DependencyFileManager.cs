@@ -558,11 +558,10 @@ public class DependencyFileManager : IDependencyFileManager
     }
 
     /// <summary>
-    /// Updates the global.json entries for tools.dotnet and sdk.version if they are older than an incoming version
+    /// Updates the global.json entries for tools.dotnet and sdk.version in the repo if incoming version is newer
     /// </summary>
-    /// <param name="incomingDotnetVersion">version to compare against</param>
-    /// <param name="globalJson">Global.Json file to update</param>
-    /// <param name="forceUpdate">Ignores version check and forces globalJson update</param>
+    /// <param name="incomingDotnetVersion">incoming version to compare against</param>
+    /// <param name="targetGlobalJson">Global.Json file to update in target repo</param>
     /// <returns>Updated global.json file if was able to update, or the unchanged global.json if unable to</returns>
     private Dictionary<GitFileMetadataName, string> UpdateDotnetVersionGlobalJson(
         SemanticVersion incomingDotnetVersion,
@@ -576,16 +575,18 @@ public class DependencyFileManager : IDependencyFileManager
             return null;
         }
 
-        if (!SemanticVersion.TryParse(targetGlobalJson.SelectToken("tools.dotnet")?.ToString(), out SemanticVersion repoDotnetVersion))
+        string dotnetVersion = targetGlobalJson.SelectToken("tools.dotnet")?.ToString();
+        if (dotnetVersion == null)
         {
-            _logger.LogError($"Could not find or parse token `tools.dotnet` in target repo's `{VersionFiles.GlobalJson}`." +
+            _logger.LogInformation($"Could not find token `tools.dotnet` in target repo's `{VersionFiles.GlobalJson}`." +
                 "Skipping dotnet SDK update.");
             return null;
         }
 
-        if (repoDotnetVersion.CompareTo(incomingDotnetVersion) > 0)
+        var targetRepoVersion = SemanticVersion.Parse(dotnetVersion);
+        if (targetRepoVersion.CompareTo(incomingDotnetVersion) > 0)
         {
-            _logger.LogError($"The dotnet SDK version in the target repo's `{VersionFiles.GlobalJson}` is higher than the " +
+            _logger.LogInformation($"The dotnet SDK version in the target repo's `{VersionFiles.GlobalJson}` is higher than the " +
                 "incoming change. Skipping dotnet SDK update.");
             return null;
         }
@@ -595,7 +596,7 @@ public class DependencyFileManager : IDependencyFileManager
         targetGlobalJson["tools"]["dotnet"] = incomingDotnetVersion.ToNormalizedString();
         metadata.Add(GitFileMetadataName.ToolsDotNetUpdate, incomingDotnetVersion.ToNormalizedString());
 
-        // Also keep sdk.version in sync
+        // Also keep sdk.version in sync with tools.dotnet
         JToken sdkVersion = targetGlobalJson.SelectToken("sdk.version");
         if (sdkVersion != null)
         {
