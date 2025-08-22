@@ -237,7 +237,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         ILocalGitRepo repoClone,
         bool currentIsBackflow)
     {
-        await _dependencyTracker.RefreshMetadata();
+        await _dependencyTracker.RefreshMetadataAsync();
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
 
         ForwardFlow lastForwardFlow = await GetLastForwardFlow(mapping.Name);

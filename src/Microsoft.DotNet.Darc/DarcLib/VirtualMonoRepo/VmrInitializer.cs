@@ -88,7 +88,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         CodeFlowParameters codeFlowParameters,
         CancellationToken cancellationToken)
     {
-        await _dependencyTracker.RefreshMetadata(sourceMappingsPath);
+        await _dependencyTracker.RefreshMetadataAsync(sourceMappingsPath);
         var mapping = _dependencyTracker.GetMapping(mappingName);
 
         if (_dependencyTracker.GetDependencyVersion(mapping) is not null)

@@ -94,7 +94,7 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
         bool resetToRemoteWhenCloningRepo = false,
         CancellationToken cancellationToken = default)
     {
-        await _dependencyTracker.RefreshMetadata();
+        await _dependencyTracker.RefreshMetadataAsync();
 
         VmrDependencyVersion currentVersion = _dependencyTracker.GetDependencyVersion(mapping)
             ?? throw new Exception($"Failed to find current version for {mapping.Name}");

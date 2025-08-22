@@ -110,8 +110,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
 
         if (unknownChangedFiles.Any())
         {
-            _logger.LogInformation("Flow contains changes that warrant PR creation: {files}",
-                string.Join(", ", unknownChangedFiles));
+            _logger.LogInformation("Flow contains changes that warrant PR creation");
             return true;
         }
 
