@@ -61,6 +61,27 @@ internal class VmrDiffOperation : Operation
 
     public override async Task<int> ExecuteAsync()
     {
+        if (string.IsNullOrEmpty(_options.Repositories))
+        {
+            // Default behavior: diff against all repositories in source-manifest.json
+            return await ExecuteMultiRepoDiffAsync();
+        }
+
+        // Check if single argument is a mapping name from VMR context
+        var parts = _options.Repositories.Split("..", StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1)
+        {
+            var currentRepoPath = _processManager.FindGitRoot(Directory.GetCurrentDirectory());
+            var branch = await _localGitRepoFactory.Create(new NativePath(currentRepoPath)).GetCheckedOutBranchAsync();
+            var isCurrentVmr = await IsRepoVmrAsync(currentRepoPath, branch);
+            
+            if (isCurrentVmr && await IsSingleMappingNameAsync(parts[0]))
+            {
+                // Single mapping name - diff only that repository
+                return await ExecuteSingleMappingDiffAsync(parts[0]);
+            }
+        }
+
         (Repo repo, Repo vmr, bool fromRepoDirection) = await ParseInput();
         if (_options.NameOnly)
         {
@@ -91,6 +112,150 @@ internal class VmrDiffOperation : Operation
                 GitFile.MakeGitFilesDeletable(tmpPath);
                 _fileSystem.DeleteDirectory(tmpPath, true);
             }
+        }
+    }
+
+    private async Task<int> ExecuteMultiRepoDiffAsync()
+    {
+        var currentRepoPath = _processManager.FindGitRoot(Directory.GetCurrentDirectory());
+        var branch = await _localGitRepoFactory.Create(new NativePath(currentRepoPath)).GetCheckedOutBranchAsync();
+        var isVmr = await IsRepoVmrAsync(currentRepoPath, branch);
+        
+        if (!isVmr)
+        {
+            throw new ArgumentException("Default diff behavior (no repository specified) can only be used from within a VMR directory");
+        }
+
+        var vmrRepo = new Repo(currentRepoPath, branch, IsLocal: true, IsVmr: true);
+        var sourceManifestPath = new NativePath(currentRepoPath) / VmrInfo.DefaultRelativeSourceManifestPath.Path;
+        
+        if (!_fileSystem.FileExists(sourceManifestPath))
+        {
+            throw new FileNotFoundException($"Source manifest not found at {sourceManifestPath}. This directory may not be a valid VMR.");
+        }
+
+        var sourceManifestContent = await _fileSystem.ReadAllTextAsync(sourceManifestPath);
+        var sourceManifest = SourceManifest.FromJson(sourceManifestContent);
+
+        if (_options.NameOnly)
+        {
+            return await ExecuteMultiRepoNameOnlyDiffAsync(vmrRepo, sourceManifest);
+        }
+        else
+        {
+            return await ExecuteMultiRepoFullDiffAsync(vmrRepo, sourceManifest);
+        }
+    }
+
+    private async Task<int> ExecuteMultiRepoNameOnlyDiffAsync(Repo vmrRepo, SourceManifest sourceManifest)
+    {
+        bool hasAnyDifferences = false;
+        int totalRepos = sourceManifest.Repositories.Count;
+        int currentRepo = 0;
+
+        foreach (var repository in sourceManifest.Repositories)
+        {
+            currentRepo++;
+            var repoArg = $"{repository.RemoteUri}:{repository.CommitSha}";
+            var targetRepo = await ParseRepo(repoArg);
+
+            Console.WriteLine($"[{currentRepo}/{totalRepos}] Diffing {repository.Path} / {repository.CommitSha}");
+            Console.WriteLine(new string('-', 80));
+
+            try
+            {
+                int exitCode = await FileTreeDiffAsync(targetRepo, vmrRepo, false);
+                if (exitCode == 1)
+                {
+                    hasAnyDifferences = true;
+                }
+                else
+                {
+                    Console.WriteLine("(No differences found)");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ERROR: Failed to execute diff for {repository.Path}: {ex.Message}");
+                hasAnyDifferences = true;
+            }
+
+            Console.WriteLine();
+            Console.WriteLine(new string('=', 80));
+            Console.WriteLine();
+        }
+
+        return hasAnyDifferences ? 1 : 0;
+    }
+
+    private async Task<int> ExecuteMultiRepoFullDiffAsync(Repo vmrRepo, SourceManifest sourceManifest)
+    {
+        bool hasAnyDifferences = false;
+
+        foreach (var repository in sourceManifest.Repositories)
+        {
+            var repoArg = $"{repository.RemoteUri}:{repository.CommitSha}";
+            var targetRepo = await ParseRepo(repoArg);
+
+            try
+            {
+                int exitCode = await FullVmrDiffAsync(targetRepo, vmrRepo);
+                if (exitCode == 1)
+                {
+                    hasAnyDifferences = true;
+                }
+            }
+            catch
+            {
+                // In full diff mode, we don't output error messages to keep it silent
+                hasAnyDifferences = true;
+            }
+        }
+
+        return hasAnyDifferences ? 1 : 0;
+    }
+
+    private async Task<int> ExecuteSingleMappingDiffAsync(string mappingName)
+    {
+        var currentRepoPath = _processManager.FindGitRoot(Directory.GetCurrentDirectory());
+        var branch = await _localGitRepoFactory.Create(new NativePath(currentRepoPath)).GetCheckedOutBranchAsync();
+        var vmrRepo = new Repo(currentRepoPath, branch, IsLocal: true, IsVmr: true);
+        
+        var sourceManifestPath = new NativePath(currentRepoPath) / VmrInfo.DefaultRelativeSourceManifestPath.Path;
+        var sourceManifestContent = await _fileSystem.ReadAllTextAsync(sourceManifestPath);
+        var sourceManifest = SourceManifest.FromJson(sourceManifestContent);
+
+        if (!sourceManifest.TryGetRepoVersion(mappingName, out var repoVersion))
+        {
+            throw new ArgumentException($"No manifest record named {mappingName} found");
+        }
+
+        var repoArg = $"{repoVersion.RemoteUri}:{repoVersion.CommitSha}";
+        var targetRepo = await ParseRepo(repoArg);
+
+        if (_options.NameOnly)
+        {
+            Console.WriteLine($"Diffing {repoVersion.Path} / {repoVersion.CommitSha}");
+            Console.WriteLine(new string('-', 80));
+
+            try
+            {
+                int exitCode = await FileTreeDiffAsync(targetRepo, vmrRepo, false);
+                if (exitCode == 0)
+                {
+                    Console.WriteLine("(No differences found)");
+                }
+                return exitCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ERROR: Failed to execute diff for {mappingName}: {ex.Message}");
+                return 1;
+            }
+        }
+        else
+        {
+            return await FullVmrDiffAsync(targetRepo, vmrRepo);
         }
     }
 
@@ -150,6 +315,11 @@ internal class VmrDiffOperation : Operation
 
     private async Task<(Repo Repo, Repo Vmr, bool fromRepoDirection)> ParseInput()
     {
+        if (string.IsNullOrEmpty(_options.Repositories))
+        {
+            throw new ArgumentException("Repositories parameter should not be null when calling ParseInput directly");
+        }
+
         Repo repo1, repo2;
         var parts = _options.Repositories.Split("..", StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length > 2 || parts.Length < 1)
@@ -163,6 +333,13 @@ internal class VmrDiffOperation : Operation
             var currentRepoPath = _processManager.FindGitRoot(Directory.GetCurrentDirectory());
             var branch = await _localGitRepoFactory.Create(new NativePath(currentRepoPath)).GetCheckedOutBranchAsync();
             repo1 = new Repo(currentRepoPath, branch, IsLocal: true, await IsRepoVmrAsync(currentRepoPath, branch));
+            
+            // Check if we're in a VMR and the single argument might be a mapping name
+            if (repo1.IsVmr && await IsSingleMappingNameAsync(parts[0]))
+            {
+                return await ParseSingleMappingAsync(repo1, parts[0]);
+            }
+            
             repo2 = await ParseRepo(parts[0]);
         }
         else
@@ -174,6 +351,57 @@ internal class VmrDiffOperation : Operation
         await VerifyInput(repo1, repo2);
 
         return repo1.IsVmr ? (repo2, repo1, false) : (repo1, repo2, true);
+    }
+
+    private async Task<bool> IsSingleMappingNameAsync(string input)
+    {
+        // A mapping name is likely a simple name without path separators, URI schemes, or colons
+        // If it contains known URI schemes or path separators, it's likely not a mapping name
+        if (input.StartsWith("http://") || input.StartsWith("https://") || 
+            input.Contains("/") || input.Contains("\\") ||
+            (input.Length > 2 && char.IsLetter(input[0]) && input[1] == ':')) // Windows path like C:
+        {
+            return false;
+        }
+
+        // Check if this matches a mapping name in the source manifest
+        var currentRepoPath = _processManager.FindGitRoot(Directory.GetCurrentDirectory());
+        var sourceManifestPath = new NativePath(currentRepoPath) / VmrInfo.DefaultRelativeSourceManifestPath.Path;
+        
+        if (!_fileSystem.FileExists(sourceManifestPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            var sourceManifestContent = await _fileSystem.ReadAllTextAsync(sourceManifestPath);
+            var sourceManifest = SourceManifest.FromJson(sourceManifestContent);
+            return sourceManifest.TryGetRepoVersion(input, out _);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private async Task<(Repo Repo, Repo Vmr, bool fromRepoDirection)> ParseSingleMappingAsync(Repo vmrRepo, string mappingName)
+    {
+        var currentRepoPath = _processManager.FindGitRoot(Directory.GetCurrentDirectory());
+        var sourceManifestPath = new NativePath(currentRepoPath) / VmrInfo.DefaultRelativeSourceManifestPath.Path;
+        
+        var sourceManifestContent = await _fileSystem.ReadAllTextAsync(sourceManifestPath);
+        var sourceManifest = SourceManifest.FromJson(sourceManifestContent);
+
+        if (!sourceManifest.TryGetRepoVersion(mappingName, out var repoVersion))
+        {
+            throw new ArgumentException($"No manifest record named {mappingName} found");
+        }
+
+        var repoArg = $"{repoVersion.RemoteUri}:{repoVersion.CommitSha}";
+        var targetRepo = await ParseRepo(repoArg);
+        
+        return (targetRepo, vmrRepo, false);
     }
 
     private async Task<IReadOnlyCollection<string>> GetDiffFilters(string vmrRemote, string commit, string mapping)
