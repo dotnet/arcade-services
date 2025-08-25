@@ -17,8 +17,9 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
     private readonly Lazy<Task<Subscription?>> _lazySubscription;
     private readonly NonBatchedPullRequestUpdaterId _id;
     private readonly BuildAssetRegistryContext _context;
-    private readonly IPullRequestPolicyFailureNotifier _pullRequestPolicyFailureNotifier;
     private readonly ILogger<NonBatchedPullRequestUpdater> _logger;
+    private readonly ICommentCollector _commentCollector;
+    private readonly IPullRequestCommentBuilder _commentBuilder;
 
     public NonBatchedPullRequestUpdater(
         NonBatchedPullRequestUpdaterId id,
@@ -28,8 +29,6 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         IPullRequestUpdaterFactory updaterFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IPullRequestBuilder pullRequestBuilder,
-        IPullRequestPolicyFailureNotifier pullRequestPolicyFailureNotifier,
-        IPullRequestConflictNotifier pullRequestConflictNotifier,
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
         ISqlBarClient sqlClient,
@@ -38,7 +37,10 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         IPcsVmrForwardFlower vmrForwardFlower,
         IPcsVmrBackFlower vmrBackFlower,
         ITelemetryRecorder telemetryRecorder,
-        ILogger<NonBatchedPullRequestUpdater> logger)
+        ILogger<NonBatchedPullRequestUpdater> logger,
+        ICommentCollector commentCollector,
+        IPullRequestCommenter pullRequestCommenter,
+        IPullRequestCommentBuilder commentBuilder)
         : base(
             id,
             mergePolicyEvaluator,
@@ -46,7 +48,6 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
             updaterFactory,
             coherencyUpdateResolver,
             pullRequestBuilder,
-            pullRequestConflictNotifier,
             cacheFactory,
             reminderManagerFactory,
             sqlClient,
@@ -55,13 +56,16 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
             vmrForwardFlower,
             vmrBackFlower,
             telemetryRecorder,
-            logger)
+            logger,
+            commentCollector,
+            pullRequestCommenter)
     {
         _lazySubscription = new Lazy<Task<Subscription?>>(RetrieveSubscription);
         _id = id;
         _context = context;
-        _pullRequestPolicyFailureNotifier = pullRequestPolicyFailureNotifier;
         _logger = logger;
+        _commentCollector = commentCollector;
+        _commentBuilder = commentBuilder;
     }
 
     public Guid SubscriptionId => _id.SubscriptionId;
@@ -97,7 +101,12 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
 
     protected override async Task TagSourceRepositoryGitHubContactsIfPossibleAsync(InProgressPullRequest pr)
     {
-        await _pullRequestPolicyFailureNotifier.TagSourceRepositoryGitHubContactsAsync(pr);
+        var comment = await _commentBuilder.BuildTagSourceRepositoryGitHubContactsCommentAsync(pr);
+        if (!string.IsNullOrEmpty(comment))
+        {
+            _commentCollector.AddComment(comment, CommentType.Warning);
+            pr.SourceRepoNotified = true;
+        }
     }
 
     protected override async Task<(string repository, string branch)> GetTargetAsync()

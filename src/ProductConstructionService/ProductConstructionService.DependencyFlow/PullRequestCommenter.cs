@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text;
@@ -15,7 +15,12 @@ using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 
-internal interface IPullRequestConflictNotifier
+/// <summary>
+/// Service for posting comments to pull requests.
+/// This class repurposes the existing PullRequestConflictNotifier functionality
+/// and adds the ability to post all collected comments from the scoped IPullRequestCommentService.
+/// </summary>
+internal interface IPullRequestCommenter
 {
     /// <summary>
     /// Posts a comment in the PR when a new build/update cannot be flown to it
@@ -39,18 +44,30 @@ internal interface IPullRequestConflictNotifier
         Subscription subscription,
         IReadOnlyCollection<UnixPath> conflictedFiles,
         Build build);
+
+    /// <summary>
+    /// Posts all collected comments from the scoped IPullRequestCommentService to the specified pull request.
+    /// </summary>
+    /// <param name="prUrl">The URL of the pull request to comment on</param>
+    /// <param name="targetRepository">The target repository URL</param>
+    Task PostCollectedCommentsAsync(string prUrl, string targetRepository);
 }
 
-internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
+internal class PullRequestCommenter : IPullRequestCommenter
 {
     private readonly IRemoteFactory _remoteFactory;
-    private readonly ILogger<PullRequestConflictNotifier> _logger;
+    private readonly ICommentCollector _commentService;
+    private readonly ILogger<PullRequestCommenter> _logger;
 
-    public PullRequestConflictNotifier(
+    private const string HelpLine = $"> In case of unclarities, consult the [FAQ]({PullRequestBuilder.CodeFlowPrFaqUri}) or tag **\\@dotnet/product-construction** for assistance.";
+
+    public PullRequestCommenter(
         IRemoteFactory remoteFactory,
-        ILogger<PullRequestConflictNotifier> logger)
+        ICommentCollector commentService,
+        ILogger<PullRequestCommenter> logger)
     {
         _remoteFactory = remoteFactory;
+        _commentService = commentService;
         _logger = logger;
     }
 
@@ -174,6 +191,45 @@ internal class PullRequestConflictNotifier : IPullRequestConflictNotifier
         catch (Exception e)
         {
             _logger.LogWarning("Posting comment to {prUrl} failed with exception {message}", pr.Url, e.Message);
+        }
+    }
+
+    public async Task PostCollectedCommentsAsync(string prUrl, string targetRepository)
+    {
+        var comments = _commentService.GetComments();
+        if (comments.Count == 0)
+        {
+            _logger.LogDebug("No collected comments to post to PR {prUrl}", prUrl);
+            return;
+        }
+
+        var remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
+
+        foreach (var comment in comments)
+        {
+            try
+            {
+                var header = comment.commentType switch
+                {
+                    CommentType.Warning => "> [!IMPORTANT]",
+                    CommentType.Information => "> [!NOTE]",
+                    _ => throw new ArgumentOutOfRangeException($"Comment type {comment.commentType} is not supported")
+                };
+                StringBuilder sb = new();
+                sb.AppendLine(header);
+                foreach (var textLine in comment.Text.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    sb.AppendLine($"> {textLine}");
+                }
+                sb.AppendLine(">");
+                sb.AppendLine(HelpLine);
+                    
+                await remote.CommentPullRequestAsync(prUrl, sb.ToString());
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to post collected comment to {prUrl}: {message}", prUrl, e.Message);
+            }
         }
     }
 }
