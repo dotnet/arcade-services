@@ -88,9 +88,18 @@ internal class VmrDiffOperation : Operation
                     }
                 }
             }
-            catch (Exception)
+            catch (DirectoryNotFoundException)
             {
-                // Not in a git repository or other error, proceed with normal parsing
+                // Not in a git repository, proceed with normal parsing
+            }
+            catch (InvalidOperationException)
+            {
+                // Not in a git repository, proceed with normal parsing
+            }
+            catch (Exception ex)
+            {
+                // Unexpected error, log for debugging and proceed with normal parsing
+                Console.Error.WriteLine($"Unexpected error while checking for single mapping name: {ex}");
             }
         }
 
