@@ -15,8 +15,8 @@ All relevant information, including the rollout PR, issues encountered during th
 # Process
 
 ## Build status check
-- [ ] Check the status of the [dotnet-arcade-services-weekly](https://dev.azure.com/dnceng/internal/_build?definitionId=993) pipeline
-- [ ] Check the status of the [arcade-services-internal-ci](https://dev.azure.com/dnceng/internal/_build?definitionId=252) pipeline.
+- [ ] Check the status of the [dotnet-arcade-services-daily](https://dev.azure.com/dnceng/internal/_build?definitionId=993) pipeline
+- [ ] Check the status of the [arcade-services-official](https://dev.azure.com/dnceng/internal/_build?definitionId=252) pipeline.
 
 ## Rollout preparation
 - [ ] Assign this issue to the FR area and to the current sprint.
@@ -55,8 +55,8 @@ A rollback was necessary during this rollout.
 # Useful links
 
 - AzDO pipelines
-  - [arcade-services-internal-ci](https://dev.azure.com/dnceng/internal/_build?definitionId=252)
-  - [dotnet-arcade-services-weekly](https://dev.azure.com/dnceng/internal/_build?definitionId=993)
+  - [arcade-services-official](https://dev.azure.com/dnceng/internal/_build?definitionId=252)
+  - [dotnet-arcade-services-daily](https://dev.azure.com/dnceng/internal/_build?definitionId=993)
 - [Rollout channel](https://teams.microsoft.com/l/channel/19%3a72e283b51f9e4567ba24a35328562df4%40thread.skype/Rollout?groupId=147df318-61de-4f04-8f7b-ecd328c256bb&tenantId=72f988bf-86f1-41af-91ab-2d7cd011db47)
 - [PCS exceptions](https://ms.portal.azure.com#@72f988bf-86f1-41af-91ab-2d7cd011db47/blade/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/resourceId/%2Fsubscriptions%2Ffbd6122a-9ad3-42e4-976e-bccb82486856%2FresourceGroups%2Fproduct-construction-service%2Fproviders%2Fmicrosoft.insights%2Fcomponents%2Fproduct-construction-service-ai-prod/source/LogsBlade.AnalyticsShareLinkToQuery/q/H4sIAAAAAAAAAz2MOw6DMBBE%252B5xiSlsiRZDS5i7GjGQXu0brRSSIwyekoH4fvjMXr0377cBWaIRXYfckC17QtoV4H%252Bcf7KtIsroTua3qIWL6YKoaLn%252FA4ylxgNBLOxOjzrT%252FMJdk%252FgV08ryabQAAAA%253D%253D)
 - [Deployment Policy](https://github.com/dotnet/core-eng/blob/main/Documentation/Policy/DeploymentPolicy.md)

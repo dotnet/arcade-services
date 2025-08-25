@@ -206,6 +206,33 @@ public class DependencyFileManager : IDependencyFileManager
     }
 
     /// <summary>
+    /// Tries to add a new or update an existing dependency in the repository.
+    /// </summary>
+    /// <returns>True if the dependency is added or updated, false if it already existed in the desired version</returns>
+    public async Task<bool> TryAddOrUpdateDependency(
+        DependencyDetail dependency,
+        string repoUri,
+        string branch,
+        UnixPath relativeBasePath = null,
+        bool versionDetailsOnly = false,
+        bool? repoHasVersionDetailsProps = null)
+    {
+        var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(await ReadVersionDetailsXmlAsync(repoUri, branch, relativeBasePath));
+
+        if (versionDetails.Dependencies.Any(d =>
+            d.Name == dependency.Name
+            && d.Version == dependency.Version
+            && d.RepoUri == dependency.RepoUri
+            && d.Commit == dependency.Commit))
+        {
+            return false;
+        }
+
+        await AddDependencyAsync(dependency, repoUri, branch, relativeBasePath, versionDetailsOnly, repoHasVersionDetailsProps);
+        return true;
+    }
+
+    /// <summary>
     /// Add a new dependency to the repository
     /// </summary>
     /// <param name="dependency">Dependency to add.</param>
@@ -245,6 +272,26 @@ public class DependencyFileManager : IDependencyFileManager
                 await AddDependencyToVersionsPropsAsync(repoUri, branch, dependency, relativeBasePath);
             }
         }
+    }
+
+    /// <returns>true if the dependency was removed successfully, false if it didn't exist</returns>
+    public async Task<bool> TryRemoveDependencyAsync(
+        string dependencyName,
+        string repoUri,
+        string branch,
+        UnixPath relativeBasePath = null,
+        bool? repoHasVersionDetailsProps = null)
+    {
+        var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(await ReadVersionDetailsXmlAsync(repoUri, branch, relativeBasePath));
+
+        // we only look at the dependency name here because that's what the removal does too
+        if (!versionDetails.Dependencies.Any(d => d.Name.Equals(dependencyName, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        await RemoveDependencyAsync(dependencyName, repoUri, branch, relativeBasePath, repoHasVersionDetailsProps);
+        return true;
     }
 
     public async Task RemoveDependencyAsync(
@@ -434,7 +481,6 @@ public class DependencyFileManager : IDependencyFileManager
         string branch,
         IEnumerable<DependencyDetail> oldDependencies,
         SemanticVersion incomingDotNetSdkVersion,
-        bool forceGlobalJsonUpdate = false,
         bool? repoHasVersionDetailsProps = null)
     {
         // When updating version files, we always want to look in the base folder, even when we're updating it in the VMR
@@ -509,7 +555,7 @@ public class DependencyFileManager : IDependencyFileManager
         Dictionary<GitFileMetadataName, string> globalJsonMetadata = null;
         if (incomingDotNetSdkVersion != null)
         {
-            globalJsonMetadata = UpdateDotnetVersionGlobalJson(incomingDotNetSdkVersion, globalJson, forceGlobalJsonUpdate);
+            globalJsonMetadata = UpdateDotnetVersionGlobalJson(incomingDotNetSdkVersion, globalJson);
         }
 
         var fileContainer = new GitFileContentContainer
@@ -559,60 +605,53 @@ public class DependencyFileManager : IDependencyFileManager
     }
 
     /// <summary>
-    /// Updates the global.json entries for tools.dotnet and sdk.version if they are older than an incoming version
+    /// Updates the global.json entries for tools.dotnet and sdk.version in the repo if incoming version is newer
     /// </summary>
-    /// <param name="incomingDotnetVersion">version to compare against</param>
-    /// <param name="globalJson">Global.Json file to update</param>
-    /// <param name="forceUpdate">Ignores version check and forces globalJson update</param>
+    /// <param name="incomingDotnetVersion">incoming version to compare against</param>
+    /// <param name="targetGlobalJson">Global.Json file to update in target repo</param>
     /// <returns>Updated global.json file if was able to update, or the unchanged global.json if unable to</returns>
     private Dictionary<GitFileMetadataName, string> UpdateDotnetVersionGlobalJson(
         SemanticVersion incomingDotnetVersion,
-        JObject globalJson,
-        bool forceUpdate = false)
+        JObject targetGlobalJson)
     {
-        try
+        JToken pinnedToken = targetGlobalJson.SelectToken("tools.pinned");
+        if (pinnedToken != null && pinnedToken.Type == JTokenType.Boolean && pinnedToken.Value<bool>())
         {
-            // Check if tools.pinned is set to true, if so skip update
-            JToken pinnedToken = globalJson.SelectToken("tools.pinned");
-            if (pinnedToken != null && pinnedToken.Type == JTokenType.Boolean && pinnedToken.Value<bool>())
-            {
-                _logger.LogInformation("Skipping dotnet SDK update because tools.pinned is set to true in global.json");
-                return null;
-            }
-
-            if (SemanticVersion.TryParse(globalJson.SelectToken("tools.dotnet")?.ToString(), out SemanticVersion repoDotnetVersion))
-            {
-                if (repoDotnetVersion.CompareTo(incomingDotnetVersion) < 0 || forceUpdate)
-                {
-                    Dictionary<GitFileMetadataName, string> metadata = [];
-
-                    globalJson["tools"]["dotnet"] = incomingDotnetVersion.ToNormalizedString();
-                    metadata.Add(GitFileMetadataName.ToolsDotNetUpdate, incomingDotnetVersion.ToNormalizedString());
-
-                    // Also update and keep sdk.version in sync.
-                    JToken sdkVersion = globalJson.SelectToken("sdk.version");
-                    if (sdkVersion != null)
-                    {
-                        globalJson["sdk"]["version"] = incomingDotnetVersion.ToNormalizedString();
-                        metadata.Add(GitFileMetadataName.SdkVersionUpdate, incomingDotnetVersion.ToNormalizedString());
-                    }
-
-                    return metadata;
-                }
-            }
-            else
-            {
-                _logger.LogError("Could not parse the repo's dotnet version from the global.json. Skipping update to dotnet version sections");
-                return null;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update Dotnet version for global.json. Skipping update to version sections.");
+            _logger.LogInformation("Skipping dotnet SDK update because tools.pinned is set to true in the target." +
+                $"repo's {VersionFiles.GlobalJson}");
+            return null;
         }
 
-        // No updates
-        return null;
+        string dotnetVersion = targetGlobalJson.SelectToken("tools.dotnet")?.ToString();
+        if (dotnetVersion == null)
+        {
+            _logger.LogInformation($"Could not find token `tools.dotnet` in target repo's `{VersionFiles.GlobalJson}`." +
+                "Skipping dotnet SDK update.");
+            return null;
+        }
+
+        var targetRepoVersion = SemanticVersion.Parse(dotnetVersion);
+        if (targetRepoVersion.CompareTo(incomingDotnetVersion) > 0)
+        {
+            _logger.LogInformation($"The dotnet SDK version in the target repo's `{VersionFiles.GlobalJson}` is higher than the " +
+                "incoming change. Skipping dotnet SDK update.");
+            return null;
+        }
+
+        Dictionary<GitFileMetadataName, string> metadata = [];
+
+        targetGlobalJson["tools"]["dotnet"] = incomingDotnetVersion.ToNormalizedString();
+        metadata.Add(GitFileMetadataName.ToolsDotNetUpdate, incomingDotnetVersion.ToNormalizedString());
+
+        // Also keep sdk.version in sync with tools.dotnet
+        JToken sdkVersion = targetGlobalJson.SelectToken("sdk.version");
+        if (sdkVersion != null)
+        {
+            targetGlobalJson["sdk"]["version"] = incomingDotnetVersion.ToNormalizedString();
+            metadata.Add(GitFileMetadataName.SdkVersionUpdate, incomingDotnetVersion.ToNormalizedString());
+        }
+
+        return metadata;
     }
 
     private static bool IsOnlyPresentInMaestroManagedFeed(HashSet<string> locations)

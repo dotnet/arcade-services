@@ -216,6 +216,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             LastFlows lastFlows = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
             await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
             await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
+            await _dependencyTracker.RefreshMetadataAsync();
             return (false, lastFlows);
         }
     }
@@ -304,6 +305,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             // Check out the last flow's commit in the PR branch to create the work branch on
             await vmr.CheckoutAsync(lastFlows.LastForwardFlow.VmrSha);
             workBranch = await _workBranchFactory.CreateWorkBranchAsync(vmr, branchName);
+            await _dependencyTracker.RefreshMetadataAsync();
         }
 
         await sourceRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
@@ -321,7 +323,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         var result = await _processManager.Execute(
             _processManager.GitExecutable,
-            ["rm", "-r", "-q", "--", .. removalFilters],
+            ["rm", "-r", "-q", "-f", "--", .. removalFilters],
             workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
             cancellationToken: cancellationToken);
 

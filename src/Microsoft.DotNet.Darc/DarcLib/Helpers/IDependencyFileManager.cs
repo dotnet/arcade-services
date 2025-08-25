@@ -19,12 +19,27 @@ namespace Microsoft.DotNet.DarcLib.Helpers;
 /// </summary>
 public interface IDependencyFileManager
 {
+    Task<bool> TryAddOrUpdateDependency(
+        DependencyDetail dependency,
+        string repoUri,
+        string? branch,
+        UnixPath? relativeBasePath = null,
+        bool versionDetailsOnly = false,
+        bool? repoHasVersionDetailsProps = null);
+
     Task AddDependencyAsync(
         DependencyDetail dependency,
         string repoUri,
         string? branch,
         UnixPath? relativeBasePath = null,
         bool versionDetailsOnly = false,
+        bool? repoHasVersionDetailsProps = null);
+
+    Task<bool> TryRemoveDependencyAsync(
+        string dependencyName,
+        string repoUri,
+        string branch,
+        UnixPath? relativeBasePath = null,
         bool? repoHasVersionDetailsProps = null);
 
     Task RemoveDependencyAsync(
@@ -64,7 +79,6 @@ public interface IDependencyFileManager
         string? branch,
         IEnumerable<DependencyDetail> oldDependencies,
         SemanticVersion? incomingDotNetSdkVersion,
-        bool forceGlobalJsonUpdate = false,
         bool? repoHasVersionDetailsProps = null);
 
     XmlDocument UpdatePackageSources(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo);

@@ -43,17 +43,17 @@ public class Local
     /// <summary>
     ///     Adds a dependency to the dependency files
     /// </summary>
-    public async Task AddDependencyAsync(DependencyDetail dependency)
+    public async Task AddDependencyAsync(DependencyDetail dependency, UnixPath relativeBasePath = null)
     {
-        await _fileManager.AddDependencyAsync(dependency, _repoRootDir.Value, null);
+        await _fileManager.AddDependencyAsync(dependency, _repoRootDir.Value, null, relativeBasePath);
     }
 
     /// <summary>
     ///     Adds a dependency to the dependency files
     /// </summary>
-    public async Task RemoveDependencyAsync(string dependencyName)
+    public async Task RemoveDependencyAsync(string dependencyName, UnixPath relativeBasePath = null)
     {
-        await _fileManager.RemoveDependencyAsync(dependencyName, _repoRootDir.Value, null);
+        await _fileManager.RemoveDependencyAsync(dependencyName, _repoRootDir.Value, null, relativeBasePath);
     }
 
     /// <summary>

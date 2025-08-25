@@ -327,7 +327,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             .. exclusions,
         ];
 
-        string[] args = ["rm", "-r", "-q"];
+        string[] args = ["rm", "-r", "-q", "-f"];
         if (removalFilters.Count > 0)
         {
             args = [.. args, "--", .. removalFilters];

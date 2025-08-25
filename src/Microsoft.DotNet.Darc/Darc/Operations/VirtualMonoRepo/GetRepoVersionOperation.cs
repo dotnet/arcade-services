@@ -31,7 +31,7 @@ internal class GetRepoVersionOperation : Operation
     public override async Task<int> ExecuteAsync()
     {
         var repositories = _options.Repositories.ToList();
-        await _dependencyTracker.RefreshMetadata();
+        await _dependencyTracker.RefreshMetadataAsync();
 
         // If there are no repositories, list all.
         if (!repositories.Any())

@@ -22,7 +22,6 @@ public interface IVmrVersionFileMerger
     /// Merges the changes in a JSON file between two references in the source and target repo.
     /// </summary>
     Task MergeJsonAsync(
-        Codeflow lastFlow,
         ILocalGitRepo targetRepo,
         string targetRepoJsonRelativePath,
         string targetRepoPreviousRef,
@@ -34,7 +33,6 @@ public interface IVmrVersionFileMerger
         bool allowMissingFiles = false);
 
     Task<VersionFileChanges<DependencyUpdate>> MergeVersionDetails(
-        Codeflow lastFlow,
         ILocalGitRepo targetRepo,
         string targetRepoVersionDetailsRelativePath,
         string targetRepoPreviousRef,
@@ -70,7 +68,6 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
     }
 
     public async Task MergeJsonAsync(
-        Codeflow lastFlow,
         ILocalGitRepo targetRepo,
         string targetRepoJsonRelativePath,
         string targetRepoPreviousRef,
@@ -84,9 +81,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         var targetRepoPreviousJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, targetRepoPreviousRef, allowMissingFiles);
         var targetRepoCurrentJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, targetRepoCurrentRef, allowMissingFiles);
 
-        var sourcePreviousJson = lastFlow is Backflow
-            ? await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoPreviousRef, allowMissingFiles)
-            : targetRepoPreviousJson;
+        var sourcePreviousJson = await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoPreviousRef, allowMissingFiles);
         var sourceCurrentJson = await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoCurrentRef, allowMissingFiles);
 
         if (!allowMissingFiles || !(await DeleteFileIfRequiredAsync(
@@ -121,7 +116,6 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
     }
 
     public async Task<VersionFileChanges<DependencyUpdate>> MergeVersionDetails(
-        Codeflow lastFlow,
         ILocalGitRepo targetRepo,
         string targetRepoVersionDetailsRelativePath,
         string targetRepoPreviousRef,
@@ -147,9 +141,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         // Similarly to the code flow algorithm, we compare the corresponding commits
         // and the contents of the version files inside.
         // We distinguish the direction of the previous flow vs the current flow.
-        var previousSourceRepoChanges = lastFlow is Backflow
-            ? await GetDependencies(sourceRepo, sourceRepoPreviousRef, sourceRepoVersionDetailsRelativePath)
-            : previousTargetRepoChanges;
+        var previousSourceRepoChanges = await GetDependencies(sourceRepo, sourceRepoPreviousRef, sourceRepoVersionDetailsRelativePath);
         var currentSourceRepoChanges = await GetDependencies(sourceRepo, sourceRepoCurrentRef, sourceRepoVersionDetailsRelativePath);
 
         List<DependencyUpdate> targetChanges = ComputeChanges(
@@ -162,9 +154,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
         VersionFileChanges<DependencyUpdate> mergedChanges = MergeVersionFileChanges(targetChanges, sourceChanges, SelectDependencyUpdate);
 
-        await ApplyVersionDetailsChangesAsync(targetRepo, mergedChanges, mappingToApplyChanges);
-
-        return mergedChanges;
+        return await ApplyVersionDetailsChangesAsync(targetRepo, mergedChanges, mappingToApplyChanges);
     }
 
     private async Task<bool> DeleteFileIfRequiredAsync(
@@ -227,11 +217,9 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
             if (removedInTarget)
             {
-                if (addedInSource)
-                {
-                    throw new ConflictingDependencyUpdateException(targetChange!, sourceChange!);
-                }
                 // we don't have to do anything since the property is removed in the repo
+                // even if the property was added in the source repo, we'll take what's in the target repo
+                // TODO https://github.com/dotnet/arcade-services/issues/5176 check if the source repo is adding a dependency here and write a comment about the conflict
                 continue;
             }
 
@@ -239,7 +227,9 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             {
                 if (addedInTarget)
                 {
-                    throw new ConflictingDependencyUpdateException(targetChange!, sourceChange!);
+                    // even if the property was removed in the source repo, we'll take whatever is in the target repo
+                    // TODO https://github.com/dotnet/arcade-services/issues/5176 check if the source repo is adding a dependency here and write a comment about the conflict
+                    continue;
                 }
                 removals.Add(property);
                 continue;
@@ -252,7 +242,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             }
             if (addedInTarget)
             {
-                additions[property] = targetChange!;
+                // the property is already in the targe repo, so we don't need to add it again
                 continue;
             }
             if (addedInSource)
@@ -268,7 +258,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             }
             if (updateInTarget)
             {
-                updates[property] = targetChange!;
+                // the property is already updated in the target repo, so we don't need to update it again
                 continue;
             }
             if (updatedInSource)
@@ -325,36 +315,60 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             .ToList();
     }
 
-    private async Task ApplyVersionDetailsChangesAsync(ILocalGitRepo repo, VersionFileChanges<DependencyUpdate> changes, string? mapping = null)
+    private async Task<VersionFileChanges<DependencyUpdate>> ApplyVersionDetailsChangesAsync(ILocalGitRepo repo, VersionFileChanges<DependencyUpdate> changes, string? mapping = null)
     {
         var versionFilesBasePath = mapping != null
             ? VmrInfo.GetRelativeRepoSourcesPath(mapping)
             : null;
         bool versionDetailsPropsExists = await _dependencyFileManager.VersionDetailsPropsExistsAsync(repo.Path, null!, versionFilesBasePath);
+        VersionFileChanges<DependencyUpdate> appliedChanges = new([], [], []);
         foreach (var removal in changes.Removals)
         {
             // Remove the property from the version details
-            await _dependencyFileManager.RemoveDependencyAsync(removal, repo.Path, null!, versionFilesBasePath, versionDetailsPropsExists);
+            if (await _dependencyFileManager.TryRemoveDependencyAsync(removal, repo.Path, null!, versionFilesBasePath, versionDetailsPropsExists))
+            {
+                appliedChanges.Removals.Add(removal);
+            }
         }
-        foreach ((var _, var update) in changes.Additions.Concat(changes.Updates))
+        foreach ((var assetName, var addition) in changes.Additions)
         {
-            await _dependencyFileManager.AddDependencyAsync(
+            if (await _dependencyFileManager.TryAddOrUpdateDependency(
+                (DependencyDetail)addition.Value!,
+                repo.Path,
+                null!,
+                versionFilesBasePath,
+                versionDetailsOnly: true,
+                versionDetailsPropsExists))
+            {
+                appliedChanges.Additions[assetName] = addition;
+            }
+        }
+        foreach ((var assetName, var update) in changes.Updates)
+        {
+            if (await _dependencyFileManager.TryAddOrUpdateDependency(
                 (DependencyDetail)update.Value!,
                 repo.Path,
                 null!,
                 versionFilesBasePath,
                 versionDetailsOnly: true,
-                versionDetailsPropsExists);
+                versionDetailsPropsExists))
+            {
+                appliedChanges.Updates[assetName] = update;
+            }
         }
 
         await repo.StageAsync(["."]);
+
+        return appliedChanges;
     }
 
     private static async Task<string> GetJsonFromGit(ILocalGitRepo repo, string jsonRelativePath, string reference, bool allowMissingFile) =>
-        await repo.GetFileFromGitAsync(jsonRelativePath, reference)
-            ?? (allowMissingFile
-                ? EmptyJsonString
-                : throw new FileNotFoundException($"File not found at {repo.Path / jsonRelativePath} for reference {reference}"));
+        reference == Constants.EmptyGitObject
+            ? EmptyJsonString
+            : await repo.GetFileFromGitAsync(jsonRelativePath, reference)
+                ?? (allowMissingFile
+                    ? EmptyJsonString
+                    : throw new FileNotFoundException($"File not found at {repo.Path / jsonRelativePath} for reference {reference}"));
 
     private static DependencyUpdate SelectDependencyUpdate(DependencyUpdate repo1Change, DependencyUpdate repo2Change)
     {

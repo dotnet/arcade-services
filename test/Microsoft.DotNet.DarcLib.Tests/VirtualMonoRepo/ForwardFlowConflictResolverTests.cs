@@ -76,7 +76,6 @@ public class ForwardFlowConflictResolverTests
             .Returns(vmrRepo.Object);
 
         vmrVersionFileMergerMock.Setup(m => m.MergeVersionDetails(
-                It.IsAny<ForwardFlow>(),
                 It.IsAny<ILocalGitRepo>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -157,7 +156,6 @@ public class ForwardFlowConflictResolverTests
 
         vmrVersionFileMergerMock.Verify(
             m => m.MergeJsonAsync(
-                lastFlow,
                 vmrRepo.Object,
                 VmrInfo.GetRelativeRepoSourcesPath(mapping) / VersionFiles.GlobalJson,
                 lastFlowVmrSha,
@@ -170,7 +168,6 @@ public class ForwardFlowConflictResolverTests
             Times.Once);
         vmrVersionFileMergerMock.Verify(
             m => m.MergeJsonAsync(
-                lastFlow,
                 vmrRepo.Object,
                 VmrInfo.GetRelativeRepoSourcesPath(mapping) / VersionFiles.DotnetToolsConfigJson,
                 lastFlowVmrSha,
@@ -183,7 +180,6 @@ public class ForwardFlowConflictResolverTests
             Times.Once);
         vmrVersionFileMergerMock.Verify(
             m => m.MergeVersionDetails(
-                lastFlow,
                 vmrRepo.Object,
                 VmrInfo.GetRelativeRepoSourcesPath(mapping) / VersionFiles.VersionDetailsXml,
                 lastFlowVmrSha,

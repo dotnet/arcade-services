@@ -27,7 +27,7 @@ public interface IVmrDependencyTracker
     /// Refreshes all metadata: source mappings, source manifest, ..
     /// </summary>
     /// <param name="sourceMappingsPath">Leave empty for default (src/source-mappings.json)</param>
-    Task RefreshMetadata(string? sourceMappingsPath = null);
+    Task RefreshMetadataAsync(string? sourceMappingsPath = null);
 
     void UpdateDependencyVersion(VmrDependencyUpdate update);
 
@@ -89,7 +89,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         _mappings = await _sourceMappingParser.ParseMappings(sourceMappingsPath);
     }
 
-    public async Task RefreshMetadata(string? sourceMappingsPath = null)
+    public async Task RefreshMetadataAsync(string? sourceMappingsPath = null)
     {
         await InitializeSourceMappings(sourceMappingsPath);
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);

@@ -4,6 +4,7 @@
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
+#nullable enable
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 [Verb("diff", HelpText = "Diffs the VMR and the product repositories. Outputs the diff to stdout, "
@@ -11,13 +12,14 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 internal class VmrDiffOptions : VmrCommandLineOptions<VmrDiffOperation>
 {
     [Option("output-path", HelpText = "Path where git patch(es) will be created (patches are split to be under 1GB)", Required = false)]
-    public string OutputPath { get; set; }
+    public string? OutputPath { get; set; }
 
-    [Value(0, Required = true, HelpText =
+    [Value(0, Required = false, HelpText =
         "Repositories and git refs to calculate the diff for in the following format: remote:branch..remote:branch, " +
         "where remote can be a local path or remote URI. Alternatively, only one target can be provided in " +
-        "which case current directory will be used as the source for the diff")]
-    public string Repositories { get; set; }
+        "which case current directory will be used as the source for the diff. If not provided and called from " +
+        "a VMR directory, diffs against all repositories in source-manifest.json")]
+    public string? Repositories { get; set; }
 
     [Option("name-only", Required = false, HelpText =
         "Only list names of differing files and directories. " +
