@@ -31,4 +31,7 @@
     <ProjectReference Include="..\..\Maestro\Maestro.MergePolicyEvaluation\Maestro.MergePolicyEvaluation.csproj" />
     <ProjectReference Include="..\..\ProductConstructionService\Microsoft.DotNet.ProductConstructionService.Client\Microsoft.DotNet.ProductConstructionService.Client.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Microsoft.DotNet.DarcLib.Tests" />
+  </ItemGroup>
 </Project>
