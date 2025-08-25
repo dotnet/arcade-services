@@ -118,9 +118,12 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
         try
         {
-            var lastFlow = headBranchExisted
+            var comparisonFlow = headBranchExisted
                 ? lastFlows.LastFlow
-                : lastFlows.LastBackFlow ?? lastFlows.LastFlow;
+                : lastFlows.LastBackFlow
+                    // If there were no backflows, this means we only had forward flows.
+                    // We need to make sure that we capture all changes made in the forward flows by comparing the current dependencies against an empty commit
+                    ?? new Backflow(Constants.EmptyGitObject, Constants.EmptyGitObject);
 
             var updates = await BackflowDependenciesAndToolset(
                 mapping.Name,
@@ -128,7 +131,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 branchToMerge,
                 build,
                 excludedAssets,
-                lastFlow,
+                comparisonFlow,
                 currentFlow,
                 cancellationToken);
             return new VersionFileUpdateResult(conflictedFiles, updates);
@@ -247,7 +250,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         string targetBranch,
         Build build,
         IReadOnlyCollection<string>? excludedAssets,
-        Codeflow lastFlow,
+        Codeflow comparisonFlow,
         Backflow currentFlow,
         CancellationToken cancellationToken)
     {
@@ -256,46 +259,43 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
         // handle global.json
         await _vmrVersionFileMerger.MergeJsonAsync(
-            lastFlow,
             targetRepo,
             VersionFiles.GlobalJson,
-            lastFlow.RepoSha,
+            comparisonFlow.RepoSha,
             targetBranch,
             vmr,
             VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.GlobalJson,
-            lastFlow.VmrSha,
+            comparisonFlow.VmrSha,
             currentFlow.VmrSha);
 
         // and handle dotnet-tools.json if it exists
         bool dotnetToolsConfigExists =
-            (await targetRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, lastFlow.RepoSha) != null) ||
+            (await targetRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, comparisonFlow.RepoSha) != null) ||
             (await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.DotnetToolsConfigJson, currentFlow.VmrSha) != null ||
             (await targetRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, targetBranch) != null) ||
-            (await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.DotnetToolsConfigJson, lastFlow.VmrSha) != null));
+            (await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.DotnetToolsConfigJson, comparisonFlow.VmrSha) != null));
         if (dotnetToolsConfigExists)
         {
             await _vmrVersionFileMerger.MergeJsonAsync(
-                    lastFlow,
                     targetRepo,
                     VersionFiles.DotnetToolsConfigJson,
-                    lastFlow.RepoSha,
+                    comparisonFlow.RepoSha,
                     targetBranch,
                     vmr,
                     VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.DotnetToolsConfigJson,
-                    lastFlow.VmrSha,
+                    comparisonFlow.VmrSha,
                     currentFlow.VmrSha,
                     allowMissingFiles: true);
         }
 
         var versionDetailsChanges = await _vmrVersionFileMerger.MergeVersionDetails(
-            lastFlow,
             targetRepo,
             VersionFiles.VersionDetailsXml,
-            lastFlow.RepoSha,
+            comparisonFlow.RepoSha,
             targetBranch,
             vmr,
             VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.VersionDetailsXml,
-            lastFlow.VmrSha,
+            comparisonFlow.VmrSha,
             currentFlow.VmrSha,
             // we're applying the changes to a product repo, so no mapping
             mappingToApplyChanges: null);

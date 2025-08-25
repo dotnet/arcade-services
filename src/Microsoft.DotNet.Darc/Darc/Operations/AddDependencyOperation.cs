@@ -6,6 +6,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging;
 
@@ -44,7 +45,11 @@ internal class AddDependencyOperation : Operation
 
         try
         {
-            await local.AddDependencyAsync(dependency);
+            await local.AddDependencyAsync(
+                dependency,
+                _options.RelativeBasePath != null
+                    ? new UnixPath(_options.RelativeBasePath)
+                    : null);
             return Constants.SuccessCode;
         }
         catch (FileNotFoundException exc)

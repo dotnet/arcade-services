@@ -287,7 +287,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         var relativeSourceMappingPath = VmrInfo.GetRelativeRepoSourcesPath(mappingName);
 
         await _versionFileMerger.MergeJsonAsync(
-            lastFlow,
             vmr,
             relativeSourceMappingPath / VersionFiles.GlobalJson,
             lastFlow.VmrSha,
@@ -306,7 +305,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         if (dotnetToolsConfigExists)
         {
             await _versionFileMerger.MergeJsonAsync(
-            lastFlow,
             vmr,
             relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson,
             lastFlow.VmrSha,
@@ -329,7 +327,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         }
 
         var versionDetailsChanges = await _versionFileMerger.MergeVersionDetails(
-            lastFlow,
             vmr,
             relativeSourceMappingPath / VersionFiles.VersionDetailsXml,
             lastFlow.VmrSha,
