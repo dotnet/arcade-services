@@ -71,28 +71,28 @@ internal class VmrDiffOperation : Operation
         var parts = _options.Repositories.Split("..", StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length == 1)
         {
-            string currentRepoPath;
             try
             {
-                currentRepoPath = _processManager.FindGitRoot(Directory.GetCurrentDirectory());
+                var currentRepoPath = _processManager.FindGitRoot(Directory.GetCurrentDirectory());
+                var sourceManifestPath = new NativePath(currentRepoPath) / VmrInfo.DefaultRelativeSourceManifestPath.Path;
+                
+                if (_fileSystem.FileExists(sourceManifestPath))
+                {
+                    var branch = await _localGitRepoFactory.Create(new NativePath(currentRepoPath)).GetCheckedOutBranchAsync();
+                    var isCurrentVmr = await IsRepoVmrAsync(currentRepoPath, branch);
+                    
+                    if (isCurrentVmr && await IsSingleMappingNameAsync(parts[0]))
+                    {
+                        // Single mapping name - diff only that repository
+                        return await ExecuteSingleMappingDiffAsync(parts[0]);
+                    }
+                }
             }
             catch (Exception)
             {
-                // Not in a git repository, proceed with normal parsing
-                goto normalParsing;
-            }
-
-            var branch = await _localGitRepoFactory.Create(new NativePath(currentRepoPath)).GetCheckedOutBranchAsync();
-            var isCurrentVmr = await IsRepoVmrAsync(currentRepoPath, branch);
-            
-            if (isCurrentVmr && await IsSingleMappingNameAsync(parts[0]))
-            {
-                // Single mapping name - diff only that repository
-                return await ExecuteSingleMappingDiffAsync(parts[0]);
+                // Not in a git repository or other error, proceed with normal parsing
             }
         }
-
-        normalParsing:
 
         (Repo repo, Repo vmr, bool fromRepoDirection) = await ParseInput();
         if (_options.NameOnly)
