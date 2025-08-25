@@ -28,7 +28,8 @@ public static class DependencyFlowConfiguration
         services.TryAddScoped<IBasicBarClient, SqlBarClient>();
         services.TryAddTransient<IPcsVmrBackFlower, PcsVmrBackFlower>();
         services.TryAddTransient<IPcsVmrForwardFlower, PcsVmrForwardFlower>();
-        services.TryAddScoped<ICommentCollector, ICommentCollector>();
+        services.TryAddScoped<ICommentCollector, CommentCollector>();
+        services.TryAddTransient<IPullRequestCommentBuilder, PullRequestCommentBuilder>();
 
         services.AddWorkItemProcessor<BuildCoherencyInfoWorkItem, BuildCoherencyInfoProcessor>();
         services.AddWorkItemProcessor<PullRequestCheck, PullRequestCheckProcessor>();

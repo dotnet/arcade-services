@@ -19,7 +19,7 @@ public enum CommentType
 }
 
 #nullable enable
-internal class CommentCollector : ICommentCollector
+public class CommentCollector : ICommentCollector
 {
     private readonly List<(string, CommentType)> _comments = [];
 
