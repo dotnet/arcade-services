@@ -34,4 +34,7 @@ internal class AddDependencyCommandLineOptions : CommandLineOptions<AddDependenc
     [Option("coherent-parent", HelpText = "Restrict updates to this dependency based on version of a dependency from another repo. " +
                                           "See https://github.com/dotnet/arcade/blob/main/Documentation/DependencyDescriptionFormat.md#dependency-description-overview for more information.")]
     public string CoherentParentDependencyName { get; set; }
+
+    [Option("relative-base-path", HelpText = "Used for VMR repos. Relative base path of the repo the dependency is being added to (e.g. src/sdk)", Required = false)]
+    public string RelativeBasePath { get; set; } = null;
 }
