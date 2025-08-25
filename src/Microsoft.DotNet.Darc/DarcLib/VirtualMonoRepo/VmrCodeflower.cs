@@ -95,6 +95,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             return false;
         }
 
+        await VerifyCodeflowLinearityAsync(repo, currentFlow, lastFlows);
+
         _logger.LogInformation("Last flow was {type} flow: {sourceSha} -> {targetSha}",
             lastFlow.Name,
             lastFlow.SourceSha,
@@ -441,6 +443,11 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         string branchToCreate,
         string targetBranch,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Verifies whether the specified codeflow continues linearly from the previous codeflow.
+    /// </summary>
+    protected abstract Task VerifyCodeflowLinearityAsync(ILocalGitRepo repo, Codeflow currentFlow, LastFlows lastFlows);
 
     /// <summary>
     /// Finds the last backflow between a repo and a VMR.

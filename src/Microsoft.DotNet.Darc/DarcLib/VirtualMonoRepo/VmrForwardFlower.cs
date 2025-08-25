@@ -436,6 +436,16 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         return (previousFlow, previousFlows);
     }
 
+    protected override async Task VerifyCodeflowLinearityAsync(ILocalGitRepo repo, Codeflow currentFlow, LastFlows lastFlows)
+    {
+        var previousFlowSha = lastFlows.LastForwardFlow.RepoSha;
+
+        if (!await repo.IsAncestorCommit(previousFlowSha, currentFlow.RepoSha))
+        {
+            throw new NonLinearCodeflowException(currentFlow.VmrSha, previousFlowSha);
+        }
+    }
+
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / Constants.CommonScriptFilesPath;
     protected override bool TargetRepoIsVmr() => true;
 

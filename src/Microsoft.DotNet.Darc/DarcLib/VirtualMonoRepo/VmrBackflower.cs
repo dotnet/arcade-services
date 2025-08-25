@@ -516,6 +516,22 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return (previousFlow, previousFlows);
     }
 
+    protected override async Task VerifyCodeflowLinearityAsync(ILocalGitRepo repo, Codeflow currentFlow, LastFlows lastFlows)
+    {
+        var previousFlowSha = lastFlows.LastBackFlow?.VmrSha;
+
+        if (previousFlowSha == null)
+        {
+            return;
+        }
+
+        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+        if (!await vmr.IsAncestorCommit(previousFlowSha, currentFlow.VmrSha))
+        {
+            throw new NonLinearCodeflowException(currentFlow.VmrSha, previousFlowSha);
+        }
+    }
+
     private async Task CommitAndMergeWorkBranch(
         SourceMapping mapping,
         Build build,

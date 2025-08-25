@@ -66,6 +66,12 @@ internal class GitOperationsHelper
         result.ThrowIfFailed($"Could not checkout {gitRef} in {repo}");
     }
 
+    public async Task CreateBranch(NativePath repo, string branchName)
+    {
+        var result = await _processManager.ExecuteGit(repo, "checkout", "-b", branchName);
+        result.ThrowIfFailed($"Failed to create branch {branchName} in {repo}");
+    }
+
     public async Task DeleteBranch(NativePath repo, string branch)
     {
         var result = await _processManager.ExecuteGit(repo, "branch", "-D", branch);
