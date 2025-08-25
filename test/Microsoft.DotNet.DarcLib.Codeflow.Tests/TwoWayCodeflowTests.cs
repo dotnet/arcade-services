@@ -1046,5 +1046,41 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         CheckFileContents(ProductRepoPath / "partial-revert.txt", revertFileContent);
         File.ReadAllText(ProductRepoPath / "full-revert.txt").Should().Contain("PLEASE READ");
     }
+
+    [Test]
+    public async Task Test()
+    {
+        var ffBranch = "test";
+        var backBranch = ffBranch + "-back";
+
+        await EnsureTestRepoIsInitialized();
+
+        // write A in fileA in VMR, open a backflow, don't merge
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / "A.txt", "A");
+        await GitOperations.CommitAll(VmrPath, "Add A.txt");
+        var codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backBranch);
+        codeFlowResult.ShouldHaveUpdates();
+
+        // Write B in fileB in repo, open and merge forward flow PR
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / "B.txt", "B");
+        await GitOperations.CommitAll(ProductRepoPath, "Add B.txt");
+        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranch);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, ffBranch);
+
+        // Write X in file B in repo
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / "B.txt", "X");
+        await GitOperations.CommitAll(ProductRepoPath, "Change B.txt to X");
+
+        // merge main branch onto backflow PR branch on repo
+        await GitOperations.MergeBranch(ProductRepoPath, backBranch, "main");
+
+        // now backflow
+        codeFlowResult = await ChangeVmrFileAndFlowIt("asd", backBranch);
+        await GitOperations.MergePrBranch(ProductRepoPath, backBranch);
+    }
 }
 
