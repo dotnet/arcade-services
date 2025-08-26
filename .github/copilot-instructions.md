@@ -82,7 +82,7 @@ After making changes, validate by testing these workflows:
 - `src/` - Contains the main source code for arcade services
   - `ProductConstructionService/` - Current dependency flow service
   - `Microsoft.DotNet.Darc/` - DARC CLI tool
-  - `Maestro/` - Legacy service (being migrated)
+  - `Maestro/` - Shared service libraries (former version of the PCS service)
 - `test/` - Test projects and test utilities
 - `.github/` - GitHub workflows and templates
 
