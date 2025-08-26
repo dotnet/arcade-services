@@ -13,15 +13,15 @@ The .NET Arcade Services repository contains the Product Construction Service (p
 ### Build Commands (NEVER CANCEL - Use Long Timeouts)
 Bootstrap and build the repository:
 - Restore dependencies: `./eng/common/build.sh --restore` (Linux/macOS) or `Build.cmd -restore` (Windows)
-  - NEVER CANCEL: Takes ~60 seconds on first run. Set timeout to 120+ seconds.
+  - NEVER CANCEL: Takes ~60 seconds on first run. Set timeout to 240+ seconds.
 - Build: `./eng/common/build.sh --build` (Linux/macOS) or `Build.cmd -build` (Windows)  
-  - NEVER CANCEL: Takes ~40 seconds after restore. Set timeout to 90+ seconds.
+  - NEVER CANCEL: Takes ~40 seconds after restore. Set timeout to 180+ seconds.
 - Full build with restore: `./build.sh` (Linux/macOS) or `Build.cmd` (Windows)
-  - NEVER CANCEL: Takes ~90 seconds total. Set timeout to 150+ seconds.
+  - NEVER CANCEL: Takes ~90 seconds total. Set timeout to 300+ seconds.
 
 ### Test Execution
 Run unit tests: `./.dotnet/dotnet test --no-build`
-- NEVER CANCEL: Takes ~70 seconds. Set timeout to 120+ seconds.
+- NEVER CANCEL: Takes ~70 seconds. Set timeout to 240+ seconds.
 - Note: Some tests may fail in non-Windows environments due to path differences
 - Standard `./eng/common/build.sh --test` does NOT work - use dotnet test directly
 
