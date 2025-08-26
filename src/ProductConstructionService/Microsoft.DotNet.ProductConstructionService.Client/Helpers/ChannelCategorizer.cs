@@ -14,22 +14,23 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Helpers
     /// </summary>
     public static class ChannelCategorizer
     {
-        private static readonly Lazy<List<ChannelCategory>> s_categories = new Lazy<List<ChannelCategory>>(() =>
+        private static readonly List<string> s_categoryNames = 
             // .NET 6-20
-            Enumerable.Range(0, 16).Select(v => new ChannelCategory($".NET {20 - v}"))
+            Enumerable.Range(0, 16).Select(v => $".NET {20 - v}")
                 .Concat(new[]
                 {
-                    new ChannelCategory(".NET"),
-                    new ChannelCategory("VS"),
-                    new ChannelCategory("Windows"),
-                    new ChannelCategory("Other"),
-                    new ChannelCategory("Test"),
+                    ".NET",
+                    "VS", 
+                    "Windows",
+                    "Other",
+                    "Test",
                 })
-                .ToList());
+                .ToList();
 
         public static List<ChannelCategory> CategorizeChannels(IEnumerable<Channel> channels)
         {
-            var categories = s_categories.Value;
+            // Create fresh category instances for each call to avoid static state issues
+            var categories = s_categoryNames.Select(name => new ChannelCategory(name)).ToList();
             var otherCategory = categories.First(c => c.Name == "Other");
             var testCategory = categories.First(c => c.Name == "Test");
 
