@@ -516,7 +516,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return (previousFlow, previousFlows);
     }
 
-    protected override async Task VerifyCodeflowLinearityAsync(ILocalGitRepo repo, Codeflow currentFlow, LastFlows lastFlows)
+    protected override async Task EnsureCodeflowLinearityAsync(ILocalGitRepo repo, Codeflow currentFlow, LastFlows lastFlows)
     {
         var previousFlowSha = lastFlows.LastBackFlow?.VmrSha;
 
