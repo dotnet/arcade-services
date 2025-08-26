@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ProductConstructionService.Client;
@@ -83,13 +84,19 @@ internal class GetChannelsOperation : Operation
 
     private static void WriteYamlChannelList(IEnumerable<Channel> allChannels)
     {
-        // Write out a simple list of each channel's name
-        foreach (var channel in allChannels.OrderBy(c => c.Name))
+        var categories = ChannelCategorizer.CategorizeChannels(allChannels);
+        
+        foreach (var category in categories)
         {
-            // Pad so that id's up to 9999 will result in consistent
-            // listing
-            string idPrefix = $"({channel.Id})".PadRight(7);
-            Console.WriteLine($"{idPrefix}{channel.Name}");
+            Console.WriteLine($"{category.Name}:");
+            foreach (var channel in category.Channels.OrderBy(c => c.Name))
+            {
+                // Pad so that id's up to 9999 will result in consistent
+                // listing
+                string idPrefix = $"({channel.Id})".PadRight(7);
+                Console.WriteLine($"  {idPrefix}{channel.Name}");
+            }
+            Console.WriteLine(); // Empty line between categories
         }
     }
 }
