@@ -547,5 +547,40 @@ internal class BackflowTests : CodeFlowTests
         gitResult = await processManager.ExecuteGit(ProductRepoPath, "commit", "-m", "Commit staged files");
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
     }
+
+    // Tests a scenario where we misconfigure subscriptions and let two different VMR branches backflow into the same repo branch.
+    // https://github.com/dotnet/arcade-services/issues/4973
+    [Test]
+    public async Task DoubleBackflowIsDetectedTest()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        const string branch1Name = nameof(DoubleBackflowIsDetectedTest);
+
+        var codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo", branch1Name);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, branch1Name);
+
+        // Create two commits in a diverging branches in the VMR
+        var branch2Name = branch1Name + "-2";
+
+        await GitOperations.CreateBranch(VmrPath, branch2Name);
+        await File.WriteAllTextAsync(_productRepoVmrFilePath, "New content in the divergent");
+        await GitOperations.CommitAll(VmrPath, "New content in the divergent");
+
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrFilePath, "New content in the main branch");
+        await GitOperations.CommitAll(VmrPath, "New content in the main branch");
+
+        // Now we try to backflow both branches into the same branch in the repo
+        var backflowBranch = branch1Name + "-backflow";
+        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(ProductRepoPath, backflowBranch);
+
+        await GitOperations.Checkout(VmrPath, branch2Name);
+        var act = () => CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch);
+        await act.Should().ThrowAsync<NonLinearCodeflowException>("The backflow should fail as the target branch already has changes from another VMR branch");
+    }
 }
 
