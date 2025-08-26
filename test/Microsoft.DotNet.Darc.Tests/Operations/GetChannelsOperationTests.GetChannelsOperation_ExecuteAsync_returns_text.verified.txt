@@ -1,0 +1,9 @@
+﻿.NET 8:
+  (1)    .NET 8
+
+VS:
+  (2)    VS Main
+
+Test:
+  (3)    Test Channel
+

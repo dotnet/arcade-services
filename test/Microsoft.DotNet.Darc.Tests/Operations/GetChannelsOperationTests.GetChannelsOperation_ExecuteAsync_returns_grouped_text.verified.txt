@@ -1,0 +1,19 @@
+﻿.NET 9:
+  (1)    .NET 9
+
+.NET 8:
+  (2)    .NET 8
+
+VS:
+  (4)    VS 17.12
+  (3)    VS Main
+
+Windows:
+  (5)    Windows 11
+
+Other:
+  (6)    Other Channel
+
+Test:
+  (7)    Test Channel
+
