@@ -124,7 +124,7 @@ docs/DevGuide.md        # Comprehensive development guide
 src/                    # Source code
 ├── ProductConstructionService/  # Current main service
 ├── Microsoft.DotNet.Darc/      # CLI tool
-└── Maestro/                    # Legacy service
+└── Maestro/                    # Shared service libraries (former version of the PCS service)
 test/                   # Test projects
 eng/common/             # Arcade build scripts
 ```
