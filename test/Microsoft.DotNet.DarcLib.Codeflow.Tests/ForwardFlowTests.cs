@@ -200,5 +200,52 @@ internal class ForwardFlowTests : CodeFlowTests
             skipMeaninglessUpdates: true);
         codeFlowResult.ShouldNotHaveUpdates();
     }
+
+    // Tests a scenario where the repo and VMR both fork (a release branch snap for instance)
+    // but the repo forked too soon and the new VMR branch already has changes from the main branch inside that the repo branch does not.
+    // The commit we'd try to flow from the repo then would not be a descendant of the previously flown commit and this must not be allowed.
+    // https://github.com/dotnet/arcade-services/issues/4973
+    [Test]
+    public async Task NonLinearForwardflowIsDetectedTest()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        const string branchName = nameof(NonLinearForwardflowIsDetectedTest);
+
+        var codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, branchName);
+
+        // Flow again - should be a no-op
+        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult.ShouldNotHaveUpdates();
+
+        await GitOperations.Checkout(ProductRepoPath, "main");
+
+        // Commit #1 in the release branch
+        await GitOperations.CreateBranch(ProductRepoPath, "release/10.0");
+        await File.WriteAllTextAsync(_productRepoFilePath, "Change in the release branch");
+        await GitOperations.CommitAll(ProductRepoPath, "Change in the release branch");
+
+        // Commit #2 in the main branch
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(_productRepoFilePath, "Change in the main branch");
+        await GitOperations.CommitAll(ProductRepoPath, "Change in the main branch");
+
+        // Commits #1 and #2 are not related
+        // Now we flow the main commit into the VMR which is not forked yet
+        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, branchName);
+
+        // Now we fork the VMR
+        await GitOperations.Checkout(VmrPath, "main");
+        await GitOperations.CreateBranch(VmrPath, "release/10.0");
+
+        // Now we try to flow the release/10.0 commit from the repo into the VMR release/10.0 branch
+        await GitOperations.Checkout(ProductRepoPath, "release/10.0");
+        Func<Task> act = async () => await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "2");
+        await act.Should().ThrowAsync<NonLinearCodeflowException>();
+    }
 }
 

@@ -94,3 +94,8 @@ public class ConflictInPrBranchException : Exception
         }
     }
 }
+
+public class NonLinearCodeflowException(string currentSha, string previousSha)
+    : DarcException($"Cannot flow commit {currentSha} as it's not a descendant of previously flown commit {previousSha}")
+{
+}
