@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -13,30 +14,29 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Helpers
     /// </summary>
     public static class ChannelCategorizer
     {
+        private static readonly Lazy<List<ChannelCategory>> s_categories = new Lazy<List<ChannelCategory>>(() =>
+            // .NET 6-20
+            Enumerable.Range(0, 16).Select(v => new ChannelCategory($".NET {20 - v}"))
+                .Concat(new[]
+                {
+                    new ChannelCategory(".NET"),
+                    new ChannelCategory("VS"),
+                    new ChannelCategory("Windows"),
+                    new ChannelCategory("Other"),
+                    new ChannelCategory("Test"),
+                })
+                .ToList());
+
         public static List<ChannelCategory> CategorizeChannels(IEnumerable<Channel> channels)
         {
-            var channelList = channels.ToList();
-            var otherCategory = new ChannelCategory("Other");
-            var testCategory = new ChannelCategory("Test");
+            var categories = s_categories.Value;
+            var otherCategory = categories.First(c => c.Name == "Other");
+            var testCategory = categories.First(c => c.Name == "Test");
 
-            var categories = new List<ChannelCategory>
-            {
-                new ChannelCategory(".NET 11"),
-                new ChannelCategory(".NET 10"),
-                new ChannelCategory(".NET 9"),
-                new ChannelCategory(".NET 8"),
-                new ChannelCategory(".NET 6"),
-                new ChannelCategory(".NET"),
-                new ChannelCategory("VS"),
-                new ChannelCategory("Windows"),
-                otherCategory,
-                testCategory,
-            };
-
-            foreach (var channel in channelList)
+            foreach (var channel in channels)
             {
                 bool categorized = false;
-                if (string.Equals(channel.Classification, "test", System.StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(channel.Classification, "test", StringComparison.OrdinalIgnoreCase))
                 {
                     testCategory.Channels.Add(channel);
                     continue;
@@ -44,7 +44,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Helpers
 
                 foreach (var category in categories)
                 {
-                    if (channel.Name.StartsWith(category.Name, System.StringComparison.OrdinalIgnoreCase))
+                    if (channel.Name.StartsWith(category.Name, StringComparison.OrdinalIgnoreCase))
                     {
                         category.Channels.Add(channel);
                         categorized = true;
