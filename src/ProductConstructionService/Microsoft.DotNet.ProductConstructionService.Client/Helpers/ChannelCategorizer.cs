@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 
@@ -14,7 +15,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Helpers
     /// </summary>
     public static class ChannelCategorizer
     {
-        private static readonly List<string> s_categoryNames = 
+        private static readonly ImmutableArray<string> s_categoryNames = 
             // .NET 6-20
             Enumerable.Range(0, 16).Select(v => $".NET {20 - v}")
                 .Concat(new[]
@@ -25,7 +26,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Helpers
                     "Other",
                     "Test",
                 })
-                .ToList();
+                .ToImmutableArray();
 
         public static List<ChannelCategory> CategorizeChannels(IEnumerable<Channel> channels)
         {
