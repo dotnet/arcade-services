@@ -518,17 +518,17 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
     protected override async Task EnsureCodeflowLinearityAsync(ILocalGitRepo repo, Codeflow currentFlow, LastFlows lastFlows)
     {
-        var previousFlowSha = lastFlows.LastBackFlow?.VmrSha;
+        var lastBackFlowVmrSha = lastFlows.LastBackFlow?.VmrSha;
 
-        if (previousFlowSha == null)
+        if (lastBackFlowVmrSha == null)
         {
             return;
         }
 
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        if (!await vmr.IsAncestorCommit(previousFlowSha, currentFlow.VmrSha))
+        if (!await vmr.IsAncestorCommit(lastBackFlowVmrSha, currentFlow.VmrSha))
         {
-            throw new NonLinearCodeflowException(currentFlow.VmrSha, previousFlowSha);
+            throw new NonLinearCodeflowException(currentFlow.VmrSha, lastBackFlowVmrSha);
         }
     }
 

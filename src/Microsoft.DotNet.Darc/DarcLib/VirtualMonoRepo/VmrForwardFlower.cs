@@ -438,11 +438,11 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
     protected override async Task EnsureCodeflowLinearityAsync(ILocalGitRepo repo, Codeflow currentFlow, LastFlows lastFlows)
     {
-        var previousFlowSha = lastFlows.LastForwardFlow.RepoSha;
+        var lastFlowRepoSha = lastFlows.LastForwardFlow.RepoSha;
 
-        if (!await repo.IsAncestorCommit(previousFlowSha, currentFlow.RepoSha))
+        if (!await repo.IsAncestorCommit(lastFlowRepoSha, currentFlow.RepoSha))
         {
-            throw new NonLinearCodeflowException(currentFlow.VmrSha, previousFlowSha);
+            throw new NonLinearCodeflowException(currentFlow.VmrSha, lastFlowRepoSha);
         }
     }
 
