@@ -52,7 +52,7 @@ public class GetSubscriptionsOperationTests
 
         result.Should().Be(Constants.ErrorCode);
 
-        var logs = _consoleOutput.GetOuput();
+        var logs = _consoleOutput.GetOutput();
         logs.Should().Be($"No subscriptions found matching the specified criteria.{Environment.NewLine}");
     }
 
@@ -68,7 +68,7 @@ public class GetSubscriptionsOperationTests
 
         result.Should().Be(Constants.ErrorCode);
 
-        var logs = _consoleOutput.GetOuput();
+        var logs = _consoleOutput.GetOutput();
         logs.Should().Be($"boo.{Environment.NewLine}");
     }
 
@@ -84,7 +84,7 @@ public class GetSubscriptionsOperationTests
 
         result.Should().Be(Constants.ErrorCode);
 
-        var logs = _consoleOutput.GetOuput();
+        var logs = _consoleOutput.GetOutput();
         // Nothing is written to the console, but to ILogger.Error instead.
         logs.Should().BeEmpty();
     }
@@ -116,7 +116,7 @@ public class GetSubscriptionsOperationTests
 
         result.Should().Be(Constants.SuccessCode);
 
-        var logs = _consoleOutput.GetOuput();
+        var logs = _consoleOutput.GetOutput();
         await Verifier.Verify(logs);
     }
 
@@ -146,7 +146,7 @@ public class GetSubscriptionsOperationTests
 
         result.Should().Be(Constants.SuccessCode);
 
-        var logs = _consoleOutput.GetOuput();
+        var logs = _consoleOutput.GetOutput();
         await Verifier.Verify(logs);
     }
 
@@ -192,7 +192,7 @@ public class GetSubscriptionsOperationTests
 
         result.Should().Be(Constants.SuccessCode);
 
-        var logs = _consoleOutput.GetOuput();
+        var logs = _consoleOutput.GetOutput();
         await Verifier.Verify(logs);
     }
 }

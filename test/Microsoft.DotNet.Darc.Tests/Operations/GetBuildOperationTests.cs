@@ -95,7 +95,7 @@ public class GetBuildOperationTests
 
         result.Should().Be(Constants.SuccessCode);
 
-        var output = _consoleOutput.GetOuput();
+        var output = _consoleOutput.GetOutput();
         output.Should().Be(UxHelpers.GetTextBuildDescription(build));
     }
 
@@ -138,7 +138,7 @@ public class GetBuildOperationTests
 
         result.Should().Be(Constants.SuccessCode);
 
-        var output = _consoleOutput.GetOuput();
+        var output = _consoleOutput.GetOutput();
         output.Should().Be(UxHelpers.GetTextBuildDescription(build));
     }
 

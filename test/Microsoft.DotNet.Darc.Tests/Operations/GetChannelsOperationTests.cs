@@ -55,7 +55,7 @@ public class GetChannelsOperationTests
 
         result.Should().Be(Constants.ErrorCode);
 
-        var logs = _consoleOutput.GetOuput();
+        var logs = _consoleOutput.GetOutput();
         logs.Should().Be($"Authentication error.{Environment.NewLine}");
     }
 
@@ -71,7 +71,7 @@ public class GetChannelsOperationTests
 
         result.Should().Be(Constants.ErrorCode);
 
-        var logs = _consoleOutput.GetOuput();
+        var logs = _consoleOutput.GetOutput();
         // Error is logged to ILogger, not console
         logs.Should().BeEmpty();
     }
@@ -98,7 +98,7 @@ public class GetChannelsOperationTests
 
         result.Should().Be(Constants.SuccessCode);
 
-        var logs = _consoleOutput.GetOuput();
+        var logs = _consoleOutput.GetOutput();
         await Verifier.Verify(logs);
     }
 
@@ -124,7 +124,7 @@ public class GetChannelsOperationTests
 
         result.Should().Be(Constants.SuccessCode);
 
-        var logs = _consoleOutput.GetOuput();
+        var logs = _consoleOutput.GetOutput();
         await Verifier.Verify(logs);
     }
 
@@ -154,7 +154,7 @@ public class GetChannelsOperationTests
 
         result.Should().Be(Constants.SuccessCode);
 
-        var logs = _consoleOutput.GetOuput();
+        var logs = _consoleOutput.GetOutput();
         await Verifier.Verify(logs);
     }
 
