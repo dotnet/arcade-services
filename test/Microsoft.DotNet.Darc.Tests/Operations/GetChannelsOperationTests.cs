@@ -175,11 +175,17 @@ public class GetChannelsOperationTests
             new Channel(id: 7, name: "Azure DevOps", classification: "product"),
             // Test overlapping names (should go to first match)
             new Channel(id: 8, name: ".NET 8 Preview", classification: "product"),
+            // Test .NET 11 categorization
+            new Channel(id: 9, name: ".NET 11 Preview", classification: "product"),
         ];
 
         var categories = ChannelCategorizer.CategorizeChannels(channels);
 
         // Verify categories exist and have expected channels
+        var net11Category = categories.FirstOrDefault(c => c.Name == ".NET 11");
+        net11Category.Should().NotBeNull();
+        net11Category.Channels.Should().Contain(c => c.Name == ".NET 11 Preview");
+
         var netCategory = categories.FirstOrDefault(c => c.Name == ".NET");
         netCategory.Should().NotBeNull();
         netCategory.Channels.Should().Contain(c => c.Name == ".NET");

@@ -21,6 +21,7 @@ public static class ChannelCategorizer
 
         var categories = new List<ChannelCategory>
         {
+            new ChannelCategory(".NET 11"),
             new ChannelCategory(".NET 10"),
             new ChannelCategory(".NET 9"),
             new ChannelCategory(".NET 8"),
