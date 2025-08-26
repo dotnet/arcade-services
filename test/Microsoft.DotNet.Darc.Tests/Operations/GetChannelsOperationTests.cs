@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Tests.Helpers;
@@ -155,5 +156,51 @@ public class GetChannelsOperationTests
 
         var logs = _consoleOutput.GetOuput();
         await Verifier.Verify(logs);
+    }
+
+    [Test]
+    public void ChannelCategorizer_CategorizeChannels_HandlesEdgeCases()
+    {
+        List<Channel> channels =
+        [
+            // Test exact name matches
+            new Channel(id: 1, name: ".NET", classification: "product"),
+            new Channel(id: 2, name: "VS", classification: "product"),
+            new Channel(id: 3, name: "Windows", classification: "product"),
+            // Test case insensitivity for classification
+            new Channel(id: 4, name: "My Test Channel", classification: "TEST"),
+            new Channel(id: 5, name: "Another Test", classification: "Test"),
+            // Test channels that don't match any category
+            new Channel(id: 6, name: "Random Channel", classification: "product"),
+            new Channel(id: 7, name: "Azure DevOps", classification: "product"),
+            // Test overlapping names (should go to first match)
+            new Channel(id: 8, name: ".NET 8 Preview", classification: "product"),
+        ];
+
+        var categories = ChannelCategorizer.CategorizeChannels(channels);
+
+        // Verify categories exist and have expected channels
+        var netCategory = categories.FirstOrDefault(c => c.Name == ".NET");
+        netCategory.Should().NotBeNull();
+        netCategory.Channels.Should().Contain(c => c.Name == ".NET");
+        netCategory.Channels.Should().NotContain(c => c.Name == ".NET 8 Preview"); // This should go to .NET 8
+
+        var net8Category = categories.FirstOrDefault(c => c.Name == ".NET 8");
+        net8Category.Should().NotBeNull();
+        net8Category.Channels.Should().Contain(c => c.Name == ".NET 8 Preview");
+
+        var testCategory = categories.FirstOrDefault(c => c.Name == "Test");
+        testCategory.Should().NotBeNull();
+        testCategory.Channels.Should().HaveCount(2);
+        testCategory.Channels.Should().Contain(c => c.Name == "My Test Channel");
+        testCategory.Channels.Should().Contain(c => c.Name == "Another Test");
+
+        var otherCategory = categories.FirstOrDefault(c => c.Name == "Other");
+        otherCategory.Should().NotBeNull();
+        otherCategory.Channels.Should().Contain(c => c.Name == "Random Channel");
+        otherCategory.Channels.Should().Contain(c => c.Name == "Azure DevOps");
+
+        // Verify no empty categories
+        categories.Should().AllSatisfy(category => category.Channels.Should().NotBeEmpty());
     }
 }
