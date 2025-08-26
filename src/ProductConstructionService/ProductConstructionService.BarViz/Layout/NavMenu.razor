@@ -38,5 +38,26 @@
     private List<Channel> AvailableChannels = [];
     private List<ChannelCategorizer.ChannelCategory> Categories = [];
     private List<Channel> PrePinnedChannels = [];
+    
+    protected override async Task OnInitializedAsync()
+    {
+        AvailableChannels = await PcsApi.Channels.ListChannelsAsync();
+        Categories = ChannelCategorizer.CategorizeChannels(AvailableChannels);
 
+        // Remove categories with no channels
+        foreach (var category in Categories.ToList())
+        {
+            if (category.Channels.Count == 0)
+            {
+                Categories.Remove(category);
+            }
+        }
+
+        if (channelFilterQuery != null)
+        {
+            PrePinnedChannels = channelFilterQuery
+              .Select(f => AvailableChannels.First(channel => channel.Id == f))
+              .ToList();
+        }
+    }
 }
