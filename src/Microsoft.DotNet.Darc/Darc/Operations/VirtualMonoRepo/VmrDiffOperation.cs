@@ -153,7 +153,7 @@ internal class VmrDiffOperation : Operation
         
         if (isVmr)
         {
-            // Original VMR behavior - diff against all repositories in source-manifest.json
+            // Diff against all repositories in source-manifest.json
             var vmrRepo = new Repo(currentRepoPath, branch, IsLocal: true, IsVmr: true);
             var sourceManifestPath = new NativePath(currentRepoPath) / VmrInfo.DefaultRelativeSourceManifestPath.Path;
             
@@ -176,7 +176,7 @@ internal class VmrDiffOperation : Operation
         }
         else
         {
-            // New behavior - check if this is a product repo with Version.Details.xml
+            // Check if this is a product repo with Version.Details.xml
             var versionDetailsPath = new NativePath(currentRepoPath) / VersionFiles.VersionDetailsXml;
             
             if (!_fileSystem.FileExists(versionDetailsPath))
