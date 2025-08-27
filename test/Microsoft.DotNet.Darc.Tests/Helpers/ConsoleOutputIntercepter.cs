@@ -26,7 +26,7 @@ public sealed class ConsoleOutputIntercepter : IDisposable
         Console.SetError(_errorWriter);
     }
 
-    public string GetOuput() => _stringWriter.ToString();
+    public string GetOutput() => _stringWriter.ToString();
 
     public string GetError() => _errorWriter.ToString();
 

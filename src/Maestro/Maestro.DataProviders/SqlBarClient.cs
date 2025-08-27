@@ -342,7 +342,13 @@ public class SqlBarClient : ISqlBarClient
     private static SubscriptionPolicy ToClientModelSubscriptionPolicy(Data.Models.SubscriptionPolicy other)
         => new(other.Batchable, (UpdateFrequency)other.UpdateFrequency);
 
-    public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync(string sourceRepo = null, string targetRepo = null, int? channelId = null)
+    public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync(
+        string sourceRepo = null, 
+        string targetRepo = null, 
+        int? channelId = null,
+        bool? sourceEnabled = null,
+        string sourceDirectory = null,
+        string targetDirectory = null)
     {
         IQueryable<Data.Models.Subscription> query = _context.Subscriptions
             .Include(s => s.Channel)
@@ -361,6 +367,21 @@ public class SqlBarClient : ISqlBarClient
         if (channelId.HasValue)
         {
             query = query.Where(sub => sub.ChannelId == channelId.Value);
+        }
+
+        if (sourceEnabled.HasValue)
+        {
+            query = query.Where(sub => sub.SourceEnabled == sourceEnabled.Value);
+        }
+
+        if (!string.IsNullOrEmpty(sourceDirectory))
+        {
+            query = query.Where(sub => sub.SourceDirectory == sourceDirectory);
+        }
+
+        if (!string.IsNullOrEmpty(targetDirectory))
+        {
+            query = query.Where(sub => sub.TargetDirectory == targetDirectory);
         }
 
         List<Data.Models.Subscription> results = await query.ToListAsync();

@@ -78,7 +78,7 @@ public class GetBuildOperationTests
             build
         ];
 
-        _barMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>()))
+        _barMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<bool?>(), It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(subscriptions.AsEnumerable());
         _barMock.Setup(t => t.GetBuildsAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(builds.AsEnumerable());
@@ -95,7 +95,7 @@ public class GetBuildOperationTests
 
         result.Should().Be(Constants.SuccessCode);
 
-        var output = _consoleOutput.GetOuput();
+        var output = _consoleOutput.GetOutput();
         output.Should().Be(UxHelpers.GetTextBuildDescription(build));
     }
 
@@ -138,7 +138,7 @@ public class GetBuildOperationTests
 
         result.Should().Be(Constants.SuccessCode);
 
-        var output = _consoleOutput.GetOuput();
+        var output = _consoleOutput.GetOutput();
         output.Should().Be(UxHelpers.GetTextBuildDescription(build));
     }
 

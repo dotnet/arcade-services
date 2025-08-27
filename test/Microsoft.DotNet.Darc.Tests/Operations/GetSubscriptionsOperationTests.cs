@@ -52,7 +52,7 @@ public class GetSubscriptionsOperationTests
 
         result.Should().Be(Constants.ErrorCode);
 
-        var logs = _consoleOutput.GetOuput();
+        var logs = _consoleOutput.GetOutput();
         logs.Should().Be($"No subscriptions found matching the specified criteria.{Environment.NewLine}");
     }
 
@@ -68,7 +68,7 @@ public class GetSubscriptionsOperationTests
 
         result.Should().Be(Constants.ErrorCode);
 
-        var logs = _consoleOutput.GetOuput();
+        var logs = _consoleOutput.GetOutput();
         logs.Should().Be($"boo.{Environment.NewLine}");
     }
 
@@ -84,7 +84,7 @@ public class GetSubscriptionsOperationTests
 
         result.Should().Be(Constants.ErrorCode);
 
-        var logs = _consoleOutput.GetOuput();
+        var logs = _consoleOutput.GetOutput();
         // Nothing is written to the console, but to ILogger.Error instead.
         logs.Should().BeEmpty();
     }
@@ -107,7 +107,7 @@ public class GetSubscriptionsOperationTests
         ];
 
         _barMock
-            .Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
+            .Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<bool?>(), It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(subscriptions.AsEnumerable());
 
         var operation = new GetSubscriptionsOperation(new GetSubscriptionsCommandLineOptions(), _barMock.Object, _loggerMock.Object);
@@ -116,7 +116,7 @@ public class GetSubscriptionsOperationTests
 
         result.Should().Be(Constants.SuccessCode);
 
-        var logs = _consoleOutput.GetOuput();
+        var logs = _consoleOutput.GetOutput();
         await Verifier.Verify(logs);
     }
 
@@ -137,7 +137,7 @@ public class GetSubscriptionsOperationTests
             subscription
         ];
 
-        _barMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
+        _barMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<bool?>(), It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(subscriptions.AsEnumerable());
 
         var operation = new GetSubscriptionsOperation(new GetSubscriptionsCommandLineOptions { OutputFormat = DarcOutputType.json }, _barMock.Object, _loggerMock.Object);
@@ -146,7 +146,7 @@ public class GetSubscriptionsOperationTests
 
         result.Should().Be(Constants.SuccessCode);
 
-        var logs = _consoleOutput.GetOuput();
+        var logs = _consoleOutput.GetOutput();
         await Verifier.Verify(logs);
     }
 
@@ -177,7 +177,7 @@ public class GetSubscriptionsOperationTests
             subscription2,
         ];
 
-        _barMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>()))
+        _barMock.Setup(t => t.GetSubscriptionsAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<int?>(), It.IsAny<bool?>(), It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(subscriptions.AsEnumerable());
 
         var operation = new GetSubscriptionsOperation(
@@ -192,7 +192,7 @@ public class GetSubscriptionsOperationTests
 
         result.Should().Be(Constants.SuccessCode);
 
-        var logs = _consoleOutput.GetOuput();
+        var logs = _consoleOutput.GetOutput();
         await Verifier.Verify(logs);
     }
 }

@@ -1819,9 +1819,6 @@ public class DependencyFileManager : IDependencyFileManager
     public static XmlDocument GenerateVersionDetailsProps(VersionDetails versionDetails)
     {
         XmlDocument output = new();
-
-        XmlDeclaration xmlDeclaration = output.CreateXmlDeclaration("1.0", "utf-8", null);
-        output.AppendChild(xmlDeclaration);
         
         XmlComment comment = output.CreateComment(VersionDetailsPropsComment);
         output.AppendChild(comment);
@@ -1842,12 +1839,18 @@ public class DependencyFileManager : IDependencyFileManager
 
         foreach (var repoDependencies in versionDetailsLookup)
         {
+            if (repoDependencies.All(d => d.SkipProperty))
+            {
+                continue;
+            }
+
             var repoUriParts = repoDependencies.Key.Split('/', StringSplitOptions.RemoveEmptyEntries);
             var repoName = repoUriParts.Last();
             if (repoUriParts.Length > 1)
             {
                 repoName = $"{repoUriParts[repoUriParts.Length - 2]}/{repoName}";
             }
+
             propertyGroup.AppendChild(output.CreateComment($" {repoName} dependencies "));
             alternatePropertyGroup.AppendChild(output.CreateComment($" {repoName} dependencies "));
             foreach (var dependency in repoDependencies.OrderBy(d => d.Name))

@@ -1,6 +1,7 @@
 @using ProductConstructionService.BarViz.Components
 @using Microsoft.DotNet.ProductConstructionService.Client;
 @using Microsoft.DotNet.ProductConstructionService.Client.Models;
+@using Microsoft.DotNet.ProductConstructionService.Client.Helpers;
 @using System.Collections.Immutable
 @inject IProductConstructionServiceApi PcsApi
 @inject NavigationManager NavManager
@@ -35,24 +36,13 @@
     private bool expanded = true;
 
     private List<Channel> AvailableChannels = [];
-    private List<Category> Categories = [];
+    private List<ChannelCategorizer.ChannelCategory> Categories = [];
     private List<Channel> PrePinnedChannels = [];
-
-    public class Category
-    {
-        public string Name { get; set; }
-        public List<Channel> Channels { get; } = [];
-
-        public Category(string name)
-        {
-            Name = name;
-        }
-    }
-
+    
     protected override async Task OnInitializedAsync()
     {
         AvailableChannels = await PcsApi.Channels.ListChannelsAsync();
-        Categories = ConstructCategories();
+        Categories = ChannelCategorizer.CategorizeChannels(AvailableChannels);
 
         // Remove categories with no channels
         foreach (var category in Categories.ToList())
@@ -69,63 +59,5 @@
               .Select(f => AvailableChannels.First(channel => channel.Id == f))
               .ToList();
         }
-    }
-
-    private List<Category> ConstructCategories()
-    {
-        var otherCategory = new Category("Other");
-        var testCategory = new Category("Test");
-
-        var categories = new List<Category>
-        {
-            new Category(".NET 10"),
-            new Category(".NET 9"),
-            new Category(".NET 8"),
-            new Category(".NET 6"),
-            new Category(".NET"),
-            new Category("VS"),
-            new Category("Windows"),
-            otherCategory,
-            testCategory,
-        };
-
-        foreach (var channel in AvailableChannels)
-        {
-            bool categorized = false;
-            if (channel.Classification == "test")
-            {
-                testCategory.Channels.Add(channel);
-                continue;
-            }
-
-            foreach (var category in categories)
-            {
-                if (channel.Name.StartsWith(category.Name))
-                {
-                    category.Channels.Add(channel);
-                    categorized = true;
-                    break;
-                }
-            }
-
-            if (!categorized)
-            {
-                otherCategory.Channels.Add(channel);
-            }
-        }
-
-        categories = categories
-            .Where(c => c.Channels.Any())
-            .ToList();
-
-        categories
-            .FirstOrDefault(c => c.Name == ".NET")?
-            .Channels.Reverse();
-
-        categories
-            .FirstOrDefault(c => c.Name == "VS")?
-            .Channels.Reverse();
-
-        return categories;
     }
 }

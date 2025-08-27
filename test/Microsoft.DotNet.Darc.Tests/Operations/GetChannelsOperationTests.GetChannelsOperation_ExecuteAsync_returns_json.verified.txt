@@ -1,0 +1,16 @@
+﻿{
+  "channels": [
+    {
+      "id": 1,
+      "name": ".NET 8"
+    },
+    {
+      "id": 3,
+      "name": "Test Channel"
+    },
+    {
+      "id": 2,
+      "name": "VS Main"
+    }
+  ]
+}

@@ -57,6 +57,9 @@ BenchmarkDotNet.Artifacts/
 project.lock.json
 project.fragment.lock.json
 artifacts/
+!artifacts/Directory.Build.props
+!artifacts/Directory.Build.targets
+!artifacts/Directory.Packages.props
 .dotnet/
 
 # StyleCop
