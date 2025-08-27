@@ -112,6 +112,20 @@ public interface IBarApiClient : IBasicBarClient
     /// <returns>Information on deleted subscription</returns>
     Task<Subscription> DeleteSubscriptionAsync(Guid subscriptionId);
 
+    /// <summary>
+    ///     Get source-enabled subscriptions for codeflow validation purposes.
+    /// </summary>
+    /// <param name="targetRepo">Target repository to filter by.</param>
+    /// <param name="sourceEnabled">Whether to filter by source-enabled subscriptions.</param>
+    /// <param name="sourceDirectory">Source directory to filter by.</param>
+    /// <param name="targetDirectory">Target directory to filter by.</param>
+    /// <returns>Set of source-enabled subscriptions.</returns>
+    Task<IEnumerable<Subscription>> GetCodeflowSubscriptionsAsync(
+        string targetRepo,
+        bool? sourceEnabled = null,
+        string? sourceDirectory = null,
+        string? targetDirectory = null);
+
     #endregion
 
     #region Channel Operations
