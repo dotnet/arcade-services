@@ -479,7 +479,9 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
     private async Task<string?> ValidateCodeflowSubscriptionConflicts(Maestro.Data.Models.Subscription subscription)
     {
         if (!subscription.SourceEnabled)
+        {
             return null;
+        }
 
         // Check for backflow conflicts (source directory not empty)
         if (!string.IsNullOrEmpty(subscription.SourceDirectory))
