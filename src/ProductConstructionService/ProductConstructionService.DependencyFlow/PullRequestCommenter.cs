@@ -2,16 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text;
-using System.Text.Json;
-using Maestro.Common;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -61,23 +53,23 @@ internal class PullRequestCommenter : IPullRequestCommenter
 
         foreach (var comment in comments)
         {
+            var header = comment.commentType switch
+            {
+                CommentType.Warning => "> [!IMPORTANT]",
+                CommentType.Information => "> [!NOTE]",
+                _ => throw new ArgumentOutOfRangeException($"Comment type {comment.commentType} is not supported")
+            };
+            StringBuilder sb = new();
+            sb.AppendLine(header);
+            foreach (var textLine in comment.Text.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries))
+            {
+                sb.AppendLine($"> {textLine}");
+            }
+            sb.AppendLine(">");
+            sb.AppendLine(HelpLine);
+
             try
             {
-                var header = comment.commentType switch
-                {
-                    CommentType.Warning => "> [!IMPORTANT]",
-                    CommentType.Information => "> [!NOTE]",
-                    _ => throw new ArgumentOutOfRangeException($"Comment type {comment.commentType} is not supported")
-                };
-                StringBuilder sb = new();
-                sb.AppendLine(header);
-                foreach (var textLine in comment.Text.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries))
-                {
-                    sb.AppendLine($"> {textLine}");
-                }
-                sb.AppendLine(">");
-                sb.AppendLine(HelpLine);
-                    
                 await remote.CommentPullRequestAsync(prUrl, sb.ToString());
             }
             catch (Exception e)
