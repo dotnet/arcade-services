@@ -295,41 +295,10 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
             }
 
             // Check for codeflow subscription conflicts
-            if (subscription.SourceEnabled)
+            var conflictError = await ValidateCodeflowSubscriptionConflicts(subscription);
+            if (conflictError != null)
             {
-                // Check for backflow conflicts (source directory not empty)
-                if (!string.IsNullOrEmpty(subscription.SourceDirectory))
-                {
-                    Maestro.Data.Models.Subscription? conflictingBackflowSubscription = await FindConflictingBackflowSubscription(subscription);
-                    if (conflictingBackflowSubscription != null)
-                    {
-                        return Conflict(
-                            new ApiError(
-                                "the request is invalid",
-                                new[]
-                                {
-                                    $"A backflow subscription '{conflictingBackflowSubscription.Id}' already exists for the same target repository and branch. " +
-                                    "Only one backflow subscription is allowed per target repository and branch combination."
-                                }));
-                    }
-                }
-                
-                // Check for forward flow conflicts (target directory not empty)
-                if (!string.IsNullOrEmpty(subscription.TargetDirectory))
-                {
-                    Maestro.Data.Models.Subscription? conflictingForwardFlowSubscription = await FindConflictingForwardFlowSubscription(subscription);
-                    if (conflictingForwardFlowSubscription != null)
-                    {
-                        return Conflict(
-                            new ApiError(
-                                "the request is invalid",
-                                new[]
-                                {
-                                    $"A forward flow subscription '{conflictingForwardFlowSubscription.Id}' already exists for the same VMR repository, branch, and target directory. " +
-                                    "Only one forward flow subscription is allowed per VMR repository, branch, and target directory combination."
-                                }));
-                    }
-                }
+                return Conflict(new ApiError("the request is invalid", new[] { conflictError }));
             }
 
             _context.Subscriptions.Update(subscription);
@@ -477,41 +446,10 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         }
 
         // Check for codeflow subscription conflicts
-        if (subscriptionModel.SourceEnabled)
+        var conflictError = await ValidateCodeflowSubscriptionConflicts(subscriptionModel);
+        if (conflictError != null)
         {
-            // Check for backflow conflicts (source directory not empty)
-            if (!string.IsNullOrEmpty(subscriptionModel.SourceDirectory))
-            {
-                Maestro.Data.Models.Subscription? conflictingBackflowSubscription = await FindConflictingBackflowSubscription(subscriptionModel);
-                if (conflictingBackflowSubscription != null)
-                {
-                    return BadRequest(
-                        new ApiError(
-                            "The request is invalid",
-                            new[]
-                            {
-                                $"A backflow subscription '{conflictingBackflowSubscription.Id}' already exists for the same target repository and branch. " +
-                                "Only one backflow subscription is allowed per target repository and branch combination."
-                            }));
-                }
-            }
-            
-            // Check for forward flow conflicts (target directory not empty)
-            if (!string.IsNullOrEmpty(subscriptionModel.TargetDirectory))
-            {
-                Maestro.Data.Models.Subscription? conflictingForwardFlowSubscription = await FindConflictingForwardFlowSubscription(subscriptionModel);
-                if (conflictingForwardFlowSubscription != null)
-                {
-                    return BadRequest(
-                        new ApiError(
-                            "The request is invalid",
-                            new[]
-                            {
-                                $"A forward flow subscription '{conflictingForwardFlowSubscription.Id}' already exists for the same VMR repository, branch, and target directory. " +
-                                "Only one forward flow subscription is allowed per VMR repository, branch, and target directory combination."
-                            }));
-                }
-            }
+            return BadRequest(new ApiError("The request is invalid", new[] { conflictError }));
         }
 
         if (!string.IsNullOrEmpty(subscriptionModel.PullRequestFailureNotificationTags)
@@ -531,6 +469,41 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
                 id = subscriptionModel.Id
             },
             new Subscription(subscriptionModel));
+    }
+
+    /// <summary>
+    ///     Validates codeflow subscription conflicts
+    /// </summary>
+    /// <param name="subscription">Subscription to validate</param>
+    /// <returns>Error message if conflict found, null if no conflicts</returns>
+    private async Task<string?> ValidateCodeflowSubscriptionConflicts(Maestro.Data.Models.Subscription subscription)
+    {
+        if (!subscription.SourceEnabled)
+            return null;
+
+        // Check for backflow conflicts (source directory not empty)
+        if (!string.IsNullOrEmpty(subscription.SourceDirectory))
+        {
+            var conflictingBackflowSubscription = await FindConflictingBackflowSubscription(subscription);
+            if (conflictingBackflowSubscription != null)
+            {
+                return $"A backflow subscription '{conflictingBackflowSubscription.Id}' already exists for the same target repository and branch. " +
+                       "Only one backflow subscription is allowed per target repository and branch combination.";
+            }
+        }
+
+        // Check for forward flow conflicts (target directory not empty)
+        if (!string.IsNullOrEmpty(subscription.TargetDirectory))
+        {
+            var conflictingForwardFlowSubscription = await FindConflictingForwardFlowSubscription(subscription);
+            if (conflictingForwardFlowSubscription != null)
+            {
+                return $"A forward flow subscription '{conflictingForwardFlowSubscription.Id}' already exists for the same VMR repository, branch, and target directory. " +
+                       "Only one forward flow subscription is allowed per VMR repository, branch, and target directory combination.";
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
