@@ -47,6 +47,7 @@ After making changes, validate by testing these workflows:
 - **DARC CLI**: Run `darc --help` and verify command list appears correctly
 - **Build System**: Ensure `./build.sh` completes without new errors
 - **Product Construction Service**: If Docker is available, verify service starts without errors
+- Do not ever run tests in `test\ProductConstructionService.ScenarioTests` as they require a whole service to be deployed
 
 ### Expected Build Failures and Limitations
 - Some unit tests fail in non-Windows environments due to path handling differences (normal)
