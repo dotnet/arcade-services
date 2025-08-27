@@ -22,7 +22,6 @@ public static class DependencyFlowConfiguration
         services.TryAddTransient<IPullRequestUpdaterFactory, PullRequestUpdaterFactory>();
         services.TryAddSingleton<IMergePolicyEvaluator, MergePolicyEvaluator>();
         services.TryAddTransient<IPullRequestBuilder, PullRequestBuilder>();
-        services.TryAddTransient<IPullRequestPolicyFailureNotifier, PullRequestPolicyFailureNotifier>();
         services.TryAddTransient<IPullRequestCommenter, PullRequestCommenter>();
         services.TryAddScoped<ISqlBarClient, SqlBarClient>();
         services.TryAddScoped<IBasicBarClient, SqlBarClient>();

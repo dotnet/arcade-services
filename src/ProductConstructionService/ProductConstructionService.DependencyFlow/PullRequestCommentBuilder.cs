@@ -218,6 +218,7 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
             - For more details, please read [the Arcade Darc documentation](https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md#update-subscription)
             """;
 
+        pr.SourceRepoNotified = true;
         return sourceRepoNotificationComment;
     }
 }

@@ -105,7 +105,6 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         if (!string.IsNullOrEmpty(comment))
         {
             _commentCollector.AddComment(comment, CommentType.Warning);
-            pr.SourceRepoNotified = true;
         }
     }
 
