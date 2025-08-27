@@ -302,7 +302,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                         targetBranch, 
                         sourceDirectory, 
                         targetDirectory, 
-                        null); // null for create (no existing subscription id)
+                        existingSubscriptionId: null); // null for create (no existing subscription id)
                 }
                 catch (ArgumentException)
                 {
