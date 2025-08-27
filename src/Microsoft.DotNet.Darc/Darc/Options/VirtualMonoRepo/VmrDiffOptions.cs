@@ -15,11 +15,13 @@ internal class VmrDiffOptions : VmrCommandLineOptions<VmrDiffOperation>
     public string? OutputPath { get; set; }
 
     [Value(0, Required = false, HelpText =
-        "Repositories and git refs to calculate the diff for in the following format: remote:branch..remote:branch, " +
-        "where remote can be a local path or remote URI. Alternatively, only one target can be provided in " +
-        "which case current directory will be used as the source for the diff. If not provided and called from " +
-        "a VMR directory, diffs against all repositories in source-manifest.json. If not provided and called from " +
-        "a product repository with eng/Version.Details.xml, diffs against the VMR URI and SHA from the <Source> element.")]
+        "Optional repository specification for diff calculation. Usage patterns:\n" +
+        "1. No argument: Auto-detects based on current directory\n" +
+        "   - When called from a VMR dir, diffs against all repositories in source-manifest.json.\n" +
+        "   - When called from a product repo dir, diffs against VMR commit stored in the <Source> element.\n" +
+        "2. Repository name: e.g. 'sdk' - When called from a VMR dir, diffs against the lastly synced commit of 'sdk' from source-manifest.json.\n" +
+        "3. Single repository: 'remote:branch' - Diffs current directory against specified target. Remote can be local path or URI.\n" +
+        "4. Two repositories: 'remote1:branch1..remote2:branch2' - Diffs the two specified repositories against each other. Remote can be local path or URI.")]
     public string? Repositories { get; set; }
 
     [Option("name-only", Required = false, HelpText =
