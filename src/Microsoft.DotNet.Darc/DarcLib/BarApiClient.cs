@@ -309,34 +309,22 @@ public class BarApiClient : IBarApiClient
     /// <param name="sourceRepo">Filter by the source repository of the subscription.</param>
     /// <param name="targetRepo">Filter by the target repository of the subscription.</param>
     /// <param name="channelId">Filter by the source channel id of the subscription.</param>
+    /// <param name="sourceEnabled">Filter by source-enabled subscriptions.</param>
+    /// <param name="sourceDirectory">Filter by source directory.</param>
+    /// <param name="targetDirectory">Filter by target directory.</param>
     /// <returns>Set of subscription.</returns>
     public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync(
         string? sourceRepo = null,
         string? targetRepo = null,
-        int? channelId = null)
-    {
-        return await _barClient.Subscriptions.ListSubscriptionsAsync(
-            sourceRepository: sourceRepo,
-            targetRepository: targetRepo,
-            channelId: channelId);
-    }
-
-    /// <summary>
-    ///     Get source-enabled subscriptions for codeflow validation purposes.
-    /// </summary>
-    /// <param name="targetRepo">Target repository to filter by.</param>
-    /// <param name="sourceEnabled">Whether to filter by source-enabled subscriptions.</param>
-    /// <param name="sourceDirectory">Source directory to filter by.</param>
-    /// <param name="targetDirectory">Target directory to filter by.</param>
-    /// <returns>Set of source-enabled subscriptions.</returns>
-    public async Task<IEnumerable<Subscription>> GetCodeflowSubscriptionsAsync(
-        string targetRepo,
+        int? channelId = null,
         bool? sourceEnabled = null,
         string? sourceDirectory = null,
         string? targetDirectory = null)
     {
         return await _barClient.Subscriptions.ListSubscriptionsAsync(
+            sourceRepository: sourceRepo,
             targetRepository: targetRepo,
+            channelId: channelId,
             sourceEnabled: sourceEnabled,
             sourceDirectory: sourceDirectory,
             targetDirectory: targetDirectory);

@@ -36,7 +36,7 @@ internal abstract class SubscriptionOperationBase : Operation
         // Check for backflow conflicts (source directory not empty)
         if (!string.IsNullOrEmpty(sourceDirectory))
         {
-            var backflowSubscriptions = await _barClient.GetCodeflowSubscriptionsAsync(
+            var backflowSubscriptions = await _barClient.GetSubscriptionsAsync(
                 targetRepo: targetRepository,
                 sourceEnabled: true);
 
@@ -57,7 +57,7 @@ internal abstract class SubscriptionOperationBase : Operation
         // Check for forward flow conflicts (target directory not empty)
         if (!string.IsNullOrEmpty(targetDirectory))
         {
-            var forwardFlowSubscriptions = await _barClient.GetCodeflowSubscriptionsAsync(
+            var forwardFlowSubscriptions = await _barClient.GetSubscriptionsAsync(
                 targetRepo: targetRepository,
                 sourceEnabled: true,
                 targetDirectory: targetDirectory);
