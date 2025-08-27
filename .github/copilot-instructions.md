@@ -21,7 +21,7 @@ Bootstrap and build the repository:
 
 ### Test Execution
 Run unit tests: `./.dotnet/dotnet test --no-build`
-- NEVER CANCEL: Takes ~70 seconds. Set timeout to 240+ seconds.
+- NEVER CANCEL: Takes ~70 seconds for unit tests, but codeflow tests can take much longer. Set timeout to 600+ seconds (10+ minutes).
 - Note: Some tests may fail in non-Windows environments due to path differences
 - Standard `./eng/common/build.sh --test` does NOT work - use dotnet test directly
 
