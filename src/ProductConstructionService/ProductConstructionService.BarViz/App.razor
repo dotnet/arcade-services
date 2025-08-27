@@ -37,7 +37,7 @@
 
     private ValueTask LocationChangingHandler(LocationChangingContext arg)
     {
-        string? newLocation = UrlRedirectManager.ApplyLocatinoRedirects(arg.TargetLocation);
+        string? newLocation = UrlRedirectManager.ApplyLocationRedirects(arg.TargetLocation);
         if (!string.IsNullOrEmpty(newLocation) && !string.Equals(newLocation, arg.TargetLocation, StringComparison.OrdinalIgnoreCase))
         {
             // .PreventNavigation();
