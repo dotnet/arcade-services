@@ -53,6 +53,8 @@
                 You can also use special keywords:
                 <ul>
                     <li><code>:codeflow</code> – must be source-enabled (VMR codeflow)</li>
+                    <li><code>:ff</code> or <code>:forwardflow</code> – forward flows (source-enabled with target directory)</li>
+                    <li><code>:bf</code> or <code>:backflow</code> – backflows (source-enabled with source directory)</li>
                     <li><code>:disabled</code> – must be disabled</li>
                     <li><code>:haspr</code> – with an active PR</li>
                     <li>Prefix the search terms to specify which field they match:
@@ -222,11 +224,21 @@
 
     bool IsMatch(Subscription subscription, string filter)
     {
-        return filter.Trim().ToLowerInvariant() switch
+        // Check for partial matches first (Goal 2)
+        var trimmedFilter = filter.Trim().ToLowerInvariant();
+        var expandedFilter = ExpandPartialFilter(trimmedFilter);
+        if (expandedFilter != trimmedFilter)
+        {
+            trimmedFilter = expandedFilter;
+        }
+
+        return trimmedFilter switch
         {
             ":codeflow" => subscription.SourceEnabled,
             ":disabled" => !subscription.Enabled,
             ":haspr" => PullRequests.ContainsKey(subscription.Id),
+            ":ff" or ":forwardflow" => subscription.IsForwardFlow(),
+            ":bf" or ":backflow" => subscription.IsBackflow(),
             ['s', 'o', 'u', 'r', 'c', 'e', ':', .. var f] => subscription.SourceRepository.Contains(f, StringComparison.OrdinalIgnoreCase),
             ['t', 'a', 'r', 'g', 'e', 't', ':', .. var f] => subscription.TargetRepository.Contains(f, StringComparison.OrdinalIgnoreCase),
             ['b', 'r', 'a', 'n', 'c', 'h', ':', .. var f] => subscription.TargetBranch.Contains(f, StringComparison.OrdinalIgnoreCase),
@@ -237,6 +249,18 @@
                 || subscription.TargetBranch.Contains(filter, StringComparison.OrdinalIgnoreCase)
                 || subscription.Channel.Name.Contains(filter, StringComparison.OrdinalIgnoreCase)
         };
+    }
+
+    string ExpandPartialFilter(string filter)
+    {
+        if (!filter.StartsWith(':'))
+            return filter;
+
+        var availableFilters = new[] { ":codeflow", ":disabled", ":haspr", ":ff", ":forwardflow", ":bf", ":backflow" };
+        var matches = availableFilters.Where(f => f.StartsWith(filter)).ToList();
+        
+        // Only expand if there's exactly one match
+        return matches.Count == 1 ? matches[0] : filter;
     }
 
     async Task ShowDetails(Subscription subscription)
