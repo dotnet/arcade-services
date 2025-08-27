@@ -12,10 +12,9 @@ public class UrlRedirectManager
 {
     private static readonly Regex _repoUrlGitHubRegex = new(@"^\/(?<channelId>[^\/]+)\/(?<repoUrl>[^\/]+)\/(?<buildId>[^\/]+)\/graph$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-    public static string? ApplyLocatinoRedirects(string location)
+    public static string? ApplyLocationRedirects(string location)
     {
-        Uri uri = new Uri(location);
-
+        var uri = new Uri(location);
         var path = uri.PathAndQuery;
 
         Match m = _repoUrlGitHubRegex.Match(path);

@@ -10,7 +10,7 @@ namespace ProductConstructionService.BarViz.Tests;
 [TestFixture]
 public class SubscriptionExtensionTests
 {
-    private Subscription CreateTestSubscription(
+    private static Subscription CreateTestSubscription(
         bool sourceEnabled = false, 
         string? sourceDirectory = null,
         string? targetDirectory = null)
@@ -25,7 +25,7 @@ public class SubscriptionExtensionTests
             sourceDirectory ?? string.Empty,
             targetDirectory ?? string.Empty,
             string.Empty,
-            new List<string>())
+            [])
         {
             Channel = new Channel(1, ".NET 9", "test")
         };
@@ -170,7 +170,7 @@ public class SubscriptionExtensionTests
     }
 
     // Mock version of the IsMatch method from Subscriptions.razor
-    private bool MockIsMatch(Subscription subscription, string filter)
+    private static bool MockIsMatch(Subscription subscription, string filter)
     {
         // Check for partial matches first (Goal 2)
         var trimmedFilter = filter.Trim().ToLowerInvariant();
