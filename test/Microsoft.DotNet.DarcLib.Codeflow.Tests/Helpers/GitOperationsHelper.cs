@@ -139,13 +139,6 @@ internal class GitOperationsHelper
         await _processManager.ExecuteGit(repo, "fetch", "--all", "--prune");
     }
 
-    public async Task MergeBranch(NativePath repo, string currentBranch, string branchToMergeWith)
-    {
-        await Checkout(repo, currentBranch);
-        var result = await _processManager.ExecuteGit(repo, "merge", branchToMergeWith);
-        result.ThrowIfFailed($"Could not merge branch {branchToMergeWith} into {currentBranch} in {repo}");
-    }
-
     public async Task ConfigureGit(NativePath repo)
     {
         await _processManager.ExecuteGit(repo, "config", "user.email", DarcLib.Constants.DarcBotEmail);
