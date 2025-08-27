@@ -228,9 +228,9 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
             return BadRequest(new ApiError("The request is invalid. Only one of source or target directory can be set"));
         }
 
-        if (update.Policy != null && update.Policy.Batchable && update.SourceEnabled == true && !string.IsNullOrEmpty(update.SourceDirectory))
+        if (update.Policy != null && update.Policy.Batchable && update.SourceEnabled == true)
         {
-            return BadRequest(new ApiError("The request is invalid. Source-enabled backflow subscriptions cannot be batched."));
+            return BadRequest(new ApiError("The request is invalid. Batched codeflow subscriptions are not supported."));
         }
 
         if (update.SourceDirectory != subscription.SourceDirectory)
@@ -415,9 +415,9 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
                 return BadRequest(new ApiError("The request is invalid. Only one of source or target directory can be set"));
             }
 
-            if (subscription.Policy.Batchable && subscription.SourceEnabled.Value && subscription.SourceDirectory != null)
+            if (subscription.Policy.Batchable && subscription.SourceEnabled.Value)
             {
-                return BadRequest(new ApiError("The request is invalid. Source-enabled backflow subscriptions cannot be batched."));
+                return BadRequest(new ApiError("The request is invalid. Batched codeflow subscriptions are not supported."));
             }
         }
 

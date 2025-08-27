@@ -24,7 +24,7 @@ internal class UpdateSubscriptionCommandLineOptions : SubscriptionCommandLineOpt
     [Option("source-repository-url", HelpText = "Source repository's URL of the subscription to be updated")]
     public string SourceRepoUrl { get; set; }
 
-    [Option("batchable", HelpText = "Whether this subscription's content can be updated in batches. Not supported when the subscription specifies merge policies")]
+    [Option("batchable", HelpText = "Whether this subscription's content can be updated in batches. Not supported when the subscription specifies merge policies or is a codeflow subscription (source-enabled).")]
     public bool? Batchable { get; set; }
 
     [Option("enabled", HelpText = "Whether subscription is enabled (active) or not")]

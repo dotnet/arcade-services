@@ -143,6 +143,12 @@ internal class AddSubscriptionOperation : Operation
                 });
         }
 
+        if (_options.Batchable && _options.SourceEnabled)
+        {
+            _logger.LogError("Batched codeflow subscriptions are not supported.");
+            return Constants.ErrorCode;
+        }
+
         if (_options.Batchable && mergePolicies.Count > 0)
         {
             Console.WriteLine("Batchable subscriptions cannot be combined with merge policies. " +

@@ -22,7 +22,7 @@ internal class AddSubscriptionCommandLineOptions : SubscriptionCommandLineOption
     [Option("target-branch", HelpText = "Target branch for the subscription.")]
     public string TargetBranch { get; set; }
 
-    [Option("batchable", HelpText = "Whether this subscription's content can be updated in batches. Not supported when the subscription specifies merge policies and in backflow subscriptions.")]
+    [Option("batchable", HelpText = "Whether this subscription's content can be updated in batches. Not supported when the subscription specifies merge policies or is a codeflow subscription (source-enabled).")]
     public bool Batchable { get; set; }
 
     [Option('q', "quiet", HelpText = "Non-interactive mode (requires all elements to be passed on the command line).")]

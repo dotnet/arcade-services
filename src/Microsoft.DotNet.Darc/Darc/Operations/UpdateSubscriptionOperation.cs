@@ -205,6 +205,12 @@ internal class UpdateSubscriptionOperation : Operation
                 }
             }
 
+            if (_options.Batchable.HasValue && _options.Batchable.Value && sourceEnabled)
+            {
+                _logger.LogError("Batched codeflow subscriptions are not supported.");
+                return Constants.ErrorCode;
+            }
+
             if (_options.Batchable.HasValue && _options.Batchable.Value && mergePolicies.Count > 0)
             {
                 _logger.LogError("Batchable subscriptions cannot be combined with merge policies. Merge policies are specified at a repository+branch level.");
