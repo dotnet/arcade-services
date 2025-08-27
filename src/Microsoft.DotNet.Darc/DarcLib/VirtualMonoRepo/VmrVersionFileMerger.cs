@@ -205,7 +205,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         IReadOnlyCollection<T> sourceChanges,
         Func<T, T, T> selector,
         string fileTargetRepoPath,
-        Func<string, string> propertyNameTransformator) where T : IVersionFileProperty
+        Func<string, string> propertyNameTransformer) where T : IVersionFileProperty
     {
         var changedProperties = targetChanges
             .Concat(sourceChanges)
@@ -233,7 +233,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 if (addedInSource)
                 {
                     var str = $"""
-                        In file {fileTargetRepoPath}, Property '{propertyNameTransformator(property)}' was removed in the target repo but added in the source repo.
+                        In file {fileTargetRepoPath}, Property '{propertyNameTransformer(property)}' was removed in the target repo but added in the source repo.
                         We will accept the target repo change, keep it removed.
                         """;
                     _commentCollector.AddComment(str, CommentType.Information);
@@ -249,7 +249,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 {
                     // even if the property was removed in the source repo, we'll take whatever is in the target repo
                     var str = $"""
-                        In file {fileTargetRepoPath}, Property '{propertyNameTransformator(property)}' was removed in the source repo but exists in the target repo.
+                        In file {fileTargetRepoPath}, Property '{propertyNameTransformer(property)}' was removed in the source repo but exists in the target repo.
                         We will accept the target repo change and keep it.
                         """;
                     _commentCollector.AddComment(str, CommentType.Information);
