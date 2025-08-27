@@ -1118,7 +1118,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         codeFlowResult.DependencyUpdates.Should().BeEmpty();
         var comments = GetLastFlowCollectedComments();
         comments.Should().HaveCount(2);
-        comments[0].Should().Contain("Property 'Package.B1' was removed in the target repo but added in the source repo.");
-        comments[1].Should().Contain("Property 'Package.A1' was removed in the source repo but exists in the target repo");
+        comments[0].Should().Contain("There was a conflict when merging version properties. In file eng/Version.Details.xml, property 'Package.B1' was removed in the target branch but added in the source repo.");
+        comments[1].Should().Contain("There was a conflict when merging version properties. In file eng/Version.Details.xml, property 'Package.A1' was added in the target branch but removed in the source repo.");
     }
 }
