@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib;
 
 public interface ICommentCollector
@@ -18,7 +19,6 @@ public enum CommentType
     Warning
 }
 
-#nullable enable
 public class CommentCollector : ICommentCollector
 {
     private readonly List<(string, CommentType)> _comments = [];
