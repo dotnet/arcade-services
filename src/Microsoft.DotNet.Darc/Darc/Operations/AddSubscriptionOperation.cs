@@ -19,11 +19,9 @@ using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class AddSubscriptionOperation : Operation
+internal class AddSubscriptionOperation : SubscriptionOperationBase
 {
     private readonly AddSubscriptionCommandLineOptions _options;
-    private readonly ILogger<AddSubscriptionOperation> _logger;
-    private readonly IBarApiClient _barClient;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IGitRepoFactory _gitRepoFactory;
 
@@ -32,11 +30,9 @@ internal class AddSubscriptionOperation : Operation
         ILogger<AddSubscriptionOperation> logger,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
-        IGitRepoFactory gitRepoFactory)
+        IGitRepoFactory gitRepoFactory) : base(barClient, logger)
     {
         _options = options;
-        _logger = logger;
-        _barClient = barClient;
         _remoteFactory = remoteFactory;
         _gitRepoFactory = gitRepoFactory;
     }
@@ -359,62 +355,6 @@ internal class AddSubscriptionOperation : Operation
         {
             _logger.LogError(e, $"Failed to create subscription.");
             return Constants.ErrorCode;
-        }
-    }
-
-    /// <summary>
-    /// Validates that the new codeflow subscription doesn't conflict with existing ones
-    /// </summary>
-    private async Task ValidateCodeflowSubscriptionConflicts(
-        string sourceRepository,
-        string targetRepository,
-        string targetBranch,
-        string sourceDirectory,
-        string targetDirectory,
-        Guid? existingSubscriptionId)
-    {
-        // Check for backflow conflicts (source directory not empty)
-        if (!string.IsNullOrEmpty(sourceDirectory))
-        {
-            var backflowSubscriptions = await _barClient.GetCodeflowSubscriptionsAsync(
-                targetRepo: targetRepository,
-                sourceEnabled: true);
-
-            var conflictingBackflowSubscription = backflowSubscriptions.FirstOrDefault(sub =>
-                !string.IsNullOrEmpty(sub.SourceDirectory) &&
-                sub.TargetRepository == targetRepository &&
-                sub.TargetBranch == targetBranch &&
-                sub.Id != existingSubscriptionId);
-
-            if (conflictingBackflowSubscription != null)
-            {
-                _logger.LogError($"A backflow subscription '{conflictingBackflowSubscription.Id}' already exists for the same target repository and branch. " +
-                               "Only one backflow subscription is allowed per target repository and branch combination.");
-                throw new ArgumentException("Codeflow subscription conflict detected.");
-            }
-        }
-
-        // Check for forward flow conflicts (target directory not empty)
-        if (!string.IsNullOrEmpty(targetDirectory))
-        {
-            var forwardFlowSubscriptions = await _barClient.GetCodeflowSubscriptionsAsync(
-                targetRepo: targetRepository,
-                sourceEnabled: true,
-                targetDirectory: targetDirectory);
-
-            var conflictingForwardFlowSubscription = forwardFlowSubscriptions.FirstOrDefault(sub =>
-                !string.IsNullOrEmpty(sub.TargetDirectory) &&
-                sub.TargetRepository == targetRepository &&
-                sub.TargetBranch == targetBranch &&
-                sub.TargetDirectory == targetDirectory &&
-                sub.Id != existingSubscriptionId);
-
-            if (conflictingForwardFlowSubscription != null)
-            {
-                _logger.LogError($"A forward flow subscription '{conflictingForwardFlowSubscription.Id}' already exists for the same VMR repository, branch, and target directory. " +
-                               "Only one forward flow subscription is allowed per VMR repository, branch, and target directory combination.");
-                throw new ArgumentException("Codeflow subscription conflict detected.");
-            }
         }
     }
 }
