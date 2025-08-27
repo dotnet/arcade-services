@@ -233,8 +233,8 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 if (addedInSource)
                 {
                     var str = $"""
-                        In file {fileTargetRepoPath}, Property '{propertyNameTransformer(property)}' was removed in the target repo but added in the source repo.
-                        We will accept the target repo change, keep it removed.
+                        There was a conflict when merging version properties. In file {fileTargetRepoPath}, property '{propertyNameTransformer(property)}' was removed in the target branch but added in the source repo.
+                        We will prefer the target repo change and not add the property.
                         """;
                     _commentCollector.AddComment(str, CommentType.Information);
                 }
@@ -249,8 +249,8 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 {
                     // even if the property was removed in the source repo, we'll take whatever is in the target repo
                     var str = $"""
-                        In file {fileTargetRepoPath}, Property '{propertyNameTransformer(property)}' was removed in the source repo but exists in the target repo.
-                        We will accept the target repo change and keep it.
+                        There was a conflict when merging version properties. In file {fileTargetRepoPath}, property '{propertyNameTransformer(property)}' was added in the target branch but removed in the source repo.
+                        We will prefer the target repo change and not add the property.
                         """;
                     _commentCollector.AddComment(str, CommentType.Information);
                     continue;
