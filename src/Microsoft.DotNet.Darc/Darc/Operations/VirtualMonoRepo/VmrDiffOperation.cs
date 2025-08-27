@@ -151,29 +151,79 @@ internal class VmrDiffOperation : Operation
         var branch = await _localGitRepoFactory.Create(new NativePath(currentRepoPath)).GetCheckedOutBranchAsync();
         var isVmr = await IsRepoVmrAsync(currentRepoPath, branch);
         
-        if (!isVmr)
+        if (isVmr)
         {
-            throw new ArgumentException("Default diff behavior (no repository specified) can only be used from within a VMR directory");
-        }
+            // Original VMR behavior - diff against all repositories in source-manifest.json
+            var vmrRepo = new Repo(currentRepoPath, branch, IsLocal: true, IsVmr: true);
+            var sourceManifestPath = new NativePath(currentRepoPath) / VmrInfo.DefaultRelativeSourceManifestPath.Path;
+            
+            if (!_fileSystem.FileExists(sourceManifestPath))
+            {
+                throw new FileNotFoundException($"Source manifest not found at {sourceManifestPath}. This directory may not be a valid VMR.");
+            }
 
-        var vmrRepo = new Repo(currentRepoPath, branch, IsLocal: true, IsVmr: true);
-        var sourceManifestPath = new NativePath(currentRepoPath) / VmrInfo.DefaultRelativeSourceManifestPath.Path;
-        
-        if (!_fileSystem.FileExists(sourceManifestPath))
-        {
-            throw new FileNotFoundException($"Source manifest not found at {sourceManifestPath}. This directory may not be a valid VMR.");
-        }
+            var sourceManifestContent = await _fileSystem.ReadAllTextAsync(sourceManifestPath);
+            var sourceManifest = SourceManifest.FromJson(sourceManifestContent);
 
-        var sourceManifestContent = await _fileSystem.ReadAllTextAsync(sourceManifestPath);
-        var sourceManifest = SourceManifest.FromJson(sourceManifestContent);
-
-        if (_options.NameOnly)
-        {
-            return await ExecuteMultiRepoNameOnlyDiffAsync(vmrRepo, sourceManifest);
+            if (_options.NameOnly)
+            {
+                return await ExecuteMultiRepoNameOnlyDiffAsync(vmrRepo, sourceManifest);
+            }
+            else
+            {
+                return await ExecuteMultiRepoFullDiffAsync(vmrRepo, sourceManifest);
+            }
         }
         else
         {
-            return await ExecuteMultiRepoFullDiffAsync(vmrRepo, sourceManifest);
+            // New behavior - check if this is a product repo with Version.Details.xml
+            var versionDetailsPath = new NativePath(currentRepoPath) / VersionFiles.VersionDetailsXml;
+            
+            if (!_fileSystem.FileExists(versionDetailsPath))
+            {
+                throw new ArgumentException("Default diff behavior (no repository specified) can only be used from within a VMR directory or a product repository with eng/Version.Details.xml");
+            }
+
+            // Parse Version.Details.xml to get VMR source information
+            var versionDetails = _versionDetailsParser.ParseVersionDetailsFile(versionDetailsPath);
+            if (versionDetails.Source is null)
+            {
+                throw new ArgumentException("No <Source> element found in Version.Details.xml. Cannot determine VMR to diff against.");
+            }
+
+            // Diff current product repo against the VMR at the specified SHA
+            return await ExecuteProductRepoVsVmrDiffAsync(currentRepoPath, branch, versionDetails.Source);
+        }
+    }
+
+    private async Task<int> ExecuteProductRepoVsVmrDiffAsync(string productRepoPath, string branch, SourceDependency source)
+    {
+        var productRepo = new Repo(productRepoPath, branch, IsLocal: true, IsVmr: false);
+        var vmrRepo = new Repo(source.Uri, source.Sha, IsLocal: false, IsVmr: true);
+
+        if (_options.NameOnly)
+        {
+            Console.WriteLine($"Diffing against VMR {source.Uri} / {source.Sha}");
+            Console.WriteLine(new string('-', 80));
+
+            try
+            {
+                int exitCode = await FileTreeDiffAsync(productRepo, vmrRepo, true);
+                if (exitCode == 0)
+                {
+                    Console.WriteLine("(No differences found)");
+                }
+                return exitCode;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"ERROR: Failed to execute diff against VMR: {ex.Message}");
+                return 1;
+            }
+        }
+        else
+        {
+            return await FullVmrDiffAsync(productRepo, vmrRepo);
         }
     }
 
