@@ -1839,7 +1839,7 @@ public class DependencyFileManager : IDependencyFileManager
 
         foreach (var repoDependencies in versionDetailsLookup)
         {
-            if (!repoDependencies.Any(d => !d.SkipProperty))
+            if (repoDependencies.All(d => d.SkipProperty))
             {
                 continue;
             }
