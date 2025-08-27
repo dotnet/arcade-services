@@ -18,38 +18,18 @@ public class PullRequestCommentBuilderTests
     private const string FakeRepoName = "reponame";
     private List<ClientModels.Subscription> _fakeSubscriptions = GenerateFakeSubscriptionModels();
 
-    private InProgressPullRequest GetInProgressPullRequestWithoutTags(string url)
+    private readonly Mock<IRemoteFactory> _remoteFactoryMock = new();
+    private readonly Mock<IBasicBarClient> _basicBarClientMock = new();
+    private readonly Mock<IRemote> _remoteMock = new();
+
+    [SetUp]
+    public void SetUp()
     {
-        var containedSubscriptions = new List<SubscriptionPullRequestUpdate>();
+        _remoteFactoryMock.Reset();
+        _basicBarClientMock.Reset();
+        _remoteMock.Reset();
 
-        var tagless = _fakeSubscriptions.Where(f => string.IsNullOrEmpty(f.PullRequestFailureNotificationTags)).First();
-        containedSubscriptions.Add(new SubscriptionPullRequestUpdate()
-        {
-            BuildId = 12345,
-            SubscriptionId = tagless.Id,
-            SourceRepo = "https://github.com/foo/bar/"
-        });
-
-        return new InProgressPullRequest()
-        {
-            UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
-            Url = url,
-            HeadBranch = "pr.head.branch",
-            SourceSha = "pr.head.sha",
-            ContainedSubscriptions = containedSubscriptions,
-            SourceRepoNotified = false
-        };
-    }
-
-    [Test]
-    public async Task CommentBuilderNotifyACheckFailed()
-    {
-        // Happy Path: Successfully create a comment, try to do it again, ensure we get an empty comment.
-        Mock<IRemoteFactory> remoteFactoryMock = new();
-        Mock<IBasicBarClient> basicBarClientMock = new();
-        Mock<IRemote> remoteMock = new();
-
-        basicBarClientMock.Setup(b => b.GetSubscriptionAsync(It.IsAny<Guid>()))
+        _basicBarClientMock.Setup(b => b.GetSubscriptionAsync(It.IsAny<Guid>()))
             .Returns((Guid subscriptionToFind) =>
             {
                 return Task.FromResult(
@@ -57,7 +37,7 @@ public class PullRequestCommentBuilderTests
                      where subscription.Id.Equals(subscriptionToFind)
                      select subscription).FirstOrDefault());
             });
-        remoteMock.Setup(r => r.GetPullRequestChecksAsync(It.IsAny<string>()))
+        _remoteMock.Setup(r => r.GetPullRequestChecksAsync(It.IsAny<string>()))
             .Returns((string fakePrsUrl) =>
             {
                 List<Check> checksToReturn =
@@ -73,24 +53,73 @@ public class PullRequestCommentBuilderTests
 
                 return Task.FromResult(checksToReturn.AsEnumerable());
             });
-        remoteFactoryMock.Setup(f => f.CreateRemoteAsync(It.IsAny<string>()))
-            .ReturnsAsync(remoteMock.Object);
+        _remoteFactoryMock.Setup(f => f.CreateRemoteAsync(It.IsAny<string>()))
+            .ReturnsAsync(_remoteMock.Object);
+    }
 
+    // Happy Path: Successfully create a comment, try to do it again, ensure we get an empty comment.
+    [Test]
+    public async Task CommentBuilderBuildsCorrectCommentForFailedCheckPr()
+    {
         PullRequestCommentBuilder commentBuilder = new(
             NullLogger<PullRequestCommentBuilder>.Instance,
-            remoteFactoryMock.Object,
-            basicBarClientMock.Object
+            _remoteFactoryMock.Object,
+            _basicBarClientMock.Object
         );
 
         var pr = GetInProgressPullRequest("https://api.github.com/repos/orgname/reponame/pulls/12345");
         var comment = await commentBuilder.BuildTagSourceRepositoryGitHubContactsCommentAsync(pr);
 
-        string.IsNullOrEmpty(comment).Should().BeFalse();
+        comment.Should().Contain($"Notification for subscribed users from https://github.com/{FakeOrgName}/source-repo1");
         pr.SourceRepoNotified.Should().BeTrue();
 
+        foreach (var individual in _fakeSubscriptions[0].PullRequestFailureNotificationTags.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var valueToCheck = individual;
+            if (!individual.StartsWith('@'))
+                valueToCheck = $"@{valueToCheck}";
+
+            comment.Should().Contain(valueToCheck);
+        }
+
+        // second invocation should return an empty string
         comment = await commentBuilder.BuildTagSourceRepositoryGitHubContactsCommentAsync(pr);
         string.IsNullOrEmpty(comment).Should().BeTrue();
+    }
 
+    [Test]
+    public async Task CommentBuilderReturnsEmptyCommentWhenOnlyMaestroChecksHaveFailedOrErrored()
+    {
+        // Checks like "all checks succeeded" stay in a failed state until all the other checks, err, succeed.
+        // Ensure we don't just go tag everyone's automerge PRs.
+        PullRequestCommentBuilder commentBuilder = new(
+            NullLogger<PullRequestCommentBuilder>.Instance,
+            _remoteFactoryMock.Object,
+            _basicBarClientMock.Object
+        );
+        InProgressPullRequest prToTag = GetInProgressPullRequest("https://api.github.com/repos/orgname/reponame/pulls/67890", 1);
+
+        var comment = await commentBuilder.BuildTagSourceRepositoryGitHubContactsCommentAsync(prToTag);
+
+        prToTag.SourceRepoNotified.Should().BeFalse();
+        comment.Should().BeEmpty();
+    }
+
+    // "Do nothing" Path: Just don't blow up when a subscription object has no tags.
+    [Test]
+    public async Task CommentBuilderReturnsEmptyCommentWhenNoContactAliasesProvided()
+    {
+        PullRequestCommentBuilder commentBuilder = new(
+            NullLogger<PullRequestCommentBuilder>.Instance,
+            _remoteFactoryMock.Object,
+            _basicBarClientMock.Object
+        );
+        InProgressPullRequest prToTag = GetInProgressPullRequestWithoutTags("https://api.github.com/repos/orgname/reponame/pulls/23456");
+
+        var comment = await commentBuilder.BuildTagSourceRepositoryGitHubContactsCommentAsync(prToTag);
+
+        prToTag.SourceRepoNotified.Should().BeFalse();
+        comment.Should().BeEmpty();
     }
 
     private InProgressPullRequest GetInProgressPullRequest(string url, int containedSubscriptionCount = 1)
@@ -108,6 +137,30 @@ public class PullRequestCommentBuilderTests
         }
         // For the purposes of testing this class, we only need to fill out
         // the "Url" and ContainedSubscriptions fields in InProgressPullRequestObjects
+        return new InProgressPullRequest()
+        {
+            UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
+            Url = url,
+            HeadBranch = "pr.head.branch",
+            SourceSha = "pr.head.sha",
+            ContainedSubscriptions = containedSubscriptions,
+            SourceRepoNotified = false
+        };
+    }
+
+
+    private InProgressPullRequest GetInProgressPullRequestWithoutTags(string url)
+    {
+        var containedSubscriptions = new List<SubscriptionPullRequestUpdate>();
+
+        var tagless = _fakeSubscriptions.Where(f => string.IsNullOrEmpty(f.PullRequestFailureNotificationTags)).First();
+        containedSubscriptions.Add(new SubscriptionPullRequestUpdate()
+        {
+            BuildId = 12345,
+            SubscriptionId = tagless.Id,
+            SourceRepo = "https://github.com/foo/bar/"
+        });
+
         return new InProgressPullRequest()
         {
             UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
