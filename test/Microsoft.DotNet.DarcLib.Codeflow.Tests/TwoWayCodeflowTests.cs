@@ -1122,4 +1122,3 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         comments[1].Should().Contain("Property 'Package.A1' was removed in the source repo but exists in the target repo");
     }
 }
-

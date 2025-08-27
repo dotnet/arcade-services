@@ -9,6 +9,7 @@ using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -50,10 +51,28 @@ internal static class Program
 
                         opts.RegisterServices(services);
 
-                        ServiceProvider provider = services.BuildServiceProvider();
+                        using ServiceProvider provider = services.BuildServiceProvider();
                         opts.InitializeFromSettings(provider.GetRequiredService<ILogger>());
 
-                        return RunOperation(opts, provider);
+                        var ret = RunOperation(opts, provider);
+
+                        var logger = provider.GetRequiredService<ILogger>();
+                        var comments = provider.GetRequiredService<ICommentCollector>().GetComments();
+
+                        foreach (var comment in comments)
+                        {
+                            switch (comment.commentType)
+                            {
+                                case CommentType.Warning:
+                                    logger.LogWarning(comment.Text);
+                                    break;
+                                case CommentType.Information:
+                                    logger.LogInformation(comment.Text);
+                                    break;
+                            }
+                        }
+
+                        return ret;
                     },
                     (errs => 1));
     }
