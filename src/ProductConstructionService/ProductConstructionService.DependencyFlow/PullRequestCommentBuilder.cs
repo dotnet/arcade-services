@@ -100,14 +100,11 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         correctContent = correctContent.Replace("\n", "\n> ");
 
         return $"""
-                > [!IMPORTANT]
-                > There are conflicts with the `{subscription.TargetBranch}` branch in this PR. Apart from conflicts in the source files, this means there are unresolved conflicts in the codeflow metadata file `{metadataFile}`.
-                > When resolving these, please use the (incoming/ours) version from the PR branch. The correct content should be this:
-                > ```{contentType}
-                > {correctContent}
-                > ```
-                > 
-                > In case of unclarities, consult the [FAQ]({PullRequestBuilder.CodeFlowPrFaqUri}) or tag **\@dotnet/product-construction** for assistance.
+                There are conflicts with the `{subscription.TargetBranch}` branch in this PR. Apart from conflicts in the source files, this means there are unresolved conflicts in the codeflow metadata file `{metadataFile}`.
+                When resolving these, please use the (incoming/ours) version from the PR branch. The correct content should be this:
+                ```{contentType}
+                {correctContent}
+                ```
                 """;
 
     }
