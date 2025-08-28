@@ -123,7 +123,7 @@ public abstract class CloneManager
         }
         catch (ProcessFailedException e) when (e.Message.Contains("files would be overwritten by checkout"))
         {
-            var result = await _localGitRepo.RunGitCommandAsync(path, ["clean", "-fdqx", "."], cancellationToken);
+            var result = await repo.RunGitCommandAsync(["clean", "-fdqx", "."], cancellationToken);
             result.ThrowIfFailed("Couldn't clean the repository");
             await repo.CheckoutAsync(checkoutRef);
         }
