@@ -409,7 +409,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         bool prAlreadyHasConflict = false,
         string latestCommitToReturn = ConflictPRRemoteSha,
         bool willFlowNewBuild = false,
-        bool mockMergePolicyEvaluator = true)
+        bool mockMergePolicyEvaluator = true,
+        bool? sourceRepoNotified = null)
         => WithExistingCodeFlowPullRequest(
                 forBuild,
                 PrStatus.Open,
@@ -419,7 +420,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 prAlreadyHasConflict,
                 latestCommitToReturn,
                 willFlowNewBuild: willFlowNewBuild,
-                mockMergePolicyEvaluator: mockMergePolicyEvaluator);
+                mockMergePolicyEvaluator: mockMergePolicyEvaluator,
+                sourceRepoNotified: sourceRepoNotified);
 
     protected IDisposable WithExistingCodeFlowPullRequest(
         Build forBuild,
@@ -430,7 +432,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         bool prAlreadyHasConflict = false,
         string latestCommitToReturn = ConflictPRRemoteSha,
         bool willFlowNewBuild = false,
-        bool mockMergePolicyEvaluator = true)
+        bool mockMergePolicyEvaluator = true,
+        bool? sourceRepoNotified = null)
     {
         var prUrl = Subscription.TargetDirectory != null
             ? VmrPullRequestUrl
@@ -453,7 +456,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 prState:
                     prAlreadyHasConflict
                         ? InProgressPullRequestState.Conflict
-                        : InProgressPullRequestState.Mergeable);
+                        : InProgressPullRequestState.Mergeable,
+                sourceRepoNotified: sourceRepoNotified);
             SetState(Subscription, pr);
             SetExpectedPullRequestState(Subscription, pr);
         });
@@ -575,7 +579,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         InProgressPullRequest? expectedState = null,
         string? overwriteBuildCommit = null,
         InProgressPullRequestState prState = InProgressPullRequestState.Mergeable,
-        Func<Asset, bool>? assetFilter = null)
+        Func<Asset, bool>? assetFilter = null,
+        bool? sourceRepoNotified = null)
     {
         var prUrl = Subscription.SourceEnabled
             ? VmrPullRequestUrl
@@ -592,11 +597,12 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     coherencyErrors,
                     overwriteBuildCommit,
                     prState,
-                    assetFilter));
+                    assetFilter,
+                    sourceRepoNotified: sourceRepoNotified));
     }
 
-    protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, int nextBuildToProcess = 0, InProgressPullRequest? expectedState = null)
-        => AndShouldHaveInProgressPullRequestState(forBuild, nextBuildToProcess, expectedState: expectedState);
+    protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, int nextBuildToProcess = 0, InProgressPullRequest? expectedState = null, bool? sourceRepoNotified = null)
+        => AndShouldHaveInProgressPullRequestState(forBuild, nextBuildToProcess, expectedState: expectedState, sourceRepoNotified: sourceRepoNotified);
 
     protected void ThenShouldHaveCachedMergePolicyResults(MergePolicyEvaluationResults results)
     {
@@ -648,7 +654,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             List<CoherencyErrorDetails>? coherencyErrors = null,
             string? overwriteBuildCommit = null,
             InProgressPullRequestState prState = InProgressPullRequestState.Mergeable,
-            Func<Asset, bool>? assetFilter = null)
+            Func<Asset, bool>? assetFilter = null,
+            bool? sourceRepoNotified = null)
         => new()
         {
             UpdaterId = GetPullRequestUpdaterId().ToString(),
@@ -679,6 +686,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             CoherencyErrors = coherencyErrors,
             Url = prUrl,
             MergeState = prState,
+            SourceRepoNotified = sourceRepoNotified,
             NextBuildsToProcess = nextBuildToProcess != 0 ?
                 new Dictionary<Guid, int>
                 {

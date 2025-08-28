@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
-using System.Text;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -40,7 +39,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private readonly IPullRequestUpdaterFactory _updaterFactory;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IPullRequestBuilder _pullRequestBuilder;
-    private readonly IPullRequestConflictNotifier _pullRequestConflictNotifier;
+    private readonly ICommentCollector _commentCollector;
+    private readonly IPullRequestCommenter _pullRequestCommenter;
     private readonly ISqlBarClient _sqlClient;
     private readonly ILocalLibGit2Client _gitClient;
     private readonly IVmrInfo _vmrInfo;
@@ -65,7 +65,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IPullRequestUpdaterFactory updaterFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IPullRequestBuilder pullRequestBuilder,
-        IPullRequestConflictNotifier pullRequestConflictNotifier,
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
         ISqlBarClient sqlClient,
@@ -74,7 +73,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IPcsVmrForwardFlower vmrForwardFlower,
         IPcsVmrBackFlower vmrBackFlower,
         ITelemetryRecorder telemetryRecorder,
-        ILogger logger)
+        ILogger logger,
+        ICommentCollector commentCollector,
+        IPullRequestCommenter pullRequestCommenter)
     {
         Id = id;
         _mergePolicyEvaluator = mergePolicyEvaluator;
@@ -82,7 +83,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _updaterFactory = updaterFactory;
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _pullRequestBuilder = pullRequestBuilder;
-        _pullRequestConflictNotifier = pullRequestConflictNotifier;
         _sqlClient = sqlClient;
         _gitClient = gitClient;
         _vmrInfo = vmrInfo;
@@ -96,6 +96,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _pullRequestCheckReminders = reminderManagerFactory.CreateReminderManager<PullRequestCheck>(cacheKey);
         _pullRequestState = cacheFactory.Create<InProgressPullRequest>(cacheKey);
         _mergePolicyEvaluationState = cacheFactory.Create<MergePolicyEvaluationResults>(cacheKey);
+        _commentCollector = commentCollector;
+        _pullRequestCommenter = pullRequestCommenter;
     }
 
     protected abstract Task<(string repository, string branch)> GetTargetAsync();
@@ -207,6 +209,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         else 
         {
             await ProcessDependencyUpdateAsync(update, pr, prInfo, build);
+        }
+
+        pr = await _pullRequestState.TryGetStateAsync();
+        if (pr != null)
+        {
+            await _pullRequestCommenter.PostCollectedCommentsAsync(pr.Url, (await GetTargetAsync()).repository);
         }
     }
 
@@ -1165,12 +1173,15 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         if (pr != null && codeFlowRes.ConflictedFiles.Count > 0)
         {
-            await _pullRequestConflictNotifier.NotifyAboutMergeConflictAsync(
-                pr,
-                update,
-                subscription,
-                codeFlowRes.ConflictedFiles,
-                build);
+            
+            _commentCollector.AddComment(
+                PullRequestCommentBuilder.NotifyAboutMergeConflict(
+                    pr,
+                    update,
+                    subscription,
+                    codeFlowRes.ConflictedFiles,
+                    build),
+                CommentType.Warning);
         }
     }
 
@@ -1340,7 +1351,14 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         InProgressPullRequest pr,
         string prHeadBranch)
     {
-        await _pullRequestConflictNotifier.NotifyAboutConflictingUpdateAsync(filesInConflict, update, subscription, pr, prHeadBranch);
+        _commentCollector.AddComment(
+            PullRequestCommentBuilder.BuildNotifyAboutConflictingUpdateComment(
+                filesInConflict,
+                update,
+                subscription,
+                pr,
+                prHeadBranch),
+            CommentType.Warning);
 
         // If the headBranch gets updated, we will retry to update it with previously conflicting changes. If these changes still cause a conflict, we should update the
         // InProgressPullRequest with the latest commit from the remote branch
@@ -1361,38 +1379,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         pr.MergeState = InProgressPullRequestState.Conflict;
         pr.SourceSha = remoteCommit;
         pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
-        await _pullRequestState.SetAsync(pr);
-        await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
-        await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);
-    }
-
-    private async Task HandleOverwrittingChanges(SubscriptionDTO subscription, List<string> commits, InProgressPullRequest pr, SubscriptionUpdateWorkItem update)
-    {
-        var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
-        var prComments = await remote.GetPullRequestCommentsAsync(pr.Url);
-        if (!prComments.Any(c => c.Contains(OverwrittenCommitMessage)))
-        {
-            _logger.LogInformation(
-                "Codeflow would overwrite manual PR changes. Stoping updates for subscription {subscriptionId} until the PR is merged",
-                update.SubscriptionId);
-            StringBuilder sb = new();
-            sb.AppendLine(OverwrittenCommitMessage);
-            foreach (var commit in commits)
-            {
-                sb.AppendLine($"- {commit}");
-            }
-            sb.AppendLine();
-            sb.AppendLine("Codeflow will resume after this PR is merged");
-            await remote.CommentPullRequestAsync(pr.Url, sb.ToString());
-        }
-        else
-        {
-            _logger.LogInformation(
-                "Codeflow for subscription {subscriptionId} is already stopped as it would overwrite manual changes",
-                update.SubscriptionId);
-        }
-
-            pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
         await _pullRequestState.SetAsync(pr);
         await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
         await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);

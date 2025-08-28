@@ -22,12 +22,13 @@ public static class DependencyFlowConfiguration
         services.TryAddTransient<IPullRequestUpdaterFactory, PullRequestUpdaterFactory>();
         services.TryAddSingleton<IMergePolicyEvaluator, MergePolicyEvaluator>();
         services.TryAddTransient<IPullRequestBuilder, PullRequestBuilder>();
-        services.TryAddTransient<IPullRequestPolicyFailureNotifier, PullRequestPolicyFailureNotifier>();
-        services.TryAddTransient<IPullRequestConflictNotifier, PullRequestConflictNotifier>();
+        services.TryAddTransient<IPullRequestCommenter, PullRequestCommenter>();
         services.TryAddScoped<ISqlBarClient, SqlBarClient>();
         services.TryAddScoped<IBasicBarClient, SqlBarClient>();
         services.TryAddTransient<IPcsVmrBackFlower, PcsVmrBackFlower>();
         services.TryAddTransient<IPcsVmrForwardFlower, PcsVmrForwardFlower>();
+        services.TryAddScoped<ICommentCollector, CommentCollector>();
+        services.TryAddTransient<IPullRequestCommentBuilder, PullRequestCommentBuilder>();
 
         services.AddWorkItemProcessor<BuildCoherencyInfoWorkItem, BuildCoherencyInfoProcessor>();
         services.AddWorkItemProcessor<PullRequestCheck, PullRequestCheckProcessor>();

@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -1115,6 +1116,9 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         codeFlowResult.ShouldHaveUpdates();
         // both of the changes were conflicting, so we took whatever the target branch had, resulting in no updates
         codeFlowResult.DependencyUpdates.Should().BeEmpty();
+        var comments = GetLastFlowCollectedComments();
+        comments.Should().HaveCount(2);
+        comments[0].Should().Contain("There was a conflict when merging version properties. In file eng/Version.Details.xml, property 'Package.B1' was removed in the target branch but added in the source repo.");
+        comments[1].Should().Contain("There was a conflict when merging version properties. In file eng/Version.Details.xml, property 'Package.A1' was added in the target branch but removed in the source repo.");
     }
 }
-
