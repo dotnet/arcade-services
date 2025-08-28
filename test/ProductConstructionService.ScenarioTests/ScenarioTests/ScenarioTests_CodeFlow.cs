@@ -6,7 +6,6 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using NUnit.Framework;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using FluentAssertions;
 
 #nullable enable
 namespace ProductConstructionService.ScenarioTests;
