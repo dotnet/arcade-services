@@ -38,7 +38,7 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
             var sourceRepoManifestEntry = sourceManifest.Repositories.FirstOrDefault(r => r.RemoteUri == sourceRepository);
             if (sourceRepoManifestEntry == null)
             {
-                return FailTransiently($"Couldn't detetermine source repo mapping");
+                return FailTransiently($"Couldn't determine source repo mapping");
             }
             var relativeBasePath = VmrInfo.GetRelativeRepoSourcesPath(sourceRepoManifestEntry.Path);
             versionDetailsPath = relativeBasePath / VersionFiles.VersionDetailsXml;
