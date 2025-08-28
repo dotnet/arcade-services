@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.Services.TestManagement.TestPlanning.WebApi;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -116,7 +117,17 @@ public abstract class CloneManager
         cancellationToken.ThrowIfCancellationRequested();
 
         var repo = _localGitRepoFactory.Create(path);
-        await repo.CheckoutAsync(checkoutRef);
+
+        try
+        {
+            await repo.CheckoutAsync(checkoutRef);
+        }
+        catch (ProcessFailedException e) when (e.Message.Contains("files would be overwritten by checkout"))
+        {
+            var result = await _localGitRepo.RunGitCommandAsync(path, ["clean", "-fdqx", "."], cancellationToken);
+            result.ThrowIfFailed("Couldn't clean the repository");
+            await repo.CheckoutAsync(checkoutRef);
+        }
 
         if (resetToRemote)
         {
