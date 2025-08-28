@@ -29,7 +29,7 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
         string versionDetailsPath, versionDetailsPropsPath, versionsPropsPath;
         if (pr.CodeFlowDirection == CodeFlowDirection.ForwardFlow)
         {
-            // Batched forward flow subscriptions are not allowed, so a PR wil always contain updates from only one repo
+            // Batched forward flow subscriptions are not allowed, so a PR will always contain updates from only one repo
             var sourceRepository = pr.ContainedUpdates.First().SourceRepo;
             var sourceManifest = SourceManifest.FromJson(await remote.GetFileContentsAsync(
                 VmrInfo.DefaultRelativeSourceManifestPath,
@@ -38,7 +38,7 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
             var sourceRepoManifestEntry = sourceManifest.Repositories.FirstOrDefault(r => r.RemoteUri == sourceRepository);
             if (sourceRepoManifestEntry == null)
             {
-                return FailTransiently($"Couldn't detetermine source repo mapping");
+                return FailTransiently($"Couldn't determine source repo mapping");
             }
             var relativeBasePath = VmrInfo.GetRelativeRepoSourcesPath(sourceRepoManifestEntry.Path);
             versionDetailsPath = relativeBasePath / VersionFiles.VersionDetailsXml;
