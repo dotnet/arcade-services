@@ -171,6 +171,16 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
             return NotFound();
         }
 
+        // Check if the update would result in an invalid batched codeflow subscription
+        // Calculate the final state considering both current subscription state and update values
+        bool finalSourceEnabled = update.SourceEnabled ?? subscription.SourceEnabled;
+        bool finalBatchable = update.Policy?.Batchable ?? subscription.PolicyObject.Batchable;
+        
+        if (finalSourceEnabled && finalBatchable)
+        {
+            return BadRequest(new ApiError("The request is invalid. Batched codeflow subscriptions are not supported."));
+        }
+
         var doUpdate = false;
 
         if (!string.IsNullOrEmpty(update.SourceRepository))
@@ -226,11 +236,6 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         if (!string.IsNullOrEmpty(update.SourceDirectory) && !string.IsNullOrEmpty(update.TargetDirectory))
         {
             return BadRequest(new ApiError("The request is invalid. Only one of source or target directory can be set"));
-        }
-
-        if (update.Policy != null && update.Policy.Batchable && update.SourceEnabled == true && !string.IsNullOrEmpty(update.SourceDirectory))
-        {
-            return BadRequest(new ApiError("The request is invalid. Source-enabled backflow subscriptions cannot be batched."));
         }
 
         if (update.SourceDirectory != subscription.SourceDirectory)
@@ -422,9 +427,9 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
                 return BadRequest(new ApiError("The request is invalid. Only one of source or target directory can be set"));
             }
 
-            if (subscription.Policy.Batchable && subscription.SourceEnabled.Value && subscription.SourceDirectory != null)
+            if (subscription.Policy.Batchable && subscription.SourceEnabled.Value)
             {
-                return BadRequest(new ApiError("The request is invalid. Source-enabled backflow subscriptions cannot be batched."));
+                return BadRequest(new ApiError("The request is invalid. Batched codeflow subscriptions are not supported."));
             }
         }
 
