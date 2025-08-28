@@ -29,7 +29,7 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
         string versionDetailsPath, versionDetailsPropsPath, versionsPropsPath;
         if (pr.CodeFlowDirection == CodeFlowDirection.ForwardFlow)
         {
-            // Batched forward flow subscriptions are not allowed, so a PR wil always contain updates from only one repo
+            // Batched forward flow subscriptions are not allowed, so a PR will always contain updates from only one repo
             var sourceRepository = pr.ContainedUpdates.First().SourceRepo;
             var sourceManifest = SourceManifest.FromJson(await remote.GetFileContentsAsync(
                 VmrInfo.DefaultRelativeSourceManifestPath,
