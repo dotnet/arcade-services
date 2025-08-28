@@ -41,6 +41,7 @@ internal abstract class CodeFlowTestsBase
     protected readonly Mock<IBasicBarClient> _basicBarClient = new();
 
     private int _buildId = 100;
+    private List<string> _lastFlowCollectedComments = [];
     private readonly Dictionary<int, Build> _builds = [];
 
     [SetUp]
@@ -96,7 +97,8 @@ internal abstract class CodeFlowTestsBase
         .AddLogging(b => b.AddConsole().AddFilter(l => l >= LogLevel.Debug))
         .AddSingleVmrSupport("git", VmrPath, TmpPath, null, null)
         .AddSingleton(_basicBarClient.Object)
-        .AddTransient<IRemoteFactory, RemoteFactory>();
+        .AddTransient<IRemoteFactory, RemoteFactory>()
+        .AddScoped<ICommentCollector, CommentCollector>();
 
     protected static List<NativePath> GetExpectedFilesInVmr(
         NativePath vmrPath,
@@ -222,7 +224,7 @@ internal abstract class CodeFlowTestsBase
             buildToFlow = await _basicBarClient.Object.GetBuildAsync(_buildId);
         }
 
-        return await codeflower.FlowBackAsync(
+        var codeFlowResult = await codeflower.FlowBackAsync(
             mappingName,
             repoPath,
             buildToFlow ?? await CreateNewVmrBuild([]),
@@ -230,6 +232,13 @@ internal abstract class CodeFlowTestsBase
             "main",
             branch,
             cancellationToken: _cancellationToken.Token);
+
+        _lastFlowCollectedComments = scope.ServiceProvider.GetRequiredService<ICommentCollector>()
+            .GetComments()
+            .Select(c => c.Text)
+            .ToList();
+
+        return codeFlowResult; 
     }
 
     protected async Task<CodeFlowResult> CallDarcForwardflow(
@@ -242,7 +251,8 @@ internal abstract class CodeFlowTestsBase
     {
         using var scope = ServiceProvider.CreateScope();
         var codeflower = scope.ServiceProvider.GetRequiredService<IVmrForwardFlower>();
-        return await codeflower.FlowForwardAsync(
+
+        var codeFlowResult = await codeflower.FlowForwardAsync(
             mappingName,
             repoPath,
             buildToFlow ?? await CreateNewRepoBuild(repoPath, []),
@@ -252,7 +262,16 @@ internal abstract class CodeFlowTestsBase
             VmrPath,
             skipMeaninglessUpdates,
             cancellationToken: _cancellationToken.Token);
+
+        _lastFlowCollectedComments = scope.ServiceProvider.GetRequiredService<ICommentCollector>()
+            .GetComments()
+            .Select(c => c.Text)
+            .ToList();
+
+        return codeFlowResult;
     }
+
+    protected IReadOnlyList<string> GetLastFlowCollectedComments() => _lastFlowCollectedComments;
 
     protected async Task<List<string>> CallDarcCloakedFileScan(string baselinesFilePath)
     {

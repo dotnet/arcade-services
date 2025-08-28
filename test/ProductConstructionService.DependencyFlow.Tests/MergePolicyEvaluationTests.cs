@@ -87,7 +87,7 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
         Build newBuild = GivenANewBuild(true);
         newBuild.Commit = "sha123456";
 
-        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, willFlowNewBuild: true, mockMergePolicyEvaluator: false))
+        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, willFlowNewBuild: true, mockMergePolicyEvaluator: false, sourceRepoNotified: true))
         {
             ExpectPrMetadataToBeUpdated();
 
@@ -106,7 +106,7 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
 
             ThenShouldHaveCachedMergePolicyResults(expectedMergePolicyEvaluationResults);
 
-            ThenShouldHaveInProgressPullRequestState(newBuild);
+            ThenShouldHaveInProgressPullRequestState(newBuild, sourceRepoNotified: true);
             AndCodeShouldHaveBeenFlownForward(newBuild);
             AndShouldHavePullRequestCheckReminder();
 

@@ -25,7 +25,6 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
         IPullRequestUpdaterFactory updaterFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IPullRequestBuilder pullRequestBuilder,
-        IPullRequestConflictNotifier pullRequestConflictNotifier,
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
         ISqlBarClient sqlClient,
@@ -34,7 +33,9 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
         IPcsVmrForwardFlower vmrForwardFlower,
         IPcsVmrBackFlower vmrBackFlower,
         ITelemetryRecorder telemetryRecorder,
-        ILogger<BatchedPullRequestUpdater> logger)
+        ILogger<BatchedPullRequestUpdater> logger,
+        ICommentCollector commentCollector,
+        IPullRequestCommenter pullRequestCommenter)
         : base(
             id,
             mergePolicyEvaluator,
@@ -42,7 +43,6 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
             updaterFactory,
             coherencyUpdateResolver,
             pullRequestBuilder,
-            pullRequestConflictNotifier,
             cacheFactory,
             reminderManagerFactory,
             sqlClient,
@@ -51,7 +51,9 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
             vmrForwardFlower,
             vmrBackFlower,
             telemetryRecorder,
-            logger)
+            logger,
+            commentCollector,
+            pullRequestCommenter)
     {
         _id = id;
         _context = context;

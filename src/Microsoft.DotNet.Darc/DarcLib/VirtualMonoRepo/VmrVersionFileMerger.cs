@@ -48,7 +48,7 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 {
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly ILogger<VmrVersionFileMerger> _logger;
-    private readonly ILocalGitRepoFactory _localGitRepoFactory;
+    private readonly ICommentCollector _commentCollector;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IDependencyFileManager _dependencyFileManager;
     private const string EmptyJsonString = "{}";
@@ -58,13 +58,14 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
         ILogger<VmrVersionFileMerger> logger,
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
-        IDependencyFileManager dependencyFileManager)
+        IDependencyFileManager dependencyFileManager,
+        ICommentCollector commentCollector)
     {
         _gitRepoFactory = gitRepoFactory;
         _logger = logger;
-        _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
         _dependencyFileManager = dependencyFileManager;
+        _commentCollector = commentCollector;
     }
 
     public async Task MergeJsonAsync(
@@ -97,7 +98,12 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             var targetRepoChanges = SimpleConfigJson.Parse(targetRepoPreviousJson).GetDiff(SimpleConfigJson.Parse(targetRepoCurrentJson));
             var vmrChanges = SimpleConfigJson.Parse(sourcePreviousJson).GetDiff(SimpleConfigJson.Parse(sourceCurrentJson));
 
-            VersionFileChanges<JsonVersionProperty> mergedChanges = MergeVersionFileChanges(targetRepoChanges, vmrChanges, JsonVersionProperty.SelectJsonVersionProperty);
+            VersionFileChanges<JsonVersionProperty> mergedChanges = MergeVersionFileChanges(
+                targetRepoChanges,
+                vmrChanges,
+                JsonVersionProperty.SelectJsonVersionProperty,
+                targetRepoJsonRelativePath,
+                property => property.Replace(':', '.'));
 
             var currentJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, "HEAD", allowMissingFiles);
             var mergedJson = SimpleConfigJson.ApplyJsonChanges(currentJson, mergedChanges);
@@ -152,7 +158,12 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
             previousSourceRepoChanges,
             currentSourceRepoChanges);
 
-        VersionFileChanges<DependencyUpdate> mergedChanges = MergeVersionFileChanges(targetChanges, sourceChanges, SelectDependencyUpdate);
+        VersionFileChanges<DependencyUpdate> mergedChanges = MergeVersionFileChanges(
+            targetChanges,
+            sourceChanges,
+            SelectDependencyUpdate,
+            targetRepoVersionDetailsRelativePath,
+            property => property);
 
         return await ApplyVersionDetailsChangesAsync(targetRepo, mergedChanges, mappingToApplyChanges);
     }
@@ -192,7 +203,9 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
     private VersionFileChanges<T> MergeVersionFileChanges<T>(
         IReadOnlyCollection<T> targetChanges,
         IReadOnlyCollection<T> sourceChanges,
-        Func<T, T, T> selector) where T : IVersionFileProperty
+        Func<T, T, T> selector,
+        string fileTargetRepoPath,
+        Func<string, string> propertyNameTransformer) where T : IVersionFileProperty
     {
         var changedProperties = targetChanges
             .Concat(sourceChanges)
@@ -217,9 +230,16 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
 
             if (removedInTarget)
             {
+                if (addedInSource)
+                {
+                    var str = $"""
+                        There was a conflict when merging version properties. In file {fileTargetRepoPath}, property '{propertyNameTransformer(property)}' was removed in the target branch but added in the source repo.
+                        We will prefer the target repo change and not add the property.
+                        """;
+                    _commentCollector.AddComment(str, CommentType.Information);
+                }
                 // we don't have to do anything since the property is removed in the repo
                 // even if the property was added in the source repo, we'll take what's in the target repo
-                // TODO https://github.com/dotnet/arcade-services/issues/5176 check if the source repo is adding a dependency here and write a comment about the conflict
                 continue;
             }
 
@@ -228,7 +248,11 @@ public class VmrVersionFileMerger : IVmrVersionFileMerger
                 if (addedInTarget)
                 {
                     // even if the property was removed in the source repo, we'll take whatever is in the target repo
-                    // TODO https://github.com/dotnet/arcade-services/issues/5176 check if the source repo is adding a dependency here and write a comment about the conflict
+                    var str = $"""
+                        There was a conflict when merging version properties. In file {fileTargetRepoPath}, property '{propertyNameTransformer(property)}' was added in the target branch but removed in the source repo.
+                        We will prefer the target repo change and not add the property.
+                        """;
+                    _commentCollector.AddComment(str, CommentType.Information);
                     continue;
                 }
                 removals.Add(property);
