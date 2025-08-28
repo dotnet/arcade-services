@@ -19,23 +19,19 @@ using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class UpdateSubscriptionOperation : Operation
+internal class UpdateSubscriptionOperation : SubscriptionOperationBase
 {
     private readonly UpdateSubscriptionCommandLineOptions _options;
-    private readonly IBarApiClient _barClient;
     private readonly IGitRepoFactory _gitRepoFactory;
-    private readonly ILogger<UpdateSubscriptionOperation> _logger;
 
     public UpdateSubscriptionOperation(
         UpdateSubscriptionCommandLineOptions options,
         IBarApiClient barClient,
         IGitRepoFactory gitRepoFactory,
-        ILogger<UpdateSubscriptionOperation> logger)
+        ILogger<UpdateSubscriptionOperation> logger) : base(barClient, logger)
     {
         _options = options;
-        _barClient = barClient;
         _gitRepoFactory = gitRepoFactory;
-        _logger = logger;
     }
 
     /// <summary>
@@ -278,6 +274,26 @@ internal class UpdateSubscriptionOperation : Operation
             subscriptionToUpdate.Policy.UpdateFrequency = Enum.Parse<UpdateFrequency>(updateFrequency, true);
 
             subscriptionToUpdate.Policy.MergePolicies = mergePolicies;
+
+            // Check for codeflow subscription conflicts (source-enabled subscriptions)
+            if (sourceEnabled)
+            {
+                try
+                {
+                    await ValidateCodeflowSubscriptionConflicts(
+                        subscriptionToUpdate.SourceRepository, 
+                        subscription.TargetRepository, 
+                        subscription.TargetBranch, 
+                        sourceDirectory, 
+                        targetDirectory, 
+                        subscription.Id); // existing subscription id for updates
+                }
+                catch (ArgumentException)
+                {
+                    Console.WriteLine("Aborting subscription update.");
+                    return Constants.ErrorCode;
+                }
+            }
 
             var updatedSubscription = await _barClient.UpdateSubscriptionAsync(
                 _options.Id,

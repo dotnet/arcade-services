@@ -19,11 +19,9 @@ using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class AddSubscriptionOperation : Operation
+internal class AddSubscriptionOperation : SubscriptionOperationBase
 {
     private readonly AddSubscriptionCommandLineOptions _options;
-    private readonly ILogger<AddSubscriptionOperation> _logger;
-    private readonly IBarApiClient _barClient;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IGitRepoFactory _gitRepoFactory;
 
@@ -32,11 +30,9 @@ internal class AddSubscriptionOperation : Operation
         ILogger<AddSubscriptionOperation> logger,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
-        IGitRepoFactory gitRepoFactory)
+        IGitRepoFactory gitRepoFactory) : base(barClient, logger)
     {
         _options = options;
-        _logger = logger;
-        _barClient = barClient;
         _remoteFactory = remoteFactory;
         _gitRepoFactory = gitRepoFactory;
     }
@@ -299,6 +295,26 @@ internal class AddSubscriptionOperation : Operation
             {
                 Console.WriteLine("Aborting subscription creation.");
                 return Constants.ErrorCode;
+            }
+
+            // Check for codeflow subscription conflicts (source-enabled subscriptions)
+            if (sourceEnabled)
+            {
+                try
+                {
+                    await ValidateCodeflowSubscriptionConflicts(
+                        sourceRepository, 
+                        targetRepository, 
+                        targetBranch, 
+                        sourceDirectory, 
+                        targetDirectory, 
+                        existingSubscriptionId: null); // null for create (no existing subscription id)
+                }
+                catch (ArgumentException)
+                {
+                    Console.WriteLine("Aborting subscription creation.");
+                    return Constants.ErrorCode;
+                }
             }
 
             Subscription newSubscription = await _barClient.CreateSubscriptionAsync(
