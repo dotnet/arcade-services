@@ -200,14 +200,5 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         });
     }
 
-    [Test]
-    [Ignore("Batched codeflow subscriptions are no longer supported due to issues with the code flow algorithm")]
-    public async Task Vmr_BatchedForwardFlowTest_NoLongerSupported()
-    {
-        // This test has been disabled because batched codeflow subscriptions are no longer supported.
-        // The functionality tested here was found to be problematic as described in GitHub issue #5210.
-        // When batched subscriptions share PRs, it causes issues with the code flow algorithm that 
-        // wasn't designed to work this way.
-        await Task.CompletedTask;
-    }
+
 }
