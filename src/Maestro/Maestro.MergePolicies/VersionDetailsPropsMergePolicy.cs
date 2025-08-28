@@ -13,6 +13,8 @@ using Microsoft.Build.Exceptions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 #nullable enable
 namespace Maestro.MergePolicies;
@@ -24,17 +26,37 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
 
     public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote remote)
     {
+        string versionDetailsPath, versionDetailsPropsPath, versionsPropsPath;
         if (pr.CodeFlowDirection == CodeFlowDirection.ForwardFlow)
         {
-            // TODO: https://github.com/dotnet/arcade-services/issues/4998 Make the check work for forward flow PRs once we implement the issue
-            return SucceedDecisively($"{DisplayName}: doesn't apply to this subscription");
+            // Batched forward flow subscriptions are not allowed, so a PR will always contain updates from only one repo
+            var sourceRepository = pr.ContainedUpdates.First().SourceRepo;
+            var sourceManifest = SourceManifest.FromJson(await remote.GetFileContentsAsync(
+                VmrInfo.DefaultRelativeSourceManifestPath,
+                pr.TargetRepoUrl,
+                pr.HeadBranch));
+            var sourceRepoManifestEntry = sourceManifest.Repositories.FirstOrDefault(r => r.RemoteUri == sourceRepository);
+            if (sourceRepoManifestEntry == null)
+            {
+                return FailTransiently($"Couldn't determine source repo mapping");
+            }
+            var relativeBasePath = VmrInfo.GetRelativeRepoSourcesPath(sourceRepoManifestEntry.Path);
+            versionDetailsPath = relativeBasePath / VersionFiles.VersionDetailsXml;
+            versionDetailsPropsPath = relativeBasePath / VersionFiles.VersionDetailsProps;
+            versionsPropsPath = relativeBasePath / VersionFiles.VersionsProps;
+        }
+        else
+        {
+            versionDetailsPath = VersionFiles.VersionDetailsXml;
+            versionDetailsPropsPath = VersionFiles.VersionDetailsProps;
+            versionsPropsPath = VersionFiles.VersionsProps;
         }
 
         ProjectRootElement versionDetailsProps;
         try
         {
             var versionDetailsPropsContent = await remote.GetFileContentsAsync(
-                VersionFiles.VersionDetailsProps,
+                versionDetailsPropsPath,
                 pr.TargetRepoUrl,
                 pr.HeadBranch);
             versionDetailsProps = ProjectRootElement.Create(
@@ -55,18 +77,18 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
         catch (InvalidProjectFileException)
         {
             return FailDecisively($"Failed to parse {Constants.VersionDetailsProps}",
-                $"The {VersionFiles.VersionDetailsProps} file is not a valid XML document. Please ensure it is well-formed.");
+                $"The {versionDetailsPropsPath} file is not a valid XML document. Please ensure it is well-formed.");
         }
         catch
         {
             return FailTransiently($"Failed to evaluate {DisplayName}",
-                $"An error occurred while trying to read the {VersionFiles.VersionDetailsProps} file");
+                $"An error occurred while trying to read the {versionDetailsPropsPath} file");
         }
 
         try
         {
             var versionsPropsContent = await remote.GetFileContentsAsync(
-                VersionFiles.VersionsProps,
+                versionsPropsPath,
                 pr.TargetRepoUrl,
                 pr.HeadBranch);
             var versionsProps = ProjectRootElement.Create(
@@ -124,7 +146,7 @@ public class VersionDetailsPropsMergePolicy : MergePolicy
             }
 
             var versionDetailsXml = DependencyFileManager.GetXmlDocument(await remote.GetFileContentsAsync(
-                VersionFiles.VersionDetailsXml,
+                versionDetailsPath,
                 pr.TargetRepoUrl,
                 pr.HeadBranch));
 
