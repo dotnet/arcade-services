@@ -55,7 +55,7 @@ internal interface IPullRequestBuilder
     /// <summary>
     ///    Generate the description for a code flow PR.
     /// </summary>
-    string GenerateCodeFlowPRDescription(
+    Task<string> GenerateCodeFlowPRDescription(
         SubscriptionUpdateWorkItem update,
         BuildDTO build,
         string? previousSourceCommit,
@@ -224,7 +224,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         return GeneratePRTitle($"[{targetBranch}] Source code updates from", repoNames);
     }
 
-    public string GenerateCodeFlowPRDescription(
+    public async Task<string> GenerateCodeFlowPRDescription(
         SubscriptionUpdateWorkItem update,
         BuildDTO build,
         string? previousSourceCommit,
@@ -233,7 +233,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         string? currentDescription,
         bool isForwardFlow)
     {
-        string description = GenerateCodeFlowPRDescriptionInternal(
+        string description = await GenerateCodeFlowPRDescriptionInternal(
             update,
             build,
             previousSourceCommit,
@@ -246,7 +246,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         return AddOrUpdateFooterInDescription(description, upstreamRepoDiffs);
     }
 
-    private static string GenerateCodeFlowPRDescriptionInternal(
+    private async Task<string> GenerateCodeFlowPRDescriptionInternal(
         SubscriptionUpdateWorkItem update,
         BuildDTO build,
         string? previousSourceCommit,
@@ -263,7 +263,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
                 > This is a codeflow update. It may contain both source code changes from [{(isForwardFlow ? "the source repo" : "the VMR")}]({update.SourceRepo}) as well as dependency updates. Learn more [here]({CodeFlowPrFaqUri}).
 
                 This pull request brings the following source code changes
-                {GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates)}
+                {await GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates)}
                 """;
         }
         else
@@ -279,15 +279,16 @@ internal class PullRequestBuilder : IPullRequestBuilder
                 currentDescription.Length :
                 endIndex + GetEndMarker(update.SubscriptionId).Length;
 
-            return string.Concat(
-                currentDescription.AsSpan(0, startCutoff),
-                GenerateCodeFlowDescriptionForSubscription(
-                    update.SubscriptionId,
-                    previousSourceCommit,
-                    build,
-                    update.SourceRepo,
-                    dependencyUpdates),
-                currentDescription.AsSpan(endCutoff, currentDescription.Length - endCutoff));
+            var beforeSpan = currentDescription.Substring(0, startCutoff);
+            var afterSpan = currentDescription.Substring(endCutoff, currentDescription.Length - endCutoff);
+            var generatedDescription = await GenerateCodeFlowDescriptionForSubscription(
+                update.SubscriptionId,
+                previousSourceCommit,
+                build,
+                update.SourceRepo,
+                dependencyUpdates);
+
+            return string.Concat(beforeSpan, generatedDescription, afterSpan);
         }
     }
 
@@ -336,7 +337,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         return sb.ToString();
     }
 
-    private static string GenerateCodeFlowDescriptionForSubscription(
+    private async Task<string> GenerateCodeFlowDescriptionForSubscription(
         Guid subscriptionId,
         string? previousSourceCommit,
         BuildDTO build,
@@ -344,6 +345,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         List<DependencyUpdateSummary> dependencyUpdates)
     {
         string sourceDiffText = CreateSourceDiffLink(build, previousSourceCommit);
+        string enhancedBuildLink = await GetBarVizBuildLinkAsync(build, subscriptionId);
 
         string dependencyUpdateBlock = CreateDependencyUpdateBlock(dependencyUpdates, repoUri);
         return
@@ -353,7 +355,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             
             ## From {build.GetRepository()}
             - **Subscription**: {GetSubscriptionLink(subscriptionId)}
-            - **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})
+            - **Build**: {enhancedBuildLink}
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Commit**: [{build.Commit}]({GitRepoUrlUtils.GetCommitUri(build.GetRepository(), build.Commit)})
             - **Commit Diff**: {sourceDiffText}
@@ -565,6 +567,10 @@ internal class PullRequestBuilder : IPullRequestBuilder
         List<GitFile>? committedFiles,
         BuildDTO build)
     {
+        // Since async methods cannot have ref parameters, we need to handle this differently
+        // We'll get the enhanced build link synchronously by calling the async method from a task
+        var enhancedBuildLink = Task.Run(async () => await GetBarVizBuildLinkAsync(build, update.SubscriptionId)).Result;
+        
         var changesLinks = new List<string>();
 
         var sourceRepository = update.SourceRepo;
@@ -577,7 +583,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             .AppendLine(sectionStartMarker)
             .AppendLine($"## From {sourceRepository}")
             .AppendLine($"- **Subscription**: {GetSubscriptionLink(updateSubscriptionId)}")
-            .AppendLine($"- **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})")
+            .AppendLine($"- **Build**: {enhancedBuildLink}")
             .AppendLine($"- **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}")
             // This is duplicated from the files changed, but is easier to read here.
             .AppendLine($"- **Commit**: [{build.Commit}]({GitRepoUrlUtils.GetCommitUri(build.GetRepository(), build.Commit)})");
@@ -844,4 +850,86 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
     private static string GetSubscriptionLink(Guid subscriptionId)
         => $"[{subscriptionId}](https://maestro.dot.net/subscriptions?search={subscriptionId})";
+
+    /// <summary>
+    /// Generates an enhanced build link that includes both the Azure DevOps build link and a BAR build link.
+    /// </summary>
+    /// <param name="build">The build object containing build information</param>
+    /// <param name="subscriptionId">The subscription ID to get channel information</param>
+    /// <returns>Enhanced build link string with BAR build details</returns>
+    private async Task<string> GetBarVizBuildLinkAsync(BuildDTO build, Guid subscriptionId)
+    {
+        var originalBuildLink = $"[{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})";
+        
+        try
+        {
+            // Get the subscription to retrieve the channel ID
+            var subscription = await _context.Subscriptions
+                .Where(s => s.Id == subscriptionId)
+                .Select(s => new { s.ChannelId })
+                .FirstOrDefaultAsync();
+            
+            if (subscription == null)
+            {
+                return originalBuildLink;
+            }
+            
+            // Generate repository slug for BarViz URL
+            var repoSlug = ConvertRepoUrlToSlug(build.GetRepository());
+            if (string.IsNullOrEmpty(repoSlug))
+            {
+                return originalBuildLink;
+            }
+            
+            // Create the BarViz link
+            var barBuildLink = $"https://maestro.dot.net/channel/{subscription.ChannelId}/{repoSlug}/build/{build.Id}";
+            return $"{originalBuildLink} ([{build.Id}]({barBuildLink}))";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to generate enhanced build link for build {BuildId} and subscription {SubscriptionId}", build.Id, subscriptionId);
+            return originalBuildLink;
+        }
+    }
+
+    /// <summary>
+    /// Converts a repository URL to a slug format used by BarViz.
+    /// </summary>
+    /// <param name="repoUrl">The repository URL</param>
+    /// <returns>Repository slug in format github:org:repo or azdo:org:project:repo</returns>
+    private static string? ConvertRepoUrlToSlug(string? repoUrl)
+    {
+        if (repoUrl == null)
+        {
+            return null;
+        }
+
+        var repoType = GitRepoUrlUtils.ParseTypeFromUri(repoUrl);
+        
+        switch (repoType)
+        {
+            case GitRepoType.GitHub:
+                var (repoName, org) = GitRepoUrlUtils.GetRepoNameAndOwner(repoUrl);
+                return $"github:{org}:{repoName}";
+                
+            case GitRepoType.AzureDevOps:
+                // For Azure DevOps, we need to extract the project name from the URL
+                // Format: https://dev.azure.com/{org}/{project}/_git/{repo}
+                const string azureDevOpsPrefix = "https://dev.azure.com/";
+                if (repoUrl.StartsWith(azureDevOpsPrefix))
+                {
+                    string[] urlParts = repoUrl.Substring(azureDevOpsPrefix.Length).Split('/');
+                    if (urlParts.Length >= 4 && urlParts[2] == "_git")
+                    {
+                        string orgName = urlParts[0];
+                        string projectName = urlParts[1];
+                        string repoNamePart = urlParts[3].Split('?')[0]; // Remove query parameters
+                        return $"azdo:{orgName}:{projectName}:{repoNamePart}";
+                    }
+                }
+                break;
+        }
+
+        return null;
+    }
 }
