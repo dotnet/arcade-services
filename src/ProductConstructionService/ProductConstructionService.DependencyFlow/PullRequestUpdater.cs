@@ -1216,7 +1216,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             subscription.TargetBranch,
             pullRequest.ContainedSubscriptions.Select(s => s.SourceRepo).ToList());
 
-        var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(
+        var description = await _pullRequestBuilder.GenerateCodeFlowPRDescription(
             update,
             build,
             previousSourceSha,
@@ -1274,7 +1274,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         try
         {
             var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(subscription.TargetBranch, [update.SourceRepo]);
-            var description = _pullRequestBuilder.GenerateCodeFlowPRDescription(
+            var description = await _pullRequestBuilder.GenerateCodeFlowPRDescription(
                 update,
                 build,
                 previousSourceSha,

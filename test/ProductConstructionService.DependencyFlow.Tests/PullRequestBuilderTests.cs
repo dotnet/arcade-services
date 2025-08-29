@@ -148,10 +148,10 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
 
         string? description = null;
         await Execute(
-            context =>
+            async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = builder.GenerateCodeFlowPRDescription(
+                description = await builder.GenerateCodeFlowPRDescription(
                     update,
                     build,
                     mockPreviousCommitSha,
@@ -159,7 +159,6 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
                     upstreamRepoDiffs,
                     currentDescription: null,
                     isForwardFlow: false);
-                return Task.CompletedTask;
             });
 
         string shortCommitSha = commitSha.Substring(0, 7);
@@ -232,10 +231,10 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         };
 
         await Execute(
-            context =>
+            async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = builder.GenerateCodeFlowPRDescription(
+                description = await builder.GenerateCodeFlowPRDescription(
                     update,
                     build,
                     mockPreviousCommitSha,
@@ -243,7 +242,6 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
                     upstreamRepoDiffs,
                     description,
                     isForwardFlow: false);
-                return Task.CompletedTask;
             });
 
         description.Should().Be(
@@ -305,8 +303,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = builder.GenerateCodeFlowPRDescription(update, build1, previousCommitSha, dependencyUpdates: [], currentDescription: null, isForwardFlow: true, upstreamRepoDiffs: []);
-                await Task.CompletedTask; // hacky way to make the lambda async
+                description = await builder.GenerateCodeFlowPRDescription(update, build1, previousCommitSha, dependencyUpdates: [], currentDescription: null, isForwardFlow: true, upstreamRepoDiffs: []);
             });
         string shortCommitSha = commitSha.Substring(0, 7);
         string shortPreviousCommitSha = previousCommitSha.Substring(0, 7);
@@ -328,8 +325,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description2 = builder.GenerateCodeFlowPRDescription(update2, build2, previousCommitSha2, dependencyUpdates: [], upstreamRepoDiffs: [], description, isForwardFlow: true);
-                await Task.CompletedTask; // hacky way to make the lambda async
+                description2 = await builder.GenerateCodeFlowPRDescription(update2, build2, previousCommitSha2, dependencyUpdates: [], upstreamRepoDiffs: [], description, isForwardFlow: true);
             });
         string shortCommitSha2 = commitSha2.Substring(0, 7);
         string shortPreviousCommitSha2 = previousCommitSha2.Substring(0, 7);
