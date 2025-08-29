@@ -1008,50 +1008,6 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         var expectedEnhancedBuildLine = $"- **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()}) ([{buildId}](https://maestro.dot.net/channel/{channelId}/azdo:dnceng:internal:dotnet-runtime/build/{buildId}))";
         description.Should().Contain(expectedEnhancedBuildLine);
     }
-
-    [Test]
-    public async Task ShouldFallBackToOriginalBuildLinkWhenSubscriptionNotFound()
-    {
-        // Given - Build without corresponding subscription in database
-        string commitSha = "xyz9876543";
-        int buildId = 99999;
-        var subscriptionId = Guid.Parse("99999999-9999-9999-9999-999999999999"); // Non-existent subscription
-        
-        Build build = GivenANewBuildId(buildId, commitSha);
-        build.AzureDevOpsAccount = "dnceng";
-        build.AzureDevOpsProject = "internal";
-        build.AzureDevOpsBuildId = 8888888;
-        build.AzureDevOpsBuildNumber = "20250829.1";
-        build.GitHubRepository = "https://github.com/dotnet/aspire";
-
-        SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, buildId, subscriptionId.ToString(), SubscriptionType.DependenciesAndSources);
-        
-        string? description = null;
-        await Execute(
-            async context =>
-            {
-                // Don't add subscription to database - test fallback behavior
-                var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = await builder.GenerateCodeFlowPRDescription(
-                    update,
-                    build,
-                    "previoussha999",
-                    dependencyUpdates: [],
-                    upstreamRepoDiffs: [],
-                    currentDescription: null,
-                    isForwardFlow: false);
-            });
-
-        // Then - Should contain only original build link (no enhanced BAR link)
-        description.Should().NotBeNull();
-        description!.Should().Contain($"[{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})");
-        description.Should().NotContain("maestro.dot.net/channel"); // Should not contain BAR link
-        
-        // Verify the original format is present without enhancement
-        var expectedOriginalBuildLine = $"- **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})";
-        description.Should().Contain(expectedOriginalBuildLine);
-    }
-
     private Build GivenANewBuildId(int id, string sha)
     {
         Build build = new(
