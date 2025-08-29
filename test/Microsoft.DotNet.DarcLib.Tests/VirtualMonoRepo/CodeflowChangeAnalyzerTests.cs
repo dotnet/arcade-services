@@ -113,7 +113,7 @@ public class CodeflowChangeAnalyzerTests
             src/source-manifest.json
             src/test-repo/global.json
             src/test-repo/eng/Version.Details.xml
-            src/test-repo/eng/Versions.props
+            src/test-repo/eng/Version.Details.props
             """;
 
         var gitDiffWithIgnoredOutput =
@@ -139,8 +139,8 @@ public class CodeflowChangeAnalyzerTests
             +      <Sha>9a90ec1b43070dc3ee0f0b869a78a175c1d33b68</Sha>
             diff --git a/src/roslyn-analyzers/eng/Versions.props b/src/roslyn-analyzers/eng/Versions.props
             index 3d1c4193028..d6ba1d51912 100644
-            --- a/src/roslyn-analyzers/eng/Versions.props
-            +++ b/src/roslyn-analyzers/eng/Versions.props
+            --- a/src/roslyn-analyzers/eng/Version.Details.props
+            +++ b/src/roslyn-analyzers/eng/Version.Details.props
             @@ -78 +78 @@
             -    <MicrosoftDotNetXliffTasksVersion>10.0.0-beta.25304.106</MicrosoftDotNetXliffTasksVersion>
             +    <MicrosoftDotNetXliffTasksVersion>10.0.0-beta.25306.103</MicrosoftDotNetXliffTasksVersion>
