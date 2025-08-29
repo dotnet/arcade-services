@@ -87,8 +87,6 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
     private static readonly Regex LinkRegex = new(@"\((https?://\S+|www\.\S+)\)", RegexOptions.Compiled);
 
-
-
     private readonly BuildAssetRegistryContext _context;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IBasicBarClient _barClient;
