@@ -106,7 +106,10 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         }
 
         var unknownChangedFiles = changedFiles
-            .Except(DependencyFileManager.DependencyFiles, StringComparer.OrdinalIgnoreCase);
+            .Except(
+                // In VMR repos, Versions.props doesn't contain any dependency versions maintained by automation, so every change is meaningful
+                DependencyFileManager.DependencyFiles.Except([VersionFiles.VersionsProps], StringComparer.OrdinalIgnoreCase),
+                StringComparer.OrdinalIgnoreCase);
 
         if (unknownChangedFiles.Any())
         {
