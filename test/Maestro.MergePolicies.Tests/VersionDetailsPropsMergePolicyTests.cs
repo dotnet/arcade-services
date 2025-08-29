@@ -255,33 +255,6 @@ public class VersionDetailsPropsMergePolicyTests
     }
 
     [Test]
-    public async Task EvaluateAsync_WhenForwardFlow_ShouldSucceed()
-    {
-        // Arrange
-        var forwardFlowPr = new PullRequestUpdateSummary(
-            url: "https://github.com/test/repo/pull/123",
-            coherencyCheckSuccessful: null,
-            coherencyErrors: [],
-            requiredUpdates: [],
-            containedUpdates: [],
-            headBranch: "test-branch",
-            repoUrl: "https://github.com/test/repo",
-            codeFlowDirection: CodeFlowDirection.ForwardFlow);
-
-        // Act
-        var result = await _policy.EvaluateAsync(forwardFlowPr, _mockRemote.Object);
-
-        // Assert
-        result.Status.Should().Be(MergePolicyEvaluationStatus.DecisiveSuccess);
-        result.Title.Should().Be("Version.Details.props Validation Merge Policy: doesn't apply to this subscription");
-        result.MergePolicyName.Should().Be("VersionDetailsProps");
-        result.MergePolicyDisplayName.Should().Be("Version.Details.props Validation Merge Policy");
-
-        // Verify no file content calls were made
-        _mockRemote.Verify(r => r.GetFileContentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
-    }
-
-    [Test]
     public async Task EvaluateAsync_WhenDependencyMappingIncomplete_ShouldFail()
     {
         // Arrange

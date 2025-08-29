@@ -533,6 +533,82 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         }
     }
 
+    [Test]
+    public async Task CreateBatchedCodeflowSubscriptionFails()
+    {
+        var testChannelName = "test-channel-sub-controller20200220";
+        var defaultGitHubSourceRepo = "https://github.com/dotnet/sub-controller-test-source-repo";
+        var defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";
+        var defaultBranchName = "main";
+
+        // Attempt to create a batched codeflow subscription (source-enabled=true, batchable=true)
+        var subscription = new SubscriptionData()
+        {
+            ChannelName = testChannelName,
+            Enabled = true,
+            SourceRepository = defaultGitHubSourceRepo,
+            TargetRepository = defaultGitHubTargetRepo,
+            Policy = new v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = v2018_07_16.Models.UpdateFrequency.EveryWeek },
+            TargetBranch = defaultBranchName,
+            SourceEnabled = true,
+            TargetDirectory = "test-target-dir"
+        };
+
+        IActionResult result = await _data.SubscriptionsController.Create(subscription);
+        result.Should().BeAssignableTo<BadRequestObjectResult>();
+        var badRequestResult = (BadRequestObjectResult)result;
+        badRequestResult.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
+        var apiError = (ApiError)badRequestResult.Value!;
+        apiError.Message.Should().Be("The request is invalid. Batched codeflow subscriptions are not supported.");
+    }
+
+    [Test]
+    public async Task UpdateToBatchedCodeflowSubscriptionFails()
+    {
+        var testChannelName = "test-channel-sub-controller20200220";
+        var defaultGitHubSourceRepo = "https://github.com/dotnet/sub-controller-test-source-repo";
+        var defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";
+        var defaultBranchName = "main";
+
+        // First create a valid non-batched subscription
+        var subscription = new SubscriptionData()
+        {
+            ChannelName = testChannelName,
+            Enabled = true,
+            SourceRepository = defaultGitHubSourceRepo,
+            TargetRepository = defaultGitHubTargetRepo,
+            Policy = new v2018_07_16.Models.SubscriptionPolicy() { Batchable = false, UpdateFrequency = v2018_07_16.Models.UpdateFrequency.EveryWeek },
+            TargetBranch = defaultBranchName,
+            SourceEnabled = true,
+            TargetDirectory = "test-target-dir"
+        };
+
+        Subscription createdSubscription;
+        {
+            IActionResult result = await _data.SubscriptionsController.Create(subscription);
+            result.Should().BeAssignableTo<ObjectResult>();
+            var objResult = (ObjectResult)result;
+            objResult.StatusCode.Should().Be((int)HttpStatusCode.Created);
+            createdSubscription = (Subscription)objResult.Value!;
+        }
+
+        // Now try to update it to be batched - this should fail
+        var update = new SubscriptionUpdate()
+        {
+            Policy = new v2018_07_16.Models.SubscriptionPolicy() { Batchable = true, UpdateFrequency = v2018_07_16.Models.UpdateFrequency.EveryDay },
+            SourceEnabled = true
+        };
+
+        {
+            IActionResult result = await _data.SubscriptionsController.UpdateSubscription(createdSubscription.Id, update);
+            result.Should().BeAssignableTo<BadRequestObjectResult>();
+            var badRequestResult = (BadRequestObjectResult)result;
+            badRequestResult.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
+            var apiError = (ApiError)badRequestResult.Value!;
+            apiError.Message.Should().Be("The request is invalid. Batched codeflow subscriptions are not supported.");
+        }
+    }
+
     private class MockOrg : Octokit.Organization
     {
         public MockOrg(int id, string login)

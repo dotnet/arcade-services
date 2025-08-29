@@ -29,6 +29,7 @@ public class VmrVersionFileMergerTests
     private readonly Mock<ILocalGitRepo> _targetRepoMock = new();
     private readonly Mock<ILocalGitRepo> _vmrRepoMock = new();
     private readonly Mock<IGitRepo> _gitRepoMock = new();
+    private readonly Mock<ICommentCollector> _commentCollectorMock = new();
     
     private VmrVersionFileMerger _vmrVersionFileMerger = null!;
     
@@ -46,6 +47,7 @@ public class VmrVersionFileMergerTests
         _targetRepoMock.Reset();
         _vmrRepoMock.Reset();
         _gitRepoMock.Reset();
+        _commentCollectorMock.Reset();
 
         _targetRepoMock.Setup(r => r.Path).Returns(new NativePath(TargetRepoPath));
         _vmrRepoMock.Setup(r => r.Path).Returns(new NativePath(VmrPath));
@@ -58,7 +60,8 @@ public class VmrVersionFileMergerTests
             _loggerMock.Object,
             _localGitRepoFactoryMock.Object,
             _versionDetailsParserMock.Object,
-            _dependencyFileManagerMock.Object);
+            _dependencyFileManagerMock.Object,
+            _commentCollectorMock.Object);
     }
 
     [Test]
@@ -591,6 +594,10 @@ public class VmrVersionFileMergerTests
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<string>()), Times.Once);
+        _commentCollectorMock.Verify(c => c.AddComment(
+                It.Is<string>(s => s.Contains("tools.conflictProperty")),
+                CommentType.Information),
+            Times.Once);
     }
 
     [Test]

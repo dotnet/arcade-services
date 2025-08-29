@@ -486,7 +486,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
         var prComment = new Comment()
         {
-            CommentType = CommentType.Text,
+            CommentType = TeamFoundation.SourceControl.WebApi.CommentType.Text,
             Content = $"{message}{CommentMarker}"
         };
 
@@ -500,12 +500,12 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                 continue;
             }
             List<Comment> comments = await client.GetCommentsAsync(repoName, id, commentThread.Id);
-            bool threadHasCommentWithMarker = comments.Any(comment => comment.CommentType == CommentType.Text && comment.Content.EndsWith(CommentMarker));
+            bool threadHasCommentWithMarker = comments.Any(comment => comment.CommentType == TeamFoundation.SourceControl.WebApi.CommentType.Text && comment.Content.EndsWith(CommentMarker));
             if (threadHasCommentWithMarker)
             {
                 // Check if last comment in that thread has the marker.
                 Comment lastComment = comments.Last();
-                if (lastComment.CommentType == CommentType.Text && lastComment.Content.EndsWith(CommentMarker))
+                if (lastComment.CommentType == TeamFoundation.SourceControl.WebApi.CommentType.Text && lastComment.Content.EndsWith(CommentMarker))
                 {
                     // Update comment
                     await client.UpdateCommentAsync(prComment, repoName, id, commentThread.Id, lastComment.Id);
@@ -1548,7 +1548,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
         var prComment = new Comment()
         {
-            CommentType = CommentType.Text,
+            CommentType = TeamFoundation.SourceControl.WebApi.CommentType.Text,
             Content = $"{comment}{CommentMarker}"
         };
 
@@ -1780,7 +1780,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                 
                 foreach (Comment comment in threadComments)
                 {
-                    if (comment.CommentType == CommentType.Text && !string.IsNullOrEmpty(comment.Content))
+                    if (comment.CommentType == TeamFoundation.SourceControl.WebApi.CommentType.Text && !string.IsNullOrEmpty(comment.Content))
                     {
                         comments.Add(comment.Content);
                     }
