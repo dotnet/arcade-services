@@ -1008,6 +1008,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         var expectedEnhancedBuildLine = $"- **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()}) ([{buildId}](https://maestro.dot.net/channel/{channelId}/azdo:dnceng:internal:dotnet-runtime/build/{buildId}))";
         description.Should().Contain(expectedEnhancedBuildLine);
     }
+
     private Build GivenANewBuildId(int id, string sha)
     {
         Build build = new(

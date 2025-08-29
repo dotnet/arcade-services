@@ -87,9 +87,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
     private static readonly Regex LinkRegex = new(@"\((https?://\S+|www\.\S+)\)", RegexOptions.Compiled);
 
-    // Regex patterns for converting repository URLs to slugs
-    private static readonly Regex RepoUrlGitHubRegex = new(@"^https:\/\/github\.com\/(?<org>[^\/]+)\/(?<repoPath>[^\/\?]+)", RegexOptions.Compiled);
-    private static readonly Regex RepoUrlAzureDevOpsRegex = new(@"^https:\/\/dev\.azure\.com\/(?<org>[^\/]+)\/(?<project>[^\/]+)\/_git\/(?<repoPath>[^\/\?]+)", RegexOptions.Compiled);
+
 
     private readonly BuildAssetRegistryContext _context;
     private readonly IRemoteFactory _remoteFactory;
@@ -908,21 +906,30 @@ internal class PullRequestBuilder : IPullRequestBuilder
             return null;
         }
 
-        var mGitHub = RepoUrlGitHubRegex.Match(repoUrl);
-        if (mGitHub.Success)
+        var repoType = GitRepoUrlUtils.ParseTypeFromUri(repoUrl);
+        
+        switch (repoType)
         {
-            string org = mGitHub.Groups["org"].Value;
-            string repoPath = mGitHub.Groups["repoPath"].Value;
-            return $"github:{org}:{repoPath}";
-        }
-
-        var mAzdo = RepoUrlAzureDevOpsRegex.Match(repoUrl);
-        if (mAzdo.Success)
-        {
-            string org = mAzdo.Groups["org"].Value;
-            string project = mAzdo.Groups["project"].Value;
-            string repoPath = mAzdo.Groups["repoPath"].Value;
-            return $"azdo:{org}:{project}:{repoPath}";
+            case GitRepoType.GitHub:
+                var (repoName, org) = GitRepoUrlUtils.GetRepoNameAndOwner(repoUrl);
+                return $"github:{org}:{repoName}";
+                
+            case GitRepoType.AzureDevOps:
+                // For Azure DevOps, we need to extract the project name from the URL
+                // Format: https://dev.azure.com/{org}/{project}/_git/{repo}
+                const string azureDevOpsPrefix = "https://dev.azure.com/";
+                if (repoUrl.StartsWith(azureDevOpsPrefix))
+                {
+                    string[] urlParts = repoUrl.Substring(azureDevOpsPrefix.Length).Split('/');
+                    if (urlParts.Length >= 4 && urlParts[2] == "_git")
+                    {
+                        string orgName = urlParts[0];
+                        string projectName = urlParts[1];
+                        string repoNamePart = urlParts[3].Split('?')[0]; // Remove query parameters
+                        return $"azdo:{orgName}:{projectName}:{repoNamePart}";
+                    }
+                }
+                break;
         }
 
         return null;
