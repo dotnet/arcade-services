@@ -61,14 +61,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly IProcessManager _processManager;
     private readonly ILogger<VmrCodeFlower> _logger;
 
-    private static readonly string[] PatchExclusions =
-    [
-        VersionFiles.VersionDetailsXml,
-        VersionFiles.VersionDetailsProps,
-        VersionFiles.GlobalJson,
-        VersionFiles.DotnetToolsConfigJson
-    ];
-
     public VmrForwardFlower(
             IVmrInfo vmrInfo,
             ISourceManifest sourceManifest,
@@ -238,7 +230,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             return await _vmrUpdater.UpdateRepository(
                 mapping,
                 build,
-                additionalFileExclusions: PatchExclusions,
+                additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
                 resetToRemoteWhenCloningRepo: ShouldResetClones,
                 cancellationToken: cancellationToken);
         }
@@ -269,7 +261,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                     hadChanges = await _vmrUpdater.UpdateRepository(
                         mapping,
                         build,
-                        additionalFileExclusions: PatchExclusions,
+                        additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
                         resetToRemoteWhenCloningRepo: ShouldResetClones,
                         cancellationToken: cancellationToken);
                 },
@@ -318,7 +310,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         [
             .. mapping.Include.Select(VmrPatchHandler.GetInclusionRule),
             .. mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule),
-            .. PatchExclusions.Select(VmrPatchHandler.GetExclusionRule),
+            .. DependencyFileManager.CodeflowDependencyFiles.Select(VmrPatchHandler.GetExclusionRule),
         ];
 
         var result = await _processManager.Execute(
@@ -345,7 +337,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         bool hadChanges = await _vmrUpdater.UpdateRepository(
             mapping,
             build,
-            additionalFileExclusions: PatchExclusions,
+            additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
             fromSha: currentSha,
             resetToRemoteWhenCloningRepo: ShouldResetClones,
             cancellationToken: cancellationToken);

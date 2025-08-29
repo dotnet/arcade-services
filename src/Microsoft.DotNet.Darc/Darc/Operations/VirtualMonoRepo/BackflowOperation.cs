@@ -52,5 +52,5 @@ internal class BackflowOperation(
             cancellationToken);
     }
 
-    protected override IEnumerable<string> GetIgnoredFiles(string mapping) => DependencyFileManager.DependencyFiles;
+    protected override IEnumerable<string> GetIgnoredFiles(string mapping) => DependencyFileManager.CodeflowDependencyFiles;
 }
