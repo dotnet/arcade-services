@@ -345,7 +345,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         List<DependencyUpdateSummary> dependencyUpdates)
     {
         string sourceDiffText = CreateSourceDiffLink(build, previousSourceCommit);
-        string enhancedBuildLink = await GetEnhancedBuildLinkAsync(build, subscriptionId);
+        string enhancedBuildLink = await GetBarVizBuildLinkAsync(build, subscriptionId);
 
         string dependencyUpdateBlock = CreateDependencyUpdateBlock(dependencyUpdates, repoUri);
         return
@@ -569,7 +569,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     {
         // Since async methods cannot have ref parameters, we need to handle this differently
         // We'll get the enhanced build link synchronously by calling the async method from a task
-        var enhancedBuildLink = Task.Run(async () => await GetEnhancedBuildLinkAsync(build, update.SubscriptionId)).Result;
+        var enhancedBuildLink = Task.Run(async () => await GetBarVizBuildLinkAsync(build, update.SubscriptionId)).Result;
         
         var changesLinks = new List<string>();
 
@@ -857,7 +857,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     /// <param name="build">The build object containing build information</param>
     /// <param name="subscriptionId">The subscription ID to get channel information</param>
     /// <returns>Enhanced build link string with BAR build details</returns>
-    private async Task<string> GetEnhancedBuildLinkAsync(BuildDTO build, Guid subscriptionId)
+    private async Task<string> GetBarVizBuildLinkAsync(BuildDTO build, Guid subscriptionId)
     {
         var originalBuildLink = $"[{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})";
         
