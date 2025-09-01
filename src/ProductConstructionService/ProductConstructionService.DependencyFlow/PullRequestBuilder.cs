@@ -345,7 +345,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         List<DependencyUpdateSummary> dependencyUpdates)
     {
         string sourceDiffText = CreateSourceDiffLink(build, previousSourceCommit);
-        string enhancedBuildLink = await GetBarVizBuildLinkAsync(build, subscriptionId);
+        string enhancedBuildLink = await GetBuildLinkAsync(build, subscriptionId);
 
         string dependencyUpdateBlock = CreateDependencyUpdateBlock(dependencyUpdates, repoUri);
         return
@@ -579,7 +579,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             .AppendLine(sectionStartMarker)
             .AppendLine($"## From {sourceRepository}")
             .AppendLine($"- **Subscription**: {GetSubscriptionLink(updateSubscriptionId)}")
-            .AppendLine($"- **Build**: {await GetBarVizBuildLinkAsync(build, update.SubscriptionId)}")
+            .AppendLine($"- **Build**: {await GetBuildLinkAsync(build, update.SubscriptionId)}")
             .AppendLine($"- **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}")
             // This is duplicated from the files changed, but is easier to read here.
             .AppendLine($"- **Commit**: [{build.Commit}]({GitRepoUrlUtils.GetCommitUri(build.GetRepository(), build.Commit)})");
@@ -849,26 +849,38 @@ internal class PullRequestBuilder : IPullRequestBuilder
         => $"[{subscriptionId}](https://maestro.dot.net/subscriptions?search={subscriptionId})";
 
     /// <summary>
-    /// Generates an enhanced build link that includes both the Azure DevOps build link and a BAR build link.
+    /// Generates a build link that to the Azure DevOps build and tries to add a BAR build link.
     /// </summary>
     /// <param name="build">The build object containing build information</param>
     /// <param name="subscriptionId">The subscription ID to get channel information</param>
     /// <returns>Enhanced build link string with BAR build details</returns>
-    private async Task<string> GetBarVizBuildLinkAsync(BuildDTO build, Guid subscriptionId)
+    private async Task<string> GetBuildLinkAsync(BuildDTO build, Guid subscriptionId)
     {
         var originalBuildLink = $"[{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})";
         
         try
         {
-            // Get the subscription to retrieve the channel ID
-            var subscription = await _context.Subscriptions
-                .Where(s => s.Id == subscriptionId)
-                .Select(s => new { s.ChannelId })
-                .FirstOrDefaultAsync();
-            
-            if (subscription == null)
+            int? channelId;
+            if (build.Channels.Count == 1)
             {
-                return originalBuildLink;
+                channelId = build.Channels[0].Id;
+            }
+            else
+            {
+
+                // Get the subscription to retrieve the channel ID
+                var subscription = await _context.Subscriptions
+                    .Where(s => s.Id == subscriptionId)
+                    .Select(s => new { s.ChannelId })
+                    .FirstOrDefaultAsync();
+
+                if (subscription == null)
+                {
+                    // If the subscription is not found, return the original link
+                    return originalBuildLink;
+                }
+
+                channelId = subscription.ChannelId;
             }
             
             // Generate repository slug for BarViz URL
@@ -879,7 +891,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             }
             
             // Create the BarViz link
-            var barBuildLink = $"https://maestro.dot.net/channel/{subscription.ChannelId}/{repoSlug}/build/{build.Id}";
+            var barBuildLink = $"https://maestro.dot.net/channel/{channelId}/{repoSlug}/build/{build.Id}";
             return $"{originalBuildLink} ([{build.Id}]({barBuildLink}))";
         }
         catch (Exception ex)
