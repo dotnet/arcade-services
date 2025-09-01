@@ -584,7 +584,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         {
             if (!item.IsFolder)
             {
-                if (!DependencyFileManager.DependencyFiles.Contains(item.Path))
+                if (!DependencyFileManager.NonCodeflowDependencyFiles.Contains(item.Path))
                 {
                     string fileContent = await GetFileContentsAsync(accountName, projectName, repoName, item.Path, commit);
                     var gitCommit = new GitFile(item.Path.TrimStart('/'), fileContent);

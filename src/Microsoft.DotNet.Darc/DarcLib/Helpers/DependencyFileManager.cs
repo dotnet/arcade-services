@@ -87,7 +87,7 @@ public class DependencyFileManager : IDependencyFileManager
         _logger = logger;
     }
 
-    public static ImmutableHashSet<string> DependencyFiles { get; } = new HashSet<string>()
+    public static ImmutableHashSet<string> NonCodeflowDependencyFiles { get; } = new HashSet<string>()
     {
         VersionFiles.VersionDetailsXml,
         VersionFiles.VersionDetailsProps,
@@ -95,6 +95,9 @@ public class DependencyFileManager : IDependencyFileManager
         VersionFiles.GlobalJson,
         VersionFiles.DotnetToolsConfigJson
     }.ToImmutableHashSet();
+
+    // In VMR repos, Versions.props doesn't contain any dependency versions maintained by automation, so every change is meaningful
+    public static ImmutableHashSet<string> CodeflowDependencyFiles { get; } = NonCodeflowDependencyFiles.Except([VersionFiles.VersionsProps]).ToImmutableHashSet();
 
     public async Task<XmlDocument> ReadVersionDetailsXmlAsync(string repoUri, string branch, UnixPath relativeBasePath = null)
         => await ReadXmlFileAsync(GetVersionFilePath(VersionFiles.VersionDetailsXml, relativeBasePath), repoUri, branch);
