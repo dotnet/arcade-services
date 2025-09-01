@@ -1045,105 +1045,41 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var isForwardFlow = !string.IsNullOrEmpty(subscription.TargetDirectory);
         string prHeadBranch = pr?.HeadBranch ?? GetNewBranchName(subscription.TargetBranch);
 
-        _logger.LogInformation(
-            "{direction}-flowing build {buildId} for subscription {subscriptionId} targeting {repo} / {targetBranch} to new branch {newBranch}",
-            isForwardFlow ? "Forward" : "Back",
-            update.BuildId,
-            subscription.Id,
-            subscription.TargetRepository,
-            subscription.TargetBranch,
-            prHeadBranch);
-
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
 
-        NativePath localRepoPath;
-        CodeFlowResult codeFlowRes;
         IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs;
         string? previousSourceSha; // is null in some edge cases like onboarding a new repository
 
-        try
+        var codeFlowRes = await ExecuteCodeFlowAsync(pr, update, subscription, build, prHeadBranch, forceUpdate, isForwardFlow);
+
+        if (codeFlowRes == null)
         {
-            if (isForwardFlow)
-            {
-                codeFlowRes = await _vmrForwardFlower.FlowForwardAsync(
-                    subscription,
-                    build,
-                    prHeadBranch,
-                    skipMeaninglessUpdates: !forceUpdate,
-                    cancellationToken: default);
-                localRepoPath = _vmrInfo.VmrPath;
-
-                SourceManifest? sourceManifest = await remote.GetSourceManifestAsync(
-                    subscription.TargetRepository,
-                    subscription.TargetBranch);
-
-                previousSourceSha = sourceManifest?
-                    .GetRepoVersion(subscription.TargetDirectory)?.CommitSha;
-
-                upstreamRepoDiffs = [];
-            }
-            else
-            {
-                codeFlowRes = await _vmrBackFlower.FlowBackAsync(subscription, build, prHeadBranch, cancellationToken: default);
-                localRepoPath = codeFlowRes.RepoPath;
-
-                SourceDependency? sourceDependency = await remote.GetSourceDependencyAsync(
-                    subscription.TargetRepository,
-                    subscription.TargetBranch);
-
-                previousSourceSha = sourceDependency?.Sha;
-
-                upstreamRepoDiffs = await ComputeRepoUpdatesAsync(previousSourceSha, build.Commit);
-
-                // Do not display the diff for which we're flowing back as the diff does not make a whole lot of sense
-                upstreamRepoDiffs = [..upstreamRepoDiffs.Where(diff => diff.RepoUri != subscription.TargetRepository)];
-            }
-        }
-        catch (ConflictInPrBranchException conflictException)
-        {
-            if (pr != null)
-            {
-                await HandlePrUpdateConflictAsync(conflictException.ConflictedFiles, update, subscription, pr, prHeadBranch);
-            }
             return;
         }
-        catch (TargetBranchNotFoundException)
-        {
-            if (pr != null)
-            {
-                // If PR already exists, this should not happen
-                throw;
-            }
-            _logger.LogWarning("Target branch {targetBranch} not found for subscription {subscriptionId}.", 
-                subscription.TargetBranch, 
-                subscription.Id);
-            return;
-        }
-        catch (Exception)
-        {
-            _logger.LogError("Failed to flow source changes for build {buildId} in subscription {subscriptionId}",
-                build.Id,
-                subscription.Id);
-            throw;
-        }
 
-        if (codeFlowRes.HadUpdates)
+        if (isForwardFlow)
         {
-            _logger.LogInformation("Code changes for {subscriptionId} ready in local branch {branch}",
-                subscription.Id,
-                prHeadBranch);
+            SourceManifest? sourceManifest = await remote.GetSourceManifestAsync(
+                subscription.TargetRepository,
+                subscription.TargetBranch);
 
-            using (var scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Push, subscription.TargetRepository))
-            {
-                await _gitClient.Push(localRepoPath, prHeadBranch, subscription.TargetRepository);
-                scope.SetSuccess();
-            }
+            previousSourceSha = sourceManifest?
+                .GetRepoVersion(subscription.TargetDirectory)?.CommitSha;
 
-            await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
+            upstreamRepoDiffs = [];
         }
         else
         {
-            _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}", subscription.Id);
+            SourceDependency? sourceDependency = await remote.GetSourceDependencyAsync(
+                subscription.TargetRepository,
+                subscription.TargetBranch);
+
+            previousSourceSha = sourceDependency?.Sha;
+
+            upstreamRepoDiffs = await ComputeRepoUpdatesAsync(previousSourceSha, build.Commit);
+
+            // Do not display the diff for which we're flowing back as the diff does not make a whole lot of sense
+            upstreamRepoDiffs = [..upstreamRepoDiffs.Where(diff => diff.RepoUri != subscription.TargetRepository)];
         }
 
         if (pr == null && codeFlowRes.HadUpdates)
@@ -1173,7 +1109,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         if (pr != null && codeFlowRes.ConflictedFiles.Count > 0)
         {
-            
             _commentCollector.AddComment(
                 PullRequestCommentBuilder.NotifyAboutMergeConflict(
                     pr,
@@ -1337,6 +1272,89 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             await darcRemote.DeleteBranchAsync(subscription.TargetRepository, prBranch);
             throw;
         }
+    }
+    private async Task<CodeFlowResult?> ExecuteCodeFlowAsync(
+        InProgressPullRequest? pr,
+        SubscriptionUpdateWorkItem update,
+        SubscriptionDTO subscription,
+        BuildDTO build,
+        string prHeadBranch,
+        bool forceUpdate,
+        bool isForwardFlow)
+    {
+        _logger.LogInformation(
+            "{direction}-flowing build {buildId} for subscription {subscriptionId} targeting {repo} / {targetBranch} to new branch {newBranch}",
+            isForwardFlow ? "Forward" : "Back",
+            build.Id,
+            subscription.Id,
+            subscription.TargetRepository,
+            subscription.TargetBranch,
+            prHeadBranch);
+
+        CodeFlowResult codeFlowRes;
+        try
+        {
+            if (isForwardFlow)
+            {
+                codeFlowRes = await _vmrForwardFlower.FlowForwardAsync(
+                    subscription,
+                    build,
+                    prHeadBranch,
+                    skipMeaninglessUpdates: !forceUpdate,
+                    cancellationToken: default);
+            }
+            else
+            {
+                codeFlowRes = await _vmrBackFlower.FlowBackAsync(
+                    subscription,
+                    build,
+                    prHeadBranch,
+                    cancellationToken: default);
+            }
+        }
+        catch (ConflictInPrBranchException conflictException)
+        {
+            if (pr != null)
+            {
+                await HandlePrUpdateConflictAsync(conflictException.ConflictedFiles, update, subscription, pr, prHeadBranch);
+            }
+            return null;
+        }
+        catch (TargetBranchNotFoundException)
+        {
+            _logger.LogWarning("Target branch {targetBranch} not found for subscription {subscriptionId}.",
+                subscription.TargetBranch,
+                subscription.Id);
+            return null;
+        }
+        catch (Exception)
+        {
+            _logger.LogError("Failed to flow source changes for build {buildId} in subscription {subscriptionId}",
+                build.Id,
+                subscription.Id);
+            throw;
+        }
+
+        if (codeFlowRes.HadUpdates)
+        {
+            _logger.LogInformation("Code changes for {subscriptionId} ready in local branch {branch}",
+                subscription.Id,
+                prHeadBranch);
+
+            using (var scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Push, subscription.TargetRepository))
+            {
+                var localTargetRepoPath = isForwardFlow ? codeFlowRes.RepoPath : _vmrInfo.VmrPath;
+                await _gitClient.Push(localTargetRepoPath, prHeadBranch, subscription.TargetRepository);
+                scope.SetSuccess();
+            }
+
+            await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
+        }
+        if (!codeFlowRes.HadUpdates)
+        {
+            _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}", subscription.Id);
+        }
+        return codeFlowRes;
     }
 
     /// <summary>
