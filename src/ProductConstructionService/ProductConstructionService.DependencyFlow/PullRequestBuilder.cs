@@ -345,8 +345,6 @@ internal class PullRequestBuilder : IPullRequestBuilder
         List<DependencyUpdateSummary> dependencyUpdates)
     {
         string sourceDiffText = CreateSourceDiffLink(build, previousSourceCommit);
-        string enhancedBuildLink = await GetBuildLinkAsync(build, subscriptionId);
-
         string dependencyUpdateBlock = CreateDependencyUpdateBlock(dependencyUpdates, repoUri);
         return
             $"""
@@ -355,7 +353,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             
             ## From {build.GetRepository()}
             - **Subscription**: {GetSubscriptionLink(subscriptionId)}
-            - **Build**: {enhancedBuildLink}
+            - **Build**: {await GetBuildLinkAsync(build, subscriptionId)}
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Commit**: [{build.Commit}]({GitRepoUrlUtils.GetCommitUri(build.GetRepository(), build.Commit)})
             - **Commit Diff**: {sourceDiffText}
