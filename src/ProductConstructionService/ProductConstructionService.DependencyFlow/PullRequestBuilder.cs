@@ -181,7 +181,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
                 itemsToUpdate,
                 message.ToString());
 
-            AppendBuildDescription(description, ref startingReferenceId, update, deps, committedFiles, build);
+            startingReferenceId = await AppendBuildDescriptionAsync(description, startingReferenceId, update, deps, committedFiles, build);
         }
 
         // If the coherency update wasn't combined, then
@@ -559,18 +559,14 @@ internal class PullRequestBuilder : IPullRequestBuilder
     ///     Because PRs tend to be live for short periods of time, we can put more information
     ///     in the description than the commit message without worrying that links will go stale.
     /// </remarks>
-    private void AppendBuildDescription(
+    private async Task<int> AppendBuildDescriptionAsync(
         StringBuilder description,
-        ref int startingReferenceId,
+        int startingReferenceId,
         SubscriptionUpdateWorkItem update,
         List<DependencyUpdate> deps,
         List<GitFile>? committedFiles,
         BuildDTO build)
     {
-        // Since async methods cannot have ref parameters, we need to handle this differently
-        // We'll get the enhanced build link synchronously by calling the async method from a task
-        var enhancedBuildLink = Task.Run(async () => await GetBarVizBuildLinkAsync(build, update.SubscriptionId)).Result;
-        
         var changesLinks = new List<string>();
 
         var sourceRepository = update.SourceRepo;
@@ -583,7 +579,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             .AppendLine(sectionStartMarker)
             .AppendLine($"## From {sourceRepository}")
             .AppendLine($"- **Subscription**: {GetSubscriptionLink(updateSubscriptionId)}")
-            .AppendLine($"- **Build**: {enhancedBuildLink}")
+            .AppendLine($"- **Build**: {await GetBarVizBuildLinkAsync(build, update.SubscriptionId)}")
             .AppendLine($"- **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}")
             // This is duplicated from the files changed, but is easier to read here.
             .AppendLine($"- **Commit**: [{build.Commit}]({GitRepoUrlUtils.GetCommitUri(build.GetRepository(), build.Commit)})");
@@ -664,6 +660,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         description.AppendLine();
 
         startingReferenceId += changesLinks.Count;
+        return startingReferenceId;
     }
 
     /// <summary>
