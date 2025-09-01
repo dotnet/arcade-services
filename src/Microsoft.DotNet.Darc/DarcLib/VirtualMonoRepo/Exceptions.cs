@@ -104,7 +104,6 @@ public class NonLinearCodeflowException(string currentSha, string previousSha)
 /// This exception is used when the current codeflow cannot be applied, and if a codeflow PR already exists, then it
 /// is blocked from receiving new flows.
 /// </summary>
-/// <param name="msg"></param>
 public class BlockingCodeflowException(string msg) : Exception(msg)
 {
 }
