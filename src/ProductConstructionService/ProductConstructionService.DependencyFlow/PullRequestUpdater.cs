@@ -49,8 +49,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly ILogger _logger;
 
-    private const string OverwrittenCommitMessage = "Stopping code flow updates for this pull request as the following commits would get overwritten:";
-
     protected readonly IReminderManager<SubscriptionUpdateWorkItem> _pullRequestUpdateReminders;
     protected readonly IReminderManager<PullRequestCheck> _pullRequestCheckReminders;
     protected readonly IRedisCache<InProgressPullRequest> _pullRequestState;
