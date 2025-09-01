@@ -1290,9 +1290,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         bool isForwardFlow)
     {
         _logger.LogInformation(
-            "{direction}-flowing build {buildId} for subscription {subscriptionId} targeting {repo} / {targetBranch} to new branch {newBranch}",
+            "{direction}-flowing build {buildId} of {sourceRepo} for subscription {subscriptionId} targeting {targetRepo} / {targetBranch} to new branch {newBranch}",
             isForwardFlow ? "Forward" : "Back",
             build.Id,
+            subscription.SourceRepository,
             subscription.Id,
             subscription.TargetRepository,
             subscription.TargetBranch,
