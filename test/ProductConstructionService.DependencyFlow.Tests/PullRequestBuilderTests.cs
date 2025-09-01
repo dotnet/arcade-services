@@ -3,6 +3,7 @@
 
 using System.Text;
 using FluentAssertions;
+using Maestro.Data;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
@@ -148,10 +149,10 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
 
         string? description = null;
         await Execute(
-            context =>
+            async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = builder.GenerateCodeFlowPRDescription(
+                description = await builder.GenerateCodeFlowPRDescription(
                     update,
                     build,
                     mockPreviousCommitSha,
@@ -159,7 +160,6 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
                     upstreamRepoDiffs,
                     currentDescription: null,
                     isForwardFlow: false);
-                return Task.CompletedTask;
             });
 
         string shortCommitSha = commitSha.Substring(0, 7);
@@ -232,10 +232,10 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         };
 
         await Execute(
-            context =>
+            async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = builder.GenerateCodeFlowPRDescription(
+                description = await builder.GenerateCodeFlowPRDescription(
                     update,
                     build,
                     mockPreviousCommitSha,
@@ -243,7 +243,6 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
                     upstreamRepoDiffs,
                     description,
                     isForwardFlow: false);
-                return Task.CompletedTask;
             });
 
         description.Should().Be(
@@ -305,8 +304,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = builder.GenerateCodeFlowPRDescription(update, build1, previousCommitSha, dependencyUpdates: [], currentDescription: null, isForwardFlow: true, upstreamRepoDiffs: []);
-                await Task.CompletedTask; // hacky way to make the lambda async
+                description = await builder.GenerateCodeFlowPRDescription(update, build1, previousCommitSha, dependencyUpdates: [], currentDescription: null, isForwardFlow: true, upstreamRepoDiffs: []);
             });
         string shortCommitSha = commitSha.Substring(0, 7);
         string shortPreviousCommitSha = previousCommitSha.Substring(0, 7);
@@ -328,8 +326,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description2 = builder.GenerateCodeFlowPRDescription(update2, build2, previousCommitSha2, dependencyUpdates: [], upstreamRepoDiffs: [], description, isForwardFlow: true);
-                await Task.CompletedTask; // hacky way to make the lambda async
+                description2 = await builder.GenerateCodeFlowPRDescription(update2, build2, previousCommitSha2, dependencyUpdates: [], upstreamRepoDiffs: [], description, isForwardFlow: true);
             });
         string shortCommitSha2 = commitSha2.Substring(0, 7);
         string shortPreviousCommitSha2 = previousCommitSha2.Substring(0, 7);
@@ -897,6 +894,119 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             });
 
         return description;
+    }
+
+    [Test]
+    public async Task ShouldGenerateEnhancedBuildLinksWithBarDetails()
+    {
+        // Given
+        string commitSha = "abc1234567";
+        int buildId = 12345;
+        int channelId = 789;
+        var subscriptionId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        
+        Build build = GivenANewBuildId(buildId, commitSha);
+        build.AzureDevOpsAccount = "dnceng";
+        build.AzureDevOpsProject = "internal";
+        build.AzureDevOpsBuildId = 2782173;
+        build.AzureDevOpsBuildNumber = "20250828.10";
+        build.GitHubRepository = "https://github.com/dotnet/roslyn";
+
+        SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, buildId, subscriptionId.ToString(), SubscriptionType.DependenciesAndSources);
+        
+        string? description = null;
+        await Execute(
+            async context =>
+            {
+                // Add subscription to the in-memory database with a channel
+                var dbContext = context.GetRequiredService<BuildAssetRegistryContext>();
+                var subscription = new Maestro.Data.Models.Subscription
+                {
+                    Id = subscriptionId,
+                    ChannelId = channelId,
+                    SourceRepository = "https://github.com/dotnet/roslyn",
+                    TargetRepository = "https://github.com/dotnet/aspire",
+                    TargetBranch = "main"
+                };
+                dbContext.Subscriptions.Add(subscription);
+                await dbContext.SaveChangesAsync();
+                
+                var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
+                description = await builder.GenerateCodeFlowPRDescription(
+                    update,
+                    build,
+                    "previoussha123",
+                    dependencyUpdates: [],
+                    upstreamRepoDiffs: [],
+                    currentDescription: null,
+                    isForwardFlow: false);
+            });
+
+        // Then - Should contain enhanced build link with BAR details
+        description.Should().NotBeNull();
+        description!.Should().Contain($"[{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})");
+        description.Should().Contain($"([{buildId}](https://maestro.dot.net/channel/{channelId}/github:dotnet:roslyn/build/{buildId}))");
+        
+        // Verify the complete enhanced format is present
+        var expectedEnhancedBuildLine = $"- **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()}) ([{buildId}](https://maestro.dot.net/channel/{channelId}/github:dotnet:roslyn/build/{buildId}))";
+        description.Should().Contain(expectedEnhancedBuildLine);
+    }
+
+    [Test]
+    public async Task ShouldGenerateEnhancedBuildLinksWithAzureDevOpsRepos()
+    {
+        // Given - Test Azure DevOps repository URL to slug conversion
+        string commitSha = "def7654321";
+        int buildId = 54321;
+        int channelId = 456;
+        var subscriptionId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        
+        Build build = GivenANewBuildId(buildId, commitSha);
+        build.AzureDevOpsAccount = "dnceng";
+        build.AzureDevOpsProject = "internal";
+        build.AzureDevOpsBuildId = 1234567;
+        build.AzureDevOpsBuildNumber = "20250829.5";
+        build.AzureDevOpsRepository = "https://dev.azure.com/dnceng/internal/_git/dotnet-runtime";
+        build.GitHubRepository = null; // Clear GitHub repo to use Azure DevOps repo
+
+        SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, buildId, subscriptionId.ToString(), SubscriptionType.DependenciesAndSources);
+        
+        string? description = null;
+        await Execute(
+            async context =>
+            {
+                // Add subscription to the in-memory database with a channel
+                var dbContext = context.GetRequiredService<BuildAssetRegistryContext>();
+                var subscription = new Maestro.Data.Models.Subscription
+                {
+                    Id = subscriptionId,
+                    ChannelId = channelId,
+                    SourceRepository = "https://dev.azure.com/dnceng/internal/_git/dotnet-runtime",
+                    TargetRepository = "https://github.com/dotnet/aspire",
+                    TargetBranch = "main"
+                };
+                dbContext.Subscriptions.Add(subscription);
+                await dbContext.SaveChangesAsync();
+                
+                var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
+                description = await builder.GenerateCodeFlowPRDescription(
+                    update,
+                    build,
+                    "previoussha456",
+                    dependencyUpdates: [],
+                    upstreamRepoDiffs: [],
+                    currentDescription: null,
+                    isForwardFlow: false);
+            });
+
+        // Then - Should contain enhanced build link with BAR details for Azure DevOps repo
+        description.Should().NotBeNull();
+        description!.Should().Contain($"[{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})");
+        description.Should().Contain($"([{buildId}](https://maestro.dot.net/channel/{channelId}/azdo:dnceng:internal:dotnet-runtime/build/{buildId}))");
+        
+        // Verify the complete enhanced format is present with Azure DevOps slug
+        var expectedEnhancedBuildLine = $"- **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()}) ([{buildId}](https://maestro.dot.net/channel/{channelId}/azdo:dnceng:internal:dotnet-runtime/build/{buildId}))";
+        description.Should().Contain(expectedEnhancedBuildLine);
     }
 
     private Build GivenANewBuildId(int id, string sha)
