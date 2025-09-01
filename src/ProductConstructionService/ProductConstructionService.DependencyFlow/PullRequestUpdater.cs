@@ -211,7 +211,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         pr = await _pullRequestState.TryGetStateAsync();
         if (pr != null)
         {
-            await _pullRequestCommenter.PostCollectedCommentsAsync(pr.Url, (await GetTargetAsync()).repository);
+            await _pullRequestCommenter.PostCollectedCommentsAsync(
+                pr.Url,
+                (await GetTargetAsync()).repository,
+                [("<subscriptionId>", update.SubscriptionId.ToString())]);
         }
     }
 

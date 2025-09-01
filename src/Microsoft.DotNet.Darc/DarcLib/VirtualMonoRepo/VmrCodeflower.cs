@@ -57,7 +57,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         "PR must be merged or closed. Once this is done, code flows into the repository will resume normally",
         "on the next subscription trigger. In order to force the subscription trigger, merge or close this PR " +
         "and run the following command using the subscription-id found in this PR.\n",
-        $"`darc trigger-subscription --id <subscription-id>`.");
+        "`darc trigger-subscription --id <subscriptionId>`.");
 
     protected VmrCodeFlower(
         IVmrInfo vmrInfo,
