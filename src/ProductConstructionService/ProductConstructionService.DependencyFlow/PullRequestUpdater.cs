@@ -1359,7 +1359,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             using (var scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Push, subscription.TargetRepository))
             {
-                var localTargetRepoPath = isForwardFlow ? codeFlowRes.RepoPath : _vmrInfo.VmrPath;
+                var localTargetRepoPath = isForwardFlow ? _vmrInfo.VmrPath : codeFlowRes.RepoPath;
                 await _gitClient.Push(localTargetRepoPath, prHeadBranch, subscription.TargetRepository);
                 scope.SetSuccess();
             }
