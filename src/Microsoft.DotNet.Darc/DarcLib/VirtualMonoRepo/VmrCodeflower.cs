@@ -48,7 +48,16 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IFileSystem _fileSystem;
+    private readonly ICommentCollector _commentCollector;
     private readonly ILogger<VmrCodeFlower> _logger;
+
+    private static readonly string CannotFlowAdditionalFlowsInPrMsg = string.Concat(
+        "The source repository has received code changes from outside of this PR branch. This PR will stop",
+        "receiving additional codeflow commits. In order to resume codeflows into this repository, this",
+        "PR must be merged or closed. Once this is done, code flows into the repository will resume normally",
+        "on the next subscription trigger. In order to force the subscription trigger, merge or close this PR " +
+        "and run the following command using the subscription-id found in this PR.\n",
+        $"`darc trigger-subscription --id <subscription-id>`.");
 
     protected VmrCodeFlower(
         IVmrInfo vmrInfo,
@@ -58,6 +67,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
         IFileSystem fileSystem,
+        ICommentCollector commentCollector,
         ILogger<VmrCodeFlower> logger)
     {
         _vmrInfo = vmrInfo;
@@ -67,6 +77,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
         _fileSystem = fileSystem;
+        _commentCollector = commentCollector;
         _logger = logger;
     }
 
@@ -93,6 +104,12 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         {
             _logger.LogInformation("No new commits to flow from {sourceRepo}", currentFlow is Backflow ? "VMR" : mapping.Name);
             return false;
+        }
+
+        if (lastFlow.Name == currentFlow.Name && headBranchExisted)
+        {
+            _commentCollector.AddComment(CannotFlowAdditionalFlowsInPrMsg, CommentType.Information);
+            throw new BlockingCodeflowException("Cannot apply codeflow on PR head branch because an opposite direction flow has been merged.");
         }
 
         await EnsureCodeflowLinearityAsync(repo, currentFlow, lastFlows);

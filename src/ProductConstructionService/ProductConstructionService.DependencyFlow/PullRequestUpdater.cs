@@ -7,7 +7,6 @@ using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
@@ -1032,6 +1031,16 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             return;
         }
 
+        if (pr?.BlockedFromFutureUpdates == true)
+        {
+            _logger.LogInformation("Failed to update pr {url} for {subscription} because it is blocked from future updates",
+                pr.Url,
+                update.SubscriptionId);
+            await SetPullRequestCheckReminder(pr, isCodeFlow: true);
+            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
+            return;
+        }
+
         var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId);
         if (subscription == null)
         {
@@ -1318,6 +1327,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             }
             return null;
         }
+        catch (BlockingCodeflowException) when (pr != null)
+        {
+            await HandleBlockingCodeflowException(pr);
+            return null;
+        }
         catch (TargetBranchNotFoundException)
         {
             _logger.LogWarning("Target branch {targetBranch} not found for subscription {subscriptionId}.",
@@ -1398,6 +1412,14 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         await _pullRequestState.SetAsync(pr);
         await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
         await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);
+    }
+
+    private async Task HandleBlockingCodeflowException(InProgressPullRequest pr)
+    {
+        _logger.LogInformation("PR with url {prUrl} is blocked from receiving future codeflows.", pr.Url);
+
+        pr.BlockedFromFutureUpdates = true;
+        await _pullRequestState.SetAsync(pr);
     }
 
     // <summary>

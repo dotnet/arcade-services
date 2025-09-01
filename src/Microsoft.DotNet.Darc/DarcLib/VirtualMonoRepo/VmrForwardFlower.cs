@@ -84,8 +84,9 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             IProcessManager processManager,
             IBasicBarClient barClient,
             IFileSystem fileSystem,
+            ICommentCollector commentCollector,
             ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, commentCollector, logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
