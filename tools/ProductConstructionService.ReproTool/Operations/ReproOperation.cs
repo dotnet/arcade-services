@@ -3,6 +3,7 @@
 
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -10,6 +11,7 @@ using Octokit;
 using ProductConstructionService.ReproTool.Options;
 using Build = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
 using GitHubClient = Octokit.GitHubClient;
+using Subscription = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
 
 namespace ProductConstructionService.ReproTool.Operations;
 
@@ -32,11 +34,20 @@ internal class ReproOperation(
             throw new ArgumentException($"Couldn't find subscription with subscription id {options.Subscription}");
         }
 
-        if (!subscription.SourceEnabled)
+        await darcProcessManager.InitializeAsync();
+        if (subscription.SourceEnabled)
         {
-            throw new ArgumentException($"Subscription {options.Subscription} is not a code flow subscription");
+            await ReproCodeFlowSubscription(subscription);
+        }
+        else
+        {
+             await ReproDependencyFlowSubscription(subscription);
         }
 
+    }
+
+    private async Task ReproCodeFlowSubscription(Subscription subscription)
+    {
         if (!string.IsNullOrEmpty(subscription.SourceDirectory) && !string.IsNullOrEmpty(subscription.TargetDirectory))
         {
             throw new ArgumentException("Code flow subscription incorrectly configured: is missing SourceDirectory or TargetDirectory");
@@ -56,7 +67,6 @@ internal class ReproOperation(
                 throw new ArgumentException($"Build {build.Id} repository {build.GitHubRepository} doesn't match the subscription source repository {subscription.SourceRepository}");
             }
         }
-        await darcProcessManager.InitializeAsync();
 
         var defaultChannel = (await prodBarClient.GetDefaultChannelsAsync(repository: subscription.SourceRepository, channel: subscription.Channel.Name)).First();
 
@@ -124,6 +134,7 @@ internal class ReproOperation(
             sourceRepo: isForwardFlow ? productRepoForkUri : VmrForkUri,
             targetRepo: isForwardFlow ? VmrForkUri : productRepoForkUri,
             targetBranch: isForwardFlow ? vmrTmpBranch.Value : productRepoTmpBranch.Value,
+            sourceEnabled: true,
             sourceDirectory: subscription.SourceDirectory,
             targetDirectory: subscription.TargetDirectory,
             skipCleanup: options.SkipCleanup);
@@ -152,5 +163,52 @@ internal class ReproOperation(
         {
             await DeleteDarcPRBranchAsync(productRepoUri.Split('/').Last(), productRepoTmpBranch.Value);
         }
+    }
+
+    private async Task ReproDependencyFlowSubscription(Subscription subscription)
+    {
+
+        if (options.BuildId == null)
+        {
+             throw new ArgumentException("A buildId must be provided to flow a dependency update subscription");
+        }
+        var build = await prodBarClient.GetBuildAsync(options.BuildId.Value);
+
+        if (build.GitHubRepository != subscription.SourceRepository)
+        {
+            throw new ArgumentException($"Build {build.Id} repository {build.GitHubRepository} doesn't match the subscription source repository {subscription.SourceRepository}");
+        }
+
+        var targetRepoFork = ProductRepoFormat + subscription.TargetRepository.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
+        var sourceRepoFork = ProductRepoFormat + subscription.SourceRepository.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
+        var targetBranch = subscription.TargetBranch;
+        await using var targetRepoTmpBranch = await PrepareProductRepoForkAsync(subscription.TargetRepository, targetRepoFork, targetBranch, options.SkipCleanup);
+
+        var channelName = $"repro-{Guid.NewGuid()}";
+        await using var channel = await darcProcessManager.CreateTestChannelAsync(channelName, options.SkipCleanup);
+
+        var testBuild = await CreateBuildAsync(
+            sourceRepoFork,
+            "branch",
+            "sha",
+            CreateAssetDataFromBuild(build));
+
+        await using var testSubscription = await darcProcessManager.CreateSubscriptionAsync(
+            sourceRepoFork,
+            targetRepoFork,
+            channelName,
+            targetRepoTmpBranch.Value,
+            sourceEnabled: false,
+            sourceDirectory: null,
+            targetDirectory: null,
+            skipCleanup: options.SkipCleanup);
+
+        await darcProcessManager.AddBuildToChannelAsync(testBuild.Id, channelName, options.SkipCleanup);
+
+        await TriggerSubscriptionAsync(testSubscription.Value);
+
+        logger.LogInformation("Code flow successfully recreated. Press enter to finish and cleanup");
+        Console.ReadLine();
+        await DeleteDarcPRBranchAsync(targetRepoFork.Split('/').Last(), targetRepoTmpBranch.Value);
     }
 }
