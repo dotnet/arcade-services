@@ -108,7 +108,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         if (lastFlow.Name == currentFlow.Name && headBranchExisted)
         {
-            _commentCollector.AddComment(CannotFlowAdditionalFlowsInPrMsg, CommentType.Information);
+            _commentCollector.AddComment(CannotFlowAdditionalFlowsInPrMsg, CommentType.Warning);
             throw new BlockingCodeflowException("Cannot apply codeflow on PR head branch because an opposite direction flow has been merged.");
         }
 
