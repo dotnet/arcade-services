@@ -814,7 +814,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             repoDependencyUpdates[targetDirectory] = new TargetRepoDependencyUpdate();
             // Existing details
-            var existingDependencies = (await darc.GetDependenciesAsync(targetRepository, prBranch ?? targetBranch)).ToList();
+            var existingDependencies = (await darc.GetDependenciesAsync(targetRepository, prBranch ?? targetBranch, relativeBasePath: targetDirectory)).ToList();
 
             // Filter out excluded assets from the build assets
             List<AssetData> assetData = build.Assets

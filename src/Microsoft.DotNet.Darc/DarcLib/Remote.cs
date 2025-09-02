@@ -226,9 +226,10 @@ public sealed class Remote : IRemote
             repoUri,
             branch,
             oldDependencies,
-            targetDotNetVersion);
+            targetDotNetVersion,
+            relativeBasePath: relativeDependencyBasePath);
 
-        List<GitFile> filesToCommit = [];
+        List <GitFile> filesToCommit = [];
 
         if (mayNeedArcadeUpdate)
         {

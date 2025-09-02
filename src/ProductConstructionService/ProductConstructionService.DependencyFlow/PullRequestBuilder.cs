@@ -155,6 +155,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             // Should max one coherency update
             (SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps) coherencyUpdate =
                 targetRepoUpdate.RequiredUpdates.Where(u => u.update.IsCoherencyUpdate).SingleOrDefault();
+            List<DependencyDetail> itemsToUpdate = [];
 
             foreach ((SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps) in nonCoherencyUpdates)
             {
@@ -163,21 +164,8 @@ internal class PullRequestBuilder : IPullRequestBuilder
                 var build = await _barClient.GetBuildAsync(update.BuildId)
                     ?? throw new Exception($"Failed to find build {update.BuildId} for subscription {update.SubscriptionId}");
 
-                var itemsToUpdate = dependenciesToCommit
-                    .Select(du => du.To)
-                    .ToList();
-
-                await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
-
-                // this should be something like GetUpdates or something..
-                List<GitFile> targetDirectoryUpdatedDependencies = await remote.GetUpdatesAsync(
-                    targetRepository,
-                    newBranchName,
-                    itemsToUpdate,
-                    targetDirectory);
-                updatedDependencies.AddRange(targetDirectoryUpdatedDependencies);
-
-                startingReferenceId = await AppendBuildDescriptionAsync(description, startingReferenceId, update, deps, targetDirectoryUpdatedDependencies, build);
+                itemsToUpdate.AddRange(dependenciesToCommit
+                    .Select(du => du.To));
             }
 
             if (coherencyUpdate.update != null)
@@ -186,17 +174,19 @@ internal class PullRequestBuilder : IPullRequestBuilder
                 await AppendCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
                 AppendCoherencyUpdateDescription(description, coherencyUpdate.deps);
 
-                var itemsToUpdate = coherencyUpdate.deps
-                    .Select(du => du.To)
-                    .ToList();
+                itemsToUpdate.AddRange(coherencyUpdate.deps
+                    .Select(du => du.To));
+            }
 
-                await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
-                await remote.CommitUpdatesAsync(
+            List<GitFile> targetDirectoryUpdatedDependencies = await remote.GetUpdatesAsync(
                     targetRepository,
                     newBranchName,
                     itemsToUpdate,
-                    message.ToString());
-            }
+                    targetDirectory);
+            await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
+            updatedDependencies.AddRange(targetDirectoryUpdatedDependencies);
+            // what do I do with this?
+            //startingReferenceId = await AppendBuildDescriptionAsync(description, startingReferenceId, update, deps, targetDirectoryUpdatedDependencies, build);
         }
 
         if (updatedDependencies.Count > 0)

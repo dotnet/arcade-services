@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.ServiceModel.Channels;
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
@@ -25,6 +26,25 @@ internal class ReproOperation(
 {
     internal override async Task RunAsync()
     {
+        var build1 = await prodBarClient.GetBuildAsync(281575);
+        await darcProcessManager.InitializeAsync();
+        var testBuild = await CreateBuildAsync(
+            "https://github.com/maestro-auth-test/dotnet",
+            "branch",
+            "commit",
+           CreateAssetDataFromBuild(build1));
+        await darcProcessManager.AddBuildToChannelAsync(testBuild.Id, "test", true);
+
+
+        await using var testSubscription = await darcProcessManager.CreateSubscriptionAsync(
+            channel: "test",
+            sourceRepo: "https://github.com/maestro-auth-test/dotnet",
+            targetRepo: "https://github.com/maestro-auth-test/dotnet",
+            targetBranch: "dkurepa/SdkBandsTest",
+            sourceEnabled: false,
+            sourceDirectory: null,
+            targetDirectory: ".,src/sdk,src/templating",
+            skipCleanup: true);
         logger.LogInformation("Fetching {subscriptionId} subscription from BAR",
             options.Subscription);
         var subscription = await prodBarClient.GetSubscriptionAsync(options.Subscription);
@@ -34,7 +54,6 @@ internal class ReproOperation(
             throw new ArgumentException($"Couldn't find subscription with subscription id {options.Subscription}");
         }
 
-        await darcProcessManager.InitializeAsync();
         if (subscription.SourceEnabled)
         {
             await ReproCodeFlowSubscription(subscription);
