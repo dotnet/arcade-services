@@ -96,8 +96,9 @@ public interface IRemote
     /// <param name="repoUri">Repository to get dependencies from</param>
     /// <param name="branchOrCommit">Commit to get dependencies at</param>
     /// <param name="name">Optional name of specific dependency to get information on</param>
+    /// <param name="relativeBasePath">Optional base path within the repo to search from</param>
     /// <returns>Matching dependency information.</returns>
-    Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string repoUri, string branchOrCommit, string name = null);
+    Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string repoUri, string branchOrCommit, string name = null, UnixPath relativeBasePath = null);
 
     /// <summary>
     /// Retrieve the common script files from a remote source.
@@ -130,6 +131,19 @@ public interface IRemote
     Task<bool> BranchExistsAsync(string repoUri, string branch);
 
     /// <summary>
+    ///     Produces a set of updated dpendencies for a repository
+    /// </summary>
+    /// <param name="repoUri">Repository to update</param>
+    /// <param name="branch">Branch of <paramref name="repoUri"/> to update.</param>
+    /// <param name="itemsToUpdate">Dependencies that need updating.</param>
+    /// <param name="relativeDependencyBasePath">Relative base path of the dependency files</param>
+    Task<List<GitFile>> GetUpdatesAsync(
+        string repoUri,
+        string branch,
+        List<DependencyDetail> itemsToUpdate,
+        UnixPath relativeDependencyBasePath = null);
+
+    /// <summary>
     ///     Commit a set of updated dependencies to a repository
     /// </summary>
     /// <param name="repoUri">Repository to update</param>
@@ -140,6 +154,16 @@ public interface IRemote
         string repoUri,
         string branch,
         List<DependencyDetail> itemsToUpdate,
+        string message,
+        UnixPath relativeDependencyBasePath = null);
+
+    /// <summary>
+    ///     Commits a set of files to a repository
+    /// </summary>
+    Task CommiteUpdatesAsync(
+        List<GitFile> filesToCommit,
+        string repoUri,
+        string branch,
         string message);
 
     /// <summary>

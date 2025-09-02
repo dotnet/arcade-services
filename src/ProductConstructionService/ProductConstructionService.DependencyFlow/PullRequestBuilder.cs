@@ -11,6 +11,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
@@ -30,7 +31,7 @@ internal interface IPullRequestBuilder
     /// <param name="targetRepository">Target repository that the updates should be applied to</param>
     /// <param name="newBranchName">Target branch the updates should be to</param>
     Task<string> CalculatePRDescriptionAndCommitUpdatesAsync(
-        List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)> requiredUpdates,
+        Dictionary<UnixPath, TargetRepoDependencyUpdate> requiredUpdates,
         string? currentDescription,
         string targetRepository,
         string newBranchName);
@@ -128,7 +129,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     }
 
     public async Task<string> CalculatePRDescriptionAndCommitUpdatesAsync(
-        List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)> requiredUpdates,
+        Dictionary<UnixPath, TargetRepoDependencyUpdate> requiredUpdates,
         string? currentDescription,
         string targetRepository,
         string newBranchName)
@@ -137,79 +138,81 @@ internal class PullRequestBuilder : IPullRequestBuilder
             .AppendLine()
             .AppendLine();
         var startingReferenceId = GetStartingReferenceId(description.ToString());
-
-        // First run through non-coherency and then do a coherency
-        // message if one exists.
-        var nonCoherencyUpdates =
-            requiredUpdates.Where(u => !u.update.IsCoherencyUpdate).ToList();
-        // Should max one coherency update
-        (SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps) coherencyUpdate =
-            requiredUpdates.Where(u => u.update.IsCoherencyUpdate).SingleOrDefault();
-
-        IRemote remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
         var locationResolver = new AssetLocationResolver(_barClient);
+        IRemote remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
-        // To keep a PR to as few commits as possible, if the number of
-        // non-coherency updates is 1 then combine coherency updates with those.
-        // Otherwise, put all coherency updates in a separate commit.
-        var combineCoherencyWithNonCoherency = nonCoherencyUpdates.Count == 1;
+        var commitMessage = new StringBuilder();
+        List<GitFile> updatedDependencies = [];
 
-        foreach ((SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps) in nonCoherencyUpdates)
+        // Go through reach target directory and get the updated git files
+        foreach (var (targetDirectory, targetRepoUpdate) in requiredUpdates)
         {
-            var message = new StringBuilder();
-            List<DependencyUpdate> dependenciesToCommit = deps;
-            await CalculateCommitMessage(update, deps, message);
-            var build = await _barClient.GetBuildAsync(update.BuildId)
-                ?? throw new Exception($"Failed to find build {update.BuildId} for subscription {update.SubscriptionId}");
+            // First run through non-coherency and then do a coherency
+            // message if one exists.
+            var nonCoherencyUpdates =
+                targetRepoUpdate.RequiredUpdates.Where(u => !u.update.IsCoherencyUpdate).ToList();
 
-            if (combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
+            // Should max one coherency update
+            (SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps) coherencyUpdate =
+                targetRepoUpdate.RequiredUpdates.Where(u => u.update.IsCoherencyUpdate).SingleOrDefault();
+
+            foreach ((SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps) in nonCoherencyUpdates)
             {
-                await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                AppendCoherencyUpdateDescription(description, coherencyUpdate.deps);
-                dependenciesToCommit.AddRange(coherencyUpdate.deps);
+                List<DependencyUpdate> dependenciesToCommit = deps;
+                await AppendCommitMessage(update, deps, commitMessage);
+                var build = await _barClient.GetBuildAsync(update.BuildId)
+                    ?? throw new Exception($"Failed to find build {update.BuildId} for subscription {update.SubscriptionId}");
+
+                var itemsToUpdate = dependenciesToCommit
+                    .Select(du => du.To)
+                    .ToList();
+
+                await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
+
+                // this should be something like GetUpdates or something..
+                List<GitFile> targetDirectoryUpdatedDependencies = await remote.GetUpdatesAsync(
+                    targetRepository,
+                    newBranchName,
+                    itemsToUpdate,
+                    targetDirectory);
+                updatedDependencies.AddRange(targetDirectoryUpdatedDependencies);
+
+                startingReferenceId = await AppendBuildDescriptionAsync(description, startingReferenceId, update, deps, targetDirectoryUpdatedDependencies, build);
             }
 
-            var itemsToUpdate = dependenciesToCommit
-                .Select(du => du.To)
-                .ToList();
+            if (coherencyUpdate.update != null)
+            {
+                var message = new StringBuilder();
+                await AppendCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
+                AppendCoherencyUpdateDescription(description, coherencyUpdate.deps);
 
-            await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
+                var itemsToUpdate = coherencyUpdate.deps
+                    .Select(du => du.To)
+                    .ToList();
 
-            List<GitFile> committedFiles = await remote.CommitUpdatesAsync(
-                targetRepository,
-                newBranchName,
-                itemsToUpdate,
-                message.ToString());
-
-            startingReferenceId = await AppendBuildDescriptionAsync(description, startingReferenceId, update, deps, committedFiles, build);
+                await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
+                await remote.CommitUpdatesAsync(
+                    targetRepository,
+                    newBranchName,
+                    itemsToUpdate,
+                    message.ToString());
+            }
         }
 
-        // If the coherency update wasn't combined, then
-        // add it now
-        if (!combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
+        if (updatedDependencies.Count > 0)
         {
-            var message = new StringBuilder();
-            var build = await _barClient.GetBuildAsync(coherencyUpdate.update.BuildId);
-            await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-            AppendCoherencyUpdateDescription(description, coherencyUpdate.deps);
-
-            var itemsToUpdate = coherencyUpdate.deps
-                .Select(du => du.To)
-                .ToList();
-
-            await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
-            await remote.CommitUpdatesAsync(
+            await remote.CommiteUpdatesAsync(
+                updatedDependencies,
                 targetRepository,
                 newBranchName,
-                itemsToUpdate,
-                message.ToString());
+                commitMessage.ToString());
         }
-
-        // If the coherency algorithm failed and there are no non-coherency updates and
-        // we create an empty commit that describes an issue.
-        if (requiredUpdates.Count == 0)
+        else
         {
+            // If the coherency algorithm failed and there are no non-coherency updates and
+            // we create an empty commit that describes an issue.
             var message = "Failed to perform coherency update for one or more dependencies.";
+            remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
             await remote.CommitUpdatesAsync(targetRepository, newBranchName, [], message);
             return $"Coherency update: {message} Please review the GitHub checks or run `darc update-dependencies --coherency-only` locally against {newBranchName} for more information.";
         }
@@ -703,7 +706,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         description.AppendLine();
     }
 
-    private async Task CalculateCommitMessage(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps, StringBuilder message)
+    private async Task AppendCommitMessage(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps, StringBuilder message)
     {
         if (update.IsCoherencyUpdate)
         {

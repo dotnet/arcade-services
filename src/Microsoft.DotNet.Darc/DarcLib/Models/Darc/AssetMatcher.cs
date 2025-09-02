@@ -1,7 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.FileSystemGlobbing;
 
 namespace Microsoft.DotNet.DarcLib.Models.Darc;
@@ -23,6 +25,48 @@ public static class AssetFilterExtensions
         var matcher = new Matcher();
         matcher.AddIncludePatterns(filters);
         return new AssetMatcher(matcher);
+    }
+
+    public static Dictionary<UnixPath, IAssetMatcher> GetAssetMatchers(this IReadOnlyCollection<string> filters, List<UnixPath> targetDirectories)
+    {
+        Dictionary<UnixPath, IAssetMatcher> assetMatcherDictionary = [];
+        foreach (var dir in targetDirectories)
+        {
+            var directoryFilters = GetFiltersForDirectory(filters, dir);
+
+            if (directoryFilters == null || directoryFilters.Count == 0)
+            {
+                assetMatcherDictionary[dir] = new AssetMatcher(null);
+            }
+            else
+            {
+                var matcher = new Matcher();
+                matcher.AddIncludePatterns(directoryFilters);
+                assetMatcherDictionary[dir] = new AssetMatcher(matcher);
+            }
+        }
+
+        return assetMatcherDictionary;
+    }
+
+    private static IReadOnlyCollection<string> GetFiltersForDirectory(this IReadOnlyCollection<string> filters, string directory)
+    {
+        List<string> dirFilters = [];
+        foreach (var filter in filters)
+        {
+            var filterParts = filter.Split(':', StringSplitOptions.RemoveEmptyEntries);
+            if (filterParts.Length != 2)
+            {
+                throw new ArgumentException($"Invalid filter format: {filter}. Expected format is 'directory_pattern:asset_pattern'.");
+            }
+
+            var dirMatcher = new Matcher().AddInclude(filterParts[0]);
+            if (!dirMatcher.Match(directory).HasMatches)
+            {
+                dirFilters.Add(filterParts[1]);
+            }
+        }
+        return dirFilters;
     }
 }
 

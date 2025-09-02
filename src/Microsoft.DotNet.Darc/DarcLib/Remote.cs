@@ -156,6 +156,13 @@ public sealed class Remote : IRemote
         return _fileManager.GetPackageSources(nugetConfig).Select(nameAndFeed => nameAndFeed.feed);
     }
 
+    public async Task CommiteUpdatesAsync(
+        List<GitFile> filesToCommit,
+        string repoUri,
+        string branch,
+        string message) =>
+            await _remoteGitClient.CommitFilesAsync(filesToCommit, repoUri, branch, message);
+
     /// <summary>
     ///     Commit a set of updated dependencies to a repository
     /// </summary>
@@ -168,10 +175,23 @@ public sealed class Remote : IRemote
         string repoUri,
         string branch,
         List<DependencyDetail> itemsToUpdate,
-        string message)
+        string message,
+        UnixPath relativeDependencyBasePath = null)
     {
+        var filesToCommit = await GetUpdatesAsync(repoUri, branch, itemsToUpdate, relativeDependencyBasePath);
 
-        List<DependencyDetail> oldDependencies = [.. await GetDependenciesAsync(repoUri, branch)];
+        await _remoteGitClient.CommitFilesAsync(filesToCommit, repoUri, branch, message);
+
+        return filesToCommit;
+    }
+
+    public async Task<List<GitFile>> GetUpdatesAsync(
+        string repoUri,
+        string branch,
+        List<DependencyDetail> itemsToUpdate,
+        UnixPath relativeDependencyBasePath = null)
+    {
+        List<DependencyDetail> oldDependencies = [.. await GetDependenciesAsync(repoUri, branch, relativeDependencyBasePath)];
         await _locationResolver.AddAssetLocationToDependenciesAsync(oldDependencies);
 
         // If we are updating the arcade sdk we need to update the eng/common files
@@ -273,8 +293,6 @@ public sealed class Remote : IRemote
 
         filesToCommit.AddRange(fileContainer.GetFilesToCommit());
 
-        await _remoteGitClient.CommitFilesAsync(filesToCommit, repoUri, branch, message);
-
         return filesToCommit;
     }
 
@@ -353,9 +371,10 @@ public sealed class Remote : IRemote
     /// <returns>Matching dependency information.</returns>
     public async Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string repoUri,
         string branchOrCommit,
-        string name = null)
+        string name = null,
+        UnixPath relativeBasePath = null)
     {
-        VersionDetails versionDetails = await _fileManager.ParseVersionDetailsXmlAsync(repoUri, branchOrCommit);
+        VersionDetails versionDetails = await _fileManager.ParseVersionDetailsXmlAsync(repoUri, branchOrCommit, relativeBasePath: relativeBasePath);
         return versionDetails.Dependencies
             .Where(dependency => string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
     }
