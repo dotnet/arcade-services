@@ -66,7 +66,7 @@ public interface IDependencyFileManager
 
     Task<JObject> ReadGlobalJsonAsync(string repoUri, string branch, UnixPath? relativeBasePath = null);
 
-    Task<(string Name, XmlDocument Content)> ReadNugetConfigAsync(string repoUri, string branch);
+    Task<(string Name, XmlDocument Content)> ReadNugetConfigAsync(string repoUri, string branch, UnixPath? relativeBasePath = null);
 
     Task<XmlDocument> ReadVersionDetailsXmlAsync(string repoUri, string branch, UnixPath? relativeBasePath = null);
 
@@ -79,7 +79,8 @@ public interface IDependencyFileManager
         string? branch,
         IEnumerable<DependencyDetail> oldDependencies,
         SemanticVersion? incomingDotNetSdkVersion,
-        bool? repoHasVersionDetailsProps = null);
+        bool? repoHasVersionDetailsProps = null,
+        UnixPath? relativeBasePath = null);
 
     XmlDocument UpdatePackageSources(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo);
 
