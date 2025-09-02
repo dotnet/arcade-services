@@ -1,0 +1,1896 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using FluentAssertions;
+using Microsoft.DotNet;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Moq;
+using NUnit.Framework;
+
+namespace Microsoft.DotNet.DarcLib.UnitTests;
+
+public class LocalGitRepoTests
+{
+    /// <summary>
+    /// Verifies that the params overload forwards the exact args array to IProcessManager.ExecuteGit,
+    /// uses default (non-cancelable) CancellationToken, and returns the same ProcessExecutionResult.
+    /// Inputs:
+    ///  - Various args arrays including empty, single, multiple, and special-character arguments.
+    /// Expected:
+    ///  - IProcessManager.ExecuteGit is invoked once with:
+    ///      * repoPath derived from the LocalGitRepo.Path (any string accepted),
+    ///      * the same args array instance,
+    ///      * null env variables,
+    ///      * default CancellationToken (non-cancelable, not requested).
+    ///  - The returned ProcessExecutionResult is the exact instance from the process manager.
+    /// </summary>
+    [TestCaseSource(nameof(ExecuteGitCommand_ArgsCases))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task ExecuteGitCommand_ParamsArgs_ForwardsToProcessManagerAndReturnsResult(string[] args)
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var expected = new ProcessExecutionResult
+        {
+            ExitCode = 0,
+            StandardOutput = "ok",
+            StandardError = string.Empty,
+            TimedOut = false
+        };
+
+        processManagerMock
+            .Setup(m => m.ExecuteGit(
+                It.IsAny<string>(),
+                It.Is<string[]>(a => ReferenceEquals(a, args)),
+                It.Is<Dictionary<string, string>>(d => d == null),
+                It.Is<CancellationToken>(ct => !ct.CanBeCanceled && !ct.IsCancellationRequested)))
+            .ReturnsAsync(expected);
+
+        var repoPath = default(NativePath);
+        var sut = new LocalGitRepo(repoPath, localGitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        var result = await sut.ExecuteGitCommand(args);
+
+        // Assert
+        result.Should().BeSameAs(expected);
+        processManagerMock.Verify(m => m.ExecuteGit(
+                It.IsAny<string>(),
+                It.Is<string[]>(a => ReferenceEquals(a, args)),
+                It.Is<Dictionary<string, string>>(d => d == null),
+                It.Is<CancellationToken>(ct => !ct.CanBeCanceled && !ct.IsCancellationRequested)),
+            Times.Once);
+        processManagerMock.VerifyNoOtherCalls();
+        localGitClientMock.VerifyNoOtherCalls();
+    }
+
+    private static IEnumerable ExecuteGitCommand_ArgsCases()
+    {
+        yield return new TestCaseData(new string[0])
+            .SetName("ExecuteGitCommand_ParamsArgs_EmptyArray_ForwardsAndReturns");
+        yield return new TestCaseData(new[] { "status" })
+            .SetName("ExecuteGitCommand_ParamsArgs_SingleArg_ForwardsAndReturns");
+        yield return new TestCaseData(new[] { "commit", "-m", "msg" })
+            .SetName("ExecuteGitCommand_ParamsArgs_MultipleArgs_ForwardsAndReturns");
+        yield return new TestCaseData(new[] { "--opt", "value with spaces", "weird&chars", "unicode-π" })
+            .SetName("ExecuteGitCommand_ParamsArgs_SpecialCharacters_ForwardsAndReturns");
+        yield return new TestCaseData(new[] { new string('x', 8192) })
+            .SetName("ExecuteGitCommand_ParamsArgs_VeryLongArgument_ForwardsAndReturns");
+    }
+
+    /// <summary>
+    /// Provides parameterized input cases for ExecuteGitCommand forwarding verification.
+    /// Inputs:
+    ///  - args: different argument arrays (empty, single item, multiple with whitespace/special characters).
+    ///  - useSpecificToken: whether to pass a specific CancellationToken instance.
+    ///  - preCanceled: whether the specific token is already canceled before invocation.
+    /// Expected:
+    ///  - LocalGitRepo forwards args and the exact cancellation token instance to IProcessManager.ExecuteGit,
+    ///    uses null for env variables, and returns the exact ProcessExecutionResult returned by the process manager.
+    /// </summary>
+    public static IEnumerable<object[]> ExecuteGitCommand_ArgsAndToken_Cases()
+    {
+        yield return new object[] { Array.Empty<string>(), false, false };
+        yield return new object[] { new[] { "status" }, true, true };
+        yield return new object[] { new[] { "commit", "-m", "Hello\nWorld", "--path=C:\\temp\\file with spaces.txt" }, true, false };
+    }
+
+    /// <summary>
+    /// Verifies that ExecuteGitCommand forwards the provided arguments array and CancellationToken to the process manager,
+    /// passes null for envVariables, and returns the same ProcessExecutionResult instance.
+    /// Inputs:
+    ///  - args: array of command arguments (empty, single, and complex cases).
+    ///  - useSpecificToken: indicates if a specific CancellationToken instance should be used.
+    ///  - preCanceled: indicates if the specific token should be in the canceled state prior to the call.
+    /// Expected:
+    ///  - IProcessManager.ExecuteGit is invoked once with:
+    ///      repoPath: any non-null string,
+    ///      arguments: the exact args instance,
+    ///      envVariables: null,
+    ///      cancellationToken: the exact token instance created in the test.
+    ///  - The returned ProcessExecutionResult is the same instance produced by the mocked process manager.
+    /// </summary>
+    [Test]
+    [TestCaseSource(nameof(ExecuteGitCommand_ArgsAndToken_Cases))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task ExecuteGitCommand_ForwardsArgsAndToken_ReturnsProcessExecutionResultFromProcessManager(
+        string[] args,
+        bool useSpecificToken,
+        bool preCanceled)
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var expectedResult = new ProcessExecutionResult
+        {
+            ExitCode = 0,
+            TimedOut = false,
+            StandardOutput = "ok",
+            StandardError = string.Empty
+        };
+
+        CancellationToken token = default;
+        CancellationTokenSource cts = null;
+        if (useSpecificToken)
+        {
+            cts = new CancellationTokenSource();
+            if (preCanceled)
+            {
+                cts.Cancel();
+            }
+
+            token = cts.Token;
+        }
+
+        processManagerMock
+            .Setup(m => m.ExecuteGit(
+                It.IsAny<string>(),
+                It.Is<string[]>(a => ReferenceEquals(a, args)),
+                It.Is<Dictionary<string, string>>(d => d == null),
+                It.Is<CancellationToken>(t => t.Equals(token))))
+            .ReturnsAsync(expectedResult);
+
+        var repo = new LocalGitRepo(default, localGitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        var actual = await repo.ExecuteGitCommand(args, token);
+
+        // Assert
+        actual.Should().BeSameAs(expectedResult);
+        processManagerMock.Verify(m => m.ExecuteGit(
+            It.IsAny<string>(),
+            It.Is<string[]>(a => ReferenceEquals(a, args)),
+            It.Is<Dictionary<string, string>>(d => d == null),
+            It.Is<CancellationToken>(t => t.Equals(token))), Times.Once);
+    }
+
+    /// <summary>
+    /// Ensures that exceptions thrown by the underlying process manager are not swallowed and are propagated to the caller.
+    /// Inputs:
+    ///  - args: a simple arguments array.
+    ///  - cancellationToken: default.
+    /// Expected:
+    ///  - The same InvalidOperationException thrown by IProcessManager.ExecuteGit is observed by the caller.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void ExecuteGitCommand_WhenProcessManagerThrows_ExceptionPropagates()
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var args = new[] { "rev-parse", "HEAD" };
+        var token = default(CancellationToken);
+        var expected = new InvalidOperationException("boom");
+
+        processManagerMock
+            .Setup(m => m.ExecuteGit(
+                It.IsAny<string>(),
+                It.Is<string[]>(a => ReferenceEquals(a, args)),
+                It.Is<Dictionary<string, string>>(d => d == null),
+                It.Is<CancellationToken>(t => t.Equals(token))))
+            .Throws(expected);
+
+        var repo = new LocalGitRepo(default, localGitClientMock.Object, processManagerMock.Object);
+
+        // Act + Assert
+        Assert.ThrowsAsync<InvalidOperationException>(async () => await repo.ExecuteGitCommand(args, token))
+            .Should().BeSameAs(expected);
+    }
+
+    /// <summary>
+    /// Verifies that AddGitAuthHeader forwards the exact provided args, envVars, and repoUri to ILocalGitClient.AddGitAuthHeader
+    /// for a variety of repoUri inputs, including empty, whitespace, long, and special-character URIs.
+    /// Inputs:
+    ///  - args: non-empty list
+    ///  - envVars: non-empty dictionary
+    ///  - repoUri: multiple values (valid/edge cases)
+    /// Expected:
+    ///  - ILocalGitClient.AddGitAuthHeader is invoked exactly once with the same args/envVars instances and the provided repoUri.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [TestCaseSource(nameof(RepoUris))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void AddGitAuthHeader_DelegatesParameters_ToLocalGitClient(string repoUri)
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+        var repoPath = default(NativePath);
+
+        var args = new List<string> { "--config", "http.extraheader=AUTH" };
+        var envVars = new Dictionary<string, string>
+            {
+                { "GIT_TERMINAL_PROMPT", "0" },
+                { "GIT_TRACE", "1" }
+            };
+
+        localGitClientMock
+            .Setup(m => m.AddGitAuthHeader(It.IsAny<IList<string>>(), It.IsAny<IDictionary<string, string>>(), It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
+
+        var repo = new LocalGitRepo(repoPath, localGitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        repo.AddGitAuthHeader(args, envVars, repoUri);
+
+        // Assert
+        localGitClientMock.Verify(
+            m => m.AddGitAuthHeader(
+                It.Is<IList<string>>(a => ReferenceEquals(a, args)),
+                It.Is<IDictionary<string, string>>(e => ReferenceEquals(e, envVars)),
+                repoUri),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// Ensures that if ILocalGitClient.AddGitAuthHeader returns a faulted Task, the LocalGitRepo.AddGitAuthHeader
+    /// method does not throw (since it does not await the Task), and the call is still made.
+    /// Inputs:
+    ///  - ILocalGitClient.AddGitAuthHeader configured to return a faulted Task.
+    /// Expected:
+    ///  - No exception is thrown by LocalGitRepo.AddGitAuthHeader.
+    ///  - ILocalGitClient.AddGitAuthHeader is invoked exactly once.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void AddGitAuthHeader_ClientReturnsFaultedTask_DoesNotThrow()
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+        var repoPath = default(NativePath);
+
+        var args = new List<string> { "arg1" };
+        var envVars = new Dictionary<string, string> { { "K", "V" } };
+        var repoUri = "https://example/repo.git";
+
+        localGitClientMock
+            .Setup(m => m.AddGitAuthHeader(
+                It.IsAny<IList<string>>(),
+                It.IsAny<IDictionary<string, string>>(),
+                It.IsAny<string>()))
+            .Returns(Task.FromException(new InvalidOperationException("boom")));
+
+        var repo = new LocalGitRepo(repoPath, localGitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        repo.AddGitAuthHeader(args, envVars, repoUri);
+
+        // Assert
+        localGitClientMock.Verify(
+            m => m.AddGitAuthHeader(
+                It.Is<IList<string>>(a => ReferenceEquals(a, args)),
+                It.Is<IDictionary<string, string>>(e => ReferenceEquals(e, envVars)),
+                repoUri),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// Verifies that if ILocalGitClient.AddGitAuthHeader throws synchronously,
+    /// the exception is propagated by LocalGitRepo.AddGitAuthHeader.
+    /// Inputs:
+    ///  - ILocalGitClient.AddGitAuthHeader configured to throw InvalidOperationException synchronously.
+    /// Expected:
+    ///  - LocalGitRepo.AddGitAuthHeader throws InvalidOperationException.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void AddGitAuthHeader_ClientThrowsSynchronously_ExceptionPropagates()
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+        var repoPath = default(NativePath);
+
+        var args = new List<string> { "a" };
+        var envVars = new Dictionary<string, string> { { "X", "Y" } };
+        var repoUri = "ssh://git@host/repo.git";
+
+        localGitClientMock
+            .Setup(m => m.AddGitAuthHeader(
+                It.IsAny<IList<string>>(),
+                It.IsAny<IDictionary<string, string>>(),
+                It.IsAny<string>()))
+            .Throws(new InvalidOperationException("sync failure"));
+
+        var repo = new LocalGitRepo(repoPath, localGitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        Action act = () => repo.AddGitAuthHeader(args, envVars, repoUri);
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>().WithMessage("sync failure");
+    }
+
+    private static IEnumerable<string> RepoUris()
+    {
+        yield return "https://github.com/dotnet/arcade";
+        yield return "";
+        yield return "   ";
+        yield return new string('a', 4096);
+        yield return "ssh://user:pa$$@host:22/repo.git?param=^&*()[]{}|<>~`";
+    }
+
+    /// <summary>
+    /// Ensures LocalGitRepo.BlameLineAsync forwards all parameters unchanged to ILocalGitClient.BlameLineAsync
+    /// and returns the exact SHA produced by the client.
+    /// Inputs (parameterized):
+    ///  - relativeFilePath: path string variants including empty and whitespace.
+    ///  - line: integer including negative, zero, min/max values.
+    ///  - blameFromCommit: null and non-null strings.
+    /// Expected:
+    ///  - ILocalGitClient.BlameLineAsync is invoked once with the same relativeFilePath, line, and blameFromCommit.
+    ///  - The returned SHA is exactly the one provided by the client.
+    /// </summary>
+    [TestCase("file.txt", 1, null, "sha-1")]
+    [TestCase("", 0, "", "sha-zero")]
+    [TestCase("   ", -1, "deadbeef", "sha-deadbeef")]
+    [TestCase("dir/sub/../file", int.MinValue, null, "sha-min")]
+    [TestCase("特殊/字符.txt", int.MaxValue, "abc123", "sha-max")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task BlameLineAsync_ForwardsArgsAndReturnsClientResult(string relativeFilePath, int line, string blameFromCommit, string expectedSha)
+    {
+        // Arrange
+        var clientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+        var repoPath = new NativePath("repo");
+
+        clientMock
+            .Setup(m => m.BlameLineAsync(It.IsAny<string>(), relativeFilePath, line, blameFromCommit))
+            .ReturnsAsync(expectedSha);
+
+        var sut = new LocalGitRepo(repoPath, clientMock.Object, processManagerMock.Object);
+
+        // Act
+        var result = await sut.BlameLineAsync(relativeFilePath, line, blameFromCommit);
+
+        // Assert
+        result.Should().Be(expectedSha);
+        clientMock.Verify(m => m.BlameLineAsync(It.IsAny<string>(), relativeFilePath, line, blameFromCommit), Times.Once);
+    }
+
+    /// <summary>
+    /// Verifies that exceptions thrown by ILocalGitClient.BlameLineAsync are not swallowed and
+    /// are propagated by LocalGitRepo.BlameLineAsync.
+    /// Inputs:
+    ///  - relativeFilePath: "file.txt"
+    ///  - line: 3
+    ///  - blameFromCommit: "baseSha"
+    /// Expected:
+    ///  - LocalGitRepo.BlameLineAsync throws InvalidOperationException with the configured message.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task BlameLineAsync_WhenClientThrows_PropagatesException()
+    {
+        // Arrange
+        var clientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+        var repoPath = new NativePath("repo");
+
+        var ex = new InvalidOperationException("boom");
+        clientMock
+            .Setup(m => m.BlameLineAsync(It.IsAny<string>(), "file.txt", 3, "baseSha"))
+            .ThrowsAsync(ex);
+
+        var sut = new LocalGitRepo(repoPath, clientMock.Object, processManagerMock.Object);
+
+        // Act
+        Func<Task> act = async () => await sut.BlameLineAsync("file.txt", 3, "baseSha");
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    /// <summary>
+    /// Verifies that LocalGitRepo.BlameLineAsync(filePath, isTargetLine, blameFromCommit) forwards
+    /// all parameters to ILocalGitClient.BlameLineAsync and returns the expected SHA.
+    /// Inputs:
+    ///  - Various filePath and blameFromCommit combinations, including empty, whitespace, special characters, and non-ASCII.
+    ///  - A non-null predicate delegate.
+    /// Expected:
+    ///  - The exact same parameters are passed through to the client, and the returned SHA matches the mock setup.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [TestCase("a.txt", null)]
+    [TestCase("", null)]
+    [TestCase(" ", "")]
+    [TestCase("/unix/path/файл.txt", " ")]
+    [TestCase("path/with:invalid*chars?.txt", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef")]
+    [TestCase("./relative/../path.txt", "abc123")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task BlameLineAsync_ValidInputs_DelegatesAndReturnsExpectedSha(string filePath, string blameFromCommit)
+    {
+        // Arrange
+        var expectedSha = "expected-sha";
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var sut = new LocalGitRepo(default, localGitClientMock.Object, processManagerMock.Object);
+
+        Func<string, bool> isTargetLine = line => line != null && line.Contains("target");
+        localGitClientMock
+            .Setup(m => m.BlameLineAsync(filePath, It.Is<Func<string, bool>>(f => ReferenceEquals(f, isTargetLine)), blameFromCommit))
+            .ReturnsAsync(expectedSha);
+
+        // Act
+        var actual = await sut.BlameLineAsync(filePath, isTargetLine, blameFromCommit);
+
+        // Assert
+        actual.Should().Be(expectedSha);
+        localGitClientMock.Verify(m => m.BlameLineAsync(filePath, It.Is<Func<string, bool>>(f => ReferenceEquals(f, isTargetLine)), blameFromCommit), Times.Once);
+        localGitClientMock.VerifyNoOtherCalls();
+        processManagerMock.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Ensures that very long file paths are correctly passed through and the result is returned.
+    /// Inputs:
+    ///  - Long filePath lengths to stress parameter passing (260 and 1024 characters, plus ".txt").
+    ///  - Non-null predicate and a valid blameFromCommit value.
+    /// Expected:
+    ///  - The client receives the exact same long filePath and returns the mocked SHA.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [TestCase(260)]
+    [TestCase(1024)]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task BlameLineAsync_LongFilePath_DelegatesAndReturns(int filePathLength)
+    {
+        // Arrange
+        var expectedSha = "long-path-sha";
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var sut = new LocalGitRepo(default, localGitClientMock.Object, processManagerMock.Object);
+
+        var filePath = new string('a', filePathLength) + ".txt";
+        var blameFromCommit = "cafebabecafebabecafebabecafebabecafebabe";
+        Func<string, bool> isTargetLine = _ => true;
+
+        localGitClientMock
+            .Setup(m => m.BlameLineAsync(filePath, It.Is<Func<string, bool>>(f => ReferenceEquals(f, isTargetLine)), blameFromCommit))
+            .ReturnsAsync(expectedSha);
+
+        // Act
+        var actual = await sut.BlameLineAsync(filePath, isTargetLine, blameFromCommit);
+
+        // Assert
+        actual.Should().Be(expectedSha);
+        localGitClientMock.Verify(m => m.BlameLineAsync(filePath, It.Is<Func<string, bool>>(f => ReferenceEquals(f, isTargetLine)), blameFromCommit), Times.Once);
+        localGitClientMock.VerifyNoOtherCalls();
+        processManagerMock.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Validates that exceptions thrown by ILocalGitClient.BlameLineAsync are propagated unchanged by LocalGitRepo.BlameLineAsync.
+    /// Inputs:
+    ///  - A valid filePath and predicate, with blameFromCommit set to a typical SHA-like string.
+    ///  - ILocalGitClient.BlameLineAsync throws InvalidOperationException with a specific message.
+    /// Expected:
+    ///  - The same InvalidOperationException is thrown by LocalGitRepo.BlameLineAsync with the same message.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task BlameLineAsync_ClientThrows_ExceptionPropagates()
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var sut = new LocalGitRepo(default, localGitClientMock.Object, processManagerMock.Object);
+
+        var filePath = "file.txt";
+        var blameFromCommit = "0123456789abcdef0123456789abcdef01234567";
+        Func<string, bool> isTargetLine = _ => false;
+
+        var expectedException = new InvalidOperationException("client-failure");
+        localGitClientMock
+            .Setup(m => m.BlameLineAsync(filePath, It.Is<Func<string, bool>>(f => ReferenceEquals(f, isTargetLine)), blameFromCommit))
+            .ThrowsAsync(expectedException);
+
+        // Act
+        Func<Task> act = () => sut.BlameLineAsync(filePath, isTargetLine, blameFromCommit);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("client-failure");
+        localGitClientMock.Verify(m => m.BlameLineAsync(filePath, It.Is<Func<string, bool>>(f => ReferenceEquals(f, isTargetLine)), blameFromCommit), Times.Once);
+        localGitClientMock.VerifyNoOtherCalls();
+        processManagerMock.VerifyNoOtherCalls();
+    }
+
+    private static IEnumerable HasWorkingTreeChangesAsync_DelegatesToClient_Cases()
+    {
+        yield return new TestCaseData("C:\\repo", true);
+        yield return new TestCaseData("/tmp/repo", false);
+        yield return new TestCaseData("relative\\path", true);
+        yield return new TestCaseData("", false);
+        yield return new TestCaseData("   ", true);
+        yield return new TestCaseData("C:\\path with spaces\\and-!@#$%^&()[]{}", false);
+        yield return new TestCaseData(new string('a', 600), true);
+    }
+
+    /// <summary>
+    /// Verifies that LocalGitRepo.HasStagedChangesAsync forwards the call to ILocalGitClient and returns its result.
+    /// Inputs:
+    ///  - ILocalGitClient.HasStagedChangesAsync is set up to return either true or false.
+    ///  - LocalGitRepo is constructed with a placeholder NativePath.
+    /// Expected:
+    ///  - HasStagedChangesAsync returns the same boolean value provided by ILocalGitClient.
+    /// Notes:
+    ///  - Ignored until a reliable way to construct a valid Microsoft.DotNet.DarcLib.Helpers.NativePath from a string is available.
+    ///    To complete this test:
+    ///      1) Replace 'default(NativePath)' with a real path value, e.g., new NativePath("C:\\repo") or an implicit conversion if supported.
+    ///      2) Unignore the test.
+    /// </summary>
+    [TestCase(true)]
+    [TestCase(false)]
+    [Ignore("Cannot reliably construct a valid NativePath for LocalGitRepo without depending on unverified constructors or implicit operators. Replace default(NativePath) with a real instance and unignore.")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task HasStagedChangesAsync_ResultForwardedFromClient(bool clientResult)
+    {
+        // Arrange
+        var gitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        gitClientMock
+            .Setup(m => m.HasStagedChangesAsync(It.IsAny<string>()))
+            .ReturnsAsync(clientResult);
+
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        // TODO: Replace with a real NativePath instance if available (e.g., new NativePath("C:\\repo") or implicit conversion).
+        NativePath repoPath = default;
+
+        var repo = new LocalGitRepo(repoPath, gitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        var result = await repo.HasStagedChangesAsync();
+
+        // Assert
+        result.Should().Be(clientResult);
+        gitClientMock.Verify(m => m.HasStagedChangesAsync(It.IsAny<string>()), Times.Once);
+    }
+
+    /// <summary>
+    /// Ensures that the repository path used by LocalGitRepo when calling ILocalGitClient.HasStagedChangesAsync
+    /// is passed through. This test captures the argument sent to the client for validation.
+    /// Inputs:
+    ///  - A LocalGitRepo constructed with a known NativePath.
+    /// Expected:
+    ///  - The client receives the exact path string derived from the provided NativePath.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task HasStagedChangesAsync_PassesRepoPathToClient()
+    {
+        // Arrange
+        string capturedPath = null;
+
+        var gitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        gitClientMock
+            .Setup(m => m.HasStagedChangesAsync(It.IsAny<string>()))
+            .Callback<string>(p => capturedPath = p)
+            .ReturnsAsync(true);
+
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        // Use a simple, cross-platform-friendly path. NativePath will normalize separators as needed.
+        var repoPath = new NativePath("repo-test");
+        string expectedPath = repoPath; // implicit conversion to string
+
+        var repo = new LocalGitRepo(repoPath, gitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        await repo.HasStagedChangesAsync();
+
+        // Assert
+        capturedPath.Should().NotBeNullOrWhiteSpace();
+        capturedPath.Should().Be(expectedPath);
+    }
+
+    private static IEnumerable<string> ValidRefs()
+    {
+        yield return "main";
+        yield return "";
+        yield return " ";
+        yield return "feature/🚀-branch";
+        yield return "HEAD~1";
+        yield return "origin/main";
+        yield return "refs/tags/v1.0";
+        yield return "tag with spaces";
+        yield return "*special*";
+        yield return new string('a', 2048);
+    }
+
+    private static IEnumerable ThrowCases()
+    {
+        yield return new TestCaseData("bad-ref", typeof(InvalidOperationException), "invalid operation during checkout");
+        yield return new TestCaseData("HEAD~2", typeof(ArgumentException), "invalid ref format");
+    }
+
+    private static bool AuthorsMatch((string Name, string Email)? actual, (string Name, string Email)? expected)
+    {
+        if (actual.HasValue != expected.HasValue) return false;
+        if (!actual.HasValue && !expected.HasValue) return true;
+        return string.Equals(actual!.Value.Name, expected!.Value.Name, StringComparison.Ordinal)
+            && string.Equals(actual!.Value.Email, expected!.Value.Email, StringComparison.Ordinal);
+    }
+
+    private static IEnumerable CommitArgumentCases()
+    {
+        // message, allowEmpty, hasAuthor, authorName, authorEmail
+        yield return new TestCaseData(string.Empty, false, false, "ignored", "ignored")
+            .SetName("CommitAsync_EmptyMessage_NoAuthor_AllowEmptyFalse");
+        yield return new TestCaseData(" ", true, false, "ignored", "ignored")
+            .SetName("CommitAsync_WhitespaceMessage_NoAuthor_AllowEmptyTrue");
+        yield return new TestCaseData("feat: add support for üñïçødë\nline2", false, true, "Jane Doe", "jane.doe+test@example.com")
+            .SetName("CommitAsync_SpecialCharsMessage_WithAuthor_AllowEmptyFalse");
+        yield return new TestCaseData(new string('x', 4096), true, true, "N", "e@x.y")
+            .SetName("CommitAsync_VeryLongMessage_WithAuthor_AllowEmptyTrue");
+    }
+
+    /// <summary>
+    /// Verifies that CommitAmendAsync forwards the NativePath (as string) and the provided CancellationToken
+    /// to ILocalGitClient.CommitAmendAsync and completes successfully.
+    /// Inputs:
+    ///  - repoPath: default NativePath value.
+    ///  - cancellationToken: either not canceled or already canceled.
+    /// Expected:
+    ///  - ILocalGitClient.CommitAmendAsync is invoked exactly once with the same path and token.
+    ///  - No exception is thrown.
+    /// </summary>
+    [TestCase(false)]
+    [TestCase(true)]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task CommitAmendAsync_ForwardsPathAndCancellationToken_CallsClientOnce(bool canceled)
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+        var repoPath = default(NativePath);
+        var sut = new LocalGitRepo(repoPath, localGitClientMock.Object, processManagerMock.Object);
+
+        var cts = new CancellationTokenSource();
+        if (canceled)
+        {
+            cts.Cancel();
+        }
+        var token = cts.Token;
+
+        var expectedPathString = sut.ToString();
+
+        localGitClientMock
+            .Setup(m => m.CommitAmendAsync(
+                It.Is<string>(p => p == expectedPathString),
+                It.Is<CancellationToken>(t => t == token)))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await sut.CommitAmendAsync(token);
+
+        // Assert
+        localGitClientMock.Verify(m => m.CommitAmendAsync(
+                It.Is<string>(p => p == expectedPathString),
+                It.Is<CancellationToken>(t => t == token)),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// Ensures exceptions thrown by ILocalGitClient.CommitAmendAsync are propagated by LocalGitRepo.CommitAmendAsync.
+    /// Inputs:
+    ///  - ILocalGitClient.CommitAmendAsync throws InvalidOperationException.
+    /// Expected:
+    ///  - LocalGitRepo.CommitAmendAsync throws the same InvalidOperationException.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task CommitAmendAsync_WhenClientThrows_ExceptionIsPropagated()
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+        var sut = new LocalGitRepo(new NativePath("."), localGitClientMock.Object, processManagerMock.Object);
+
+        localGitClientMock
+            .Setup(m => m.CommitAmendAsync(
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("boom"));
+
+        // Act
+        Func<Task> act = () => sut.CommitAmendAsync(CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        localGitClientMock.Verify(m => m.CommitAmendAsync(
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// Verifies that when ILocalGitClient.CommitAmendAsync returns a canceled task,
+    /// LocalGitRepo.CommitAmendAsync throws OperationCanceledException.
+    /// Inputs:
+    ///  - A pre-canceled CancellationToken.
+    ///  - ILocalGitClient.CommitAmendAsync returns Task.FromCanceled(token).
+    /// Expected:
+    ///  - LocalGitRepo.CommitAmendAsync throws OperationCanceledException.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task CommitAmendAsync_WhenClientTaskIsCanceled_ThrowsOperationCanceled()
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+        var sut = new LocalGitRepo(default(NativePath), localGitClientMock.Object, processManagerMock.Object);
+
+        var cts = new CancellationTokenSource();
+        cts.Cancel();
+        var token = cts.Token;
+
+        localGitClientMock
+            .Setup(m => m.CommitAmendAsync(
+                It.IsAny<string>(),
+                It.Is<CancellationToken>(t => t == token)))
+            .Returns(Task.FromCanceled(token));
+
+        // Act
+        Func<Task> act = () => sut.CommitAmendAsync(token);
+
+        // Assert
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        localGitClientMock.Verify(m => m.CommitAmendAsync(
+                It.IsAny<string>(),
+                It.Is<CancellationToken>(t => t == token)),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// Provides a range of branch name inputs, including normal, empty, whitespace-only,
+    /// path-like, refs-style, special and unicode names to validate forwarding without validation.
+    /// </summary>
+    private static IEnumerable<string> BranchNames()
+    {
+        yield return "main";
+        yield return "";
+        yield return " ";
+        yield return "feature/new-api";
+        yield return "refs/heads/release";
+        yield return "release-1.0.0";
+        yield return "weird-branch-☃";
+        yield return "name~^:?*[]";
+        yield return new string('a', 1024);
+    }
+
+    /// <summary>
+    /// Verifies that DeleteBranchAsync forwards the provided branch name to ILocalGitClient.DeleteBranchAsync.
+    /// Inputs:
+    ///  - Various branchName values including empty, whitespace, special, and long strings.
+    /// Expected:
+    ///  - ILocalGitClient.DeleteBranchAsync is invoked exactly once with any repo path and the exact branchName.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [TestCaseSource(nameof(BranchNames))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task DeleteBranchAsync_ForwardsBranchNameToClient(string branchName)
+    {
+        // Arrange
+        var gitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        gitClientMock
+            .Setup(m => m.DeleteBranchAsync(It.IsAny<string>(), It.Is<string>(b => b == branchName)))
+            .Returns(Task.CompletedTask);
+
+        var repoPath = default(NativePath);
+        var repo = new LocalGitRepo(repoPath, gitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        await repo.DeleteBranchAsync(branchName);
+
+        // Assert
+        gitClientMock.Verify(m => m.DeleteBranchAsync(It.IsAny<string>(), branchName), Times.Once);
+        gitClientMock.VerifyNoOtherCalls();
+        processManagerMock.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Ensures that if the underlying ILocalGitClient.DeleteBranchAsync throws, the exception is propagated by LocalGitRepo.DeleteBranchAsync.
+    /// Inputs:
+    ///  - A branchName that triggers an ArgumentException from the mocked client.
+    /// Expected:
+    ///  - LocalGitRepo.DeleteBranchAsync throws the same ArgumentException.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task DeleteBranchAsync_ClientThrows_ExceptionIsPropagated()
+    {
+        // Arrange
+        var gitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+        var branchName = "throwing-branch";
+
+        gitClientMock
+            .Setup(m => m.DeleteBranchAsync(It.IsAny<string>(), It.Is<string>(b => b == branchName)))
+            .ThrowsAsync(new ArgumentException("Invalid branch"));
+
+        var repo = new LocalGitRepo(default(NativePath), gitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        ArgumentException ex = null;
+        try
+        {
+            await repo.DeleteBranchAsync(branchName);
+        }
+        catch (ArgumentException e)
+        {
+            ex = e;
+        }
+
+        // Assert
+        gitClientMock.Verify(m => m.DeleteBranchAsync(It.IsAny<string>(), branchName), Times.Once);
+        gitClientMock.VerifyNoOtherCalls();
+        processManagerMock.VerifyNoOtherCalls();
+
+        // Using assertion library to validate exception presence and type.
+        ex.Should().NotBeNull();
+        ex.Should().BeOfType<ArgumentException>();
+        ex.Message.Should().Contain("Invalid branch");
+    }
+
+    /// <summary>
+    /// Verifies that GetFileFromGitAsync forwards the repo path and provided arguments
+    /// (relativeFilePath, revision, outputPath) to ILocalGitClient.GetFileFromGitAsync and returns its result.
+    /// Inputs:
+    ///  - Various relativeFilePath, revision, and outputPath combinations including empty and special characters.
+    /// Expected:
+    ///  - ILocalGitClient.GetFileFromGitAsync is invoked once with the exact arguments.
+    ///  - The returned content from the client is returned unchanged by LocalGitRepo.
+    /// </summary>
+    [Test]
+    [TestCaseSource(nameof(GetFileFromGitAsync_Forwarding_Cases))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetFileFromGitAsync_ForwardsArgumentsAndReturnsResult(string relativeFilePath, string revision, string outputPath, string expectedContent)
+    {
+        // Arrange
+        var repoPathString = "/repo/root";
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        localGitClientMock
+            .Setup(m => m.GetFileFromGitAsync(repoPathString, relativeFilePath, revision, outputPath))
+            .ReturnsAsync(expectedContent);
+
+        var repo = new LocalGitRepo(new NativePath(repoPathString), localGitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        var actual = await repo.GetFileFromGitAsync(relativeFilePath, revision, outputPath);
+
+        // Assert
+        actual.Should().Be(expectedContent);
+        localGitClientMock.Verify(m => m.GetFileFromGitAsync(repoPathString, relativeFilePath, revision, outputPath), Times.Once);
+    }
+
+    /// <summary>
+    /// Ensures that when only relativeFilePath is specified, the method uses default values
+    /// revision = "HEAD" and outputPath = null.
+    /// Inputs:
+    ///  - relativeFilePath only.
+    /// Expected:
+    ///  - ILocalGitClient.GetFileFromGitAsync is called with revision "HEAD" and outputPath null.
+    ///  - The returned content matches the client's return.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetFileFromGitAsync_OnlyRelativePath_DefaultsToHeadAndNullOutput()
+    {
+        // Arrange
+        var repoPathString = "/repo/defaults";
+        var relativeFilePath = "dir/file.txt";
+        var expectedContent = "file-contents";
+
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        localGitClientMock
+            .Setup(m => m.GetFileFromGitAsync(It.IsAny<string>(), relativeFilePath, "HEAD", null))
+            .ReturnsAsync(expectedContent);
+
+        var repo = new LocalGitRepo(new NativePath(repoPathString), localGitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        var actual = await repo.GetFileFromGitAsync(relativeFilePath);
+
+        // Assert
+        actual.Should().Be(expectedContent);
+        localGitClientMock.Verify(m => m.GetFileFromGitAsync(It.IsAny<string>(), relativeFilePath, "HEAD", null), Times.Once);
+    }
+
+    /// <summary>
+    /// Validates that null returned by the underlying ILocalGitClient is propagated,
+    /// even though LocalGitRepo's method signature is non-nullable.
+    /// Inputs:
+    ///  - relativeFilePath only (default revision and outputPath).
+    /// Expected:
+    ///  - The result is null.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetFileFromGitAsync_UnderlyingReturnsNull_PropagatesNull()
+    {
+        // Arrange
+        var repoPathString = "/repo/null";
+        var relativeFilePath = "some/file.txt";
+
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        localGitClientMock
+            .Setup(m => m.GetFileFromGitAsync(It.IsAny<string>(), relativeFilePath, "HEAD", null))
+            .ReturnsAsync((string)null);
+
+        var repo = new LocalGitRepo(new NativePath(repoPathString), localGitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        var actual = await repo.GetFileFromGitAsync(relativeFilePath);
+
+        // Assert
+        actual.Should().BeNull();
+        localGitClientMock.Verify(m => m.GetFileFromGitAsync(It.IsAny<string>(), relativeFilePath, "HEAD", null), Times.Once);
+    }
+
+    /// <summary>
+    /// Ensures that exceptions thrown by the underlying ILocalGitClient are propagated unchanged.
+    /// Inputs:
+    ///  - A specific relativeFilePath, revision, and outputPath causing the client to throw.
+    /// Expected:
+    ///  - The same exception type is thrown from LocalGitRepo.GetFileFromGitAsync.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetFileFromGitAsync_ClientThrows_ExceptionPropagates()
+    {
+        // Arrange
+        var repoPathString = "/repo/error";
+        var relativeFilePath = "error/file.txt";
+        var revision = "main";
+        var outputPath = "out/path.txt";
+
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        localGitClientMock
+            .Setup(m => m.GetFileFromGitAsync(It.IsAny<string>(), relativeFilePath, revision, outputPath))
+            .ThrowsAsync(new InvalidOperationException("boom"));
+
+        var repo = new LocalGitRepo(new NativePath(repoPathString), localGitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        Func<Task> act = () => repo.GetFileFromGitAsync(relativeFilePath, revision, outputPath);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        localGitClientMock.Verify(m => m.GetFileFromGitAsync(It.IsAny<string>(), relativeFilePath, revision, outputPath), Times.Once);
+    }
+
+    private static IEnumerable GetFileFromGitAsync_Forwarding_Cases()
+    {
+        yield return new TestCaseData("file.txt", "HEAD", null, "content-1");
+        yield return new TestCaseData("", "dev", "out/file.bin", "content-2");
+        yield return new TestCaseData("   ", "", "", "content-3");
+        yield return new TestCaseData("p@th/with spaces & ü.txt", "feature/ä", "C:\\tmp\\out.txt", "content-4");
+        yield return new TestCaseData(new string('a', 4096) + ".txt", "a-branch", "/tmp/output", "content-5");
+    }
+
+    /// <summary>
+    /// Verifies that GetGitCommitAsync forwards the provided CancellationToken to ILocalGitClient
+    /// and returns whatever value the client returns, unchanged.
+    /// Inputs:
+    ///  - Various commit strings including empty, whitespace, typical SHA, mixed/special characters.
+    ///  - A non-canceled CancellationToken.
+    /// Expected:
+    ///  - The returned commit string equals the mocked value.
+    ///  - The CancellationToken observed by ILocalGitClient equals the token passed to LocalGitRepo.
+    /// </summary>
+    [TestCase("")]
+    [TestCase(" ")]
+    [TestCase("0123456789abcdef0123456789abcdef01234567")]
+    [TestCase("AbC123")]
+    [TestCase("line1\nline2\t\u2603")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetGitCommitAsync_ForwardsTokenAndReturnsClientValue(string expectedCommit)
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        string capturedRepoPath = null;
+        CancellationToken capturedToken = default;
+
+        localGitClientMock
+            .Setup(m => m.GetGitCommitAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, CancellationToken>((path, token) =>
+            {
+                capturedRepoPath = path;
+                capturedToken = token;
+            })
+            .ReturnsAsync(expectedCommit);
+
+        var sut = new LocalGitRepo(default(NativePath), localGitClientMock.Object, processManagerMock.Object);
+        using var cts = new CancellationTokenSource();
+        var token = cts.Token;
+
+        // Act
+        var result = await sut.GetGitCommitAsync(token);
+
+        // Assert
+        result.Should().Be(expectedCommit);
+        capturedToken.Should().Be(token);
+        // We avoid asserting on repo path value due to unknown NativePath -> string conversion specifics.
+        localGitClientMock.Verify(m => m.GetGitCommitAsync(It.IsAny<string>(), token), Times.Once);
+    }
+
+    /// <summary>
+    /// Ensures that any exception thrown by ILocalGitClient.GetGitCommitAsync is not swallowed and is
+    /// propagated by LocalGitRepo.GetGitCommitAsync.
+    /// Inputs:
+    ///  - ILocalGitClient configured to throw InvalidOperationException.
+    /// Expected:
+    ///  - The same InvalidOperationException is thrown to the caller.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetGitCommitAsync_ClientThrows_ExceptionIsPropagated()
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var error = new InvalidOperationException("boom");
+        localGitClientMock
+            .Setup(m => m.GetGitCommitAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(error);
+
+        var sut = new LocalGitRepo(NativePath.CurrentDir, localGitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        Func<Task> act = async () => await sut.GetGitCommitAsync(CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        localGitClientMock.Verify(m => m.GetGitCommitAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
+    /// Verifies that GetGitSubmodulesAsync forwards the commit argument unchanged to ILocalGitClient
+    /// and returns exactly the same List instance provided by the client.
+    /// Inputs:
+    ///  - Various commit strings including empty, whitespace, Unicode/special characters, and very long strings.
+    /// Expected:
+    ///  - ILocalGitClient.GetGitSubmodulesAsync is invoked exactly once with the same commit string.
+    ///  - The returned list reference is the same instance as provided by the mock.
+    /// </summary>
+    [TestCaseSource(nameof(CommitInputs))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetGitSubmodulesAsync_CommitForwarded_ReturnsClientResult(string commit)
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var expected = new List<GitSubmoduleInfo>
+            {
+                new GitSubmoduleInfo("Sub1", "path/sub1", "https://example.com/sub1.git", "abc123"),
+                new GitSubmoduleInfo("Sub2", "path/sub2", "https://example.com/sub2.git", "def456"),
+            };
+
+        localGitClientMock
+            .Setup(m => m.GetGitSubmodulesAsync(It.IsAny<string>(), It.Is<string>(c => c == commit)))
+            .ReturnsAsync(expected);
+
+        var repoPath = default(NativePath);
+        var sut = new LocalGitRepo(repoPath, localGitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        var result = await sut.GetGitSubmodulesAsync(commit);
+
+        // Assert
+        result.Should().BeSameAs(expected);
+        localGitClientMock.Verify(m => m.GetGitSubmodulesAsync(It.IsAny<string>(), commit), Times.Once);
+        localGitClientMock.VerifyNoOtherCalls();
+        processManagerMock.VerifyNoOtherCalls();
+    }
+
+    // Test data sources
+
+    private static IEnumerable<string> CommitInputs()
+    {
+        yield return "abc123";
+        yield return "";
+        yield return "   ";
+        yield return "ä漢字-✓-🐱‍👤";
+        yield return new string('a', 5000);
+    }
+
+    private static IEnumerable ExceptionCases()
+    {
+        yield return new TestCaseData("abc123", new InvalidOperationException("invalid op"));
+        yield return new TestCaseData("   ", new ArgumentException("bad commit"));
+        yield return new TestCaseData("deadbeef", new OperationCanceledException("canceled"));
+    }
+
+    /// <summary>
+    /// Verifies that GetObjectTypeAsync forwards the provided object SHA and repository path to ILocalGitClient
+    /// and returns the exact enum value produced by the client.
+    /// Inputs:
+    ///  - Various objectSha strings including empty, whitespace, special characters, and a very long string.
+    /// Expected:
+    ///  - ILocalGitClient.GetObjectTypeAsync is invoked once with the exact repo path and objectSha.
+    ///  - The method returns the same GitObjectType as returned by the client.
+    /// </summary>
+    [TestCase("")]
+    [TestCase(" ")]
+    [TestCase("\t\n")]
+    [TestCase("abc123")]
+    [TestCase("ABCDEF0123456789abcdef")]
+    [TestCase("!@#$%^&*()_+-={}[]|\\:;\"'<>,.?/")]
+    [TestCase("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")] // 100 'a's
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetObjectTypeAsync_ForwardsArgumentsAndReturnsResult(string objectSha)
+    {
+        // Arrange
+        var repoPathString = "/tmp/repo-path";
+        var nativePath = new NativePath(repoPathString);
+
+        var clientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var expected = GitObjectType.Tag;
+
+        clientMock
+            .Setup(c => c.GetObjectTypeAsync(repoPathString, objectSha))
+            .ReturnsAsync(expected);
+
+        var sut = new LocalGitRepo(nativePath, clientMock.Object, processManagerMock.Object);
+
+        // Act
+        var result = await sut.GetObjectTypeAsync(objectSha);
+
+        // Assert
+        result.Should().Be(expected);
+        clientMock.Verify(c => c.GetObjectTypeAsync(repoPathString, objectSha), Times.Once);
+        clientMock.VerifyNoOtherCalls();
+        processManagerMock.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Ensures that all possible GitObjectType values returned by the underlying client
+    /// are passed through unchanged by GetObjectTypeAsync.
+    /// Inputs:
+    ///  - Each GitObjectType enum value from Unknown to RemoteRef.
+    /// Expected:
+    ///  - The method returns exactly the same enum value as produced by ILocalGitClient.
+    /// </summary>
+    [TestCase(GitObjectType.Unknown)]
+    [TestCase(GitObjectType.Blob)]
+    [TestCase(GitObjectType.Tree)]
+    [TestCase(GitObjectType.Commit)]
+    [TestCase(GitObjectType.Tag)]
+    [TestCase(GitObjectType.RemoteRef)]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetObjectTypeAsync_PropagatesEnumValues(GitObjectType returnedType)
+    {
+        // Arrange
+        var repoPathString = "/repo";
+        var nativePath = new NativePath(repoPathString);
+
+        var clientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var objectSha = "deadbeef";
+        clientMock
+            .Setup(c => c.GetObjectTypeAsync(repoPathString, objectSha))
+            .ReturnsAsync(returnedType);
+
+        var sut = new LocalGitRepo(nativePath, clientMock.Object, processManagerMock.Object);
+
+        // Act
+        var result = await sut.GetObjectTypeAsync(objectSha);
+
+        // Assert
+        result.Should().Be(returnedType);
+        clientMock.Verify(c => c.GetObjectTypeAsync(repoPathString, objectSha), Times.Once);
+        clientMock.VerifyNoOtherCalls();
+        processManagerMock.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Validates that exceptions thrown by ILocalGitClient.GetObjectTypeAsync are not swallowed
+    /// and are propagated by LocalGitRepo.GetObjectTypeAsync.
+    /// Inputs:
+    ///  - A SHA string for which the client throws InvalidOperationException.
+    /// Expected:
+    ///  - The task throws InvalidOperationException.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetObjectTypeAsync_WhenClientThrows_PropagatesException()
+    {
+        // Arrange
+        var repoPathString = "/repo/with/error";
+        var nativePath = new NativePath(repoPathString);
+
+        var clientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var objectSha = "bad-sha";
+        clientMock
+            .Setup(c => c.GetObjectTypeAsync(repoPathString, objectSha))
+            .ThrowsAsync(new InvalidOperationException("client failure"));
+
+        var sut = new LocalGitRepo(nativePath, clientMock.Object, processManagerMock.Object);
+
+        // Act
+        Func<Task> act = async () => await sut.GetObjectTypeAsync(objectSha);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        clientMock.Verify(c => c.GetObjectTypeAsync(repoPathString, objectSha), Times.Once);
+        clientMock.VerifyNoOtherCalls();
+        processManagerMock.VerifyNoOtherCalls();
+    }
+
+    private static IEnumerable GitRefTestCases
+    {
+        get
+        {
+            yield return new TestCaseData(null).SetName("GetShaForRefAsync_GitRefNull_ForwardsNullAndReturnsClientResult");
+            yield return new TestCaseData(string.Empty).SetName("GetShaForRefAsync_GitRefEmpty_ForwardsAndReturnsClientResult");
+            yield return new TestCaseData(" ").SetName("GetShaForRefAsync_GitRefWhitespace_ForwardsAndReturnsClientResult");
+            yield return new TestCaseData("refs/heads/main").SetName("GetShaForRefAsync_GitRefBranch_ForwardsAndReturnsClientResult");
+            yield return new TestCaseData("tag/v1.0.0").SetName("GetShaForRefAsync_GitRefTag_ForwardsAndReturnsClientResult");
+            yield return new TestCaseData("abc123").SetName("GetShaForRefAsync_GitRefShortSha_ForwardsAndReturnsClientResult");
+            yield return new TestCaseData("feature/😀\t\n").SetName("GetShaForRefAsync_GitRefSpecialChars_ForwardsAndReturnsClientResult");
+            yield return new TestCaseData(new string('x', 4096)).SetName("GetShaForRefAsync_GitRefVeryLong_ForwardsAndReturnsClientResult");
+        }
+    }
+
+    /// <summary>
+    /// Ensures that exceptions thrown by the underlying ILocalGitClient.GetCheckedOutBranchAsync
+    /// are not swallowed and are propagated by LocalGitRepo.GetCheckedOutBranchAsync.
+    /// Inputs:
+    ///  - ILocalGitClient configured to throw InvalidOperationException with a specific message.
+    /// Expected:
+    ///  - LocalGitRepo.GetCheckedOutBranchAsync throws the same InvalidOperationException with the same message.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetCheckedOutBranchAsync_WhenClientThrows_ExceptionIsPropagated()
+    {
+        // Arrange
+        var clientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var repoPath = default(NativePath);
+        var ex = new InvalidOperationException("client failure");
+
+        clientMock
+            .Setup(m => m.GetCheckedOutBranchAsync(It.IsAny<NativePath>()))
+            .Returns(() => Task.FromException<string>(ex));
+
+        var sut = new LocalGitRepo(repoPath, clientMock.Object, processManagerMock.Object);
+
+        // Act
+        Func<Task> act = async () => await sut.GetCheckedOutBranchAsync();
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("client failure");
+        clientMock.Verify(m => m.GetCheckedOutBranchAsync(It.IsAny<NativePath>()), Times.Once);
+        clientMock.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Provides representative remote URI inputs to validate that LocalGitRepo.FetchAllAsync
+    /// forwards the collection to ILocalGitClient without alteration.
+    /// Inputs:
+    ///  - Empty collection.
+    ///  - Single-item collection.
+    ///  - Multiple items with duplicates and special characters.
+    /// Expected:
+    ///  - ILocalGitClient.FetchAllAsync is invoked exactly once with the same collection instance.
+    /// </summary>
+    public static IEnumerable RemoteUrisCases()
+    {
+        yield return new TestCaseData((IReadOnlyCollection<string>)Array.Empty<string>()).SetName("Empty");
+        yield return new TestCaseData((IReadOnlyCollection<string>)new[] { "origin" }).SetName("Single");
+        yield return new TestCaseData((IReadOnlyCollection<string>)new List<string> { "origin", "origin", "upstream", " ssh://host:22/repo ", "*invalid*" }).SetName("MultipleWithDuplicatesAndSpecials");
+    }
+
+    private static IEnumerable GetStagedFiles_Returns_TestCases()
+    {
+        yield return new TestCaseData(new List<string>()).SetName("GetStagedFiles_Empty_ReturnsEmpty");
+        yield return new TestCaseData(new List<string> { "file.txt" }).SetName("GetStagedFiles_SingleFile_ReturnsSingle");
+        yield return new TestCaseData(new List<string> { "src/a.cs", "C:\\temp\\b.cs" }).SetName("GetStagedFiles_MultipleFiles_ReturnsAll");
+        yield return new TestCaseData(new List<string> { new string('a', 1024) + ".txt" }).SetName("GetStagedFiles_VeryLongPath_ReturnsSame");
+        yield return new TestCaseData(new List<string> { "uniçødé.txt", "symbols!@#$%^&*().md" }).SetName("GetStagedFiles_SpecialCharacters_ReturnsSame");
+        yield return new TestCaseData(new List<string> { "dup.txt", "dup.txt" }).SetName("GetStagedFiles_Duplicates_PreservesDuplicates");
+    }
+
+    /// <summary>
+    /// Verifies that GetConfigValue forwards the setting to ILocalGitClient.GetConfigValue and returns the same result.
+    /// Inputs:
+    ///  - Various setting strings including empty, whitespace, typical, long, and special-character values.
+    /// Expected:
+    ///  - The returned value equals the mocked client's response.
+    ///  - ILocalGitClient.GetConfigValue is called exactly once with any repo path and the provided setting.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [TestCaseSource(nameof(GetConfigValue_ValidSettings_Cases))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task GetConfigValue_VariousSettings_ForwardsAndReturns(string setting, string expectedResult)
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        localGitClientMock
+            .Setup(m => m.GetConfigValue(It.IsAny<string>(), setting))
+            .ReturnsAsync(expectedResult);
+
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        NativePath repoPath = default;
+        var sut = new LocalGitRepo(repoPath, localGitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        var result = await sut.GetConfigValue(setting);
+
+        // Assert
+        result.Should().Be(expectedResult);
+        localGitClientMock.Verify(m => m.GetConfigValue(It.IsAny<string>(), setting), Times.Once);
+        localGitClientMock.VerifyNoOtherCalls();
+        processManagerMock.VerifyNoOtherCalls();
+    }
+
+    private static IEnumerable GetConfigValue_ValidSettings_Cases()
+    {
+        // empty string
+        yield return new TestCaseData(string.Empty, "value-empty").SetName("GetConfigValue_EmptySetting_ReturnsClientValue");
+
+        // whitespace-only
+        yield return new TestCaseData("   ", "value-whitespace").SetName("GetConfigValue_WhitespaceSetting_ReturnsClientValue");
+
+        // typical key
+        yield return new TestCaseData("user.email", "user@example.com").SetName("GetConfigValue_TypicalSetting_ReturnsClientValue");
+
+        // special characters
+        yield return new TestCaseData("core.long?path;*=true", "weird-value").SetName("GetConfigValue_SpecialCharactersInSetting_ReturnsClientValue");
+
+        // very long setting
+        yield return new TestCaseData(new string('x', 1024), "very-long-value").SetName("GetConfigValue_VeryLongSetting_ReturnsClientValue");
+    }
+
+    /// <summary>
+    /// Ensures that exceptions thrown by ILocalGitClient.GetConfigValue are propagated unchanged by LocalGitRepo.GetConfigValue.
+    /// Inputs:
+    ///  - A specific setting for which the client throws InvalidOperationException with a known message.
+    /// Expected:
+    ///  - The same InvalidOperationException is thrown with the expected message.
+    ///  - The client method is called exactly once.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task GetConfigValue_ClientThrows_ExceptionIsPropagated()
+    {
+        // Arrange
+        var setting = "invalid.setting";
+        var exceptionMessage = "Simulated failure";
+
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        localGitClientMock
+            .Setup(m => m.GetConfigValue(It.IsAny<string>(), setting))
+            .ThrowsAsync(new InvalidOperationException(exceptionMessage));
+
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        NativePath repoPath = default;
+        var sut = new LocalGitRepo(repoPath, localGitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        Func<Task> act = () => sut.GetConfigValue(setting);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage(exceptionMessage);
+        localGitClientMock.Verify(m => m.GetConfigValue(It.IsAny<string>(), setting), Times.Once);
+        localGitClientMock.VerifyNoOtherCalls();
+        processManagerMock.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Verifies that SetConfigValue forwards the call to ILocalGitClient.SetConfigValue with the exact
+    /// setting and value provided, and completes without throwing for valid inputs.
+    /// Inputs:
+    ///  - Various setting/value pairs including empty, whitespace-only, and special characters.
+    /// Expected:
+    ///  - ILocalGitClient.SetConfigValue is invoked exactly once with the same setting and value.
+    ///  - No exception is thrown.
+    /// </summary>
+    [TestCase("user.name", "John Doe")]
+    [TestCase("", "value")]
+    [TestCase("core.autocrlf", "")]
+    [TestCase("   ", "  ")]
+    [TestCase("weird!@#$%^&*()_+=[]{};':,.<>?|", "\t\n\r value")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task SetConfigValue_ForwardsToClient_WithExactSettingAndValue(string setting, string value)
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var repoPath = new NativePath("/tmp/repo with spaces & unicode Ā");
+        string capturedRepoPath = null;
+
+        localGitClientMock
+            .Setup(m => m.SetConfigValue(It.IsAny<string>(), setting, value))
+            .Callback<string, string, string>((repo, s, v) => capturedRepoPath = repo)
+            .Returns(Task.CompletedTask);
+
+        var sut = new LocalGitRepo(repoPath, localGitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        await sut.SetConfigValue(setting, value);
+
+        // Assert
+        localGitClientMock.Verify(m => m.SetConfigValue(It.IsAny<string>(), setting, value), Times.Once);
+        capturedRepoPath.Should().NotBeNull();
+    }
+
+    /// <summary>
+    /// Ensures that exceptions thrown by the underlying ILocalGitClient.SetConfigValue
+    /// are propagated by LocalGitRepo.SetConfigValue without being swallowed or wrapped.
+    /// Inputs:
+    ///  - A valid setting/value pair; the client mock is configured to throw InvalidOperationException.
+    /// Expected:
+    ///  - The same InvalidOperationException is thrown when calling LocalGitRepo.SetConfigValue.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task SetConfigValue_WhenClientThrows_ExceptionIsPropagated()
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var repoPath = new NativePath("/tmp/repo");
+        const string setting = "core.symlinks";
+        const string value = "true";
+
+        localGitClientMock
+            .Setup(m => m.SetConfigValue(It.IsAny<string>(), setting, value))
+            .ThrowsAsync(new InvalidOperationException("boom"));
+
+        var sut = new LocalGitRepo(repoPath, localGitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        Func<Task> act = async () => await sut.SetConfigValue(setting, value);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    /// <summary>
+    /// Verifies that ResetWorkingTree forwards the repository path (wrapped as a new NativePath)
+    /// and the optional relative UnixPath to ILocalGitClient.ResetWorkingTree.
+    /// Inputs:
+    ///  - repoPathStr: Various forms of repo paths (relative, forward/backward slashes).
+    ///  - relativePathStr: Null (whole repo), forward/backward-slash paths (subpath reset).
+    /// Expected:
+    ///  - ILocalGitClient.ResetWorkingTree is invoked exactly once with a NativePath whose Path equals the normalized repoPath,
+    ///    and a UnixPath whose Path equals the normalized relative path when provided, or null otherwise.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [TestCase("C:/repo", null)]
+    [TestCase("C:\\repo", "src/file")]
+    [TestCase(".", "dir\\sub")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task ResetWorkingTree_ForwardsRepoPathAndRelativePathToClient(string repoPathStr, string relativePathStr)
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var repoPath = new NativePath(repoPathStr);
+        var expectedRepoPathString = new NativePath(repoPathStr).Path; // expected path passed to client
+
+        UnixPath relativePath = relativePathStr != null ? new UnixPath(relativePathStr) : null;
+        var expectedRelativePathString = relativePathStr != null ? new UnixPath(relativePathStr).Path : null;
+
+        localGitClientMock
+            .Setup(m => m.ResetWorkingTree(
+                It.Is<NativePath>(p => p != null && p.Path == expectedRepoPathString),
+                It.Is<UnixPath>(rp => expectedRelativePathString == null ? rp == null : (rp != null && rp.Path == expectedRelativePathString))))
+            .Returns(Task.CompletedTask);
+
+        var sut = new LocalGitRepo(repoPath, localGitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        await sut.ResetWorkingTree(relativePath);
+
+        // Assert
+        localGitClientMock.Verify(m => m.ResetWorkingTree(
+            It.Is<NativePath>(p => p != null && p.Path == expectedRepoPathString),
+            It.Is<UnixPath>(rp => expectedRelativePathString == null ? rp == null : (rp != null && rp.Path == expectedRelativePathString))),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// Ensures that exceptions thrown by ILocalGitClient.ResetWorkingTree are propagated by LocalGitRepo.ResetWorkingTree.
+    /// Inputs:
+    ///  - A valid repo path and a non-null relative path.
+    /// Expected:
+    ///  - The same exception type thrown by the client is observed by the caller.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void ResetWorkingTree_WhenClientThrows_PropagatesException()
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var repoPath = new NativePath("C:/repo");
+        var relativePath = new UnixPath("src/file");
+
+        localGitClientMock
+            .Setup(m => m.ResetWorkingTree(
+                It.IsAny<NativePath>(),
+                It.IsAny<UnixPath>()))
+            .ThrowsAsync(new InvalidOperationException("boom"));
+
+        var sut = new LocalGitRepo(repoPath, localGitClientMock.Object, processManagerMock.Object);
+
+        // Act + Assert
+        Assert.ThrowsAsync<InvalidOperationException>(() => sut.ResetWorkingTree(relativePath));
+        localGitClientMock.Verify(m => m.ResetWorkingTree(It.IsAny<NativePath>(), It.IsAny<UnixPath>()), Times.Once);
+    }
+
+    // Helper to supply a very long path case without duplicating the boolean matrix in attributes
+    private static IEnumerable GetVeryLongPathCases()
+    {
+        var longFile = new string('a', 4096) + ".txt";
+        yield return new TestCaseData(longFile, false);
+    }
+
+    /// <summary>
+    /// Verifies that RunGitCommandAsync forwards the exact args array and the provided CancellationToken
+    /// to ILocalGitClient.RunGitCommandAsync and returns the same ProcessExecutionResult provided by the mock.
+    /// Inputs:
+    ///  - Various argument arrays including empty, single, multiple, special characters, and a very long argument.
+    ///  - CancellationToken in default and canceled states.
+    /// Expected:
+    ///  - ILocalGitClient.RunGitCommandAsync is called once with the same args instance and the same token.
+    ///  - The returned ProcessExecutionResult is the same instance as provided by the mock.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [TestCaseSource(nameof(RunGitCommandAsync_ArgsCases))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task RunGitCommandAsync_ForwardsArgsAndToken_ReturnsResult(string[] args, bool cancelToken)
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var expected = new ProcessExecutionResult
+        {
+            ExitCode = 0,
+            TimedOut = false,
+            StandardOutput = "ok",
+            StandardError = string.Empty
+        };
+
+        using var cts = new CancellationTokenSource();
+        if (cancelToken)
+        {
+            cts.Cancel();
+        }
+        var token = cts.Token;
+
+        // Use default NativePath since the method under test only forwards to ILocalGitClient.
+        var repoPath = default(NativePath);
+        var sut = new LocalGitRepo(repoPath, localGitClientMock.Object, processManagerMock.Object);
+
+        localGitClientMock
+            .Setup(m => m.RunGitCommandAsync(
+                It.IsAny<string>(),
+                It.Is<string[]>(a => ReferenceEquals(a, args)),
+                It.Is<CancellationToken>(ct => ct == token)))
+            .ReturnsAsync(expected);
+
+        // Act
+        var result = await sut.RunGitCommandAsync(args, token);
+
+        // Assert
+        result.Should().BeSameAs(expected);
+        localGitClientMock.Verify(m => m.RunGitCommandAsync(
+            It.IsAny<string>(),
+            It.Is<string[]>(a => ReferenceEquals(a, args)),
+            It.Is<CancellationToken>(ct => ct == token)), Times.Once);
+        localGitClientMock.VerifyNoOtherCalls();
+        processManagerMock.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Ensures that exceptions thrown by the underlying ILocalGitClient.RunGitCommandAsync
+    /// are not swallowed and propagate to the caller.
+    /// Inputs:
+    ///  - An args array with a single command.
+    ///  - A default CancellationToken.
+    /// Expected:
+    ///  - InvalidOperationException with the specified message is thrown from RunGitCommandAsync.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task RunGitCommandAsync_WhenClientThrows_PropagatesException()
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var repoPath = default(NativePath);
+        var sut = new LocalGitRepo(repoPath, localGitClientMock.Object, processManagerMock.Object);
+
+        var args = new[] { "status" };
+        var token = CancellationToken.None;
+
+        localGitClientMock
+            .Setup(m => m.RunGitCommandAsync(
+                It.IsAny<string>(),
+                It.Is<string[]>(a => ReferenceEquals(a, args)),
+                It.Is<CancellationToken>(ct => ct == token)))
+            .ThrowsAsync(new InvalidOperationException("boom"));
+
+        // Act
+        Func<Task> act = async () => await sut.RunGitCommandAsync(args, token);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("boom");
+        localGitClientMock.Verify(m => m.RunGitCommandAsync(
+            It.IsAny<string>(),
+            It.Is<string[]>(a => ReferenceEquals(a, args)),
+            It.Is<CancellationToken>(ct => ct == token)), Times.Once);
+        localGitClientMock.VerifyNoOtherCalls();
+        processManagerMock.VerifyNoOtherCalls();
+    }
+
+    private static IEnumerable RunGitCommandAsync_ArgsCases()
+    {
+        yield return new TestCaseData(Array.Empty<string>(), false)
+            .SetName("RunGitCommandAsync_EmptyArgs_DefaultToken_ReturnsResult");
+        yield return new TestCaseData(new[] { "status" }, false)
+            .SetName("RunGitCommandAsync_SingleArg_DefaultToken_ReturnsResult");
+        yield return new TestCaseData(new[] { "commit", "-m", "msg with spaces" }, false)
+            .SetName("RunGitCommandAsync_MultipleArgsWithSpaces_DefaultToken_ReturnsResult");
+        yield return new TestCaseData(new[] { "special-ß", "arg-!@#$%^&*()_+-=[]{};':\",.<>/?`~" }, false)
+            .SetName("RunGitCommandAsync_SpecialCharacters_DefaultToken_ReturnsResult");
+        yield return new TestCaseData(new[] { new string('a', 5000) }, true)
+            .SetName("RunGitCommandAsync_VeryLongArg_CanceledToken_ReturnsResult");
+    }
+
+    /// <summary>
+    /// Verifies that IsAncestorCommit forwards the ancestor and descendant parameters to ILocalGitClient
+    /// and returns the boolean result produced by the client.
+    /// Inputs:
+    ///  - ancestor and descendant variations including empty, whitespace, unicode.
+    /// Expected:
+    ///  - Returns the exact boolean provided by ILocalGitClient.IsAncestorCommit and calls client with the same inputs.
+    /// </summary>
+    [TestCase("abcd1234", "efgh5678", true)]
+    [TestCase("", "", false)]
+    [TestCase("  ", "\t\n", true)]
+    [TestCase("äöüß🚀", "中文", false)]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task IsAncestorCommit_ForwardsArgsAndReturnsClientResult(string ancestor, string descendant, bool clientResult)
+    {
+        // Arrange
+        var gitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        gitClientMock
+            .Setup(m => m.IsAncestorCommit(It.IsAny<string>(), ancestor, descendant))
+            .ReturnsAsync(clientResult);
+
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var sut = new LocalGitRepo(default(NativePath), gitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        var result = await sut.IsAncestorCommit(ancestor, descendant);
+
+        // Assert
+        result.Should().Be(clientResult);
+        gitClientMock.Verify(m => m.IsAncestorCommit(It.IsAny<string>(), ancestor, descendant), Times.Once);
+    }
+
+    /// <summary>
+    /// Ensures that exceptions thrown by the underlying ILocalGitClient.IsAncestorCommit
+    /// are not swallowed and propagate to the caller.
+    /// Inputs:
+    ///  - Specific ancestor and descendant values causing the client to throw.
+    /// Expected:
+    ///  - The same exception type is thrown by LocalGitRepo.IsAncestorCommit.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task IsAncestorCommit_ClientThrows_ExceptionPropagates()
+    {
+        // Arrange
+        var gitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        gitClientMock
+            .Setup(m => m.IsAncestorCommit(It.IsAny<string>(), "ancestor-x", "descendant-y"))
+            .ThrowsAsync(new InvalidOperationException("boom"));
+
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var sut = new LocalGitRepo(new NativePath("."), gitClientMock.Object, processManagerMock.Object);
+
+        // Act
+        Func<Task> act = async () => await sut.IsAncestorCommit("ancestor-x", "descendant-y");
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        gitClientMock.Verify(m => m.IsAncestorCommit(It.IsAny<string>(), "ancestor-x", "descendant-y"), Times.Once);
+    }
+
+    /// <summary>
+    /// Verifies that GetRefType forwards the repository path, gitRef, and cancellation token
+    /// to ILocalGitClient.GetRefType, and returns the value from the client.
+    /// Inputs:
+    ///  - Various gitRef strings (empty, whitespace, branch, tag, remote ref, commit-ish, long/special).
+    ///  - CancellationToken either default or a specific token.
+    /// Expected:
+    ///  - ILocalGitClient.GetRefType is invoked exactly once with the same gitRef and token.
+    ///  - The returned GitObjectType equals the value returned by the client mock.
+    /// </summary>
+    [Test]
+    [TestCaseSource(nameof(GetRefType_DelegatesAndReturns_Cases))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetRefType_DelegatesAndReturnsExpectedType(string gitRef, bool useSpecificToken, GitObjectType clientResult)
+    {
+        // Arrange
+        var localGitClientMock = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+
+        var token = useSpecificToken ? new CancellationTokenSource().Token : CancellationToken.None;
+
+        localGitClientMock
+            .Setup(m => m.GetRefType(It.IsAny<string>(), gitRef, It.Is<CancellationToken>(ct => ct.Equals(token))))
+            .ReturnsAsync(clientResult);
+
+        var repo = new LocalGitRepo(default, localGitClientMock.Object, processManagerMock.Object);
+        var expectedRepoPathString = repo.ToString();
+
+        // Act
+        var result = await repo.GetRefType(gitRef, token);
+
+        // Assert
+        result.Should().Be(clientResult);
+        localGitClientMock.Verify(
+            m => m.GetRefType(
+                It.Is<string>(s => s == expectedRepoPathString),
+                gitRef,
+                It.Is<CancellationToken>(ct => ct.Equals(token))),
+            Times.Once);
+    }
+
+    private static IEnumerable GetRefType_DelegatesAndReturns_Cases()
+    {
+        var longRef = new string('x', 1024);
+        yield return new TestCaseData("", false, GitObjectType.Unknown).SetName("EmptyRef_DefaultToken_Unknown");
+        yield return new TestCaseData("   ", true, GitObjectType.Tree).SetName("WhitespaceRef_SpecificToken_Tree");
+        yield return new TestCaseData("refs/heads/main", false, GitObjectType.Commit).SetName("BranchRef_DefaultToken_Commit");
+        yield return new TestCaseData("refs/tags/v1.0.0", true, GitObjectType.Tag).SetName("TagRef_SpecificToken_Tag");
+        yield return new TestCaseData("origin/main", false, GitObjectType.RemoteRef).SetName("RemoteRef_DefaultToken_RemoteRef");
+        yield return new TestCaseData("deadbeefdeadbeefdeadbeefdeadbeefdeadbeef", true, GitObjectType.Commit).SetName("FullSha_SpecificToken_Commit");
+        yield return new TestCaseData("feature/🔒-secure", false, GitObjectType.Unknown).SetName("SpecialChars_DefaultToken_Unknown");
+        yield return new TestCaseData(longRef, true, GitObjectType.Blob).SetName("VeryLongRef_SpecificToken_Blob");
+    }
+
+    /// <summary>
+    /// Verifies that LocalGitRepo.ToString() returns the string representation of the repository path.
+    /// Inputs:
+    ///  - A LocalGitRepo instance constructed with a specific NativePath value.
+    /// Expected:
+    ///  - ToString() returns the string value of the provided NativePath.
+    /// Notes:
+    ///  - This test is marked inconclusive because the construction API for Helpers.NativePath
+    ///    is not available in the provided context. Replace the TODOs with the correct construction,
+    ///    instantiate LocalGitRepo, and assert the returned string using AwesomeAssertions.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void ToString_ReturnsUnderlyingPathString_InconclusiveUntilNativePathConstructionKnown()
+    {
+        // Arrange
+        var pathString = "C:/repo";
+        var nativePath = new NativePath(pathString);
+        var gitClient = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var processManager = new Mock<IProcessManager>(MockBehavior.Strict);
+        var repo = new LocalGitRepo(nativePath, gitClient.Object, processManager.Object);
+
+        // Act
+        var result = repo.ToString();
+
+        // Assert
+        result.Should().Be(nativePath.Path);
+    }
+}

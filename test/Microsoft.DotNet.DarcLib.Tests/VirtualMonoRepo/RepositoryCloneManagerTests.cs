@@ -1,21 +1,26 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using FluentAssertions;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using NUnit.Framework;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
-using NUnit.Framework;
 
-#nullable enable
 namespace Microsoft.DotNet.DarcLib.Tests.VirtualMonoRepo;
+
 
 public class RepositoryCloneManagerTests
 {
@@ -184,7 +189,7 @@ public class RepositoryCloneManagerTests
         // A second clone of the same
         ResetCalls();
         clone = await _manager.PrepareCloneAsync(mapping, new[] { mapping.DefaultRemote }, Ref, default);
-        
+
         clone.Path.Should().Be(clonePath);
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(mapping.DefaultRemote, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.UpdateRemoteAsync(clonePath, "default", default), Times.Never);
@@ -200,7 +205,7 @@ public class RepositoryCloneManagerTests
             .ReturnsAsync(GitObjectType.RemoteRef);
 
         clone = await _manager.PrepareCloneAsync(mapping, new[] { mapping.DefaultRemote, newRemote }, Ref, default);
-        
+
         clone.Path.Should().Be(clonePath);
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissingAsync(clonePath, newRemote, It.IsAny<CancellationToken>()), Times.Exactly(2));
@@ -216,7 +221,7 @@ public class RepositoryCloneManagerTests
             .ReturnsAsync(GitObjectType.Unknown)
             .ReturnsAsync(GitObjectType.Commit);
         clone = await _manager.PrepareCloneAsync(mapping, new[] { mapping.DefaultRemote, newRemote }, Ref + "3", default);
-        
+
         clone.Path.Should().Be(clonePath);
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.AddRemoteIfMissingAsync(clonePath, newRemote, It.IsAny<CancellationToken>()), Times.Never);
@@ -323,7 +328,7 @@ public class RepositoryCloneManagerTests
         var remotes = configuration.Values.Select(x => x.RemoteUri).ToArray();
 
         var searchedRefs = new[] { "sha1111", "sha2222", "sha4444" };
-        var action = async() => await _manager.PrepareCloneAsync(mapping, remotes, searchedRefs, "main", default);
+        var action = async () => await _manager.PrepareCloneAsync(mapping, remotes, searchedRefs, "main", default);
         await action.Should().ThrowAsync<Exception>("because sha4 is not present anywhere");
 
         foreach (var pair in configuration)
@@ -393,5 +398,54 @@ public class RepositoryCloneManagerTests
             RemoteUri = remoteUri;
             CommitsContained = commitsContained;
         }
+    }
+
+    /// <summary>
+    /// Verifies that the RepositoryCloneManager constructor successfully creates an instance
+    /// when provided with valid dependency instances and performs no interactions with those
+    /// dependencies during construction.
+    /// Inputs:
+    /// - All constructor dependencies are provided as strict Moq mocks (non-null).
+    /// Expected:
+    /// - No exception is thrown.
+    /// - A non-null instance of RepositoryCloneManager is created.
+    /// - No methods or properties on any dependency are invoked during construction.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void Constructor_ValidDependencies_InstanceCreatedWithoutSideEffects()
+    {
+        // Arrange
+        var vmrInfo = new Mock<IVmrInfo>(MockBehavior.Strict);
+        var gitRepoCloner = new Mock<IGitRepoCloner>(MockBehavior.Strict);
+        var localGitClient = new Mock<ILocalGitClient>(MockBehavior.Strict);
+        var localGitRepoFactory = new Mock<ILocalGitRepoFactory>(MockBehavior.Strict);
+        var telemetryRecorder = new Mock<ITelemetryRecorder>(MockBehavior.Strict);
+        var fileSystem = new Mock<IFileSystem>(MockBehavior.Strict);
+        var logger = new Mock<ILogger<RepositoryCloneManager>>(MockBehavior.Strict);
+
+        // Act
+        var sut = new RepositoryCloneManager(
+            vmrInfo.Object,
+            gitRepoCloner.Object,
+            localGitClient.Object,
+            localGitRepoFactory.Object,
+            telemetryRecorder.Object,
+            fileSystem.Object,
+            logger.Object);
+
+        // Assert
+        sut.Should().NotBeNull();
+        sut.Should().BeOfType<RepositoryCloneManager>();
+        sut.Should().BeAssignableTo<CloneManager>();
+
+        vmrInfo.VerifyNoOtherCalls();
+        gitRepoCloner.VerifyNoOtherCalls();
+        localGitClient.VerifyNoOtherCalls();
+        localGitRepoFactory.VerifyNoOtherCalls();
+        telemetryRecorder.VerifyNoOtherCalls();
+        fileSystem.VerifyNoOtherCalls();
+        logger.VerifyNoOtherCalls();
     }
 }

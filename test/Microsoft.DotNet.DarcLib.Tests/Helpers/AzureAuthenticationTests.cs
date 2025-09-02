@@ -1,0 +1,217 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using Azure;
+using Azure.Core;
+using Azure.Identity;
+using FluentAssertions;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Moq;
+using NUnit.Framework;
+
+namespace Microsoft.DotNet.DarcLib.Helpers.UnitTests;
+
+
+public class AzureAuthenticationTests
+{
+    /// <summary>
+    /// Ensures that when isDevelopment is true, the method returns DefaultAzureCredential regardless of the client ID.
+    /// Inputs:
+    ///  - isDevelopment: true
+    ///  - managedIdentityClientId: null (ignored in this branch)
+    /// Expected:
+    ///  - Returns an instance of DefaultAzureCredential.
+    ///  - No exception is thrown.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void GetServiceCredential_IsDevelopment_ReturnsDefaultAzureCredential()
+    {
+        // Arrange
+        var isDevelopment = true;
+        string managedIdentityClientId = null;
+
+        // Act
+        TokenCredential credential = AzureAuthentication.GetServiceCredential(isDevelopment, managedIdentityClientId);
+
+        // Assert
+        credential.Should().BeOfType<DefaultAzureCredential>();
+    }
+
+    /// <summary>
+    /// Validates that when isDevelopment is false and a non-null client ID is provided,
+    /// the method returns ManagedIdentityCredential.
+    /// Inputs (parameterized):
+    ///  - isDevelopment: false
+    ///  - managedIdentityClientId: non-null strings (typical GUID and mixed characters)
+    /// Expected:
+    ///  - Returns an instance of ManagedIdentityCredential.
+    ///  - No exception is thrown.
+    /// </summary>
+    [TestCase("00000000-0000-0000-0000-000000000001")]
+    [TestCase("id-with_special.chars_123")]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void GetServiceCredential_NonDevelopment_WithClientId_ReturnsManagedIdentityCredential(string managedIdentityClientId)
+    {
+        // Arrange
+        var isDevelopment = false;
+
+        // Act
+        TokenCredential credential = AzureAuthentication.GetServiceCredential(isDevelopment, managedIdentityClientId);
+
+        // Assert
+        credential.Should().BeOfType<ManagedIdentityCredential>();
+    }
+
+    /// <summary>
+    /// Ensures that when isDevelopment is false and managedIdentityClientId is null,
+    /// the method throws an ArgumentException with the expected message.
+    /// Inputs:
+    ///  - isDevelopment: false
+    ///  - managedIdentityClientId: null
+    /// Expected:
+    ///  - Throws ArgumentException with message "managedIdentityClientId can't be null when creating service identity".
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void GetServiceCredential_NonDevelopment_NullClientId_ThrowsArgumentException()
+    {
+        // Arrange
+        var isDevelopment = false;
+        string managedIdentityClientId = null;
+
+        // Act
+        Action act = () => AzureAuthentication.GetServiceCredential(isDevelopment, managedIdentityClientId);
+
+        // Assert
+        act.Should()
+           .Throw<ArgumentException>()
+           .WithMessage("managedIdentityClientId can't be null when creating service identity");
+    }
+#if DEBUG
+    /// <summary>
+    /// Verifies that in DEBUG build, GetCliCredential returns a ChainedTokenCredential instance.
+    /// Inputs:
+    ///  - No inputs (static method with no parameters).
+    /// Expected:
+    ///  - A non-null instance of ChainedTokenCredential is returned without throwing.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent")]
+    [Category("auto-generated")]
+    public void GetCliCredential_DebugBuild_ReturnsChainedTokenCredential()
+    {
+        // Arrange
+
+        // Act
+        var credential = AzureAuthentication.GetCliCredential();
+
+        // Assert
+        credential.Should().NotBeNull();
+        credential.Should().BeOfType<ChainedTokenCredential>();
+    }
+
+    /// <summary>
+    /// Ensures that each call to GetCliCredential returns a new instance (no caching),
+    /// which is important to avoid unintended shared state.
+    /// Inputs:
+    ///  - Two consecutive calls to the static method with no parameters.
+    /// Expected:
+    ///  - Two distinct ChainedTokenCredential instances (reference inequality).
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent")]
+    [Category("auto-generated")]
+    public void GetCliCredential_MultipleInvocations_ReturnDistinctInstances()
+    {
+        // Arrange
+
+        // Act
+        var first = AzureAuthentication.GetCliCredential();
+        var second = AzureAuthentication.GetCliCredential();
+
+        // Assert
+        first.Should().NotBeSameAs(second);
+        first.Should().BeOfType<ChainedTokenCredential>();
+        second.Should().BeOfType<ChainedTokenCredential>();
+    }
+#endif
+
+#if DEBUG
+    /// <summary>
+    /// Ensures that in DEBUG build, consecutive calls to GetCliCredential return distinct instances (no caching).
+    /// Inputs:
+    ///  - Two consecutive static calls
+    /// Expected:
+    ///  - Two different ChainedTokenCredential instances (reference inequality).
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent")]
+    [Category("auto-generated")]
+    public void GetCliCredential_DebugBuild_MultipleInvocations_ReturnDistinctInstances()
+    {
+        // Arrange
+
+        // Act
+        var first = AzureAuthentication.GetCliCredential();
+        var second = AzureAuthentication.GetCliCredential();
+
+        // Assert
+        first.Should().NotBeSameAs(second);
+        first.Should().BeOfType<ChainedTokenCredential>();
+        second.Should().BeOfType<ChainedTokenCredential>();
+    }
+#else
+    /// <summary>
+    /// Verifies that in non-DEBUG build, GetCliCredential returns an AzureCliCredential instance.
+    /// Inputs:
+    ///  - None (static call)
+    /// Expected:
+    ///  - Non-null AzureCliCredential instance is returned without throwing.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void GetCliCredential_ReleaseBuild_ReturnsAzureCliCredential()
+    {
+        // Arrange
+
+        // Act
+        var credential = AzureAuthentication.GetCliCredential();
+
+        // Assert
+        credential.Should().NotBeNull();
+        credential.Should().BeOfType<AzureCliCredential>();
+    }
+
+    /// <summary>
+    /// Ensures that in non-DEBUG build, consecutive calls to GetCliCredential return distinct instances (no caching).
+    /// Inputs:
+    ///  - Two consecutive static calls
+    /// Expected:
+    ///  - Two different AzureCliCredential instances (reference inequality).
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void GetCliCredential_ReleaseBuild_MultipleInvocations_ReturnDistinctInstances()
+    {
+        // Arrange
+
+        // Act
+        var first = AzureAuthentication.GetCliCredential();
+        var second = AzureAuthentication.GetCliCredential();
+
+        // Assert
+        first.Should().NotBeSameAs(second);
+        first.Should().BeOfType<AzureCliCredential>();
+        second.Should().BeOfType<AzureCliCredential>();
+    }
+#endif
+
+}

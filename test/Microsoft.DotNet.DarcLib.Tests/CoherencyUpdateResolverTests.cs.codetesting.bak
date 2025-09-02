@@ -1,0 +1,645 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using FluentAssertions;
+using Microsoft.DotNet;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using Microsoft.Extensions;
+using Microsoft.Extensions.Logging;
+using Moq;
+using NUnit.Framework;
+
+namespace Microsoft.DotNet.DarcLib.Tests;
+
+
+public class CoherencyUpdateResolverTests
+{
+    /// <summary>
+    /// Ensures the constructor accepts valid dependencies and creates a non-null instance that implements ICoherencyUpdateResolver.
+    /// Inputs:
+    ///  - IBasicBarClient mock (Strict/Loose),
+    ///  - IRemoteFactory mock (Strict/Loose),
+    ///  - ILogger mock (Strict/Loose).
+    /// Expected:
+    ///  - No exception is thrown.
+    ///  - Created instance is not null and is assignable to ICoherencyUpdateResolver.
+    /// </summary>
+    [TestCase(true)]
+    [TestCase(false)]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void Constructor_ValidDependencies_CreatesInstanceImplementingInterface(bool strict)
+    {
+        // Arrange
+        var behavior = strict ? MockBehavior.Strict : MockBehavior.Loose;
+        var barClientMock = new Mock<IBasicBarClient>(behavior);
+        var remoteFactoryMock = new Mock<IRemoteFactory>(behavior);
+        var loggerMock = new Mock<ILogger>(behavior);
+
+        // Act
+        var resolver = new CoherencyUpdateResolver(barClientMock.Object, remoteFactoryMock.Object, loggerMock.Object);
+
+        // Assert
+        resolver.Should().NotBeNull();
+        resolver.Should().BeAssignableTo<ICoherencyUpdateResolver>();
+    }
+
+    /// <summary>
+    /// Ensures that the wrapper method returns an empty list when no dependencies are provided.
+    /// Inputs:
+    ///  - dependencies: empty collection.
+    /// Expected:
+    ///  - Returns an empty list.
+    ///  - No calls are made to external services (IRemoteFactory or IBasicBarClient).
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetRequiredCoherencyUpdatesAsync_EmptyDependencies_ReturnsEmptyList()
+    {
+        // Arrange
+        var barClient = new Mock<IBasicBarClient>(MockBehavior.Strict);
+        var remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
+        var logger = new Mock<ILogger>(MockBehavior.Loose);
+
+        var sut = new CoherencyUpdateResolver(barClient.Object, remoteFactory.Object, logger.Object);
+        var dependencies = new List<DependencyDetail>();
+
+        // Act
+        var result = await sut.GetRequiredCoherencyUpdatesAsync(dependencies);
+
+        // Assert
+        result.Should().BeEmpty();
+        remoteFactory.Verify(m => m.CreateRemoteAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Verifies that when a dependency is a leaf but is pinned, no updates are produced.
+    /// Inputs:
+    ///  - Two dependencies: A (parent) and B (child) where B.CoherentParentDependencyName = "A" and B.Pinned = true.
+    /// Expected:
+    ///  - Returns an empty list because pinned leaves are not updated.
+    ///  - No external calls are made to IRemoteFactory or IBasicBarClient.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetRequiredCoherencyUpdatesAsync_PinnedLeaf_NoUpdatesReturned()
+    {
+        // Arrange
+        var barClient = new Mock<IBasicBarClient>(MockBehavior.Strict);
+        var remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
+        var logger = new Mock<ILogger>(MockBehavior.Loose);
+
+        var sut = new CoherencyUpdateResolver(barClient.Object, remoteFactory.Object, logger.Object);
+
+        var parent = new DependencyDetail
+        {
+            Name = "A",
+            Version = "1.0.0",
+            RepoUri = "https://repo/a",
+            Commit = "sha-a",
+            Pinned = false
+        };
+
+        var childPinned = new DependencyDetail
+        {
+            Name = "B",
+            Version = "2.0.0",
+            RepoUri = "https://repo/b",
+            Commit = "sha-b",
+            Pinned = true,
+            CoherentParentDependencyName = "A"
+        };
+
+        var dependencies = new List<DependencyDetail> { parent, childPinned };
+
+        // Act
+        var result = await sut.GetRequiredCoherencyUpdatesAsync(dependencies);
+
+        // Assert
+        result.Should().BeEmpty();
+        remoteFactory.Verify(m => m.CreateRemoteAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Ensures that an exception from the underlying strict coherency logic is propagated by the wrapper.
+    /// Inputs:
+    ///  - A single dependency with CoherentParentDependencyName pointing to a non-existent parent.
+    /// Expected:
+    ///  - Throws DarcException indicating missing coherent parent.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetRequiredCoherencyUpdatesAsync_MissingCoherentParent_ThrowsDarcException()
+    {
+        // Arrange
+        var barClient = new Mock<IBasicBarClient>(MockBehavior.Strict);
+        var remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
+        var logger = new Mock<ILogger>(MockBehavior.Loose);
+
+        var sut = new CoherencyUpdateResolver(barClient.Object, remoteFactory.Object, logger.Object);
+
+        var orphan = new DependencyDetail
+        {
+            Name = "Orphan",
+            Version = "3.0.0",
+            RepoUri = "https://repo/orphan",
+            Commit = "sha-o",
+            CoherentParentDependencyName = "MissingParent",
+            Pinned = false
+        };
+
+        var dependencies = new List<DependencyDetail> { orphan };
+
+        // Act
+        Func<Task> act = async () => await sut.GetRequiredCoherencyUpdatesAsync(dependencies);
+
+        // Assert
+        await act.Should().ThrowAsync<DarcException>();
+        remoteFactory.Verify(m => m.CreateRemoteAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Ensures no updates are produced when assets do not match any dependency by name (case-insensitive match is used).
+    /// Inputs:
+    ///  - One asset with Name "A".
+    ///  - One dependency with Name "B".
+    /// Expected:
+    ///  - Empty result (no DependencyUpdate entries).
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void GetRequiredNonCoherencyUpdates_NoMatchingDependency_ReturnsEmpty()
+    {
+        // Arrange
+        var bar = new Mock<IBasicBarClient>(MockBehavior.Strict).Object;
+        var remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict).Object;
+        var logger = new Mock<ILogger>(MockBehavior.Loose).Object;
+        var resolver = new CoherencyUpdateResolver(bar, remoteFactory, logger);
+
+        var assets = new[]
+        {
+                new AssetData(nonShipping: false) { Name = "A", Version = "1.0.0", Locations = new List<AssetLocationData>() }
+            };
+        var dependencies = new[]
+        {
+                new DependencyDetail { Name = "B", Version = "0.9.0", RepoUri = "r", Commit = "c", Pinned = false }
+            };
+
+        // Act
+        var updates = resolver.GetRequiredNonCoherencyUpdates("repo", "sha", assets, dependencies);
+
+        // Assert
+        updates.Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// Verifies that a matching dependency marked as pinned is not updated.
+    /// Inputs:
+    ///  - One asset with Name "Pkg" and different Version from dependency.
+    ///  - Matching dependency with Pinned = true.
+    /// Expected:
+    ///  - No updates are returned.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void GetRequiredNonCoherencyUpdates_PinnedDependency_Skipped()
+    {
+        // Arrange
+        var bar = new Mock<IBasicBarClient>(MockBehavior.Strict).Object;
+        var remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict).Object;
+        var logger = new Mock<ILogger>(MockBehavior.Loose).Object;
+        var resolver = new CoherencyUpdateResolver(bar, remoteFactory, logger);
+
+        var assets = new[]
+        {
+                new AssetData(false) { Name = "Pkg", Version = "2.0.0" }
+            };
+        var dependencies = new[]
+        {
+                new DependencyDetail { Name = "Pkg", Version = "1.0.0", RepoUri = "r", Commit = "c", Pinned = true }
+            };
+
+        // Act
+        var updates = resolver.GetRequiredNonCoherencyUpdates("repo", "sha", assets, dependencies);
+
+        // Assert
+        updates.Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// Ensures that when the dependency already matches asset name/version and the provided source repo/commit exactly,
+    /// no update is produced.
+    /// Inputs:
+    ///  - Asset: Name "Pkg", Version "1.0.0".
+    ///  - Dependency: Name "Pkg", Version "1.0.0", Commit "sha", RepoUri "repo".
+    ///  - sourceRepoUri = "repo", sourceCommit = "sha".
+    /// Expected:
+    ///  - No updates are returned.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void GetRequiredNonCoherencyUpdates_ExactMatch_NoUpdateNeeded()
+    {
+        // Arrange
+        var bar = new Mock<IBasicBarClient>(MockBehavior.Strict).Object;
+        var remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict).Object;
+        var logger = new Mock<ILogger>(MockBehavior.Loose).Object;
+        var resolver = new CoherencyUpdateResolver(bar, remoteFactory, logger);
+
+        const string name = "Pkg";
+        const string version = "1.0.0";
+        const string repo = "repo";
+        const string sha = "sha";
+
+        var assets = new[] { new AssetData(false) { Name = name, Version = version } };
+        var dependencies = new[]
+        {
+                new DependencyDetail { Name = name, Version = version, RepoUri = repo, Commit = sha, Pinned = false }
+            };
+
+        // Act
+        var updates = resolver.GetRequiredNonCoherencyUpdates(repo, sha, assets, dependencies);
+
+        // Assert
+        updates.Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// Validates typical update behavior: case-insensitive match on dependency name triggers an update, and
+    /// resulting 'To' dependency has fields sourced from the asset and source parameters; Locations are mapped.
+    /// Inputs:
+    ///  - Dependency: Name "pkg", Version "0.9.0", RepoUri "old", Commit "old".
+    ///  - Asset: Name "Pkg", Version "1.2.3", Locations ["feed1","feed2"].
+    ///  - sourceRepoUri = "newRepo", sourceCommit = "newSha".
+    /// Expected:
+    ///  - One update returned.
+    ///  - From == original dependency.
+    ///  - To fields: Name "Pkg", Version "1.2.3", RepoUri "newRepo", Commit "newSha", Locations mapped from asset.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void GetRequiredNonCoherencyUpdates_CaseCorrectionAndLocations_Mapped()
+    {
+        // Arrange
+        var bar = new Mock<IBasicBarClient>(MockBehavior.Strict).Object;
+        var remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict).Object;
+        var logger = new Mock<ILogger>(MockBehavior.Loose).Object;
+        var resolver = new CoherencyUpdateResolver(bar, remoteFactory, logger);
+
+        var dependency = new DependencyDetail
+        {
+            Name = "pkg",
+            Version = "0.9.0",
+            RepoUri = "old",
+            Commit = "old",
+            Pinned = false
+        };
+
+        var assets = new[]
+        {
+                new AssetData(false)
+                {
+                    Name = "Pkg",
+                    Version = "1.2.3",
+                    Locations = new List<AssetLocationData>
+                    {
+                        new AssetLocationData(LocationType.NugetFeed) { Location = "feed1" },
+                        new AssetLocationData(LocationType.Container) { Location = "feed2" }
+                    }
+                }
+            };
+
+        const string sourceRepoUri = "newRepo";
+        const string sourceCommit = "newSha";
+
+        // Act
+        var updates = resolver.GetRequiredNonCoherencyUpdates(sourceRepoUri, sourceCommit, assets, new[] { dependency });
+
+        // Assert
+        updates.Should().HaveCount(1);
+        var update = updates[0];
+        update.From.Should().NotBeNull();
+        update.To.Should().NotBeNull();
+
+        update.From.Name.Should().Be("pkg");
+        update.From.Version.Should().Be("0.9.0");
+        update.From.RepoUri.Should().Be("old");
+        update.From.Commit.Should().Be("old");
+
+        update.To.Name.Should().Be("Pkg");
+        update.To.Version.Should().Be("1.2.3");
+        update.To.RepoUri.Should().Be(sourceRepoUri);
+        update.To.Commit.Should().Be(sourceCommit);
+
+        var toLocations = update.To.Locations?.ToList();
+        toLocations.Should().NotBeNull();
+        toLocations.Should().HaveCount(2);
+        // Verify exact mapped values
+        toLocations[0].Should().Be("feed1");
+        toLocations[1].Should().Be("feed2");
+    }
+
+    /// <summary>
+    /// Ensures that if a dependency has a coherent parent configured but that parent asset is not present
+    /// in the provided assets set, the dependency is not updated.
+    /// Inputs:
+    ///  - Child dependency with CoherentParentDependencyName "Parent".
+    ///  - Assets include only the child asset.
+    /// Expected:
+    ///  - No updates are returned.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void GetRequiredNonCoherencyUpdates_CoherentParentMissingInAssets_Skipped()
+    {
+        // Arrange
+        var bar = new Mock<IBasicBarClient>(MockBehavior.Strict).Object;
+        var remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict).Object;
+        var logger = new Mock<ILogger>(MockBehavior.Loose).Object;
+        var resolver = new CoherencyUpdateResolver(bar, remoteFactory, logger);
+
+        var child = new DependencyDetail
+        {
+            Name = "Child",
+            Version = "0.1",
+            RepoUri = "r",
+            Commit = "c",
+            Pinned = false,
+            CoherentParentDependencyName = "Parent"
+        };
+
+        var assets = new[]
+        {
+                new AssetData(false) { Name = "Child", Version = "1.0" }
+            };
+
+        // Act
+        var updates = resolver.GetRequiredNonCoherencyUpdates("repo", "sha", assets, new[] { child });
+
+        // Assert
+        updates.Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// Verifies that when the coherent parent is present among assets and the parent dependency is pinned,
+    /// the child dependency is not updated.
+    /// Inputs:
+    ///  - Child dependency with CoherentParentDependencyName "Parent".
+    ///  - Dependencies include "Parent" with Pinned = true.
+    ///  - Assets include both "Child" and "Parent".
+    /// Expected:
+    ///  - No updates are returned.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void GetRequiredNonCoherencyUpdates_CoherentParentPresentAndPinned_Skipped()
+    {
+        // Arrange
+        var bar = new Mock<IBasicBarClient>(MockBehavior.Strict).Object;
+        var remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict).Object;
+        var logger = new Mock<ILogger>(MockBehavior.Loose).Object;
+        var resolver = new CoherencyUpdateResolver(bar, remoteFactory, logger);
+
+        var child = new DependencyDetail
+        {
+            Name = "Child",
+            Version = "0.1",
+            RepoUri = "r",
+            Commit = "c",
+            Pinned = false,
+            CoherentParentDependencyName = "Parent"
+        };
+        var parent = new DependencyDetail
+        {
+            Name = "Parent",
+            Version = "5.0",
+            RepoUri = "rP",
+            Commit = "cP",
+            Pinned = true
+        };
+
+        var assets = new[]
+        {
+                new AssetData(false) { Name = "Child", Version = "1.0" },
+                new AssetData(false) { Name = "Parent", Version = "5.1" }
+            };
+
+        // Act
+        var updates = resolver.GetRequiredNonCoherencyUpdates("repo", "sha", assets, new[] { child, parent });
+
+        // Assert
+        updates.Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// Demonstrates case-sensitivity bug/behavior in parent pinned check:
+    /// if the coherent parent name differs only by case in the dependency list,
+    /// the code will not detect it as pinned and will proceed with update.
+    /// Inputs:
+    ///  - Child dependency with CoherentParentDependencyName "Parent".
+    ///  - Dependencies include "parent" (lowercase) with Pinned = true.
+    ///  - Assets include both "Child" and "Parent".
+    /// Expected:
+    ///  - One update is produced because parent pinned check is case-sensitive.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void GetRequiredNonCoherencyUpdates_CoherentParentPinnedNameCaseMismatch_Updates()
+    {
+        // Arrange
+        var bar = new Mock<IBasicBarClient>(MockBehavior.Strict).Object;
+        var remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict).Object;
+        var logger = new Mock<ILogger>(MockBehavior.Loose).Object;
+        var resolver = new CoherencyUpdateResolver(bar, remoteFactory, logger);
+
+        var child = new DependencyDetail
+        {
+            Name = "Child",
+            Version = "0.1",
+            RepoUri = "r",
+            Commit = "c",
+            Pinned = false,
+            CoherentParentDependencyName = "Parent"
+        };
+        var parentDifferentCase = new DependencyDetail
+        {
+            Name = "parent", // different case
+            Version = "5.0",
+            RepoUri = "rP",
+            Commit = "cP",
+            Pinned = true
+        };
+
+        var assets = new[]
+        {
+                new AssetData(false) { Name = "Child", Version = "1.0" },
+                new AssetData(false) { Name = "Parent", Version = "5.1" }
+            };
+
+        // Act
+        var updates = resolver.GetRequiredNonCoherencyUpdates("repo", "sha", assets, new[] { child, parentDifferentCase });
+
+        // Assert
+        updates.Should().HaveCount(1);
+        updates[0].From.Name.Should().Be("Child");
+        updates[0].To.Name.Should().Be("Child");
+        updates[0].To.Version.Should().Be("1.0");
+    }
+
+    /// <summary>
+    /// Ensures that when multiple assets with the same name are present, only one update is generated
+    /// for the matching dependency (first encountered asset determines the update).
+    /// Inputs:
+    ///  - Two assets with the same Name "Dup" but different Versions ("1.0","2.0").
+    ///  - One dependency named "Dup".
+    /// Expected:
+    ///  - Exactly one update produced.
+    ///  - The update uses the first asset's Version ("1.0").
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void GetRequiredNonCoherencyUpdates_DuplicateAssetsForSameDependency_OnlyOneUpdate()
+    {
+        // Arrange
+        var bar = new Mock<IBasicBarClient>(MockBehavior.Strict).Object;
+        var remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict).Object;
+        var logger = new Mock<ILogger>(MockBehavior.Loose).Object;
+        var resolver = new CoherencyUpdateResolver(bar, remoteFactory, logger);
+
+        var assets = new[]
+        {
+                new AssetData(false) { Name = "Dup", Version = "1.0" },
+                new AssetData(false) { Name = "Dup", Version = "2.0" }
+            };
+        var dep = new DependencyDetail { Name = "Dup", Version = "0.1", RepoUri = "r", Commit = "c", Pinned = false };
+
+        // Act
+        var updates = resolver.GetRequiredNonCoherencyUpdates("repo", "sha", assets, new[] { dep });
+
+        // Assert
+        updates.Should().HaveCount(1);
+        updates[0].To.Version.Should().Be("1.0");
+    }
+
+    /// <summary>
+    /// Verifies the constructor correctly accepts valid dependencies and creates a usable instance.
+    /// Inputs:
+    ///  - IBasicBarClient mock with specified MockBehavior.
+    ///  - IRemoteFactory mock with specified MockBehavior.
+    ///  - ILogger mock with specified MockBehavior.
+    /// Expected:
+    ///  - No exception is thrown during construction.
+    ///  - Resulting instance is not null and is assignable to ICoherencyUpdateResolver.
+    /// </summary>
+    [TestCase(MockBehavior.Strict, MockBehavior.Strict, MockBehavior.Strict)]
+    [TestCase(MockBehavior.Strict, MockBehavior.Strict, MockBehavior.Loose)]
+    [TestCase(MockBehavior.Strict, MockBehavior.Loose, MockBehavior.Strict)]
+    [TestCase(MockBehavior.Strict, MockBehavior.Loose, MockBehavior.Loose)]
+    [TestCase(MockBehavior.Loose, MockBehavior.Strict, MockBehavior.Strict)]
+    [TestCase(MockBehavior.Loose, MockBehavior.Strict, MockBehavior.Loose)]
+    [TestCase(MockBehavior.Loose, MockBehavior.Loose, MockBehavior.Strict)]
+    [TestCase(MockBehavior.Loose, MockBehavior.Loose, MockBehavior.Loose)]
+    [Category("constructor")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void Constructor_ValidDependencies_CreatesInstanceImplementingInterface(
+        MockBehavior barClientBehavior,
+        MockBehavior remoteFactoryBehavior,
+        MockBehavior loggerBehavior)
+    {
+        // Arrange
+        var barClient = new Mock<IBasicBarClient>(barClientBehavior);
+        var remoteFactory = new Mock<IRemoteFactory>(remoteFactoryBehavior);
+        var logger = new Mock<ILogger>(loggerBehavior);
+
+        // Act
+        var sut = new CoherencyUpdateResolver(barClient.Object, remoteFactory.Object, logger.Object);
+
+        // Assert
+        sut.Should().NotBeNull();
+        sut.Should().BeAssignableTo<ICoherencyUpdateResolver>();
+    }
+
+    private static IEnumerable<TestCaseData> NoWorkCases()
+    {
+        // Empty dependency graph
+        yield return new TestCaseData(
+            new List<DependencyDetail>())
+            .SetName("GetRequiredCoherencyUpdatesAsync_EmptyDependencies_ReturnsEmptyList");
+
+        // Leaf is pinned; no updates should be produced and no external calls should be made
+        var parent = new DependencyDetail
+        {
+            Name = "A",
+            Version = "1.0.0",
+            RepoUri = "https://repo/a",
+            Commit = "sha-a",
+            Pinned = false
+        };
+
+        var childPinned = new DependencyDetail
+        {
+            Name = "B",
+            Version = "2.0.0",
+            RepoUri = "https://repo/b",
+            Commit = "sha-b",
+            Pinned = true,
+            CoherentParentDependencyName = "A"
+        };
+
+        yield return new TestCaseData(
+            new List<DependencyDetail> { parent, childPinned })
+            .SetName("GetRequiredCoherencyUpdatesAsync_PinnedLeaf_NoUpdatesReturned");
+    }
+
+    /// <summary>
+    /// Validates scenarios where no coherency updates are required.
+    /// Inputs:
+    ///  - Case 1: Empty dependency list.
+    ///  - Case 2: A leaf dependency that is pinned.
+    /// Expected:
+    ///  - Returns an empty list in both cases.
+    ///  - No external calls to IRemoteFactory are made.
+    /// </summary>
+    [TestCaseSource(nameof(NoWorkCases))]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task GetRequiredCoherencyUpdatesAsync_NoWorkCases_ReturnsEmptyAndNoRemoteCalls(IReadOnlyCollection<DependencyDetail> dependencies)
+    {
+        // Arrange
+        var barClient = new Mock<IBasicBarClient>(MockBehavior.Strict);
+        var remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
+        var logger = new Mock<ILogger>(MockBehavior.Loose);
+
+        var sut = new CoherencyUpdateResolver(barClient.Object, remoteFactory.Object, logger.Object);
+
+        // Act
+        var result = await sut.GetRequiredCoherencyUpdatesAsync(dependencies);
+
+        // Assert
+        result.Should().BeEmpty();
+        remoteFactory.Verify(m => m.CreateRemoteAsync(It.IsAny<string>()), Times.Never);
+    }
+
+}

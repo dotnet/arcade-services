@@ -1,0 +1,825 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using Maestro;
+using Maestro.Common;
+using Microsoft.DotNet;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.Extensions;
+using Microsoft.Extensions.Logging;
+using Moq;
+using NUnit.Framework;
+
+namespace Microsoft.DotNet.DarcLib.UnitTests;
+
+public class LocalGitClientTests
+{
+    /// <summary>
+    /// Ensures the constructor accepts all required dependencies and creates a usable instance without throwing.
+    /// Inputs:
+    ///  - Five mocked dependencies (IRemoteTokenProvider, ITelemetryRecorder, IProcessManager, IFileSystem, ILogger).
+    ///  - Mock behavior toggled between Strict and Loose.
+    /// Expected:
+    ///  - No exception is thrown and a non-null LocalGitClient instance is created.
+    /// </summary>
+    [TestCase(true, TestName = "Constructor_WithStrictMocks_InstanceCreated")]
+    [TestCase(false, TestName = "Constructor_WithLooseMocks_InstanceCreated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void Constructor_WithAllDependenciesProvided_InstanceCreated(bool useStrict)
+    {
+        // Arrange
+        var behavior = useStrict ? MockBehavior.Strict : MockBehavior.Loose;
+
+        var remoteTokenProvider = new Mock<IRemoteTokenProvider>(behavior).Object;
+        var telemetryRecorder = new Mock<ITelemetryRecorder>(behavior).Object;
+        var processManager = new Mock<IProcessManager>(behavior).Object;
+        var fileSystem = new Mock<IFileSystem>(behavior).Object;
+        var logger = new Mock<ILogger>(behavior).Object;
+
+        // Act
+        var client = new LocalGitClient(remoteTokenProvider, telemetryRecorder, processManager, fileSystem, logger);
+
+        // Assert
+        // Intentionally avoiding external assertion frameworks per constraints.
+        // Test passes if no exception is thrown and instance is created.
+        if (client == null)
+        {
+            throw new Exception("LocalGitClient instance should not be null after construction.");
+        }
+    }
+
+    /// <summary>
+    /// Partial test documenting behavior when a non-empty branch is provided.
+    /// This path is exercised by simulating a successful git invocation via IProcessManager.
+    /// Inputs:
+    ///  - repoPath: any path.
+    ///  - relativeFilePath: any file path.
+    ///  - branch: non-empty string.
+    /// Expected:
+    ///  - GetFileContentsAsync returns the StandardOutput provided by the mocked IProcessManager for git.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetFileContentsAsync_BranchProvided_ReturnsContentFromGitMock()
+    {
+        // Arrange
+        var repoPath = "/repo/path";
+        var relativeFilePath = "dir/file.txt";
+        var branch = "main";
+        var expectedContent = "file-content-from-git";
+
+        var remoteTokenProvider = new Mock<IRemoteTokenProvider>(MockBehavior.Loose);
+        var telemetryRecorder = new Mock<ITelemetryRecorder>(MockBehavior.Loose);
+        var processManager = new Mock<IProcessManager>(MockBehavior.Strict);
+        var fileSystem = new Mock<IFileSystem>(MockBehavior.Loose);
+        var logger = new Mock<ILogger>(MockBehavior.Loose);
+
+        var successResult = new ProcessExecutionResult
+        {
+            ExitCode = 0,
+            TimedOut = false,
+            StandardOutput = expectedContent,
+            StandardError = string.Empty
+        };
+
+        // Cover common ExecuteGit overloads to ensure whichever is used by GetFileContentsAsync returns our content
+        processManager
+            .Setup(m => m.ExecuteGit(
+                It.IsAny<string>(),
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<Dictionary<string, string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(successResult);
+
+        processManager
+            .Setup(m => m.ExecuteGit(
+                It.IsAny<string>(),
+                It.IsAny<string[]>(),
+                It.IsAny<Dictionary<string, string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(successResult);
+
+        processManager
+            .Setup(m => m.ExecuteGit(
+                It.IsAny<string>(),
+                It.IsAny<string[]>()))
+            .ReturnsAsync(successResult);
+
+        var sut = new LocalGitClient(
+            remoteTokenProvider.Object,
+            telemetryRecorder.Object,
+            processManager.Object,
+            fileSystem.Object,
+            logger.Object);
+
+        // Act: invoke GetFileContentsAsync via reflection to avoid tight coupling to exact signature
+        var method = typeof(LocalGitClient)
+            .GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
+            .FirstOrDefault(m =>
+            {
+                if (m.Name != "GetFileContentsAsync")
+                {
+                    return false;
+                }
+
+                var p = m.GetParameters();
+                return p.Length >= 3
+                       && p[0].ParameterType == typeof(string)
+                       && p[1].ParameterType == typeof(string)
+                       && p[2].ParameterType == typeof(string);
+            });
+
+        if (method == null)
+        {
+            throw new Exception("Expected LocalGitClient.GetFileContentsAsync(repoPath, relativeFilePath, branch[, CancellationToken]) to exist.");
+        }
+
+        var parameters = method.GetParameters();
+        object[] args;
+        if (parameters.Length >= 4 && parameters[3].ParameterType == typeof(CancellationToken))
+        {
+            args = new object[] { repoPath, relativeFilePath, branch, CancellationToken.None };
+        }
+        else
+        {
+            args = new object[] { repoPath, relativeFilePath, branch };
+        }
+
+        var invokeResult = method.Invoke(sut, args);
+        if (invokeResult is Task task)
+        {
+            await task.ConfigureAwait(false);
+        }
+        else
+        {
+            throw new Exception("Expected GetFileContentsAsync to return a Task or Task<string>.");
+        }
+
+        string actualContent = null;
+        var taskType = invokeResult.GetType();
+        if (taskType.IsGenericType && taskType.GetGenericTypeDefinition() == typeof(Task<>))
+        {
+            var resProp = taskType.GetProperty("Result");
+            actualContent = resProp?.GetValue(invokeResult) as string;
+        }
+
+        // Assert
+        if (!string.Equals(expectedContent, actualContent, StringComparison.Ordinal))
+        {
+            throw new Exception($"Unexpected content. Expected: '{expectedContent}', Actual: '{actualContent ?? "<null>"}'");
+        }
+    }
+
+    /// <summary>
+    /// Verifies that CheckoutAsync passes the correct repo path and arguments ["checkout", ref]
+    /// to IProcessManager.ExecuteGit and completes without throwing when the process succeeds.
+    /// Inputs:
+    ///  - Various repoPath and refToCheckout strings (including empty, whitespace, special chars, long).
+    /// Expected:
+    ///  - IProcessManager.ExecuteGit is invoked once with the exact arguments.
+    ///  - No exception is thrown.
+    /// </summary>
+    [TestCaseSource(nameof(ValidCheckoutArgs))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task CheckoutAsync_ValidInputs_ExecutesGitCheckoutAndDoesNotThrow(string repoPath, string refToCheckout)
+    {
+        // Arrange
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+        processManagerMock
+            .Setup(m => m.ExecuteGit(
+                repoPath,
+                It.IsAny<string[]>(),
+                It.IsAny<Dictionary<string, string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProcessExecutionResult { ExitCode = 0, TimedOut = false });
+
+        var sut = CreateSut(processManagerMock.Object);
+
+        // Act
+        await sut.CheckoutAsync(repoPath, refToCheckout);
+
+        // Assert
+        processManagerMock.Verify(m => m.ExecuteGit(
+            repoPath,
+            It.Is<string[]>(args => args.Length == 2 && args[0] == "checkout" && args[1] == refToCheckout),
+            It.Is<Dictionary<string, string>>(env => env == null),
+            It.Is<CancellationToken>(ct => ct.Equals(default(CancellationToken)))),
+            Times.Once);
+    }
+
+    private static LocalGitClient CreateSut(IProcessManager processManager)
+    {
+        var remoteTokenProvider = new Mock<IRemoteTokenProvider>(MockBehavior.Loose).Object;
+        var telemetryRecorder = new Mock<ITelemetryRecorder>(MockBehavior.Loose).Object;
+        var fileSystem = new Mock<IFileSystem>(MockBehavior.Loose).Object;
+        var logger = new Mock<ILogger>(MockBehavior.Loose).Object;
+
+        return new LocalGitClient(remoteTokenProvider, telemetryRecorder, processManager, fileSystem, logger);
+    }
+
+    private static IEnumerable<TestCaseData> ValidCheckoutArgs()
+    {
+        yield return new TestCaseData("/repo/path", "main").SetName("Repo_Normal_Ref_Main");
+        yield return new TestCaseData("", "").SetName("Repo_Empty_Ref_Empty");
+        yield return new TestCaseData("   ", " \t\n").SetName("Repo_Whitespace_Ref_Whitespace");
+        yield return new TestCaseData("C:\\root\\repo", "feature/JIRA-1234_fix-äöü-ß").SetName("Repo_WindowsPath_Ref_SpecialChars");
+        yield return new TestCaseData(new string('a', 1024), new string('b', 1024)).SetName("Repo_Long_Ref_Long");
+    }
+
+    private static IEnumerable<TestCaseData> FailureCases()
+    {
+        // Non-zero exit code (no timeout)
+        yield return new TestCaseData("/repo/path", "dev", false, 1).SetName("Failure_NonZeroExit_NoTimeout");
+        // Timed out (exit code may be -2 or any), ensure failure due to timeout
+        yield return new TestCaseData("/repo/path", "release", true, -2).SetName("Failure_Timeout");
+        // Edge inputs with failure
+        yield return new TestCaseData("", "", false, 137).SetName("Failure_EdgeInputs_NonZeroExit");
+    }
+
+    /// <summary>
+    /// Ensures DeleteBranchAsync invokes git with the correct arguments and completes without throwing
+    /// when the underlying process succeeds.
+    /// Inputs:
+    ///  - repoPath and branchName values including typical, empty, whitespace, spaces-in-values, and unicode.
+    /// Expected:
+    ///  - IProcessManager.ExecuteGit is called once with ["branch", "-D", branchName].
+    ///  - No exception is thrown by DeleteBranchAsync.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [TestCase("/repo/path", "feature/x")]
+    [TestCase("C:\\repo path", "branch with spaces")]
+    [TestCase("", "")]
+    [TestCase(" ", " ")]
+    [TestCase("/r/😃", "weird-😃")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task DeleteBranchAsync_ValidInputs_ExecutesCorrectGitCommandAndDoesNotThrow(string repoPath, string branchName)
+    {
+        // Arrange
+        var remoteTokenProvider = new Mock<IRemoteTokenProvider>(MockBehavior.Strict);
+        var telemetry = new Mock<ITelemetryRecorder>(MockBehavior.Strict);
+        var processManager = new Mock<IProcessManager>(MockBehavior.Strict);
+        var fileSystem = new Mock<IFileSystem>(MockBehavior.Strict);
+        var logger = new Mock<ILogger>(MockBehavior.Loose);
+
+        var sut = new LocalGitClient(remoteTokenProvider.Object, telemetry.Object, processManager.Object, fileSystem.Object, logger.Object);
+
+        var expectedArgs = new[] { "branch", "-D", branchName };
+        processManager
+            .Setup(m => m.ExecuteGit(repoPath, It.Is<string[]>(a => a.SequenceEqual(expectedArgs))))
+            .ReturnsAsync(new ProcessExecutionResult { ExitCode = 0 });
+
+        // Act
+        await sut.DeleteBranchAsync(repoPath, branchName);
+
+        // Assert
+        processManager.Verify(m => m.ExecuteGit(repoPath, It.Is<string[]>(a => a.SequenceEqual(expectedArgs))), Times.Once);
+    }
+
+    private static IEnumerable StageArgsCases
+    {
+        get
+        {
+            yield return new TestCaseData("repo", new string[0]).SetName("Repo_Normal_NoPaths");
+            yield return new TestCaseData("repo", new[] { "file.txt" }).SetName("Repo_Normal_SinglePath");
+            yield return new TestCaseData("", new[] { "dup", "dup" }).SetName("Repo_Empty_DuplicatePaths");
+            yield return new TestCaseData("C:/repo with spaces", new[] { "a b.txt", "c\\d", "e/f", "weird,chars" }).SetName("Repo_WithSpaces_MultipleSpecialPaths");
+        }
+    }
+
+    /// <summary>
+    /// Verifies that StageAsync prepends "add" to the provided paths, forwards the cancellation token,
+    /// and calls IProcessManager.ExecuteGit with the exact argument sequence.
+    /// Inputs:
+    ///  - repoPath: varied (normal, empty, with spaces).
+    ///  - pathsToStage: empty, single item, duplicates, and items with special characters.
+    /// Expected:
+    ///  - ExecuteGit is invoked exactly once with arguments ["add", <pathsToStage...>] and the provided token.
+    ///  - No exception is thrown when the process succeeds.
+    /// </summary>
+    [Test]
+    [TestCaseSource(nameof(StageArgsCases))]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task StageAsync_ArgumentsPrependAdd_ExecutesGitAndSucceeds(string repoPath, string[] pathsToStage)
+    {
+        // Arrange
+        var remoteTokenProvider = new Mock<IRemoteTokenProvider>(MockBehavior.Strict);
+        var telemetryRecorder = new Mock<ITelemetryRecorder>(MockBehavior.Strict);
+        var processManager = new Mock<IProcessManager>(MockBehavior.Strict);
+        var fileSystem = new Mock<IFileSystem>(MockBehavior.Strict);
+        var logger = new Mock<ILogger>(MockBehavior.Loose);
+
+        var expectedArgs = new[] { "add" }.Concat(pathsToStage).ToArray();
+        var tokenSource = new CancellationTokenSource();
+        var token = tokenSource.Token;
+
+        processManager
+            .Setup(m => m.ExecuteGit(
+                repoPath,
+                It.Is<IEnumerable<string>>(args => args.SequenceEqual(expectedArgs)),
+                It.IsAny<Dictionary<string, string>>(),
+                token))
+            .ReturnsAsync(new ProcessExecutionResult { ExitCode = 0 });
+
+        var sut = new LocalGitClient(
+            remoteTokenProvider.Object,
+            telemetryRecorder.Object,
+            processManager.Object,
+            fileSystem.Object,
+            logger.Object);
+
+        // Act
+        await sut.StageAsync(repoPath, pathsToStage, token);
+
+        // Assert
+        processManager.Verify(m => m.ExecuteGit(
+            repoPath,
+            It.Is<IEnumerable<string>>(args => args.SequenceEqual(expectedArgs)),
+            It.IsAny<Dictionary<string, string>>(),
+            token), Times.Once);
+    }
+
+    /// <summary>
+    /// Verifies that PullAsync calls 'git pull' via IProcessManager.ExecuteGit with the provided repo path and cancellation token,
+    /// and completes without throwing when the process succeeds.
+    /// Inputs:
+    ///  - repoPath variations (including empty and whitespace)
+    ///  - cancellation token states (canceled and not canceled)
+    /// Expected:
+    ///  - IProcessManager.ExecuteGit is invoked once with arguments ["pull"], null env vars, and the same CancellationToken.
+    ///  - PullAsync does not throw any exception.
+    /// </summary>
+    [TestCaseSource(nameof(RepoAndCancelCases))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task PullAsync_ExecutesGitPullAndDoesNotThrow_WhenSucceeded(string repoPath, bool cancelled)
+    {
+        // Arrange
+        var remoteTokenProvider = new Mock<IRemoteTokenProvider>(MockBehavior.Strict);
+        var telemetryRecorder = new Mock<ITelemetryRecorder>(MockBehavior.Strict);
+        var processManager = new Mock<IProcessManager>(MockBehavior.Strict);
+        var fileSystem = new Mock<IFileSystem>(MockBehavior.Strict);
+        var logger = new Mock<ILogger>(MockBehavior.Loose);
+
+        var token = new CancellationToken(cancelled);
+
+        processManager
+            .Setup(m => m.ExecuteGit(
+                It.IsAny<string>(),
+                It.IsAny<string[]>(),
+                It.Is<Dictionary<string, string>>(d => d == null),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProcessExecutionResult
+            {
+                ExitCode = 0,
+                TimedOut = false,
+                StandardOutput = "ok",
+                StandardError = ""
+            });
+
+        var sut = new LocalGitClient(
+            remoteTokenProvider.Object,
+            telemetryRecorder.Object,
+            processManager.Object,
+            fileSystem.Object,
+            logger.Object);
+
+        // Act
+        await sut.PullAsync(repoPath, token);
+
+        // Assert
+        processManager.Verify(m => m.ExecuteGit(
+                repoPath,
+                It.Is<string[]>(a => a.Length == 1 && a[0] == "pull"),
+                It.Is<Dictionary<string, string>>(d => d == null),
+                It.Is<CancellationToken>(ct => ct.Equals(token))),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// Ensures that PullAsync throws when the underlying git command fails (non-zero exit code or timeout),
+    /// and that the exception message contains the target repository path.
+    /// Inputs:
+    ///  - TimedOut (true/false), ExitCode (0/non-zero) combinations causing failure.
+    /// Expected:
+    ///  - An exception is thrown.
+    ///  - Exception message contains "Failed to pull updates in {repoPath}".
+    /// </summary>
+    [TestCase(false, 1)]
+    [TestCase(true, 0)]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task PullAsync_CommandFailure_ThrowsWithRepoPathInMessage(bool timedOut, int exitCode)
+    {
+        // Arrange
+        var repoPath = "/tmp/repo🚀";
+        var token = CancellationToken.None;
+
+        var remoteTokenProvider = new Mock<IRemoteTokenProvider>(MockBehavior.Strict);
+        var telemetryRecorder = new Mock<ITelemetryRecorder>(MockBehavior.Strict);
+        var processManager = new Mock<IProcessManager>(MockBehavior.Strict);
+        var fileSystem = new Mock<IFileSystem>(MockBehavior.Strict);
+        var logger = new Mock<ILogger>(MockBehavior.Loose);
+
+        processManager
+            .Setup(m => m.ExecuteGit(
+                repoPath,
+                It.Is<string[]>(a => a.Length == 1 && a[0] == "pull"),
+                It.Is<Dictionary<string, string>>(d => d == null),
+                token))
+            .ReturnsAsync(new ProcessExecutionResult
+            {
+                ExitCode = exitCode,
+                TimedOut = timedOut,
+                StandardOutput = "",
+                StandardError = "err"
+            });
+
+        var sut = new LocalGitClient(
+            remoteTokenProvider.Object,
+            telemetryRecorder.Object,
+            processManager.Object,
+            fileSystem.Object,
+            logger.Object);
+
+        // Act
+        Exception caught = null;
+        try
+        {
+            await sut.PullAsync(repoPath, token);
+        }
+        catch (Exception ex)
+        {
+            caught = ex;
+        }
+
+        // Assert
+        if (caught == null)
+        {
+            throw new Exception("Expected an exception to be thrown when git pull fails, but none was thrown.");
+        }
+
+        if (!caught.Message.Contains($"Failed to pull updates in {repoPath}", StringComparison.Ordinal))
+        {
+            throw new Exception($"Exception message did not contain the expected repository path. Actual: {caught.Message}");
+        }
+
+        processManager.VerifyAll();
+    }
+
+    private static IEnumerable RepoAndCancelCases()
+    {
+        yield return new TestCaseData("C:\\repo", false);
+        yield return new TestCaseData("", false);
+        yield return new TestCaseData("   ", true);
+        yield return new TestCaseData("/tmp/repo🚀", false);
+        yield return new TestCaseData(new string('a', 512), true);
+    }
+
+    private static LocalGitClient CreateSut(IProcessManager processManager, ILogger logger)
+    {
+        var remoteTokenProvider = new Mock<IRemoteTokenProvider>(MockBehavior.Loose).Object;
+        var telemetryRecorder = new Mock<ITelemetryRecorder>(MockBehavior.Loose).Object;
+        var fileSystem = new Mock<IFileSystem>(MockBehavior.Loose).Object;
+
+        return new LocalGitClient(
+            remoteTokenProvider,
+            telemetryRecorder,
+            processManager,
+            fileSystem,
+            logger);
+    }
+
+    /// <summary>
+    /// Verifies the happy-path behavior when no auth token is available:
+    ///  - ls-remote retrieves the URL.
+    ///  - remote update and fetch are executed without auth-related args/env vars.
+    ///  - Token provider is consulted twice (once per AddGitAuthHeader call).
+    /// Inputs:
+    ///  - Valid repoPath and remoteName.
+    ///  - Token provider returns null token.
+    /// Expected:
+    ///  - Two git commands are executed with expected arguments and empty env vars.
+    ///  - No auth header argument is injected.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task UpdateRemoteAsync_SuccessWithoutToken_InvokesUpdateAndFetchWithNoAuthHeaders()
+    {
+        // Arrange
+        var repoPath = "/repo";
+        var remoteName = "origin";
+        var remoteUrl = "https://github.com/org/repo.git";
+        var ct = CancellationToken.None;
+
+        var tokenProvider = new Mock<IRemoteTokenProvider>(MockBehavior.Strict);
+        var telemetry = new Mock<ITelemetryRecorder>(MockBehavior.Strict);
+        var processManager = new Mock<IProcessManager>(MockBehavior.Strict);
+        var fileSystem = new Mock<IFileSystem>(MockBehavior.Strict);
+        var logger = new Mock<ILogger>(MockBehavior.Loose);
+
+        // First: ls-remote --get-url <remoteName>
+        processManager
+            .Setup(pm => pm.ExecuteGit(
+                repoPath,
+                It.Is<string[]>(a => a.SequenceEqual(new[] { "ls-remote", "--get-url", remoteName })),
+                It.Is<Dictionary<string, string>>(d => d == null),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProcessExecutionResult
+            {
+                ExitCode = 0,
+                TimedOut = false,
+                StandardOutput = remoteUrl + Environment.NewLine
+            });
+
+        // Token provider returns null -> AddGitAuthHeader is a no-op (called twice)
+        tokenProvider
+            .Setup(tp => tp.GetTokenForRepositoryAsync(remoteUrl))
+            .ReturnsAsync((string)null);
+        tokenProvider
+            .Setup(tp => tp.GetTokenForRepositoryAsync(remoteUrl))
+            .ReturnsAsync((string)null);
+
+        // Second: git remote update <remoteName> with no auth args/env vars
+        processManager
+            .Setup(pm => pm.ExecuteGit(
+                repoPath,
+                It.Is<IEnumerable<string>>(a => a.SequenceEqual(new[] { "remote", "update", remoteName })),
+                It.Is<Dictionary<string, string>>(env => env != null && env.Count == 0),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProcessExecutionResult { ExitCode = 0 });
+
+        // Third: git fetch --tags --force <remoteName> with no auth args/env vars
+        processManager
+            .Setup(pm => pm.ExecuteGit(
+                repoPath,
+                It.Is<IEnumerable<string>>(a => a.SequenceEqual(new[] { "fetch", "--tags", "--force", remoteName })),
+                It.Is<Dictionary<string, string>>(env => env != null && env.Count == 0),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProcessExecutionResult { ExitCode = 0 });
+
+        var sut = new LocalGitClient(tokenProvider.Object, telemetry.Object, processManager.Object, fileSystem.Object, logger.Object);
+
+        // Act
+        await sut.UpdateRemoteAsync(repoPath, remoteName, ct);
+
+        // Assert
+        processManager.VerifyAll();
+        tokenProvider.Verify(tp => tp.GetTokenForRepositoryAsync(remoteUrl), Times.Exactly(2));
+    }
+
+    private static IEnumerable GetStagedFiles_Success_Cases()
+    {
+        yield return new TestCaseData(
+            "file1.cs\nfile2.cs",
+            new[] { "file1.cs", "file2.cs" })
+            .SetName("GetStagedFiles_GitSucceeds_UnixNewlines_ReturnsLines");
+
+        yield return new TestCaseData(
+            " file1.cs \r\n \r\nfile2.cs\r\n",
+            new[] { "file1.cs", "file2.cs" })
+            .SetName("GetStagedFiles_GitSucceeds_MixedNewlinesAndWhitespace_TrimsAndRemovesEmpty");
+
+        yield return new TestCaseData(
+            "\r\n\r\n  a.txt  \n b.txt \n  a.txt  \n",
+            new[] { "a.txt", "b.txt", "a.txt" })
+            .SetName("GetStagedFiles_GitSucceeds_DuplicatesPreserved_OrderMaintained");
+
+        yield return new TestCaseData(
+            "\r\n \n \r \n",
+            Array.Empty<string>())
+            .SetName("GetStagedFiles_GitSucceeds_OnlyWhitespaceAndNewlines_ReturnsEmpty");
+    }
+
+    // TestCaseSource providing diverse repoPath inputs to exercise string edge cases
+    public static IEnumerable<string> RepoPaths()
+    {
+        yield return "C:\\repo";
+        yield return "";
+        yield return "   ";
+        yield return "/unix/style/path";
+        yield return "C:\\path with spaces\\repo";
+        yield return "C:\\path\\with\\unicode-测试";
+        yield return new string('a', 260);
+    }
+
+    /// <summary>
+    /// Ensures that HasStagedChangesAsync forwards the provided repoPath unchanged,
+    /// and calls git with the exact expected arguments: diff --cached --exit-code --quiet.
+    /// Inputs:
+    ///  - Various repoPath strings including empty and whitespace.
+    /// Expected:
+    ///  - IProcessManager.ExecuteGit is invoked once with the same repoPath and exact arguments.
+    ///  - No other calls are made to the process manager.
+    /// </summary>
+    [TestCase("C:\\repo", TestName = "HasStagedChangesAsync_WindowsAbsolutePath_ExecutesWithExactArgs")]
+    [TestCase("/home/user/repo", TestName = "HasStagedChangesAsync_UnixAbsolutePath_ExecutesWithExactArgs")]
+    [TestCase("", TestName = "HasStagedChangesAsync_EmptyPath_ExecutesWithExactArgs")]
+    [TestCase("   ", TestName = "HasStagedChangesAsync_WhitespaceOnlyPath_ExecutesWithExactArgs")]
+    [TestCase("C:\\répo🚀", TestName = "HasStagedChangesAsync_UnicodePath_ExecutesWithExactArgs")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task HasStagedChangesAsync_PassesExpectedGitArgumentsAndRepoPath_CallsExecuteGitWithExactParameters(string repoPath)
+    {
+        // Arrange
+        var remoteConfigurationMock = new Mock<IRemoteTokenProvider>(MockBehavior.Strict);
+        var telemetryRecorderMock = new Mock<ITelemetryRecorder>(MockBehavior.Strict);
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+        var fileSystemMock = new Mock<IFileSystem>(MockBehavior.Strict);
+        var loggerMock = new Mock<ILogger>(MockBehavior.Loose);
+
+        var processResult = new ProcessExecutionResult
+        {
+            TimedOut = false,
+            ExitCode = 0
+        };
+
+        processManagerMock
+            .Setup(m => m.ExecuteGit(It.IsAny<string>(), It.IsAny<string[]>()))
+            .ReturnsAsync(processResult);
+
+        var client = new LocalGitClient(
+            remoteConfigurationMock.Object,
+            telemetryRecorderMock.Object,
+            processManagerMock.Object,
+            fileSystemMock.Object,
+            loggerMock.Object);
+
+        var expectedArgs = new[] { "diff", "--cached", "--exit-code", "--quiet" };
+
+        // Act
+        var _ = await client.HasStagedChangesAsync(repoPath);
+
+        // Assert
+        processManagerMock.Verify(m => m.ExecuteGit(repoPath, It.Is<string[]>(a => a.SequenceEqual(expectedArgs))), Times.Once);
+        processManagerMock.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Placeholder to validate the exception branch when an unknown GitRepoType is encountered.
+    /// Inputs:
+    ///  - A repoUri that would result in a repo type not handled by the switch expression.
+    /// Expected:
+    ///  - Exception is thrown with a message indicating the unsupported repo type.
+    /// Notes:
+    ///  - This path is unreachable via GitRepoUrlUtils.ParseTypeFromUri using public inputs,
+    ///    and the static method cannot be mocked. If the implementation changes or becomes injectable,
+    ///    replace this Inconclusive with a real test that forces an unknown enum value.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void AddGitAuthHeader_UnknownRepoType_ThrowsException_Partial()
+    {
+        Assert.Inconclusive("Cannot reach the default switch branch using GitRepoUrlUtils.ParseTypeFromUri; replace with a concrete test if the repo type detection becomes injectable.");
+    }
+
+    private static IEnumerable RunGitCommandAsync_ForwardingCases()
+    {
+        yield return new TestCaseData(
+            "",
+            Array.Empty<string>(),
+            false
+        ).SetName("EmptyRepoPath_EmptyArgs_NoCancellation");
+
+        yield return new TestCaseData(
+            " ",
+            new[] { "status" },
+            false
+        ).SetName("WhitespaceRepoPath_SingleArg_NoCancellation");
+
+        yield return new TestCaseData(
+            "C:\\repo",
+            new[] { "commit", "-m", "feat: add ✨ feature", "--allow-empty" },
+            false
+        ).SetName("WindowsPath_MultipleArgsWithUnicode_NoCancellation");
+
+        yield return new TestCaseData(
+            "/tmp/repo",
+            new[] { "log", "--oneline", "--grep=fix\\s+bug", "--max-count", "1000" },
+            true
+        ).SetName("UnixPath_ArgsWithRegex_CancellationRequested");
+
+        yield return new TestCaseData(
+            "/a/b",
+            new[] { "diff", "--name-only", "HEAD~1", "HEAD", "--", "path with spaces/file.txt" },
+            false
+        ).SetName("UnixPath_ArgsWithSpaces_NoCancellation");
+    }
+
+    /// <summary>
+    /// Verifies that SetConfigValue invokes IProcessManager.ExecuteGit with the exact expected arguments
+    /// and completes without throwing when the process succeeds.
+    /// Inputs:
+    ///  - repoPath, setting, value (including empty and special-character cases).
+    /// Expected:
+    ///  - ExecuteGit is called once with ("config", setting, value).
+    ///  - No exception is thrown.
+    /// </summary>
+    [Test]
+    [TestCase("repo", "user.name", "John Doe")]
+    [TestCase("", "", "")]
+    [TestCase("C:\\path with spaces\\repo", "http.proxy", "http://user:pa ss@host:8080")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task SetConfigValue_ExecutesGitWithExpectedArguments_Succeeds(string repoPath, string setting, string value)
+    {
+        // Arrange
+        var remoteProvider = new Mock<IRemoteTokenProvider>(MockBehavior.Loose);
+        var telemetry = new Mock<ITelemetryRecorder>(MockBehavior.Loose);
+        var processManager = new Mock<IProcessManager>(MockBehavior.Strict);
+        var fileSystem = new Mock<IFileSystem>(MockBehavior.Loose);
+        var logger = new Mock<ILogger>(MockBehavior.Loose);
+
+        var successResult = new ProcessExecutionResult
+        {
+            ExitCode = 0,
+            TimedOut = false,
+            StandardOutput = string.Empty,
+            StandardError = string.Empty
+        };
+
+        processManager
+            .Setup(m => m.ExecuteGit(repoPath, "config", setting, value))
+            .ReturnsAsync(successResult);
+
+        var sut = new LocalGitClient(
+            remoteProvider.Object,
+            telemetry.Object,
+            processManager.Object,
+            fileSystem.Object,
+            logger.Object);
+
+        // Act
+        await sut.SetConfigValue(repoPath, setting, value);
+
+        // Assert
+        processManager.Verify(m => m.ExecuteGit(repoPath, "config", setting, value), Times.Once);
+    }
+
+    /// <summary>
+    /// Verifies that ResolveConflict calls 'git checkout' with the correct side (--ours/--theirs)
+    /// followed by 'git add', and completes without throwing when both commands succeed.
+    /// Inputs:
+    ///  - repoPath: "repo/path"
+    ///  - file: "conflicted.txt"
+    ///  - ours: true or false
+    /// Expected:
+    ///  - _processManager.ExecuteGit is called with ("checkout", "--ours"/"--theirs", file) then ("add", file)
+    ///  - No exception is thrown.
+    /// </summary>
+    [TestCase(true)]
+    [TestCase(false)]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task ResolveConflict_Success_CheckoutWithCorrectSideAndStage(bool ours)
+    {
+        // Arrange
+        var repoPath = "repo/path";
+        var file = "conflicted.txt";
+        var expectedSide = ours ? "--ours" : "--theirs";
+
+        var processManagerMock = new Mock<IProcessManager>(MockBehavior.Strict);
+        processManagerMock
+            .Setup(m => m.ExecuteGit(repoPath, "checkout", expectedSide, file))
+            .ReturnsAsync(new ProcessExecutionResult { ExitCode = 0, TimedOut = false });
+        processManagerMock
+            .Setup(m => m.ExecuteGit(repoPath, "add", file))
+            .ReturnsAsync(new ProcessExecutionResult { ExitCode = 0, TimedOut = false });
+
+        var remoteTokenProviderMock = new Mock<IRemoteTokenProvider>(MockBehavior.Loose);
+        var telemetryRecorderMock = new Mock<ITelemetryRecorder>(MockBehavior.Loose);
+        var fileSystemMock = new Mock<IFileSystem>(MockBehavior.Loose);
+        var loggerMock = new Mock<ILogger>(MockBehavior.Loose);
+
+        var sut = new LocalGitClient(
+            remoteTokenProviderMock.Object,
+            telemetryRecorderMock.Object,
+            processManagerMock.Object,
+            fileSystemMock.Object,
+            loggerMock.Object);
+
+        // Act
+        await sut.ResolveConflict(repoPath, file, ours);
+
+        // Assert
+        processManagerMock.Verify(m => m.ExecuteGit(repoPath, "checkout", expectedSide, file), Times.Once);
+        processManagerMock.Verify(m => m.ExecuteGit(repoPath, "add", file), Times.Once);
+    }
+
+}

@@ -32,6 +32,7 @@ using NUnit.Framework;
 namespace Microsoft.DotNet.DarcLib.Tests;
 
 
+
 [TestFixture]
 public class RemoteTests
 {
@@ -1857,7 +1858,962 @@ public class RemoteTests
         yield return new TestCaseData("weird/:*?<>|chars.txt", "file:///C:/temp/repo", "rel/1.0")
             .SetName("SpecialCharactersInPathAndBranch");
     }
+
+    /// <summary>
+    /// Verifies that exceptions thrown by the underlying IRemoteGitRepo.CreateBranchAsync
+    /// are propagated unchanged by Remote.CreateNewBranchAsync.
+    /// Inputs:
+    ///  - Valid repoUri, baseBranch, newBranch; mock configured to throw InvalidOperationException with a custom message.
+    /// Expected:
+    ///  - The same InvalidOperationException is thrown with the same message.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task CreateNewBranchAsync_RemoteThrows_ExceptionIsPropagated()
+    {
+        // Arrange
+        var repoUri = "https://github.com/owner/repo";
+        var baseBranch = "main";
+        var newBranch = "feature/throw";
+        var expectedMessage = "failure creating branch";
+
+        var remoteGitRepo = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        remoteGitRepo
+            .Setup(m => m.CreateBranchAsync(repoUri, newBranch, baseBranch))
+            .ThrowsAsync(new InvalidOperationException(expectedMessage));
+
+        var remote = new Remote(
+            remoteGitRepo.Object,
+            Mock.Of<IVersionDetailsParser>(),
+            Mock.Of<ISourceMappingParser>(),
+            Mock.Of<IRemoteFactory>(),
+            Mock.Of<IAssetLocationResolver>(),
+            Mock.Of<IRedisCacheClient>(),
+            Mock.Of<ILogger>());
+
+        // Act
+        try
+        {
+            await remote.CreateNewBranchAsync(repoUri, baseBranch, newBranch);
+            throw new Exception("Expected InvalidOperationException was not thrown.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Assert
+            if (ex.Message != expectedMessage)
+            {
+                throw new Exception("Thrown exception message did not match the expected one.");
+            }
+        }
+
+        remoteGitRepo.Verify(m => m.CreateBranchAsync(repoUri, newBranch, baseBranch), Times.Once);
+        remoteGitRepo.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Verifies that DeleteBranchAsync logs an informational message and delegates to IRemoteGitRepo.DeleteBranchAsync
+    /// for a variety of string inputs, including empty, whitespace, special characters, and long values.
+    /// Inputs:
+    ///  - repoUri and branch with diverse string cases (non-null): normal, empty, whitespace-only, special characters, long strings.
+    /// Expected:
+    ///  - ILogger.Log called once with LogLevel.Information and a message containing the repoUri and branch.
+    ///  - IRemoteGitRepo.DeleteBranchAsync invoked once with the exact repoUri and branch.
+    /// </summary>
+    [TestCaseSource(nameof(DeleteBranchAsync_Cases))]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task DeleteBranchAsync_VariousInputs_DelegatesAndLogs(string repoUri, string branch)
+    {
+        // Arrange
+        var gitClientMock = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        gitClientMock
+            .Setup(m => m.DeleteBranchAsync(repoUri, branch))
+            .Returns(Task.CompletedTask)
+            .Verifiable();
+
+        var loggerMock = new Mock<ILogger>(MockBehavior.Strict);
+        loggerMock
+            .Setup(l => l.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((_, __) => true),
+                It.IsAny<Exception>(),
+                (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()));
+
+        var remote = CreateRemote(gitClientMock.Object, loggerMock.Object);
+
+        // Act
+        await remote.DeleteBranchAsync(repoUri, branch);
+
+        // Assert
+        gitClientMock.Verify(m => m.DeleteBranchAsync(repoUri, branch), Times.Once);
+
+        loggerMock.Verify(l => l.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) =>
+                    v.ToString().Contains("Deleting branch", StringComparison.Ordinal) &&
+                    v.ToString().Contains(branch, StringComparison.Ordinal) &&
+                    v.ToString().Contains(repoUri, StringComparison.Ordinal)),
+                It.IsAny<Exception>(),
+                (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// Verifies that DeleteBranchAsync propagates exceptions from IRemoteGitRepo.DeleteBranchAsync
+    /// and still logs an informational message before the call.
+    /// Inputs:
+    ///  - Typical repoUri and branch strings while the underlying client throws InvalidOperationException.
+    /// Expected:
+    ///  - InvalidOperationException is thrown.
+    ///  - ILogger.Log(LogLevel.Information, ...) is called exactly once.
+    ///  - IRemoteGitRepo.DeleteBranchAsync is invoked exactly once with the same parameters.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task DeleteBranchAsync_WhenClientThrows_ExceptionIsPropagatedAndLogEmitted()
+    {
+        // Arrange
+        var repoUri = "https://github.com/org/repo";
+        var branch = "feature/test";
+
+        var exception = new InvalidOperationException("boom");
+
+        var gitClientMock = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        gitClientMock
+            .Setup(m => m.DeleteBranchAsync(repoUri, branch))
+            .ThrowsAsync(exception);
+
+        var loggerMock = new Mock<ILogger>(MockBehavior.Strict);
+        loggerMock
+            .Setup(l => l.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((_, __) => true),
+                It.IsAny<Exception>(),
+                (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()));
+
+        var remote = CreateRemote(gitClientMock.Object, loggerMock.Object);
+
+        // Act
+        Func<Task> act = () => remote.DeleteBranchAsync(repoUri, branch);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .Where(e => e.Message == "boom");
+
+        gitClientMock.Verify(m => m.DeleteBranchAsync(repoUri, branch), Times.Once);
+        loggerMock.Verify(l => l.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) =>
+                    v.ToString().Contains("Deleting branch", StringComparison.Ordinal) &&
+                    v.ToString().Contains(branch, StringComparison.Ordinal) &&
+                    v.ToString().Contains(repoUri, StringComparison.Ordinal)),
+                It.IsAny<Exception>(),
+                (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
+            Times.Once);
+    }
+
+    private static Remote CreateRemote(IRemoteGitRepo client, ILogger logger)
+    {
+        return new Remote(
+            client,
+            Mock.Of<IVersionDetailsParser>(),
+            Mock.Of<ISourceMappingParser>(),
+            Mock.Of<IRemoteFactory>(),
+            Mock.Of<IAssetLocationResolver>(),
+            Mock.Of<IRedisCacheClient>(),
+            logger);
+    }
+
+    private static IEnumerable<TestCaseData> DeleteBranchAsync_Cases()
+    {
+        yield return new TestCaseData("https://github.com/owner/repo", "main");
+        yield return new TestCaseData("", "");
+        yield return new TestCaseData(" ", " ");
+        yield return new TestCaseData("https://host/repo/✓?q=∆&x=©", "feature/Ä-测试");
+        yield return new TestCaseData(new string('a', 1024), new string('b', 512));
+    }
+
+    private static IEnumerable<TestCaseData> BranchExistsAsync_ValidCases()
+    {
+        yield return new TestCaseData("https://github.com/org/repo", "main", true)
+            .SetName("RepoHttps_Main_ReturnsTrue");
+        yield return new TestCaseData("", "", false)
+            .SetName("EmptyStrings_ReturnsFalse");
+        yield return new TestCaseData(" ", " ", true)
+            .SetName("WhitespaceStrings_ReturnsTrue");
+        yield return new TestCaseData("ssh://git@example.com:repo.git", "feature/bugfix/#123", false)
+            .SetName("SshWithSpecialBranch_ReturnsFalse");
+        yield return new TestCaseData(new string('a', 1024), new string('b', 2048), true)
+            .SetName("VeryLongInputs_ReturnsTrue");
+        yield return new TestCaseData("特殊字符://路径?查询=✓&🚀", "release/2024.01-预览", false)
+            .SetName("UnicodeAndSpecials_ReturnsFalse");
+    }
+
+    /// <summary>
+    /// Verifies that BranchExistsAsync forwards the provided repoUri and branch to IRemoteGitRepo.DoesBranchExistAsync
+    /// and returns the exact result from the dependency.
+    /// Inputs:
+    ///  - Diverse combinations of repoUri and branch including empty strings, special characters, and very long strings.
+    /// Expected:
+    ///  - The returned boolean equals the mocked dependency's result.
+    ///  - IRemoteGitRepo.DoesBranchExistAsync is invoked exactly once with the same repoUri and branch.
+    /// </summary>
+    [Test]
+    [TestCaseSource(nameof(BranchExistsAsync_ValidCases))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task BranchExistsAsync_VariousInputs_ForwardsParametersAndReturnsExpected(string repoUri, string branch, bool expected)
+    {
+        // Arrange
+        var remoteGitRepo = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        remoteGitRepo
+            .Setup(m => m.DoesBranchExistAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(expected);
+
+        var remote = new Remote(
+            remoteGitRepo.Object,
+            Mock.Of[IVersionDetailsParser](),
+            Mock.Of[ISourceMappingParser](),
+            Mock.Of[IRemoteFactory](),
+            Mock.Of[IAssetLocationResolver](),
+            Mock.Of[IRedisCacheClient](),
+            Mock.Of[ILogger]());
+
+        // Act
+        var result = await remote.BranchExistsAsync(repoUri, branch);
+
+        // Assert
+        AssertEqual(expected, result, "BranchExistsAsync should return the exact result from IRemoteGitRepo.DoesBranchExistAsync");
+        remoteGitRepo.Verify(m => m.DoesBranchExistAsync(repoUri, branch), Times.Once);
+        remoteGitRepo.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Ensures that BranchExistsAsync propagates exceptions thrown by the underlying IRemoteGitRepo.
+    /// Inputs:
+    ///  - A valid repoUri and branch for which the dependency throws InvalidOperationException.
+    /// Expected:
+    ///  - The same InvalidOperationException is thrown by BranchExistsAsync with the original message.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task BranchExistsAsync_RemoteThrows_ExceptionIsPropagated()
+    {
+        // Arrange
+        var repoUri = "https://github.com/org/repo";
+        var branch = "bugfix/#123";
+        var remoteGitRepo = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        remoteGitRepo
+            .Setup(m => m.DoesBranchExistAsync(repoUri, branch))
+            .ThrowsAsync(new InvalidOperationException("boom"));
+
+        var remote = new Remote(
+            remoteGitRepo.Object,
+            Mock.Of[IVersionDetailsParser](),
+            Mock.Of[ISourceMappingParser](),
+            Mock.Of[IRemoteFactory](),
+            Mock.Of[IAssetLocationResolver](),
+            Mock.Of[IRedisCacheClient](),
+            Mock.Of[ILogger]());
+
+        // Act
+        var act = new Func<Task>(async () => await remote.BranchExistsAsync(repoUri, branch));
+
+        // Assert
+        await AssertThrowsAsync<InvalidOperationException>(act, "boom");
+        remoteGitRepo.Verify(m => m.DoesBranchExistAsync(repoUri, branch), Times.Once);
+        remoteGitRepo.VerifyNoOtherCalls();
+    }
+
+    // Minimal helper assertions to keep tests self-contained without relying on unspecified external APIs.
+    private static void AssertEqual<T>(T expected, T actual, string because)
+    {
+        if (!EqualityComparer<T>.Default.Equals(expected, actual))
+        {
+            throw new AssertionException($"Assertion failed: Expected <{expected}>, Actual <{actual}>. Because: {because}");
+        }
+    }
+
+    private static async Task AssertThrowsAsync<TException>(Func<Task> act, string expectedMessage = null) where TException : Exception
+    {
+        try
+        {
+            await act();
+        }
+        catch (Exception ex)
+        {
+            if (ex is TException tex)
+            {
+                if (expectedMessage != null && tex.Message != expectedMessage)
+                {
+                    throw new AssertionException($"Exception message mismatch. Expected: \"{expectedMessage}\", Actual: \"{tex.Message}\"");
+                }
+                return;
+            }
+
+            throw new AssertionException($"Expected exception of type {typeof(TException).Name}, but caught {ex.GetType().Name} with message: {ex.Message}");
+        }
+
+        throw new AssertionException($"Expected exception of type {typeof(TException).Name}, but no exception was thrown.");
+    }
+
+    /// <summary>
+    /// Verifies that when the underlying client throws, DeletePullRequestBranchAsync wraps the exception
+    /// into a DarcException with the expected message and preserves the original exception as InnerException.
+    /// Inputs:
+    ///  - A typical pull request URL that triggers an InvalidOperationException from the client.
+    /// Expected:
+    ///  - A DarcException is thrown.
+    ///  - The exception message is "Failed to delete head branch for pull request {pullRequestUri}".
+    ///  - The InnerException reference equals the original InvalidOperationException.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task DeletePullRequestBranchAsync_ClientThrows_WrapsInDarcExceptionAndPreservesInnerException()
+    {
+        // Arrange
+        var uri = "https://github.com/org/repo/pull/42";
+        var inner = new InvalidOperationException("boom");
+
+        var remoteGitRepo = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        remoteGitRepo
+            .Setup(m => m.DeletePullRequestBranchAsync(uri))
+            .ThrowsAsync(inner);
+
+        var remote = new Remote(
+            remoteGitRepo.Object,
+            new Mock<IVersionDetailsParser>(MockBehavior.Loose).Object,
+            new Mock<ISourceMappingParser>(MockBehavior.Loose).Object,
+            new Mock<IRemoteFactory>(MockBehavior.Loose).Object,
+            new Mock<IAssetLocationResolver>(MockBehavior.Loose).Object,
+            new Mock<IRedisCacheClient>(MockBehavior.Loose).Object,
+            new Mock<ILogger>(MockBehavior.Loose).Object);
+
+        // Act
+        DarcException caught = null;
+        try
+        {
+            await remote.DeletePullRequestBranchAsync(uri);
+        }
+        catch (DarcException ex)
+        {
+            caught = ex;
+        }
+
+        // Assert
+        Assert.NotNull(caught, "Expected DarcException to be thrown.");
+        Assert.AreSame(inner, caught.InnerException, "InnerException must be the original exception.");
+        Assert.AreEqual("Failed to delete head branch for pull request {pullRequestUri}", caught.Message, "Wrapped exception message must match expected literal.");
+
+        remoteGitRepo.Verify(m => m.DeletePullRequestBranchAsync(uri), Times.Once);
+        remoteGitRepo.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Validates that MergeDependencyPullRequestAsync:
+    ///  - Builds the merge commit message from PR title, parsed dependency updates (stars removed),
+    ///    and appends non-bot commit messages as bullet points.
+    ///  - Forwards the exact pull request URL.
+    ///  - Uses a default MergePullRequestParameters instance when 'parameters' is null with defaults preserved.
+    /// Inputs:
+    ///  - pullRequestUrl: typical URL.
+    ///  - PR with one [DependencyUpdate] block having starred package names.
+    ///  - Commits authored by darc-bot (ignored) and non-bot (included).
+    /// Expected:
+    ///  - IRemoteGitRepo.MergeDependencyPullRequestAsync invoked once with:
+    ///      parameters: non-null with SquashMerge=true, DeleteSourceBranch=true, CommitToMerge=null.
+    ///      mergeCommitMessage: "{Title}\r\n:{updates}\r\n\r\n - {nonBotCommit1}\r\n\r\n - {nonBotCommit2}"
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task MergeDependencyPullRequestAsync_NullParameters_BuildsExpectedCommitMessage_UsesDefaultParameters()
+    {
+        // Arrange
+        var pullRequestUrl = "https://host/repo/pull/1";
+        var pr = new PullRequest
+        {
+            Title = "Update dependencies from dotnet",
+            Description =
+                "Intro text\r\n" +
+                "[DependencyUpdate]: <> (Begin)\r\n" +
+                "- **Foo**: from 1.0.0 to 1.1.0\r\n" +
+                "- **Bar**: from 2.0.0 to 2.1.0\r\n" +
+                "[DependencyUpdate]: <> (End)\r\n" +
+                "Outro"
+        };
+
+        var commits = new List<Commit>
+        {
+            new Commit(Constants.DarcBotName, "sha-bot", "bot internal changes"),
+            new Commit("alice", "sha-1", "Fix issue in build"),
+            new Commit("bob", "sha-2", "Add tests for feature X"),
+        };
+
+        var expectedDependencyBlock = "- Foo: from 1.0.0 to 1.1.0\r\n- Bar: from 2.0.0 to 2.1.0";
+        var expectedMessage =
+            "Update dependencies from dotnet\r\n" +
+            ":" + expectedDependencyBlock +
+            "\r\n\r\n - Fix issue in build" +
+            "\r\n\r\n - Add tests for feature X";
+
+        var client = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        client.Setup(m => m.GetPullRequestAsync(pullRequestUrl))
+              .ReturnsAsync(pr);
+        client.Setup(m => m.GetPullRequestCommitsAsync(pullRequestUrl))
+              .ReturnsAsync(commits);
+        client.Setup(m => m.MergeDependencyPullRequestAsync(
+                    pullRequestUrl,
+                    It.Is<MergePullRequestParameters>(p => p != null && p.SquashMerge && p.DeleteSourceBranch && p.CommitToMerge == null),
+                    It.Is<string>(msg => msg == expectedMessage)))
+              .Returns(Task.CompletedTask)
+              .Verifiable();
+
+        var remote = CreateRemote(client.Object);
+
+        // Act
+        await remote.MergeDependencyPullRequestAsync(pullRequestUrl, null);
+
+        // Assert
+        client.Verify(m => m.GetPullRequestAsync(pullRequestUrl), Times.Once);
+        client.Verify(m => m.GetPullRequestCommitsAsync(pullRequestUrl), Times.Once);
+        client.Verify(m => m.MergeDependencyPullRequestAsync(
+            pullRequestUrl,
+            It.IsAny<MergePullRequestParameters>(),
+            It.IsAny<string>()),
+            Times.Once);
+        client.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Verifies that when no [DependencyUpdate] block is present and all commits are authored by the bot,
+    /// the merge message consists of "{Title}\r\n:" with no appended bullet points,
+    /// and an explicit MergePullRequestParameters instance is passed through unchanged.
+    /// Inputs:
+    ///  - pullRequestUrl: typical URL.
+    ///  - PR Description: no dependency update blocks.
+    ///  - Commits: only darc-bot authored.
+    ///  - parameters: custom instance with non-default values.
+    /// Expected:
+    ///  - IRemoteGitRepo.MergeDependencyPullRequestAsync invoked once with the same 'parameters' instance (reference equality).
+    ///  - mergeCommitMessage equals "{Title}\r\n:" with no further content.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task MergeDependencyPullRequestAsync_NoDependencyBlocksAndOnlyBotCommits_ForwardsParametersAndMinimalMessage()
+    {
+        // Arrange
+        var pullRequestUrl = "https://host/repo/pull/2";
+        var pr = new PullRequest
+        {
+            Title = "Chore: housekeeping",
+            Description = "No updates here"
+        };
+
+        var commits = new List<Commit>
+        {
+            new Commit(Constants.DarcBotName, "sha-bot", "Automated update"),
+        };
+
+        var expectedMessage = "Chore: housekeeping\r\n:";
+
+        var customParams = new MergePullRequestParameters
+        {
+            CommitToMerge = "abc123",
+            SquashMerge = false,
+            DeleteSourceBranch = false
+        };
+
+        var client = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        client.Setup(m => m.GetPullRequestAsync(pullRequestUrl))
+              .ReturnsAsync(pr);
+        client.Setup(m => m.GetPullRequestCommitsAsync(pullRequestUrl))
+              .ReturnsAsync(commits);
+        client.Setup(m => m.MergeDependencyPullRequestAsync(
+                    pullRequestUrl,
+                    It.Is<MergePullRequestParameters>(p => object.ReferenceEquals(p, customParams)),
+                    It.Is<string>(msg => msg == expectedMessage)))
+              .Returns(Task.CompletedTask)
+              .Verifiable();
+
+        var remote = CreateRemote(client.Object);
+
+        // Act
+        await remote.MergeDependencyPullRequestAsync(pullRequestUrl, customParams);
+
+        // Assert
+        client.Verify(m => m.GetPullRequestAsync(pullRequestUrl), Times.Once);
+        client.Verify(m => m.GetPullRequestCommitsAsync(pullRequestUrl), Times.Once);
+        client.Verify(m => m.MergeDependencyPullRequestAsync(
+            pullRequestUrl,
+            It.IsAny<MergePullRequestParameters>(),
+            It.IsAny<string>()),
+            Times.Once);
+        client.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Ensures that a commit with a null Author triggers a NullReferenceException due to the .Equals call.
+    /// Inputs:
+    ///  - pullRequestUrl: any string.
+    ///  - PR: minimal with empty description.
+    ///  - Commits: contains a Commit with Author = null.
+    /// Expected:
+    ///  - MergeDependencyPullRequestAsync throws NullReferenceException.
+    ///  - IRemoteGitRepo.MergeDependencyPullRequestAsync is never called.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task MergeDependencyPullRequestAsync_CommitWithNullAuthor_ThrowsNullReferenceException()
+    {
+        // Arrange
+        var pullRequestUrl = "https://host/repo/pull/3";
+        var pr = new PullRequest
+        {
+            Title = "Title",
+            Description = ""
+        };
+
+        var commits = new List<Commit>
+        {
+            new Commit(null, "sha-null", "message that should never be appended"),
+        };
+
+        var client = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        client.Setup(m => m.GetPullRequestAsync(pullRequestUrl))
+              .ReturnsAsync(pr);
+        client.Setup(m => m.GetPullRequestCommitsAsync(pullRequestUrl))
+              .ReturnsAsync(commits);
+
+        var remote = CreateRemote(client.Object);
+
+        // Act
+        NullReferenceException caught = null;
+        try
+        {
+            await remote.MergeDependencyPullRequestAsync(pullRequestUrl, new MergePullRequestParameters());
+        }
+        catch (NullReferenceException ex)
+        {
+            caught = ex;
+        }
+
+        // Assert
+        if (caught == null)
+        {
+            throw new Exception("Expected NullReferenceException was not thrown.");
+        }
+
+        client.Verify(m => m.MergeDependencyPullRequestAsync(
+            It.IsAny<string>(),
+            It.IsAny<MergePullRequestParameters>(),
+            It.IsAny<string>()),
+            Times.Never);
+        client.VerifyNoOtherCalls();
+    }
+
+    private static Remote CreateRemote(IRemoteGitRepo client)
+    {
+        return new Remote(
+            client,
+            Mock.Of<IVersionDetailsParser>(),
+            Mock.Of<ISourceMappingParser>(),
+            Mock.Of<IRemoteFactory>(),
+            Mock.Of<IAssetLocationResolver>(),
+            Mock.Of<IRedisCacheClient>(),
+            Mock.Of<ILogger>());
+    }
+
+    /// <summary>
+    /// Ensures that exceptions thrown by the underlying IRemoteGitRepo.GetPullRequestAsync
+    /// are propagated by Remote.GetPullRequestAsync without alteration.
+    /// Inputs:
+    ///  - A valid pullRequestUri string.
+    /// Expected:
+    ///  - The same InvalidOperationException is observed by the caller with the same message.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task GetPullRequestAsync_WhenClientThrows_ExceptionIsPropagated()
+    {
+        // Arrange
+        const string pullRequestUri = "https://github.com/org/repo/pull/42";
+        var remoteGitRepoMock = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        var versionDetailsParserMock = new Mock<IVersionDetailsParser>(MockBehavior.Strict);
+        var sourceMappingParserMock = new Mock<ISourceMappingParser>(MockBehavior.Strict);
+        var remoteFactoryMock = new Mock<IRemoteFactory>(MockBehavior.Strict);
+        var assetLocationResolverMock = new Mock<IAssetLocationResolver>(MockBehavior.Strict);
+        var cacheClientMock = new Mock<IRedisCacheClient>(MockBehavior.Strict);
+        var loggerMock = new Mock<ILogger>(MockBehavior.Loose);
+
+        var ex = new InvalidOperationException("boom");
+        remoteGitRepoMock
+            .Setup(m => m.GetPullRequestAsync(It.IsAny<string>()))
+            .ThrowsAsync(ex);
+
+        var remote = new Remote(
+            remoteGitRepoMock.Object,
+            versionDetailsParserMock.Object,
+            sourceMappingParserMock.Object,
+            remoteFactoryMock.Object,
+            assetLocationResolverMock.Object,
+            cacheClientMock.Object,
+            loggerMock.Object);
+
+        // Act
+        Func<Task> act = async () => await remote.GetPullRequestAsync(pullRequestUri);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("boom");
+        remoteGitRepoMock.Verify(m => m.GetPullRequestAsync(It.Is<string>(s => s == pullRequestUri)), Times.Once);
+        remoteGitRepoMock.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Verifies that when the repository URI is null, empty, or whitespace-only,
+    /// RepositoryExistsAsync returns false and does not call the underlying IRemoteGitRepo.RepoExistsAsync.
+    /// Inputs:
+    ///  - repoUri: null, "", " ", "\t", " \r\n ".
+    /// Expected:
+    ///  - The method returns false.
+    ///  - IRemoteGitRepo.RepoExistsAsync is never invoked.
+    /// </summary>
+    [TestCase(null)]
+    [TestCase("")]
+    [TestCase(" ")]
+    [TestCase("\t")]
+    [TestCase(" \r\n ")]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task RepositoryExistsAsync_NullOrWhitespaceRepoUri_ReturnsFalseAndDoesNotCallClient(string repoUri)
+    {
+        // Arrange
+        var remoteGitClient = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        var versionDetailsParser = new Mock<IVersionDetailsParser>(MockBehavior.Loose);
+        var sourceMappingParser = new Mock<ISourceMappingParser>(MockBehavior.Loose);
+        var remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Loose);
+        var assetLocationResolver = new Mock<IAssetLocationResolver>(MockBehavior.Loose);
+        var cacheClient = new Mock<IRedisCacheClient>(MockBehavior.Loose);
+        var logger = new Mock<ILogger>(MockBehavior.Loose);
+
+        var remote = new Remote(
+            remoteGitClient.Object,
+            versionDetailsParser.Object,
+            sourceMappingParser.Object,
+            remoteFactory.Object,
+            assetLocationResolver.Object,
+            cacheClient.Object,
+            logger.Object);
+
+        // Act
+        var result = await remote.RepositoryExistsAsync(repoUri);
+
+        // Assert
+        result.Should().BeFalse();
+        remoteGitClient.Verify(x => x.RepoExistsAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Verifies that when the IRemoteGitRepo dependency is null,
+    /// RepositoryExistsAsync returns false regardless of the repoUri value.
+    /// Inputs:
+    ///  - repoUri: a typical HTTPS repository URI.
+    /// Expected:
+    ///  - The method returns false and no calls are made to any client methods.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task RepositoryExistsAsync_RemoteGitClientIsNull_ReturnsFalse()
+    {
+        // Arrange
+        IRemoteGitRepo remoteGitClient = null;
+        var versionDetailsParser = new Mock<IVersionDetailsParser>(MockBehavior.Loose);
+        var sourceMappingParser = new Mock<ISourceMappingParser>(MockBehavior.Loose);
+        var remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Loose);
+        var assetLocationResolver = new Mock<IAssetLocationResolver>(MockBehavior.Loose);
+        var cacheClient = new Mock<IRedisCacheClient>(MockBehavior.Loose);
+        var logger = new Mock<ILogger>(MockBehavior.Loose);
+
+        var remote = new Remote(
+            remoteGitClient,
+            versionDetailsParser.Object,
+            sourceMappingParser.Object,
+            remoteFactory.Object,
+            assetLocationResolver.Object,
+            cacheClient.Object,
+            logger.Object);
+
+        // Act
+        var result = await remote.RepositoryExistsAsync("https://github.com/dotnet/arcade");
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Ensures that exceptions thrown by the underlying IRemoteGitRepo.RepoExistsAsync are propagated unchanged.
+    /// Inputs:
+    ///  - repoUri: a valid repository URI.
+    ///  - client configured to throw InvalidOperationException.
+    /// Expected:
+    ///  - The same InvalidOperationException is thrown by RepositoryExistsAsync.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task RepositoryExistsAsync_ClientThrows_ExceptionIsPropagated()
+    {
+        // Arrange
+        const string repoUri = "https://github.com/dotnet/arcade";
+        const string errorMessage = "boom";
+
+        var remoteGitClient = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        remoteGitClient
+            .Setup(x => x.RepoExistsAsync(repoUri))
+            .ThrowsAsync(new InvalidOperationException(errorMessage));
+
+        var versionDetailsParser = new Mock<IVersionDetailsParser>(MockBehavior.Loose);
+        var sourceMappingParser = new Mock<ISourceMappingParser>(MockBehavior.Loose);
+        var remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Loose);
+        var assetLocationResolver = new Mock<IAssetLocationResolver>(MockBehavior.Loose);
+        var cacheClient = new Mock<IRedisCacheClient>(MockBehavior.Loose);
+        var logger = new Mock<ILogger>(MockBehavior.Loose);
+
+        var remote = new Remote(
+            remoteGitClient.Object,
+            versionDetailsParser.Object,
+            sourceMappingParser.Object,
+            remoteFactory.Object,
+            assetLocationResolver.Object,
+            cacheClient.Object,
+            logger.Object);
+
+        // Act + Assert
+        try
+        {
+            await remote.RepositoryExistsAsync(repoUri);
+            throw new Exception("Expected InvalidOperationException was not thrown.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            ex.Message.Should().Be(errorMessage);
+        }
+    }
+
+    private static IEnumerable<TestCaseData> ForwardingCases()
+    {
+        yield return new TestCaseData("https://github.com/owner/repo/pull/1", "Looks good to me!");
+        yield return new TestCaseData("", "");
+        yield return new TestCaseData(" ", " ");
+        yield return new TestCaseData("file://C:/path/pr/1", "path-based PR reference");
+        yield return new TestCaseData("https://host/repo/pull/✓?q=∆&x=©", "Unicode 🚀🔥 and specials ~!@#$%^&*()_+");
+        yield return new TestCaseData(new string('a', 1024), new string('b', 2048));
+    }
+
+    /// <summary>
+    /// Ensures that CommentPullRequestAsync forwards the exact parameters to IRemoteGitRepo.CommentPullRequestAsync
+    /// and awaits the call successfully.
+    /// Inputs:
+    ///  - Various pullRequestUri and comment combinations including empty, whitespace, special characters, and very long strings.
+    /// Expected:
+    ///  - The underlying IRemoteGitRepo.CommentPullRequestAsync is invoked exactly once with the same parameters.
+    ///  - No exception is thrown for these inputs.
+    /// </summary>
+    [TestCaseSource(nameof(ForwardingCases))]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task CommentPullRequestAsync_ParametersForwarded_CallsClientExactlyOnce(string pullRequestUri, string comment)
+    {
+        // Arrange
+        var gitRepoMock = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        var versionDetailsParserMock = new Mock<IVersionDetailsParser>(MockBehavior.Strict);
+        var sourceMappingParserMock = new Mock<ISourceMappingParser>(MockBehavior.Strict);
+        var remoteFactoryMock = new Mock<IRemoteFactory>(MockBehavior.Strict);
+        var assetLocationResolverMock = new Mock<IAssetLocationResolver>(MockBehavior.Strict);
+        var cacheMock = new Mock<IRedisCacheClient>(MockBehavior.Strict);
+        var loggerMock = new Mock<ILogger>(MockBehavior.Loose);
+
+        gitRepoMock
+            .Setup(m => m.CommentPullRequestAsync(pullRequestUri, comment))
+            .Returns(Task.CompletedTask);
+
+        var remote = new Remote(
+            gitRepoMock.Object,
+            versionDetailsParserMock.Object,
+            sourceMappingParserMock.Object,
+            remoteFactoryMock.Object,
+            assetLocationResolverMock.Object,
+            cacheMock.Object,
+            loggerMock.Object);
+
+        // Act
+        await remote.CommentPullRequestAsync(pullRequestUri, comment);
+
+        // Assert
+        gitRepoMock.Verify(m => m.CommentPullRequestAsync(pullRequestUri, comment), Times.Once);
+        gitRepoMock.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Verifies that exceptions thrown by the underlying IRemoteGitRepo.CommentPullRequestAsync
+    /// are propagated by Remote.CommentPullRequestAsync without being swallowed.
+    /// Inputs:
+    ///  - Valid pullRequestUri and comment causing downstream to throw.
+    /// Expected:
+    ///  - The same exception type is thrown with the same message.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task CommentPullRequestAsync_DownstreamThrows_ExceptionIsPropagated()
+    {
+        // Arrange
+        var gitRepoMock = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        var versionDetailsParserMock = new Mock<IVersionDetailsParser>(MockBehavior.Strict);
+        var sourceMappingParserMock = new Mock<ISourceMappingParser>(MockBehavior.Strict);
+        var remoteFactoryMock = new Mock<IRemoteFactory>(MockBehavior.Strict);
+        var assetLocationResolverMock = new Mock<IAssetLocationResolver>(MockBehavior.Strict);
+        var cacheMock = new Mock<IRedisCacheClient>(MockBehavior.Strict);
+        var loggerMock = new Mock<ILogger>(MockBehavior.Loose);
+
+        var pullRequestUri = "https://example.com/repo/pull/42";
+        var comment = "trigger error";
+        var expected = new InvalidOperationException("boom");
+
+        gitRepoMock
+            .Setup(m => m.CommentPullRequestAsync(pullRequestUri, comment))
+            .ThrowsAsync(expected);
+
+        var remote = new Remote(
+            gitRepoMock.Object,
+            versionDetailsParserMock.Object,
+            sourceMappingParserMock.Object,
+            remoteFactoryMock.Object,
+            assetLocationResolverMock.Object,
+            cacheMock.Object,
+            loggerMock.Object);
+
+        // Act + Assert
+        try
+        {
+            await remote.CommentPullRequestAsync(pullRequestUri, comment);
+            throw new Exception("Expected exception was not thrown.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            if (!string.Equals(ex.Message, expected.Message, StringComparison.Ordinal))
+            {
+                throw;
+            }
+        }
+
+        gitRepoMock.Verify(m => m.CommentPullRequestAsync(pullRequestUri, comment), Times.Once);
+        gitRepoMock.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Ensures that GetSourceManifestAsync forwards the correct default manifest path and parameters to the git client
+    /// and properly parses a minimal valid JSON payload into an empty SourceManifest.
+    /// Inputs:
+    ///  - vmrUri and branchOrCommit combinations including normal, empty, and special-character inputs.
+    /// Expected:
+    ///  - IRemoteGitRepo.GetFileContentsAsync is called once with VmrInfo.DefaultRelativeSourceManifestPath, vmrUri, branchOrCommit.
+    ///  - The returned SourceManifest is not null and contains empty Repositories and Submodules collections.
+    /// </summary>
+    [TestCase("https://github.com/org/repo", "main")]
+    [TestCase("", "")]
+    [TestCase("ssh://git@example.com:repo.git", "feature/Ä-测试")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetSourceManifestAsync_ValidJson_ParsesAndUsesDefaultPath(string vmrUri, string branchOrCommit)
+    {
+        // Arrange
+        var gitRepoMock = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        gitRepoMock
+            .Setup(m => m.GetFileContentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync("{\"repositories\":[],\"submodules\":[]}");
+
+        var remote = new Remote(
+            gitRepoMock.Object,
+            Mock.Of<IVersionDetailsParser>(),
+            Mock.Of<ISourceMappingParser>(),
+            Mock.Of<IRemoteFactory>(),
+            Mock.Of<IAssetLocationResolver>(),
+            Mock.Of<IRedisCacheClient>(),
+            Mock.Of<ILogger>());
+
+        // Act
+        var manifest = await remote.GetSourceManifestAsync(vmrUri, branchOrCommit);
+
+        // Assert
+        gitRepoMock.Verify(
+            m => m.GetFileContentsAsync(
+                It.Is<string>(p => p == VmrInfo.DefaultRelativeSourceManifestPath.ToString()),
+                vmrUri,
+                branchOrCommit),
+            Times.Once);
+
+        manifest.Should().NotBeNull();
+        manifest.Repositories.Should().BeEmpty();
+        manifest.Submodules.Should().BeEmpty();
+        gitRepoMock.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Validates that GetSourceManifestAsync throws a JsonException when the retrieved file content is invalid JSON.
+    /// Inputs:
+    ///  - Arbitrary vmrUri and branchOrCommit values.
+    /// Expected:
+    ///  - A JsonException is thrown due to invalid source-manifest JSON payload.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetSourceManifestAsync_InvalidJson_ThrowsJsonException()
+    {
+        // Arrange
+        var gitRepoMock = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        gitRepoMock
+            .Setup(m => m.GetFileContentsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync("not valid json");
+
+        var remote = new Remote(
+            gitRepoMock.Object,
+            Mock.Of<IVersionDetailsParser>(),
+            Mock.Of<ISourceMappingParser>(),
+            Mock.Of<IRemoteFactory>(),
+            Mock.Of<IAssetLocationResolver>(),
+            Mock.Of<IRedisCacheClient>(),
+            Mock.Of<ILogger>());
+
+        // Act
+        Func<Task> act = () => remote.GetSourceManifestAsync("repo", "branch");
+
+        // Assert
+        await act.Should().ThrowAsync<System.Text.Json.JsonException>();
+
+        gitRepoMock.Verify(m =>
+            m.GetFileContentsAsync(
+                It.Is<string>(p => p == VmrInfo.DefaultRelativeSourceManifestPath.ToString()),
+                "repo",
+                "branch"),
+            Times.Once);
+        gitRepoMock.VerifyNoOtherCalls();
+    }
 }
+
 
 
 
@@ -1941,6 +2897,7 @@ public class RemoteDeleteBranchAsyncTests
         yield return new TestCaseData(veryLong, veryLongBranch).SetName("DeleteBranchAsync_VeryLongStrings_DelegatesAndLogs");
     }
 }
+
 
 
 
@@ -2043,6 +3000,7 @@ public class RemoteBranchExistsAsyncTests
         remoteGitRepo.VerifyNoOtherCalls();
     }
 }
+
 
 
 
@@ -2189,6 +3147,7 @@ public class Remote_GetPullRequestChecksAsync_Tests
 
 
 
+
 /// <summary>
 /// Tests for Remote.GetPullRequestReviewsAsync, validating logging, pass-through behavior, and error propagation.
 /// </summary>
@@ -2245,7 +3204,133 @@ public class Remote_GetPullRequestReviewsAsync_Tests
         }
     }
 
+
+    /// <summary>
+    /// Verifies that GetPullRequestReviewsAsync logs an informational message, forwards the exact URL
+    /// to the underlying IRemoteGitRepo.GetLatestPullRequestReviewsAsync, and returns the same result instance.
+    /// Inputs:
+    ///  - pullRequestUrl: typical, empty, whitespace-only, very long, and special-character strings.
+    ///  - expectedReviews: specific IList{Review} instances to be returned by the client.
+    /// Expected:
+    ///  - ILogger.Log is called once with LogLevel.Information and a message containing the URL.
+    ///  - IRemoteGitRepo.GetLatestPullRequestReviewsAsync is called once with the exact same URL.
+    ///  - The returned IEnumerable{Review} instance is the same as the mock's return value (reference equality).
+    /// </summary>
+    [Test]
+    [TestCaseSource(nameof(GetPullRequestReviewsAsync_ReturnsUnderlyingResult_Cases))]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task GetPullRequestReviewsAsync_VariousInputs_LogsDelegatesAndReturnsSameInstance(string pullRequestUrl, IList<Review> expectedReviews)
+    {
+        // Arrange
+        var gitClientMock = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        gitClientMock
+            .Setup(m => m.GetLatestPullRequestReviewsAsync(pullRequestUrl))
+            .ReturnsAsync(expectedReviews)
+            .Verifiable();
+
+        var loggerMock = new Mock<ILogger>(MockBehavior.Strict);
+        loggerMock
+            .Setup(l => l.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((_, __) => true),
+                It.IsAny<Exception>(),
+                (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()));
+
+        var remote = CreateRemote(gitClientMock.Object, loggerMock.Object);
+
+        // Act
+        var result = await remote.GetPullRequestReviewsAsync(pullRequestUrl);
+
+        // Assert
+        result.Should().BeSameAs(expectedReviews);
+
+        gitClientMock.Verify(m => m.GetLatestPullRequestReviewsAsync(pullRequestUrl), Times.Once);
+
+        loggerMock.Verify(l => l.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) =>
+                    v.ToString().Contains("Getting reviews for pull request", StringComparison.Ordinal) &&
+                    v.ToString().Contains(pullRequestUrl, StringComparison.Ordinal)),
+                It.IsAny<Exception>(),
+                (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
+            Times.Once);
+
+        gitClientMock.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Ensures that exceptions thrown by the underlying IRemoteGitRepo.GetLatestPullRequestReviewsAsync are not swallowed
+    /// and are propagated by Remote.GetPullRequestReviewsAsync, while still logging the informational message.
+    /// Inputs:
+    ///  - pullRequestUrl: a typical URL.
+    /// Expected:
+    ///  - InvalidOperationException is thrown with the original message.
+    ///  - ILogger.Log is called once with LogLevel.Information.
+    ///  - IRemoteGitRepo.GetLatestPullRequestReviewsAsync is invoked once with the same URL.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task GetPullRequestReviewsAsync_RemoteThrows_ExceptionIsPropagated()
+    {
+        // Arrange
+        var pullRequestUrl = "https://github.com/owner/repo/pull/42";
+        var expectedMessage = "boom";
+
+        var gitClientMock = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        gitClientMock
+            .Setup(m => m.GetLatestPullRequestReviewsAsync(pullRequestUrl))
+            .ThrowsAsync(new InvalidOperationException(expectedMessage));
+
+        var loggerMock = new Mock<ILogger>(MockBehavior.Strict);
+        loggerMock
+            .Setup(l => l.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((_, __) => true),
+                It.IsAny<Exception>(),
+                (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()));
+
+        var remote = CreateRemote(gitClientMock.Object, loggerMock.Object);
+
+        // Act
+        Func<Task> act = async () => await remote.GetPullRequestReviewsAsync(pullRequestUrl);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage(expectedMessage);
+
+        gitClientMock.Verify(m => m.GetLatestPullRequestReviewsAsync(pullRequestUrl), Times.Once);
+
+        loggerMock.Verify(l => l.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) =>
+                    v.ToString().Contains("Getting reviews for pull request", StringComparison.Ordinal) &&
+                    v.ToString().Contains(pullRequestUrl, StringComparison.Ordinal)),
+                It.IsAny<Exception>(),
+                (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
+            Times.Once);
+
+        gitClientMock.VerifyNoOtherCalls();
+    }
+
+    private static Remote CreateRemote(IRemoteGitRepo client, ILogger logger)
+    {
+        return new Remote(
+            client,
+            Mock.Of<IVersionDetailsParser>(),
+            Mock.Of<ISourceMappingParser>(),
+            Mock.Of<IRemoteFactory>(),
+            Mock.Of<IAssetLocationResolver>(),
+            Mock.Of<IRedisCacheClient>(),
+            logger);
+    }
 }
+
 
 
 
@@ -2405,7 +3490,9 @@ public class RemoteGetPackageSourcesAsyncTests
         // Assert
         await act.Should().ThrowAsync<DependencyFileNotFoundException>();
     }
+
 }
+
 
 
 
@@ -2525,6 +3612,7 @@ public class RemoteCommentPullRequestAsyncTests
 
 
 
+
 [TestFixture]
 public class RemoteGetSourceManifestAsyncTests
 {
@@ -2609,6 +3697,7 @@ public class RemoteGetSourceManifestAsyncTests
 
 
 
+
 [TestFixture]
 public class RemoteGetSourceMappingsAsyncTests
 {
@@ -2656,4 +3745,429 @@ public class RemoteGetSourceMappingsAsyncTests
         ).SetName("FileUri_ControlCharInJson_ReturnsOneMapping");
     }
 
+
+    /// <summary>
+    /// Ensures GetSourceMappingsAsync:
+    ///  - Calls IRemoteGitRepo.GetFileContentsAsync with VmrInfo.DefaultRelativeSourceMappingsPath, vmrUri, and branch.
+    ///  - Passes the retrieved content to ISourceMappingParser.ParseMappingsFromJson.
+    ///  - Returns exactly the same instance that the parser returns (including null).
+    /// Inputs:
+    ///  - vmrUri and branch: typical, empty, whitespace, special, and long strings.
+    ///  - fileContent: various strings (JSON-like, whitespace, long).
+    ///  - resultCount: number of SourceMapping items parser should return; when -1, parser returns null.
+    /// Expected:
+    ///  - Correct delegation to git client and parser with exact parameters.
+    ///  - The returned value is the same instance as provided by the parser (reference equality).
+    /// </summary>
+    [Test]
+    [TestCaseSource(nameof(GetSourceMappingsAsync_TestCases))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetSourceMappingsAsync_VariousInputs_DelegatesAndReturnsParserResult(
+        string vmrUri,
+        string branch,
+        string fileContent,
+        int resultCount)
+    {
+        // Arrange
+        var gitClient = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        gitClient
+            .Setup(m => m.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceMappingsPath.ToString(), vmrUri, branch))
+            .ReturnsAsync(fileContent);
+
+        var parser = new Mock<ISourceMappingParser>(MockBehavior.Strict);
+
+        IReadOnlyCollection<SourceMapping> expectedResult = null;
+        if (resultCount >= 0)
+        {
+            var list = new List<SourceMapping>();
+            for (int i = 0; i < resultCount; i++)
+            {
+                list.Add(new SourceMapping(
+                    "name-" + i,
+                    "https://example.org/remote.git",
+                    "main",
+                    new List<string> { "include/path" },
+                    new List<string> { "exclude/path" },
+                    false));
+            }
+            expectedResult = list;
+        }
+
+        parser
+            .Setup(p => p.ParseMappingsFromJson(fileContent))
+            .Returns(expectedResult);
+
+        var remote = CreateRemote(gitClient.Object, parser.Object);
+
+        // Act
+        var result = await remote.GetSourceMappingsAsync(vmrUri, branch);
+
+        // Assert
+        gitClient.Verify(m => m.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceMappingsPath.ToString(), vmrUri, branch), Times.Once);
+        parser.Verify(p => p.ParseMappingsFromJson(fileContent), Times.Once);
+
+        if (expectedResult is null)
+        {
+            result.Should().BeNull();
+        }
+        else
+        {
+            result.Should().BeSameAs(expectedResult);
+            result.Count.Should().Be(resultCount);
+        }
+
+        gitClient.VerifyNoOtherCalls();
+        parser.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Validates that exceptions thrown by the underlying git client or parser are propagated unchanged.
+    /// Inputs:
+    ///  - throwsInClient: true -> IRemoteGitRepo.GetFileContentsAsync throws; false -> parser throws.
+    /// Expected:
+    ///  - InvalidOperationException is thrown in both scenarios.
+    ///  - When thrown by client, parser is not called.
+    ///  - When thrown by parser, client is called once.
+    /// </summary>
+    [Test]
+    [TestCase(true)]
+    [TestCase(false)]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetSourceMappingsAsync_DownstreamThrows_ExceptionIsPropagated(bool throwsInClient)
+    {
+        // Arrange
+        const string vmrUri = "https://github.com/org/vmr";
+        const string branch = "feature/Ä-测试";
+        const string fileContent = "{ \"mappings\": [] }";
+        var ex = new InvalidOperationException("boom");
+
+        var gitClient = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        var parser = new Mock<ISourceMappingParser>(MockBehavior.Strict);
+
+        if (throwsInClient)
+        {
+            gitClient
+                .Setup(m => m.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceMappingsPath.ToString(), vmrUri, branch))
+                .ThrowsAsync(ex);
+        }
+        else
+        {
+            gitClient
+                .Setup(m => m.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceMappingsPath.ToString(), vmrUri, branch))
+                .ReturnsAsync(fileContent);
+
+            parser
+                .Setup(p => p.ParseMappingsFromJson(fileContent))
+                .Throws(ex);
+        }
+
+        var remote = CreateRemote(gitClient.Object, parser.Object);
+
+        // Act
+        Func<Task> act = async () => await remote.GetSourceMappingsAsync(vmrUri, branch);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>();
+
+        if (throwsInClient)
+        {
+            gitClient.Verify(m => m.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceMappingsPath.ToString(), vmrUri, branch), Times.Once);
+            parser.VerifyNoOtherCalls();
+        }
+        else
+        {
+            gitClient.Verify(m => m.GetFileContentsAsync(VmrInfo.DefaultRelativeSourceMappingsPath.ToString(), vmrUri, branch), Times.Once);
+            parser.Verify(p => p.ParseMappingsFromJson(fileContent), Times.Once);
+            parser.VerifyNoOtherCalls();
+        }
+
+        gitClient.VerifyNoOtherCalls();
+    }
+
+    private static Remote CreateRemote(IRemoteGitRepo gitClient, ISourceMappingParser parser)
+    {
+        return new Remote(
+            gitClient,
+            Mock.Of<IVersionDetailsParser>(),
+            parser,
+            Mock.Of<IRemoteFactory>(),
+            Mock.Of<IAssetLocationResolver>(),
+            Mock.Of<IRedisCacheClient>(),
+            Mock.Of<ILogger>());
+    }
+}
+
+
+
+[TestFixture]
+public class RemoteGitDiffAsyncTests
+{
+    private static Remote CreateRemote(IRemoteGitRepo gitClient)
+    {
+        return new Remote(
+            gitClient,
+            Mock.Of<IVersionDetailsParser>(),
+            Mock.Of<ISourceMappingParser>(),
+            Mock.Of<IRemoteFactory>(),
+            Mock.Of<IAssetLocationResolver>(),
+            Mock.Of<IRedisCacheClient>(),
+            Mock.Of<ILogger>());
+    }
+
+    private static IEnumerable<TestCaseData> NoDiff_Cases()
+    {
+        yield return new TestCaseData("https://github.com/org/repo", "v1.2.3", "v1.2.3")
+            .SetName("GitDiffAsync_SameCaseEqualVersions_NoDiff");
+        yield return new TestCaseData("", "Release-Branch", "release-branch")
+            .SetName("GitDiffAsync_CaseInsensitiveEqualVersions_NoDiff");
+        yield return new TestCaseData("ssh://git@github.com:org/repo.git", "", "")
+            .SetName("GitDiffAsync_EmptyStrings_NoDiff");
+        yield return new TestCaseData("file://local", "  whitespace  ", "  whitespace  ")
+            .SetName("GitDiffAsync_WhitespaceString_NoDiff");
+        yield return new TestCaseData("special://uri", "NaN~!@#$%^&*()", "NaN~!@#$%^&*()")
+            .SetName("GitDiffAsync_SpecialCharacters_NoDiff");
+        yield return new TestCaseData("any://repo", new string('a', 1024), new string('a', 1024))
+            .SetName("GitDiffAsync_VeryLongEqualVersions_NoDiff");
+    }
+
+    /// <summary>
+    /// Ensures that when baseVersion equals targetVersion (case-insensitive), Remote.GitDiffAsync
+    /// returns a NoDiff result and does not call the underlying IRemoteGitRepo.GitDiffAsync.
+    /// Inputs:
+    ///  - Various repoUri values and pairs of baseVersion/targetVersion that are equal ignoring case.
+    /// Expected:
+    ///  - Returned GitDiff has BaseVersion and TargetVersion equal to baseVersion, Ahead/Behind = 0, Valid = true.
+    ///  - IRemoteGitRepo.GitDiffAsync is never called.
+    /// </summary>
+    [Test]
+    [TestCaseSource(nameof(NoDiff_Cases))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GitDiffAsync_BaseEqualsTarget_ReturnsNoDiffAndSkipsClientCall(string repoUri, string baseVersion, string targetVersion)
+    {
+        // Arrange
+        var gitClient = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        var remote = CreateRemote(gitClient.Object);
+
+        // Act
+        var result = await remote.GitDiffAsync(repoUri, baseVersion, targetVersion);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.BaseVersion.Should().Be(baseVersion);
+        result.TargetVersion.Should().Be(baseVersion);
+        result.Ahead.Should().Be(0);
+        result.Behind.Should().Be(0);
+        result.Valid.Should().BeTrue();
+
+        gitClient.Verify(m => m.GitDiffAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        gitClient.VerifyNoOtherCalls();
+    }
+
+    private static IEnumerable<TestCaseData> Delegate_Cases()
+    {
+        yield return new TestCaseData("https://github.com/org/repo", "v1.2.3", "v1.2.4")
+            .SetName("GitDiffAsync_DifferentVersions_Typical");
+        yield return new TestCaseData("", "a", "b")
+            .SetName("GitDiffAsync_DifferentVersions_EmptyRepoUri");
+        yield return new TestCaseData("special://✓", "A", "a ")
+            .SetName("GitDiffAsync_DifferentVersions_WhitespaceDifference");
+        yield return new TestCaseData("any://repo", new string('x', 512), new string('x', 513))
+            .SetName("GitDiffAsync_DifferentVersions_VeryLong");
+    }
+
+    /// <summary>
+    /// Verifies that when baseVersion and targetVersion differ, Remote.GitDiffAsync delegates to
+    /// IRemoteGitRepo.GitDiffAsync with the same parameters and returns exactly the same result instance.
+    /// Inputs:
+    ///  - Diverse repoUri/baseVersion/targetVersion values that are not equal ignoring case.
+    /// Expected:
+    ///  - IRemoteGitRepo.GitDiffAsync is called once with the exact same arguments.
+    ///  - The returned GitDiff instance is the same as provided by the dependency.
+    /// </summary>
+    [Test]
+    [TestCaseSource(nameof(Delegate_Cases))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GitDiffAsync_DifferentVersions_DelegatesToClientAndReturnsResult(string repoUri, string baseVersion, string targetVersion)
+    {
+        // Arrange
+        var expected = new GitDiff
+        {
+            BaseVersion = baseVersion,
+            TargetVersion = targetVersion,
+            Ahead = 3,
+            Behind = 1,
+            Valid = true
+        };
+
+        var gitClient = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        gitClient
+            .Setup(m => m.GitDiffAsync(repoUri, baseVersion, targetVersion))
+            .ReturnsAsync(expected);
+
+        var remote = CreateRemote(gitClient.Object);
+
+        // Act
+        var result = await remote.GitDiffAsync(repoUri, baseVersion, targetVersion);
+
+        // Assert
+        result.Should().BeSameAs(expected);
+        gitClient.Verify(m => m.GitDiffAsync(repoUri, baseVersion, targetVersion), Times.Once);
+        gitClient.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Ensures that exceptions thrown by the underlying IRemoteGitRepo.GitDiffAsync are propagated unchanged.
+    /// Inputs:
+    ///  - repoUri, baseVersion, targetVersion that differ.
+    ///  - IRemoteGitRepo configured to throw InvalidOperationException.
+    /// Expected:
+    ///  - The same InvalidOperationException is thrown by Remote.GitDiffAsync.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GitDiffAsync_ClientThrows_ExceptionIsPropagated()
+    {
+        // Arrange
+        var repoUri = "https://example/repo";
+        var baseVersion = "1.0.0";
+        var targetVersion = "2.0.0";
+        var ex = new InvalidOperationException("boom");
+
+        var gitClient = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        gitClient
+            .Setup(m => m.GitDiffAsync(repoUri, baseVersion, targetVersion))
+            .ThrowsAsync(ex);
+
+        var remote = CreateRemote(gitClient.Object);
+
+        // Act
+        Func<Task> act = () => remote.GitDiffAsync(repoUri, baseVersion, targetVersion);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("boom");
+
+        gitClient.Verify(m => m.GitDiffAsync(repoUri, baseVersion, targetVersion), Times.Once);
+        gitClient.VerifyNoOtherCalls();
+    }
+}
+
+
+
+[TestFixture]
+public class Remote_GetFileContentsAsync_Tests
+{
+    /// <summary>
+    /// Validates that GetFileContentsAsync forwards the provided parameters (filePath, repoUri, branch)
+    /// to the underlying IRemoteGitRepo and returns exactly the content returned by that client.
+    /// Inputs are parameterized to cover typical, empty, whitespace, special characters, and long strings.
+    /// Expected: The result equals the client-returned content and the client is invoked exactly once with the same parameters.
+    /// </summary>
+    [Test]
+    [TestCaseSource(nameof(GetFileContentsAsync_ValidInputCases))]
+    [Category("GetFileContentsAsync")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetFileContentsAsync_ValidInputs_ForwardsAndReturnsResult(string filePath, string repoUri, string branch)
+    {
+        // Arrange
+        var gitRepoMock = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        var versionParserMock = new Mock<IVersionDetailsParser>(MockBehavior.Loose);
+        var sourceMappingParserMock = new Mock<ISourceMappingParser>(MockBehavior.Loose);
+        var remoteFactoryMock = new Mock<IRemoteFactory>(MockBehavior.Loose);
+        var locationResolverMock = new Mock<IAssetLocationResolver>(MockBehavior.Loose);
+        var cacheClientMock = new Mock<IRedisCacheClient>(MockBehavior.Loose);
+        var loggerMock = new Mock<ILogger>(MockBehavior.Loose);
+
+        var expectedContent = $"content::{filePath}::{repoUri}::{branch}";
+        gitRepoMock
+            .Setup(m => m.GetFileContentsAsync(filePath, repoUri, branch))
+            .ReturnsAsync(expectedContent);
+
+        var remote = new Remote(
+            gitRepoMock.Object,
+            versionParserMock.Object,
+            sourceMappingParserMock.Object,
+            remoteFactoryMock.Object,
+            locationResolverMock.Object,
+            cacheClientMock.Object,
+            loggerMock.Object);
+
+        // Act
+        var result = await remote.GetFileContentsAsync(filePath, repoUri, branch);
+
+        // Assert
+        result.Should().Be(expectedContent);
+        gitRepoMock.Verify(m => m.GetFileContentsAsync(filePath, repoUri, branch), Times.Once);
+        gitRepoMock.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Ensures that exceptions thrown by the underlying IRemoteGitRepo.GetFileContentsAsync
+    /// are not swallowed by Remote.GetFileContentsAsync and are propagated to the caller.
+    /// Inputs:
+    ///  - Valid strings for filePath, repoUri, and branch.
+    /// Expected:
+    ///  - The same exception type (InvalidOperationException) is thrown.
+    /// </summary>
+    [Test]
+    [Category("GetFileContentsAsync")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task GetFileContentsAsync_WhenClientThrows_ExceptionIsPropagated()
+    {
+        // Arrange
+        var filePath = "src/dir/file.txt";
+        var repoUri = "https://github.com/org/repo";
+        var branch = "feature/branch-α";
+
+        var gitRepoMock = new Mock<IRemoteGitRepo>(MockBehavior.Strict);
+        var versionParserMock = new Mock<IVersionDetailsParser>(MockBehavior.Loose);
+        var sourceMappingParserMock = new Mock<ISourceMappingParser>(MockBehavior.Loose);
+        var remoteFactoryMock = new Mock<IRemoteFactory>(MockBehavior.Loose);
+        var locationResolverMock = new Mock<IAssetLocationResolver>(MockBehavior.Loose);
+        var cacheClientMock = new Mock<IRedisCacheClient>(MockBehavior.Loose);
+        var loggerMock = new Mock<ILogger>(MockBehavior.Loose);
+
+        gitRepoMock
+            .Setup(m => m.GetFileContentsAsync(filePath, repoUri, branch))
+            .ThrowsAsync(new InvalidOperationException("boom"));
+
+        var remote = new Remote(
+            gitRepoMock.Object,
+            versionParserMock.Object,
+            sourceMappingParserMock.Object,
+            remoteFactoryMock.Object,
+            locationResolverMock.Object,
+            cacheClientMock.Object,
+            loggerMock.Object);
+
+        // Act
+        Func<Task> act = () => remote.GetFileContentsAsync(filePath, repoUri, branch);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        gitRepoMock.Verify(m => m.GetFileContentsAsync(filePath, repoUri, branch), Times.Once);
+        gitRepoMock.VerifyNoOtherCalls();
+    }
+
+    private static IEnumerable<TestCaseData> GetFileContentsAsync_ValidInputCases()
+    {
+        yield return new TestCaseData("src/dir/file.txt", "https://github.com/org/repo", "main");
+        yield return new TestCaseData("", "", "");
+        yield return new TestCaseData(" ", " ", " ");
+        yield return new TestCaseData(
+            new string('a', 1024),
+            new string('b', 1024),
+            new string('c', 1024));
+        yield return new TestCaseData(
+            "path/with/%20 and ✓🚀",
+            "ssh://git@example.com:repo.git?x=∆&y=©",
+            "feature/branch-αβ🚀");
+    }
 }

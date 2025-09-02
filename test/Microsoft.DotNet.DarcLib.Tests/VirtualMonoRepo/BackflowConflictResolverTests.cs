@@ -1,26 +1,33 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+#nullable disable
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using Microsoft.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using NuGet;
 using NuGet.Versioning;
 using NUnit.Framework;
 
-#nullable enable
 namespace Microsoft.DotNet.DarcLib.Tests.VirtualMonoRepo;
+
 
 public class BackflowConflictResolverTests
 {
@@ -133,7 +140,7 @@ public class BackflowConflictResolverTests
                 var key = (repo == _vmrPath ? "vmr" : "repo") + "/" + commit;
                 var versionDetails = _versionDetails[key];
                 _versionDetails[key] = new VersionDetails(
-                    [..versionDetails.Dependencies.Where(d => d.Name != name)],
+                    [.. versionDetails.Dependencies.Where(d => d.Name != name)],
                     versionDetails.Source);
             })
             .Returns(Task.CompletedTask);
@@ -245,7 +252,7 @@ public class BackflowConflictResolverTests
                 new Dictionary<string, DependencyUpdate>()
                 {
                     // this represents the repo-side update to Version.Details.xml prior to the current codeflow
-                    { repoDependencyUpdate.From.Name, repoDependencyUpdate } 
+                    { repoDependencyUpdate.From.Name, repoDependencyUpdate }
                 }));
 
         // Simulate dependency manager
@@ -255,7 +262,7 @@ public class BackflowConflictResolverTests
                 // This would normally set locations, but we don't need that for the test
             })
             .Returns(Task.CompletedTask);
-            
+
         await TestConflictResolver(
             build,
             lastFlows,
@@ -362,75 +369,6 @@ public class BackflowConflictResolverTests
 
     }
 
-    private async Task TestConflictResolver(
-        Build build,
-        LastFlows lastFlows,
-        Backflow currentFlow,
-        (string Name, string Version)[] expectedDependencies,
-        ExpectedUpdate[] expectedUpdates,
-        bool headBranchExisted,
-        string[] excludedAssets)
-    {
-        var gitFileChanges = new GitFileContentContainer();
-        _dependencyFileManager
-            .Setup(x => x.UpdateDependencyFiles(
-                It.IsAny<IEnumerable<DependencyDetail>>(),
-                It.IsAny<SourceDependency>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<IEnumerable<DependencyDetail>>(),
-                null,
-                It.IsAny<bool?>()))
-            .Callback((IEnumerable<DependencyDetail> itemsToUpdate,
-                       SourceDependency? sourceDependency,
-                       string repo,
-                       string? commit,
-                       IEnumerable<DependencyDetail> oldDependencies,
-                       SemanticVersion? incomingDotNetSdkVersion,
-                       bool? _) =>
-            {
-                // Update dependencies in-memory
-                var key = (repo == _vmrPath ? "vmr" : "repo") + "/" + commit;
-                _versionDetails[key] = new VersionDetails(
-                    oldDependencies
-                        .Select(dep => itemsToUpdate.FirstOrDefault(d => d.Name.Equals(dep.Name, StringComparison.OrdinalIgnoreCase)) ?? dep)
-                        .ToArray(),
-                    new SourceDependency(build, MappingName));
-
-            })
-            .ReturnsAsync(gitFileChanges);
-
-        var cancellationToken = new CancellationToken();
-        VersionFileUpdateResult mergeResult = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
-            new SourceMapping(MappingName, "https://github/repo1", "main", [], [], false),
-            lastFlows,
-            currentFlow,
-            _localRepo.Object,
-            build,
-            PrBranch,
-            TargetBranch,
-            excludedAssets: excludedAssets,
-            headBranchExisted: headBranchExisted,
-            cancellationToken);
-
-        mergeResult.ConflictedFiles.Should().BeEmpty();
-        mergeResult.DependencyUpdates
-            .Select(update => new ExpectedUpdate(
-                update.To.Name,
-                update.From?.Version,
-                update.To?.Version))
-            .Should().BeEquivalentTo(expectedUpdates, options => options.WithoutStrictOrdering());
-
-        // Test the final state of V.D.xml (from the working tree)
-        _versionDetails["repo/"].Dependencies
-            .Select(x => (x.Name, x.Version))
-            .Should().BeEquivalentTo(expectedDependencies, options => options.WithoutStrictOrdering());
-
-        _libGit2Client.Verify(x => x.CommitFilesAsync(It.IsAny<List<GitFile>>(), _repoPath.Path, null, null), Times.AtLeastOnce);
-        _localRepo.Verify(x => x.StageAsync(new[] { "." }, cancellationToken), Times.AtLeastOnce);
-        _localRepo.Verify(x => x.CommitAsync(It.IsAny<string>(), false, null, cancellationToken), Times.AtLeastOnce);
-    }
-
     private Build CreateNewBuild(string commit, (string name, string version)[] assets)
     {
         var assetId = 1;
@@ -471,5 +409,252 @@ public class BackflowConflictResolverTests
             Type = type,
         };
 
-    private record ExpectedUpdate(string Name, string? From, string? To);
+    /// <summary>
+    /// Validates that the BackflowConflictResolver constructor initializes an instance
+    /// when provided with non-null dependencies.
+    /// Inputs:
+    ///  - All constructor parameters are provided as Moq-generated interface instances.
+    /// Expected:
+    ///  - The constructed instance is not null.
+    ///  - The instance implements IBackflowConflictResolver.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void BackflowConflictResolver_Ctor_WithValidDependencies_CreatesInstance()
+    {
+        // Arrange
+        var vmrInfo = new Mock<IVmrInfo>(MockBehavior.Strict).Object;
+        var patchHandler = new Mock<IVmrPatchHandler>(MockBehavior.Strict).Object;
+        var libGit2Client = new Mock<ILocalLibGit2Client>(MockBehavior.Strict).Object;
+        var localGitRepoFactory = new Mock<ILocalGitRepoFactory>(MockBehavior.Strict).Object;
+        var versionDetailsParser = new Mock<IVersionDetailsParser>(MockBehavior.Strict).Object;
+        var assetLocationResolver = new Mock<IAssetLocationResolver>(MockBehavior.Strict).Object;
+        var coherencyUpdateResolver = new Mock<ICoherencyUpdateResolver>(MockBehavior.Strict).Object;
+        var dependencyFileManager = new Mock<IDependencyFileManager>(MockBehavior.Strict).Object;
+        var fileSystem = new Mock<IFileSystem>(MockBehavior.Strict).Object;
+        var logger = new Mock<ILogger<BackflowConflictResolver>>(MockBehavior.Loose).Object;
+        var vmrVersionFileMerger = new Mock<IVmrVersionFileMerger>(MockBehavior.Strict).Object;
+
+        // Act
+        var sut = new BackflowConflictResolver(
+            vmrInfo,
+            patchHandler,
+            libGit2Client,
+            localGitRepoFactory,
+            versionDetailsParser,
+            assetLocationResolver,
+            coherencyUpdateResolver,
+            dependencyFileManager,
+            fileSystem,
+            logger,
+            vmrVersionFileMerger);
+
+        // Assert
+        sut.Should().NotBeNull();
+        sut.Should().BeAssignableTo<IBackflowConflictResolver>();
+    }
+
+    /// <summary>
+    /// Ensures multiple invocations of the constructor produce distinct instances without shared state.
+    /// Inputs:
+    ///  - Two independent sets of mocks are provided to two constructor calls.
+    /// Expected:
+    ///  - The resulting instances are not the same reference.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void BackflowConflictResolver_Ctor_MultipleInstances_AreIndependent()
+    {
+        // Arrange
+        var vmrInfo1 = new Mock<IVmrInfo>(MockBehavior.Strict).Object;
+        var patchHandler1 = new Mock<IVmrPatchHandler>(MockBehavior.Strict).Object;
+        var libGit2Client1 = new Mock<ILocalLibGit2Client>(MockBehavior.Strict).Object;
+        var localGitRepoFactory1 = new Mock<ILocalGitRepoFactory>(MockBehavior.Strict).Object;
+        var versionDetailsParser1 = new Mock<IVersionDetailsParser>(MockBehavior.Strict).Object;
+        var assetLocationResolver1 = new Mock<IAssetLocationResolver>(MockBehavior.Strict).Object;
+        var coherencyUpdateResolver1 = new Mock<ICoherencyUpdateResolver>(MockBehavior.Strict).Object;
+        var dependencyFileManager1 = new Mock<IDependencyFileManager>(MockBehavior.Strict).Object;
+        var fileSystem1 = new Mock<IFileSystem>(MockBehavior.Strict).Object;
+        var logger1 = new Mock<ILogger<BackflowConflictResolver>>(MockBehavior.Loose).Object;
+        var vmrVersionFileMerger1 = new Mock<IVmrVersionFileMerger>(MockBehavior.Strict).Object;
+
+        var vmrInfo2 = new Mock<IVmrInfo>(MockBehavior.Strict).Object;
+        var patchHandler2 = new Mock<IVmrPatchHandler>(MockBehavior.Strict).Object;
+        var libGit2Client2 = new Mock<ILocalLibGit2Client>(MockBehavior.Strict).Object;
+        var localGitRepoFactory2 = new Mock<ILocalGitRepoFactory>(MockBehavior.Strict).Object;
+        var versionDetailsParser2 = new Mock<IVersionDetailsParser>(MockBehavior.Strict).Object;
+        var assetLocationResolver2 = new Mock<IAssetLocationResolver>(MockBehavior.Strict).Object;
+        var coherencyUpdateResolver2 = new Mock<ICoherencyUpdateResolver>(MockBehavior.Strict).Object;
+        var dependencyFileManager2 = new Mock<IDependencyFileManager>(MockBehavior.Strict).Object;
+        var fileSystem2 = new Mock<IFileSystem>(MockBehavior.Strict).Object;
+        var logger2 = new Mock<ILogger<BackflowConflictResolver>>(MockBehavior.Loose).Object;
+        var vmrVersionFileMerger2 = new Mock<IVmrVersionFileMerger>(MockBehavior.Strict).Object;
+
+        // Act
+        var sut1 = new BackflowConflictResolver(
+            vmrInfo1,
+            patchHandler1,
+            libGit2Client1,
+            localGitRepoFactory1,
+            versionDetailsParser1,
+            assetLocationResolver1,
+            coherencyUpdateResolver1,
+            dependencyFileManager1,
+            fileSystem1,
+            logger1,
+            vmrVersionFileMerger1);
+
+        var sut2 = new BackflowConflictResolver(
+            vmrInfo2,
+            patchHandler2,
+            libGit2Client2,
+            localGitRepoFactory2,
+            versionDetailsParser2,
+            assetLocationResolver2,
+            coherencyUpdateResolver2,
+            dependencyFileManager2,
+            fileSystem2,
+            logger2,
+            vmrVersionFileMerger2);
+
+        // Assert
+        sut1.Should().NotBeNull();
+        sut2.Should().NotBeNull();
+        sut1.Should().NotBeSameAs(sut2);
+    }
+
+    /// <summary>
+    /// Verifies that when the input sequence of DependencyUpdate is empty,
+    /// the method returns the exact "no updates" message.
+    /// Inputs:
+    ///  - updates: empty collection.
+    /// Expected:
+    ///  - "No dependency updates to commit"
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void BuildDependencyUpdateCommitMessage_EmptyUpdates_ReturnsNoUpdatesMessage()
+    {
+        // Arrange
+        var updates = new List<DependencyUpdate>();
+
+        // Act
+        var message = BackflowConflictResolver.BuildDependencyUpdateCommitMessage(updates);
+
+        // Assert
+        message.Should().Be("No dependency updates to commit");
+    }
+
+    /// <summary>
+    /// Ensures mixed updates (Updated, Added, Removed) are grouped and ordered correctly,
+    /// with names aggregated per version group and sections emitted in the order:
+    /// Updated, Added, Removed. Also validates line breaks and trimming.
+    /// Inputs:
+    ///  - Updated: Foo(2.0.0->3.0.0), Bar(2.0.0->3.0.0), Boz(1.0.0->4.0.0)
+    ///  - Added: Bop(3.0.0)
+    ///  - Removed: Bam(2.0.0)
+    /// Expected:
+    ///  - Updated Dependencies:
+    ///    Foo, Bar (Version 2.0.0 -> 3.0.0)
+    ///    Boz (Version 1.0.0 -> 4.0.0)
+    ///    [blank line]
+    ///  - Added Dependencies:
+    ///    Bop (Version 3.0.0)
+    ///    [blank line]
+    ///  - Removed Dependencies:
+    ///    Bam (Version 2.0.0)
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void BuildDependencyUpdateCommitMessage_MixedUpdates_GroupedAndOrdered()
+    {
+        // Arrange
+        DependencyUpdate dep1 = new()
+        {
+            From = new DependencyDetail { Name = "Foo", Version = "2.0.0" },
+            To = new DependencyDetail { Name = "Foo", Version = "3.0.0" },
+        };
+
+        DependencyUpdate dep2 = new()
+        {
+            From = new DependencyDetail { Name = "Bar", Version = "2.0.0" },
+            To = new DependencyDetail { Name = "Bar", Version = "3.0.0" },
+        };
+
+        DependencyUpdate dep3 = new()
+        {
+            From = new DependencyDetail { Name = "Boz", Version = "1.0.0" },
+            To = new DependencyDetail { Name = "Boz", Version = "4.0.0" },
+        };
+
+        DependencyUpdate dep4 = new()
+        {
+            To = new DependencyDetail { Name = "Bop", Version = "3.0.0" },
+        };
+
+        DependencyUpdate dep5 = new()
+        {
+            From = new DependencyDetail { Name = "Bam", Version = "2.0.0" },
+        };
+
+        var updates = new[] { dep1, dep2, dep3, dep4, dep5 };
+
+        var expected =
+            """
+            Updated Dependencies:
+            Foo, Bar (Version 2.0.0 -> 3.0.0)
+            Boz (Version 1.0.0 -> 4.0.0)
+
+            Added Dependencies:
+            Bop (Version 3.0.0)
+
+            Removed Dependencies:
+            Bam (Version 2.0.0)
+            """.Trim();
+
+        // Act
+        var message = BackflowConflictResolver.BuildDependencyUpdateCommitMessage(updates);
+
+        // Assert
+        message.Should().Be(expected);
+    }
+
+    /// <summary>
+    /// Validates that for updated dependencies where From.Name and To.Name differ,
+    /// the displayed name comes from From.Name (as per implementation),
+    /// and that grouping by version range is respected.
+    /// Inputs:
+    ///  - Updated: From = OldName 1.0.0, To = NewName 2.0.0
+    /// Expected:
+    ///  - Updated Dependencies:
+    ///    OldName (Version 1.0.0 -> 2.0.0)
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void BuildDependencyUpdateCommitMessage_UpdatedUsesFromName_WhenNamesDiffer()
+    {
+        // Arrange
+        var update = new DependencyUpdate
+        {
+            From = new DependencyDetail { Name = "OldName", Version = "1.0.0" },
+            To = new DependencyDetail { Name = "NewName", Version = "2.0.0" },
+        };
+
+        var expected =
+            """
+            Updated Dependencies:
+            OldName (Version 1.0.0 -> 2.0.0)
+            """.Trim();
+
+        // Act
+        var message = BackflowConflictResolver.BuildDependencyUpdateCommitMessage(new[] { update });
+
+        // Assert
+        message.Should().Be(expected);
+    }
 }

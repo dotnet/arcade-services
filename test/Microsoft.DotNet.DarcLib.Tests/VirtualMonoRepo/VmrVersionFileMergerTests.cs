@@ -1,23 +1,28 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-
-#nullable enable
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Extensions;
 using Microsoft.Extensions.Logging;
 using Moq;
+using NuGet;
+using NuGet.Versioning;
 using NUnit.Framework;
+#nullable enable
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib.Tests.VirtualMonoRepo;
+
 
 public class VmrVersionFileMergerTests
 {
@@ -29,9 +34,9 @@ public class VmrVersionFileMergerTests
     private readonly Mock<ILocalGitRepo> _targetRepoMock = new();
     private readonly Mock<ILocalGitRepo> _vmrRepoMock = new();
     private readonly Mock<IGitRepo> _gitRepoMock = new();
-    
+
     private VmrVersionFileMerger _vmrVersionFileMerger = null!;
-    
+
     private const string TestJsonPath = "test.json";
     private const string TargetPreviousSha = "target-previous-sha";
     private const string TargetCurrentSha = "target-current-sha";
@@ -66,7 +71,7 @@ public class VmrVersionFileMergerTests
     {
         // Arrange
         var lastFlow = new Backflow("previous-vmr-sha", "previous-repo-sha");
-        
+
         var targetPreviousJson = """
             {
               "sdk": {
@@ -89,7 +94,7 @@ public class VmrVersionFileMergerTests
               }
             }
             """;
-        
+
         var targetCurrentJson = """
             {
               "sdk": {
@@ -113,7 +118,7 @@ public class VmrVersionFileMergerTests
               }
             }
             """;
-        
+
         var sourcePreviousJson = """
             {
               "sdk": {
@@ -136,7 +141,7 @@ public class VmrVersionFileMergerTests
               }
             }
             """;
-        
+
         var sourceCurrentJson = """
             {
               "sdk": {
@@ -194,7 +199,7 @@ public class VmrVersionFileMergerTests
             .ReturnsAsync(targetCurrentJson);
         _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), "HEAD", It.IsAny<string>()))
             .ReturnsAsync(targetCurrentJson);
-        _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()    ))
+        _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()))
             .ReturnsAsync(sourcePreviousJson);
         _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
             .ReturnsAsync(sourceCurrentJson);
@@ -223,7 +228,7 @@ public class VmrVersionFileMergerTests
     public async Task MergeJsonAsyncHandlesMissingJsonsCorrectly()
     {
         var lastFlow = new Backflow("previous-vmr-sha", "previous-repo-sha");
-        
+
         string? targetPreviousJson = null;
         string? targetCurrentJson = null;
         string? vmrPreviousJson = null;
@@ -355,7 +360,7 @@ public class VmrVersionFileMergerTests
                 // Package.That.Is.Already.Removed.In.Repo is removed
             ],
             sourceDependency);
-        List<(string, string)> expectedVersions = 
+        List<(string, string)> expectedVersions =
             [
                 ("Package.From.Build", "1.0.1"),
                 ("Package.Updated.In.Both", "3.0.0"),
@@ -415,7 +420,7 @@ public class VmrVersionFileMergerTests
                 }
                 else
                 {
-                    dep.Version = dependency.Version; 
+                    dep.Version = dependency.Version;
                 }
             })
             .ReturnsAsync(true);
@@ -461,7 +466,7 @@ public class VmrVersionFileMergerTests
     {
         // Arrange
         var lastFlow = new Backflow("previous-vmr-sha", "previous-repo-sha");
-        
+
         var targetPreviousJson = """
             {
               "sdk": {
@@ -481,7 +486,7 @@ public class VmrVersionFileMergerTests
               }
             }
             """;
-        
+
         var targetCurrentJson = """
             {
               "sdk": {
@@ -502,7 +507,7 @@ public class VmrVersionFileMergerTests
               }
             }
             """;
-        
+
         var vmrPreviousJson = """
             {
               "sdk": {
@@ -523,7 +528,7 @@ public class VmrVersionFileMergerTests
               }
             }
             """;
-        
+
         var vmrCurrentJson = """
             {
               "sdk": {
@@ -597,7 +602,7 @@ public class VmrVersionFileMergerTests
     public async Task MergeJsonAsync_FileDeletedInTargetRepo_DoesNothing()
     {
         var lastFlow = new Backflow("previous-vmr-sha", "previous-repo-sha");
-        
+
         var targetPreviousJson = """
             {
               "sdk": {
@@ -605,9 +610,9 @@ public class VmrVersionFileMergerTests
               }
             }
             """;
-        
+
         string? targetCurrentJson = null; // File deleted in target repo
-        
+
         var vmrPreviousJson = """
             {
               "sdk": {
@@ -615,7 +620,7 @@ public class VmrVersionFileMergerTests
               }
             }
             """;
-        
+
         var vmrCurrentJson = """
             {
               "sdk": {
@@ -659,7 +664,7 @@ public class VmrVersionFileMergerTests
     {
         // Arrange
         var lastFlow = new Backflow("previous-vmr-sha", "previous-repo-sha");
-        
+
         var targetPreviousJson = """
             {
               "sdk": {
@@ -667,7 +672,7 @@ public class VmrVersionFileMergerTests
               }
             }
             """;
-        
+
         var targetCurrentJson = """
             {
               "sdk": {
@@ -675,7 +680,7 @@ public class VmrVersionFileMergerTests
               }
             }
             """;
-        
+
         var vmrPreviousJson = """
             {
               "sdk": {
@@ -683,7 +688,7 @@ public class VmrVersionFileMergerTests
               }
             }
             """;
-        
+
         string? vmrCurrentJson = null; // File deleted in VMR (source repo)
 
         _targetRepoMock.Setup(r => r.GetFileFromGitAsync(TestJsonPath, TargetPreviousSha, It.IsAny<string>()))
@@ -726,4 +731,223 @@ public class VmrVersionFileMergerTests
             RepoUri = "uri",
             Type = type,
         };
+
+    /// <summary>
+    /// Ensures that constructing VmrVersionFileMerger with valid (non-null) dependencies succeeds.
+    /// Input:
+    ///  - All constructor parameters provided as mock instances.
+    /// Expected:
+    ///  - No exception is thrown and the instance is created successfully.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void Constructor_ValidDependencies_DoesNotThrow()
+    {
+        // Arrange
+        var gitRepoFactory = new Mock<IGitRepoFactory>(MockBehavior.Strict).Object;
+        var logger = new Mock<ILogger<VmrVersionFileMerger>>(MockBehavior.Strict).Object;
+        var localGitRepoFactory = new Mock<ILocalGitRepoFactory>(MockBehavior.Strict).Object;
+        var versionDetailsParser = new Mock<IVersionDetailsParser>(MockBehavior.Strict).Object;
+        var dependencyFileManager = new Mock<IDependencyFileManager>(MockBehavior.Strict).Object;
+
+        // Act
+        var sut = new VmrVersionFileMerger(
+            gitRepoFactory,
+            logger,
+            localGitRepoFactory,
+            versionDetailsParser,
+            dependencyFileManager);
+
+        // Assert
+        GC.KeepAlive(sut);
+    }
+    private readonly Mock<ILocalGitRepo> _sourceRepoMock = new();
+
+    private VmrVersionFileMerger _sut = null!;
+
+    private const string TargetPrevRef = "target-prev";
+    private const string TargetCurrRef = "target-curr";
+    private const string SourcePrevRef = "source-prev";
+    private const string SourceCurrRef = "source-curr";
+    private const string TargetRelativePath = "eng/Version.Details.xml";
+    private const string SourceRelativePath = "src/VMR/Version.Details.xml";
+
+    /// <summary>
+    /// Verifies MergeVersionDetails merges and applies changes correctly:
+    /// - For a dependency updated in both repos, the higher semantic version is selected and applied as an update.
+    /// - A dependency added only in the source repo is applied as an addition.
+    /// - A dependency removed only in the source repo is applied as a removal.
+    /// - A dependency removed in the target repo but added in the source repo is ignored (no-op).
+    /// Also verifies VersionDetailsPropsExistsAsync result is propagated to add/update/remove operations and mapping handling.
+    /// </summary>
+    /// <param name="mapping">Mapping to apply changes under; when null the relative base path must be null, otherwise non-null.</param>
+    /// <param name="versionDetailsPropsExists">Controls the value returned from VersionDetailsPropsExistsAsync and propagated to operations.</param>
+    [TestCase(null, true)]
+    [TestCase("some/mapping", false)]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task MergeVersionDetails_MergesAndApplies_ChoosesHigherSemVerAndHonorsTargetRemovalsAsync(string mapping, bool versionDetailsPropsExists)
+    {
+        // Arrange
+        var keyTargetPrev = "key-target-prev";
+        var keyTargetCurr = "key-target-curr";
+        var keySourcePrev = "key-source-prev";
+        var keySourceCurr = "key-source-curr";
+
+        // target: A 1.0.0 -> 1.2.0 (updated); D removed
+        var targetPrev = new VersionDetails(
+            new[]
+            {
+                CreateDependency("A", "1.0.0", "sha-tp"),
+                CreateDependency("D", "0.9.0", "sha-tp"),
+            },
+            new SourceDependency("t-uri", "t-map", "sha-tp", 1));
+        var targetCurr = new VersionDetails(
+            new[]
+            {
+                CreateDependency("A", "1.2.0", "sha-tc"),
+            },
+            new SourceDependency("t-uri", "t-map", "sha-tc", 2));
+
+        // source: A 1.0.0 -> 1.3.0 (updated, higher), B added, C removed, D added (but should be ignored due to target removal)
+        var sourcePrev = new VersionDetails(
+            new[]
+            {
+                CreateDependency("A", "1.0.0", "sha-sp"),
+                CreateDependency("C", "1.0.0", "sha-sp"),
+            },
+            new SourceDependency("s-uri", "s-map", "sha-sp", 3));
+        var sourceCurr = new VersionDetails(
+            new[]
+            {
+                CreateDependency("A", "1.3.0", "sha-sc"),
+                CreateDependency("B", "2.0.0", "sha-sc"),
+                CreateDependency("D", "1.0.0", "sha-sc"),
+            },
+            new SourceDependency("s-uri", "s-map", "sha-sc", 4));
+
+        var dict = new Dictionary<string, VersionDetails>
+        {
+            [keyTargetPrev] = targetPrev,
+            [keyTargetCurr] = targetCurr,
+            [keySourcePrev] = sourcePrev,
+            [keySourceCurr] = sourceCurr,
+        };
+
+        _targetRepoMock
+            .Setup(r => r.GetFileFromGitAsync(TargetRelativePath, TargetPrevRef, It.IsAny<string>()))
+            .ReturnsAsync(keyTargetPrev);
+        _targetRepoMock
+            .Setup(r => r.GetFileFromGitAsync(TargetRelativePath, TargetCurrRef, It.IsAny<string>()))
+            .ReturnsAsync(keyTargetCurr);
+
+        _sourceRepoMock
+            .Setup(r => r.GetFileFromGitAsync(SourceRelativePath, SourcePrevRef, It.IsAny<string>()))
+            .ReturnsAsync(keySourcePrev);
+        _sourceRepoMock
+            .Setup(r => r.GetFileFromGitAsync(SourceRelativePath, SourceCurrRef, It.IsAny<string>()))
+            .ReturnsAsync(keySourceCurr);
+
+        _versionDetailsParserMock
+            .Setup(p => p.ParseVersionDetailsXml(It.IsAny<string>(), It.IsAny<bool>()))
+            .Returns((string key, bool _) => dict[key]);
+
+        _dependencyFileManagerMock
+            .Setup(m => m.VersionDetailsPropsExistsAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                mapping == null ? It.Is<UnixPath?>(p => p == null) : It.Is<UnixPath?>(p => p != null)))
+            .ReturnsAsync(versionDetailsPropsExists);
+
+        _dependencyFileManagerMock
+            .Setup(m => m.TryAddOrUpdateDependency(
+                It.IsAny<DependencyDetail>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<UnixPath?>(),
+                It.IsAny<bool>(),
+                It.IsAny<bool?>()))
+            .ReturnsAsync(true);
+
+        _dependencyFileManagerMock
+            .Setup(m => m.TryRemoveDependencyAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<UnixPath?>(),
+                It.IsAny<bool?>()))
+            .ReturnsAsync(true);
+
+        // Act
+        await _sut.MergeVersionDetails(
+            _targetRepoMock.Object,
+            TargetRelativePath,
+            TargetPrevRef,
+            TargetCurrRef,
+            _sourceRepoMock.Object,
+            SourceRelativePath,
+            SourcePrevRef,
+            SourceCurrRef,
+            mapping);
+
+        // Assert
+        // Verify four reads with correct revisions
+        _targetRepoMock.Verify(r => r.GetFileFromGitAsync(TargetRelativePath, TargetPrevRef, It.IsAny<string>()), Times.Once);
+        _targetRepoMock.Verify(r => r.GetFileFromGitAsync(TargetRelativePath, TargetCurrRef, It.IsAny<string>()), Times.Once);
+        _sourceRepoMock.Verify(r => r.GetFileFromGitAsync(SourceRelativePath, SourcePrevRef, It.IsAny<string>()), Times.Once);
+        _sourceRepoMock.Verify(r => r.GetFileFromGitAsync(SourceRelativePath, SourceCurrRef, It.IsAny<string>()), Times.Once);
+
+        // VersionDetailsPropsExistsAsync must be called exactly once with expected relativeBasePath null/non-null based on mapping
+        _dependencyFileManagerMock.Verify(m => m.VersionDetailsPropsExistsAsync(
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            mapping == null ? It.Is<UnixPath?>(p => p == null) : It.Is<UnixPath?>(p => p != null)),
+            Times.Once);
+
+        // Update: A must be applied with higher semver "1.3.0" from source and with propagated repoHasVersionDetailsProps
+        _dependencyFileManagerMock.Verify(m => m.TryAddOrUpdateDependency(
+            It.Is<DependencyDetail>(d => d.Name == "A" && d.Version == "1.3.0"),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            mapping == null ? It.Is<UnixPath?>(p => p == null) : It.Is<UnixPath?>(p => p != null),
+            true,
+            versionDetailsPropsExists), Times.Once);
+
+        // Addition: B must be applied
+        _dependencyFileManagerMock.Verify(m => m.TryAddOrUpdateDependency(
+            It.Is<DependencyDetail>(d => d.Name == "B" && d.Version == "2.0.0"),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            mapping == null ? It.Is<UnixPath?>(p => p == null) : It.Is<UnixPath?>(p => p != null),
+            true,
+            versionDetailsPropsExists), Times.Once);
+
+        // Removal: C must be removed
+        _dependencyFileManagerMock.Verify(m => m.TryRemoveDependencyAsync(
+            It.Is<string>(name => name == "C"),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            mapping == null ? It.Is<UnixPath?>(p => p == null) : It.Is<UnixPath?>(p => p != null),
+            versionDetailsPropsExists), Times.Once);
+
+        // Target removed D should cause no addition or removal
+        _dependencyFileManagerMock.Verify(m => m.TryAddOrUpdateDependency(
+            It.Is<DependencyDetail>(d => d.Name == "D"),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<UnixPath?>(),
+            It.IsAny<bool>(),
+            It.IsAny<bool?>()), Times.Never);
+        _dependencyFileManagerMock.Verify(m => m.TryRemoveDependencyAsync(
+            It.Is<string>(name => name == "D"),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<UnixPath?>(),
+            It.IsAny<bool?>()), Times.Never);
+
+        // Staging must occur
+        _targetRepoMock.Verify(r => r.StageAsync(It.Is<IEnumerable<string>>(s => s.SequenceEqual(new[] { "." })), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
 }

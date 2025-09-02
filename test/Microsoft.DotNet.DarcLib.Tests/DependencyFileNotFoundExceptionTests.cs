@@ -1,0 +1,323 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using System.Collections.Generic;
+using System.Runtime;
+using System.Runtime.Serialization;
+using FluentAssertions;
+using Microsoft.DotNet;
+using Microsoft.DotNet.DarcLib;
+using Moq;
+using NUnit.Framework;
+
+namespace Microsoft.DotNet.DarcLib.Tests;
+
+
+/// <summary>
+/// Unit tests for DependencyFileNotFoundException constructor that accepts
+/// (string filePath, string repository, string branch, Exception innerException).
+/// Validates message composition and inner exception propagation across a range of inputs.
+/// </summary>
+[TestFixture]
+public class DependencyFileNotFoundExceptionTests
+{
+    /// <summary>
+    /// Ensures the constructor composes the expected Message and sets InnerException accordingly.
+    /// Inputs vary across normal values, empty/whitespace, nulls, special characters, and very long strings.
+    /// Expected:
+    /// - Message equals "Required dependency file '{filePath}' in repository '{repository}' branch '{branch}' was not found."
+    ///   where null values are rendered as empty strings by string interpolation.
+    /// - InnerException equals the provided innerException (including null).
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [TestCaseSource(nameof(ConstructorCases))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void DependencyFileNotFoundException_VariousInputs_MessageAndInnerAreCorrect(string filePath, string repository, string branch, Exception innerException)
+    {
+        // Arrange
+        var expectedMessage = $"Required dependency file '{filePath}' in repository '{repository}' branch '{branch}' was not found.";
+
+        // Act
+        var ex = new DependencyFileNotFoundException(filePath, repository, branch, innerException);
+
+        // Assert
+        ex.Message.Should().Be(expectedMessage);
+        ex.InnerException.Should().Be(innerException);
+    }
+
+    private static System.Collections.Generic.IEnumerable<TestCaseData> ConstructorCases()
+    {
+        // Normal values with non-null inner exception
+        yield return new TestCaseData(
+            "eng/Version.Details.xml",
+            "https://github.com/dotnet/arcade",
+            "main",
+            new Exception("boom"))
+            .SetName("NormalValues_InnerProvided");
+
+        // Empty strings with null inner exception
+        yield return new TestCaseData(
+            string.Empty,
+            string.Empty,
+            string.Empty,
+            null)
+            .SetName("EmptyStrings_InnerNull");
+
+        // Whitespace strings with non-null inner exception
+        yield return new TestCaseData(
+            " ",
+            "   ",
+            "\t",
+            new InvalidOperationException("inner"))
+            .SetName("WhitespaceStrings_InnerProvided");
+
+        // Special characters and path-like inputs
+        yield return new TestCaseData(
+            "C:\\path\\with\\slashes\\and 'quotes'\nfile.json",
+            "org/repo:name",
+            "feature/bugfix-123",
+            new ApplicationException("special"))
+            .SetName("SpecialCharactersAndPaths");
+
+        // Very long strings and null inner
+        yield return new TestCaseData(
+            new string('a', 2048),
+            new string('b', 2048),
+            new string('c', 2048),
+            null)
+            .SetName("VeryLongStrings_InnerNull");
+
+        // Nulls for filePath/repository/branch with inner provided
+        yield return new TestCaseData(
+            null,
+            null,
+            null,
+            new Exception("nulls"))
+            .SetName("NullInputs_InnerProvided");
+    }
+
+    /// <summary>
+    /// Exposes the protected deserialization constructor to allow direct testing.
+    /// </summary>
+    private sealed class TestableDependencyFileNotFoundException : DependencyFileNotFoundException
+    {
+        public TestableDependencyFileNotFoundException(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
+    }
+
+    /// <summary>
+    /// Ensures the protected serialization constructor throws ArgumentNullException when SerializationInfo is null.
+    /// Inputs:
+    ///  - info: null
+    ///  - context: default StreamingContext
+    /// Expected:
+    ///  - ArgumentNullException with ParamName == "info".
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void DependencyFileNotFoundException_SerializationCtor_NullInfo_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var context = default(StreamingContext);
+
+        // Act
+        Action act = () => new TestableDependencyFileNotFoundException(null, context);
+
+        // Assert
+        var ex = act.Should().Throw<ArgumentNullException>().Which;
+        ex.ParamName.Should().Be("info");
+    }
+
+    /// <summary>
+    /// Ensures that the parameterless constructor creates a valid exception instance
+    /// with no inner exception.
+    /// Inputs:
+    ///  - No inputs (default constructor).
+    /// Expected:
+    ///  - Instance is created successfully.
+    ///  - InnerException is null.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void Constructor_Default_CreatesInstanceWithNullInnerException()
+    {
+        // Arrange
+        // No arrangement needed for default constructor.
+
+        // Act
+        var exception = new DependencyFileNotFoundException();
+
+        // Assert
+        exception.Should().NotBeNull();
+        exception.InnerException.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Validates that the DependencyFileNotFoundException(string message) constructor:
+    /// - Preserves the provided message exactly across a variety of message inputs (empty, whitespace, control, long, and special characters).
+    /// - Does not set an InnerException.
+    /// Inputs:
+    ///  - message: Various non-null strings including empty, whitespace-only, control characters, and very long strings.
+    /// Expected:
+    ///  - The created exception's Message equals the input message.
+    ///  - The created exception's InnerException is null.
+    /// </summary>
+    [TestCaseSource(nameof(MessageCases))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void Constructor_MessageVariants_MessagePreservedAndNoInnerException(string message)
+    {
+        // Arrange
+        // message provided by TestCaseSource
+
+        // Act
+        var ex = new DependencyFileNotFoundException(message);
+
+        // Assert
+        ex.Should().BeOfType<DependencyFileNotFoundException>();
+        ex.Message.Should().Be(message);
+        ex.InnerException.Should().BeNull();
+    }
+
+    private static IEnumerable<string> MessageCases()
+    {
+        yield return string.Empty;
+        yield return " ";
+        yield return "   ";
+        yield return "\tTabbed message";
+        yield return "\r\nMultiline\nMessage";
+        yield return "Special chars !@#$%^&*()_+[]{}|;':\",./<>?\\`~";
+        yield return "Control char before end -> \u001F <- here";
+        yield return new string('a', 4096);
+    }
+
+    /// <summary>
+    /// Validates that the (string message, Exception innerException) constructor sets the Message and InnerException
+    /// as provided and that the created instance is of the correct type hierarchy.
+    /// Inputs:
+    ///  - Various non-null message values (empty, whitespace, special chars, very long).
+    ///  - Inner exception type selector indicating base Exception or InvalidOperationException.
+    /// Expected:
+    ///  - Message equals the provided message.
+    ///  - InnerException is the same instance as provided.
+    ///  - Instance is of type DependencyFileNotFoundException and assignable to DarcException.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [TestCaseSource(nameof(Ctor_MessageAndInnerException_AssignsProperties_Cases))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void Constructor_MessageAndInnerException_PropertiesSet(string message, string innerExceptionKind)
+    {
+        // Arrange
+        Exception innerException = innerExceptionKind == "InvalidOperation"
+            ? new InvalidOperationException("inner-ioe")
+            : new Exception("inner-base");
+
+        // Act
+        var ex = new DependencyFileNotFoundException(message, innerException);
+
+        // Assert
+        ex.Should().NotBeNull();
+        ex.Should().BeOfType<DependencyFileNotFoundException>();
+        ex.Should().BeAssignableTo<DarcException>();
+        ex.Message.Should().Be(message);
+        ex.InnerException.Should().BeSameAs(innerException);
+    }
+
+    private static IEnumerable<TestCaseData> Ctor_MessageAndInnerException_AssignsProperties_Cases()
+    {
+        yield return new TestCaseData(string.Empty, "Base").SetName("EmptyMessage_BaseException");
+        yield return new TestCaseData(" ", "InvalidOperation").SetName("WhitespaceMessage_InvalidOperationException");
+        yield return new TestCaseData("special\t\nchars äΩ🚀", "Base").SetName("SpecialCharsMessage_BaseException");
+        yield return new TestCaseData(new string('a', 10000), "InvalidOperation").SetName("VeryLongMessage_InvalidOperationException");
+    }
+
+    /// <summary>
+    /// Ensures the protected serialization constructor throws ArgumentNullException when SerializationInfo is null.
+    /// Inputs:
+    ///  - info: null
+    ///  - context: default StreamingContext
+    /// Expected:
+    ///  - Throws ArgumentNullException with ParamName == "info".
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void SerializationCtor_NullInfo_ThrowsArgumentNullException()
+    {
+        // Arrange
+        SerializationInfo info = null;
+        var context = default(StreamingContext);
+
+        // Act
+        Action act = () => new TestableDependencyFileNotFoundException(info, context);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>()
+            .Which.ParamName.Should().Be("info");
+    }
+
+    /// <summary>
+    /// Ensures that the parameterless constructor creates a valid exception instance
+    /// with no inner exception.
+    /// Inputs:
+    ///  - No inputs (default constructor).
+    /// Expected:
+    ///  - Instance is created successfully (non-null).
+    ///  - InnerException is null.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void DependencyFileNotFoundException_DefaultCtor_CreatesInstanceWithNullInnerException()
+    {
+        // Arrange
+        // (No inputs required)
+
+        // Act
+        var exception = new DependencyFileNotFoundException();
+
+        // Assert
+        exception.Should().NotBeNull();
+        exception.InnerException.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Validates that the (string message, Exception innerException) constructor sets the Message and InnerException
+    /// as provided and that the created instance is of the correct type hierarchy.
+    /// Inputs:
+    ///  - Various non-null message values (empty, whitespace, special chars, multi-line, very long).
+    ///  - Inner exception instances of different types.
+    /// Expected:
+    ///  - Message equals the provided message.
+    ///  - InnerException is the same instance as provided.
+    ///  - Instance is of type DependencyFileNotFoundException and assignable to DarcException.
+    /// </summary>
+    [Test]
+    [Category("unit")]
+    [TestCaseSource(nameof(Ctor_MessageAndInnerException_AssignsProperties_Cases))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void Constructor_MessageAndInnerException_AssignsProperties(string message, Exception innerException)
+    {
+        // Arrange
+        // Inputs provided by TestCaseSource.
+
+        // Act
+        var ex = new DependencyFileNotFoundException(message, innerException);
+
+        // Assert
+        ex.Should().NotBeNull();
+        ex.Message.Should().Be(message);
+        ex.InnerException.Should().BeSameAs(innerException);
+        ex.Should().BeOfType<DependencyFileNotFoundException>();
+        ex.Should().BeAssignableTo<DarcException>();
+    }
+
+}

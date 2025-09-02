@@ -1,19 +1,27 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using Microsoft.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
-#nullable enable
 namespace Microsoft.DotNet.DarcLib.Tests.VirtualMonoRepo;
+
 
 [TestFixture]
 public class CodeflowChangeAnalyzerTests
@@ -295,5 +303,35 @@ public class CodeflowChangeAnalyzerTests
 
         _barClient.Setup(x => x.GetBuildAsync(270662)).ReturnsAsync(build1);
         _barClient.Setup(x => x.GetBuildAsync(271018)).ReturnsAsync(build2);
+    }
+
+    /// <summary>
+    /// Ensures that the constructor succeeds and returns a non-null instance when valid (non-null) dependencies are provided.
+    /// Inputs: All constructor parameters are initialized Moq objects (non-null).
+    /// Expected: A non-null CodeflowChangeAnalyzer instance is created without throwing any exceptions.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void Constructor_WithValidDependencies_ShouldCreateInstance()
+    {
+        // Arrange
+        var localGitRepoFactory = new Mock<ILocalGitRepoFactory>(MockBehavior.Strict).Object;
+        var versionDetailsParser = new Mock<IVersionDetailsParser>(MockBehavior.Strict).Object;
+        var barClient = new Mock<IBasicBarClient>(MockBehavior.Strict).Object;
+        var vmrInfo = new Mock<IVmrInfo>(MockBehavior.Strict).Object;
+        var logger = new Mock<ILogger<CodeflowChangeAnalyzer>>(MockBehavior.Loose).Object;
+
+        // Act
+        var analyzer = new CodeflowChangeAnalyzer(
+            localGitRepoFactory,
+            versionDetailsParser,
+            barClient,
+            vmrInfo,
+            logger);
+
+        // Assert
+        analyzer.Should().NotBeNull();
+        analyzer.Should().BeOfType<CodeflowChangeAnalyzer>();
     }
 }

@@ -1,0 +1,292 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
+using Maestro;
+using Maestro.Common;
+using Microsoft.DotNet;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Extensions;
+using Microsoft.Extensions.Logging;
+using Moq;
+using NuGet;
+using NuGet.Versioning;
+using NUnit.Framework;
+
+namespace Microsoft.DotNet.DarcLib.Tests;
+
+public class LocalTests
+{
+    private static IEnumerable<TestCaseData> AddDependencyAsync_Cases()
+    {
+        yield return new TestCaseData(
+            BuildDependency("Package.A", "1.0.0", "https://repo/a", "abc123"),
+            null,
+            "/tmp/repo")
+            .SetName("AddDependencyAsync_NullRelativeBasePath_UsesRepoRootDir");
+
+        yield return new TestCaseData(
+            BuildDependency("Microsoft.DotNet.Arcade.Sdk", "9.9.9", "https://github.com/dotnet/arcade", "deadbeef"),
+            new UnixPath("src"),
+            "/home/user/repo")
+            .SetName("AddDependencyAsync_WithRelativeBasePath_ForwardsUnixPath");
+
+        yield return new TestCaseData(
+            BuildDependency("Toolset.X", "2.3.4-beta", "https://example.com/toolsetx", "cafebabe"),
+            new UnixPath("./sub/dir"),
+            "C:/dev/repo")
+            .SetName("AddDependencyAsync_WithNestedRelativeBasePath_ForwardsNestedPath");
+    }
+
+    private static DependencyDetail BuildDependency(string name, string version, string repoUri, string commit)
+    {
+        return new DependencyDetail
+        {
+            Name = name,
+            Version = version,
+            RepoUri = repoUri,
+            Commit = commit,
+            Pinned = false,
+            SkipProperty = false,
+            Type = DependencyType.Product
+        };
+    }
+
+    /// <summary>
+    /// Verifies that Local.RemoveDependencyAsync delegates to DependencyFileManager.RemoveDependencyAsync
+    /// with the provided dependencyName and relativeBasePath, and uses the overrideRootPath as repo root.
+    /// Inputs:
+    ///  - Various dependencyName values including null/empty/whitespace/special characters/long string.
+    ///  - relativeBasePath as null, empty, ".", and nested paths.
+    /// Expected:
+    ///  - DependencyFileManager.RemoveDependencyAsync is invoked with:
+    ///      - dependencyName as provided,
+    ///      - repoUri equal to overrideRootPath,
+    ///      - branch null,
+    ///      - relativeBasePath passed through unchanged.
+    /// Notes:
+    ///  - Ignored: Local constructs concrete internal dependencies (_fileManager, _gitClient) that cannot be replaced or mocked.
+    ///    To enable this test, refactor Local to accept an IDependencyFileManager via constructor injection
+    ///    or provide an overload/factory to substitute dependencies in tests. Then:
+    ///      1) Inject a mock IDependencyFileManager.
+    ///      2) Call sut.RemoveDependencyAsync(dependencyName, relativeBasePath).
+    ///      3) Verify the mock received RemoveDependencyAsync with expected arguments.
+    /// </summary>
+    [TestCase(null, null, Description = "Null dependency name; no relative base path.")]
+    [TestCase("", null, Description = "Empty dependency name; no relative base path.")]
+    [TestCase(" ", null, Description = "Whitespace dependency name; no relative base path.")]
+    [TestCase("Package.X", null, Description = "Valid name; no relative base path.")]
+    [TestCase("Package.X", ".", Description = "Valid name; current directory relative base path.")]
+    [TestCase("Pkg/with/slash", "nested/path", Description = "Name with slash; nested relative path.")]
+    [TestCase("NameWith:Colon*", "", Description = "Name with special characters; empty relative path.")]
+    [TestCase("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "src/arcade", Description = "Very long name; specific relative path.")]
+    [Ignore("Design prevents isolation: Local internally constructs concrete dependencies that cannot be mocked. See test XML comments for refactoring guidance.")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task RemoveDependencyAsync_DelegatesToDependencyFileManager_WithExpectedArguments(string dependencyName, string relativeBasePathText)
+    {
+        // Arrange
+        var tokenProvider = new Mock<IRemoteTokenProvider>(MockBehavior.Strict);
+        var logger = new Mock<ILogger>(MockBehavior.Loose);
+        var overrideRootPath = "/tmp/override-root-path";
+
+        var sut = new Local(tokenProvider.Object, logger.Object, overrideRootPath);
+
+        UnixPath relativeBasePath = relativeBasePathText == null ? null : new UnixPath(relativeBasePathText);
+
+        // Act
+        // NOTE: This call would attempt to perform real file operations via the concrete DependencyFileManager/LocalLibGit2Client.
+        // Once Local is refactored for DI, replace with a mock verification as described in the XML comments above.
+        await sut.RemoveDependencyAsync(dependencyName, relativeBasePath);
+
+        // Assert
+        // Validation is not performed in this ignored test.
+        // After refactoring for DI, verify that:
+        // _fileManager.RemoveDependencyAsync(dependencyName, overrideRootPath, null, relativeBasePath) was called exactly once.
+    }
+
+    /// <summary>
+    /// Ensures UpdateDependenciesAsync can be invoked with no Arcade dependency present and that
+    /// the method proceeds to update dependency files and commit.
+    /// Inputs:
+    ///  - dependencies: empty list (no Arcade item).
+    ///  - remoteFactory: mock (unused).
+    ///  - gitRepoFactory: mock (unused).
+    ///  - barClient: mock (unused).
+    /// Expected:
+    ///  - Method completes without throwing.
+    /// Notes:
+    ///  - Ignored because Local tightly constructs DependencyFileManager and LocalLibGit2Client internally,
+    ///    preventing proper mocking of file system and Git operations, which would attempt real IO.
+    ///    To enable this test, refactor Local to accept these collaborators via DI.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Ignore("Cannot execute without refactoring Local to inject DependencyFileManager/ILocalLibGit2Client. This test documents expected behavior.")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public async Task UpdateDependenciesAsync_NoArcadeDependency_CommitsFilesAndDoesNotFetchEngCommon()
+    {
+        // Arrange
+        var tokenProvider = new Mock<IRemoteTokenProvider>(MockBehavior.Strict);
+        var logger = new Mock<ILogger>(MockBehavior.Loose);
+
+        string tempRepo = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+
+        var dependencies = new List<DependencyDetail>(); // No Arcade item
+        var remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
+        var gitRepoFactory = new Mock<IGitRepoFactory>(MockBehavior.Strict);
+        var barClient = new Mock<IBasicBarClient>(MockBehavior.Strict);
+
+        var sut = new Local(tokenProvider.Object, logger.Object, tempRepo);
+
+        // Act
+        await sut.UpdateDependenciesAsync(dependencies, remoteFactory.Object, gitRepoFactory.Object, barClient.Object);
+
+        // Assert
+        Assert.Inconclusive("Executed as documentation-only. Replace Ignore with proper DI-enabled execution once Local is refactored.");
+    }
+
+    private static IEnumerable NameFilterCases()
+    {
+        yield return new TestCaseData(null);
+        yield return new TestCaseData(string.Empty);
+        yield return new TestCaseData("Alpha");
+        yield return new TestCaseData("alpha");
+        yield return new TestCaseData("GAMMA");
+        yield return new TestCaseData(" ");
+        yield return new TestCaseData("\t");
+        yield return new TestCaseData("name-with-special-çhår😊");
+        yield return new TestCaseData(new string('a', 1024));
+    }
+
+    /// <summary>
+    /// Verifies that Local.Checkout delegates to the underlying git client with the repository root path,
+    /// provided commit (including edge-case strings), and force flag.
+    /// Inputs:
+    ///  - commit: empty, whitespace, control whitespace, typical branch/ref, tag, SHA, special characters, very long string.
+    ///  - force: both true and false.
+    /// Expected:
+    ///  - _gitClient.Checkout(_repoRootDir.Value, commit, force) is invoked once with the same arguments.
+    /// Notes:
+    ///  - Ignored because Local constructs its own ILocalLibGit2Client internally, which cannot be mocked without refactoring.
+    ///    After refactoring to allow injecting ILocalLibGit2Client, replace the comments in Act/Assert with real Moq verification.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Ignore("Local constructs its own ILocalLibGit2Client internally; cannot mock to verify delegation without refactoring.")]
+    [TestCaseSource(nameof(Checkout_CommitAndForce_Cases))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void Checkout_DelegatesToGitClientWithRepoRoot(string commit, bool force)
+    {
+        // Arrange
+        var tokenProviderMock = new Mock<IRemoteTokenProvider>(MockBehavior.Strict);
+        var loggerMock = new Mock<ILogger>(MockBehavior.Loose);
+        var overrideRootPath = Path.Combine(Path.GetTempPath(), "repo-root");
+        var local = new Local(tokenProviderMock.Object, loggerMock.Object, overrideRootPath);
+
+        // Act
+        // local.Checkout(commit, force);
+
+        // Assert
+        // After refactor to inject ILocalLibGit2Client:
+        // mockGitClient.Verify(m => m.Checkout(overrideRootPath, commit, force), Times.Once);
+    }
+
+    private static IEnumerable<TestCaseData> Checkout_CommitAndForce_Cases()
+    {
+        yield return new TestCaseData("", false).SetName("Checkout_EmptyStringCommit_ForceFalse_Delegates");
+        yield return new TestCaseData("", true).SetName("Checkout_EmptyStringCommit_ForceTrue_Delegates");
+        yield return new TestCaseData(" ", false).SetName("Checkout_WhitespaceCommit_ForceFalse_Delegates");
+        yield return new TestCaseData("\t\n", true).SetName("Checkout_ControlWhitespaceCommit_ForceTrue_Delegates");
+        yield return new TestCaseData("main", false).SetName("Checkout_BranchMain_ForceFalse_Delegates");
+        yield return new TestCaseData("refs/heads/release/1.0", true).SetName("Checkout_RefHeadsRelease_ForceTrue_Delegates");
+        yield return new TestCaseData("v1.0.0", false).SetName("Checkout_TagVersion_ForceFalse_Delegates");
+        yield return new TestCaseData("feature/with/slashes", true).SetName("Checkout_BranchWithSlashes_ForceTrue_Delegates");
+        yield return new TestCaseData("1234567890abcdef1234567890abcdef12345678", false).SetName("Checkout_40CharSha_ForceFalse_Delegates");
+        yield return new TestCaseData("name_with-special.chars@!", true).SetName("Checkout_SpecialCharacters_ForceTrue_Delegates");
+        yield return new TestCaseData(new string('x', 4096), false).SetName("Checkout_VeryLongCommit_ForceFalse_Delegates");
+    }
+
+    /// <summary>
+    /// Guidance-only placeholder illustrating the intended verification once Local allows injection of ILocalLibGit2Client.
+    /// Inputs:
+    ///  - commit: "main"
+    ///  - force: true
+    /// Expected:
+    ///  - Verify _gitClient.Checkout(overrideRootPath, "main", true) is called exactly once.
+    /// Notes:
+    ///  - Ignored until Local is refactored to accept an ILocalLibGit2Client via constructor or factory.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Ignore("Design requires refactoring to inject ILocalLibGit2Client; cannot verify without DI.")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void Checkout_WhenDesignAllowsInjectingGitClient_VerificationExample()
+    {
+        // Arrange
+        var tokenProviderMock = new Mock<IRemoteTokenProvider>(MockBehavior.Strict);
+        var loggerMock = new Mock<ILogger>(MockBehavior.Loose);
+        var overrideRootPath = Path.Combine(Path.GetTempPath(), "repo-root");
+        var local = new Local(tokenProviderMock.Object, loggerMock.Object, overrideRootPath);
+
+        // Act
+        // local.Checkout("main", force: true);
+
+        // Assert
+        // mockGitClient.Verify(m => m.Checkout(overrideRootPath, "main", true), Times.Once);
+    }
+
+    /// <summary>
+    /// Verifies that AddRemoteIfMissingAsync delegates to the underlying git client to:
+    ///  - Add the remote if not present, and
+    ///  - Update/fetch the remote using the returned remote name,
+    /// and returns that remote name.
+    /// Inputs:
+    ///  - Various repoDir and repoUrl values including null, empty, whitespace, normal paths/URLs, and values with spaces.
+    /// Expected:
+    ///  - The method should forward inputs to the git client and return the remote name from AddRemoteIfMissingAsync.
+    /// Notes:
+    ///  - This test is marked inconclusive because Local constructs its own ILocalLibGit2Client internally.
+    ///    Without a constructor overload or seam to inject a mocked ILocalLibGit2Client, we cannot verify interactions.
+    ///    To enable testing, add a constructor that accepts an ILocalLibGit2Client (or an abstraction) and use it in the method.
+    /// </summary>
+    [TestCase(null, null)]
+    [TestCase("", "")]
+    [TestCase(" ", " ")]
+    [TestCase("C:\\repo", "https://example.com/repo.git")]
+    [TestCase("/tmp/repo", "ssh://git@github.com/dotnet/arcade.git")]
+    [TestCase("C:\\path with spaces\\repo", "https://example.com/repo with spaces.git")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public async Task AddRemoteIfMissingAsync_VariousInputs_CallsGitClientAndReturnsRemoteName(string repoDir, string repoUrl)
+    {
+        // Arrange
+        var tokenProviderMock = new Mock<IRemoteTokenProvider>(MockBehavior.Strict);
+        var loggerMock = new Mock<ILogger>(MockBehavior.Loose);
+
+        // Provide an override root path to avoid accessing _gitClient.GetRootDirAsync() in the constructor.
+        var local = new Local(tokenProviderMock.Object, loggerMock.Object, overrideRootPath: "C:\\repo");
+
+        // Act & Assert
+        // Partial test: Cannot arrange mocks for _gitClient as it is created internally and is not injectable.
+        // Next steps for maintainers:
+        //  1) Add a constructor overload to Local that accepts an ILocalLibGit2Client and assigns it to _gitClient.
+        //  2) In tests, mock ILocalLibGit2Client to:
+        //     - Return a known remote name from AddRemoteIfMissingAsync(repoDir, repoUrl, CancellationToken.None)
+        //     - Verify UpdateRemoteAsync(repoDir, returnedRemoteName, CancellationToken.None) is called once
+        //     - Verify the method returns the expected remote name.
+        Assert.Inconclusive("Cannot test Local.AddRemoteIfMissingAsync: _gitClient is not injectable. Add a constructor overload that accepts ILocalLibGit2Client to enable mocking.");
+        await Task.CompletedTask;
+    }
+}

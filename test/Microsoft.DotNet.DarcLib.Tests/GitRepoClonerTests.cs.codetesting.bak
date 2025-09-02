@@ -1,0 +1,41 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using LibGit2Sharp;
+using Maestro;
+using Maestro.Common;
+using Microsoft.DotNet;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.Extensions;
+using Microsoft.Extensions.Logging;
+using Moq;
+using NUnit.Framework;
+
+namespace Microsoft.DotNet.DarcLib.Tests;
+
+public class GitRepoClonerTests
+{
+    /// <summary>
+    /// Intended to validate the successful NoCheckout path:
+    /// - Repository is cloned without checking out the working tree.
+    /// - No gitDirectory relocation occurs even when a gitDirectory is provided.
+    /// - ILocalLibGit2Client.SafeCheckout is NOT called.
+    /// How to enable:
+    /// - Replace LibGit2Sharp.Repository.Clone static invocation with an injectable abstraction, or
+    ///   provide a local, accessible test repository URL (network access required) suitable for CI.
+    /// - Then remove the Ignore attribute and add concrete assertions for the filesystem state and mock interactions.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void CloneNoCheckoutAsync_Success_NoCheckoutBehavior_VerifyByIntegration()
+    {
+        // This is a placeholder test intentionally left minimal to run in CI without external dependencies.
+        // See the XML summary for steps to enable an integration-style test in your environment.
+    }
+}

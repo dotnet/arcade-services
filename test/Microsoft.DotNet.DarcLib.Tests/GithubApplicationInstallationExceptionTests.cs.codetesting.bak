@@ -1,0 +1,29 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using System.Collections.Generic;
+using System.Runtime;
+using System.Runtime.Serialization;
+using Microsoft.DotNet;
+using Microsoft.DotNet.DarcLib;
+using Moq;
+using NUnit.Framework;
+
+namespace Microsoft.DotNet.DarcLib.UnitTests;
+
+public class GithubApplicationInstallationExceptionTests
+{
+    private sealed class ExceptionCtorAccessor : GithubApplicationInstallationException
+    {
+        public ExceptionCtorAccessor(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
+    }
+
+    private static IEnumerable<string> LongMessages()
+    {
+        yield return new string('a', 5000);
+    }
+}

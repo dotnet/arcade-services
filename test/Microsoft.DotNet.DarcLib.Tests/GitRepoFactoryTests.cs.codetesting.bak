@@ -1,0 +1,395 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using FluentAssertions;
+using Maestro;
+using Maestro.Common;
+using Maestro.Common.AzureDevOpsTokens;
+using Microsoft.DotNet;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.Extensions;
+using Microsoft.Extensions.Logging;
+using Moq;
+using NUnit.Framework;
+
+namespace Microsoft.DotNet.DarcLib.Tests;
+
+/// <summary>
+/// Unit tests for GitRepoFactory.CreateClient. 
+/// Note: CreateClient relies on the static GitRepoUrlUtils.ParseTypeFromUri to determine the repo type.
+/// Since this static method cannot be mocked with the allowed frameworks, tests that require specific
+/// repo type mappings are marked as inconclusive with guidance.
+/// </summary>
+public class GitRepoFactoryTests
+{
+    /// <summary>
+    /// Validates that null, empty, and whitespace-only repoUri inputs cause CreateClient to throw.
+    /// Inputs:
+    ///  - repoUri: null, "", " ", "\t", "\r\n"
+    /// Expected:
+    ///  - Some exception is thrown (the exact exception type depends on ParseTypeFromUri implementation).
+    /// </summary>
+    [Test]
+    [TestCase(null)]
+    [TestCase("")]
+    [TestCase(" ")]
+    [TestCase("\t")]
+    [TestCase("\r\n")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void CreateClient_NullOrWhitespaceRepoUri_Throws(string repoUri)
+    {
+        // Arrange
+        var factory = CreateFactory(out _, out _, out _, out _, out _, out _);
+
+        // Act
+        Action act = () => factory.CreateClient(repoUri);
+
+        // Assert
+        act.Should().Throw<Exception>();
+    }
+
+    private static GitRepoFactory CreateFactory(
+        out Mock<IAzureDevOpsTokenProvider> azdoTokenProvider,
+        out Mock<IRemoteTokenProvider> remoteTokenProvider,
+        out Mock<ITelemetryRecorder> telemetryRecorder,
+        out Mock<IProcessManager> processManager,
+        out Mock<IFileSystem> fileSystem,
+        out Mock<ILoggerFactory> loggerFactory)
+    {
+        azdoTokenProvider = new Mock<IAzureDevOpsTokenProvider>(MockBehavior.Strict);
+        remoteTokenProvider = new Mock<IRemoteTokenProvider>(MockBehavior.Strict);
+        telemetryRecorder = new Mock<ITelemetryRecorder>(MockBehavior.Strict);
+        processManager = new Mock<IProcessManager>(MockBehavior.Strict);
+        fileSystem = new Mock<IFileSystem>(MockBehavior.Strict);
+        loggerFactory = new Mock<ILoggerFactory>(MockBehavior.Strict);
+
+        // CreateLogger<T> is invoked by CreateClient for each concrete client type; return no-op loggers.
+        loggerFactory
+            .Setup(l => l.CreateLogger(It.IsAny<string>()))
+            .Returns(new Mock<ILogger>().Object);
+        // Generic CreateLogger<T> is extension-like; set up non-generic to be safe.
+        loggerFactory
+            .Setup(l => l.CreateLogger(It.IsAny<Type>()))
+            .Returns(new Mock<ILogger>().Object);
+
+        return new GitRepoFactory(
+            remoteTokenProvider.Object,
+            azdoTokenProvider.Object,
+            telemetryRecorder.Object,
+            processManager.Object,
+            fileSystem.Object,
+            loggerFactory.Object,
+            "temp-path");
+    }
+
+    /// <summary>
+    /// Verifies that providing valid (non-null) dependencies and a typical temporary path
+    /// constructs the GitRepoFactory without throwing.
+    /// Inputs:
+    ///  - All interface dependencies: non-null mocks
+    ///  - temporaryPath: "C:\temp\darc"
+    /// Expected:
+    ///  - No exception is thrown and an instance is created.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void Ctor_ValidDependenciesAndPath_CreatesInstance()
+    {
+        // Arrange
+        var remoteTokenProvider = new Mock<IRemoteTokenProvider>().Object;
+        var azdoTokenProvider = new Mock<IAzureDevOpsTokenProvider>().Object;
+        var telemetryRecorder = new Mock<ITelemetryRecorder>().Object;
+        var processManager = new Mock<IProcessManager>().Object;
+        var fileSystem = new Mock<IFileSystem>().Object;
+        var loggerFactory = new Mock<ILoggerFactory>().Object;
+        var temporaryPath = "C:\\temp\\darc";
+
+        // Act
+        var sut = new GitRepoFactory(
+            remoteTokenProvider,
+            azdoTokenProvider,
+            telemetryRecorder,
+            processManager,
+            fileSystem,
+            loggerFactory,
+            temporaryPath);
+
+        // Assert
+        sut.Should().NotBeNull();
+        sut.Should().BeOfType<GitRepoFactory>();
+    }
+
+    /// <summary>
+    /// Ensures that passing null to each constructor parameter individually (including the string temporaryPath)
+    /// does not throw, since the constructor performs no validation and only assigns fields.
+    /// Inputs:
+    ///  - nullIndex: which parameter to set to null (0..6)
+    ///     0: IRemoteTokenProvider
+    ///     1: IAzureDevOpsTokenProvider
+    ///     2: ITelemetryRecorder
+    ///     3: IProcessManager
+    ///     4: IFileSystem
+    ///     5: ILoggerFactory
+    ///     6: string temporaryPath
+    /// Expected:
+    ///  - Construction does not throw for any nullIndex.
+    /// </summary>
+    [TestCase(0)]
+    [TestCase(1)]
+    [TestCase(2)]
+    [TestCase(3)]
+    [TestCase(4)]
+    [TestCase(5)]
+    [TestCase(6)]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void Ctor_NullEachParameterIndividually_DoesNotThrow(int nullIndex)
+    {
+        // Arrange
+        IRemoteTokenProvider remoteTokenProvider = nullIndex == 0 ? null : new Mock<IRemoteTokenProvider>().Object;
+        IAzureDevOpsTokenProvider azdoTokenProvider = nullIndex == 1 ? null : new Mock<IAzureDevOpsTokenProvider>().Object;
+        ITelemetryRecorder telemetryRecorder = nullIndex == 2 ? null : new Mock<ITelemetryRecorder>().Object;
+        IProcessManager processManager = nullIndex == 3 ? null : new Mock<IProcessManager>().Object;
+        IFileSystem fileSystem = nullIndex == 4 ? null : new Mock<IFileSystem>().Object;
+        ILoggerFactory loggerFactory = nullIndex == 5 ? null : new Mock<ILoggerFactory>().Object;
+        string temporaryPath = nullIndex == 6 ? null : "any";
+
+        // Act
+        Action act = () => _ = new GitRepoFactory(
+            remoteTokenProvider,
+            azdoTokenProvider,
+            telemetryRecorder,
+            processManager,
+            fileSystem,
+            loggerFactory,
+            temporaryPath);
+
+        // Assert
+        act.Should().NotThrow();
+    }
+
+    /// <summary>
+    /// Ensures that even if all dependencies and the temporaryPath are null,
+    /// the constructor still does not throw as it only assigns fields.
+    /// Inputs:
+    ///  - All parameters: null
+    /// Expected:
+    ///  - No exception is thrown.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void Ctor_AllNullParameters_DoesNotThrow()
+    {
+        // Arrange
+        IRemoteTokenProvider remoteTokenProvider = null;
+        IAzureDevOpsTokenProvider azdoTokenProvider = null;
+        ITelemetryRecorder telemetryRecorder = null;
+        IProcessManager processManager = null;
+        IFileSystem fileSystem = null;
+        ILoggerFactory loggerFactory = null;
+        string temporaryPath = null;
+
+        // Act
+        Action act = () => _ = new GitRepoFactory(
+            remoteTokenProvider,
+            azdoTokenProvider,
+            telemetryRecorder,
+            processManager,
+            fileSystem,
+            loggerFactory,
+            temporaryPath);
+
+        // Assert
+        act.Should().NotThrow();
+    }
+
+    /// <summary>
+    /// Validates that various edge-case values for the temporary path (empty, whitespace, long, special characters, unicode)
+    /// do not cause the constructor to throw.
+    /// Inputs (temporaryPath):
+    ///  - ""
+    ///  - " "
+    ///  - "\t\n"
+    ///  - "C:\temp"
+    ///  - "/var/tmp/darc"
+    ///  - Long string of 'a's (8192 chars)
+    ///  - "C:\path\with<>:\"|?*"
+    ///  - "路径/путь/مسار"
+    ///  - "name-with-😊-emoji"
+    ///  - "abc\0def" (includes a control char)
+    /// Expected:
+    ///  - No exception is thrown for any temporaryPath value.
+    /// </summary>
+    [TestCaseSource(nameof(TemporaryPathCases))]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void Ctor_TemporaryPathEdgeCases_DoesNotThrow(string temporaryPath)
+    {
+        // Arrange
+        var remoteTokenProvider = new Mock<IRemoteTokenProvider>().Object;
+        var azdoTokenProvider = new Mock<IAzureDevOpsTokenProvider>().Object;
+        var telemetryRecorder = new Mock<ITelemetryRecorder>().Object;
+        var processManager = new Mock<IProcessManager>().Object;
+        var fileSystem = new Mock<IFileSystem>().Object;
+        var loggerFactory = new Mock<ILoggerFactory>().Object;
+
+        // Act
+        Action act = () => _ = new GitRepoFactory(
+            remoteTokenProvider,
+            azdoTokenProvider,
+            telemetryRecorder,
+            processManager,
+            fileSystem,
+            loggerFactory,
+            temporaryPath);
+
+        // Assert
+        act.Should().NotThrow();
+    }
+
+    private static System.Collections.Generic.IEnumerable<string> TemporaryPathCases()
+    {
+        yield return "";
+        yield return " ";
+        yield return "\t\n";
+        yield return "C:\\temp";
+        yield return "/var/tmp/darc";
+        yield return new string('a', 8192);
+        yield return "C:\\path\\with<>:\\\"|?*";
+        yield return "路径/путь/مسار";
+        yield return "name-with-😊-emoji";
+        yield return "abc\0def";
+    }
+
+    /// <summary>
+    /// Verifies that Azure DevOps repository URIs are correctly recognized and produce an AzureDevOpsClient.
+    /// Inputs:
+    ///  - repoUri: dev.azure.com or *.visualstudio.com URLs.
+    /// Expected:
+    ///  - Returns an instance of AzureDevOpsClient.
+    /// </summary>
+    [Test]
+    [TestCase("https://dev.azure.com/org/project/_git/repo")]
+    [TestCase("https://account.visualstudio.com/project/_git/repo")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void CreateClient_AzureDevOpsUri_ReturnsAzureDevOpsClient(string repoUri)
+    {
+        // Arrange
+        var factory = CreateFactory("temp-path");
+
+        // Act
+        var client = factory.CreateClient(repoUri);
+
+        // Assert
+        client.Should().BeOfType<AzureDevOpsClient>();
+    }
+
+    /// <summary>
+    /// Verifies that GitHub repository URIs are correctly recognized and produce a GitHubClient.
+    /// Inputs:
+    ///  - repoUri: https://github.com/org/repo
+    /// Expected:
+    ///  - Returns an instance of GitHubClient.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void CreateClient_GitHubUri_ReturnsGitHubClient()
+    {
+        // Arrange
+        var factory = CreateFactory("temp-path");
+        var repoUri = "https://github.com/dotnet/runtime";
+
+        // Act
+        var client = factory.CreateClient(repoUri);
+
+        // Assert
+        client.Should().BeOfType<GitHubClient>();
+    }
+
+    /// <summary>
+    /// Verifies that local repository paths/URIs are correctly recognized and produce a LocalLibGit2Client.
+    /// Inputs:
+    ///  - repoUri: relative path or a file:// URI.
+    /// Expected:
+    ///  - Returns an instance of LocalLibGit2Client.
+    /// </summary>
+    [Test]
+    [TestCase("local-repo")]
+    [TestCase("file:///C:/repo")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void CreateClient_LocalPathOrFileUri_ReturnsLocalLibGit2Client(string repoUri)
+    {
+        // Arrange
+        var factory = CreateFactory("temp-path");
+
+        // Act
+        var client = factory.CreateClient(repoUri);
+
+        // Assert
+        client.Should().BeOfType<LocalLibGit2Client>();
+    }
+
+    /// <summary>
+    /// Ensures that invalid or unsupported repository identifiers cause an ArgumentException.
+    /// Inputs (repoUri):
+    ///  - null
+    ///  - empty string
+    ///  - whitespace-only string
+    ///  - non-supported host URL
+    ///  - local path with invalid characters
+    /// Expected:
+    ///  - Throws ArgumentException with parameter name "repoUri" and message "Unknown git repository type".
+    /// </summary>
+    [Test]
+    [TestCase(null)]
+    [TestCase("")]
+    [TestCase(" ")]
+    [TestCase("https://example.com/org/repo")]
+    [TestCase("foo|bar")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void CreateClient_InvalidOrUnsupportedRepoUri_ThrowsArgumentException(string repoUri)
+    {
+        // Arrange
+        var factory = CreateFactory("temp-path");
+
+        // Act
+        Action act = () => factory.CreateClient(repoUri);
+
+        // Assert
+        var ex = act.Should().Throw<ArgumentException>().Which;
+        ex.Message.Should().Be("Unknown git repository type");
+        ex.ParamName.Should().Be("repoUri");
+    }
+
+    private static GitRepoFactory CreateFactory(string temporaryPath)
+    {
+        var remoteTokenProvider = new Mock<IRemoteTokenProvider>(MockBehavior.Loose);
+        var azdoTokenProvider = new Mock<IAzureDevOpsTokenProvider>(MockBehavior.Loose);
+        var telemetryRecorder = new Mock<ITelemetryRecorder>(MockBehavior.Loose);
+        var processManager = new Mock<IProcessManager>(MockBehavior.Loose);
+        var fileSystem = new Mock<IFileSystem>(MockBehavior.Loose);
+
+        var loggerFactory = new Mock<ILoggerFactory>(MockBehavior.Loose);
+        loggerFactory
+            .Setup(l => l.CreateLogger(It.IsAny<string>()))
+            .Returns(Mock.Of<ILogger>());
+
+        return new GitRepoFactory(
+            remoteTokenProvider.Object,
+            azdoTokenProvider.Object,
+            telemetryRecorder.Object,
+            processManager.Object,
+            fileSystem.Object,
+            loggerFactory.Object,
+            temporaryPath);
+    }
+}

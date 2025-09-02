@@ -1,0 +1,85 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
+using Maestro;
+using Maestro.Common;
+using Maestro.Common.AzureDevOpsTokens;
+using Microsoft.DotNet;
+using Microsoft.DotNet.DarcLib;
+using Moq;
+using NUnit.Framework;
+
+namespace Microsoft.DotNet.DarcLib.Tests;
+
+public class RemoteTokenProviderTests
+{
+    /// <summary>
+    /// Validates that the parameterless constructor completes without throwing,
+    /// ensuring that default token providers are instantiated safely.
+    /// Inputs:
+    ///  - No inputs.
+    /// Expected:
+    ///  - No exception is thrown during construction.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void Constructor_Default_DoesNotThrow()
+    {
+        // Arrange
+        // No arrangement needed.
+
+        // Act
+        var instance = new RemoteTokenProvider();
+
+        // Assert
+        // No exception thrown is the assertion.
+        _ = instance;
+    }
+
+    /// <summary>
+    /// Partial test: Intended to verify that the parameterless constructor initializes
+    /// both internal token providers as ResolvedTokenProvider instances with null tokens.
+    /// Inputs:
+    ///  - No inputs.
+    /// Expected:
+    ///  - _azdoTokenProvider and _gitHubTokenProvider are instances of ResolvedTokenProvider configured with null tokens.
+    /// Notes:
+    ///  - This verification requires access to private fields or exercising other class members
+    ///    (e.g., GetTokenForRepository/GetTokenForRepositoryAsync) which are outside the requested test scope,
+    ///    and reflection is prohibited by the testing rules. To complete this test, either:
+    ///    1) Allow use of the class's public methods to indirectly validate constructor effects, or
+    ///    2) Permit reflection-based inspection of private fields.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void Constructor_Default_InitializesResolvedTokenProviders_Partial()
+    {
+        // Arrange
+        var instance = new RemoteTokenProvider();
+
+        // Act
+        var gitHubToken = instance.GetTokenForRepository("https://github.com/dotnet/arcade");
+        var azdoToken = instance.GetTokenForRepository("https://dev.azure.com/dnceng/internal/_git/arcade");
+
+        // Assert
+        Assert.That(gitHubToken, Is.Null, "GitHub token should be null when default constructor is used.");
+        Assert.That(azdoToken, Is.Null, "Azure DevOps token should be null when default constructor is used.");
+    }
+
+    private static System.Collections.Generic.IEnumerable<TestCaseData> TokenPairs()
+    {
+        yield return new TestCaseData(null, null).SetName("Tokens_Null_Null");
+        yield return new TestCaseData(string.Empty, string.Empty).SetName("Tokens_Empty_Empty");
+        yield return new TestCaseData(" ", "\t\r\n").SetName("Tokens_Whitespace_VariedWhitespace");
+        yield return new TestCaseData(new string('a', 1024), new string('b', 2048)).SetName("Tokens_VeryLongStrings");
+        yield return new TestCaseData(@"p@$$w0rd!:/\?%#中文🙂", "gh-Τόκεν-✓").SetName("Tokens_SpecialAndUnicode");
+        yield return new TestCaseData("azdoTokenValue", "ghTokenValue").SetName("Tokens_NormalValues");
+    }
+
+}

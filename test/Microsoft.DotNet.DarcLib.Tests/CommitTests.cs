@@ -1,0 +1,155 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using System.Collections.Generic;
+using FluentAssertions;
+using Microsoft.DotNet;
+using Microsoft.DotNet.DarcLib;
+using Moq;
+using NUnit.Framework;
+
+namespace Microsoft.DotNet.DarcLib.UnitTests;
+
+
+/// <summary>
+/// Unit tests for the Commit constructor, ensuring that provided inputs are assigned to properties without alteration.
+/// Covers edge cases for string parameters including empty, whitespace-only, very long, and special characters.
+/// </summary>
+public class CommitTests
+{
+    /// <summary>
+    /// Provides diverse input cases for the Commit constructor, targeting edge cases for string parameters.
+    /// </summary>
+    private static System.Collections.Generic.IEnumerable<TestCaseData> ConstructorCases()
+    {
+        // Typical values
+        yield return new TestCaseData("Alice", "abc123", "Initial commit")
+            .SetName("Constructor_ValidTypicalInputs_PropertiesAssigned");
+
+        // Empty strings
+        yield return new TestCaseData("", "abc123", "Initial commit")
+            .SetName("Constructor_EmptyAuthor_PropertiesAssigned");
+        yield return new TestCaseData("Alice", "", "Initial commit")
+            .SetName("Constructor_EmptySha_PropertiesAssigned");
+        yield return new TestCaseData("Alice", "abc123", "")
+            .SetName("Constructor_EmptyMessage_PropertiesAssigned");
+
+        // Whitespace-only strings
+        yield return new TestCaseData("   \t", "abc123", "Initial commit")
+            .SetName("Constructor_WhitespaceAuthor_PropertiesAssigned");
+        yield return new TestCaseData("Alice", "   \t", "Initial commit")
+            .SetName("Constructor_WhitespaceSha_PropertiesAssigned");
+        yield return new TestCaseData("Alice", "abc123", "   \t")
+            .SetName("Constructor_WhitespaceMessage_PropertiesAssigned");
+
+        // Very long strings
+        var longStr = new string('a', 10000);
+        yield return new TestCaseData(longStr, "abc123", "Initial commit")
+            .SetName("Constructor_VeryLongAuthor_PropertiesAssigned");
+        yield return new TestCaseData("Alice", longStr, "Initial commit")
+            .SetName("Constructor_VeryLongSha_PropertiesAssigned");
+        yield return new TestCaseData("Alice", "abc123", longStr)
+            .SetName("Constructor_VeryLongMessage_PropertiesAssigned");
+
+        // Special/control characters
+        var special = "Äß漢字\n\t\r!@#$%^&*()[]{}<>|\\/\"'`~";
+        yield return new TestCaseData(special, "abc123", "Initial commit")
+            .SetName("Constructor_SpecialCharsAuthor_PropertiesAssigned");
+        yield return new TestCaseData("Alice", special, "Initial commit")
+            .SetName("Constructor_SpecialCharsSha_PropertiesAssigned");
+        yield return new TestCaseData("Alice", "abc123", special)
+            .SetName("Constructor_SpecialCharsMessage_PropertiesAssigned");
+    }
+
+    /// <summary>
+    /// Verifies that the Commit constructor assigns provided input values to the corresponding read-only properties.
+    /// Inputs cover typical, empty, whitespace-only, very long, and special/control character strings.
+    /// Expected result: No exception is thrown and properties exactly match the inputs.
+    /// </summary>
+    /// <param name="author">Author input under test.</param>
+    /// <param name="sha">Commit SHA input under test.</param>
+    /// <param name="message">Commit message input under test.</param>
+    [Test]
+    [TestCaseSource(nameof(ConstructorCases))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void Constructor_ValidInputs_PropertiesAssigned(string author, string sha, string message)
+    {
+        // Arrange
+        // Inputs are provided by the test case source.
+
+        // Act
+        var commit = new Commit(author, sha, message);
+
+        // Assert
+        commit.Author.Should().Be(author);
+        commit.Sha.Should().Be(sha);
+        commit.Message.Should().Be(message);
+    }
+
+    /// <summary>
+    /// Verifies that GetShortSha returns the first seven characters when the input length is at least seven.
+    /// Inputs include typical hex-like strings, exactly seven characters, spaces, and strings with control characters.
+    /// Expected: The returned string equals the first seven characters of the input without throwing.
+    /// </summary>
+    [TestCase("abcdef0123456789", "abcdef0", TestName = "GetShortSha_InputLongerThanSeven_ReturnsFirstSeven")]
+    [TestCase("1234567", "1234567", TestName = "GetShortSha_InputExactlySeven_ReturnsSameString")]
+    [TestCase("       123", "       ", TestName = "GetShortSha_InputStartsWithSevenSpaces_ReturnsSevenSpaces")]
+    [TestCase("\n\t\rabc1234", "\n\t\rabc1", TestName = "GetShortSha_InputWithControlCharsAtStart_ReturnsFirstSevenIncludingControls")]
+    [TestCase("ABCDEF0123", "ABCDEF0", TestName = "GetShortSha_AlphanumericUppercase_ReturnsFirstSeven")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void GetShortSha_LengthAtLeastSeven_ReturnsFirstSeven(string input, string expected)
+    {
+        // Arrange
+        // input and expected provided via test cases
+
+        // Act
+        var result = Commit.GetShortSha(input);
+
+        // Assert
+        result.Should().Be(expected);
+    }
+
+    /// <summary>
+    /// Ensures that GetShortSha throws ArgumentOutOfRangeException for inputs shorter than seven characters.
+    /// Inputs test empty string, single character, and six characters.
+    /// Expected: ArgumentOutOfRangeException is thrown.
+    /// </summary>
+    [TestCase("", TestName = "GetShortSha_EmptyString_ThrowsArgumentOutOfRange")]
+    [TestCase("a", TestName = "GetShortSha_SingleChar_ThrowsArgumentOutOfRange")]
+    [TestCase("123456", TestName = "GetShortSha_SixChars_ThrowsArgumentOutOfRange")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void GetShortSha_LengthLessThanSeven_ThrowsArgumentOutOfRangeException(string input)
+    {
+        // Arrange
+        Action act = () => Commit.GetShortSha(input);
+
+        // Act & Assert
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    /// <summary>
+    /// Validates behavior on very long inputs to ensure only the first seven characters are returned.
+    /// Input: a 1000-character string.
+    /// Expected: A string containing the first seven characters of the input.
+    /// </summary>
+    [Test]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void GetShortSha_VeryLongString_ReturnsFirstSeven()
+    {
+        // Arrange
+        var input = new string('a', 1000);
+        var expected = new string('a', 7);
+
+        // Act
+        var result = Commit.GetShortSha(input);
+
+        // Assert
+        result.Should().Be(expected);
+    }
+
+}

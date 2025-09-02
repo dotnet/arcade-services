@@ -1,0 +1,254 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System;
+using System.Collections.Generic;
+using System.Runtime;
+using System.Runtime.Serialization;
+using FluentAssertions;
+using Microsoft.DotNet;
+using Microsoft.DotNet.DarcLib;
+using Moq;
+using NUnit.Framework;
+
+namespace Microsoft.DotNet.DarcLib.Tests;
+
+
+
+public class DarcExceptionTests
+{
+    /// <summary>
+    /// Validates that the parameterless constructor initializes a DarcException with sensible defaults.
+    /// Inputs:
+    ///  - No inputs (default constructor).
+    /// Expected:
+    ///  - Instance is of type DarcException.
+    ///  - Message is non-null/non-whitespace and contains the fully qualified type name.
+    ///  - InnerException is null.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void Constructor_Default_InitializesWithExpectedDefaults()
+    {
+        // Arrange
+        var expectedTypeName = typeof(DarcException).FullName;
+
+        // Act
+        var ex = new DarcException();
+
+        // Assert
+        ex.Should().BeOfType<DarcException>();
+        ex.InnerException.Should().BeNull();
+        ex.Message.Should().NotBeNullOrWhiteSpace();
+        ex.Message.Should().Contain(expectedTypeName);
+    }
+
+    private static System.Collections.IEnumerable SerializationCases()
+    {
+        yield return new TestCaseData("Simple message", true).SetName("SerializationCtor_Restores_MessageAndInner_Simple");
+        yield return new TestCaseData(string.Empty, false).SetName("SerializationCtor_Restores_EmptyMessage_NoInner");
+        yield return new TestCaseData(" \t\r\n", true).SetName("SerializationCtor_Restores_WhitespaceMessage_WithInner");
+        yield return new TestCaseData(new string('a', 2048), false).SetName("SerializationCtor_Restores_VeryLongMessage_NoInner");
+        yield return new TestCaseData("Ω≈ç√∫˜µ≤≥÷\u0000\u0001", true).SetName("SerializationCtor_Restores_SpecialAndControlCharsMessage_WithInner");
+    }
+
+    // Helper: expose the protected serialization constructor for testing.
+    private sealed class DarcExceptionEx : DarcException
+    {
+        public DarcExceptionEx(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
+    }
+
+    /// <summary>
+    /// Validates that the string message provided to the constructor is preserved as Exception.Message
+    /// and that no InnerException is set.
+    /// Inputs:
+    ///  - Various message strings including empty, whitespace-only, control characters, Unicode, and very long strings.
+    /// Expected:
+    ///  - Created exception is not null.
+    ///  - Exception.Message equals the provided message.
+    ///  - Exception.InnerException is null.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [TestCaseSource(nameof(MessageCases))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void Constructor_WithVariousMessages_MessageIsSetAndInnerExceptionIsNull(string inputMessage)
+    {
+        // Arrange
+        var message = inputMessage;
+
+        // Act
+        var exception = new DarcException(message);
+
+        // Assert
+        exception.Should().NotBeNull();
+        exception.Message.Should().Be(message);
+        exception.InnerException.Should().BeNull();
+    }
+
+    private static System.Collections.Generic.IEnumerable<string> MessageCases()
+    {
+        yield return ""; // empty
+        yield return " "; // single space
+        yield return "\r\n\t "; // whitespace and control characters
+        yield return "simple message";
+        yield return "ä😊漢字"; // Unicode characters
+        yield return "prefix\0suffix"; // embedded null char
+        yield return new string('x', 10000); // very long message
+    }
+
+    /// <summary>
+    /// Ensures that the (string message, Exception innerException) constructor correctly assigns
+    /// the provided message and inner exception to the new instance.
+    /// Inputs:
+    ///  - Various message strings (empty, whitespace, very long, special/control/unicode characters).
+    ///  - Different inner exception instances across types.
+    /// Expected:
+    ///  - The created DarcException has Message equal to the provided message and InnerException
+    ///    referencing the exact provided inner exception instance.
+    /// </summary>
+    [Test]
+    [TestCaseSource(nameof(CtorInputs))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void DarcException_MessageAndInnerException_AssignedAsProvided(string message, Exception innerException)
+    {
+        // Arrange
+        // Inputs provided by TestCaseSource
+
+        // Act
+        var ex = new DarcException(message, innerException);
+
+        // Assert
+        ex.Should().NotBeNull();
+        ex.Message.Should().Be(message);
+        ex.InnerException.Should().BeSameAs(innerException);
+    }
+
+    private static IEnumerable<TestCaseData> CtorInputs()
+    {
+        yield return new TestCaseData("Simple message", new Exception("generic inner"))
+            .SetName("SimpleMessage_WithGenericInnerException");
+        yield return new TestCaseData(string.Empty, new InvalidOperationException("invalid op"))
+            .SetName("EmptyMessage_WithInvalidOperationInner");
+        yield return new TestCaseData(" ", new ArgumentException("arg ex"))
+            .SetName("WhitespaceMessage_WithArgumentExceptionInner");
+        yield return new TestCaseData("Special:\t\r\n\u0000\u2603", new ApplicationException("app ex"))
+            .SetName("SpecialCharactersMessage_WithApplicationExceptionInner");
+        yield return new TestCaseData(new string('x', 10000), new Exception("long msg inner"))
+            .SetName("VeryLongMessage_WithGenericInnerException");
+        yield return new TestCaseData("Emoji 😀 漢字", new Exception("unicode inner"))
+            .SetName("UnicodeMessage_WithGenericInnerException");
+    }
+
+    /// <summary>
+    /// Validates that the (string message) constructor preserves the provided message
+    /// and does not set an inner exception.
+    /// Inputs:
+    ///  - Various non-null message strings including empty, whitespace-only, special/control characters,
+    ///    Unicode, and very long strings.
+    /// Expected:
+    ///  - The created exception is not null.
+    ///  - Exception.Message equals the provided message.
+    ///  - Exception.InnerException is null.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [TestCaseSource(nameof(MessageCases))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void Constructor_Message_SetsMessageAndNoInnerException(string inputMessage)
+    {
+        // Arrange
+        var message = inputMessage;
+
+        // Act
+        var ex = new DarcException(message);
+
+        // Assert
+        ex.Should().NotBeNull();
+        ex.Message.Should().Be(message);
+        ex.InnerException.Should().BeNull();
+    }
+
+
+    /// <summary>
+    /// Validates that providing an empty SerializationInfo (missing required keys)
+    /// to the protected serialization constructor results in a SerializationException.
+    /// Inputs:
+    ///  - An empty SerializationInfo for DarcException.
+    ///  - Any StreamingContext.
+    /// Expected:
+    ///  - SerializationException is thrown during construction.
+    /// </summary>
+    [Test]
+    [Category("auto-generated")]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    public void Constructor_EmptySerializationInfo_ThrowsSerializationException()
+    {
+        // Arrange
+        var info = new SerializationInfo(typeof(DarcException), new FormatterConverter());
+        var context = new StreamingContext(StreamingContextStates.All);
+
+        // Act
+        Action act = () => new DarcExceptionProxy(info, context);
+
+        // Assert
+        act.Should().Throw<SerializationException>();
+    }
+
+    private static IEnumerable<TestCaseData> SerializationRoundtripCases()
+    {
+        yield return new TestCaseData(string.Empty, false, StreamingContextStates.None)
+            .SetName("EmptyMessage_NoInner_None");
+        yield return new TestCaseData("  \t\n", true, StreamingContextStates.CrossProcess)
+            .SetName("WhitespaceMessage_WithInner_CrossProcess");
+        yield return new TestCaseData("Unicode-消息-😃", true, StreamingContextStates.CrossMachine)
+            .SetName("UnicodeMessage_WithInner_CrossMachine");
+        yield return new TestCaseData(new string('x', 2048), false, StreamingContextStates.All)
+            .SetName("VeryLongMessage_NoInner_All");
+    }
+
+    // Helper: expose the protected serialization constructor for testing.
+    private sealed class DarcExceptionProxy : DarcException
+    {
+        public DarcExceptionProxy(SerializationInfo info, StreamingContext context)
+            : base(info, context)
+        {
+        }
+    }
+
+    /// <summary>
+    /// Validates that the (string message) constructor preserves the provided message
+    /// and does not set an inner exception.
+    /// Inputs:
+    ///  - Various non-null message strings including empty, whitespace-only, control/special characters,
+    ///    Unicode, and very long strings.
+    /// Expected:
+    ///  - Created exception is not null.
+    ///  - Exception.Message equals the provided message exactly.
+    ///  - Exception.InnerException is null.
+    /// </summary>
+    [Test]
+    [TestCaseSource(nameof(MessageCases))]
+    [Author("Code Testing Agent v0.3.0-alpha.25425.8+159f94d")]
+    [Category("auto-generated")]
+    public void DarcException_Message_SetsMessageAndInnerExceptionNull(string inputMessage)
+    {
+        // Arrange
+        var message = inputMessage;
+
+        // Act
+        var exception = new DarcException(message);
+
+        // Assert
+        exception.Should().NotBeNull();
+        exception.Message.Should().Be(message);
+        exception.InnerException.Should().BeNull();
+    }
+
+}
+
