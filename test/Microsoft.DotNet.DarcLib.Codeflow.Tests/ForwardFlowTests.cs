@@ -197,7 +197,7 @@ internal class ForwardFlowTests : CodeFlowTests
             ProductRepoPath,
             branchName,
             // This is what we're testing in this test
-            skipMeaninglessUpdates: true);
+            forceUpdate: false);
         codeFlowResult.ShouldNotHaveUpdates();
     }
 

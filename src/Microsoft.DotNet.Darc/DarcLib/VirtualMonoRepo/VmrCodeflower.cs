@@ -32,6 +32,7 @@ public interface IVmrCodeFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
+        bool forceUpdate,
         CancellationToken cancellationToken = default);
 }
 
@@ -97,6 +98,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
+        bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
         var lastFlow = lastFlows.LastFlow;
@@ -106,7 +108,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             return false;
         }
 
-        if (lastFlow.Name == currentFlow.Name && headBranchExisted)
+        if (lastFlow.Name == currentFlow.Name && headBranchExisted && !forceUpdate)
         {
             _commentCollector.AddComment(CannotFlowAdditionalFlowsInPrMsg, CommentType.Warning);
             throw new BlockingCodeflowException("Cannot apply codeflow on PR head branch because an opposite direction flow has been merged.");
@@ -133,6 +135,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 targetBranch,
                 headBranch,
                 headBranchExisted,
+                forceUpdate,
                 cancellationToken);
         }
         else
@@ -182,6 +185,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
+        bool forceUpdate,
         CancellationToken cancellationToken);
 
     /// <summary>
@@ -360,6 +364,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         string headBranch,
         string targetBranch,
         IReadOnlyCollection<string>? excludedAssets,
+        bool forceUpdate,
         Func<Task> reapplyChanges,
         CancellationToken cancellationToken)
     {
@@ -409,6 +414,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 targetBranch,
                 headBranch,
                 headBranchExisted: true, // Head branch was created when we rewound to the previous flow
+                forceUpdate,
                 cancellationToken);
 
             var changedFilesAfterRecreation = await GetChangesInHeadBranch(

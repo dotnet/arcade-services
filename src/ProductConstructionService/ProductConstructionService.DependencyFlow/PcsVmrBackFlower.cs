@@ -33,6 +33,7 @@ internal interface IPcsVmrBackFlower : IVmrBackFlower
         Subscription subscription,
         Build build,
         string targetBranch,
+        bool forceApply,
         CancellationToken cancellationToken = default);
 }
 
@@ -73,6 +74,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         Subscription subscription,
         Build build,
         string targetBranch,
+        bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
         (var headBranchExisted, SourceMapping mapping, ILocalGitRepo targetRepo) = await PrepareVmrAndRepo(
@@ -92,6 +94,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             subscription.TargetBranch,
             targetBranch,
             headBranchExisted,
+            forceUpdate,
             cancellationToken);
 
         return result with

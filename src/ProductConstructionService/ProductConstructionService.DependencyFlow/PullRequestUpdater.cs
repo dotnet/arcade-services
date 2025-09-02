@@ -1311,7 +1311,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     subscription,
                     build,
                     prHeadBranch,
-                    skipMeaninglessUpdates: !forceUpdate,
+                    forceUpdate,
                     cancellationToken: default);
             }
             else
@@ -1320,6 +1320,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     subscription,
                     build,
                     prHeadBranch,
+                    forceUpdate,
                     cancellationToken: default);
             }
         }
