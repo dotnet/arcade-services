@@ -106,7 +106,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         }
 
         var unknownChangedFiles = changedFiles
-            .Except(DependencyFileManager.DependencyFiles, StringComparer.OrdinalIgnoreCase);
+            .Except(DependencyFileManager.CodeflowDependencyFiles, StringComparer.OrdinalIgnoreCase);
 
         if (unknownChangedFiles.Any())
         {

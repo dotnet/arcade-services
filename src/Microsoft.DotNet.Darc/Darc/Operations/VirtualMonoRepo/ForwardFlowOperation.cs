@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
@@ -53,6 +54,7 @@ internal class ForwardFlowOperation(
     protected override IEnumerable<string> GetIgnoredFiles(string mapping) =>
     [
         VmrInfo.DefaultRelativeSourceManifestPath,
-        VmrInfo.GetRelativeRepoSourcesPath(mapping) / VersionFiles.VersionDetailsXml,
+        .. DependencyFileManager.CodeflowDependencyFiles
+            .Select(f => VmrInfo.GetRelativeRepoSourcesPath(mapping) / f)
     ];
 }
