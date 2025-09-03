@@ -19,7 +19,10 @@ internal interface IPullRequestCommenter
     /// </summary>
     /// <param name="prUrl">The URL of the pull request to comment on</param>
     /// <param name="targetRepository">The target repository URL</param>
-    Task PostCollectedCommentsAsync(string prUrl, string targetRepository);
+    Task PostCollectedCommentsAsync(
+        string prUrl,
+        string targetRepository,
+        IEnumerable<(string oldValue, string newValue)> replacements);
 }
 
 internal class PullRequestCommenter : IPullRequestCommenter
@@ -40,7 +43,10 @@ internal class PullRequestCommenter : IPullRequestCommenter
         _logger = logger;
     }
 
-    public async Task PostCollectedCommentsAsync(string prUrl, string targetRepository)
+    public async Task PostCollectedCommentsAsync(
+        string prUrl,
+        string targetRepository,
+        IEnumerable<(string oldValue, string newValue)> replacements)
     {
         var comments = _commentService.GetComments();
         if (comments.Count == 0)
@@ -59,9 +65,17 @@ internal class PullRequestCommenter : IPullRequestCommenter
                 CommentType.Information => "> [!NOTE]",
                 _ => throw new ArgumentOutOfRangeException($"Comment type {comment.commentType} is not supported")
             };
+
+            var commentText = comment.Text;
+            
+            foreach (var (oldValue, newValue) in replacements)
+            {
+                commentText = commentText.Replace(oldValue, newValue);
+            }
+            
             StringBuilder sb = new();
             sb.AppendLine(header);
-            foreach (var textLine in comment.Text.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries))
+            foreach (var textLine in commentText.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries))
             {
                 sb.AppendLine($"> {textLine}");
             }

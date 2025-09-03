@@ -55,6 +55,8 @@ public class InProgressPullRequest : DependencyFlowWorkItem
     public Dictionary<Guid, int> NextBuildsToProcess { get; set; } = [];
 
     public CodeFlowDirection CodeFlowDirection { get; set; }
+
+    public bool BlockedFromFutureUpdates { get; set; } = false;
 }
 
 public enum InProgressPullRequestState

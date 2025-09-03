@@ -126,6 +126,7 @@ internal abstract class CodeFlowOperation(
                     tmpTargetBranch,
                     tmpHeadBranch,
                     headBranchExisted: false,
+                    forceUpdate: false,
                     cancellationToken);
             }
             catch (Exception e)

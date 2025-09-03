@@ -35,6 +35,7 @@ public interface IVmrBackFlower : IVmrCodeFlower
         IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
         string headBranch,
+        bool forceUpdate,
         CancellationToken cancellationToken = default);
 }
 
@@ -67,8 +68,9 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             IBackflowConflictResolver versionFileConflictResolver,
             IFileSystem fileSystem,
             IBasicBarClient barClient,
+            ICommentCollector commentCollector,
             ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, commentCollector, logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
@@ -91,6 +93,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
         string headBranch,
+        bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
         var targetRepo = _localGitRepoFactory.Create(targetRepoPath);
@@ -111,6 +114,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             headBranch,
             headBranchExisted,
+            forceUpdate,
             cancellationToken);
     }
 
@@ -123,6 +127,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
+        bool forceUpdate,
         CancellationToken cancellationToken)
     {
         var currentFlow = new Backflow(build.Commit, lastFlows.LastFlow.RepoSha);
@@ -136,6 +141,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             headBranch,
             headBranchExisted,
+            forceUpdate,
             cancellationToken);
 
         // We try to merge the target branch and we apply dependency updates
@@ -168,6 +174,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
+        bool forceUpdate,
         CancellationToken cancellationToken)
     {
         var lastFlownSha = lastFlows.LastFlow.VmrSha;
@@ -247,6 +254,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 headBranch,
                 targetBranch,
                 excludedAssets,
+                forceUpdate,
                 reapplyChanges: async () =>
                 {
                     foreach (VmrIngestionPatch patch in patches)
