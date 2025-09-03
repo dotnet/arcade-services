@@ -55,12 +55,13 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     private static readonly string CannotFlowAdditionalFlowsInPrMsg =
         """
         The source repository has received code changes from an opposite flow. Any additional codeflows into this PR may potentially result in lost changes.
-
+        
         Please continue with one of the following options:
-
-        1. Close or merge this PR and let the codeflow continue normally.
-        2. Close or merge this PR and receive the new codeflow immediately by running `darc trigger-subscription --id <subscriptionId>`.
-        3. Keep flowing changes into this PR anyway by force-triggering the subscription: `darc trigger-subscription --force --id <subscriptionId>`.
+        1. Close or merge this PR and let the codeflow continue normally
+        2. Close or merge this PR and receive the new codeflow immediately by triggering the subscription:
+            `darc trigger-subscription --id <subscriptionId>`
+        3. Force-flow new changes into this PR at your own risk (some PR commits might be reverted):
+            `darc trigger-subscription --force --id <subscriptionId>`
         """;
 
     protected VmrCodeFlower(
