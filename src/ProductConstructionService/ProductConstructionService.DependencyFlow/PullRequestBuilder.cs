@@ -718,8 +718,16 @@ internal class PullRequestBuilder : IPullRequestBuilder
     private void AppendNonCoherencyCommitMessage(string relativeBasePath, List<DependencyUpdate> deps, StringBuilder message)
     {
         message.AppendLine($"On relative base path {relativeBasePath}");
-        message.AppendLine(string.Join(" , ", deps.Select(p => p.To.Name)));
-        message.AppendLine($" From Version {deps[0].From.Version} -> To Version {deps[0].To.Version}");
+        
+        // Group dependencies by their version changes
+        var versionGroups = deps
+            .GroupBy(dep => $"From Version {dep.From.Version} -> To Version {dep.To.Version}")
+            .ToList();
+
+        foreach (var group in versionGroups)
+        {
+            message.AppendLine($"{string.Join(" , ", group.Select(p => p.To.Name))} {group.Key}");
+        }
 
         message.AppendLine();
     }
@@ -727,8 +735,18 @@ internal class PullRequestBuilder : IPullRequestBuilder
     private void AppendCoherencyCommitMessage(string relativeBasePath, List<DependencyUpdate> deps, StringBuilder message)
     {
         message.AppendLine($"On relative base path {relativeBasePath}");
-        message.AppendLine(string.Join(",", deps.Select(p => p.To.Name)));
-        message.AppendLine($" From Version {deps[0].From.Version} -> To Version {deps[0].To.Version} (parent: {deps[0].To.CoherentParentDependencyName}");
+        
+        // Group dependencies by their version changes
+        var versionGroups = deps
+            .GroupBy(dep => $"From Version {dep.From.Version} -> To Version {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})")
+            .ToList();
+
+        foreach (var group in versionGroups)
+        {
+            message.AppendLine($"{string.Join(",", group.Select(p => p.To.Name))} {group.Key}");
+            message.AppendLine();
+        }
+
         message.AppendLine();
     }
 
