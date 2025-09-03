@@ -52,14 +52,16 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     private readonly ICommentCollector _commentCollector;
     private readonly ILogger<VmrCodeFlower> _logger;
 
-    private static readonly string CannotFlowAdditionalFlowsInPrMsg = string.Concat(
-        "The source repository has received code changes from an opposite flow. Any additional codeflows into ",
-        "this PR may potentially result in lost changes. Please continue with one of the following options: \n",
-        "1. Close or merge this PR and let the codeflow continue normally. \n",
-        "2. Close or merge this PR and receive the new codeflow immediately by running ",
-        "`darc trigger-subscription --id <subscriptionId>`. \n",
-        "3. Keep flowing changes into this PR anyway by force-triggering the subscription: ",
-        "`darc trigger-subscription --force --id <subscriptionId>`.");
+    private static readonly string CannotFlowAdditionalFlowsInPrMsg =
+        """
+        The source repository has received code changes from an opposite flow. Any additional codeflows into this PR may potentially result in lost changes.
+
+        Please continue with one of the following options:
+
+        1. Close or merge this PR and let the codeflow continue normally.
+        2. Close or merge this PR and receive the new codeflow immediately by running `darc trigger-subscription --id <subscriptionId>`.
+        3. Keep flowing changes into this PR anyway by force-triggering the subscription: `darc trigger-subscription --force --id <subscriptionId>`.
+        """;
 
     protected VmrCodeFlower(
         IVmrInfo vmrInfo,
