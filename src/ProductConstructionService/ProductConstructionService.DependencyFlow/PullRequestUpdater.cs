@@ -551,7 +551,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         catch (DependencyFileNotFoundException e)
         {
             // It can happen that the target branch does not exist or it just does not have eng/Version.Details.xml
-            _logger.LogWarning("Failed to read target branch dependencies: " + e.Message);
+            _logger.LogWarning("Failed to read target branch dependencies: {ErrorMessage}", e.Message);
             return null;
         }
 
