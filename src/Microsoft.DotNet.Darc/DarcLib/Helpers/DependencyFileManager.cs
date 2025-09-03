@@ -491,10 +491,10 @@ public class DependencyFileManager : IDependencyFileManager
         XmlDocument versionProps = await ReadVersionPropsAsync(repoUri, branch, relativeBasePath);
         JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, relativeBasePath);
         JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, relativeBasePath);
-        (string nugetConfigName, XmlDocument nugetConfig) = await ReadNugetConfigAsync(repoUri, branch);
+        (string nugetConfigName, XmlDocument nugetConfig) = await ReadNugetConfigAsync(repoUri, branch, relativeBasePath);
         if (!repoHasVersionDetailsProps.HasValue)
         {
-            repoHasVersionDetailsProps = await VersionDetailsPropsExistsAsync(repoUri, branch);
+            repoHasVersionDetailsProps = await VersionDetailsPropsExistsAsync(repoUri, branch, relativeBasePath);
         }
 
         foreach (DependencyDetail itemToUpdate in itemsToUpdate)

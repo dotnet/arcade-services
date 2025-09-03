@@ -541,7 +541,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         Dictionary<UnixPath, TargetRepoDependencyUpdate> repoDependencyUpdates =
             await GetRequiredUpdates(update, targetRepository, build, prBranch: null, targetBranch: targetBranch);
 
-        if (repoDependencyUpdates.Values.All(update => update.CoherencyCheckSuccessful && update.RequiredUpdates.Count < 1))
+        if (repoDependencyUpdates.Values.All(update =>
+            update.CoherencyCheckSuccessful
+            && update.NonCoherencyUpdates.Count == 0
+            && (update.CoherencyUpdates == null
+                || update.CoherencyUpdates.Count == 0)))
         {
             return null;
         }
@@ -560,18 +564,15 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 newBranchName);
 
             // The PR is just getting created so there's only one subscription update
-            var containedSubscriptions = repoDependencyUpdates.First().Value.RequiredUpdates
-                // Coherency updates do not have subscription info.
-                .Where(u => !u.update.IsCoherencyUpdate)
-                .Select(
-                u => new SubscriptionPullRequestUpdate
+            List<SubscriptionPullRequestUpdate> containedSubscriptions = [
+                new SubscriptionPullRequestUpdate
                 {
-                    SubscriptionId = u.update.SubscriptionId,
-                    BuildId = u.update.BuildId,
-                    SourceRepo = u.update.SourceRepo,
-                    CommitSha = u.update.SourceSha
-                })
-                .ToList();
+                    SubscriptionId = update.SubscriptionId,
+                    BuildId = update.BuildId,
+                    SourceRepo = update.SourceRepo,
+                    CommitSha = update.SourceSha
+                }
+            ];
 
             var prUrl = await darcRemote.CreatePullRequestAsync(
                 targetRepository,
@@ -593,8 +594,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 ContainedSubscriptions = containedSubscriptions,
 
                 RequiredUpdates = repoDependencyUpdates
-                    .SelectMany(kvp => kvp.Value.RequiredUpdates
-                        .SelectMany(update => update.deps.Select(du => new DependencyUpdateSummary(du) { RelativeBasePath = kvp.Key })))
+                    .SelectMany(kvp => kvp.Value.NonCoherencyUpdates
+                        .Concat(kvp.Value.CoherencyUpdates ?? [])
+                        .Select(update => (kvp.Key, update)))
+                    .Select(u => new DependencyUpdateSummary(u.update) { RelativeBasePath = u.Key })
                     .ToList(),
 
                 CoherencyCheckSuccessful = repoDependencyUpdates.Values.All(update => update.CoherencyCheckSuccessful),
@@ -812,7 +815,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         foreach (var (targetDirectory, excludedAssetsMatcher) in targetDirectoryAssetMatchers)
         {
-            repoDependencyUpdates[targetDirectory] = new TargetRepoDependencyUpdate();
             // Existing details
             var existingDependencies = (await darc.GetDependenciesAsync(targetRepository, prBranch ?? targetBranch, relativeBasePath: targetDirectory)).ToList();
 
@@ -857,7 +859,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     existingDependencies.Add(dependencyUpdate.To);
                 }
 
-                repoDependencyUpdates[targetDirectory].RequiredUpdates.Add((update, dependenciesToUpdate));
+                repoDependencyUpdates[targetDirectory] = new TargetRepoDependencyUpdate
+                {
+                    NonCoherencyUpdates = dependenciesToUpdate,
+                    Update = update
+                };
             }
 
             // Once we have applied all of non coherent updates, then we need to run a coherency check on the dependencies.
@@ -890,8 +896,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     UpdaterId = Id.Id,
                     IsCoherencyUpdate = true
                 };
-                repoDependencyUpdates[targetDirectory].RequiredUpdates.Add((coherencyUpdateParameters, coherencyUpdates.ToList()));
-            }
+                repoDependencyUpdates[targetDirectory].CoherencyUpdates = coherencyUpdates.ToList();            }
 
             _logger.LogInformation("Finished getting Required Updates for {branch} of {targetRepository}", targetBranch, targetRepository);
         }   
@@ -947,7 +952,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     ///     This method is intended for use in situations where we want to keep the information about the original dependency
     ///     version, such as when updating PR descriptions.
     /// </remarks>
-    private static async Task<List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)>> CalculateOriginalDependencies(
+    /*private static async Task<List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)>> CalculateOriginalDependencies(
         IRemote darcRemote,
         string targetRepository,
         string targetBranch,
@@ -972,7 +977,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
 
         return alteredUpdates;
-    }
+    }*/
 
     private async Task ScheduleUpdateForLater(InProgressPullRequest pr, SubscriptionUpdateWorkItem update, bool isCodeFlow)
     {

@@ -160,7 +160,7 @@ public interface IRemote
     /// <summary>
     ///     Commits a set of files to a repository
     /// </summary>
-    Task CommiteUpdatesAsync(
+    Task CommitUpdatesAsync(
         List<GitFile> filesToCommit,
         string repoUri,
         string branch,
