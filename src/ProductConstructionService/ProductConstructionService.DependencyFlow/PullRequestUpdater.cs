@@ -537,9 +537,23 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
 
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
+        TargetRepoDependencyUpdate repoDependencyUpdate;
 
-        TargetRepoDependencyUpdate repoDependencyUpdate =
-            await GetRequiredUpdates(update, targetRepository, build, prBranch: null, targetBranch: targetBranch);
+        try
+        {
+            repoDependencyUpdate = await GetRequiredUpdates(
+                update,
+                targetRepository,
+                build,
+                prBranch: null,
+                targetBranch: targetBranch);
+        }
+        catch (DependencyFileNotFoundException e)
+        {
+            // It can happen that the target branch does not exist or it just does not have eng/Version.Details.xml
+            _logger.LogWarning("Failed to read target branch dependencies: " + e.Message);
+            return null;
+        }
 
         if (repoDependencyUpdate.CoherencyCheckSuccessful && repoDependencyUpdate.RequiredUpdates.Count < 1)
         {
@@ -802,7 +816,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         var excludedAssetsMatcher = subscription.ExcludedAssets.GetAssetMatcher();
 
-        // Existing details 
+        // Existing details
         var existingDependencies = (await darc.GetDependenciesAsync(targetRepository, prBranch ?? targetBranch)).ToList();
 
         // Filter out excluded assets from the build assets
