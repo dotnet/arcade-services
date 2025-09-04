@@ -32,7 +32,7 @@ internal interface IPullRequestBuilder
     /// <param name="targetRepository">Target repository that the updates should be applied to</param>
     /// <param name="newBranchName">Target branch the updates should be to</param>
     Task<string> CalculatePRDescriptionAndCommitUpdatesAsync(
-        Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> requiredUpdates,
+        TargetRepoDependencyUpdates requiredUpdates,
         string? currentDescription,
         string targetRepository,
         string newBranchName);
@@ -130,7 +130,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     }
 
     public async Task<string> CalculatePRDescriptionAndCommitUpdatesAsync(
-        Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> requiredUpdates,
+        TargetRepoDependencyUpdates requiredUpdates,
         string? currentDescription,
         string targetRepository,
         string newBranchName)
@@ -141,7 +141,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         var startingReferenceId = GetStartingReferenceId(description.ToString());
         var locationResolver = new AssetLocationResolver(_barClient);
         IRemote remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
-        var update = requiredUpdates.Values.First().Update;
+        var update = requiredUpdates.SubscriptionUpdate;
         var build = await _barClient.GetBuildAsync(update.BuildId);
 
         StringBuilder nonCoherencyCommitMessage = new($"Update dependencies from {update.SourceRepo} build {build.AzureDevOpsBuildNumber}");
@@ -154,11 +154,11 @@ internal class PullRequestBuilder : IPullRequestBuilder
         List<GitFile> targetDirectoryUpdatedDependencies = [];
 
         // Go through reach target directory and get the updated git files
-        foreach (var (targetDirectory, targetRepoUpdate) in requiredUpdates)
+        foreach (var (targetDirectory, targetRepoDirectoryUpdates) in requiredUpdates.DirectoryUpdates)
         {
             var nonCoherencyUpdates =
-                targetRepoUpdate.NonCoherencyUpdates;
-            List<DependencyUpdate>? coherencyUpdates = targetRepoUpdate.CoherencyUpdates;
+                targetRepoDirectoryUpdates.NonCoherencyUpdates;
+            List<DependencyUpdate>? coherencyUpdates = targetRepoDirectoryUpdates.CoherencyUpdates;
 
             List<DependencyDetail> itemsToUpdate = [];
 
@@ -200,7 +200,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             await AppendBuildDescriptionAsync(
                 description,
                 startingReferenceId,
-                requiredUpdates.Values.First().Update,
+                requiredUpdates.SubscriptionUpdate,
                 nonCoherencyUpdatesPerDirectory,
                 targetDirectoryUpdatedDependencies,
                 build);
