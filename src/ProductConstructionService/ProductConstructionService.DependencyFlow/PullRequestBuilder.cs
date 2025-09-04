@@ -167,7 +167,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             itemsToUpdate.AddRange(nonCoherencyUpdates
                 .Select(du => du.To));
 
-            if (coherencyUpdates != null)
+            if (coherencyUpdates != null && coherencyUpdates.Count > 0)
             {
                 AppendCoherencyCommitMessage(targetDirectory, coherencyUpdates, coherencyCommitMessage);
                 coherencyUpdatesPerDirectory[targetDirectory] = [.. coherencyUpdates];

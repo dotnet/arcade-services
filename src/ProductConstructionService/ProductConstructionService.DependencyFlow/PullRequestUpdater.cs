@@ -891,18 +891,15 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             if (coherencyUpdates.Count != 0)
             {
-                // For the update asset parameters, we don't have any information on the source of the update,
-                // since coherency can be run even without any updates.
-                var coherencyUpdateParameters = new SubscriptionUpdateWorkItem
-                {
-                    UpdaterId = Id.Id,
-                    IsCoherencyUpdate = true
-                };
-                repoDependencyUpdates[targetDirectory].CoherencyUpdates = coherencyUpdates.ToList();            }
+                repoDependencyUpdates[targetDirectory].CoherencyUpdates = coherencyUpdates.ToList();
+            }
 
-            _logger.LogInformation("Finished getting Required Updates for {branch} of {targetRepository}", targetBranch, targetRepository);
-        }   
-        
+            _logger.LogInformation("Finished getting Required Updates for {branch} of {targetRepository} on relative path {relativePath}",
+                targetBranch,
+                targetRepository,
+                targetDirectory);
+        }
+
         return repoDependencyUpdates;
     }
 
@@ -963,7 +960,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         Dictionary<UnixPath, TargetRepoDependencyUpdate> alteredUpdates = new();
         foreach (var (targetDirectory, targetDictionaryRepositoryUpdates) in targetRepositoryUpdates)
         {
-            List<DependencyDetail> targetBranchDeps = [.. await darcRemote.GetDependenciesAsync(targetRepository, targetBranch, targetDirectory)];
+            List<DependencyDetail> targetBranchDeps = [.. await darcRemote.GetDependenciesAsync(targetRepository, targetBranch, relativeBasePath: targetDirectory)];
 
             var updatedNonCoherencyDeps = targetDictionaryRepositoryUpdates.NonCoherencyUpdates
                 .Select(dependency => new DependencyUpdate()
