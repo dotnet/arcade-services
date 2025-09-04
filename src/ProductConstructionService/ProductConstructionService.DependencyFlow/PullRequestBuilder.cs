@@ -32,7 +32,7 @@ internal interface IPullRequestBuilder
     /// <param name="targetRepository">Target repository that the updates should be applied to</param>
     /// <param name="newBranchName">Target branch the updates should be to</param>
     Task<string> CalculatePRDescriptionAndCommitUpdatesAsync(
-        Dictionary<UnixPath, TargetRepoDependencyUpdate> requiredUpdates,
+        Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> requiredUpdates,
         string? currentDescription,
         string targetRepository,
         string newBranchName);
@@ -130,7 +130,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     }
 
     public async Task<string> CalculatePRDescriptionAndCommitUpdatesAsync(
-        Dictionary<UnixPath, TargetRepoDependencyUpdate> requiredUpdates,
+        Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> requiredUpdates,
         string? currentDescription,
         string targetRepository,
         string newBranchName)

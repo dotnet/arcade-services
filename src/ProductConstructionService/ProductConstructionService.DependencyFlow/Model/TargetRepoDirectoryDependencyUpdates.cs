@@ -7,11 +7,10 @@ using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.Model;
 
-internal class TargetRepoDependencyUpdate
+internal class TargetRepoDirectoryDependencyUpdates
 {
     public bool CoherencyCheckSuccessful { get; set; } = true;
     public List<CoherencyErrorDetails>? CoherencyErrors { get; set; }
-    public required SubscriptionUpdateWorkItem Update { get; set; }
     public required List<DependencyUpdate> NonCoherencyUpdates { get; set; }
     public List<DependencyUpdate>? CoherencyUpdates { get; set; }
 }

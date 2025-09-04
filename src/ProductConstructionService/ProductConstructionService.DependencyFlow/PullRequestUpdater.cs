@@ -538,7 +538,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
-        Dictionary<UnixPath, TargetRepoDependencyUpdate> repoDependencyUpdates =
+        TargetRepoDependencyUpdates repoDependencyUpdates =
             await GetRequiredUpdates(update, targetRepository, build, prBranch: null, targetBranch: targetBranch);
 
         if (repoDependencyUpdates.Values.All(update =>
@@ -650,7 +650,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
-        Dictionary<UnixPath, TargetRepoDependencyUpdate> repoDependencyUpdates =
+        Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> repoDependencyUpdates =
             await GetRequiredUpdates(update, targetRepository, build, prInfo.HeadBranch, targetBranch);
 
         if (repoDependencyUpdates.Values.All(update =>
@@ -782,7 +782,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     ///     updates required based on the input updates.  The second pass uses the repo state + the
     ///     updates from the first pass to determine what else needs to change based on the coherency metadata.
     /// </remarks>
-    private async Task<Dictionary<UnixPath, TargetRepoDependencyUpdate>> GetRequiredUpdates(
+    private async Task<TargetRepoDependencyUpdates> GetRequiredUpdates(
         SubscriptionUpdateWorkItem update,
         string targetRepository,
         BuildDTO build,
@@ -793,7 +793,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         // Get a remote factory for the target repo
         IRemote darc = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
-        Dictionary<UnixPath, TargetRepoDependencyUpdate> repoDependencyUpdates = new();
+        Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> repoDependencyUpdates = new();
 
         // Get subscription to access excluded assets
         var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId)
@@ -851,6 +851,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                         CommitSha = update.SourceSha
                     }
                     });
+                repoDependencyUpdates[targetDirectory] = new TargetRepoDirectoryDependencyUpdates
+                {
+                    NonCoherencyUpdates = [],
+                };
             }
             else
             {
@@ -861,10 +865,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     existingDependencies.Add(dependencyUpdate.To);
                 }
 
-                repoDependencyUpdates[targetDirectory] = new TargetRepoDependencyUpdate
+                repoDependencyUpdates[targetDirectory] = new TargetRepoDirectoryDependencyUpdates
                 {
                     NonCoherencyUpdates = dependenciesToUpdate,
-                    Update = update
                 };
             }
 
@@ -900,7 +903,18 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 targetDirectory);
         }
 
-        return repoDependencyUpdates;
+        return new TargetRepoDependencyUpdates
+        {
+            DirectoryUpdates = repoDependencyUpdates,
+            Update = repoDependencyUpdates.Values.All(updates => updates.NonCoherencyUpdates.Count == 0)
+                        && repoDependencyUpdates.Values.Any(updates => updates.CoherencyUpdates != null && updates.CoherencyUpdates.Count > 0)
+                ? new SubscriptionUpdateWorkItem
+                    {
+                        UpdaterId = Id.Id,
+                        IsCoherencyUpdate = true
+                    }
+                : update
+        };
     }
 
     private static string GetNewBranchName(string targetBranch) => $"darc-{targetBranch}-{Guid.NewGuid()}";
@@ -951,13 +965,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     ///     This method is intended for use in situations where we want to keep the information about the original dependency
     ///     version, such as when updating PR descriptions.
     /// </remarks>
-    private static async Task<Dictionary<UnixPath, TargetRepoDependencyUpdate>> CalculateOriginalDependencies(
+    private static async Task<Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates>> CalculateOriginalDependencies(
         IRemote darcRemote,
         string targetRepository,
         string targetBranch,
-        Dictionary<UnixPath, TargetRepoDependencyUpdate> targetRepositoryUpdates)
+        Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> targetRepositoryUpdates)
     {
-        Dictionary<UnixPath, TargetRepoDependencyUpdate> alteredUpdates = new();
+        Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> alteredUpdates = new();
         foreach (var (targetDirectory, targetDictionaryRepositoryUpdates) in targetRepositoryUpdates)
         {
             List<DependencyDetail> targetBranchDeps = [.. await darcRemote.GetDependenciesAsync(targetRepository, targetBranch, relativeBasePath: targetDirectory)];
@@ -978,7 +992,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     To = dependency.To,
                 })
                 .ToList() ?? [];
-            alteredUpdates[targetDirectory] = new TargetRepoDependencyUpdate
+            alteredUpdates[targetDirectory] = new TargetRepoDirectoryDependencyUpdates
             {
                 NonCoherencyUpdates = updatedNonCoherencyDeps,
                 CoherencyUpdates = updatedCoherencyDeps,
