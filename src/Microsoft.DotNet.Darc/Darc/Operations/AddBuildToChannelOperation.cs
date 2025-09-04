@@ -304,7 +304,7 @@ internal class AddBuildToChannelOperation : Operation
 
         try
         {
-            var waitIntervalInSeconds = TimeSpan.FromSeconds(60);
+            var waitIntervalInSeconds = TimeSpan.FromSeconds(30);
             AzureDevOpsBuild promotionBuild;
 
             do
