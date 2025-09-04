@@ -33,6 +33,7 @@ internal interface IPcsVmrBackFlower : IVmrBackFlower
         Subscription subscription,
         Build build,
         string targetBranch,
+        bool forceApply,
         CancellationToken cancellationToken = default);
 }
 
@@ -58,8 +59,9 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             IBackflowConflictResolver versionFileConflictResolver,
             IFileSystem fileSystem,
             IBasicBarClient barClient,
+            ICommentCollector commentCollector,
             ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, vmrCloneManager, repositoryCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, vmrPatchHandler, workBranchFactory, versionFileConflictResolver, fileSystem, barClient, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, vmrCloneManager, repositoryCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, vmrPatchHandler, workBranchFactory, versionFileConflictResolver, fileSystem, barClient, commentCollector, logger)
     {
         _sourceManifest = sourceManifest;
         _dependencyTracker = dependencyTracker;
@@ -72,6 +74,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         Subscription subscription,
         Build build,
         string targetBranch,
+        bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
         (var headBranchExisted, SourceMapping mapping, ILocalGitRepo targetRepo) = await PrepareVmrAndRepo(
@@ -91,6 +94,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             subscription.TargetBranch,
             targetBranch,
             headBranchExisted,
+            forceUpdate,
             cancellationToken);
 
         return result with

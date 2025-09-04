@@ -32,6 +32,7 @@ public interface IVmrCodeFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
+        bool forceUpdate,
         CancellationToken cancellationToken = default);
 }
 
@@ -48,7 +49,20 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IFileSystem _fileSystem;
+    private readonly ICommentCollector _commentCollector;
     private readonly ILogger<VmrCodeFlower> _logger;
+
+    private static readonly string CannotFlowAdditionalFlowsInPrMsg =
+        """
+        The source repository has received code changes from an opposite flow. Any additional codeflows into this PR may potentially result in lost changes.
+        
+        Please continue with one of the following options:
+        1. Close or merge this PR and let the codeflow continue normally
+        2. Close or merge this PR and receive the new codeflow immediately by triggering the subscription:
+            `darc trigger-subscription --id <subscriptionId>`
+        3. Force-flow new changes into this PR at your own risk (some PR commits might be reverted):
+            `darc trigger-subscription --force --id <subscriptionId>`
+        """;
 
     protected VmrCodeFlower(
         IVmrInfo vmrInfo,
@@ -58,6 +72,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
         IFileSystem fileSystem,
+        ICommentCollector commentCollector,
         ILogger<VmrCodeFlower> logger)
     {
         _vmrInfo = vmrInfo;
@@ -67,6 +82,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
         _fileSystem = fileSystem;
+        _commentCollector = commentCollector;
         _logger = logger;
     }
 
@@ -86,6 +102,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
+        bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
         var lastFlow = lastFlows.LastFlow;
@@ -93,6 +110,12 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         {
             _logger.LogInformation("No new commits to flow from {sourceRepo}", currentFlow is Backflow ? "VMR" : mapping.Name);
             return false;
+        }
+
+        if (lastFlow.Name != currentFlow.Name && headBranchExisted && !forceUpdate)
+        {
+            _commentCollector.AddComment(CannotFlowAdditionalFlowsInPrMsg, CommentType.Warning);
+            throw new BlockingCodeflowException("Cannot apply codeflow on PR head branch because an opposite direction flow has been merged.");
         }
 
         await EnsureCodeflowLinearityAsync(repo, currentFlow, lastFlows);
@@ -116,6 +139,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 targetBranch,
                 headBranch,
                 headBranchExisted,
+                forceUpdate,
                 cancellationToken);
         }
         else
@@ -165,6 +189,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
+        bool forceUpdate,
         CancellationToken cancellationToken);
 
     /// <summary>
@@ -343,6 +368,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         string headBranch,
         string targetBranch,
         IReadOnlyCollection<string>? excludedAssets,
+        bool forceUpdate,
         Func<Task> reapplyChanges,
         CancellationToken cancellationToken)
     {
@@ -392,6 +418,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 targetBranch,
                 headBranch,
                 headBranchExisted: true, // Head branch was created when we rewound to the previous flow
+                forceUpdate,
                 cancellationToken);
 
             var changedFilesAfterRecreation = await GetChangesInHeadBranch(
