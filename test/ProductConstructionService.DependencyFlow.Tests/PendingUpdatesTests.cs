@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data.Models;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -9,6 +11,12 @@ namespace ProductConstructionService.DependencyFlow.Tests;
 [TestFixture, NonParallelizable]
 internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
 {
+
+    protected override void RegisterServices(IServiceCollection services)
+    {
+        base.RegisterServices(services);
+    }
+
     [Test]
     public async Task PendingUpdatesNotUpdatablePr()
     {
@@ -47,9 +55,9 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
         WithNoRequiredCoherencyUpdates();
         using (WithExistingPullRequest(b, canUpdate: true))
         {
-            await WhenProcessPendingUpdatesAsyncIsCalled(b);
+            await WhenProcessPendingUpdatesAsyncIsCalled(b, shouldGetUpdates: true);
 
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true, relativeBasePath: new UnixPath("."));
             ThenUpdateReminderIsRemoved();
             AndPendingUpdateIsRemoved();
             AndCommitUpdatesShouldHaveBeenCalled(b);
@@ -126,9 +134,9 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
         WithNoRequiredCoherencyUpdates();
         using (WithExistingPullRequest(b1, canUpdate: true, nextBuildToProcess: b2.Id, setupRemoteMock: true))
         {
-            await WhenProcessPendingUpdatesAsyncIsCalled(b2, applyNewestOnly: true);
+            await WhenProcessPendingUpdatesAsyncIsCalled(b2, applyNewestOnly: true, shouldGetUpdates: true);
 
-            ThenShouldHaveInProgressPullRequestState(b2);
+            ThenShouldHaveInProgressPullRequestState(b2, relativeBasePath: new UnixPath("."));
             AndShouldHaveNoPendingUpdateState();
             AndShouldHavePullRequestCheckReminder();
         }
@@ -152,9 +160,9 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
         WithNoRequiredCoherencyUpdates();
         using (WithExistingPullRequest(b, canUpdate: false))
         {
-            await WhenProcessPendingUpdatesAsyncIsCalled(b, forceUpdate: true);
+            await WhenProcessPendingUpdatesAsyncIsCalled(b, forceUpdate: true, shouldGetUpdates: true);
 
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true, relativeBasePath: new UnixPath("."));
             ThenUpdateReminderIsRemoved();
             AndPendingUpdateIsRemoved();
             AndCommitUpdatesShouldHaveBeenCalled(b);

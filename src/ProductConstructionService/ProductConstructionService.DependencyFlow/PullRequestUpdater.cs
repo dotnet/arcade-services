@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
-using LibGit2Sharp;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -13,7 +12,7 @@ using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
@@ -575,6 +574,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     BaseBranch = targetBranch,
                     HeadBranch = newBranchName,
                 });
+            var agregatedCoherencyErrors = repoDependencyUpdates.DirectoryUpdates.Values.SelectMany(update => update.CoherencyErrors ?? []).ToList();
+
             InProgressPullRequest inProgressPr = new()
             {
                 UpdaterId = Id.ToString(),
@@ -584,7 +585,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 ContainedSubscriptions = [],
                 RequiredUpdates = [],
                 CoherencyCheckSuccessful = false,
-                CoherencyErrors = repoDependencyUpdates.DirectoryUpdates.Values.SelectMany(update => update.CoherencyErrors ?? []).ToList(),
+                CoherencyErrors = agregatedCoherencyErrors.Count > 0 ? agregatedCoherencyErrors : null,
                 CodeFlowDirection = CodeFlowDirection.None,
             };
 
@@ -618,6 +619,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     HeadBranch = newBranchName,
                 });
 
+            var agregatedCoherencyErrors = repoDependencyUpdates.DirectoryUpdates.Values.SelectMany(update => update.CoherencyErrors ?? []).ToList();
+
             var inProgressPr = new InProgressPullRequest
             {
                 UpdaterId = Id.ToString(),
@@ -635,7 +638,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     .ToList(),
 
                 CoherencyCheckSuccessful = repoDependencyUpdates.CoherencyCheckSuccessful,
-                CoherencyErrors = repoDependencyUpdates.DirectoryUpdates.Values.SelectMany(update => update.CoherencyErrors ?? []).ToList(),
+                CoherencyErrors = agregatedCoherencyErrors.Count > 0 ? agregatedCoherencyErrors : null,
                 CodeFlowDirection = CodeFlowDirection.None,
             };
 
@@ -715,7 +718,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
         pr.CoherencyCheckSuccessful = repoDependencyUpdates.CoherencyCheckSuccessful;
-        pr.CoherencyErrors = repoDependencyUpdates.DirectoryUpdates.Values.SelectMany(update => update.CoherencyErrors ?? []).ToList();
+        var agregatedCoherencyErrors = repoDependencyUpdates.DirectoryUpdates.Values.SelectMany(update => update.CoherencyErrors ?? []).ToList();
+        pr.CoherencyErrors = agregatedCoherencyErrors.Count > 0 ? agregatedCoherencyErrors : null;
 
         List<SubscriptionPullRequestUpdate> previousSubscriptions = [.. pr.ContainedSubscriptions];
 
@@ -781,6 +785,15 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         List<DependencyUpdateSummary> existingUpdates,
         List<DependencyUpdateSummary> incomingUpdates)
     {
+        // Already existing PRs (at the time of deployment) will have relative base path for all dependency updates as null, but that really means the root,
+        // so we'll update them
+        foreach (var update in existingUpdates)
+        {
+            if (update.RelativeBasePath == null)
+            {
+                update.RelativeBasePath = new UnixPath(".");
+            }
+        }
         IEnumerable<DependencyUpdateSummary> mergedUpdates = existingUpdates
             .Select(u =>
             {
@@ -793,6 +806,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     FromVersion = u.FromVersion,
                     ToCommitSha = matchingIncoming != null ? matchingIncoming.ToCommitSha : u.ToCommitSha,
                     ToVersion = matchingIncoming != null ? matchingIncoming.ToVersion : u.ToVersion,
+                    RelativeBasePath = u.RelativeBasePath,
                 };
             });
 

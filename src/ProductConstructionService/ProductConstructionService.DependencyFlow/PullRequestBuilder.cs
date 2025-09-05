@@ -121,10 +121,15 @@ internal class PullRequestBuilder : IPullRequestBuilder
             return $"[{targetBranch}] Update dependencies to ensure coherency";
         }
 
-        List<string> repoNames = await _context.Subscriptions
+        var subs = await _context.Subscriptions.ToListAsync();
+        var goodSubs = subs.Where(s => uniqueSubscriptionIds.Contains(s.Id)).ToList();
+        var repoNames = goodSubs.Where(s => !string.IsNullOrEmpty(s.SourceRepository))
+            .Select(s => s.SourceRepository!)
+            .ToList();
+        /*List<string> repoNames = await _context.Subscriptions
             .Where(s => uniqueSubscriptionIds.Contains(s.Id) && !string.IsNullOrEmpty(s.SourceRepository))
             .Select(s => s.SourceRepository!)
-            .ToListAsync();
+            .ToListAsync();*/
 
         return GeneratePRTitle($"[{targetBranch}] Update dependencies from", repoNames);
     }
@@ -178,14 +183,16 @@ internal class PullRequestBuilder : IPullRequestBuilder
                     .Select(du => du.To));
             }
 
-            targetDirectoryUpdatedDependencies = await remote.GetUpdatesAsync(
-                    targetRepository,
-                    newBranchName,
-                    itemsToUpdate,
-                    targetDirectory);
-            await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
-            updatedDependencies.AddRange(targetDirectoryUpdatedDependencies);
-            // what do I do with this?
+            if (itemsToUpdate.Count > 0)
+            {
+                targetDirectoryUpdatedDependencies = await remote.GetUpdatesAsync(
+                        targetRepository,
+                        newBranchName,
+                        itemsToUpdate,
+                        targetDirectory);
+                await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
+                updatedDependencies.AddRange(targetDirectoryUpdatedDependencies);
+            }
         }
 
         if (updatedDependencies.Count > 0)
@@ -200,13 +207,17 @@ internal class PullRequestBuilder : IPullRequestBuilder
             {
                 AppendCoherencyUpdateDescription(description, coherencyUpdatesPerDirectory);
             }
-            await AppendBuildDescriptionAsync(
-                description,
-                startingReferenceId,
-                requiredUpdates.SubscriptionUpdate,
-                nonCoherencyUpdatesPerDirectory,
-                targetDirectoryUpdatedDependencies,
-                build);
+            if (nonCoherencyUpdatesPerDirectory.Count > 0)
+            {
+                await AppendBuildDescriptionAsync(
+                    description,
+                    startingReferenceId,
+                    requiredUpdates.SubscriptionUpdate,
+                    nonCoherencyUpdatesPerDirectory,
+                    targetDirectoryUpdatedDependencies,
+                    build);
+            }
+            return description.ToString();
         }
         else
         {
@@ -218,7 +229,6 @@ internal class PullRequestBuilder : IPullRequestBuilder
             return $"Coherency update: {message} Please review the GitHub checks or run `darc update-dependencies --coherency-only` locally against {newBranchName} for more information.";
         }
 
-        return description.ToString();
     }
 
     public string GenerateCodeFlowPRTitle(

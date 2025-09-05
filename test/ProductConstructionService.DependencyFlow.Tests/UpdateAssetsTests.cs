@@ -3,6 +3,7 @@
 
 using Maestro.Data.Models;
 using Maestro.MergePolicies;
+using Microsoft.DotNet.DarcLib.Helpers;
 using NUnit.Framework;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -28,14 +29,14 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
         CreatePullRequestShouldReturnAValidValue();
 
-        await WhenUpdateAssetsAsyncIsCalled(b);
+        await WhenUpdateAssetsAsyncIsCalled(b, shouldGetUpdates: true);
 
-        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false);
+        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false, relativeBasePath: new UnixPath("."));
         AndCreateNewBranchShouldHaveBeenCalled();
         AndCommitUpdatesShouldHaveBeenCalled(b);
         AndCreatePullRequestShouldHaveBeenCalled();
         AndShouldHavePullRequestCheckReminder();
-        AndShouldHaveInProgressPullRequestState(b);
+        AndShouldHaveInProgressPullRequestState(b, relativeBasePath: new UnixPath("."));
     }
 
     [TestCase(false)]
@@ -56,13 +57,13 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
         using (WithExistingPullRequest(b, canUpdate: true))
         {
-            await WhenUpdateAssetsAsyncIsCalled(b);
+            await WhenUpdateAssetsAsyncIsCalled(b, shouldGetUpdates: true);
 
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true, relativeBasePath: new UnixPath("."));
             AndCommitUpdatesShouldHaveBeenCalled(b);
             AndUpdatePullRequestShouldHaveBeenCalled();
             AndShouldHavePullRequestCheckReminder();
-            AndShouldHaveInProgressPullRequestState(b);
+            AndShouldHaveInProgressPullRequestState(b, relativeBasePath: new UnixPath("."));
         }
     }
 
@@ -108,7 +109,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
         await WhenUpdateAssetsAsyncIsCalled(b);
 
-        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false);
+        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false, relativeBasePath: new UnixPath("."));
         AndSubscriptionShouldBeUpdatedForMergedPullRequest(b);
     }
 
@@ -130,9 +131,9 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
         CreatePullRequestShouldReturnAValidValue();
 
-        await WhenUpdateAssetsAsyncIsCalled(b);
+        await WhenUpdateAssetsAsyncIsCalled(b, shouldGetUpdates: true);
 
-        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false);
+        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false, relativeBasePath: new UnixPath("."));
         AndCreateNewBranchShouldHaveBeenCalled();
         AndCommitUpdatesShouldHaveBeenCalled(b);
         AndCreatePullRequestShouldHaveBeenCalled();
@@ -146,7 +147,8 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
                         Error = "Repo @ commit does not contain dependency fakeDependency",
                         PotentialSolutions = new List<string>()
                     }
-            ]);
+            ],
+            relativeBasePath: new UnixPath("."));
     }
 
     [TestCase(false)]
@@ -176,14 +178,14 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
         CreatePullRequestShouldReturnAValidValue();
 
-        await WhenUpdateAssetsAsyncIsCalled(b);
+        await WhenUpdateAssetsAsyncIsCalled(b, shouldGetUpdates: true);
 
-        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false, assetFilter);
+        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false, assetFilter, relativeBasePath: new UnixPath("."));
         AndCreateNewBranchShouldHaveBeenCalled();
         AndCommitUpdatesShouldHaveBeenCalled(b, assetFilter);
         AndCreatePullRequestShouldHaveBeenCalled();
         AndShouldHavePullRequestCheckReminder();
-        AndShouldHaveInProgressPullRequestState(b, assetFilter: assetFilter);
+        AndShouldHaveInProgressPullRequestState(b, assetFilter: assetFilter, relativeBasePath: new UnixPath("."));
     }
 
     [TestCase(false)]
@@ -212,7 +214,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
         await WhenUpdateAssetsAsyncIsCalled(b);
 
         // Verify that no assets were passed to GetRequiredNonCoherencyUpdates (all excluded)
-        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false, asset => false);
+        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false, asset => false, relativeBasePath: new UnixPath("."));
         AndSubscriptionShouldBeUpdatedForMergedPullRequest(b);
     }
 
@@ -243,14 +245,14 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
         using (WithExistingPullRequest(b, canUpdate: true, assetFilter: assetFilter))
         {
-            await WhenUpdateAssetsAsyncIsCalled(b);
+            await WhenUpdateAssetsAsyncIsCalled(b, shouldGetUpdates: true);
 
             // Verify that only non-excluded assets were passed
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true, assetFilter);
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true, assetFilter, relativeBasePath: new UnixPath("."));
             AndCommitUpdatesShouldHaveBeenCalled(b, assetFilter);
             AndUpdatePullRequestShouldHaveBeenCalled();
             AndShouldHavePullRequestCheckReminder();
-            AndShouldHaveInProgressPullRequestState(b, assetFilter: assetFilter);
+            AndShouldHaveInProgressPullRequestState(b, assetFilter: assetFilter, relativeBasePath: new UnixPath("."));
         }
     }
 }

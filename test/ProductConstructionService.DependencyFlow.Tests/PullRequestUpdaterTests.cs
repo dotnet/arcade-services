@@ -86,7 +86,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.IsAny<PullRequest>()));
     }
 
-    protected void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild, bool prExists, Func<Asset, bool>? assetFilter = null)
+    protected void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild, bool prExists, Func<Asset, bool>? assetFilter = null, UnixPath? relativeBasePath = null)
     {
         var assets = new List<IReadOnlyCollection<AssetData>>();
         var dependencies = new List<IReadOnlyCollection<DependencyDetail>>();
@@ -95,7 +95,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             .Verify(r => r.GetRequiredNonCoherencyUpdates(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)));
 
         DarcRemotes[TargetRepo]
-            .Verify(r => r.GetDependenciesAsync(TargetRepo, prExists ? InProgressPrHeadBranch : TargetBranch, null));
+            .Verify(r => r.GetDependenciesAsync(TargetRepo, prExists ? InProgressPrHeadBranch : TargetBranch, name: null, relativeBasePath));
 
         UpdateResolver
             .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies)));
@@ -127,11 +127,11 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         var updatedDependencies = new List<List<DependencyDetail>>();
         DarcRemotes[TargetRepo]
             .Verify(
-                r => r.CommitUpdatesAsync(
+                r => r.GetUpdatesAsync(
                     TargetRepo,
                     InProgressPrHeadBranch,
                     Capture.In(updatedDependencies),
-                    It.IsAny<string>()));
+                    It.IsAny<UnixPath>()));
 
         updatedDependencies.Should()
             .BeEquivalentTo(
@@ -580,7 +580,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         string? overwriteBuildCommit = null,
         InProgressPullRequestState prState = InProgressPullRequestState.Mergeable,
         Func<Asset, bool>? assetFilter = null,
-        bool? sourceRepoNotified = null)
+        bool? sourceRepoNotified = null,
+        UnixPath? relativeBasePath = null)
     {
         var prUrl = Subscription.SourceEnabled
             ? VmrPullRequestUrl
@@ -598,11 +599,12 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     overwriteBuildCommit,
                     prState,
                     assetFilter,
-                    sourceRepoNotified: sourceRepoNotified));
+                    sourceRepoNotified: sourceRepoNotified,
+                    relativeBasePath));
     }
 
-    protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, int nextBuildToProcess = 0, InProgressPullRequest? expectedState = null, bool? sourceRepoNotified = null)
-        => AndShouldHaveInProgressPullRequestState(forBuild, nextBuildToProcess, expectedState: expectedState, sourceRepoNotified: sourceRepoNotified);
+    protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, int nextBuildToProcess = 0, InProgressPullRequest? expectedState = null, bool? sourceRepoNotified = null, UnixPath? relativeBasePath = null)
+        => AndShouldHaveInProgressPullRequestState(forBuild, nextBuildToProcess, expectedState: expectedState, sourceRepoNotified: sourceRepoNotified, relativeBasePath: relativeBasePath);
 
     protected void ThenShouldHaveCachedMergePolicyResults(MergePolicyEvaluationResults results)
     {
@@ -655,7 +657,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             string? overwriteBuildCommit = null,
             InProgressPullRequestState prState = InProgressPullRequestState.Mergeable,
             Func<Asset, bool>? assetFilter = null,
-            bool? sourceRepoNotified = null)
+            bool? sourceRepoNotified = null,
+            UnixPath? relativeBasePath = null)
         => new()
         {
             UpdaterId = GetPullRequestUpdaterId().ToString(),
@@ -679,7 +682,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     FromVersion = d.Version,
                     ToVersion = d.Version,
                     FromCommitSha = NewCommit,
-                    ToCommitSha = "sha3333"
+                    ToCommitSha = "sha3333",
+                    RelativeBasePath = relativeBasePath
                 })
                 .ToList(),
             CoherencyCheckSuccessful = coherencyCheckSuccessful,

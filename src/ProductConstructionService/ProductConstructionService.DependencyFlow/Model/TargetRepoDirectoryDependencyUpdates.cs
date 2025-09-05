@@ -3,7 +3,6 @@
 
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.Model;
 
