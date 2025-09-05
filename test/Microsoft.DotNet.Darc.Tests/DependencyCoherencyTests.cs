@@ -1187,7 +1187,7 @@ public class DependencyCoherencyTests
 
     private void RepoHasDependencies(string repo, string commit, List<DependencyDetail> dependencies)
     {
-        _remoteMock.Setup(m => m.GetDependenciesAsync(repo, commit, null)).ReturnsAsync(dependencies);
+        _remoteMock.Setup(m => m.GetDependenciesAsync(repo, commit, null, It.IsAny<UnixPath>())).ReturnsAsync(dependencies);
     }
 
     private void RepoHadBuilds(string repo, string commit, IEnumerable<Build> builds)

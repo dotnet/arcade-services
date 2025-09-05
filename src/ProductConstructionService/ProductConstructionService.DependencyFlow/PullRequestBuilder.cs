@@ -11,7 +11,6 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.TeamFoundation.Build.WebApi;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
@@ -121,15 +120,10 @@ internal class PullRequestBuilder : IPullRequestBuilder
             return $"[{targetBranch}] Update dependencies to ensure coherency";
         }
 
-        var subs = await _context.Subscriptions.ToListAsync();
-        var goodSubs = subs.Where(s => uniqueSubscriptionIds.Contains(s.Id)).ToList();
-        var repoNames = goodSubs.Where(s => !string.IsNullOrEmpty(s.SourceRepository))
-            .Select(s => s.SourceRepository!)
-            .ToList();
-        /*List<string> repoNames = await _context.Subscriptions
+        List<string> repoNames = await _context.Subscriptions
             .Where(s => uniqueSubscriptionIds.Contains(s.Id) && !string.IsNullOrEmpty(s.SourceRepository))
             .Select(s => s.SourceRepository!)
-            .ToListAsync();*/
+            .ToListAsync();
 
         return GeneratePRTitle($"[{targetBranch}] Update dependencies from", repoNames);
     }
