@@ -471,7 +471,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 Status = prStatus,
                 HeadBranch = InProgressPrHeadBranch,
                 BaseBranch = TargetBranch,
-                TargetBranchCommitSha = "sha123456",
+                HeadBranchCommitSha = "sha123456",
             });
 
         if (willFlowNewBuild
