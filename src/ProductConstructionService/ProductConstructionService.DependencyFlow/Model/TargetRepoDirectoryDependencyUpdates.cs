@@ -1,0 +1,15 @@
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using Maestro.MergePolicies;
+using Microsoft.DotNet.DarcLib.Models.Darc;
+
+namespace ProductConstructionService.DependencyFlow.Model;
+
+internal class TargetRepoDirectoryDependencyUpdates
+{
+    public bool CoherencyCheckSuccessful { get; set; } = true;
+    public List<CoherencyErrorDetails>? CoherencyErrors { get; set; }
+    public required List<DependencyUpdate> NonCoherencyUpdates { get; set; }
+    public List<DependencyUpdate>? CoherencyUpdates { get; set; }
+}

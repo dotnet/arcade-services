@@ -417,9 +417,9 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
                 return BadRequest(new ApiError("The request is invalid. Source-enabled subscriptions require the source or target directory to be set"));
             }
 
-            if (!subscription.SourceEnabled.Value && (!string.IsNullOrEmpty(subscription.SourceDirectory) || !string.IsNullOrEmpty(subscription.TargetDirectory)))
+            if (!subscription.SourceEnabled.Value && !string.IsNullOrEmpty(subscription.SourceDirectory))
             {
-                return BadRequest(new ApiError("The request is invalid. Source or target directory can be set only for source-enabled subscriptions"));
+                return BadRequest(new ApiError("The request is invalid. Source directory can be set only for source-enabled subscriptions"));
             }
 
             if (!string.IsNullOrEmpty(subscription.SourceDirectory) && !string.IsNullOrEmpty(subscription.TargetDirectory))

@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data.Models;
+using Microsoft.DotNet.DarcLib.Helpers;
 using NUnit.Framework;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -74,7 +75,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             ThenCodeShouldHaveBeenFlownForward(newBuild);
             AndShouldHaveNoPendingUpdateState();
             AndShouldHavePullRequestCheckReminder();
-            AndShouldHaveInProgressPullRequestState(newBuild);
+            AndShouldHaveInProgressPullRequestState(newBuild, relativeBasePath: new UnixPath("."));
         }
     }
 
@@ -153,7 +154,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             ThenCodeShouldHaveBeenFlownForward(newBuild);
             AndShouldHaveNoPendingUpdateState();
             AndShouldHavePullRequestCheckReminder();
-            AndShouldHaveInProgressPullRequestState(newBuild);
+            AndShouldHaveInProgressPullRequestState(newBuild, relativeBasePath: new UnixPath("."));
         }
     }
 }

@@ -66,6 +66,7 @@ internal class FullBackflowTestOperation : Operation
                 sourceRepo: VmrForkUri,
                 targetRepo: productRepoForkUri,
                 targetBranch: targetBranch,
+                sourceEnabled: true,
                 sourceDirectory: vmrRepo.Mapping.Name,
                 targetDirectory: null,
                 skipCleanup: true);

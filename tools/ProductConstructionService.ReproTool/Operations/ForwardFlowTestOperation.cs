@@ -55,6 +55,7 @@ internal class ForwardFlowTestOperation(
                 sourceRepo: productRepoForkUri,
                 targetRepo: VmrForkUri,
                 targetBranch: vmrTestBranch.Value,
+                sourceEnabled: true,
                 sourceDirectory: null,
                 targetDirectory: vmrRepo.Mapping.Name,
                 skipCleanup: true);

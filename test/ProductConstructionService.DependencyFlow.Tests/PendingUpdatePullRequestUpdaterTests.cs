@@ -3,8 +3,10 @@
 
 using Maestro.Data.Models;
 using Maestro.DataProviders;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.DependencyInjection;
-using ProductConstructionService.DependencyFlow.WorkItems;
+using Moq;
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -21,11 +23,17 @@ internal abstract class PendingUpdatePullRequestUpdaterTests : PullRequestUpdate
         Build forBuild,
         bool isCodeFlow = false,
         bool applyNewestOnly = false,
-        bool forceUpdate = false)
+        bool forceUpdate = false,
+        bool shouldGetUpdates = false)
     {
         await Execute(
             async context =>
             {
+                if (shouldGetUpdates)
+                { 
+                    DarcRemotes[TargetRepo].Setup(r => r.GetUpdatesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<DependencyDetail>>(), It.IsAny<UnixPath>()))
+                        .ReturnsAsync([new GitFile("path", "content")]);
+                }
                 BuildDTO buildDTO = SqlBarClient.ToClientModelBuild(forBuild);
                 IPullRequestUpdater updater = CreatePullRequestActor(context);
                 await updater.ProcessPendingUpdatesAsync(CreateSubscriptionUpdate(forBuild, isCodeFlow), applyNewestOnly, forceUpdate, buildDTO);

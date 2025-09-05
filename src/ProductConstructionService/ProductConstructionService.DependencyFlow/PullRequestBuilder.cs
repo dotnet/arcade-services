@@ -11,6 +11,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
@@ -30,7 +31,7 @@ internal interface IPullRequestBuilder
     /// <param name="targetRepository">Target repository that the updates should be applied to</param>
     /// <param name="newBranchName">Target branch the updates should be to</param>
     Task<string> CalculatePRDescriptionAndCommitUpdatesAsync(
-        List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)> requiredUpdates,
+        TargetRepoDependencyUpdates requiredUpdates,
         string? currentDescription,
         string targetRepository,
         string newBranchName);
@@ -128,7 +129,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     }
 
     public async Task<string> CalculatePRDescriptionAndCommitUpdatesAsync(
-        List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)> requiredUpdates,
+        TargetRepoDependencyUpdates requiredUpdates,
         string? currentDescription,
         string targetRepository,
         string newBranchName)
@@ -137,84 +138,91 @@ internal class PullRequestBuilder : IPullRequestBuilder
             .AppendLine()
             .AppendLine();
         var startingReferenceId = GetStartingReferenceId(description.ToString());
-
-        // First run through non-coherency and then do a coherency
-        // message if one exists.
-        var nonCoherencyUpdates =
-            requiredUpdates.Where(u => !u.update.IsCoherencyUpdate).ToList();
-        // Should max one coherency update
-        (SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps) coherencyUpdate =
-            requiredUpdates.Where(u => u.update.IsCoherencyUpdate).SingleOrDefault();
-
-        IRemote remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
         var locationResolver = new AssetLocationResolver(_barClient);
+        IRemote remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
+        var update = requiredUpdates.SubscriptionUpdate;
+        var build = await _barClient.GetBuildAsync(update.BuildId);
 
-        // To keep a PR to as few commits as possible, if the number of
-        // non-coherency updates is 1 then combine coherency updates with those.
-        // Otherwise, put all coherency updates in a separate commit.
-        var combineCoherencyWithNonCoherency = nonCoherencyUpdates.Count == 1;
+        StringBuilder nonCoherencyCommitMessage = new($"Update dependencies from {update.SourceRepo} build {build.AzureDevOpsBuildNumber}");
+        nonCoherencyCommitMessage.AppendLine();
+        StringBuilder coherencyCommitMessage = new("Dependency coherency updates");
+        coherencyCommitMessage.AppendLine();
+        List<GitFile> updatedDependencies = [];
+        Dictionary<UnixPath, List<DependencyUpdate>> nonCoherencyUpdatesPerDirectory = [];
+        Dictionary<UnixPath, List<DependencyUpdate>> coherencyUpdatesPerDirectory = [];
+        List<GitFile> targetDirectoryUpdatedDependencies = [];
 
-        foreach ((SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps) in nonCoherencyUpdates)
+        // Go through reach target directory and get the updated git files
+        foreach (var (targetDirectory, targetRepoDirectoryUpdates) in requiredUpdates.DirectoryUpdates)
         {
-            var message = new StringBuilder();
-            List<DependencyUpdate> dependenciesToCommit = deps;
-            await CalculateCommitMessage(update, deps, message);
-            var build = await _barClient.GetBuildAsync(update.BuildId)
-                ?? throw new Exception($"Failed to find build {update.BuildId} for subscription {update.SubscriptionId}");
+            var nonCoherencyUpdates =
+                targetRepoDirectoryUpdates.NonCoherencyUpdates;
+            List<DependencyUpdate>? coherencyUpdates = targetRepoDirectoryUpdates.CoherencyUpdates;
 
-            if (combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
+            List<DependencyDetail> itemsToUpdate = [];
+
+            if (nonCoherencyUpdates.Count > 0)
             {
-                await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                AppendCoherencyUpdateDescription(description, coherencyUpdate.deps);
-                dependenciesToCommit.AddRange(coherencyUpdate.deps);
+                AppendNonCoherencyCommitMessage(targetDirectory, nonCoherencyUpdates, nonCoherencyCommitMessage);
+                nonCoherencyUpdatesPerDirectory[targetDirectory] = [.. nonCoherencyUpdates];
+                itemsToUpdate.AddRange(nonCoherencyUpdates
+                    .Select(du => du.To));
+            }           
+
+            if (coherencyUpdates != null && coherencyUpdates.Count > 0)
+            {
+                AppendCoherencyCommitMessage(targetDirectory, coherencyUpdates, coherencyCommitMessage);
+                coherencyUpdatesPerDirectory[targetDirectory] = [.. coherencyUpdates];
+                itemsToUpdate.AddRange(coherencyUpdates
+                    .Select(du => du.To));
             }
 
-            var itemsToUpdate = dependenciesToCommit
-                .Select(du => du.To)
-                .ToList();
-
-            await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
-
-            List<GitFile> committedFiles = await remote.CommitUpdatesAsync(
-                targetRepository,
-                newBranchName,
-                itemsToUpdate,
-                message.ToString());
-
-            startingReferenceId = await AppendBuildDescriptionAsync(description, startingReferenceId, update, deps, committedFiles, build);
+            if (itemsToUpdate.Count > 0)
+            {
+                targetDirectoryUpdatedDependencies = await remote.GetUpdatesAsync(
+                        targetRepository,
+                        newBranchName,
+                        itemsToUpdate,
+                        targetDirectory);
+                await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
+                updatedDependencies.AddRange(targetDirectoryUpdatedDependencies);
+            }
         }
 
-        // If the coherency update wasn't combined, then
-        // add it now
-        if (!combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
+        if (updatedDependencies.Count > 0)
         {
-            var message = new StringBuilder();
-            var build = await _barClient.GetBuildAsync(coherencyUpdate.update.BuildId);
-            await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-            AppendCoherencyUpdateDescription(description, coherencyUpdate.deps);
-
-            var itemsToUpdate = coherencyUpdate.deps
-                .Select(du => du.To)
-                .ToList();
-
-            await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
             await remote.CommitUpdatesAsync(
+                updatedDependencies,
                 targetRepository,
                 newBranchName,
-                itemsToUpdate,
-                message.ToString());
-        }
+                nonCoherencyCommitMessage.Append(coherencyCommitMessage).ToString());
 
-        // If the coherency algorithm failed and there are no non-coherency updates and
-        // we create an empty commit that describes an issue.
-        if (requiredUpdates.Count == 0)
+            if (coherencyUpdatesPerDirectory.Count > 0)
+            {
+                AppendCoherencyUpdateDescription(description, coherencyUpdatesPerDirectory);
+            }
+            if (nonCoherencyUpdatesPerDirectory.Count > 0)
+            {
+                await AppendBuildDescriptionAsync(
+                    description,
+                    startingReferenceId,
+                    requiredUpdates.SubscriptionUpdate,
+                    nonCoherencyUpdatesPerDirectory,
+                    targetDirectoryUpdatedDependencies,
+                    build);
+            }
+            return description.ToString();
+        }
+        else
         {
+            // If the coherency algorithm failed and there are no non-coherency updates and
+            // we create an empty commit that describes an issue.
             var message = "Failed to perform coherency update for one or more dependencies.";
-            await remote.CommitUpdatesAsync(targetRepository, newBranchName, [], message);
+            remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
+            await remote.CommitUpdatesAsync(filesToCommit: [], targetRepository, newBranchName, message);
             return $"Coherency update: {message} Please review the GitHub checks or run `darc update-dependencies --coherency-only` locally against {newBranchName} for more information.";
         }
 
-        return description.ToString();
     }
 
     public string GenerateCodeFlowPRTitle(
@@ -550,7 +558,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     /// <param name="description">Description to extend</param>
     /// <param name="startingReferenceId">Counter for references</param>
     /// <param name="update">Update</param>
-    /// <param name="deps">Dependencies updated</param>
+    /// <param name="updatedDependenciesPerPath">Dependencies updated, per relative path</param>
     /// <param name="committedFiles">List of commited files</param>
     /// <param name="build">Build</param>
     /// <remarks>
@@ -561,8 +569,8 @@ internal class PullRequestBuilder : IPullRequestBuilder
         StringBuilder description,
         int startingReferenceId,
         SubscriptionUpdateWorkItem update,
-        List<DependencyUpdate> deps,
-        List<GitFile>? committedFiles,
+        Dictionary<UnixPath, List<DependencyUpdate>> updatedDependenciesPerPath,
+        List<GitFile> committedFiles,
         BuildDTO build)
     {
         var changesLinks = new List<string>();
@@ -596,45 +604,50 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
         var shaRangeToLinkId = new Dictionary<(string from, string to), int>();
 
-        // Group dependencies by version range and commit range
-        var dependencyGroups = deps
-            .GroupBy(dep => new
-            {
-                FromVersion = dep.From.Version,
-                ToVersion = dep.To.Version,
-                FromCommit = dep.From.Commit,
-                ToCommit = dep.To.Commit,
-                RepoUri = dep.To.RepoUri
-            })
-            .ToList();
-
-        foreach (var group in dependencyGroups)
+        foreach (var (relativePath, updatedDependencies) in updatedDependenciesPerPath)
         {
-            var representative = group.First();
-            
-            if (!shaRangeToLinkId.ContainsKey((representative.From.Commit, representative.To.Commit)))
-            {
-                var changesUri = string.Empty;
-                try
+            subscriptionSection.AppendLine($"  - RelativePath: {relativePath}");
+            // Group dependencies by version range and commit range
+            var dependencyGroups = updatedDependencies
+                .GroupBy(dep => new
                 {
-                    changesUri = GetChangesURI(representative.To.RepoUri, representative.From.Commit, representative.To.Commit);
-                }
-                catch (ArgumentNullException e)
-                {
-                    _logger.LogError(e, $"Failed to create SHA comparison link for dependency {representative.To.Name} during asset update for subscription {update.SubscriptionId}");
-                }
-                shaRangeToLinkId.Add((representative.From.Commit, representative.To.Commit), startingReferenceId + changesLinks.Count);
-                changesLinks.Add(changesUri);
-            }
+                    FromVersion = dep.From.Version,
+                    ToVersion = dep.To.Version,
+                    FromCommit = dep.From.Commit,
+                    ToCommit = dep.To.Commit,
+                    RepoUri = dep.To.RepoUri
+                })
+                .ToList();
 
-            // Write the group header with version range and link
-            subscriptionSection.AppendLine($"  - From [{representative.From.Version} to {representative.To.Version}][{shaRangeToLinkId[(representative.From.Commit, representative.To.Commit)]}]");
-            
-            // Write each dependency in the group
-            foreach (var dep in group)
+            foreach (var group in dependencyGroups)
             {
-                subscriptionSection.AppendLine($"    - {dep.To.Name}");
+                var representative = group.First();
+
+                if (!shaRangeToLinkId.ContainsKey((representative.From.Commit, representative.To.Commit)))
+                {
+                    var changesUri = string.Empty;
+                    try
+                    {
+                        changesUri = GetChangesURI(representative.To.RepoUri, representative.From.Commit, representative.To.Commit);
+                    }
+                    catch (ArgumentNullException e)
+                    {
+                        _logger.LogError(e, $"Failed to create SHA comparison link for dependency {representative.To.Name} during asset update for subscription {update.SubscriptionId}");
+                    }
+                    shaRangeToLinkId.Add((representative.From.Commit, representative.To.Commit), startingReferenceId + changesLinks.Count);
+                    changesLinks.Add(changesUri);
+                }
+
+                // Write the group header with version range and link
+                subscriptionSection.AppendLine($"    - From [{representative.From.Version} to {representative.To.Version}][{shaRangeToLinkId[(representative.From.Commit, representative.To.Commit)]}]");
+
+                // Write each dependency in the group
+                foreach (var dep in group)
+                {
+                    subscriptionSection.AppendLine($"       - {dep.To.Name}");
+                }
             }
+            // maybe this for loop is not correct and should go further?
         }
 
         subscriptionSection.AppendLine();
@@ -665,12 +678,14 @@ internal class PullRequestBuilder : IPullRequestBuilder
     ///     Append coherency update description to the PR description
     /// </summary>
     /// <param name="description">Description to extend</param>
-    /// <param name="dependencies">Dependencies updated</param>
+    /// <param name="coherencyUpdatesPerDirectory">Dependencies updated, per directory</param>
     /// <remarks>
     ///     Because PRs tend to be live for short periods of time, we can put more information
     ///     in the description than the commit message without worrying that links will go stale.
     /// </remarks>
-    private static void AppendCoherencyUpdateDescription(StringBuilder description, List<DependencyUpdate> dependencies)
+    private static void AppendCoherencyUpdateDescription(
+        StringBuilder description,
+        Dictionary<UnixPath, List<DependencyUpdate>> coherencyUpdatesPerDirectory)
     {
         var sectionStartMarker = "[marker]: <> (Begin:Coherency Updates)";
         var sectionEndMarker = "[marker]: <> (End:Coherency Updates)";
@@ -688,9 +703,13 @@ internal class PullRequestBuilder : IPullRequestBuilder
             .AppendLine()
             .AppendLine("- **Coherency Updates**:");
 
-        foreach (DependencyUpdate dep in dependencies)
+        foreach (var (targetDirectory, dependencies) in coherencyUpdatesPerDirectory)
         {
-            coherencySection.AppendLine($"  - **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})");
+            coherencySection.AppendLine($"  - in {targetDirectory}");
+            foreach (DependencyUpdate dep in dependencies)
+            {
+                coherencySection.AppendLine($"    - **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})");
+            }
         }
 
         coherencySection
@@ -703,54 +722,75 @@ internal class PullRequestBuilder : IPullRequestBuilder
         description.AppendLine();
     }
 
-    private async Task CalculateCommitMessage(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps, StringBuilder message)
+    private void AppendNonCoherencyCommitMessage(string relativeBasePath, List<DependencyUpdate> deps, StringBuilder message)
     {
-        if (update.IsCoherencyUpdate)
+        message.AppendLine($"On relative base path {relativeBasePath}");
+        
+        // Group dependencies by their version changes
+        var versionGroups = deps
+            .GroupBy(dep => $"From Version {dep.From.Version} -> To Version {dep.To.Version}")
+            .ToList();
+
+        foreach (var group in versionGroups)
         {
-            message.AppendLine("Dependency coherency updates");
-            message.AppendLine();
-            message.AppendLine(string.Join(",", deps.Select(p => p.To.Name)));
-            message.AppendLine($" From Version {deps[0].From.Version} -> To Version {deps[0].To.Version} (parent: {deps[0].To.CoherentParentDependencyName}");
-        }
-        else
-        {
-            var sourceRepository = update.SourceRepo;
-            var build = await _barClient.GetBuildAsync(update.BuildId);
-            message.AppendLine($"Update dependencies from {sourceRepository} build {build?.AzureDevOpsBuildNumber}");
-            message.AppendLine();
-            message.AppendLine(string.Join(" , ", deps.Select(p => p.To.Name)));
-            message.AppendLine($" From Version {deps[0].From.Version} -> To Version {deps[0].To.Version}");
+            message.AppendLine($"{string.Join(" , ", group.Select(p => p.To.Name))} {group.Key}");
         }
 
         message.AppendLine();
     }
 
-    private static void UpdatePRDescriptionDueConfigFiles(List<GitFile>? committedFiles, StringBuilder globalJsonSection)
+    private void AppendCoherencyCommitMessage(string relativeBasePath, List<DependencyUpdate> deps, StringBuilder message)
     {
-        GitFile? globalJsonFile = committedFiles?.
-            Where(gf => gf.FilePath.Equals("global.json", StringComparison.OrdinalIgnoreCase)).
-            FirstOrDefault();
+        message.AppendLine($"On relative base path {relativeBasePath}");
+        
+        // Group dependencies by their version changes
+        var versionGroups = deps
+            .GroupBy(dep => $"From Version {dep.From.Version} -> To Version {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})")
+            .ToList();
+
+        foreach (var group in versionGroups)
+        {
+            message.AppendLine($"{string.Join(",", group.Select(p => p.To.Name))} {group.Key}");
+            message.AppendLine();
+        }
+
+        message.AppendLine();
+    }
+
+    private static void UpdatePRDescriptionDueConfigFiles(List<GitFile> committedFiles, StringBuilder globalJsonSection)
+    {
+        List<GitFile> globalJsonFiles = committedFiles
+            .Where(gf => gf.FilePath.Contains("global.json", StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
         // The list of committedFiles can contain the `global.json` file (and others) 
         // even though no actual change was made to the file and therefore there is no 
         // metadata for it.
-        if (globalJsonFile?.Metadata != null)
+        foreach (var globalJsonFile in globalJsonFiles)
         {
-            var hasSdkVersionUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.SdkVersionUpdate);
-            var hasToolsDotnetUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.ToolsDotNetUpdate);
-
-            globalJsonSection.AppendLine("- **Updates to .NET SDKs:**");
-
-            if (hasSdkVersionUpdate)
+            if (globalJsonFile.Metadata != null)
             {
-                globalJsonSection.AppendLine($"  - Updates sdk.version to " +
-                    $"{globalJsonFile.Metadata[GitFileMetadataName.SdkVersionUpdate]}");
-            }
+                var hasSdkVersionUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.SdkVersionUpdate);
+                var hasToolsDotnetUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.ToolsDotNetUpdate);
+                var relativeBasePath = globalJsonFile.FilePath.Replace("global.json", string.Empty, StringComparison.OrdinalIgnoreCase);
+                if (string.IsNullOrEmpty(relativeBasePath))
+                {
+                    relativeBasePath = "./";
+                }
 
-            if (hasToolsDotnetUpdate)
-            {
-                globalJsonSection.AppendLine($"  - Updates tools.dotnet to " +
-                    $"{globalJsonFile.Metadata[GitFileMetadataName.ToolsDotNetUpdate]}");
+                globalJsonSection.AppendLine($"- **Updates to .NET SDKs in {relativeBasePath}:**");
+
+                if (hasSdkVersionUpdate)
+                {
+                    globalJsonSection.AppendLine($"  - Updates sdk.version to " +
+                        $"{globalJsonFile.Metadata[GitFileMetadataName.SdkVersionUpdate]}");
+                }
+
+                if (hasToolsDotnetUpdate)
+                {
+                    globalJsonSection.AppendLine($"  - Updates tools.dotnet to " +
+                        $"{globalJsonFile.Metadata[GitFileMetadataName.ToolsDotNetUpdate]}");
+                }
             }
         }
     }

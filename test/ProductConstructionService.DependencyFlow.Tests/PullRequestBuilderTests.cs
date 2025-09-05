@@ -6,41 +6,36 @@ using FluentAssertions;
 using Maestro.Data;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
+using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
+using Asset = Microsoft.DotNet.ProductConstructionService.Client.Models.Asset;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
 [TestFixture]
 internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
 {
-    private Dictionary<string, Mock<IRemote>> _darcRemotes = null!;
-    private Mock<IRemoteFactory> _remoteFactory = null!;
     private Mock<IBasicBarClient> _barClient = null!;
 
     [SetUp]
     public void PullRequestBuilderTests_SetUp()
     {
-        _darcRemotes = new()
-        {
-            [TargetRepo] = new Mock<IRemote>()
-        };
-        _remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
         _barClient = new Mock<IBasicBarClient>(MockBehavior.Strict);
     }
 
     protected override void RegisterServices(IServiceCollection services)
     {
-        _remoteFactory
-            .Setup(f => f.CreateRemoteAsync(It.IsAny<string>()))
-            .ReturnsAsync((string repo) => _darcRemotes.GetOrAddValue(repo, () => CreateMock<IRemote>()).Object);
-
-        services.AddSingleton(_remoteFactory.Object);
+        foreach (var (_, remote) in DarcRemotes)
+        {
+            remote.Setup(r => r.GetUpdatesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<DependencyDetail>>(), It.IsAny<UnixPath>()))
+                .ReturnsAsync([new GitFile("path", "content")]);
+        }
         services.AddSingleton(_barClient.Object);
 
         base.RegisterServices(services);
@@ -52,25 +47,42 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         var build = GivenANewBuildId(101, "abc1234");
         SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(true, build.Id, "11111111-1111-1111-1111-111111111111");
         List<DependencyUpdate> deps = GivenDependencyUpdates('a', build.Id);
+        TargetRepoDependencyUpdates requiredUpdates = GetTargetRepoDependencyUpdates(
+            update,
+            nonCoherencyUpdates: [],
+            coherencyUpdates: deps,
+            new UnixPath("."));
 
-        var description = await GeneratePullRequestDescription([(update, deps)]);
+        var description = await GeneratePullRequestDescription(requiredUpdates);
         description.ToString().Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps));
     }
 
     [Test]
     public async Task ShouldReturnCalculateCorrectPRDescriptionWhenNonCoherencyUpdate()
     {
+        UnixPath path = new(".");
         var build1 = GivenANewBuildId(101, "abc1234");
         var build2 = GivenANewBuildId(102, "def2345");
         SubscriptionUpdateWorkItem update1 = GivenSubscriptionUpdate(false, build1.Id, "11111111-1111-1111-1111-111111111111");
         SubscriptionUpdateWorkItem update2 = GivenSubscriptionUpdate(false, build2.Id, "22222222-2222-2222-2222-222222222222");
         List<DependencyUpdate> deps1 = GivenDependencyUpdates('a', build1.Id);
         List<DependencyUpdate> deps2 = GivenDependencyUpdates('b', build2.Id);
+        TargetRepoDependencyUpdates requiredUpdates1 = GetTargetRepoDependencyUpdates(
+            update1,
+            nonCoherencyUpdates: deps1,
+            coherencyUpdates: [],
+            path);
+        TargetRepoDependencyUpdates requiredUpdates2 = GetTargetRepoDependencyUpdates(
+            update2,
+            nonCoherencyUpdates: deps2,
+            coherencyUpdates: [],
+            path);
 
-        var description = await GeneratePullRequestDescription([(update1, deps1), (update2, deps2)]);
+        var description = await GeneratePullRequestDescription(requiredUpdates1);
+        description = await GeneratePullRequestDescription(requiredUpdates2, description);
 
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps1, 1));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps2, 3));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps1), 1));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps2), 3));
     }
 
     [Test]
@@ -88,30 +100,51 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         List<DependencyUpdate> deps2 = GivenDependencyUpdates('b', build2.Id);
         List<DependencyUpdate> deps3 = GivenDependencyUpdates('c', build3.Id);
         List<DependencyUpdate> deps4 = GivenDependencyUpdates('e', build4.Id);
+        UnixPath path = new(".");
+        TargetRepoDependencyUpdates requiredUpdates1 = GetTargetRepoDependencyUpdates(
+            update1,
+            nonCoherencyUpdates: deps1,
+            coherencyUpdates: [],
+            path);
+        TargetRepoDependencyUpdates requiredUpdates2 = GetTargetRepoDependencyUpdates(
+            update2,
+            nonCoherencyUpdates: deps2,
+            coherencyUpdates: [],
+            path);
+        TargetRepoDependencyUpdates requiredUpdates3 = GetTargetRepoDependencyUpdates(
+            update3,
+            nonCoherencyUpdates: deps3,
+            coherencyUpdates: [],
+            path);
 
-        var description = await GeneratePullRequestDescription([(update1, deps1), (update2, deps2), (update3, deps3)]);
+        var description = await GeneratePullRequestDescription(requiredUpdates1);
+        description = await GeneratePullRequestDescription(requiredUpdates2, description);
+        description = await GeneratePullRequestDescription(requiredUpdates3, description);
 
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps1, 1));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps2, 3));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps1, 1));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps2, 3));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps3, 5));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps1), 1));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps2), 3));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps3), 5));
 
         List<DependencyUpdate> deps22 = GivenDependencyUpdates('d', build3.Id);
 
-        description = await GeneratePullRequestDescription([(update2, deps22)], description);
+        requiredUpdates2.DirectoryUpdates[path].NonCoherencyUpdates = deps22;
+        description = await GeneratePullRequestDescription(requiredUpdates2, description);
 
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps1, 1));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps3, 5));
-        description.Should().NotContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps2, 3));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps22, 7));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps1), 1));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps3), 5));
+        description.Should().NotContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps2), 3));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps22), 7));
 
-        deps3 = GivenDependencyUpdates('e', build4.Id);
+        TargetRepoDependencyUpdates requiredUpdates4 = GetTargetRepoDependencyUpdates(
+            update4,
+            nonCoherencyUpdates: deps4,
+            coherencyUpdates: [],
+            path);
 
-        description = await GeneratePullRequestDescription([(update4, deps3)], description);
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps1, 1));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps4, 9));
-        description.Should().NotContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(deps2, 3));
+        description = await GeneratePullRequestDescription(requiredUpdates4, description);
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps1), 1));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps4), 9));
+        description.Should().NotContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps2), 3));
     }
 
     [Test]
@@ -513,7 +546,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     {
         var build1 = GivenANewBuildId(101, "abc1234");
         SubscriptionUpdateWorkItem update1 = GivenSubscriptionUpdate(false, build1.Id, "11111111-1111-1111-1111-111111111111");
-        
+        UnixPath path = new(".");
+
         // Create dependencies that should be grouped (same version range and commit range)
         List<DependencyUpdate> deps1 = [
             new DependencyUpdate
@@ -532,6 +566,11 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
                 To = new DependencyDetail { Name = "Microsoft.TemplateEngine.Utils", Version = "10.0.100-preview.6.25318.104", RepoUri = "https://amazing_uri.com", Commit = "def456" }
             }
         ];
+        TargetRepoDependencyUpdates requiredUpdates = GetTargetRepoDependencyUpdates(
+            update1,
+            nonCoherencyUpdates: deps1,
+            coherencyUpdates: [],
+            path);
 
         foreach (var dependency in deps1.SelectMany(d => new[] { d.From, d.To }))
         {
@@ -540,8 +579,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
                 .ReturnsAsync([new Asset(1, build1.Id, false, dependency.Name, dependency.Version, [])]);
         }
 
-        var description = await GeneratePullRequestDescription([(update1, deps1)]);
-        
+        var description = await GeneratePullRequestDescription(requiredUpdates);
+
         // The grouped dependencies should appear like:
         // - From [10.0.100-preview.6.25317.107 to 10.0.100-preview.6.25318.104][1]
         //   - Microsoft.TemplateEngine.Abstractions
@@ -698,61 +737,65 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         int buildId,
         string guid,
         SubscriptionType type = SubscriptionType.Dependencies) => new()
-    {
-        UpdaterId = guid,
-        IsCoherencyUpdate = isCoherencyUpdate,
-        SourceRepo = "The best repo",
-        SubscriptionId = new Guid(guid),
-        BuildId = buildId,
-        SubscriptionType = type,
-    };
+        {
+            UpdaterId = guid,
+            IsCoherencyUpdate = isCoherencyUpdate,
+            SourceRepo = "The best repo",
+            SubscriptionId = new Guid(guid),
+            BuildId = buildId,
+            SubscriptionType = type,
+        };
 
     private static string BuildCorrectPRDescriptionWhenCoherencyUpdate(List<DependencyUpdate> deps)
     {
         var stringBuilder = new StringBuilder();
         foreach (DependencyUpdate dep in deps)
         {
-            stringBuilder.AppendLine($"  - **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})");
+            stringBuilder.AppendLine($"    - **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})");
         }
         return stringBuilder.ToString();
     }
 
-    private static string BuildCorrectPRDescriptionWhenNonCoherencyUpdate(List<DependencyUpdate> deps, int startingId)
+    private static string BuildCorrectPRDescriptionWhenNonCoherencyUpdate(Dictionary<UnixPath, List<DependencyUpdate>> updatedDependenciesPerPath, int startingId)
     {
         var builder = new StringBuilder();
-        
-        // Group dependencies by version range and commit range
-        var dependencyGroups = deps
-            .GroupBy(dep => new
-            {
-                FromVersion = dep.From.Version,
-                ToVersion = dep.To.Version,
-                FromCommit = dep.From.Commit,
-                ToCommit = dep.To.Commit
-            })
-            .ToList();
-
         List<string> urls = [];
         int currentId = startingId;
 
-        foreach (var group in dependencyGroups)
+        foreach (var (relativePath, updatedDependencies) in updatedDependenciesPerPath)
         {
-            var representative = group.First();
-            urls.Add(PullRequestBuilder.GetChangesURI(representative.To.RepoUri, representative.From.Commit, representative.To.Commit));
-            
-            builder.AppendLine($"  - From [{representative.From.Version} to {representative.To.Version}][{currentId}]");
-            foreach (var dep in group)
+            builder.AppendLine($"  - RelativePath: {relativePath}");
+            var dependencyGroups = updatedDependencies
+                .GroupBy(dep => new
+                {
+                    FromVersion = dep.From.Version,
+                    ToVersion = dep.To.Version,
+                    FromCommit = dep.From.Commit,
+                    ToCommit = dep.To.Commit,
+                    RepoUri = dep.To.RepoUri
+                })
+                .ToList();
+
+            foreach (var group in dependencyGroups)
             {
-                builder.AppendLine($"    - {dep.To.Name}");
+                var representative = group.First();
+
+                urls.Add(PullRequestBuilder.GetChangesURI(representative.To.RepoUri, representative.From.Commit, representative.To.Commit));
+
+                builder.AppendLine($"    - From [{representative.From.Version} to {representative.To.Version}][{currentId}]");
+                foreach (var dep in group)
+                {
+                    builder.AppendLine($"       - {dep.To.Name}");
+                }
+                currentId++;
             }
-            currentId++;
         }
-        
         builder.AppendLine();
         for (var i = 0; i < urls.Count; i++)
         {
             builder.AppendLine($"[{i + startingId}]: {urls[i]}");
         }
+
         return builder.ToString();
     }
 
@@ -878,7 +921,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     }
 
     private async Task<string> GeneratePullRequestDescription(
-        List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)> updates,
+        TargetRepoDependencyUpdates updates,
         string? originalDescription = null)
     {
         string description = null!;
@@ -904,7 +947,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         int buildId = 12345;
         int channelId = 789;
         var subscriptionId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-        
+
         Build build = GivenANewBuildId(buildId, commitSha);
         build.AzureDevOpsAccount = "dnceng";
         build.AzureDevOpsProject = "internal";
@@ -913,7 +956,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         build.GitHubRepository = "https://github.com/dotnet/roslyn";
 
         SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, buildId, subscriptionId.ToString(), SubscriptionType.DependenciesAndSources);
-        
+
         string? description = null;
         await Execute(
             async context =>
@@ -930,7 +973,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
                 };
                 dbContext.Subscriptions.Add(subscription);
                 await dbContext.SaveChangesAsync();
-                
+
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
                 description = await builder.GenerateCodeFlowPRDescription(
                     update,
@@ -946,7 +989,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         description.Should().NotBeNull();
         description!.Should().Contain($"[{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})");
         description.Should().Contain($"([{buildId}](https://maestro.dot.net/channel/{channelId}/github:dotnet:roslyn/build/{buildId}))");
-        
+
         // Verify the complete enhanced format is present
         var expectedEnhancedBuildLine = $"- **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()}) ([{buildId}](https://maestro.dot.net/channel/{channelId}/github:dotnet:roslyn/build/{buildId}))";
         description.Should().Contain(expectedEnhancedBuildLine);
@@ -960,7 +1003,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         int buildId = 54321;
         int channelId = 456;
         var subscriptionId = Guid.Parse("22222222-2222-2222-2222-222222222222");
-        
+
         Build build = GivenANewBuildId(buildId, commitSha);
         build.AzureDevOpsAccount = "dnceng";
         build.AzureDevOpsProject = "internal";
@@ -970,7 +1013,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         build.GitHubRepository = null; // Clear GitHub repo to use Azure DevOps repo
 
         SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, buildId, subscriptionId.ToString(), SubscriptionType.DependenciesAndSources);
-        
+
         string? description = null;
         await Execute(
             async context =>
@@ -987,7 +1030,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
                 };
                 dbContext.Subscriptions.Add(subscription);
                 await dbContext.SaveChangesAsync();
-                
+
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
                 description = await builder.GenerateCodeFlowPRDescription(
                     update,
@@ -1003,7 +1046,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         description.Should().NotBeNull();
         description!.Should().Contain($"[{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()})");
         description.Should().Contain($"([{buildId}](https://maestro.dot.net/channel/{channelId}/azdo:dnceng:internal:dotnet-runtime/build/{buildId}))");
-        
+
         // Verify the complete enhanced format is present with Azure DevOps slug
         var expectedEnhancedBuildLine = $"- **Build**: [{build.AzureDevOpsBuildNumber}]({build.GetBuildLink()}) ([{buildId}](https://maestro.dot.net/channel/{channelId}/azdo:dnceng:internal:dotnet-runtime/build/{buildId}))";
         description.Should().Contain(expectedEnhancedBuildLine);
@@ -1032,4 +1075,31 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
 
         return build;
     }
+
+    private TargetRepoDependencyUpdates GetTargetRepoDependencyUpdates(
+        SubscriptionUpdateWorkItem update,
+        List<DependencyUpdate> nonCoherencyUpdates,
+        List<DependencyUpdate> coherencyUpdates,
+        UnixPath path) =>
+        new()
+        {
+            SubscriptionUpdate = update,
+            DirectoryUpdates = new Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates>
+            {
+                {
+                    path,
+                    new TargetRepoDirectoryDependencyUpdates
+                    {
+                        NonCoherencyUpdates = nonCoherencyUpdates,
+                        CoherencyUpdates = coherencyUpdates
+                    }
+                }
+            }
+        };
+
+    private Dictionary<UnixPath, List<DependencyUpdate>> GetUpdatedDependenciesPerPath(UnixPath path, List<DependencyUpdate> nonCoherencyUpdates) =>
+        new()
+        {
+            { path, nonCoherencyUpdates }
+        };
 }

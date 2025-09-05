@@ -7,10 +7,12 @@ using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
@@ -537,16 +539,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
 
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
-        TargetRepoDependencyUpdate repoDependencyUpdate;
-
+        TargetRepoDependencyUpdates repoDependencyUpdates;
+        
         try
         {
-            repoDependencyUpdate = await GetRequiredUpdates(
-                update,
-                targetRepository,
-                build,
-                prBranch: null,
-                targetBranch: targetBranch);
+            repoDependencyUpdates =
+                await GetRequiredUpdates(update, targetRepository, build, prBranch: null, targetBranch: targetBranch);
         }
         catch (DependencyFileNotFoundException e)
         {
@@ -555,7 +553,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             return null;
         }
 
-        if (repoDependencyUpdate.CoherencyCheckSuccessful && repoDependencyUpdate.RequiredUpdates.Count < 1)
+        // if there coherency check was a success, we really don't need to do anything, so just return
+        if (repoDependencyUpdates.DirectoryUpdates.Values.All(update =>
+            update.CoherencyCheckSuccessful
+            && update.NonCoherencyUpdates.Count == 0
+            && (update.CoherencyUpdates == null
+                || update.CoherencyUpdates.Count == 0)))
         {
             return null;
         }
@@ -565,36 +568,69 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var newBranchName = GetNewBranchName(targetBranch);
         await darcRemote.CreateNewBranchAsync(targetRepository, targetBranch, newBranchName);
 
+        // if the coherency check failed, and we don't have any non-coherency updates, then we want to open a PR with an error message
+        if (!repoDependencyUpdates.CoherencyCheckSuccessful
+            && repoDependencyUpdates.DirectoryUpdates.Values.All(update =>
+                update.NonCoherencyUpdates.Count == 0))
+        {
+            var commitMessage = "Failed to perform coherency update for one or more dependencies.";
+            await darcRemote.CommitUpdatesAsync(filesToCommit: [], targetRepository, newBranchName, commitMessage);
+            var prDescription = $"Coherency update: {commitMessage} Please review the GitHub checks or run `darc update-dependencies --coherency-only` locally against {newBranchName} for more information.";
+            var prUrl = await darcRemote.CreatePullRequestAsync(
+                targetRepository,
+                new PullRequest
+                {
+                    Title = $"[{targetBranch}] Update dependencies to ensure coherency",
+                    Description = prDescription,
+                    BaseBranch = targetBranch,
+                    HeadBranch = newBranchName,
+                });
+            var agregatedCoherencyErrors = repoDependencyUpdates.DirectoryUpdates.Values.SelectMany(update => update.CoherencyErrors ?? []).ToList();
+
+            InProgressPullRequest inProgressPr = new()
+            {
+                UpdaterId = Id.ToString(),
+                Url = prUrl,
+                HeadBranch = newBranchName,
+                SourceSha = update.SourceSha,
+                ContainedSubscriptions = [],
+                RequiredUpdates = [],
+                CoherencyCheckSuccessful = false,
+                CoherencyErrors = agregatedCoherencyErrors.Count > 0 ? agregatedCoherencyErrors : null,
+                CodeFlowDirection = CodeFlowDirection.None,
+            };
+
+            await SetPullRequestCheckReminder(inProgressPr, isCodeFlow);
+            return prUrl;
+        }
+
         try
         {
             var description = await _pullRequestBuilder.CalculatePRDescriptionAndCommitUpdatesAsync(
-                repoDependencyUpdate.RequiredUpdates,
+                repoDependencyUpdates,
                 currentDescription: null,
                 targetRepository,
                 newBranchName);
 
-            var containedSubscriptions = repoDependencyUpdate.RequiredUpdates
-                // Coherency updates do not have subscription info.
-                .Where(u => !u.update.IsCoherencyUpdate)
-                .Select(
-                u => new SubscriptionPullRequestUpdate
+            SubscriptionPullRequestUpdate subscriptionUpdate = new()
                 {
-                    SubscriptionId = u.update.SubscriptionId,
-                    BuildId = u.update.BuildId,
-                    SourceRepo = u.update.SourceRepo,
-                    CommitSha = u.update.SourceSha
-                })
-                .ToList();
+                    SubscriptionId = repoDependencyUpdates.SubscriptionUpdate.SubscriptionId,
+                    BuildId = repoDependencyUpdates.SubscriptionUpdate.BuildId,
+                    SourceRepo = repoDependencyUpdates.SubscriptionUpdate.SourceRepo,
+                    CommitSha = repoDependencyUpdates.SubscriptionUpdate.SourceSha
+                };
 
             var prUrl = await darcRemote.CreatePullRequestAsync(
                 targetRepository,
                 new PullRequest
                 {
-                    Title = await _pullRequestBuilder.GeneratePRTitleAsync(containedSubscriptions, targetBranch),
+                    Title = await _pullRequestBuilder.GeneratePRTitleAsync([subscriptionUpdate], targetBranch),
                     Description = description,
                     BaseBranch = targetBranch,
                     HeadBranch = newBranchName,
                 });
+
+            var agregatedCoherencyErrors = repoDependencyUpdates.DirectoryUpdates.Values.SelectMany(update => update.CoherencyErrors ?? []).ToList();
 
             var inProgressPr = new InProgressPullRequest
             {
@@ -603,22 +639,22 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 HeadBranch = newBranchName,
                 SourceSha = update.SourceSha,
 
-                ContainedSubscriptions = containedSubscriptions,
+                ContainedSubscriptions = [subscriptionUpdate],
 
-                RequiredUpdates = repoDependencyUpdate.RequiredUpdates
-                        .SelectMany(update => update.deps)
-                        .Select(du => new DependencyUpdateSummary(du))
-                        .ToList(),
+                RequiredUpdates = repoDependencyUpdates.DirectoryUpdates
+                    .SelectMany(kvp => kvp.Value.NonCoherencyUpdates
+                        .Concat(kvp.Value.CoherencyUpdates ?? [])
+                        .Select(update => (kvp.Key, update)))
+                    .Select(u => new DependencyUpdateSummary(u.update) { RelativeBasePath = u.Key })
+                    .ToList(),
 
-                CoherencyCheckSuccessful = repoDependencyUpdate.CoherencyCheckSuccessful,
-                CoherencyErrors = repoDependencyUpdate.CoherencyErrors,
+                CoherencyCheckSuccessful = repoDependencyUpdates.CoherencyCheckSuccessful,
+                CoherencyErrors = agregatedCoherencyErrors.Count > 0 ? agregatedCoherencyErrors : null,
                 CodeFlowDirection = CodeFlowDirection.None,
             };
 
             if (!string.IsNullOrEmpty(prUrl))
             {
-                inProgressPr.Url = prUrl;
-
                 await AddDependencyFlowEventsAsync(
                     inProgressPr.ContainedSubscriptions,
                     DependencyFlowEventType.Created,
@@ -662,19 +698,27 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
-        TargetRepoDependencyUpdate targetRepositoryUpdates =
+        TargetRepoDependencyUpdates repoDependencyUpdates =
             await GetRequiredUpdates(update, targetRepository, build, prInfo.HeadBranch, targetBranch);
 
-        if (targetRepositoryUpdates.CoherencyCheckSuccessful && targetRepositoryUpdates.RequiredUpdates.Count < 1)
+        if (repoDependencyUpdates.DirectoryUpdates.Values.All(update =>
+            update.CoherencyCheckSuccessful
+            && update.NonCoherencyUpdates.Count == 0
+            && (update.CoherencyUpdates == null
+                || update.CoherencyUpdates.Count == 0)))
         {
             _logger.LogInformation("No updates found for pull request {url}", pr.Url);
             return;
         }
 
-        _logger.LogInformation("Found {count} required updates for pull request {url}", targetRepositoryUpdates.RequiredUpdates.Count, pr.Url);
-
-        pr.RequiredUpdates = MergeExistingWithIncomingUpdates(pr.RequiredUpdates,
-            targetRepositoryUpdates.RequiredUpdates.SelectMany(x => x.deps).ToList());
+        pr.RequiredUpdates = MergeExistingWithIncomingUpdates(
+            pr.RequiredUpdates,
+            repoDependencyUpdates.DirectoryUpdates
+                .SelectMany(kvp => kvp.Value.NonCoherencyUpdates
+                    .Concat(kvp.Value.CoherencyUpdates ?? [])
+                    .Select(update => (kvp.Key, update)))
+                .Select(u => new DependencyUpdateSummary(u.update) { RelativeBasePath = u.Key })
+                .ToList());
 
         if (pr.RequiredUpdates.Count < 1)
         {
@@ -684,8 +728,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
-        pr.CoherencyCheckSuccessful = targetRepositoryUpdates.CoherencyCheckSuccessful;
-        pr.CoherencyErrors = targetRepositoryUpdates.CoherencyErrors;
+        pr.CoherencyCheckSuccessful = repoDependencyUpdates.CoherencyCheckSuccessful;
+        var agregatedCoherencyErrors = repoDependencyUpdates.DirectoryUpdates.Values.SelectMany(update => update.CoherencyErrors ?? []).ToList();
+        pr.CoherencyErrors = agregatedCoherencyErrors.Count > 0 ? agregatedCoherencyErrors : null;
 
         List<SubscriptionPullRequestUpdate> previousSubscriptions = [.. pr.ContainedSubscriptions];
 
@@ -705,17 +750,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             DependencyFlowEventReason.FailedUpdate,
             pr.MergePolicyResult,
             pr.Url);
-
-        pr.ContainedSubscriptions.AddRange(targetRepositoryUpdates.RequiredUpdates
-            .Where(u => !u.update.IsCoherencyUpdate)
-            .Select(
-                u => new SubscriptionPullRequestUpdate
-                {
-                    SubscriptionId = u.update.SubscriptionId,
-                    BuildId = u.update.BuildId,
-                    SourceRepo = u.update.SourceRepo,
-                    CommitSha = u.update.SourceSha
-                }));
+        pr.ContainedSubscriptions.Add(new SubscriptionPullRequestUpdate
+        {
+            SubscriptionId = update.SubscriptionId,
+            BuildId = update.BuildId,
+            SourceRepo = update.SourceRepo,
+            CommitSha = update.SourceSha
+        });
 
         // Mark any new dependency updates as Created. Any subscriptions that are in pr.ContainedSubscriptions
         // but were not in the previous list of subscriptions are new
@@ -727,7 +768,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             pr.Url);
 
         var requiredDescriptionUpdates =
-            await CalculateOriginalDependencies(darcRemote, targetRepository, targetBranch, targetRepositoryUpdates);
+            await CalculateOriginalDependenciesAsync(darcRemote, targetRepository, targetBranch, repoDependencyUpdates);
 
         prInfo.Description = await _pullRequestBuilder.CalculatePRDescriptionAndCommitUpdatesAsync(
             requiredDescriptionUpdates,
@@ -753,34 +794,37 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// <returns>Merged list of existing updates along with the new</returns>
     private static List<DependencyUpdateSummary> MergeExistingWithIncomingUpdates(
         List<DependencyUpdateSummary> existingUpdates,
-        List<DependencyUpdate> incomingUpdates)
+        List<DependencyUpdateSummary> incomingUpdates)
     {
+        // Already existing PRs (at the time of deployment) will have relative base path for all dependency updates as null, but that really means the root,
+        // so we'll update them
+        foreach (var update in existingUpdates)
+        {
+            if (update.RelativeBasePath == null)
+            {
+                update.RelativeBasePath = new UnixPath(".");
+            }
+        }
         IEnumerable<DependencyUpdateSummary> mergedUpdates = existingUpdates
             .Select(u =>
             {
-                var matchingIncoming = incomingUpdates.FirstOrDefault(i => i.DependencyName == u.DependencyName);
+                var matchingIncoming = incomingUpdates
+                    .FirstOrDefault(i => i.DependencyName == u.DependencyName && i.RelativeBasePath == u.RelativeBasePath);
                 return new DependencyUpdateSummary()
                 {
                     DependencyName = u.DependencyName,
                     FromCommitSha = u.FromCommitSha,
                     FromVersion = u.FromVersion,
-                    ToCommitSha = matchingIncoming != null ? matchingIncoming.To.Commit : u.ToCommitSha,
-                    ToVersion = matchingIncoming != null ? matchingIncoming.To.Version : u.ToVersion,
+                    ToCommitSha = matchingIncoming != null ? matchingIncoming.ToCommitSha : u.ToCommitSha,
+                    ToVersion = matchingIncoming != null ? matchingIncoming.ToVersion : u.ToVersion,
+                    RelativeBasePath = u.RelativeBasePath,
                 };
             });
 
         IEnumerable<DependencyUpdateSummary> newUpdates = incomingUpdates
-            .Where(u => !existingUpdates.Any(e => u.DependencyName == e.DependencyName))
-            .Select(update => new DependencyUpdateSummary(update));
+            .Where(u => !existingUpdates.Any(e => u.DependencyName == e.DependencyName && u.RelativeBasePath == e.RelativeBasePath));
 
         return [.. mergedUpdates, .. newUpdates];
-    }
-
-    private class TargetRepoDependencyUpdate
-    {
-        public bool CoherencyCheckSuccessful { get; set; } = true;
-        public List<CoherencyErrorDetails>? CoherencyErrors { get; set; }
-        public List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)> RequiredUpdates { get; set; } = [];
     }
 
     /// <summary>
@@ -797,7 +841,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     ///     updates required based on the input updates.  The second pass uses the repo state + the
     ///     updates from the first pass to determine what else needs to change based on the coherency metadata.
     /// </remarks>
-    private async Task<TargetRepoDependencyUpdate> GetRequiredUpdates(
+    private async Task<TargetRepoDependencyUpdates> GetRequiredUpdates(
         SubscriptionUpdateWorkItem update,
         string targetRepository,
         BuildDTO build,
@@ -808,40 +852,56 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         // Get a remote factory for the target repo
         IRemote darc = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
-        TargetRepoDependencyUpdate repoDependencyUpdate = new();
+        Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> repoDependencyUpdates = new();
 
         // Get subscription to access excluded assets
         var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId)
             ?? throw new ($"Subscription with ID {update.SubscriptionId} not found in the DB.");
 
-        var excludedAssetsMatcher = subscription.ExcludedAssets.GetAssetMatcher();
-
-        // Existing details
-        var existingDependencies = (await darc.GetDependenciesAsync(targetRepository, prBranch ?? targetBranch)).ToList();
-
-        // Filter out excluded assets from the build assets
-        List<AssetData> assetData = build.Assets
-            .Where(a => !excludedAssetsMatcher.IsExcluded(a.Name))
-            .Select(a => new AssetData(false)
-            {
-                Name = a.Name,
-                Version = a.Version
-            })
-            .ToList();
-
-        // Retrieve the source of the assets
-        List<DependencyUpdate> dependenciesToUpdate = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
-            update.SourceRepo,
-            update.SourceSha,
-            assetData,
-            existingDependencies);
-
-        if (dependenciesToUpdate.Count < 1)
+        List<UnixPath> targetDirectories;
+        Dictionary<UnixPath, IAssetMatcher> targetDirectoryAssetMatchers;
+        // TODO this can definitely be better, later
+        if (string.IsNullOrEmpty(subscription.TargetDirectory))
         {
-            // No dependencies need to be updated.
-            await UpdateSubscriptionsForMergedPRAsync(
-                new List<SubscriptionPullRequestUpdate>
+            // TODO, does a '.' path work here???
+            targetDirectories = [new UnixPath(".")];
+            targetDirectoryAssetMatchers = [];
+            targetDirectoryAssetMatchers[targetDirectories[0]] = subscription.ExcludedAssets.GetAssetMatcher();
+        }
+        else
+        {
+            targetDirectories = subscription.TargetDirectory.Split(',').Select(d => new UnixPath(d)).ToList();
+            targetDirectoryAssetMatchers = subscription.ExcludedAssets.GetAssetMatchers(targetDirectories);
+        }
+
+        foreach (var (targetDirectory, excludedAssetsMatcher) in targetDirectoryAssetMatchers)
+        {
+            // Existing details
+            var existingDependencies = (await darc.GetDependenciesAsync(targetRepository, prBranch ?? targetBranch, relativeBasePath: targetDirectory)).ToList();
+
+            // Filter out excluded assets from the build assets
+            List<AssetData> assetData = build.Assets
+                .Where(a => !excludedAssetsMatcher.IsExcluded(a.Name))
+                .Select(a => new AssetData(false)
                 {
+                    Name = a.Name,
+                    Version = a.Version
+                })
+                .ToList();
+
+            // Retrieve the source of the assets
+            List<DependencyUpdate> dependenciesToUpdate = _coherencyUpdateResolver.GetRequiredNonCoherencyUpdates(
+                update.SourceRepo,
+                update.SourceSha,
+                assetData,
+                existingDependencies);
+
+            if (dependenciesToUpdate.Count < 1)
+            {
+                // No dependencies need to be updated.
+                await UpdateSubscriptionsForMergedPRAsync(
+                    new List<SubscriptionPullRequestUpdate>
+                    {
                     new()
                     {
                         SubscriptionId = update.SubscriptionId,
@@ -849,55 +909,64 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                         SourceRepo = update.SourceRepo,
                         CommitSha = update.SourceSha
                     }
-                });
-        }
-        else
-        {
-            // Update the existing details list
-            foreach (DependencyUpdate dependencyUpdate in dependenciesToUpdate)
+                    });
+                repoDependencyUpdates[targetDirectory] = new TargetRepoDirectoryDependencyUpdates
+                {
+                    NonCoherencyUpdates = [],
+                };
+            }
+            else
             {
-                existingDependencies.Remove(dependencyUpdate.From);
-                existingDependencies.Add(dependencyUpdate.To);
+                // Update the existing details list
+                foreach (DependencyUpdate dependencyUpdate in dependenciesToUpdate)
+                {
+                    existingDependencies.Remove(dependencyUpdate.From);
+                    existingDependencies.Add(dependencyUpdate.To);
+                }
+
+                repoDependencyUpdates[targetDirectory] = new TargetRepoDirectoryDependencyUpdates
+                {
+                    NonCoherencyUpdates = dependenciesToUpdate,
+                };
             }
 
-            repoDependencyUpdate.RequiredUpdates.Add((update, dependenciesToUpdate));
-        }
+            // Once we have applied all of non coherent updates, then we need to run a coherency check on the dependencies.
+            List<DependencyUpdate> coherencyUpdates = [];
+            try
+            {
+                _logger.LogInformation("Running a coherency check on the existing dependencies for branch {branch} of repo {repository}",
+                    targetBranch,
+                    targetRepository);
+                coherencyUpdates = await _coherencyUpdateResolver.GetRequiredCoherencyUpdatesAsync(existingDependencies);
+            }
+            catch (DarcCoherencyException e)
+            {
+                _logger.LogInformation("Failed attempting strict coherency update on branch '{strictCoherencyFailedBranch}' of repo '{strictCoherencyFailedRepo}'",
+                     targetBranch, targetRepository);
+                repoDependencyUpdates[targetDirectory].CoherencyCheckSuccessful = false;
+                repoDependencyUpdates[targetDirectory].CoherencyErrors = e.Errors.Select(e => new CoherencyErrorDetails
+                {
+                    Error = e.Error,
+                    PotentialSolutions = e.PotentialSolutions
+                }).ToList();
+            }
 
-        // Once we have applied all of non coherent updates, then we need to run a coherency check on the dependencies.
-        List<DependencyUpdate> coherencyUpdates = [];
-        try
-        {
-            _logger.LogInformation("Running a coherency check on the existing dependencies for branch {branch} of repo {repository}",
+            if (coherencyUpdates.Count != 0)
+            {
+                repoDependencyUpdates[targetDirectory].CoherencyUpdates = coherencyUpdates.ToList();
+            }
+
+            _logger.LogInformation("Finished getting Required Updates for {branch} of {targetRepository} on relative path {relativePath}",
                 targetBranch,
-                targetRepository);
-            coherencyUpdates = await _coherencyUpdateResolver.GetRequiredCoherencyUpdatesAsync(existingDependencies);
-        }
-        catch (DarcCoherencyException e)
-        {
-            _logger.LogInformation("Failed attempting strict coherency update on branch '{strictCoherencyFailedBranch}' of repo '{strictCoherencyFailedRepo}'",
-                 targetBranch, targetRepository);
-            repoDependencyUpdate.CoherencyCheckSuccessful = false;
-            repoDependencyUpdate.CoherencyErrors = e.Errors.Select(e => new CoherencyErrorDetails
-            {
-                Error = e.Error,
-                PotentialSolutions = e.PotentialSolutions
-            }).ToList();
+                targetRepository,
+                targetDirectory);
         }
 
-        if (coherencyUpdates.Count != 0)
+        return new TargetRepoDependencyUpdates
         {
-            // For the update asset parameters, we don't have any information on the source of the update,
-            // since coherency can be run even without any updates.
-            var coherencyUpdateParameters = new SubscriptionUpdateWorkItem
-            {
-                UpdaterId = Id.Id,
-                IsCoherencyUpdate = true
-            };
-            repoDependencyUpdate.RequiredUpdates.Add((coherencyUpdateParameters, coherencyUpdates.ToList()));
-        }
-
-        _logger.LogInformation("Finished getting Required Updates for {branch} of {targetRepository}", targetBranch, targetRepository);
-        return repoDependencyUpdate;
+            DirectoryUpdates = repoDependencyUpdates,
+            SubscriptionUpdate = update
+        };
     }
 
     private static string GetNewBranchName(string targetBranch) => $"darc-{targetBranch}-{Guid.NewGuid()}";
@@ -948,31 +1017,46 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     ///     This method is intended for use in situations where we want to keep the information about the original dependency
     ///     version, such as when updating PR descriptions.
     /// </remarks>
-    private static async Task<List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)>> CalculateOriginalDependencies(
+    private static async Task<TargetRepoDependencyUpdates> CalculateOriginalDependenciesAsync(
         IRemote darcRemote,
         string targetRepository,
         string targetBranch,
-        TargetRepoDependencyUpdate targetRepositoryUpdates)
+        TargetRepoDependencyUpdates targetRepositoryUpdates)
     {
-        List<DependencyDetail> targetBranchDeps = [.. await darcRemote.GetDependenciesAsync(targetRepository, targetBranch)];
-
-        List<(SubscriptionUpdateWorkItem update, List<DependencyUpdate> deps)> alteredUpdates = [];
-        foreach (var requiredUpdate in targetRepositoryUpdates.RequiredUpdates)
+        Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> alteredUpdates = new();
+        foreach (var (targetDirectory, targetDictionaryRepositoryUpdates) in targetRepositoryUpdates.DirectoryUpdates)
         {
-            var updatedDependencies = requiredUpdate.deps
+            List<DependencyDetail> targetBranchDeps = [.. await darcRemote.GetDependenciesAsync(targetRepository, targetBranch, relativeBasePath: targetDirectory)];
+
+            var updatedNonCoherencyDeps = targetDictionaryRepositoryUpdates.NonCoherencyUpdates
                 .Select(dependency => new DependencyUpdate()
                 {
                     From = targetBranchDeps
-                            .Where(replace => dependency.From.Name == replace.Name)
-                            .FirstOrDefault(dependency.From),
+                        .FirstOrDefault(replace => dependency.From.Name == replace.Name, dependency.From),
                     To = dependency.To,
                 })
                 .ToList();
-
-            alteredUpdates.Add((requiredUpdate.update, updatedDependencies));
+            var updatedCoherencyDeps = targetDictionaryRepositoryUpdates.CoherencyUpdates?
+                .Select(dependency => new DependencyUpdate()
+                {
+                    From = targetBranchDeps
+                        .FirstOrDefault(replace => dependency.From.Name == replace.Name, dependency.From),
+                    To = dependency.To,
+                })
+                .ToList() ?? [];
+            alteredUpdates[targetDirectory] = new TargetRepoDirectoryDependencyUpdates
+            {
+                NonCoherencyUpdates = updatedNonCoherencyDeps,
+                CoherencyUpdates = updatedCoherencyDeps,
+                CoherencyCheckSuccessful = targetDictionaryRepositoryUpdates.CoherencyCheckSuccessful,
+                CoherencyErrors = targetDictionaryRepositoryUpdates.CoherencyErrors
+            };
         }
-
-        return alteredUpdates;
+        
+        return new TargetRepoDependencyUpdates {
+            DirectoryUpdates = alteredUpdates,
+            SubscriptionUpdate = targetRepositoryUpdates.SubscriptionUpdate
+        };
     }
 
     private async Task ScheduleUpdateForLater(InProgressPullRequest pr, SubscriptionUpdateWorkItem update, bool isCodeFlow)
@@ -1169,7 +1253,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             CommitSha = update.SourceSha
         });
 
-        pullRequest.RequiredUpdates = MergeExistingWithIncomingUpdates(pullRequest.RequiredUpdates, newDependencyUpdates);
+        pullRequest.RequiredUpdates = MergeExistingWithIncomingUpdates(
+            pullRequest.RequiredUpdates,
+            newDependencyUpdates
+                .Select(u => new DependencyUpdateSummary(u))
+                .ToList());
 
         var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(
             subscription.TargetBranch,
