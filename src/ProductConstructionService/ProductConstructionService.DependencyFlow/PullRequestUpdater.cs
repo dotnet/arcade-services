@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
+using LibGit2Sharp;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -12,6 +13,7 @@ using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
@@ -541,6 +543,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         TargetRepoDependencyUpdates repoDependencyUpdates =
             await GetRequiredUpdates(update, targetRepository, build, prBranch: null, targetBranch: targetBranch);
 
+        // if there coherency check was a success, we really don't need to do anything, so just return
         if (repoDependencyUpdates.DirectoryUpdates.Values.All(update =>
             update.CoherencyCheckSuccessful
             && update.NonCoherencyUpdates.Count == 0
@@ -555,6 +558,40 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var newBranchName = GetNewBranchName(targetBranch);
         await darcRemote.CreateNewBranchAsync(targetRepository, targetBranch, newBranchName);
 
+        // if the coherency check failed, and we don't have any non-coherency updates, then we want to open a PR with an error message
+        if (!repoDependencyUpdates.CoherencyCheckSuccessful
+            && repoDependencyUpdates.DirectoryUpdates.Values.All(update =>
+                update.NonCoherencyUpdates.Count == 0))
+        {
+            var commitMessage = "Failed to perform coherency update for one or more dependencies.";
+            await darcRemote.CommitUpdatesAsync(filesToCommit: [], targetRepository, newBranchName, commitMessage);
+            var prDescription = $"Coherency update: {commitMessage} Please review the GitHub checks or run `darc update-dependencies --coherency-only` locally against {newBranchName} for more information.";
+            var prUrl = await darcRemote.CreatePullRequestAsync(
+                targetRepository,
+                new PullRequest
+                {
+                    Title = $"[{targetBranch}] Update dependencies to ensure coherency",
+                    Description = prDescription,
+                    BaseBranch = targetBranch,
+                    HeadBranch = newBranchName,
+                });
+            InProgressPullRequest inProgressPr = new()
+            {
+                UpdaterId = Id.ToString(),
+                Url = prUrl,
+                HeadBranch = newBranchName,
+                SourceSha = update.SourceSha,
+                ContainedSubscriptions = [],
+                RequiredUpdates = [],
+                CoherencyCheckSuccessful = false,
+                CoherencyErrors = repoDependencyUpdates.DirectoryUpdates.Values.SelectMany(update => update.CoherencyErrors ?? []).ToList(),
+                CodeFlowDirection = CodeFlowDirection.None,
+            };
+
+            await SetPullRequestCheckReminder(inProgressPr, isCodeFlow);
+            return prUrl;
+        }
+
         try
         {
             var description = await _pullRequestBuilder.CalculatePRDescriptionAndCommitUpdatesAsync(
@@ -562,7 +599,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 currentDescription: null,
                 targetRepository,
                 newBranchName);
-
 
             SubscriptionPullRequestUpdate subscriptionUpdate = new()
                 {
@@ -605,8 +641,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             if (!string.IsNullOrEmpty(prUrl))
             {
-                inProgressPr.Url = prUrl;
-
                 await AddDependencyFlowEventsAsync(
                     inProgressPr.ContainedSubscriptions,
                     DependencyFlowEventType.Created,
@@ -906,14 +940,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         return new TargetRepoDependencyUpdates
         {
             DirectoryUpdates = repoDependencyUpdates,
-            SubscriptionUpdate = repoDependencyUpdates.Values.All(updates => updates.NonCoherencyUpdates.Count == 0)
-                        && repoDependencyUpdates.Values.Any(updates => updates.CoherencyUpdates != null && updates.CoherencyUpdates.Count > 0)
-                ? new SubscriptionUpdateWorkItem
-                    {
-                        UpdaterId = Id.Id,
-                        IsCoherencyUpdate = true
-                    }
-                : update
+            SubscriptionUpdate = update
         };
     }
 

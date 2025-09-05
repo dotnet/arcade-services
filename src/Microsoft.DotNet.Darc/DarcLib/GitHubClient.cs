@@ -623,6 +623,10 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     {
         path = path.Replace('\\', '/');
         path = path.TrimStart('/').TrimEnd('/');
+        if (path.StartsWith("./"))
+        {
+            path = path.Substring(2);
+        }
 
         (string owner, string repo) = ParseRepoUri(repoUri);
 

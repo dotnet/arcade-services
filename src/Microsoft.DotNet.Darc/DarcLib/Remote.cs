@@ -201,24 +201,24 @@ public sealed class Remote : IRemote
         SemanticVersion targetDotNetVersion = null;
         // If arcadeItem is not null, we need to update eng/common for dependency flow subscriptions that don't target the repo root
         // We need the "." root check because we don't want to update the root eng/common in arcade -> arcade and vmr -> vmr (sdk) band scenarios
-        var mayNeedArcadeUpdate = arcadeItem != null && repoUri != arcadeItem.RepoUri && relativeDependencyBasePath.ToString() != ".";
+        var mayNeedArcadeUpdate = arcadeItem != null && (repoUri != arcadeItem.RepoUri || relativeDependencyBasePath.ToString() != ".");
         // If we find version files in src/arcade, we know the source repo is the VMR
         var repoIsVmr = true;
-        var relativeBasePath = VmrInfo.ArcadeRepoDir;
+        var sourceRelativeBasePath = VmrInfo.ArcadeRepoDir;
 
         if (mayNeedArcadeUpdate)
         {
             IDependencyFileManager arcadeFileManager = await _remoteFactory.CreateDependencyFileManagerAsync(arcadeItem.RepoUri);
             try
             {
-                targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, relativeBasePath);
+                targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, sourceRelativeBasePath);
             }
             catch (DependencyFileNotFoundException)
             {
                 // global.json not found in src/arcade meaning that the source repo is not the VMR
-                relativeBasePath = null;
+                sourceRelativeBasePath = null;
                 repoIsVmr = false;
-                targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, relativeBasePath);
+                targetDotNetVersion = await arcadeFileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, sourceRelativeBasePath);
             }
         }
 
@@ -238,26 +238,47 @@ public sealed class Remote : IRemote
             // Files in the source arcade repo. We use the remote factory because the
             // arcade repo may be in github while this remote is targeted at AzDO.
             IRemote arcadeRemote = await _remoteFactory.CreateRemoteAsync(arcadeItem.RepoUri);
-            List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit, relativeBasePath);
+            List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit, sourceRelativeBasePath);
             // If the engCommon files are coming from the VMR, we have to remove 'src/arcade/' from the file paths and replace with the relativeDependencyBasePath
             if (repoIsVmr)
             {
+                string pathToReplaceWith;
+                if (relativeDependencyBasePath.ToString() == ".")
+                {
+                    pathToReplaceWith = null;
+                }
+                else
+                {
+                    pathToReplaceWith = relativeDependencyBasePath.ToString();
+                }
+
                 engCommonFiles = engCommonFiles
                     .Select(f => new GitFile(
-                        // need to check this in a scenario test
-                        f.FilePath.Replace(VmrInfo.ArcadeRepoDir, relativeDependencyBasePath, StringComparison.InvariantCultureIgnoreCase).TrimStart('/'),
+                        f.FilePath.Replace(VmrInfo.ArcadeRepoDir, pathToReplaceWith, StringComparison.InvariantCultureIgnoreCase).TrimStart('/'),
                         f.Content,
                         f.ContentEncoding,
                         f.Mode,
                         f.Operation))
                     .ToList();
             }
-
+            else
+            {
+                engCommonFiles = engCommonFiles
+                    .Select(f => new GitFile(
+                        relativeDependencyBasePath.ToString() == "."
+                            ? f.FilePath
+                            : relativeDependencyBasePath / f.FilePath,
+                        f.Content,
+                        f.ContentEncoding,
+                        f.Mode,
+                        f.Operation))
+                    .ToList();
+            }
             filesToCommit.AddRange(engCommonFiles);
 
             // Files in the target repo
             var latestCommit = await _remoteGitClient.GetLastCommitShaAsync(repoUri, branch);
-            List<GitFile> targetEngCommonFiles = await GetCommonScriptFilesAsync(repoUri, latestCommit);
+            List<GitFile> targetEngCommonFiles = await GetCommonScriptFilesAsync(repoUri, latestCommit, relativeDependencyBasePath);
 
             var deletedFiles = new List<string>();
 

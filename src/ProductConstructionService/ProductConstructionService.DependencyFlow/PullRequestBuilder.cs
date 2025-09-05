@@ -162,10 +162,13 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
             List<DependencyDetail> itemsToUpdate = [];
 
-            AppendNonCoherencyCommitMessage(targetDirectory, nonCoherencyUpdates, nonCoherencyCommitMessage);
-            nonCoherencyUpdatesPerDirectory[targetDirectory] = [.. nonCoherencyUpdates];
-            itemsToUpdate.AddRange(nonCoherencyUpdates
-                .Select(du => du.To));
+            if (nonCoherencyUpdates.Count > 0)
+            {
+                AppendNonCoherencyCommitMessage(targetDirectory, nonCoherencyUpdates, nonCoherencyCommitMessage);
+                nonCoherencyUpdatesPerDirectory[targetDirectory] = [.. nonCoherencyUpdates];
+                itemsToUpdate.AddRange(nonCoherencyUpdates
+                    .Select(du => du.To));
+            }           
 
             if (coherencyUpdates != null && coherencyUpdates.Count > 0)
             {
@@ -211,7 +214,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             // we create an empty commit that describes an issue.
             var message = "Failed to perform coherency update for one or more dependencies.";
             remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
-            await remote.CommitUpdatesAsync(targetRepository, newBranchName, [], message);
+            await remote.CommitUpdatesAsync(filesToCommit: [], targetRepository, newBranchName, message);
             return $"Coherency update: {message} Please review the GitHub checks or run `darc update-dependencies --coherency-only` locally against {newBranchName} for more information.";
         }
 

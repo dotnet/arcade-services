@@ -111,6 +111,11 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         _logger.LogInformation(
             $"Getting the contents of file '{filePath}' from repo '{accountName}/{projectName}/{repoName}' in branch/commit '{branchOrCommit}'...");
 
+        if (filePath.StartsWith("./"))
+        {
+            filePath = filePath.Substring(2);
+        }
+
         // The AzDO REST API currently does not transparently handle commits vs. branches vs. tags.
         // You really need to know whether you're talking about a commit or branch or tag
         // when you ask the question. Avoid this issue for now by first checking branch (most common)
@@ -571,6 +576,12 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             commit);
 
         (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
+
+        // AzDo doesn't work with leading paths like ./, for example ./eng/common/builds.ps1, so we need to strip it
+        if (path.StartsWith("./"))
+        {
+            path = path.Substring(2);
+        }
 
         JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod.Get,
