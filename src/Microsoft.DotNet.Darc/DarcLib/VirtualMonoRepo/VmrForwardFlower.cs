@@ -32,7 +32,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
     /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="targetVmrUri">URI of the VMR to update</param>
-    /// <param name="skipMeaninglessUpdates">Skip creating PR if only insignificant changes are present</param>
+    /// <param name="forceUpdate">Force the update to be performed</param>
     /// <returns>CodeFlowResult containing information about the codeflow calculation</returns>
     Task<CodeFlowResult> FlowForwardAsync(
         string mapping,
@@ -42,7 +42,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
         string targetBranch,
         string headBranch,
         string targetVmrUri,
-        bool skipMeaninglessUpdates = false,
+        bool forceUpdate,
         CancellationToken cancellationToken = default);
 }
 
@@ -76,8 +76,9 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             IProcessManager processManager,
             IBasicBarClient barClient,
             IFileSystem fileSystem,
+            ICommentCollector commentCollector,
             ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, commentCollector, logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
@@ -101,7 +102,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string targetBranch,
         string headBranch,
         string targetVmrUri,
-        bool skipMeaninglessUpdates = false,
+        bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
         ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
@@ -124,6 +125,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             targetBranch,
             headBranch,
             headBranchExisted,
+            forceUpdate,
             cancellationToken);
 
         IReadOnlyCollection<UnixPath>? conflictedFiles = null;
@@ -143,8 +145,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 cancellationToken);
         }
 
-        // We try to detect if the changes were meaningful and it's worth creating a new PR
-        if (conflictedFiles != null && skipMeaninglessUpdates && hasChanges && !headBranchExisted)
+        // If we don't force the update, we'll set hasChanges to false when the updates are not meaningful
+        if (conflictedFiles != null && !forceUpdate && hasChanges && !headBranchExisted)
         {
             hasChanges &= await _codeflowChangeAnalyzer.ForwardFlowHasMeaningfulChangesAsync(mapping.Name, headBranch, targetBranch);
         }
@@ -223,6 +225,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
+        bool forceUpdate,
         CancellationToken cancellationToken)
     {
         try
@@ -256,6 +259,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 headBranch,
                 targetBranch,
                 excludedAssets,
+                forceUpdate,
                 reapplyChanges: async () =>
                 {
                     hadChanges = await _vmrUpdater.UpdateRepository(

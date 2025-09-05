@@ -99,3 +99,11 @@ public class NonLinearCodeflowException(string currentSha, string previousSha)
     : DarcException($"Cannot flow commit {currentSha} as it's not a descendant of previously flown commit {previousSha}")
 {
 }
+
+/// <summary>
+/// This exception is used when the current codeflow cannot be applied, and if a codeflow PR already exists, then it
+/// is blocked from receiving new flows.
+/// </summary>
+public class BlockingCodeflowException(string msg) : Exception(msg)
+{
+}
