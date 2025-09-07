@@ -170,4 +170,33 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
             AndShouldHavePullRequestCheckReminder();
         }
     }
+
+    [Test]
+    public async Task PendingUpdateShouldCreatePRWhenSubHasTargetDirectories()
+    {
+        GivenATestChannel();
+        GivenASubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = true,
+                UpdateFrequency = UpdateFrequency.EveryBuild
+            }, 
+            targetDirectory: ".,src/foo,src/bar");
+        Build b = GivenANewBuild(true);
+
+        GivenAPendingUpdateReminder(b);
+        AndPendingUpdates(b);
+        WithRequireNonCoherencyUpdates();
+        WithNoRequiredCoherencyUpdates();
+        
+        await WhenProcessPendingUpdatesAsyncIsCalled(b, shouldGetUpdates: true);
+
+        ThenGetRequiredUpdatesForMultipleDirectoriesShouldHaveBeenCalled(b, false, 
+            new UnixPath("."), new UnixPath("src/foo"), new UnixPath("src/bar"));
+        AndCreateNewBranchShouldHaveBeenCalled();
+        AndCommitUpdatesForMultipleDirectoriesShouldHaveBeenCalled(b, 3);
+        AndCreatePullRequestShouldHaveBeenCalled();
+        AndShouldHaveInProgressPullRequestState(b, relativeBasePath: new UnixPath("."));
+        AndShouldHavePullRequestCheckReminder();
+    }
 }

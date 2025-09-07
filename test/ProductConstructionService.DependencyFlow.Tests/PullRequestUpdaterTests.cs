@@ -699,4 +699,73 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 } :
                 []
         };
+
+    protected void ThenGetRequiredUpdatesForMultipleDirectoriesShouldHaveBeenCalled(Build withBuild, bool prExists, params UnixPath[] expectedDirectories)
+    {
+        var assets = new List<IReadOnlyCollection<AssetData>>();
+        var dependencies = new List<IReadOnlyCollection<DependencyDetail>>();
+
+        // Verify the coherency update resolver is called once per directory
+        UpdateResolver
+            .Verify(r => r.GetRequiredNonCoherencyUpdates(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)), 
+                Times.Exactly(expectedDirectories.Length));
+
+        // Verify GetDependenciesAsync is called once for each target directory
+        foreach (var directory in expectedDirectories)
+        {
+            DarcRemotes[TargetRepo]
+                .Verify(r => r.GetDependenciesAsync(TargetRepo, prExists ? InProgressPrHeadBranch : TargetBranch, null, directory), 
+                    Times.Once);
+        }
+
+        UpdateResolver
+            .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies)), 
+                Times.Exactly(expectedDirectories.Length));
+
+        // Verify that assets were processed for each directory
+        assets.Count.Should().Be(expectedDirectories.Length);
+        foreach (var assetCollection in assets)
+        {
+            assetCollection.Should()
+                .BeEquivalentTo(
+                    withBuild.Assets
+                        .Select(a => new AssetData(false)
+                        {
+                            Name = a.Name,
+                            Version = a.Version
+                        })
+                        .ToList());
+        }
+    }
+
+    protected void AndCommitUpdatesForMultipleDirectoriesShouldHaveBeenCalled(Build withUpdatesFromBuild, int expectedDirectoryCount, Func<Asset, bool>? assetFilter = null)
+    {
+        var updatedDependencies = new List<List<DependencyDetail>>();
+        DarcRemotes[TargetRepo]
+            .Verify(
+                r => r.GetUpdatesAsync(
+                    TargetRepo,
+                    InProgressPrHeadBranch,
+                    Capture.In(updatedDependencies),
+                    It.IsAny<UnixPath>()),
+                Times.Exactly(expectedDirectoryCount));
+
+        // Each directory should have processed the same assets
+        var expectedDependencyList = withUpdatesFromBuild.Assets
+            .Where(assetFilter ?? (_ => true))
+            .Select(a => new DependencyDetail
+            {
+                Name = a.Name,
+                Version = a.Version,
+                RepoUri = withUpdatesFromBuild.GitHubRepository,
+                Commit = "sha3333"
+            })
+            .ToList();
+
+        updatedDependencies.Should().HaveCount(expectedDirectoryCount);
+        foreach (var dependencies in updatedDependencies)
+        {
+            dependencies.Should().BeEquivalentTo(expectedDependencyList);
+        }
+    }
 }
