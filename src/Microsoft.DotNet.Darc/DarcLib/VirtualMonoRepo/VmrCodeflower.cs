@@ -59,9 +59,9 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         Please continue with one of the following options:
         1. Close or merge this PR and let the codeflow continue normally
         2. Close or merge this PR and receive the new codeflow immediately by triggering the subscription:
-            `darc trigger-subscription --id <subscriptionId>`
+            `darc trigger-subscriptions --id <subscriptionId>`
         3. Force-flow new changes into this PR at your own risk (some PR commits might be reverted):
-            `darc trigger-subscription --force --id <subscriptionId>`
+            `darc trigger-subscriptions --force --id <subscriptionId>`
         """;
 
     protected VmrCodeFlower(
