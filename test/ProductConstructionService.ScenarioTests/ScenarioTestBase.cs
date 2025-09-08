@@ -281,6 +281,63 @@ internal abstract partial class ScenarioTestBase
     protected static string GetExpectedCodeFlowDependencyVersionEntry(string sourceRepo, string targetRepoName, string sha, int buildId) =>
         $"<Source Uri=\"{GetGitHubRepoUrl(sourceRepo)}\" Mapping=\"{targetRepoName}\" Sha=\"{sha}\" BarId=\"{buildId}\" />";
 
+    protected async Task CheckGitHubPullRequestWithTargetDirectories(
+        string expectedPRTitle,
+        string targetRepoName,
+        string targetBranch,
+        Dictionary<string, List<DependencyDetail>> expectedDependenciesByDirectory,
+        string repoDirectory,
+        bool isCompleted,
+        bool isUpdated,
+        bool cleanUp)
+    {
+        TestContext.WriteLine($"Checking opened PR in {targetBranch} {targetRepoName}");
+        Octokit.PullRequest pullRequest = isUpdated
+            ? await WaitForUpdatedPullRequestAsync(targetRepoName, targetBranch)
+            : await WaitForPullRequestAsync(targetRepoName, targetBranch);
+
+        pullRequest.Title.Should().Be(expectedPRTitle);
+
+        using (ChangeDirectory(repoDirectory))
+        {
+            var cleanUpTask = cleanUp
+                ? CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, targetRepoName, pullRequest)
+                : AsyncDisposable.Create(async () => await Task.CompletedTask);
+
+            await using (cleanUpTask)
+            {
+                await ValidatePullRequestDependenciesInDirectories(pullRequest.Head.Ref, expectedDependenciesByDirectory);
+
+                if (isCompleted)
+                {
+                    TestContext.WriteLine($"Checking for automatic merging of PR in {targetBranch} {targetRepoName}");
+
+                    await WaitForMergedPullRequestAsync(targetRepoName, targetBranch);
+                }
+            }
+        }
+    }
+
+    private static async Task ValidatePullRequestDependenciesInDirectories(string pullRequestBaseBranch, Dictionary<string, List<DependencyDetail>> expectedDependenciesByDirectory, int tries = 1)
+    {
+        var triesRemaining = tries;
+        while (triesRemaining-- > 0)
+        {
+            await CheckoutRemoteBranchAsync(pullRequestBaseBranch);
+            await RunGitAsync("pull");
+
+            foreach (var (directory, expectedDependencies) in expectedDependenciesByDirectory)
+            {
+                TestContext.WriteLine($"Validating dependencies in directory: {directory}");
+                
+                var actualDependencies = await RunDarcAsync("get-dependencies", "--relative-base-path", directory);
+                var expectedDependenciesString = DependencyCollectionStringBuilder.GetString(expectedDependencies);
+
+                actualDependencies.Should().Be(expectedDependenciesString);
+            }
+        }
+    }
+
     protected async Task CheckGitHubPullRequest(
         string expectedPRTitle,
         string targetRepoName,
@@ -555,6 +612,50 @@ internal abstract partial class ScenarioTestBase
         using (ChangeDirectory(repoPath))
         {
             await RunDarcAsync(["add-dependency", "--name", name, "--type", isToolset ? "toolset" : "product", "--repo", repoUri, "--version", "0.0.1"]);
+        }
+    }
+
+    protected static async Task AddDependenciesToLocalRepoWithDirectory(
+        string repoPath,
+        List<AssetData> dependencies,
+        string repoUri,
+        string? targetDirectory = null,
+        string coherentParent = "",
+        bool pinned = false)
+    {
+        using (ChangeDirectory(repoPath))
+        {
+            foreach (AssetData asset in dependencies)
+            {
+                List<string> parameters =
+                [
+                    "add-dependency",
+                    "--name", asset.Name,
+                    "--version", asset.Version,
+                    "--type", "product",
+                    "--repo", repoUri
+                ];
+
+                if (!string.IsNullOrEmpty(targetDirectory))
+                {
+                    parameters.Add("--relative-base-path");
+                    parameters.Add(targetDirectory);
+                }
+
+                if (!string.IsNullOrEmpty(coherentParent))
+                {
+                    parameters.Add("--coherent-parent");
+                    parameters.Add(coherentParent);
+                }
+                if (pinned)
+                {
+                    parameters.Add("--pinned");
+                }
+
+                var parameterArr = parameters.ToArray();
+
+                await RunDarcAsync(parameterArr);
+            }
         }
     }
     protected static async Task<string> GetTestChannelsAsync()
@@ -929,6 +1030,18 @@ internal abstract partial class ScenarioTestBase
         AssetData asset2 = GetAssetDataWithLocations(asset2Name, asset2Version, location, locationType);
 
         return [asset1, asset2];
+    }
+
+    protected static List<AssetData> GetAssetData(string asset1Name, string asset1Version, string asset2Name, string asset2Version, string asset3Name, string asset3Version)
+    {
+        var location = @"https://pkgs.dev.azure.com/dnceng/public/_packaging/NotARealFeed/nuget/v3/index.json";
+        LocationType locationType = LocationType.NugetFeed;
+
+        AssetData asset1 = GetAssetDataWithLocations(asset1Name, asset1Version, location, locationType);
+        AssetData asset2 = GetAssetDataWithLocations(asset2Name, asset2Version, location, locationType);
+        AssetData asset3 = GetAssetDataWithLocations(asset3Name, asset3Version, location, locationType);
+
+        return [asset1, asset2, asset3];
     }
 
     protected static AssetData GetAssetDataWithLocations(

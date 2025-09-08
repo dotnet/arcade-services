@@ -593,4 +593,95 @@ internal abstract class TestLogic : ScenarioTestBase
                 targetIsAzDo: isAzDoTest);
         }
     }
+
+    public async Task GitHubMultipleTargetDirectoriesTestBase(
+        string targetBranch,
+        string channelName,
+        List<AssetData> sourceAssets,
+        List<AssetData> build1Assets,
+        List<AssetData> build2Assets,
+        Dictionary<string, List<DependencyDetail>> expectedDependenciesByDirectory1,
+        Dictionary<string, List<DependencyDetail>> expectedDependenciesByDirectory2)
+    {
+        var targetRepoName = TestRepository.VmrTestRepoName;
+        var sourceRepoName = TestRepository.VmrTestRepoName;
+
+        var testChannelName = channelName;
+        var sourceRepoUri = GetGitHubRepoUrl(sourceRepoName);
+        var targetRepoUri = GetGitHubRepoUrl(targetRepoName);
+        var targetDirectories = $"src/{TestRepository.TestRepo1Name},src/{TestRepository.TestRepo2Name},src/{TestRepository.TestRepo3Name}";
+
+        TestContext.WriteLine($"Creating test channel {testChannelName}");
+        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName);
+
+        TestContext.WriteLine($"Adding a subscription from {sourceRepoName} to {targetRepoName} with target directories");
+        await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(testChannelName, sourceRepoName, targetRepoName, targetBranch,
+            UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: ["--target-directory", targetDirectories],
+            sourceIsAzDo: false, targetIsAzDo: false);
+
+        TestContext.WriteLine("Set the first build for intake into target repository");
+        Build build1 = await CreateBuildAsync(sourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit, SourceBuildNumber, build1Assets);
+        await AddBuildToChannelAsync(build1.Id, testChannelName);
+
+        TestContext.WriteLine("Cloning target repo to prepare the target branch");
+        TemporaryDirectory reposFolder = await CloneRepositoryAsync(targetRepoName);
+
+        using (ChangeDirectory(reposFolder.Directory))
+        {
+            await using (await CheckoutBranchAsync(targetBranch))
+            {
+                TestContext.WriteLine("Adding dependencies to target repo in different directories");
+                // Add dependencies to src/maestro-test1
+                await AddDependenciesToLocalRepoWithDirectory(reposFolder.Directory, sourceAssets.ToList(), sourceRepoUri, "src/maestro-test1");
+                
+                // Add the excluded asset to src/maestro-test2 to test exclusion behavior
+                await AddDependenciesToLocalRepoWithDirectory(reposFolder.Directory, sourceAssets.Skip(1).ToList(), sourceRepoUri, "src/maestro-test2");
+
+                TestContext.WriteLine("Pushing branch to remote");
+                await GitCommitAsync("Add dependencies to multiple directories");
+                await using (await PushGitBranchAsync("origin", targetBranch))
+                {
+                    TestContext.WriteLine("Trigger the dependency update");
+                    await TriggerSubscriptionAsync(subscription1Id.Value);
+
+                    TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
+
+                    var expectedPRTitle = $"[{targetBranch}] Update dependencies from {TestParameters.GitHubTestOrg}/{sourceRepoName}";
+                    await CheckGitHubPullRequestWithTargetDirectories(
+                        expectedPRTitle,
+                        targetRepoName,
+                        targetBranch,
+                        expectedDependenciesByDirectory1,
+                        reposFolder.Directory,
+                        isCompleted: false,
+                        isUpdated: false,
+                        cleanUp: false);
+
+                    TestContext.WriteLine("Set the second build for intake into target repository");
+                    Build build2 = await CreateBuildAsync(sourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit, SourceBuildNumber, build2Assets);
+                    await AddBuildToChannelAsync(build2.Id, testChannelName);
+
+                    TestContext.WriteLine("Trigger the dependency update");
+                    await TriggerSubscriptionAsync(subscription1Id.Value);
+
+                    TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
+
+                    await CheckGitHubPullRequestWithTargetDirectories(
+                        expectedPRTitle,
+                        targetRepoName,
+                        targetBranch,
+                        expectedDependenciesByDirectory2,
+                        reposFolder.Directory,
+                        isCompleted: false,
+                        isUpdated: true,
+                        cleanUp: true);
+                }
+            }
+        }
+    }
+
+    public static void GitHubMultipleTargetDirectories()
+    {
+
+    }
 }

@@ -153,9 +153,9 @@ public class Local
     /// <summary>
     ///     Gets the local dependencies
     /// </summary>
-    public async Task<List<DependencyDetail>> GetDependenciesAsync(string name = null, bool includePinned = true)
+    public async Task<List<DependencyDetail>> GetDependenciesAsync(string name = null, bool includePinned = true, UnixPath relativeBasePath = null)
     {
-        VersionDetails versionDetails = await _fileManager.ParseVersionDetailsXmlAsync(_repoRootDir.Value, null, includePinned);
+        VersionDetails versionDetails = await _fileManager.ParseVersionDetailsXmlAsync(_repoRootDir.Value, null, includePinned, relativeBasePath);
         return versionDetails.Dependencies
             .Where(dependency => string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
             .ToList();

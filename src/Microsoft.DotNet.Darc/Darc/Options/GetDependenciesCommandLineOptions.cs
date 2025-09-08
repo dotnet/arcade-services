@@ -11,4 +11,7 @@ internal class GetDependenciesCommandLineOptions : CommandLineOptions<GetDepende
 {
     [Option('n', "name", HelpText = "Name of dependency to query for.")]
     public string Name { get; set; }
+
+    [Option("relative-base-path", HelpText = "Used for VMR repos. Relative base path of the repo the dependency is being added to (e.g. src/sdk)", Required = false)]
+    public string RelativeBasePath { get; set; } = null;
 }
