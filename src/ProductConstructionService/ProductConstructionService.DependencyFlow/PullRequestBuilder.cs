@@ -143,21 +143,19 @@ internal class PullRequestBuilder : IPullRequestBuilder
         var update = requiredUpdates.SubscriptionUpdate;
         var build = await _barClient.GetBuildAsync(update.BuildId);
 
-        StringBuilder nonCoherencyCommitMessage = new($"Update dependencies from {update.SourceRepo} build {build.AzureDevOpsBuildNumber}");
-        nonCoherencyCommitMessage.AppendLine();
-        StringBuilder coherencyCommitMessage = new("Dependency coherency updates");
-        coherencyCommitMessage.AppendLine();
+        StringBuilder nonCoherencyCommitMessage = new();
+        StringBuilder coherencyCommitMessage = new();
         List<GitFile> updatedDependencies = [];
         Dictionary<UnixPath, List<DependencyUpdate>> nonCoherencyUpdatesPerDirectory = [];
         Dictionary<UnixPath, List<DependencyUpdate>> coherencyUpdatesPerDirectory = [];
         List<GitFile> targetDirectoryUpdatedDependencies = [];
 
-        // Go through reach target directory and get the updated git files
+        // Go through each target directory and get the updated git files
         foreach (var (targetDirectory, targetRepoDirectoryUpdates) in requiredUpdates.DirectoryUpdates)
         {
             var nonCoherencyUpdates =
                 targetRepoDirectoryUpdates.NonCoherencyUpdates;
-            List<DependencyUpdate>? coherencyUpdates = targetRepoDirectoryUpdates.CoherencyUpdates;
+            var coherencyUpdates = targetRepoDirectoryUpdates.CoherencyUpdates;
 
             List<DependencyDetail> itemsToUpdate = [];
 
@@ -191,6 +189,16 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
         if (updatedDependencies.Count > 0)
         {
+            if (nonCoherencyCommitMessage.Length > 0)
+            {
+                nonCoherencyCommitMessage.Insert(0, $"Update dependencies from {update.SourceRepo} build {build.AzureDevOpsBuildNumber}" + Environment.NewLine);
+                nonCoherencyCommitMessage.AppendLine();
+            }
+            if (coherencyCommitMessage.Length > 0)
+            {
+                coherencyCommitMessage.Insert(0, "Dependency coherency updates" + Environment.NewLine);
+                coherencyCommitMessage.AppendLine();
+            }
             await remote.CommitUpdatesAsync(
                 updatedDependencies,
                 targetRepository,
@@ -218,7 +226,6 @@ internal class PullRequestBuilder : IPullRequestBuilder
             // If the coherency algorithm failed and there are no non-coherency updates and
             // we create an empty commit that describes an issue.
             var message = "Failed to perform coherency update for one or more dependencies.";
-            remote = await _remoteFactory.CreateRemoteAsync(targetRepository);
             await remote.CommitUpdatesAsync(filesToCommit: [], targetRepository, newBranchName, message);
             return $"Coherency update: {message} Please review the GitHub checks or run `darc update-dependencies --coherency-only` locally against {newBranchName} for more information.";
         }

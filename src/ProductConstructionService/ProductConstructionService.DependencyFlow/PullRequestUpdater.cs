@@ -12,7 +12,6 @@ using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
@@ -426,7 +425,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         IEnumerable<MergePolicyEvaluationResult> updatedMergePolicyResults = await _mergePolicyEvaluator.EvaluateAsync(prSummary, remote, policyDefinitions, cachedResults, prInfo.TargetBranchCommitSha);
 
-        MergePolicyEvaluationResults updatedResult = new MergePolicyEvaluationResults(
+        MergePolicyEvaluationResults updatedResult = new(
             updatedMergePolicyResults.ToImmutableList(),
             prInfo.TargetBranchCommitSha);
 

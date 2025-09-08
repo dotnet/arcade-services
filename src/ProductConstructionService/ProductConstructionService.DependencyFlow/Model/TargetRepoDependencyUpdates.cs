@@ -5,6 +5,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.Model;
+
 internal class TargetRepoDependencyUpdates
 {
     public required Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> DirectoryUpdates { get; set; }

@@ -231,7 +231,7 @@ public sealed class Remote : IRemote
             targetDotNetVersion,
             relativeBasePath: relativeDependencyBasePath);
 
-        List <GitFile> filesToCommit = [];
+        List<GitFile> filesToCommit = [];
 
         if (mayNeedArcadeUpdate)
         {
@@ -261,13 +261,11 @@ public sealed class Remote : IRemote
                         f.Operation))
                     .ToList();
             }
-            else
+            else if (relativeDependencyBasePath.ToString() != ".")
             {
                 engCommonFiles = engCommonFiles
                     .Select(f => new GitFile(
-                        relativeDependencyBasePath.ToString() == "."
-                            ? f.FilePath
-                            : relativeDependencyBasePath / f.FilePath,
+                        relativeDependencyBasePath / f.FilePath,
                         f.Content,
                         f.ContentEncoding,
                         f.Mode,
@@ -400,9 +398,8 @@ public sealed class Remote : IRemote
         UnixPath relativeBasePath = null)
     {
         VersionDetails versionDetails = await _fileManager.ParseVersionDetailsXmlAsync(repoUri, branchOrCommit, relativeBasePath: relativeBasePath);
-        var ret = versionDetails.Dependencies
+        return versionDetails.Dependencies
             .Where(dependency => string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-        return ret;
     }
 
     public async Task<SourceDependency> GetSourceDependencyAsync(string repoUri, string branch)
