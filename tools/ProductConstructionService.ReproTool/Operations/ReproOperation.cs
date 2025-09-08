@@ -26,12 +26,12 @@ internal class ReproOperation(
 {
     internal override async Task RunAsync()
     {
-        var build1 = await prodBarClient.GetBuildAsync(281575);
+        var build1 = await prodBarClient.GetBuildAsync(282247);
         await darcProcessManager.InitializeAsync();
         var testBuild = await CreateBuildAsync(
             "https://github.com/maestro-auth-test/dotnet",
             "branch",
-            "commit",
+            "9d24e131fc9d315b1773a0e080d7b35a0cd8856f",
            CreateAssetDataFromBuild(build1));
         await darcProcessManager.AddBuildToChannelAsync(testBuild.Id, "test", true);
 

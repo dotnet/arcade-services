@@ -162,8 +162,8 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
                 Batchable = batchable,
                 UpdateFrequency = UpdateFrequency.EveryBuild
             },
-            "quail.eating.*"); // This should exclude the "quail.eating.ducks" package
-        
+            excludedAssetPatterns: "quail.eating.*"); // This should exclude the "quail.eating.ducks" package
+
         // Create a build with multiple assets, some matching the exclusion pattern
         Build b = GivenANewBuild(true, [
             ("quail.eating.ducks", "1.1.0", false),      // Should be excluded
@@ -199,7 +199,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
                 Batchable = batchable,
                 UpdateFrequency = UpdateFrequency.EveryBuild
             },
-            "*"); // This should exclude ALL packages
+            excludedAssetPatterns: "*"); // This should exclude ALL packages
         
         // Create a build with assets - all should be excluded
         Build b = GivenANewBuild(true, [
@@ -229,7 +229,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
                 Batchable = batchable,
                 UpdateFrequency = UpdateFrequency.EveryBuild
             },
-            "quail.*"); // Exclude packages starting with "quail"
+            excludedAssetPatterns: "quail.*"); // Exclude packages starting with "quail"
         
         // Create a build with multiple assets
         Build b = GivenANewBuild(true, [

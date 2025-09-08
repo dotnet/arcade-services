@@ -260,12 +260,6 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
                     subscription.SourceDirectory = null;
                     doUpdate = true;
                 }
-
-                if (!string.IsNullOrEmpty(subscription.TargetDirectory))
-                {
-                    subscription.TargetDirectory = null;
-                    doUpdate = true;
-                }
             }
             // Turning on source-enabled will require a source directory
             else if (string.IsNullOrEmpty(subscription.SourceDirectory) && string.IsNullOrEmpty(subscription.TargetDirectory))

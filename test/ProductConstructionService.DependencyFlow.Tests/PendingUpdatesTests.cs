@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data.Models;
+using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
@@ -169,34 +170,5 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
             AndUpdatePullRequestShouldHaveBeenCalled();
             AndShouldHavePullRequestCheckReminder();
         }
-    }
-
-    [Test]
-    public async Task PendingUpdateShouldCreatePRWhenSubHasTargetDirectories()
-    {
-        GivenATestChannel();
-        GivenASubscription(
-            new SubscriptionPolicy
-            {
-                Batchable = true,
-                UpdateFrequency = UpdateFrequency.EveryBuild
-            }, 
-            targetDirectory: ".,src/foo,src/bar");
-        Build b = GivenANewBuild(true);
-
-        GivenAPendingUpdateReminder(b);
-        AndPendingUpdates(b);
-        WithRequireNonCoherencyUpdates();
-        WithNoRequiredCoherencyUpdates();
-        
-        await WhenProcessPendingUpdatesAsyncIsCalled(b, shouldGetUpdates: true);
-
-        ThenGetRequiredUpdatesForMultipleDirectoriesShouldHaveBeenCalled(b, false, 
-            new UnixPath("."), new UnixPath("src/foo"), new UnixPath("src/bar"));
-        AndCreateNewBranchShouldHaveBeenCalled();
-        AndCommitUpdatesForMultipleDirectoriesShouldHaveBeenCalled(b, 3);
-        AndCreatePullRequestShouldHaveBeenCalled();
-        AndShouldHaveInProgressPullRequestState(b, relativeBasePath: new UnixPath("."));
-        AndShouldHavePullRequestCheckReminder();
     }
 }

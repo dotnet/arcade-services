@@ -860,10 +860,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         List<UnixPath> targetDirectories;
         Dictionary<UnixPath, IAssetMatcher> targetDirectoryAssetMatchers;
-        // TODO this can definitely be better, later
         if (string.IsNullOrEmpty(subscription.TargetDirectory))
         {
-            // TODO, does a '.' path work here???
             targetDirectories = [new UnixPath(".")];
             targetDirectoryAssetMatchers = [];
             targetDirectoryAssetMatchers[targetDirectories[0]] = subscription.ExcludedAssets.GetAssetMatcher();

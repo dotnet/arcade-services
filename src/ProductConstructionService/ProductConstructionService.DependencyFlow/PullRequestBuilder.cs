@@ -120,14 +120,10 @@ internal class PullRequestBuilder : IPullRequestBuilder
             return $"[{targetBranch}] Update dependencies to ensure coherency";
         }
 
-        var subs = _context.Subscriptions;
-        var q = subs.Where(s => uniqueSubscriptionIds.Contains(s.Id));
-        var a = q.Where(s => !string.IsNullOrEmpty(s.SourceRepository));
-        var repoNames = await a.Select(s => s.SourceRepository).ToListAsync();
-        //List<string> repoNames = await _context.Subscriptions
-        //    .Where(s => uniqueSubscriptionIds.Contains(s.Id) && !string.IsNullOrEmpty(s.SourceRepository))
-        //    .Select(s => s.SourceRepository!)
-        //    .ToListAsync();
+        List<string> repoNames = await _context.Subscriptions
+            .Where(s => uniqueSubscriptionIds.Contains(s.Id) && !string.IsNullOrEmpty(s.SourceRepository))
+            .Select(s => s.SourceRepository!)
+            .ToListAsync();
 
         return GeneratePRTitle($"[{targetBranch}] Update dependencies from", repoNames);
     }

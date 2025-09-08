@@ -191,7 +191,7 @@ public sealed class Remote : IRemote
         List<DependencyDetail> itemsToUpdate,
         UnixPath relativeDependencyBasePath = null)
     {
-        List<DependencyDetail> oldDependencies = [.. await GetDependenciesAsync(repoUri, branch, relativeDependencyBasePath)];
+        List<DependencyDetail> oldDependencies = (await GetDependenciesAsync(repoUri, branch, relativeBasePath: relativeDependencyBasePath)).ToList();
         await _locationResolver.AddAssetLocationToDependenciesAsync(oldDependencies);
 
         // If we are updating the arcade sdk we need to update the eng/common files
@@ -400,8 +400,9 @@ public sealed class Remote : IRemote
         UnixPath relativeBasePath = null)
     {
         VersionDetails versionDetails = await _fileManager.ParseVersionDetailsXmlAsync(repoUri, branchOrCommit, relativeBasePath: relativeBasePath);
-        return versionDetails.Dependencies
+        var ret = versionDetails.Dependencies
             .Where(dependency => string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        return ret;
     }
 
     public async Task<SourceDependency> GetSourceDependencyAsync(string repoUri, string branch)

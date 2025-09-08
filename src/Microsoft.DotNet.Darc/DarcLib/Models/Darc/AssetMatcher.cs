@@ -52,20 +52,52 @@ public static class AssetFilterExtensions
     private static IReadOnlyCollection<string> GetFiltersForDirectory(this IReadOnlyCollection<string> filters, string directory)
     {
         List<string> dirFilters = [];
+        
+        // Normalize the directory - treat "." as root directory
+        string normalizedDirectory = directory == "." ? string.Empty : directory;
+        
         foreach (var filter in filters)
         {
-            var filterParts = filter.Split(':', StringSplitOptions.RemoveEmptyEntries);
-            if (filterParts.Length != 2)
+            var lastSlash = filter.LastIndexOf('/');
+            
+            if (lastSlash == -1)
             {
-                throw new ArgumentException($"Invalid filter format: {filter}. Expected format is 'directory_pattern:asset_pattern'.");
+                // No slash in filter - this is a root-level pattern
+                if (string.IsNullOrEmpty(normalizedDirectory))
+                {
+                    dirFilters.Add(filter);
+                }
             }
-
-            var dirMatcher = new Matcher().AddInclude(filterParts[0]);
-            if (!dirMatcher.Match(directory).HasMatches)
+            else
             {
-                dirFilters.Add(filterParts[1]);
+                var filterPath = filter.Substring(0, lastSlash);
+                var assetPattern = filter.Substring(lastSlash + 1);
+
+                // If filterPath is "*" or "**", it applies to all directories
+                if (filterPath == "*" || filterPath == "**")
+                {
+                    dirFilters.Add(assetPattern);
+                }
+                else
+                {
+                    if (string.IsNullOrEmpty(normalizedDirectory))
+                    {
+                        continue;
+                    }
+
+                    // Use Matcher to check if the directory matches the filter path pattern
+                    var pathMatcher = new Matcher();
+                    pathMatcher.AddInclude(filterPath);
+                    
+                    // Check if this filter applies to the current directory using glob matching
+                    if (pathMatcher.Match(normalizedDirectory).HasMatches)
+                    {
+                        dirFilters.Add(assetPattern);
+                    }
+                }
             }
         }
+        
         return dirFilters;
     }
 }

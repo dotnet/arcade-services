@@ -233,21 +233,25 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         pr.Description.Should().Contain("[1]:");
     }
 
-    protected void CreatePullRequestShouldReturnAValidValue()
+    protected void CreatePullRequestShouldReturnAValidValue(string? targetRepo = null, string? prUrl = null)
     {
-        var targetRepo = Subscription.TargetDirectory != null ? VmrUri : TargetRepo;
-        var prUrl = Subscription.TargetDirectory != null ? VmrPullRequestUrl : InProgressPrUrl;
+        var repo = string.IsNullOrEmpty(targetRepo)
+            ? Subscription.TargetDirectory != null ? VmrUri : TargetRepo
+            : targetRepo;
+        var url = string.IsNullOrEmpty(prUrl)
+            ? Subscription.TargetDirectory != null ? VmrPullRequestUrl : InProgressPrUrl
+            : prUrl;
 
-        DarcRemotes.GetOrAddValue(targetRepo, () => new Mock<IRemote>())
+        DarcRemotes.GetOrAddValue(repo, () => new Mock<IRemote>())
             .Setup(s => s.CreatePullRequestAsync(It.IsAny<string>(), It.IsAny<PullRequest>()))
             .Callback<string, PullRequest>((repo, pr) =>
             {
-                if (targetRepo == VmrUri)
+                if (repo == VmrUri)
                 {
                     InProgressPrHeadBranch = pr.HeadBranch;
                 }
             })
-            .ReturnsAsync(prUrl);
+            .ReturnsAsync(url);
     }
 
     protected void AndUpdatePullRequestShouldHaveBeenCalled()
@@ -553,11 +557,13 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         return Disposable.Create(remote.VerifyAll);
     }
 
-    protected void AndShouldHavePullRequestCheckReminder()
+    protected void AndShouldHavePullRequestCheckReminder(string? url = null)
     {
-        var prUrl = Subscription.SourceEnabled
-            ? VmrPullRequestUrl
-            : InProgressPrUrl;
+        var prUrl = string.IsNullOrEmpty(url)
+            ? Subscription.SourceEnabled
+                ? VmrPullRequestUrl
+                : InProgressPrUrl
+            : url;
 
         SetExpectedReminder(Subscription, new PullRequestCheck()
         {
@@ -582,11 +588,15 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         InProgressPullRequestState prState = InProgressPullRequestState.Mergeable,
         Func<Asset, bool>? assetFilter = null,
         bool? sourceRepoNotified = null,
-        UnixPath? relativeBasePath = null)
+        UnixPath? relativeBasePath = null,
+        string? url = null,
+        List<DependencyUpdateSummary>? dependencyUpdates = null)
     {
-        var prUrl = Subscription.SourceEnabled
-            ? VmrPullRequestUrl
-            : InProgressPrUrl;
+        var prUrl = string.IsNullOrEmpty(url)
+            ? Subscription.SourceEnabled
+                ? VmrPullRequestUrl
+                : InProgressPrUrl
+            : url;
 
         SetExpectedPullRequestState(
             Subscription,
@@ -601,7 +611,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     prState,
                     assetFilter,
                     sourceRepoNotified: sourceRepoNotified,
-                    relativeBasePath));
+                    relativeBasePath,
+                    dependencyUpdates: dependencyUpdates));
     }
 
     protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, int nextBuildToProcess = 0, InProgressPullRequest? expectedState = null, bool? sourceRepoNotified = null, UnixPath? relativeBasePath = null)
@@ -659,7 +670,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             InProgressPullRequestState prState = InProgressPullRequestState.Mergeable,
             Func<Asset, bool>? assetFilter = null,
             bool? sourceRepoNotified = null,
-            UnixPath? relativeBasePath = null)
+            UnixPath? relativeBasePath = null,
+            List<DependencyUpdateSummary>? dependencyUpdates = null)
         => new()
         {
             UpdaterId = GetPullRequestUpdaterId().ToString(),
@@ -675,18 +687,19 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     CommitSha = forBuild.Commit
                 }
             ],
-            RequiredUpdates = forBuild.Assets
-                .Where(assetFilter ?? (_ => true))
-                .Select(d => new DependencyUpdateSummary
-                {
-                    DependencyName = d.Name,
-                    FromVersion = d.Version,
-                    ToVersion = d.Version,
-                    FromCommitSha = NewCommit,
-                    ToCommitSha = "sha3333",
-                    RelativeBasePath = relativeBasePath
-                })
-                .ToList(),
+            RequiredUpdates = dependencyUpdates
+                ?? forBuild.Assets
+                    .Where(assetFilter ?? (_ => true))
+                    .Select(d => new DependencyUpdateSummary
+                    {
+                        DependencyName = d.Name,
+                        FromVersion = d.Version,
+                        ToVersion = d.Version,
+                        FromCommitSha = NewCommit,
+                        ToCommitSha = "sha3333",
+                        RelativeBasePath = relativeBasePath
+                    })
+                    .ToList(),
             CoherencyCheckSuccessful = coherencyCheckSuccessful,
             CoherencyErrors = coherencyErrors,
             Url = prUrl,
