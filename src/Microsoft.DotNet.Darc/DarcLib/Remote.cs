@@ -201,7 +201,7 @@ public sealed class Remote : IRemote
         SemanticVersion targetDotNetVersion = null;
         // If arcadeItem is not null, we need to update eng/common for dependency flow subscriptions that don't target the repo root
         // We need the "." root check because we don't want to update the root eng/common in arcade -> arcade and vmr -> vmr (sdk) band scenarios
-        var mayNeedArcadeUpdate = arcadeItem != null && (repoUri != arcadeItem.RepoUri || relativeDependencyBasePath != null);
+        var mayNeedArcadeUpdate = arcadeItem != null && (repoUri != arcadeItem.RepoUri || relativeDependencyBasePath.ToString() != ".");
         // If we find version files in src/arcade, we know the source repo is the VMR
         var repoIsVmr = true;
         var sourceRelativeBasePath = VmrInfo.ArcadeRepoDir;

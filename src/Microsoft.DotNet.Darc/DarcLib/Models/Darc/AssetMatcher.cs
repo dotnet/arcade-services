@@ -30,9 +30,9 @@ public static class AssetFilterExtensions
     /// <summary>
     /// Creates asset matchers for each target directory based on applicable filters.
     /// </summary>
-    public static NullSafeUnixPathDictionary<IAssetMatcher> GetAssetMatchersPerDirectory(this IReadOnlyCollection<string> filters, List<UnixPath> targetDirectories)
+    public static Dictionary<UnixPath, IAssetMatcher> GetAssetMatchersPerDirectory(this IReadOnlyCollection<string> filters, List<UnixPath> targetDirectories)
     {
-        NullSafeUnixPathDictionary<IAssetMatcher > assetMatcherDictionary = [];
+        Dictionary<UnixPath, IAssetMatcher> assetMatcherDictionary = [];
         foreach (var dir in targetDirectories)
         {
             var directoryFilters = GetFiltersForDirectory(filters, dir);

@@ -9,7 +9,7 @@ namespace ProductConstructionService.DependencyFlow.Model;
 
 internal class TargetRepoDependencyUpdates
 {
-    public required NullSafeUnixPathDictionary<TargetRepoDirectoryDependencyUpdates> DirectoryUpdates { get; set; }
+    public required Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> DirectoryUpdates { get; set; }
     public required SubscriptionUpdateWorkItem SubscriptionUpdate { get; set; }
     public bool CoherencyCheckSuccessful => DirectoryUpdates.Values.All(v => v.CoherencyCheckSuccessful);
 
