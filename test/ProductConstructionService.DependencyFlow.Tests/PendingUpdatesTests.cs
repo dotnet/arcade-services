@@ -50,7 +50,7 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
         {
             await WhenProcessPendingUpdatesAsyncIsCalled(b, shouldGetUpdates: true);
 
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true, relativeBasePath: new UnixPath("."));
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
             ThenUpdateReminderIsRemoved();
             AndPendingUpdateIsRemoved();
             AndCommitUpdatesShouldHaveBeenCalled(b);
@@ -155,7 +155,7 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
         {
             await WhenProcessPendingUpdatesAsyncIsCalled(b, forceUpdate: true, shouldGetUpdates: true);
 
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true, relativeBasePath: new UnixPath("."));
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
             ThenUpdateReminderIsRemoved();
             AndPendingUpdateIsRemoved();
             AndCommitUpdatesShouldHaveBeenCalled(b);

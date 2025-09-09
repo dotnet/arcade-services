@@ -51,7 +51,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             update,
             nonCoherencyUpdates: [],
             coherencyUpdates: deps,
-            new UnixPath("."));
+            UnixPath.Empty);
 
         var description = await GeneratePullRequestDescription(requiredUpdates);
         description.ToString().Should().Contain(BuildCorrectPRDescriptionWhenCoherencyUpdate(deps));

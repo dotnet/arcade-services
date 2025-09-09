@@ -31,12 +31,12 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
         await WhenUpdateAssetsAsyncIsCalled(b, shouldGetUpdates: true);
 
-        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false, relativeBasePath: new UnixPath("."));
+        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false);
         AndCreateNewBranchShouldHaveBeenCalled();
         AndCommitUpdatesShouldHaveBeenCalled(b);
         AndCreatePullRequestShouldHaveBeenCalled();
         AndShouldHavePullRequestCheckReminder();
-        AndShouldHaveInProgressPullRequestState(b, relativeBasePath: new UnixPath("."));
+        AndShouldHaveInProgressPullRequestState(b, relativeBasePath: UnixPath.Empty);
     }
 
     [TestCase(false)]
@@ -59,7 +59,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
         {
             await WhenUpdateAssetsAsyncIsCalled(b, shouldGetUpdates: true);
 
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true, relativeBasePath: UnixPath.Empty);
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
             AndCommitUpdatesShouldHaveBeenCalled(b);
             AndUpdatePullRequestShouldHaveBeenCalled();
             AndShouldHavePullRequestCheckReminder();
@@ -109,7 +109,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
         await WhenUpdateAssetsAsyncIsCalled(b);
 
-        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false, relativeBasePath: new UnixPath("."));
+        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false);
         AndSubscriptionShouldBeUpdatedForMergedPullRequest(b);
     }
 
@@ -133,7 +133,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
         await WhenUpdateAssetsAsyncIsCalled(b, shouldGetUpdates: true);
 
-        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false, relativeBasePath: new UnixPath("."));
+        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false);
         AndCreateNewBranchShouldHaveBeenCalled();
         AndCommitUpdatesShouldHaveBeenCalled(b);
         AndCreatePullRequestShouldHaveBeenCalled();
@@ -148,7 +148,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
                         PotentialSolutions = new List<string>()
                     }
             ],
-            relativeBasePath: new UnixPath("."));
+            relativeBasePath: UnixPath.Empty);
     }
 
     [TestCase(false)]
@@ -180,12 +180,12 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
         await WhenUpdateAssetsAsyncIsCalled(b, shouldGetUpdates: true);
 
-        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false, assetFilter, relativeBasePath: new UnixPath("."));
+        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false, assetFilter);
         AndCreateNewBranchShouldHaveBeenCalled();
         AndCommitUpdatesShouldHaveBeenCalled(b, assetFilter);
         AndCreatePullRequestShouldHaveBeenCalled();
         AndShouldHavePullRequestCheckReminder();
-        AndShouldHaveInProgressPullRequestState(b, assetFilter: assetFilter, relativeBasePath: new UnixPath("."));
+        AndShouldHaveInProgressPullRequestState(b, assetFilter: assetFilter, relativeBasePath: UnixPath.Empty);
     }
 
     [TestCase(false)]
@@ -214,7 +214,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
         await WhenUpdateAssetsAsyncIsCalled(b);
 
         // Verify that no assets were passed to GetRequiredNonCoherencyUpdates (all excluded)
-        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false, asset => false, relativeBasePath: new UnixPath("."));
+        ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false, asset => false);
         AndSubscriptionShouldBeUpdatedForMergedPullRequest(b);
     }
 
@@ -248,7 +248,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
             await WhenUpdateAssetsAsyncIsCalled(b, shouldGetUpdates: true);
 
             // Verify that only non-excluded assets were passed
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true, assetFilter, relativeBasePath: UnixPath.Empty);
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true, assetFilter);
             AndCommitUpdatesShouldHaveBeenCalled(b, assetFilter);
             AndUpdatePullRequestShouldHaveBeenCalled();
             AndShouldHavePullRequestCheckReminder();

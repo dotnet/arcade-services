@@ -203,7 +203,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             },
             targetDirectory: ".,src/foo,src/bar");
         Build b = GivenANewBuild(true);
-        UnixPath path1 = new UnixPath(".");
+        UnixPath path1 = UnixPath.Empty;
         UnixPath path2 = new UnixPath("src/foo");
         UnixPath path3 = new UnixPath("src/bar");
         UnixPath[] targetDirectories = [path1, path2, path3];

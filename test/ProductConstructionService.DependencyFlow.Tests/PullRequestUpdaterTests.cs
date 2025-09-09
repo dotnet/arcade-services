@@ -86,10 +86,11 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.IsAny<PullRequest>()));
     }
 
-    protected void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild, bool prExists, Func<Asset, bool>? assetFilter = null, UnixPath? relativeBasePath = null)
+    protected void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild, bool prExists, Func<Asset, bool>? assetFilter = null)
     {
         var assets = new List<IReadOnlyCollection<AssetData>>();
         var dependencies = new List<IReadOnlyCollection<DependencyDetail>>();
+        var relativeBasePath = UnixPath.Empty;
 
         UpdateResolver
             .Verify(r => r.GetRequiredNonCoherencyUpdates(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)));
