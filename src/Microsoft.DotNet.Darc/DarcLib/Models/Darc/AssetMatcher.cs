@@ -27,7 +27,10 @@ public static class AssetFilterExtensions
         return new AssetMatcher(matcher);
     }
 
-    public static Dictionary<UnixPath, IAssetMatcher> GetAssetMatchers(this IReadOnlyCollection<string> filters, List<UnixPath> targetDirectories)
+    /// <summary>
+    /// Creates asset matchers for each target directory based on applicable filters.
+    /// </summary>
+    public static Dictionary<UnixPath, IAssetMatcher> GetAssetMatchersPerDirectory(this IReadOnlyCollection<string> filters, List<UnixPath> targetDirectories)
     {
         Dictionary<UnixPath, IAssetMatcher> assetMatcherDictionary = [];
         foreach (var dir in targetDirectories)
@@ -59,7 +62,7 @@ public static class AssetFilterExtensions
         foreach (var filter in filters)
         {
             var lastSlash = filter.LastIndexOf('/');
-            
+
             if (lastSlash == -1)
             {
                 // No slash in filter - this is a root-level pattern
@@ -67,34 +70,29 @@ public static class AssetFilterExtensions
                 {
                     dirFilters.Add(filter);
                 }
+                continue;
             }
-            else
+
+            var filterPath = filter.Substring(0, lastSlash);
+            var assetPattern = filter.Substring(lastSlash + 1);
+            // If filterPath is "*" or "**", it applies to all directories
+            if (filterPath == "*" || filterPath == "**")
             {
-                var filterPath = filter.Substring(0, lastSlash);
-                var assetPattern = filter.Substring(lastSlash + 1);
+                dirFilters.Add(assetPattern);
+                continue;
+            }
+            if (string.IsNullOrEmpty(normalizedDirectory))
+            {
+                continue;
+            }
+            // Use Matcher to check if the directory matches the filter path pattern
+            var pathMatcher = new Matcher();
+            pathMatcher.AddInclude(filterPath);
 
-                // If filterPath is "*" or "**", it applies to all directories
-                if (filterPath == "*" || filterPath == "**")
-                {
-                    dirFilters.Add(assetPattern);
-                }
-                else
-                {
-                    if (string.IsNullOrEmpty(normalizedDirectory))
-                    {
-                        continue;
-                    }
-
-                    // Use Matcher to check if the directory matches the filter path pattern
-                    var pathMatcher = new Matcher();
-                    pathMatcher.AddInclude(filterPath);
-                    
-                    // Check if this filter applies to the current directory using glob matching
-                    if (pathMatcher.Match(normalizedDirectory).HasMatches)
-                    {
-                        dirFilters.Add(assetPattern);
-                    }
-                }
+            // Check if this filter applies to the current directory using glob matching
+            if (pathMatcher.Match(normalizedDirectory).HasMatches)
+            {
+                dirFilters.Add(assetPattern);
             }
         }
         

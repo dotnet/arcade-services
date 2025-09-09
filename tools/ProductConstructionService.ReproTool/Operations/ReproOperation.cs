@@ -26,25 +26,6 @@ internal class ReproOperation(
 {
     internal override async Task RunAsync()
     {
-        var build1 = await prodBarClient.GetBuildAsync(282247);
-        await darcProcessManager.InitializeAsync();
-        var testBuild = await CreateBuildAsync(
-            "https://github.com/maestro-auth-test/dotnet",
-            "branch",
-            "9d24e131fc9d315b1773a0e080d7b35a0cd8856f",
-           CreateAssetDataFromBuild(build1));
-        await darcProcessManager.AddBuildToChannelAsync(testBuild.Id, "test", true);
-
-
-        await using var testSubscription = await darcProcessManager.CreateSubscriptionAsync(
-            channel: "test",
-            sourceRepo: "https://github.com/maestro-auth-test/dotnet",
-            targetRepo: "https://github.com/maestro-auth-test/dotnet",
-            targetBranch: "dkurepa/SdkBandsTest",
-            sourceEnabled: false,
-            sourceDirectory: null,
-            targetDirectory: ".,src/sdk,src/templating",
-            skipCleanup: true);
         logger.LogInformation("Fetching {subscriptionId} subscription from BAR",
             options.Subscription);
         var subscription = await prodBarClient.GetSubscriptionAsync(options.Subscription);

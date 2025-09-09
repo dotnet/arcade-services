@@ -232,7 +232,7 @@ internal abstract class Operation(
             .Select(asset => new AssetData(false)
             {
                 Name = asset.Name,
-                Version = asset.Version + "1",
+                Version = asset.Version,
                 Locations = asset.Locations?.Select(location => new AssetLocationData(location.Type) { Location = location.Location }).ToList()
             })
             .ToList();

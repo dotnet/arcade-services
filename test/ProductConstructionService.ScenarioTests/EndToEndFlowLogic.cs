@@ -679,9 +679,4 @@ internal abstract class TestLogic : ScenarioTestBase
             }
         }
     }
-
-    public static void GitHubMultipleTargetDirectories()
-    {
-
-    }
 }

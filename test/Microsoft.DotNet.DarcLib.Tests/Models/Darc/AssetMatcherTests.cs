@@ -27,7 +27,7 @@ public class AssetMatcherTests
         UnixPath path3 = new("src/templating");
         var directories = new List<UnixPath> { path1, path2, path3 };
 
-        var matchers = filters.GetAssetMatchers(directories);
+        var matchers = filters.GetAssetMatchersPerDirectory(directories);
 
         matchers[path1].IsExcluded("Package3").Should().BeTrue();
         matchers[path1].IsExcluded("Package1").Should().BeFalse();

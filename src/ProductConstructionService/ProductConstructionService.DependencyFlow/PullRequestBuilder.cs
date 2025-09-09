@@ -153,8 +153,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         // Go through each target directory and get the updated git files
         foreach (var (targetDirectory, targetRepoDirectoryUpdates) in requiredUpdates.DirectoryUpdates)
         {
-            var nonCoherencyUpdates =
-                targetRepoDirectoryUpdates.NonCoherencyUpdates;
+            var nonCoherencyUpdates = targetRepoDirectoryUpdates.NonCoherencyUpdates;
             var coherencyUpdates = targetRepoDirectoryUpdates.CoherencyUpdates;
 
             List<DependencyDetail> itemsToUpdate = [];
@@ -651,10 +650,10 @@ internal class PullRequestBuilder : IPullRequestBuilder
                 // Write each dependency in the group
                 foreach (var dep in group)
                 {
-                    subscriptionSection.AppendLine($"       - {dep.To.Name}");
+                    subscriptionSection.Append("       - ");
+                    subscriptionSection.AppendLine(dep.To.Name);
                 }
             }
-            // maybe this for loop is not correct and should go further?
         }
 
         subscriptionSection.AppendLine();

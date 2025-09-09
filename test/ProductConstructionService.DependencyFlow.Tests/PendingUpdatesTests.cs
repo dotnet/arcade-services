@@ -2,9 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data.Models;
-using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -12,12 +10,6 @@ namespace ProductConstructionService.DependencyFlow.Tests;
 [TestFixture, NonParallelizable]
 internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
 {
-
-    protected override void RegisterServices(IServiceCollection services)
-    {
-        base.RegisterServices(services);
-    }
-
     [Test]
     public async Task PendingUpdatesNotUpdatablePr()
     {

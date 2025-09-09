@@ -584,7 +584,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     BaseBranch = targetBranch,
                     HeadBranch = newBranchName,
                 });
-            var agregatedCoherencyErrors = repoDependencyUpdates.DirectoryUpdates.Values.SelectMany(update => update.CoherencyErrors ?? []).ToList();
+            List<CoherencyErrorDetails> agregatedCoherencyErrors = repoDependencyUpdates.GetAgregatedCoherencyErrors();
 
             InProgressPullRequest inProgressPr = new()
             {
@@ -629,7 +629,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     HeadBranch = newBranchName,
                 });
 
-            var agregatedCoherencyErrors = repoDependencyUpdates.DirectoryUpdates.Values.SelectMany(update => update.CoherencyErrors ?? []).ToList();
+            List<CoherencyErrorDetails> agregatedCoherencyErrors = repoDependencyUpdates.GetAgregatedCoherencyErrors();
 
             var inProgressPr = new InProgressPullRequest
             {
@@ -728,7 +728,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
         pr.CoherencyCheckSuccessful = repoDependencyUpdates.CoherencyCheckSuccessful;
-        var agregatedCoherencyErrors = repoDependencyUpdates.DirectoryUpdates.Values.SelectMany(update => update.CoherencyErrors ?? []).ToList();
+        List<CoherencyErrorDetails> agregatedCoherencyErrors = repoDependencyUpdates.GetAgregatedCoherencyErrors();
         pr.CoherencyErrors = agregatedCoherencyErrors.Count > 0 ? agregatedCoherencyErrors : null;
 
         List<SubscriptionPullRequestUpdate> previousSubscriptions = [.. pr.ContainedSubscriptions];
@@ -799,10 +799,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         // so we'll update them
         foreach (var update in existingUpdates)
         {
-            if (update.RelativeBasePath == null)
-            {
-                update.RelativeBasePath = new UnixPath(".");
-            }
+            update.RelativeBasePath ??= new UnixPath(".");
         }
         IEnumerable<DependencyUpdateSummary> mergedUpdates = existingUpdates
             .Select(u =>
@@ -868,7 +865,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         else
         {
             targetDirectories = subscription.TargetDirectory.Split(',').Select(d => new UnixPath(d)).ToList();
-            targetDirectoryAssetMatchers = subscription.ExcludedAssets.GetAssetMatchers(targetDirectories);
+            targetDirectoryAssetMatchers = subscription.ExcludedAssets.GetAssetMatchersPerDirectory(targetDirectories);
         }
 
         foreach (var (targetDirectory, excludedAssetsMatcher) in targetDirectoryAssetMatchers)
