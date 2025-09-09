@@ -132,9 +132,9 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
             return repoProp;
         }
 
-        if (repoProp.Value is List<string> repoValues)
+        if (repoProp.Value is IEnumerable<string> repoArray && vmrProp is IEnumerable<string> vmrArray)
         {
-            var mergedLists = repoValues.Concat((List<string>)vmrProp.Value).Distinct().ToList();
+            List<string> mergedLists = [.. repoArray.Concat(vmrArray).Distinct()];
             return new JsonVersionProperty(repoProp.Name, NodeComparisonResult.Updated, mergedLists);
         }
 

@@ -118,7 +118,6 @@ public class VersionDetailsFileMerger : VmrVersionFileMerger, IVersionDetailsFil
         // Pair dependencies with the same name
         foreach (var dep in after.Dependencies)
         {
-
             var existing = dependencyChanges.FirstOrDefault(d => d.From?.Name == dep.Name);
             if (existing != null)
             {

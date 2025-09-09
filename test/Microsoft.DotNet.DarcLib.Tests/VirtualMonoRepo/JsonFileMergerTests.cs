@@ -544,7 +544,7 @@ public class JsonFileMergerTests
             It.IsAny<string>()), Times.Once);
     }
 
-    private bool ValidateGitFile(GitFile file, string expectedContent, GitFileOperation operation)
+    private static bool ValidateGitFile(GitFile file, string expectedContent, GitFileOperation operation)
     {
         var normalizedFileContent = file.Content.Trim().Replace("\r\n", "\n");
         var expectedContentNormalized = expectedContent.Trim().Replace("\r\n", "\n");
