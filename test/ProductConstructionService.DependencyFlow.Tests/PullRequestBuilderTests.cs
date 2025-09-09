@@ -764,7 +764,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
 
         foreach (var (relativePath, updatedDependencies) in updatedDependenciesPerPath)
         {
-            builder.AppendLine($"  - RelativePath: {(UnixPath.IsRootPath(relativePath) ? "root" : relativePath)}");
+            builder.AppendLine($"  - RelativePath: {(UnixPath.IsEmptyPath(relativePath) ? "root" : relativePath)}");
             var dependencyGroups = updatedDependencies
                 .GroupBy(dep => new
                 {

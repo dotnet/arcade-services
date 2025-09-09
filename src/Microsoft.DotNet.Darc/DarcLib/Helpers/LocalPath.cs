@@ -155,18 +155,18 @@ public class UnixPath : LocalPath
 
     protected override string NormalizePath(string s) => s.Replace('\\', '/');
 
-    public static bool IsRootPath(string path) => path.Length == 0 || path == null || path[0] == '.';
+    public static bool IsEmptyPath(string path) => path.Length == 0 || path == null || path[0] == '.';
 
     public override bool Equals(object? obj)
     {
-        if (obj is null) return IsRootPath(Path);
+        if (obj is null) return IsEmptyPath(Path);
         
-        if (obj is string str) return IsRootPath(Path) ? IsRootPath(str) : Path.Equals(str);
+        if (obj is string str) return IsEmptyPath(Path) ? IsEmptyPath(str) : Path.Equals(str);
         
         if (obj is UnixPath unixPath)
         {
             // Both are root paths - they're equal
-            if (IsRootPath(Path) && IsRootPath(unixPath.Path)) 
+            if (IsEmptyPath(Path) && IsEmptyPath(unixPath.Path)) 
             {
                 return true;
             }
@@ -178,7 +178,7 @@ public class UnixPath : LocalPath
         return base.Equals(obj);
     }
 
-    public override int GetHashCode() => IsRootPath(Path) ? 0 : Path.GetHashCode();
+    public override int GetHashCode() => IsEmptyPath(Path) ? 0 : Path.GetHashCode();
 }
 
 /// <summary>
