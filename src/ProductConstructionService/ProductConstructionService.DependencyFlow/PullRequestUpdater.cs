@@ -584,7 +584,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     BaseBranch = targetBranch,
                     HeadBranch = newBranchName,
                 });
-            List<CoherencyErrorDetails> agregatedCoherencyErrors = repoDependencyUpdates.GetAgregatedCoherencyErrors();
+            List<CoherencyErrorDetails> aggregatedCoherencyErrors = repoDependencyUpdates.GetAgregatedCoherencyErrors();
 
             InProgressPullRequest inProgressPr = new()
             {
@@ -595,7 +595,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 ContainedSubscriptions = [],
                 RequiredUpdates = [],
                 CoherencyCheckSuccessful = false,
-                CoherencyErrors = agregatedCoherencyErrors.Count > 0 ? agregatedCoherencyErrors : null,
+                CoherencyErrors = aggregatedCoherencyErrors.Count > 0 ? aggregatedCoherencyErrors : null,
                 CodeFlowDirection = CodeFlowDirection.None,
             };
 
@@ -629,7 +629,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     HeadBranch = newBranchName,
                 });
 
-            List<CoherencyErrorDetails> agregatedCoherencyErrors = repoDependencyUpdates.GetAgregatedCoherencyErrors();
+            List<CoherencyErrorDetails> aggregatedCoherencyErrors = repoDependencyUpdates.GetAgregatedCoherencyErrors();
 
             var inProgressPr = new InProgressPullRequest
             {
@@ -648,7 +648,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     .ToList(),
 
                 CoherencyCheckSuccessful = repoDependencyUpdates.CoherencyCheckSuccessful,
-                CoherencyErrors = agregatedCoherencyErrors.Count > 0 ? agregatedCoherencyErrors : null,
+                CoherencyErrors = aggregatedCoherencyErrors.Count > 0 ? aggregatedCoherencyErrors : null,
                 CodeFlowDirection = CodeFlowDirection.None,
             };
 
@@ -728,8 +728,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
         pr.CoherencyCheckSuccessful = repoDependencyUpdates.CoherencyCheckSuccessful;
-        List<CoherencyErrorDetails> agregatedCoherencyErrors = repoDependencyUpdates.GetAgregatedCoherencyErrors();
-        pr.CoherencyErrors = agregatedCoherencyErrors.Count > 0 ? agregatedCoherencyErrors : null;
+        List<CoherencyErrorDetails> aggregatedCoherencyErrors = repoDependencyUpdates.GetAgregatedCoherencyErrors();
+        pr.CoherencyErrors = aggregatedCoherencyErrors.Count > 0 ? aggregatedCoherencyErrors : null;
 
         List<SubscriptionPullRequestUpdate> previousSubscriptions = [.. pr.ContainedSubscriptions];
 
@@ -795,12 +795,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         List<DependencyUpdateSummary> existingUpdates,
         List<DependencyUpdateSummary> incomingUpdates)
     {
-        // Already existing PRs (at the time of deployment) will have relative base path for all dependency updates as null, but that really means the root,
-        // so we'll update them
-        foreach (var update in existingUpdates)
-        {
-            update.RelativeBasePath ??= new UnixPath(".");
-        }
         IEnumerable<DependencyUpdateSummary> mergedUpdates = existingUpdates
             .Select(u =>
             {
@@ -848,17 +842,17 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         // Get a remote factory for the target repo
         IRemote darc = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
-        Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> repoDependencyUpdates = new();
+        NullSafeUnixPathDictionary<TargetRepoDirectoryDependencyUpdates> repoDependencyUpdates = new();
 
         // Get subscription to access excluded assets
         var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId)
             ?? throw new ($"Subscription with ID {update.SubscriptionId} not found in the DB.");
 
         List<UnixPath> targetDirectories;
-        Dictionary<UnixPath, IAssetMatcher> targetDirectoryAssetMatchers;
+        NullSafeUnixPathDictionary<IAssetMatcher> targetDirectoryAssetMatchers;
         if (string.IsNullOrEmpty(subscription.TargetDirectory))
         {
-            targetDirectories = [new UnixPath(".")];
+            targetDirectories = [null];
             targetDirectoryAssetMatchers = [];
             targetDirectoryAssetMatchers[targetDirectories[0]] = subscription.ExcludedAssets.GetAssetMatcher();
         }
@@ -1017,7 +1011,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         string targetBranch,
         TargetRepoDependencyUpdates targetRepositoryUpdates)
     {
-        Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> alteredUpdates = new();
+        NullSafeUnixPathDictionary<TargetRepoDirectoryDependencyUpdates> alteredUpdates = new();
         foreach (var (targetDirectory, targetDictionaryRepositoryUpdates) in targetRepositoryUpdates.DirectoryUpdates)
         {
             List<DependencyDetail> targetBranchDeps = [.. await darcRemote.GetDependenciesAsync(targetRepository, targetBranch, relativeBasePath: targetDirectory)];

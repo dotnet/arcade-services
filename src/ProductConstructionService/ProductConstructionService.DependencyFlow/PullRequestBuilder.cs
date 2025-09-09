@@ -146,8 +146,8 @@ internal class PullRequestBuilder : IPullRequestBuilder
         StringBuilder nonCoherencyCommitMessage = new();
         StringBuilder coherencyCommitMessage = new();
         List<GitFile> updatedDependencies = [];
-        Dictionary<UnixPath, List<DependencyUpdate>> nonCoherencyUpdatesPerDirectory = [];
-        Dictionary<UnixPath, List<DependencyUpdate>> coherencyUpdatesPerDirectory = [];
+        NullSafeUnixPathDictionary<List<DependencyUpdate>> nonCoherencyUpdatesPerDirectory = [];
+        NullSafeUnixPathDictionary<List<DependencyUpdate>> coherencyUpdatesPerDirectory = [];
         List<GitFile> targetDirectoryUpdatedDependencies = [];
 
         // Go through each target directory and get the updated git files
@@ -575,7 +575,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         StringBuilder description,
         int startingReferenceId,
         SubscriptionUpdateWorkItem update,
-        Dictionary<UnixPath, List<DependencyUpdate>> updatedDependenciesPerPath,
+        NullSafeUnixPathDictionary<List<DependencyUpdate>> updatedDependenciesPerPath,
         List<GitFile> committedFiles,
         BuildDTO build)
     {
@@ -612,7 +612,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
         foreach (var (relativePath, updatedDependencies) in updatedDependenciesPerPath)
         {
-            subscriptionSection.AppendLine($"  - RelativePath: {relativePath}");
+            subscriptionSection.AppendLine($"  - RelativePath: {relativePath ?? "root"}");
             // Group dependencies by version range and commit range
             var dependencyGroups = updatedDependencies
                 .GroupBy(dep => new
@@ -691,7 +691,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     /// </remarks>
     private static void AppendCoherencyUpdateDescription(
         StringBuilder description,
-        Dictionary<UnixPath, List<DependencyUpdate>> coherencyUpdatesPerDirectory)
+        NullSafeUnixPathDictionary<List<DependencyUpdate>> coherencyUpdatesPerDirectory)
     {
         var sectionStartMarker = "[marker]: <> (Begin:Coherency Updates)";
         var sectionEndMarker = "[marker]: <> (End:Coherency Updates)";
@@ -711,7 +711,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
         foreach (var (targetDirectory, dependencies) in coherencyUpdatesPerDirectory)
         {
-            coherencySection.AppendLine($"  - in {targetDirectory}");
+            coherencySection.AppendLine($"  - in {targetDirectory ?? "root"}");
             foreach (DependencyUpdate dep in dependencies)
             {
                 coherencySection.AppendLine($"    - **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})");
@@ -728,9 +728,9 @@ internal class PullRequestBuilder : IPullRequestBuilder
         description.AppendLine();
     }
 
-    private void AppendNonCoherencyCommitMessage(string relativeBasePath, List<DependencyUpdate> deps, StringBuilder message)
+    private void AppendNonCoherencyCommitMessage(UnixPath? relativeBasePath, List<DependencyUpdate> deps, StringBuilder message)
     {
-        message.AppendLine($"On relative base path {relativeBasePath}");
+        message.AppendLine($"On relative base path {relativeBasePath ?? "root"}");
         
         // Group dependencies by their version changes
         var versionGroups = deps
@@ -745,10 +745,10 @@ internal class PullRequestBuilder : IPullRequestBuilder
         message.AppendLine();
     }
 
-    private void AppendCoherencyCommitMessage(string relativeBasePath, List<DependencyUpdate> deps, StringBuilder message)
+    private void AppendCoherencyCommitMessage(UnixPath? relativeBasePath, List<DependencyUpdate> deps, StringBuilder message)
     {
-        message.AppendLine($"On relative base path {relativeBasePath}");
-        
+        message.AppendLine($"On relative base path {relativeBasePath ?? "root"}");
+
         // Group dependencies by their version changes
         var versionGroups = deps
             .GroupBy(dep => $"From Version {dep.From.Version} -> To Version {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})")
