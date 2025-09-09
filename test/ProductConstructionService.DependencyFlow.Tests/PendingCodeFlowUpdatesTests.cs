@@ -75,7 +75,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             ThenCodeShouldHaveBeenFlownForward(newBuild);
             AndShouldHaveNoPendingUpdateState();
             AndShouldHavePullRequestCheckReminder();
-            AndShouldHaveInProgressPullRequestState(newBuild, relativeBasePath: new UnixPath("."));
+            AndShouldHaveInProgressPullRequestState(newBuild);
         }
     }
 
@@ -154,7 +154,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             ThenCodeShouldHaveBeenFlownForward(newBuild);
             AndShouldHaveNoPendingUpdateState();
             AndShouldHavePullRequestCheckReminder();
-            AndShouldHaveInProgressPullRequestState(newBuild, relativeBasePath: new UnixPath("."));
+            AndShouldHaveInProgressPullRequestState(newBuild);
         }
     }
 }

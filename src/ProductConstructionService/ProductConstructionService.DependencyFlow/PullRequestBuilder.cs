@@ -612,7 +612,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
         foreach (var (relativePath, updatedDependencies) in updatedDependenciesPerPath)
         {
-            subscriptionSection.AppendLine($"  - RelativePath: {relativePath}");
+            subscriptionSection.AppendLine($"  - RelativePath: {(UnixPath.IsRootPath(relativePath) ? "root" : relativePath)}");
             // Group dependencies by version range and commit range
             var dependencyGroups = updatedDependencies
                 .GroupBy(dep => new
@@ -711,7 +711,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
         foreach (var (targetDirectory, dependencies) in coherencyUpdatesPerDirectory)
         {
-            coherencySection.AppendLine($"  - in {targetDirectory}");
+            coherencySection.AppendLine($"  - in {(UnixPath.IsRootPath(targetDirectory) ? "root" : targetDirectory)}");
             foreach (DependencyUpdate dep in dependencies)
             {
                 coherencySection.AppendLine($"    - **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})");
@@ -730,7 +730,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
     private void AppendNonCoherencyCommitMessage(string relativeBasePath, List<DependencyUpdate> deps, StringBuilder message)
     {
-        message.AppendLine($"On relative base path {relativeBasePath}");
+        message.AppendLine($"On relative base path {(UnixPath.IsRootPath(relativeBasePath) ? "root" : relativeBasePath)}");
         
         // Group dependencies by their version changes
         var versionGroups = deps
@@ -747,7 +747,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
     private void AppendCoherencyCommitMessage(string relativeBasePath, List<DependencyUpdate> deps, StringBuilder message)
     {
-        message.AppendLine($"On relative base path {relativeBasePath}");
+        message.AppendLine($"On relative base path {(UnixPath.IsRootPath(relativeBasePath) ? "root" : relativeBasePath)}");
         
         // Group dependencies by their version changes
         var versionGroups = deps

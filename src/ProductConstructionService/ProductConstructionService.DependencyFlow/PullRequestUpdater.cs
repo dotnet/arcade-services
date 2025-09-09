@@ -795,12 +795,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         List<DependencyUpdateSummary> existingUpdates,
         List<DependencyUpdateSummary> incomingUpdates)
     {
-        // Already existing PRs (at the time of deployment) will have relative base path for all dependency updates as null, but that really means the root,
-        // so we'll update them
-        foreach (var update in existingUpdates)
-        {
-            update.RelativeBasePath ??= new UnixPath(".");
-        }
         IEnumerable<DependencyUpdateSummary> mergedUpdates = existingUpdates
             .Select(u =>
             {
@@ -858,7 +852,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         Dictionary<UnixPath, IAssetMatcher> targetDirectoryAssetMatchers;
         if (string.IsNullOrEmpty(subscription.TargetDirectory))
         {
-            targetDirectories = [new UnixPath(".")];
+            targetDirectories = [UnixPath.Empty];
             targetDirectoryAssetMatchers = [];
             targetDirectoryAssetMatchers[targetDirectories[0]] = subscription.ExcludedAssets.GetAssetMatcher();
         }

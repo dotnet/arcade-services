@@ -59,11 +59,11 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
         {
             await WhenUpdateAssetsAsyncIsCalled(b, shouldGetUpdates: true);
 
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true, relativeBasePath: new UnixPath("."));
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true, relativeBasePath: UnixPath.Empty);
             AndCommitUpdatesShouldHaveBeenCalled(b);
             AndUpdatePullRequestShouldHaveBeenCalled();
             AndShouldHavePullRequestCheckReminder();
-            AndShouldHaveInProgressPullRequestState(b, relativeBasePath: new UnixPath("."));
+            AndShouldHaveInProgressPullRequestState(b);
         }
     }
 
@@ -248,11 +248,11 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
             await WhenUpdateAssetsAsyncIsCalled(b, shouldGetUpdates: true);
 
             // Verify that only non-excluded assets were passed
-            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true, assetFilter, relativeBasePath: new UnixPath("."));
+            ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true, assetFilter, relativeBasePath: UnixPath.Empty);
             AndCommitUpdatesShouldHaveBeenCalled(b, assetFilter);
             AndUpdatePullRequestShouldHaveBeenCalled();
             AndShouldHavePullRequestCheckReminder();
-            AndShouldHaveInProgressPullRequestState(b, assetFilter: assetFilter, relativeBasePath: new UnixPath("."));
+            AndShouldHaveInProgressPullRequestState(b, assetFilter: assetFilter);
         }
     }
 }

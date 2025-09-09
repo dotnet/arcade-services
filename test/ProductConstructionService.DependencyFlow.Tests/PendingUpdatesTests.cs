@@ -129,7 +129,7 @@ internal class PendingUpdatesTests : PendingUpdatePullRequestUpdaterTests
         {
             await WhenProcessPendingUpdatesAsyncIsCalled(b2, applyNewestOnly: true, shouldGetUpdates: true);
 
-            ThenShouldHaveInProgressPullRequestState(b2, relativeBasePath: new UnixPath("."));
+            ThenShouldHaveInProgressPullRequestState(b2);
             AndShouldHaveNoPendingUpdateState();
             AndShouldHavePullRequestCheckReminder();
         }

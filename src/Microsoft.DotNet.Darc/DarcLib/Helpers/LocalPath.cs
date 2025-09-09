@@ -138,6 +138,7 @@ public class NativePath : LocalPath
 public class UnixPath : LocalPath
 {
     public static readonly UnixPath CurrentDir = new(".");
+    public static readonly UnixPath Empty = new("");
 
     public UnixPath(string path) : this(path, true)
     {
@@ -154,17 +155,30 @@ public class UnixPath : LocalPath
 
     protected override string NormalizePath(string s) => s.Replace('\\', '/');
 
+    public static bool IsRootPath(string path) => path.Length == 0 || path == null || path[0] == '.';
+
     public override bool Equals(object? obj)
     {
-        if (obj is UnixPath nativePath)
+        if (obj is null) return IsRootPath(Path);
+        
+        if (obj is string str) return IsRootPath(Path) ? IsRootPath(str) : Path.Equals(str);
+        
+        if (obj is UnixPath unixPath)
         {
-            return Path.Equals(nativePath.Path);
+            // Both are root paths - they're equal
+            if (IsRootPath(Path) && IsRootPath(unixPath.Path)) 
+            {
+                return true;
+            }
+            
+            // Regular path comparison
+            return Path.Equals(unixPath.Path);
         }
 
         return base.Equals(obj);
     }
 
-    public override int GetHashCode() => Path.GetHashCode();
+    public override int GetHashCode() => IsRootPath(Path) ? 0 : Path.GetHashCode();
 }
 
 /// <summary>

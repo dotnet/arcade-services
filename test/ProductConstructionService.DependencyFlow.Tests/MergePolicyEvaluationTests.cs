@@ -107,7 +107,7 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
 
             ThenShouldHaveCachedMergePolicyResults(expectedMergePolicyEvaluationResults);
 
-            ThenShouldHaveInProgressPullRequestState(newBuild, sourceRepoNotified: true, relativeBasePath: new UnixPath("."));
+            ThenShouldHaveInProgressPullRequestState(newBuild, sourceRepoNotified: true);
             AndCodeShouldHaveBeenFlownForward(newBuild);
             AndShouldHavePullRequestCheckReminder();
 

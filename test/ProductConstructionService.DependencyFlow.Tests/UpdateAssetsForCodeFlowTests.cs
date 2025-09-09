@@ -133,7 +133,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
 
             await WhenUpdateAssetsAsyncIsCalled(newBuild);
 
-            ThenShouldHaveInProgressPullRequestState(newBuild, relativeBasePath: new UnixPath("."));
+            ThenShouldHaveInProgressPullRequestState(newBuild);
             AndCodeShouldHaveBeenFlownForward(newBuild);
             AndShouldHavePullRequestCheckReminder();
         }
