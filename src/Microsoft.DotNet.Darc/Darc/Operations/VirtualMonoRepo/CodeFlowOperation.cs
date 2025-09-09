@@ -27,7 +27,7 @@ internal abstract class CodeFlowOperation(
         IDependencyFileManager dependencyFileManager,
         ILocalGitRepoFactory localGitRepoFactory,
         IFileSystem fileSystem,
-        IBarApiClient? barClient,
+        IBarApiClient barClient,
         ILogger<CodeFlowOperation> logger)
     : VmrOperationBase(options, logger)
 {
@@ -39,7 +39,7 @@ internal abstract class CodeFlowOperation(
     private readonly IDependencyFileManager _dependencyFileManager = dependencyFileManager;
     private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
     private readonly IFileSystem _fileSystem = fileSystem;
-    private readonly IBarApiClient? _barClient = barClient;
+    private readonly IBarApiClient _barClient = barClient;
     private readonly ILogger<CodeFlowOperation> _logger = logger;
 
     /// <summary>
@@ -116,13 +116,6 @@ internal abstract class CodeFlowOperation(
             // If build ID is provided, fetch the build from BAR
             if (_options.BuildId.HasValue)
             {
-                if (_barClient == null)
-                {
-                    throw new DarcException(
-                        "Build ID was specified but BAR API client is not available. " +
-                        "Make sure you have provided valid BAR authentication credentials.");
-                }
-
                 _logger.LogInformation("Fetching build {buildId} from BAR...", _options.BuildId.Value);
                 build = await _barClient.GetBuildAsync(_options.BuildId.Value);
                 

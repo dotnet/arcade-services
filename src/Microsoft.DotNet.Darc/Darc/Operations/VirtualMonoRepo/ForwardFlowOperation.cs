@@ -25,7 +25,7 @@ internal class ForwardFlowOperation(
         ILocalGitRepoFactory localGitRepoFactory,
         IFileSystem fileSystem,
         IProcessManager processManager,
-        IBarApiClient? barClient,
+        IBarApiClient barClient,
         ILogger<ForwardFlowOperation> logger)
     : CodeFlowOperation(options, vmrInfo, codeFlower, dependencyTracker, patchHandler, dependencyFileManager, localGitRepoFactory, fileSystem, barClient, logger)
 {
