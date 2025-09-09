@@ -138,7 +138,7 @@ public class NativePath : LocalPath
 public class UnixPath : LocalPath
 {
     public static readonly UnixPath CurrentDir = new(".");
-    public static readonly UnixPath Empty = new("");
+    public static readonly UnixPath Empty = new(string.Empty);
 
     public UnixPath(string path) : this(path, true)
     {
