@@ -24,11 +24,12 @@ public class ForwardFlowConflictResolverTests
     [Test]
     public async Task ForwardFlowConflictResolverMergesDependenciesCorrectly()
     {
-        Mock<ILocalGitRepo> vmrRepo = new Mock<ILocalGitRepo>();
-        Mock<ILocalGitRepo> productRepo = new Mock<ILocalGitRepo>();
-        Mock<IVmrVersionFileMerger> vmrVersionFileMergerMock = new();
+        Mock<ILocalGitRepo> vmrRepo = new();
+        Mock<ILocalGitRepo> productRepo = new();
         Mock<ILocalGitRepoFactory> localGitRepoFactoryMock = new();
         Mock<IDependencyFileManager> dependencyFileManagerMock = new();
+        Mock<IJsonFileMerger> jsonMergerMock = new();
+        Mock<IVersionDetailsFileMerger> versionDetailsFileMergerMock = new();
         Mock<IGitRepoFactory> gitRepoFactoryMock = new();
         Mock<IGitRepo> vmrGitRepoMock = new();
 
@@ -46,19 +47,8 @@ public class ForwardFlowConflictResolverTests
         var root = doc.CreateElement("Root");
         doc.AppendChild(root);
         SourceDependency newSourceDependency = new(
-                    new Build(
-                        2,
-                        DateTimeOffset.Now,
-                        0,
-                        false,
-                        true,
-                        string.Empty,
-                        [],
-                        [],
-                        [],
-                        []),
-                    "mapping"
-                );
+            new Build(2, DateTimeOffset.Now, 0, false, true, string.Empty, [], [], [], []),
+            "mapping");
 
         productRepo.Setup(r => r.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, lastFlowRepoSha, It.IsAny<string>()))
             .ReturnsAsync("not important");
@@ -75,7 +65,7 @@ public class ForwardFlowConflictResolverTests
         localGitRepoFactoryMock.Setup(f => f.Create(It.IsAny<NativePath>()))
             .Returns(vmrRepo.Object);
 
-        vmrVersionFileMergerMock.Setup(m => m.MergeVersionDetails(
+        versionDetailsFileMergerMock.Setup(m => m.MergeVersionDetails(
                 It.IsAny<ILocalGitRepo>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -139,12 +129,13 @@ public class ForwardFlowConflictResolverTests
             new Mock<IVmrInfo>().Object,
             new Mock<ISourceManifest>().Object,
             new Mock<IVmrPatchHandler>().Object,
-            new Mock<IFileSystem>().Object,
-            NullLogger<ForwardFlowConflictResolver>.Instance,
-            vmrVersionFileMergerMock.Object,
             localGitRepoFactoryMock.Object,
             dependencyFileManagerMock.Object,
-            gitRepoFactoryMock.Object);
+            jsonMergerMock.Object,
+            versionDetailsFileMergerMock.Object,
+            gitRepoFactoryMock.Object,
+            new Mock<IFileSystem>().Object,
+            NullLogger<ForwardFlowConflictResolver>.Instance);
 
         await resolver.MergeDependenciesAsync(
             mapping,
@@ -154,8 +145,8 @@ public class ForwardFlowConflictResolverTests
             currentFlow,
             CancellationToken.None);
 
-        vmrVersionFileMergerMock.Verify(
-            m => m.MergeJsonAsync(
+        jsonMergerMock.Verify(
+            m => m.MergeJsonsAsync(
                 vmrRepo.Object,
                 VmrInfo.GetRelativeRepoSourcesPath(mapping) / VersionFiles.GlobalJson,
                 lastFlowVmrSha,
@@ -166,8 +157,8 @@ public class ForwardFlowConflictResolverTests
                 currentFlowRepoSha,
                 false),
             Times.Once);
-        vmrVersionFileMergerMock.Verify(
-            m => m.MergeJsonAsync(
+        jsonMergerMock.Verify(
+            m => m.MergeJsonsAsync(
                 vmrRepo.Object,
                 VmrInfo.GetRelativeRepoSourcesPath(mapping) / VersionFiles.DotnetToolsConfigJson,
                 lastFlowVmrSha,
@@ -178,7 +169,7 @@ public class ForwardFlowConflictResolverTests
                 currentFlowRepoSha,
                 true),
             Times.Once);
-        vmrVersionFileMergerMock.Verify(
+        versionDetailsFileMergerMock.Verify(
             m => m.MergeVersionDetails(
                 vmrRepo.Object,
                 VmrInfo.GetRelativeRepoSourcesPath(mapping) / VersionFiles.VersionDetailsXml,

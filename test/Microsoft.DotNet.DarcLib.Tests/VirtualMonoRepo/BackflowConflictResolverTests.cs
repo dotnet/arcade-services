@@ -43,8 +43,9 @@ public class BackflowConflictResolverTests
     private readonly Mock<IVersionDetailsParser> _versionDetailsParser = new();
     private readonly Mock<IAssetLocationResolver> _assetLocationResolver = new();
     private readonly Mock<IDependencyFileManager> _dependencyFileManager = new();
+    private readonly Mock<IJsonFileMerger> _jsonMergerMock = new();
+    private readonly Mock<IVersionDetailsFileMerger> _versionDetailsFileMergerMock = new();
     private readonly Mock<IFileSystem> _fileSystem = new();
-    private readonly Mock<IVmrVersionFileMerger> _vmrVersionFileMergerMock = new();
 
     private readonly Mock<ILocalGitRepo> _localRepo = new();
     private readonly Mock<ILocalGitRepo> _localVmr = new();
@@ -140,7 +141,8 @@ public class BackflowConflictResolverTests
 
         _fileSystem.Reset();
 
-        _vmrVersionFileMergerMock.Reset();
+        _versionDetailsFileMergerMock.Reset();
+        _jsonMergerMock.Reset();
 
         _conflictResolver = new(
             _vmrInfo.Object,
@@ -151,9 +153,10 @@ public class BackflowConflictResolverTests
             _assetLocationResolver.Object,
             new CoherencyUpdateResolver(Mock.Of<IBasicBarClient>(), Mock.Of<IRemoteFactory>(), new NullLogger<CoherencyUpdateResolver>()),
             _dependencyFileManager.Object,
+            _jsonMergerMock.Object,
+            _versionDetailsFileMergerMock.Object,
             _fileSystem.Object,
-            new NullLogger<BackflowConflictResolver>(),
-            _vmrVersionFileMergerMock.Object);
+            new NullLogger<BackflowConflictResolver>());
     }
 
     // Tests a case when packages were updated in the repo as well as in VMR and some created during the build.
@@ -229,7 +232,7 @@ public class BackflowConflictResolverTests
             { "Package.Added.In.Repo", new DependencyUpdate() { From = null, To = new DependencyDetail { Name = "Package.Added.In.Repo", Version = "1.0.1" }}}
         };
 
-        _vmrVersionFileMergerMock.Setup(x => x.MergeVersionDetails(
+        _versionDetailsFileMergerMock.Setup(x => x.MergeVersionDetails(
                 It.IsAny<ILocalGitRepo>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),

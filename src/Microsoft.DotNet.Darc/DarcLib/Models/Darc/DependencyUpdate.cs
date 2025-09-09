@@ -29,7 +29,7 @@ public class DependencyUpdate : IVersionFileProperty
 
     public object Value => To;
 
-    public bool IsAdded() => From == null;
-    public  bool IsRemoved() => To == null;
-    public  bool IsUpdated() => From != null && To != null;
+    public bool IsAdded => From == null;
+    public  bool IsRemoved => To == null;
+    public  bool IsUpdated => From != null && To != null;
 }

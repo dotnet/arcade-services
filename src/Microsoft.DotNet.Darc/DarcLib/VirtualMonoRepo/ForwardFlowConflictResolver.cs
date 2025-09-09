@@ -71,30 +71,33 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
     private readonly ISourceManifest _sourceManifest;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<ForwardFlowConflictResolver> _logger;
-    private readonly IVmrVersionFileMerger _versionFileMerger;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IDependencyFileManager _dependencyFileManager;
+    private readonly IJsonFileMerger _jsonFileMerger;
+    private readonly IVersionDetailsFileMerger _versionDetailsFileMerger;
     private readonly IGitRepoFactory _gitRepoFactory;
 
     public ForwardFlowConflictResolver(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
         IVmrPatchHandler patchHandler,
-        IFileSystem fileSystem,
-        ILogger<ForwardFlowConflictResolver> logger,
-        IVmrVersionFileMerger versionFileMerger,
         ILocalGitRepoFactory localGitRepoFactory,
         IDependencyFileManager dependencyFileManager,
-        IGitRepoFactory gitRepoFactory)
+        IJsonFileMerger jsonFileMerger,
+        IVersionDetailsFileMerger versionDetailsFileMerger,
+        IGitRepoFactory gitRepoFactory,
+        IFileSystem fileSystem,
+        ILogger<ForwardFlowConflictResolver> logger)
         : base(vmrInfo, patchHandler, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
         _fileSystem = fileSystem;
         _logger = logger;
-        _versionFileMerger = versionFileMerger;
         _localGitRepoFactory = localGitRepoFactory;
         _dependencyFileManager = dependencyFileManager;
+        _jsonFileMerger = jsonFileMerger;
+        _versionDetailsFileMerger = versionDetailsFileMerger;
         _gitRepoFactory = gitRepoFactory;
     }
 
@@ -286,7 +289,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         var relativeSourceMappingPath = VmrInfo.GetRelativeRepoSourcesPath(mappingName);
 
-        await _versionFileMerger.MergeJsonAsync(
+        await _jsonFileMerger.MergeJsonsAsync(
             vmr,
             relativeSourceMappingPath / VersionFiles.GlobalJson,
             lastFlow.VmrSha,
@@ -304,7 +307,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             (await vmr.GetFileFromGitAsync(relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson, lastFlow.VmrSha) != null));
         if (dotnetToolsConfigExists)
         {
-            await _versionFileMerger.MergeJsonAsync(
+            await _jsonFileMerger.MergeJsonsAsync(
             vmr,
             relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson,
             lastFlow.VmrSha,
@@ -326,7 +329,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             versionDetailsPropsCreated = true;
         }
 
-        var versionDetailsChanges = await _versionFileMerger.MergeVersionDetails(
+        var versionDetailsChanges = await _versionDetailsFileMerger.MergeVersionDetails(
             vmr,
             relativeSourceMappingPath / VersionFiles.VersionDetailsXml,
             lastFlow.VmrSha,
