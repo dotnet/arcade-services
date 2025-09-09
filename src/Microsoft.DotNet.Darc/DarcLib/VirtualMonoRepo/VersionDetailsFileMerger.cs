@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -188,15 +187,24 @@ public class VersionDetailsFileMerger : VmrVersionFileMerger, IVersionDetailsFil
         return appliedChanges;
     }
 
-    private static DependencyUpdate SelectNewerDependencyUpdate(DependencyUpdate repo1Change, DependencyUpdate repo2Change)
+    private DependencyUpdate SelectNewerDependencyUpdate(DependencyUpdate repo1Change, DependencyUpdate repo2Change)
     {
         if (SemanticVersion.TryParse(repo1Change.To?.Version!, out var repo1Version) &&
             SemanticVersion.TryParse(repo2Change.To?.Version!, out var repo2Version))
         {
             return repo1Version > repo2Version ? repo1Change : repo2Change;
         }
-        
-        throw new ArgumentException($"Cannot compare {repo1Change.To?.Version} with {repo2Change.To?.Version} because they are not valid semantic versions.");
+
+        _commentCollector.AddComment(
+            $"""
+            A conflict was detected when merging dependency files.
+            The dependency {repo1Change.To?.Name} has conflicting incomparable version values `{repo1Change.To?.Version}` and `{repo2Change.To?.Version}`.
+
+            Please verify and/or update the dependency version manually.
+            """,
+            CommentType.Warning);
+
+        return repo1Change;
     }
 }
 

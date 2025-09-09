@@ -33,6 +33,7 @@ public interface IJsonFileMerger
 public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
 {
     private readonly IGitRepoFactory _gitRepoFactory;
+    private readonly ICommentCollector _commentCollector;
     private const string EmptyJsonString = "{}";
 
     public JsonFileMerger(
@@ -41,6 +42,7 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
         : base(gitRepoFactory, commentCollector)
     {
         _gitRepoFactory = gitRepoFactory;
+        _commentCollector = commentCollector;
     }
 
     public async Task MergeJsonsAsync(
@@ -70,18 +72,18 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
                 targetRepoCurrentRef,
                 EmptyJsonString))
         {
-            var targetRepoChanges = SimpleConfigJson.Parse(targetRepoPreviousJson).GetDiff(SimpleConfigJson.Parse(targetRepoCurrentJson));
-            var vmrChanges = SimpleConfigJson.Parse(sourcePreviousJson).GetDiff(SimpleConfigJson.Parse(sourceCurrentJson));
+            var targetRepoChanges = FlatJson.Parse(targetRepoPreviousJson).GetDiff(FlatJson.Parse(targetRepoCurrentJson));
+            var vmrChanges = FlatJson.Parse(sourcePreviousJson).GetDiff(FlatJson.Parse(sourceCurrentJson));
 
             VersionFileChanges<JsonVersionProperty> mergedChanges = MergeChanges(
                 targetRepoChanges,
                 vmrChanges,
-                SelectNewerJsonVersionProperty,
+                (repoProp, vmrProp) => SelectNewerJsonVersionProperty(targetRepoJsonRelativePath, repoProp, vmrProp),
                 targetRepoJsonRelativePath,
                 property => property.Replace(':', '.'));
 
             var currentJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, "HEAD", allowMissingFiles);
-            var mergedJson = SimpleConfigJson.ApplyJsonChanges(currentJson, mergedChanges);
+            var mergedJson = FlatJson.ApplyJsonChanges(currentJson, mergedChanges);
 
             var newJson = new GitFile(targetRepo.Path / targetRepoJsonRelativePath, mergedJson);
 
@@ -104,11 +106,11 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
                     ? EmptyJsonString
                     : throw new FileNotFoundException($"File not found at {repo.Path / jsonRelativePath} for reference {reference}"));
 
-    private static JsonVersionProperty SelectNewerJsonVersionProperty(JsonVersionProperty repoProp, JsonVersionProperty vmrProp)
+    private JsonVersionProperty SelectNewerJsonVersionProperty(string fileName, JsonVersionProperty repoProp, JsonVersionProperty vmrProp)
     {
         if (repoProp.Value == null && vmrProp.Value == null)
         {
-            throw new ArgumentException($"Compared values for '{repoProp.Name}' are null");
+            return repoProp;
         }
 
         if (repoProp.Value == null)
@@ -124,7 +126,14 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
         // Are the value types the same?
         if (repoProp.Value.GetType() != vmrProp.Value.GetType())
         {
-            throw new ArgumentException($"Cannot compare {repoProp.Value.GetType()} with {vmrProp.Value.GetType()} because their values are of different types.");
+            AddWarning(
+                fileName,
+                $"""
+                The property {repoProp.Name} has different type in repo than in VMR:
+                - Repository: `{repoProp.Value}`
+                - VMR: `{vmrProp.Value}`
+                """);
+            return repoProp;
         }
 
         if (repoProp.Value.Equals(vmrProp.Value))
@@ -132,7 +141,7 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
             return repoProp;
         }
 
-        if (repoProp.Value is IEnumerable<string> repoArray && vmrProp is IEnumerable<string> vmrArray)
+        if (repoProp.Value is IEnumerable<string> repoArray && vmrProp.Value is IEnumerable<string> vmrArray)
         {
             List<string> mergedLists = [.. repoArray.Concat(vmrArray).Distinct()];
             return new JsonVersionProperty(repoProp.Name, NodeComparisonResult.Updated, mergedLists);
@@ -140,10 +149,12 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
 
         if (repoProp.Value.GetType() == typeof(bool))
         {
-            // if values are different, throw an exception
+            // If values are different, throw an exception
             if (!repoProp.Value.Equals(vmrProp.Value))
             {
-                throw new ArgumentException($"Key {repoProp.Name} value has different boolean values in properties.");
+                AddWarning(
+                    fileName,
+                    $"The property {repoProp.Name} is `{repoProp.Value}` in the repository and `{vmrProp.Value}` in the VMR.");
             }
             return repoProp;
         }
@@ -155,17 +166,44 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
 
         if (repoProp.Value.GetType() == typeof(string))
         {
-            // if we're able to parse both values as SemanticVersion, take the bigger one
+            // If we're able to parse both values as SemanticVersion, take the bigger one
             if (SemanticVersion.TryParse(repoProp.Value.ToString()!, out var repoVersion) &&
                 SemanticVersion.TryParse(vmrProp.Value.ToString()!, out var vmrVersion))
             {
                 return repoVersion > vmrVersion ? repoProp : vmrProp;
             }
-            // if we can't parse both values as SemanticVersion, that means one is using a different property like $(Version), so throw an exception
-            throw new ArgumentException($"Key {repoProp.Name} value has different string values in properties, and cannot be parsed as SemanticVersion");
+
+            AddWarning(
+                fileName,
+                $"""
+                The property {repoProp.Name} has conflicting value:
+                - Repository: `{repoProp.Value}`
+                - VMR: `{vmrProp.Value}`
+                """);
+
+            return repoProp;
         }
 
-        throw new ArgumentException($"Cannot compare properties with {repoProp.Value.GetType()} values for key {repoProp.Name}.");
+        AddWarning(
+            fileName,
+            $"""
+            The property {repoProp.Name} has unmergeable values:
+            - Repository: `{repoProp.Value}`
+            - VMR: `{vmrProp.Value}`
+            """);
+
+        return repoProp;
+    }
+
+    private void AddWarning(string fileName, string message)
+    {
+        _commentCollector.AddComment(
+            $"""
+                A conflict was detected when merging file `{fileName}`. {message}
+
+                The repository value was used. Please verify this is the correct value or update it `{fileName}` accordingly.
+                """,
+            CommentType.Warning);
     }
 }
 
