@@ -214,7 +214,6 @@ public interface IRemote
     /// </summary>
     /// <param name="pullRequestUri">Uri of the pull request</param>
     /// <param name="comment">Comment message</param>
-    /// <returns></returns>
     Task CommentPullRequestAsync(string pullRequestUri, string comment);
 
     /// <summary>
@@ -245,6 +244,15 @@ public interface IRemote
     /// <param name="branch">Branch to get file contents from</param>
     /// <returns>File contents or throws on file not found.</returns>
     Task<string> GetFileContentsAsync(string filePath, string repoUri, string branch);
+
+    /// <summary>
+    /// Returns a list of tree names (directories) under a given path in a given branch
+    /// </summary>
+    /// <param name="path"></param>
+    /// <param name="repoUri"></param>
+    /// <param name="branch"></param>
+    /// <returns></returns>
+    Task<IReadOnlyCollection<string>> GetGitTreeNames(string path, string repoUri, string branch);
 
     #endregion
 }

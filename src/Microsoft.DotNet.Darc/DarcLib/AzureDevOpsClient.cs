@@ -1801,4 +1801,74 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
         return comments;
     }
+
+    public async Task<IReadOnlyCollection<string>> GetGitTreeNames(string path, string repoUri, string branch)
+    {
+        _logger.LogDebug(
+            $"Getting folder names from path '{path}' in repo '{repoUri}' on branch '{branch}'...");
+
+        // Clean up the path similar to other methods
+        if (path.StartsWith("./"))
+        {
+            path = path.Substring(2);
+        }
+        
+        path = path.Replace('\\', '/');
+        path = path.TrimStart('/').TrimEnd('/');
+
+        (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
+
+        if (string.IsNullOrEmpty(accountName) || string.IsNullOrEmpty(projectName) || string.IsNullOrEmpty(repoName))
+        {
+            _logger.LogInformation($"'accountName', 'projectName', or 'repoName' couldn't be inferred from '{repoUri}'. " +
+                                   $"Not getting folder names from '{path}'");
+            return [];
+        }
+
+        try
+        {
+            // Get the commit SHA for the branch
+            string commitSha = await GetCommitShaForGitRefAsync(accountName, projectName, repoName, branch);
+
+            // Get the tree SHA from the commit
+            JObject commitResponse = await ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Get,
+                accountName,
+                projectName,
+                $"_apis/git/repositories/{repoName}/commits/{commitSha}",
+                _logger);
+
+            string treeSha = commitResponse["treeId"].ToString();
+
+            // If path is specified, navigate to that tree
+            if (!string.IsNullOrEmpty(path))
+            {
+                treeSha = await GetTreeShaForPathAsync(accountName, projectName, repoName, treeSha, path);
+            }
+
+            // Get the contents of the tree
+            JObject treeResponse = await ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Get,
+                accountName,
+                projectName,
+                $"_apis/git/repositories/{repoName}/trees/{treeSha}?recursive=false",
+                _logger);
+
+            // Filter and return only folder names (tree objects)
+            var entries = treeResponse["treeEntries"].ToObject<JArray>();
+            var folderNames = entries
+                .Where(entry => entry["gitObjectType"].ToString().ToLowerInvariant() == "tree")
+                .Select(entry => entry["relativePath"].ToString())
+                .ToList();
+
+            _logger.LogDebug($"Found {folderNames.Count} folders in path '{path}'");
+            
+            return folderNames;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Failed to get folder names from path '{path}' in repo '{repoUri}' on branch '{branch}'");
+            throw;
+        }
+    }
 }

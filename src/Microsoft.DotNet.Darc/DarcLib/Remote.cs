@@ -489,4 +489,9 @@ public sealed class Remote : IRemote
             branch);
         return _sourceMappingParser.ParseMappingsFromJson(fileContent);
     }
+
+    public async Task<IReadOnlyCollection<string>> GetGitTreeNames(string path, string repoUri, string branch)
+    {
+        return await _remoteGitClient.GetGitTreeNames(path, repoUri, branch);
+    }
 }

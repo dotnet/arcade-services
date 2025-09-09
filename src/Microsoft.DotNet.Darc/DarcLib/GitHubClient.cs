@@ -1349,4 +1349,68 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         
         return comments.Select(comment => comment.Body).ToList();
     }
+
+    public async Task<IReadOnlyCollection<string>> GetGitTreeNames(string path, string repoUri, string branch)
+    {
+        _logger.LogDebug(
+            $"Getting folder names from path '{path}' in repo '{repoUri}' on branch '{branch}'...");
+
+        path = path.Replace('\\', '/');
+        path = path.TrimStart('/').TrimEnd('/');
+        if (path.StartsWith("./"))
+        {
+            path = path.Substring(2);
+        }
+
+        (string owner, string repo) = ParseRepoUri(repoUri);
+
+        if (string.IsNullOrEmpty(owner) || string.IsNullOrEmpty(repo))
+        {
+            _logger.LogInformation($"'owner' or 'repository' couldn't be inferred from '{repoUri}'. " +
+                                   $"Not getting folder names from '{path}'");
+            return [];
+        }
+
+        try
+        {
+            var client = GetClient(owner, repo);
+            
+            // Get the commit SHA for the branch
+            string commitSha = await GetCommitShaForGitRefAsync(client, owner, repo, branch);
+            
+            // Get the tree for the specified path
+            TreeResponse tree;
+            if (string.IsNullOrEmpty(path))
+            {
+                // If path is empty, get the root tree
+                var commit = await client.Git.Commit.Get(owner, repo, commitSha);
+                tree = await client.Git.Tree.Get(owner, repo, commit.Tree.Sha);
+            }
+            else
+            {
+                // Navigate to the specified path
+                tree = await GetTreeForPathAsync(owner, repo, commitSha, path);
+            }
+
+            if (tree.Truncated)
+            {
+                _logger.LogWarning("The git repository is too large for the GitHub API. Tree results are truncated.");
+            }
+
+            // Filter and return only folder names (TreeType.Tree)
+            var folderNames = tree.Tree
+                .Where(item => item.Type == TreeType.Tree)
+                .Select(item => item.Path)
+                .ToList();
+
+            _logger.LogDebug($"Found {folderNames.Count} folders in path '{path}'");
+            
+            return folderNames;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Failed to get folder names from path '{path}' in repo '{repoUri}' on branch '{branch}'");
+            throw;
+        }
+    }
 }

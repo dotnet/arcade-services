@@ -858,7 +858,24 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         else
         {
-            targetDirectories = subscription.TargetDirectory.Split(',').Select(d => new UnixPath(d)).ToList();
+            targetDirectories = [];
+            var directories = subscription.TargetDirectory.Split(',');
+            
+            foreach (var d in directories)
+            {
+                if (d.EndsWith('*'))
+                {
+                    // Trim trailing '/' and '*' characters and get directory names
+                    string basePath = d.TrimEnd('/', '*');
+                    var directoryNames = await darc.GetGitTreeNames(basePath, targetRepository, targetBranch);
+                    targetDirectories.AddRange(directoryNames.Select(dirName => new UnixPath(basePath) / dirName));
+                }
+                else
+                {
+                    targetDirectories.Add(new UnixPath(d));
+                }
+            }
+            
             targetDirectoryAssetMatchers = subscription.ExcludedAssets.GetAssetMatchersPerDirectory(targetDirectories);
         }
 
