@@ -24,8 +24,9 @@ internal class BackflowOperation(
     IDependencyFileManager dependencyFileManager,
     IProcessManager processManager,
     IFileSystem fileSystem,
+    IBarApiClient? barClient,
     ILogger<BackflowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, backFlower, dependencyTracker, patchHandler, dependencyFileManager, localGitRepoFactory, fileSystem, logger)
+    : CodeFlowOperation(options, vmrInfo, backFlower, dependencyTracker, patchHandler, dependencyFileManager, localGitRepoFactory, fileSystem, barClient, logger)
 {
     private readonly BackflowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
