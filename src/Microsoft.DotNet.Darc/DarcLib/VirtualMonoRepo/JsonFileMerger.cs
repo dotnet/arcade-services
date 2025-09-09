@@ -201,7 +201,7 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
             $"""
                 A conflict was detected when merging file `{fileName}`. {message}
 
-                Please verify and/or update `{fileName}` manually.
+                The repository value was used. Please verify this is the correct value or update it `{fileName}` accordingly.
                 """,
             CommentType.Warning);
     }
