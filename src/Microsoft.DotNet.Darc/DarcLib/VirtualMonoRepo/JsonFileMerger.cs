@@ -72,8 +72,8 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
                 targetRepoCurrentRef,
                 EmptyJsonString))
         {
-            var targetRepoChanges = SimpleConfigJson.Parse(targetRepoPreviousJson).GetDiff(SimpleConfigJson.Parse(targetRepoCurrentJson));
-            var vmrChanges = SimpleConfigJson.Parse(sourcePreviousJson).GetDiff(SimpleConfigJson.Parse(sourceCurrentJson));
+            var targetRepoChanges = FlatJson.Parse(targetRepoPreviousJson).GetDiff(FlatJson.Parse(targetRepoCurrentJson));
+            var vmrChanges = FlatJson.Parse(sourcePreviousJson).GetDiff(FlatJson.Parse(sourceCurrentJson));
 
             VersionFileChanges<JsonVersionProperty> mergedChanges = MergeChanges(
                 targetRepoChanges,
@@ -83,7 +83,7 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
                 property => property.Replace(':', '.'));
 
             var currentJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, "HEAD", allowMissingFiles);
-            var mergedJson = SimpleConfigJson.ApplyJsonChanges(currentJson, mergedChanges);
+            var mergedJson = FlatJson.ApplyJsonChanges(currentJson, mergedChanges);
 
             var newJson = new GitFile(targetRepo.Path / targetRepoJsonRelativePath, mergedJson);
 
@@ -141,7 +141,7 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
             return repoProp;
         }
 
-        if (repoProp.Value is IEnumerable<string> repoArray && vmrProp is IEnumerable<string> vmrArray)
+        if (repoProp.Value is IEnumerable<string> repoArray && vmrProp.Value is IEnumerable<string> vmrArray)
         {
             List<string> mergedLists = [.. repoArray.Concat(vmrArray).Distinct()];
             return new JsonVersionProperty(repoProp.Name, NodeComparisonResult.Updated, mergedLists);

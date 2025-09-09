@@ -201,6 +201,79 @@ public class VersionDetailsFileMergerTests
             .Select(d => (d.Name, d.Version))
             .Should()
             .BeEquivalentTo(expectedUpdates, options => options.WithStrictOrdering());
+
+    }
+
+    [Test]
+    public async Task MergeVersionDetails_ConflictingIncomparableVersions_PostsWarningComment()
+    {
+        var targetPreviousDependencies = new VersionDetails(
+            [
+                CreateDependency("TestPackage", "1.0.0", "sha1"),
+            ],
+            null);
+        var targetCurrentDependencies = new VersionDetails(
+            [
+                CreateDependency("TestPackage", "custom-version-1", "sha2"), // Non-semantic version
+            ],
+            null);
+        var vmrPreviousDependencies = new VersionDetails(
+            [
+                CreateDependency("TestPackage", "1.0.0", "sha1"),
+            ],
+            null);
+        var vmrCurrentDependencies = new VersionDetails(
+            [
+                CreateDependency("TestPackage", "custom-version-2", "sha3"), // Different non-semantic version
+            ],
+            null);
+
+        var targetPreviousKey = "targetPrevious";
+        var targetCurrentKey = "targetCurrent";
+        var vmrPreviousKey = "vmrPrevious";
+        var vmrCurrentKey = "vmrCurrent";
+
+        Dictionary<string, VersionDetails> versionDetailsDictionary = new()
+        {
+            { targetPreviousKey, targetPreviousDependencies },
+            { targetCurrentKey, targetCurrentDependencies },
+            { vmrPreviousKey, vmrPreviousDependencies },
+            { vmrCurrentKey, vmrCurrentDependencies }
+        };
+
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), TargetPreviousSha, It.IsAny<string>()))
+            .ReturnsAsync(targetPreviousKey);
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), TargetCurrentSha, It.IsAny<string>()))
+            .ReturnsAsync(targetCurrentKey);
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), "HEAD", It.IsAny<string>()))
+            .ReturnsAsync(targetCurrentKey);
+        _vmrRepoMock.Setup(v => v.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()))
+            .ReturnsAsync(vmrPreviousKey);
+        _vmrRepoMock.Setup(v => v.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
+            .ReturnsAsync(vmrCurrentKey);
+
+        _versionDetailsParserMock.Setup(p => p.ParseVersionDetailsXml(It.IsAny<string>(), It.IsAny<bool>()))
+            .Returns((string key, bool _) => versionDetailsDictionary[key]);
+
+        _dependencyFileManagerMock.Setup(d => d.TryAddOrUpdateDependency(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .ReturnsAsync(true);
+
+        var result = await _versionDetailsFileMerger.MergeVersionDetails(
+            _targetRepoMock.Object,
+            "TARGET VERSION.DETAILS PATH",
+            TargetPreviousSha,
+            TargetCurrentSha,
+            _vmrRepoMock.Object,
+            "VMR VERSION.DETAILS PATH",
+            VmrPreviousSha,
+            VmrCurrentSha,
+            mappingToApplyChanges: null);
+
+        // Verify that a warning comment is posted for conflicting incomparable versions
+        _commentCollectorMock.Verify(c => c.AddComment(
+            It.Is<string>(s => s.Contains("conflict") && s.Contains("TestPackage") && s.Contains("incomparable")),
+            CommentType.Warning),
+            Times.Once);
     }
 
     private static DependencyDetail CreateDependency(string name, string version, string commit, DependencyType type = DependencyType.Product)
