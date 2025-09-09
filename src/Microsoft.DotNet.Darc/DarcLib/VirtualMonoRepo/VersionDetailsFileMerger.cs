@@ -198,7 +198,7 @@ public class VersionDetailsFileMerger : VmrVersionFileMerger, IVersionDetailsFil
         _commentCollector.AddComment(
             $"""
             A conflict was detected when merging dependency files.
-            The dependency {repo1Change.To?.Name} has conflicting incomparable version values `{repo1Change.To?.Version} and `{repo2Change.To?.Version}`.
+            The dependency {repo1Change.To?.Name} has conflicting incomparable version values `{repo1Change.To?.Version}` and `{repo2Change.To?.Version}`.
 
             Please verify and/or update the dependency version manually.
             """,
