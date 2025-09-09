@@ -116,7 +116,8 @@ public static class VmrRegistrations
         services.TryAddTransient<ICodeFlowVmrUpdater, CodeFlowVmrUpdater>();
         services.TryAddTransient<IBackflowConflictResolver, BackflowConflictResolver>();
         services.TryAddTransient<IForwardFlowConflictResolver, ForwardFlowConflictResolver>();
-        services.TryAddTransient<IVmrVersionFileMerger, VmrVersionFileMerger>();
+        services.TryAddTransient<IJsonFileMerger, JsonFileMerger>();
+        services.TryAddTransient<IVersionDetailsFileMerger, VersionDetailsFileMerger>();
         services.TryAddTransient<ICodeflowChangeAnalyzer, CodeflowChangeAnalyzer>();
         services.TryAddTransient<IWorkBranchFactory, WorkBranchFactory>();
         services.TryAddTransient<IThirdPartyNoticesGenerator, ThirdPartyNoticesGenerator>();

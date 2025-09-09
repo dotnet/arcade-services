@@ -48,7 +48,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IDependencyFileManager _dependencyFileManager;
     private readonly IFileSystem _fileSystem;
-    private readonly IVmrVersionFileMerger _vmrVersionFileMerger;
+    private readonly IJsonFileMerger _jsonFileMerger;
+    private readonly IVersionDetailsFileMerger _versionDetailsFileMerger;
     private readonly ILogger<BackflowConflictResolver> _logger;
 
     public BackflowConflictResolver(
@@ -60,9 +61,10 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         IAssetLocationResolver assetLocationResolver,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         IDependencyFileManager dependencyFileManager,
+        IJsonFileMerger jsonFileMerger,
+        IVersionDetailsFileMerger versionDetailsFileMerger,
         IFileSystem fileSystem,
-        ILogger<BackflowConflictResolver> logger,
-        IVmrVersionFileMerger vmrVersionFileMerger)
+        ILogger<BackflowConflictResolver> logger)
         : base(vmrInfo, patchHandler, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
@@ -72,9 +74,10 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         _assetLocationResolver = assetLocationResolver;
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _dependencyFileManager = dependencyFileManager;
+        _jsonFileMerger = jsonFileMerger;
+        _versionDetailsFileMerger = versionDetailsFileMerger;
         _fileSystem = fileSystem;
         _logger = logger;
-        _vmrVersionFileMerger = vmrVersionFileMerger;
     }
 
     public async Task<VersionFileUpdateResult> TryMergingBranchAndUpdateDependencies(
@@ -258,7 +261,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
         // handle global.json
-        await _vmrVersionFileMerger.MergeJsonAsync(
+        await _jsonFileMerger.MergeJsonsAsync(
             targetRepo,
             VersionFiles.GlobalJson,
             comparisonFlow.RepoSha,
@@ -276,7 +279,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             (await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.DotnetToolsConfigJson, comparisonFlow.VmrSha) != null));
         if (dotnetToolsConfigExists)
         {
-            await _vmrVersionFileMerger.MergeJsonAsync(
+            await _jsonFileMerger.MergeJsonsAsync(
                     targetRepo,
                     VersionFiles.DotnetToolsConfigJson,
                     comparisonFlow.RepoSha,
@@ -288,7 +291,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                     allowMissingFiles: true);
         }
 
-        var versionDetailsChanges = await _vmrVersionFileMerger.MergeVersionDetails(
+        var versionDetailsChanges = await _versionDetailsFileMerger.MergeVersionDetails(
             targetRepo,
             VersionFiles.VersionDetailsXml,
             comparisonFlow.RepoSha,

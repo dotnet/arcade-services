@@ -3,11 +3,12 @@
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+
 public interface IVersionFileProperty
 {
     string Name { get; }
     object? Value { get; }
-    bool IsAdded();
-    bool IsRemoved();
-    bool IsUpdated();
+    bool IsAdded { get; }
+    bool IsRemoved { get; }
+    bool IsUpdated { get; }
 }
