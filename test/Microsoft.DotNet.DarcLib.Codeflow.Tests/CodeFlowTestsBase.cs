@@ -214,7 +214,8 @@ internal abstract class CodeFlowTestsBase
         string branch,
         Build? buildToFlow = null,
         IReadOnlyCollection<string>? excludedAssets = null,
-        bool useLatestBuild = false)
+        bool useLatestBuild = false,
+        bool forceUpdate = true)
     {
         using var scope = ServiceProvider.CreateScope();
         var codeflower = scope.ServiceProvider.GetRequiredService<IVmrBackFlower>();
@@ -231,7 +232,7 @@ internal abstract class CodeFlowTestsBase
             excludedAssets,
             "main",
             branch,
-            forceUpdate: true,
+            forceUpdate: forceUpdate,
             cancellationToken: _cancellationToken.Token);
 
         _lastFlowCollectedComments = scope.ServiceProvider.GetRequiredService<ICommentCollector>()
