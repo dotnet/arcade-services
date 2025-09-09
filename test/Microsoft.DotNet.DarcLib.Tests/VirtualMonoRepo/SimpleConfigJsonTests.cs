@@ -45,8 +45,8 @@ public class SimpleConfigJsonTests
         """;
 
         // Act
-        var simpleConfigJson = SimpleConfigJson.Parse(json);
-        var result = simpleConfigJson.Dictionary;
+        var simpleConfigJson = FlatJson.Parse(json);
+        var result = simpleConfigJson.FlatValues;
 
         // Assert
         result.Should().HaveCount(12);
@@ -117,8 +117,8 @@ public class SimpleConfigJsonTests
         };
 
         // Act
-        var oldSimpleConfigJson = new SimpleConfigJson(oldJson);
-        var newSimpleConfigJson = new SimpleConfigJson(newJson);
+        var oldSimpleConfigJson = new FlatJson(oldJson);
+        var newSimpleConfigJson = new FlatJson(newJson);
         var changes = oldSimpleConfigJson.GetDiff(newSimpleConfigJson);
 
         // Assert
@@ -126,34 +126,34 @@ public class SimpleConfigJsonTests
 
         // Check removed property
         var removedChange = changes.Should().ContainSingle(c => c.Name == "removed:property").Subject;
-        removedChange.IsRemoved().Should().BeTrue();
+        removedChange.IsRemoved.Should().BeTrue();
         removedChange.Value.Should().BeNull();
 
         // Check updated string
         var updatedStringChange = changes.Should().ContainSingle(c => c.Name == "updated:string").Subject;
-        updatedStringChange.IsUpdated().Should().BeTrue();
+        updatedStringChange.IsUpdated.Should().BeTrue();
         updatedStringChange.Value.Should().Be("new value");
 
         // Check updated boolean
         var updatedBoolChange = changes.Should().ContainSingle(c => c.Name == "updated:bool").Subject;
-        updatedBoolChange.IsUpdated().Should().BeTrue();
+        updatedBoolChange.IsUpdated.Should().BeTrue();
         updatedBoolChange.Value.Should().Be(true);
 
         // Check updated array
         var updatedArrayChange = changes.Should().ContainSingle(c => c.Name == "updated:array").Subject;
-        updatedArrayChange.IsUpdated().Should().BeTrue();
+        updatedArrayChange.IsUpdated.Should().BeTrue();
         updatedArrayChange.Value.Should().BeOfType<List<string>>();
         var updatedArray = (List<string>)updatedArrayChange.Value!;
         updatedArray.Should().BeEquivalentTo(new[] { "new1", "new2" });
 
         // Check added property
         var addedChange = changes.Should().ContainSingle(c => c.Name == "added:property").Subject;
-        addedChange.IsAdded().Should().BeTrue();
+        addedChange.IsAdded.Should().BeTrue();
         addedChange.Value.Should().Be("new property");
 
         // Check updated tools:dotnet
         var updatedToolsChange = changes.Should().ContainSingle(c => c.Name == "tools:dotnet").Subject;
-        updatedToolsChange.IsUpdated().Should().BeTrue();
+        updatedToolsChange.IsUpdated.Should().BeTrue();
         updatedToolsChange.Value.Should().Be("8.0.400");
     }
 
@@ -169,8 +169,8 @@ public class SimpleConfigJsonTests
         };
 
         // Act
-        var oldSimpleConfigJson = new SimpleConfigJson(json);
-        var newSimpleConfigJson = new SimpleConfigJson(new Dictionary<string, object>(json));
+        var oldSimpleConfigJson = new FlatJson(json);
+        var newSimpleConfigJson = new FlatJson(new Dictionary<string, object>(json));
         var changes = oldSimpleConfigJson.GetDiff(newSimpleConfigJson);
 
         // Assert
@@ -192,8 +192,8 @@ public class SimpleConfigJsonTests
         };
 
         // Act & Assert
-        var oldSimpleConfigJson = new SimpleConfigJson(oldJson);
-        var newSimpleConfigJson = new SimpleConfigJson(newJson);
+        var oldSimpleConfigJson = new FlatJson(oldJson);
+        var newSimpleConfigJson = new FlatJson(newJson);
         var action = () => oldSimpleConfigJson.GetDiff(newSimpleConfigJson);
         action.Should().Throw<ArgumentException>()
             .WithMessage("Key property value has different types in old and new json");
@@ -214,8 +214,8 @@ public class SimpleConfigJsonTests
         };
 
         // Act & Assert
-        var oldSimpleConfigJson = new SimpleConfigJson(oldJson);
-        var newSimpleConfigJson = new SimpleConfigJson(newJson);
+        var oldSimpleConfigJson = new FlatJson(oldJson);
+        var newSimpleConfigJson = new FlatJson(newJson);
         var action = () => oldSimpleConfigJson.GetDiff(newSimpleConfigJson);
         action.Should().Throw<ArgumentException>()
             .WithMessage("Key property value has different types in old and new json");
@@ -229,8 +229,8 @@ public class SimpleConfigJsonTests
         var newJson = new Dictionary<string, object>();
 
         // Act
-        var oldSimpleConfigJson = new SimpleConfigJson(oldJson);
-        var newSimpleConfigJson = new SimpleConfigJson(newJson);
+        var oldSimpleConfigJson = new FlatJson(oldJson);
+        var newSimpleConfigJson = new FlatJson(newJson);
         var changes = oldSimpleConfigJson.GetDiff(newSimpleConfigJson);
 
         // Assert

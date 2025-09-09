@@ -12,16 +12,17 @@ using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-public class SimpleConfigJson
-{
-    public Dictionary<string, object> Dictionary { get; }
 
-    public SimpleConfigJson(Dictionary<string, object> dictionary)
+public class FlatJson
+{
+    public Dictionary<string, object> FlatValues { get; }
+
+    public FlatJson(Dictionary<string, object> values)
     {
-        Dictionary = dictionary;
+        FlatValues = values;
     }
 
-    public static SimpleConfigJson Parse(string json)
+    public static FlatJson Parse(string json)
     {
         using var document = JsonDocument.Parse(json);
         Dictionary<string, object> dictionary = [];
@@ -35,16 +36,16 @@ public class SimpleConfigJson
             FlattenSimpleJsonConfigElement(currentElement, currentPath, dictionary, pathsToProcess);
         }
 
-        return new SimpleConfigJson(dictionary);
+        return new FlatJson(dictionary);
     }
 
-    public List<JsonVersionProperty> GetDiff(SimpleConfigJson otherJson)
+    public List<JsonVersionProperty> GetDiff(FlatJson otherJson)
     {
         List<JsonVersionProperty> changes = [];
 
-        foreach (var kvp in this.Dictionary)
+        foreach (var kvp in FlatValues)
         {
-            if (!otherJson.Dictionary.TryGetValue(kvp.Key, out var newValue))
+            if (!otherJson.FlatValues.TryGetValue(kvp.Key, out var newValue))
             {
                 changes.Add(new JsonVersionProperty(kvp.Key, NodeComparisonResult.Removed, null));
             }
@@ -67,9 +68,9 @@ public class SimpleConfigJson
             }
         }
 
-        foreach (var kvp in otherJson.Dictionary)
+        foreach (var kvp in otherJson.FlatValues)
         {
-            if (!this.Dictionary.ContainsKey(kvp.Key))
+            if (!FlatValues.ContainsKey(kvp.Key))
             {
                 changes.Add(new JsonVersionProperty(kvp.Key, NodeComparisonResult.Added, kvp.Value));
             }

@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -1118,7 +1119,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         codeFlowResult.DependencyUpdates.Should().BeEmpty();
         var comments = GetLastFlowCollectedComments();
         comments.Should().HaveCount(2);
-        comments[0].Should().Contain("There was a conflict when merging version properties. In file eng/Version.Details.xml, property 'Package.B1' was removed in the target branch but added in the source repo.");
-        comments[1].Should().Contain("There was a conflict when merging version properties. In file eng/Version.Details.xml, property 'Package.A1' was added in the target branch but removed in the source repo.");
+        comments[0].Should().Contain($"There was a conflict when merging version properties. In file eng/Version.Details.xml, property 'Package.B1'{Environment.NewLine}was removed in the target branch but added in the source repo.");
+        comments[1].Should().Contain($"There was a conflict when merging version properties. In file eng/Version.Details.xml, property 'Package.A1'{Environment.NewLine}was added in the target branch but removed in the source repo.");
     }
 }
