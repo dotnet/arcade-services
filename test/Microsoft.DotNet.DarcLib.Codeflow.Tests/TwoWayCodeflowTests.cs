@@ -1168,10 +1168,10 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.CommitAll(VmrPath, "2");
 
         Assert.ThrowsAsync<BlockingCodeflowException>(async () =>
-        await CallDarcBackflow(
-            Constants.ProductRepoName,
-            ProductRepoPath,
-            branchName,
-            forceUpdate: false));
+            await CallDarcBackflow(
+                Constants.ProductRepoName,
+                ProductRepoPath,
+                branchName,
+                forceUpdate: false));
     }
 }
