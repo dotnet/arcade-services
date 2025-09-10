@@ -571,7 +571,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
     ///     Because PRs tend to be live for short periods of time, we can put more information
     ///     in the description than the commit message without worrying that links will go stale.
     /// </remarks>
-    private async Task<int> AppendBuildDescriptionAsync(
+    private async Task AppendBuildDescriptionAsync(
         StringBuilder description,
         int startingReferenceId,
         SubscriptionUpdateWorkItem update,
@@ -675,9 +675,6 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
         description.Insert(sectionStartIndex, subscriptionSection.ToString());
         description.AppendLine();
-
-        startingReferenceId += changesLinks.Count;
-        return startingReferenceId;
     }
 
     /// <summary>
