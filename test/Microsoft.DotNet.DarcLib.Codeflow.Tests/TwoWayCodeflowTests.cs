@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -1121,5 +1120,58 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         comments.Should().HaveCount(2);
         comments[0].Should().Contain($"There was a conflict when merging version properties. In file eng/Version.Details.xml, property 'Package.B1'{Environment.NewLine}was removed in the target branch but added in the source repo.");
         comments[1].Should().Contain($"There was a conflict when merging version properties. In file eng/Version.Details.xml, property 'Package.A1'{Environment.NewLine}was added in the target branch but removed in the source repo.");
+    }
+
+    /*
+         When not using forceUpdate, codeflow PRs on the target repository should stop receiving additional 
+         flows as soon as an opposite-flow is merged on the source repository. 
+         Once the source repository has received new changes from the target repository, the opposite-flow codeflow must be used,
+         but it is impossible to apply opposite-flow on an existing PR.
+     
+            repo                   VMR   
+              │                     │   
+              │   O◄────────────────O 0.
+              │   │                 │   
+           1. O───┼────────────────►O  
+              │   │                 │   
+              │   x◄────────────────O   
+              │ 2.                  │   
+              │                     │   
+
+        0. VMR gets a file VMR.txt and flows it into the repo without merging
+        1. Repo gets a file Repo.txt and flows it into the VMR, and merges it
+        2. VMR makes a first modification to VMR.txt and flows it - this should fail with a codeflow exception
+    */
+    [Test]
+    public async Task BlockCodeflowPrWhenOppositeFlowIsMerged()
+    {
+        const string branchName = nameof(BlockCodeflowPrWhenOppositeFlowIsMerged);
+
+        await EnsureTestRepoIsInitialized();
+
+        // 0.VMR gets a file VMR.txt and flows it into the repo without merging
+        await File.WriteAllTextAsync(_productRepoVmrPath / "A.txt", "1");
+        await GitOperations.CommitAll(VmrPath, "1");
+        var codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult.ShouldHaveUpdates();
+
+        // 1.Repo gets a file Repo.txt and flows it into the VMR, and merges it
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / "B.txt", "Hello world");
+        await GitOperations.CommitAll(ProductRepoPath, "Hello world");
+        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, forceUpdate: true);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, branchName);
+
+        // 2.VMR makes a first modification to VMR.txt and flows it - this should fail with a codeflow exception
+        await File.WriteAllTextAsync(_productRepoVmrPath / "A.txt", "2");
+        await GitOperations.CommitAll(VmrPath, "2");
+
+        Assert.ThrowsAsync<BlockingCodeflowException>(async () =>
+            await CallDarcBackflow(
+                Constants.ProductRepoName,
+                ProductRepoPath,
+                branchName,
+                forceUpdate: false));
     }
 }
