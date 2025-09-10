@@ -98,7 +98,8 @@ internal abstract class CodeFlowTestsBase
         .AddSingleVmrSupport("git", VmrPath, TmpPath, null, null)
         .AddSingleton(_basicBarClient.Object)
         .AddTransient<IRemoteFactory, RemoteFactory>()
-        .AddScoped<ICommentCollector, CommentCollector>();
+        .AddScoped<ICommentCollector, CommentCollector>()
+        .AddSingleton<IRedisCacheClient, NoOpRedisClient>();
 
     protected static List<NativePath> GetExpectedFilesInVmr(
         NativePath vmrPath,

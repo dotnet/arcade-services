@@ -344,7 +344,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                 _ => PrStatus.None,
             },
             UpdatedAt = DateTimeOffset.UtcNow,
-            TargetBranchCommitSha = pr.LastMergeTargetCommit.CommitId,
+            HeadBranchCommitSha = pr.LastMergeSourceCommit.CommitId,
         };
     }
 
