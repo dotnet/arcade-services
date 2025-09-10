@@ -36,8 +36,7 @@ internal class FeatureFlagGetOperation : IOperation
             if (!string.IsNullOrEmpty(_options.FlagName))
             {
                 // Get specific flag
-                _logger.LogInformation("Getting feature flag {FlagName} for subscription {SubscriptionId}",
-                    _options.FlagName, subscriptionId);
+                Console.WriteLine($"Getting feature flag {_options.FlagName} for subscription {subscriptionId}");
 
                 var flag = await _client.FeatureFlags.GetFeatureFlagAsync(_options.FlagName, subscriptionId);
 
@@ -71,7 +70,7 @@ internal class FeatureFlagGetOperation : IOperation
             else
             {
                 // Get all flags for subscription
-                _logger.LogInformation("Getting all feature flags for subscription {SubscriptionId}", subscriptionId);
+                Console.WriteLine($"Getting all feature flags for subscription {{0}}", subscriptionId);
 
                 var response = await _client.FeatureFlags.GetFeatureFlagsAsync(subscriptionId);
 

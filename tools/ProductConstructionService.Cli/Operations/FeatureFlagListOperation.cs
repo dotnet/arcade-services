@@ -29,91 +29,19 @@ internal class FeatureFlagListOperation : IOperation
         {
             if (!string.IsNullOrEmpty(_options.SubscriptionId))
             {
-                // List flags for specific subscription
-                if (!Guid.TryParse(_options.SubscriptionId, out var subscriptionId))
+                (var flowControl, var value) = await ListFlagsForSubscription();
+                if (!flowControl)
                 {
-                    Console.WriteLine($"Error: Invalid subscription ID '{_options.SubscriptionId}'. Must be a valid GUID.");
-                    return 1;
+                    return value;
                 }
-
-                _logger.LogInformation("Listing feature flags for subscription {SubscriptionId}", subscriptionId);
-
-                var response = await _client.FeatureFlags.GetFeatureFlagsAsync(subscriptionId);
-
-                if (response.Flags?.Count == 0 || response.Flags == null)
-                {
-                    Console.WriteLine($"No feature flags found for subscription {subscriptionId}");
-                    return 0;
-                }
-
-                Console.WriteLine($"Feature flags for subscription {subscriptionId}:");
-                Console.WriteLine();
-
-                foreach (var flag in response.Flags)
-                {
-                    Console.WriteLine($"  {flag.FlagName}: {flag.Value}");
-                    
-                    if (flag.Expiry.HasValue)
-                    {
-                        var timeRemaining = flag.Expiry.Value - DateTimeOffset.UtcNow;
-                        if (timeRemaining.TotalDays > 0)
-                        {
-                            Console.WriteLine($"    Expires in {timeRemaining.TotalDays:F1} days ({flag.Expiry.Value:yyyy-MM-dd})");
-                        }
-                        else
-                        {
-                            Console.WriteLine($"    Expires: {flag.Expiry.Value:yyyy-MM-dd HH:mm:ss} UTC");
-                        }
-                    }
-                }
-
-                Console.WriteLine();
-                Console.WriteLine($"Total: {response.Total} flags");
             }
             else
             {
-                // List all flags (admin operation)
-                _logger.LogInformation("Listing all feature flags");
-
-                var response = await _client.FeatureFlags.GetAllFeatureFlagsAsync();
-
-                if (response.Flags?.Count == 0 || response.Flags == null)
+                (var flowControl, var value) = await ListAllFlags();
+                if (!flowControl)
                 {
-                    Console.WriteLine("No feature flags found in the system");
-                    return 0;
+                    return value;
                 }
-
-                Console.WriteLine("All feature flags:");
-                Console.WriteLine();
-
-                var groupedFlags = response.Flags.GroupBy(f => f.SubscriptionId).OrderBy(g => g.Key);
-
-                foreach (var group in groupedFlags)
-                {
-                    Console.WriteLine($"Subscription {group.Key}:");
-                    
-                    foreach (var flag in group.OrderBy(f => f.FlagName))
-                    {
-                        Console.WriteLine($"  {flag.FlagName}: {flag.Value}");
-                        
-                        if (flag.Expiry.HasValue)
-                        {
-                            var timeRemaining = flag.Expiry.Value - DateTimeOffset.UtcNow;
-                            if (timeRemaining.TotalDays > 0)
-                            {
-                                Console.WriteLine($"    Expires in {timeRemaining.TotalDays:F1} days");
-                            }
-                            else
-                            {
-                                Console.WriteLine($"    Expires: {flag.Expiry.Value:yyyy-MM-dd HH:mm:ss} UTC");
-                            }
-                        }
-                    }
-                    
-                    Console.WriteLine();
-                }
-
-                Console.WriteLine($"Total: {response.Total} flags across {groupedFlags.Count()} subscriptions");
             }
 
             return 0;
@@ -124,5 +52,95 @@ internal class FeatureFlagListOperation : IOperation
             Console.WriteLine($"✗ Error: {ex.Message}");
             return 1;
         }
+    }
+
+    private async Task<(bool flowControl, int value)> ListFlagsForSubscription()
+    {
+        if (!Guid.TryParse(_options.SubscriptionId, out var subscriptionId))
+        {
+            Console.WriteLine($"Error: Invalid subscription ID '{_options.SubscriptionId}'. Must be a valid GUID.");
+            return (flowControl: false, value: 1);
+        }
+
+        Console.WriteLine($"Listing feature flags for subscription {subscriptionId}");
+
+        var response = await _client.FeatureFlags.GetFeatureFlagsAsync(subscriptionId);
+
+        if (response.Flags?.Count == 0 || response.Flags == null)
+        {
+            Console.WriteLine($"No feature flags found for subscription {subscriptionId}");
+            return (flowControl: false, value: 0);
+        }
+
+        Console.WriteLine($"Feature flags for subscription {subscriptionId}:");
+        Console.WriteLine();
+
+        foreach (var flag in response.Flags)
+        {
+            Console.WriteLine($"  {flag.FlagName}: {flag.Value}");
+
+            if (flag.Expiry.HasValue)
+            {
+                var timeRemaining = flag.Expiry.Value - DateTimeOffset.UtcNow;
+                if (timeRemaining.TotalDays > 0)
+                {
+                    Console.WriteLine($"    Expires in {timeRemaining.TotalDays:F1} days ({flag.Expiry.Value:yyyy-MM-dd})");
+                }
+                else
+                {
+                    Console.WriteLine($"    Expires: {flag.Expiry.Value:yyyy-MM-dd HH:mm:ss} UTC");
+                }
+            }
+        }
+
+        Console.WriteLine();
+        Console.WriteLine($"Total: {response.Total} flags");
+        return (flowControl: true, value: default);
+    }
+
+    private async Task<(bool flowControl, int value)> ListAllFlags()
+    {
+        Console.WriteLine("Listing all feature flags");
+
+        var response = await _client.FeatureFlags.GetAllFeatureFlagsAsync();
+
+        if (response.Flags?.Count == 0 || response.Flags == null)
+        {
+            Console.WriteLine("No feature flags found in the system");
+            return (flowControl: false, value: 0);
+        }
+
+        Console.WriteLine("All feature flags:");
+        Console.WriteLine();
+
+        var groupedFlags = response.Flags.GroupBy(f => f.SubscriptionId).OrderBy(g => g.Key);
+
+        foreach (var group in groupedFlags)
+        {
+            Console.WriteLine($"Subscription {group.Key}:");
+
+            foreach (var flag in group.OrderBy(f => f.FlagName))
+            {
+                Console.WriteLine($"  {flag.FlagName}: {flag.Value}");
+
+                if (flag.Expiry.HasValue)
+                {
+                    var timeRemaining = flag.Expiry.Value - DateTimeOffset.UtcNow;
+                    if (timeRemaining.TotalDays > 0)
+                    {
+                        Console.WriteLine($"    Expires in {timeRemaining.TotalDays:F1} days");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"    Expires: {flag.Expiry.Value:yyyy-MM-dd HH:mm:ss} UTC");
+                    }
+                }
+            }
+
+            Console.WriteLine();
+        }
+
+        Console.WriteLine($"Total: {response.Total} flags across {groupedFlags.Count()} subscriptions");
+        return (flowControl: true, value: default);
     }
 }

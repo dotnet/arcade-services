@@ -33,8 +33,7 @@ internal class FeatureFlagRemoveOperation : IOperation
                 return 1;
             }
 
-            _logger.LogInformation("Removing feature flag {FlagName} for subscription {SubscriptionId}",
-                _options.FlagName, subscriptionId);
+            Console.WriteLine($"Removing feature flag {_options.FlagName} for subscription {subscriptionId}");
 
             var removed = await _client.FeatureFlags.RemoveFeatureFlagAsync(_options.FlagName, subscriptionId);
 

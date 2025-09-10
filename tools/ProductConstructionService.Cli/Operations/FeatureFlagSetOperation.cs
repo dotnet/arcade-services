@@ -34,8 +34,7 @@ internal class FeatureFlagSetOperation : IOperation
                 return 1;
             }
 
-            _logger.LogInformation("Setting feature flag {FlagName} = {Value} for subscription {SubscriptionId}",
-                _options.FlagName, _options.Value, subscriptionId);
+            Console.WriteLine($"Setting feature flag {_options.FlagName} = {_options.Value} for subscription {subscriptionId}");
 
             var request = new SetFeatureFlagRequest(subscriptionId)
             {

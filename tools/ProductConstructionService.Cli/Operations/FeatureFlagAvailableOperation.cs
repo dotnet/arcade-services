@@ -3,22 +3,18 @@
 
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.Cli.Options;
 
 namespace ProductConstructionService.Cli.Operations;
 
 internal class FeatureFlagAvailableOperation : IOperation
 {
-    private readonly FeatureFlagAvailableOptions _options;
     private readonly IProductConstructionServiceApi _client;
     private readonly ILogger<FeatureFlagAvailableOperation> _logger;
 
     public FeatureFlagAvailableOperation(
-        FeatureFlagAvailableOptions options,
         IProductConstructionServiceApi client,
         ILogger<FeatureFlagAvailableOperation> logger)
     {
-        _options = options;
         _client = client;
         _logger = logger;
     }
@@ -27,8 +23,6 @@ internal class FeatureFlagAvailableOperation : IOperation
     {
         try
         {
-            _logger.LogInformation("Listing available feature flags");
-
             var response = await _client.FeatureFlags.GetAvailableFeatureFlagsAsync();
 
             if (response.Flags?.Count == 0 || response.Flags == null)
@@ -51,8 +45,6 @@ internal class FeatureFlagAvailableOperation : IOperation
                 Console.WriteLine();
             }
 
-            Console.WriteLine($"Total: {response.Flags.Count} available flags");
-            Console.WriteLine();
             Console.WriteLine("Example usage:");
             if (response.Flags.Count > 0)
             {
