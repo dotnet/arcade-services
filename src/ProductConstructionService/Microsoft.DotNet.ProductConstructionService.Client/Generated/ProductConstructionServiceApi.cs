@@ -31,6 +31,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         IBuilds Builds { get; }
         IBuildTime BuildTime { get; }
         IDefaultChannels DefaultChannels { get; }
+        IFeatureFlags FeatureFlags { get; }
         IGoal Goal { get; }
         IChannels Channels { get; }
         IPipelines Pipelines { get; }
@@ -123,6 +124,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         public IDefaultChannels DefaultChannels { get; }
 
+        public IFeatureFlags FeatureFlags { get; }
+
         public IGoal Goal { get; }
 
         public IChannels Channels { get; }
@@ -151,6 +154,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             Builds = new Builds(this);
             BuildTime = new BuildTime(this);
             DefaultChannels = new DefaultChannels(this);
+            FeatureFlags = new FeatureFlags(this);
             Goal = new Goal(this);
             Channels = new Channels(this);
             Pipelines = new Pipelines(this);
