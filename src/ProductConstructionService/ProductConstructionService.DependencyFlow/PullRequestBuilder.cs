@@ -148,11 +148,11 @@ internal class PullRequestBuilder : IPullRequestBuilder
         List<GitFile> updatedDependencies = [];
         Dictionary<UnixPath, List<DependencyUpdate>> nonCoherencyUpdatesPerDirectory = [];
         Dictionary<UnixPath, List<DependencyUpdate>> coherencyUpdatesPerDirectory = [];
-        List<GitFile> targetDirectoryUpdatedDependencies = [];
 
         // Go through each target directory and get the updated git files
         foreach (var (targetDirectory, targetRepoDirectoryUpdates) in requiredUpdates.DirectoryUpdates)
         {
+            List<GitFile> targetDirectoryUpdatedDependencies = [];
             var nonCoherencyUpdates = targetRepoDirectoryUpdates.NonCoherencyUpdates;
             var coherencyUpdates = targetRepoDirectoryUpdates.CoherencyUpdates;
 
@@ -215,7 +215,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
                     startingReferenceId,
                     requiredUpdates.SubscriptionUpdate,
                     nonCoherencyUpdatesPerDirectory,
-                    targetDirectoryUpdatedDependencies,
+                    updatedDependencies,
                     build);
             }
             return description.ToString();
