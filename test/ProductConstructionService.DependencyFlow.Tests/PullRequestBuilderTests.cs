@@ -60,7 +60,6 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     [Test]
     public async Task ShouldReturnCalculateCorrectPRDescriptionWhenNonCoherencyUpdate()
     {
-        UnixPath path = new(".");
         var build1 = GivenANewBuildId(101, "abc1234");
         var build2 = GivenANewBuildId(102, "def2345");
         SubscriptionUpdateWorkItem update1 = GivenSubscriptionUpdate(false, build1.Id, "11111111-1111-1111-1111-111111111111");
@@ -71,18 +70,19 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             update1,
             nonCoherencyUpdates: deps1,
             coherencyUpdates: [],
-            path);
+            UnixPath.Empty);
+        UnixPath path2 = new("src/arcade");
         TargetRepoDependencyUpdates requiredUpdates2 = GetTargetRepoDependencyUpdates(
             update2,
             nonCoherencyUpdates: deps2,
             coherencyUpdates: [],
-            path);
+            path2);
 
         var description = await GeneratePullRequestDescription(requiredUpdates1);
         description = await GeneratePullRequestDescription(requiredUpdates2, description);
 
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps1), 1));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps2), 3));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(UnixPath.Empty, deps1), 1));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path2, deps2), 3));
     }
 
     [Test]
@@ -100,51 +100,50 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         List<DependencyUpdate> deps2 = GivenDependencyUpdates('b', build2.Id);
         List<DependencyUpdate> deps3 = GivenDependencyUpdates('c', build3.Id);
         List<DependencyUpdate> deps4 = GivenDependencyUpdates('e', build4.Id);
-        UnixPath path = new(".");
         TargetRepoDependencyUpdates requiredUpdates1 = GetTargetRepoDependencyUpdates(
             update1,
             nonCoherencyUpdates: deps1,
             coherencyUpdates: [],
-            path);
+            UnixPath.Empty);
         TargetRepoDependencyUpdates requiredUpdates2 = GetTargetRepoDependencyUpdates(
             update2,
             nonCoherencyUpdates: deps2,
             coherencyUpdates: [],
-            path);
+            UnixPath.Empty);
         TargetRepoDependencyUpdates requiredUpdates3 = GetTargetRepoDependencyUpdates(
             update3,
             nonCoherencyUpdates: deps3,
             coherencyUpdates: [],
-            path);
+            UnixPath.Empty);
 
         var description = await GeneratePullRequestDescription(requiredUpdates1);
         description = await GeneratePullRequestDescription(requiredUpdates2, description);
         description = await GeneratePullRequestDescription(requiredUpdates3, description);
 
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps1), 1));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps2), 3));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps3), 5));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(UnixPath.Empty, deps1), 1));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(UnixPath.Empty, deps2), 3));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(UnixPath.Empty, deps3), 5));
 
         List<DependencyUpdate> deps22 = GivenDependencyUpdates('d', build3.Id);
 
-        requiredUpdates2.DirectoryUpdates[path].NonCoherencyUpdates = deps22;
+        requiredUpdates2.DirectoryUpdates[UnixPath.Empty].NonCoherencyUpdates = deps22;
         description = await GeneratePullRequestDescription(requiredUpdates2, description);
 
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps1), 1));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps3), 5));
-        description.Should().NotContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps2), 3));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps22), 7));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(UnixPath.Empty, deps1), 1));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(UnixPath.Empty, deps3), 5));
+        description.Should().NotContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(UnixPath.Empty, deps2), 3));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(UnixPath.Empty, deps22), 7));
 
         TargetRepoDependencyUpdates requiredUpdates4 = GetTargetRepoDependencyUpdates(
             update4,
             nonCoherencyUpdates: deps4,
             coherencyUpdates: [],
-            path);
+            UnixPath.Empty);
 
         description = await GeneratePullRequestDescription(requiredUpdates4, description);
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps1), 1));
-        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps4), 9));
-        description.Should().NotContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(path, deps2), 3));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(UnixPath.Empty, deps1), 1));
+        description.Should().Contain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(UnixPath.Empty, deps4), 9));
+        description.Should().NotContain(BuildCorrectPRDescriptionWhenNonCoherencyUpdate(GetUpdatedDependenciesPerPath(UnixPath.Empty, deps2), 3));
     }
 
     [Test]
@@ -546,7 +545,6 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     {
         var build1 = GivenANewBuildId(101, "abc1234");
         SubscriptionUpdateWorkItem update1 = GivenSubscriptionUpdate(false, build1.Id, "11111111-1111-1111-1111-111111111111");
-        UnixPath path = new(".");
 
         // Create dependencies that should be grouped (same version range and commit range)
         List<DependencyUpdate> deps1 = [
@@ -570,7 +568,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             update1,
             nonCoherencyUpdates: deps1,
             coherencyUpdates: [],
-            path);
+            UnixPath.Empty);
 
         foreach (var dependency in deps1.SelectMany(d => new[] { d.From, d.To }))
         {
@@ -762,9 +760,19 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         List<string> urls = [];
         int currentId = startingId;
 
+        bool shouldAddDirectory = true;
+        string padding = "  ";
+        if (updatedDependenciesPerPath.Keys.Count == 1 && updatedDependenciesPerPath.Keys.First() == UnixPath.Empty)
+        {
+            shouldAddDirectory = false;
+            padding = string.Empty;
+        }
         foreach (var (relativePath, updatedDependencies) in updatedDependenciesPerPath)
         {
-            builder.AppendLine($"  - RelativePath: {(UnixPath.IsEmptyPath(relativePath) ? "root" : relativePath)}");
+            if (shouldAddDirectory)
+            {
+                builder.AppendLine($"  - 📂 `{(UnixPath.IsEmptyPath(relativePath) ? "root" : relativePath)}`");
+            }
             var dependencyGroups = updatedDependencies
                 .GroupBy(dep => new
                 {
@@ -782,10 +790,10 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
 
                 urls.Add(PullRequestBuilder.GetChangesURI(representative.To.RepoUri, representative.From.Commit, representative.To.Commit));
 
-                builder.AppendLine($"    - From [{representative.From.Version} to {representative.To.Version}][{currentId}]");
+                builder.AppendLine($"  {padding}- From [{representative.From.Version} to {representative.To.Version}][{currentId}]");
                 foreach (var dep in group)
                 {
-                    builder.AppendLine($"       - {dep.To.Name}");
+                    builder.AppendLine($"     {padding}- {dep.To.Name}");
                 }
                 currentId++;
             }
