@@ -40,6 +40,7 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionUpdateDat
                 new("In source-enabled (VMR code flow subscriptions) subscriptions, source and target directories define which directory of the VMR (under src/) are the sources synchronized with.", true),
                 new("Only one of those needs to be set based on whether the source or the target repo is the VMR.", true),
                 new("In dependency flow subscriptions only target directory is supported and defines a comma separated list of paths ('.' for repo root) where the dependency updates are applied.", true),
+                new("These paths support globbing, but only at the end of the path, e.g src/*", true),
                 new("Source directory is not supported in dependency flow subscriptions.", true),
                 Line.Empty,
             ])
