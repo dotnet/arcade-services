@@ -10,63 +10,19 @@ namespace ProductConstructionService.Common;
 public static class FeatureFlags
 {
     /// <summary>
-    /// Enables enhanced pull request updates with additional validation and reporting.
+    /// Enables rebase strategy for codeflow conflict resolution instead of merge.
     /// </summary>
-    public const string EnableEnhancedPrUpdates = "enable-enhanced-pr-updates";
-
-    /// <summary>
-    /// Enables batch processing for dependency updates to improve performance.
-    /// </summary>
-    public const string EnableBatchDependencyUpdates = "enable-batch-dependency-updates";
-
-    /// <summary>
-    /// Enables advanced merge conflict resolution strategies.
-    /// </summary>
-    public const string EnableAdvancedMergeConflictResolution = "enable-advanced-merge-conflict-resolution";
-
-    /// <summary>
-    /// Enables detailed telemetry collection for subscription processing.
-    /// </summary>
-    public const string EnableDetailedTelemetry = "enable-detailed-telemetry";
-
-    /// <summary>
-    /// Enables experimental dependency flow optimizations.
-    /// </summary>
-    public const string EnableExperimentalDependencyFlow = "enable-experimental-dependency-flow";
+    public const string EnableRebaseStrategy = "enable-rebase-strategy";
 
     /// <summary>
     /// Gets all available feature flags with their metadata.
     /// </summary>
     public static readonly Dictionary<string, FeatureFlagMetadata> AllFlags = new()
     {
-        [EnableEnhancedPrUpdates] = new FeatureFlagMetadata(
-            EnableEnhancedPrUpdates,
-            "Enhanced PR Updates",
-            "Enables enhanced pull request updates with additional validation and reporting.",
-            FeatureFlagType.Boolean),
-
-        [EnableBatchDependencyUpdates] = new FeatureFlagMetadata(
-            EnableBatchDependencyUpdates,
-            "Batch Dependency Updates",
-            "Enables batch processing for dependency updates to improve performance.",
-            FeatureFlagType.Boolean),
-
-        [EnableAdvancedMergeConflictResolution] = new FeatureFlagMetadata(
-            EnableAdvancedMergeConflictResolution,
-            "Advanced Merge Conflict Resolution",
-            "Enables advanced merge conflict resolution strategies.",
-            FeatureFlagType.Boolean),
-
-        [EnableDetailedTelemetry] = new FeatureFlagMetadata(
-            EnableDetailedTelemetry,
-            "Detailed Telemetry",
-            "Enables detailed telemetry collection for subscription processing.",
-            FeatureFlagType.Boolean),
-
-        [EnableExperimentalDependencyFlow] = new FeatureFlagMetadata(
-            EnableExperimentalDependencyFlow,
-            "Experimental Dependency Flow",
-            "Enables experimental dependency flow optimizations.",
+        [EnableRebaseStrategy] = new FeatureFlagMetadata(
+            EnableRebaseStrategy,
+            "Rebase Strategy",
+            "Enables rebase strategy for codeflow conflict resolution instead of merge.",
             FeatureFlagType.Boolean)
     };
 

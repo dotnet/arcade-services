@@ -34,16 +34,16 @@ public class FeatureFlagsController20200220Tests
         // Arrange
         var request = new SetFeatureFlagRequest(
             _testSubscriptionId,
-            FeatureFlags.EnableEnhancedPrUpdates,
+            FeatureFlags.EnableRebaseStrategy,
             "true");
 
         var expectedResponse = new FeatureFlagResponse(
             true,
             "Feature flag set successfully",
-            new FeatureFlagValue(_testSubscriptionId, FeatureFlags.EnableEnhancedPrUpdates, "true"));
+            new FeatureFlagValue(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy, "true"));
 
         _mockFeatureFlagService
-            .Setup(s => s.SetFlagAsync(_testSubscriptionId, FeatureFlags.EnableEnhancedPrUpdates, "true", null, default))
+            .Setup(s => s.SetFlagAsync(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy, "true", null, default))
             .ReturnsAsync(expectedResponse);
 
         // Act
@@ -55,7 +55,7 @@ public class FeatureFlagsController20200220Tests
         okResult.Value.Should().BeEquivalentTo(expectedResponse);
         
         _mockFeatureFlagService.Verify(
-            s => s.SetFlagAsync(_testSubscriptionId, FeatureFlags.EnableEnhancedPrUpdates, "true", null, default),
+            s => s.SetFlagAsync(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy, "true", null, default),
             Times.Once);
     }
 
@@ -97,14 +97,14 @@ public class FeatureFlagsController20200220Tests
     public async Task GetFeatureFlag_ExistingFlag_ReturnsFlag()
     {
         // Arrange
-        var expectedFlag = new FeatureFlagValue(_testSubscriptionId, FeatureFlags.EnableEnhancedPrUpdates, "true");
+        var expectedFlag = new FeatureFlagValue(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy, "true");
 
         _mockFeatureFlagService
-            .Setup(s => s.GetFlagAsync(_testSubscriptionId, FeatureFlags.EnableEnhancedPrUpdates, default))
+            .Setup(s => s.GetFlagAsync(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy, default))
             .ReturnsAsync(expectedFlag);
 
         // Act
-        var result = await _controller.GetFeatureFlag(_testSubscriptionId, FeatureFlags.EnableEnhancedPrUpdates);
+        var result = await _controller.GetFeatureFlag(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy);
 
         // Assert
         result.Should().BeAssignableTo<OkObjectResult>();
@@ -117,11 +117,11 @@ public class FeatureFlagsController20200220Tests
     {
         // Arrange
         _mockFeatureFlagService
-            .Setup(s => s.GetFlagAsync(_testSubscriptionId, FeatureFlags.EnableEnhancedPrUpdates, default))
+            .Setup(s => s.GetFlagAsync(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy, default))
             .ReturnsAsync((FeatureFlagValue?)null);
 
         // Act
-        var result = await _controller.GetFeatureFlag(_testSubscriptionId, FeatureFlags.EnableEnhancedPrUpdates);
+        var result = await _controller.GetFeatureFlag(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy);
 
         // Assert
         result.Should().BeAssignableTo<NotFoundResult>();
@@ -133,8 +133,7 @@ public class FeatureFlagsController20200220Tests
         // Arrange
         var expectedFlags = new List<FeatureFlagValue>
         {
-            new(_testSubscriptionId, FeatureFlags.EnableEnhancedPrUpdates, "true"),
-            new(_testSubscriptionId, FeatureFlags.EnableBatchDependencyUpdates, "false")
+            new(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy, "true")
         };
 
         _mockFeatureFlagService
@@ -149,7 +148,7 @@ public class FeatureFlagsController20200220Tests
         var okResult = (OkObjectResult)result;
         var response = okResult.Value as FeatureFlagListResponse;
         response!.Flags.Should().BeEquivalentTo(expectedFlags);
-        response.Total.Should().Be(2);
+        response.Total.Should().Be(1);
     }
 
     [Test]
@@ -157,11 +156,11 @@ public class FeatureFlagsController20200220Tests
     {
         // Arrange
         _mockFeatureFlagService
-            .Setup(s => s.RemoveFlagAsync(_testSubscriptionId, FeatureFlags.EnableEnhancedPrUpdates, default))
+            .Setup(s => s.RemoveFlagAsync(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy, default))
             .ReturnsAsync(true);
 
         // Act
-        var result = await _controller.RemoveFeatureFlag(_testSubscriptionId, FeatureFlags.EnableEnhancedPrUpdates);
+        var result = await _controller.RemoveFeatureFlag(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy);
 
         // Assert
         result.Should().BeAssignableTo<OkObjectResult>();
@@ -174,11 +173,11 @@ public class FeatureFlagsController20200220Tests
     {
         // Arrange
         _mockFeatureFlagService
-            .Setup(s => s.RemoveFlagAsync(_testSubscriptionId, FeatureFlags.EnableEnhancedPrUpdates, default))
+            .Setup(s => s.RemoveFlagAsync(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy, default))
             .ReturnsAsync(false);
 
         // Act
-        var result = await _controller.RemoveFeatureFlag(_testSubscriptionId, FeatureFlags.EnableEnhancedPrUpdates);
+        var result = await _controller.RemoveFeatureFlag(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy);
 
         // Assert
         result.Should().BeAssignableTo<NotFoundResult>();
@@ -195,6 +194,6 @@ public class FeatureFlagsController20200220Tests
         var okResult = (OkObjectResult)result;
         var response = okResult.Value as AvailableFeatureFlagsResponse;
         response!.Flags.Should().HaveCount(FeatureFlags.AllFlags.Count);
-        response.Flags.Should().Contain(f => f.Key == FeatureFlags.EnableEnhancedPrUpdates);
+        response.Flags.Should().Contain(f => f.Key == FeatureFlags.EnableRebaseStrategy);
     }
 }

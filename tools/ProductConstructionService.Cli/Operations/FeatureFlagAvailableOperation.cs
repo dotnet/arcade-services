@@ -43,7 +43,7 @@ internal class FeatureFlagAvailableOperation : IOperation
             Console.WriteLine($"Total: {flags.Count()} available flags");
             Console.WriteLine();
             Console.WriteLine("Example usage:");
-            Console.WriteLine($"  pcs feature-flag-set --subscription-id \"12345678-1234-1234-1234-123456789012\" --flag \"{FeatureFlags.EnableEnhancedPrUpdates}\" --value \"true\"");
+            Console.WriteLine($"  pcs feature-flag-set --subscription-id \"12345678-1234-1234-1234-123456789012\" --flag \"{FeatureFlags.EnableRebaseStrategy}\" --value \"true\"");
 
             return Task.FromResult(0);
         }
