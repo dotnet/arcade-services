@@ -616,7 +616,7 @@ internal abstract class TestLogic : ScenarioTestBase
 
         TestContext.WriteLine($"Adding a subscription from {sourceRepoName} to {targetRepoName} with target directories");
         await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(testChannelName, sourceRepoName, targetRepoName, targetBranch,
-            UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: ["--target-directory", targetDirectories],
+            UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: ["--target-directory", targetDirectories, "--excluded-assets", $"**/{sourceAssets[2].Name}"],
             sourceIsAzDo: false, targetIsAzDo: false);
 
         TestContext.WriteLine("Set the first build for intake into target repository");

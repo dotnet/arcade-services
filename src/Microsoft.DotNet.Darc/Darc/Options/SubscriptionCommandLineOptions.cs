@@ -20,7 +20,8 @@ internal abstract class SubscriptionCommandLineOptions<T> : CommandLineOptions<T
     public string SourceDirectory { get; set; }
 
     [Option("target-directory", HelpText = "In source enabled subs: Name of the VMR target directory which are the repository sources synchronized to." +
-        " In dependency flow subscriptions: Comma separated list of paths ('.' for repo root) where the dependency updates are applied.")]
+        " In dependency flow subscriptions: Comma separated list of paths ('.' for repo root) where the dependency updates are applied."
+        )]
     public string TargetDirectory { get; set; }
 
     [Option("excluded-assets", HelpText = "Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded." +

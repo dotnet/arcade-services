@@ -848,13 +848,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId)
             ?? throw new ($"Subscription with ID {update.SubscriptionId} not found in the DB.");
 
+        var excludedAssetsMatcher = subscription.ExcludedAssets.GetAssetMatcher();
+
         List<UnixPath> targetDirectories;
-        Dictionary<UnixPath, IAssetMatcher> targetDirectoryAssetMatchers;
         if (string.IsNullOrEmpty(subscription.TargetDirectory))
         {
             targetDirectories = [UnixPath.Empty];
-            targetDirectoryAssetMatchers = [];
-            targetDirectoryAssetMatchers[targetDirectories[0]] = subscription.ExcludedAssets.GetAssetMatcher();
         }
         else
         {
@@ -875,18 +874,17 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     targetDirectories.Add(new UnixPath(d));
                 }
             }
-            
-            targetDirectoryAssetMatchers = subscription.ExcludedAssets.GetAssetMatchersPerDirectory(targetDirectories);
         }
 
-        foreach (var (targetDirectory, excludedAssetsMatcher) in targetDirectoryAssetMatchers)
+        foreach (var targetDirectory in targetDirectories)
         {
             // Existing details
             var existingDependencies = (await darc.GetDependenciesAsync(targetRepository, prBranch ?? targetBranch, relativeBasePath: targetDirectory)).ToList();
 
             // Filter out excluded assets from the build assets
+            bool isRoot = targetDirectory == UnixPath.Empty;
             List<AssetData> assetData = build.Assets
-                .Where(a => !excludedAssetsMatcher.IsExcluded(a.Name))
+                .Where(a => !excludedAssetsMatcher.IsExcluded(isRoot ? a.Name : $"{targetDirectory}/{a.Name}"))
                 .Select(a => new AssetData(false)
                 {
                     Name = a.Name,

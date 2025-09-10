@@ -336,9 +336,8 @@ internal class ScenarioTests_GitHubFlow : TestLogic
                 new DependencyDetail
                 {
                     Name = GetUniqueAssetName("VmrBaz"),
-                    Version = "3.1.1",
+                    Version = "3.1.0",
                     RepoUri = sourceRepoUri,
-                    Commit = TestRepository.CoherencyTestRepo1Commit,
                     Type = DependencyType.Product,
                     Pinned = false
                 },
@@ -366,9 +365,8 @@ internal class ScenarioTests_GitHubFlow : TestLogic
                 new DependencyDetail
                 {
                     Name = GetUniqueAssetName("VmrBaz"),
-                    Version = "3.1.1",
+                    Version = "3.1.0",
                     RepoUri = sourceRepoUri,
-                    Commit = TestRepository.CoherencyTestRepo1Commit,
                     Type = DependencyType.Product,
                     Pinned = false
                 }
@@ -399,9 +397,8 @@ internal class ScenarioTests_GitHubFlow : TestLogic
                 new DependencyDetail
                 {
                     Name = GetUniqueAssetName("VmrBaz"),
-                    Version = "3.2.1",
+                    Version = "3.1.0",
                     RepoUri = sourceRepoUri,
-                    Commit = TestRepository.CoherencyTestRepo1Commit,
                     Type = DependencyType.Product,
                     Pinned = false
                 },
@@ -429,9 +426,8 @@ internal class ScenarioTests_GitHubFlow : TestLogic
                 new DependencyDetail
                 {
                     Name = GetUniqueAssetName("VmrBaz"),
-                    Version = "3.2.1",
+                    Version = "3.1.0",
                     RepoUri = sourceRepoUri,
-                    Commit = TestRepository.CoherencyTestRepo1Commit,
                     Type = DependencyType.Product,
                     Pinned = false
                 }

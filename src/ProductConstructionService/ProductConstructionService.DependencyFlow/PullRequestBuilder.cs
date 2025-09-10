@@ -781,7 +781,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
                 var relativeBasePath = globalJsonFile.FilePath.Replace("global.json", string.Empty, StringComparison.OrdinalIgnoreCase);
                 if (string.IsNullOrEmpty(relativeBasePath))
                 {
-                    relativeBasePath = "./";
+                    relativeBasePath = "root";
                 }
 
                 globalJsonSection.AppendLine($"- **Updates to .NET SDKs in {relativeBasePath}:**");
