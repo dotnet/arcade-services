@@ -1,8 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.Common;
 using ProductConstructionService.Cli.Options;
 
 namespace ProductConstructionService.Cli.Operations;
@@ -10,16 +10,16 @@ namespace ProductConstructionService.Cli.Operations;
 internal class FeatureFlagGetOperation : IOperation
 {
     private readonly FeatureFlagGetOptions _options;
-    private readonly IFeatureFlagService _featureFlagService;
+    private readonly IProductConstructionServiceApi _client;
     private readonly ILogger<FeatureFlagGetOperation> _logger;
 
     public FeatureFlagGetOperation(
         FeatureFlagGetOptions options,
-        IFeatureFlagService featureFlagService,
+        IProductConstructionServiceApi client,
         ILogger<FeatureFlagGetOperation> logger)
     {
         _options = options;
-        _featureFlagService = featureFlagService;
+        _client = client;
         _logger = logger;
     }
 
@@ -39,7 +39,7 @@ internal class FeatureFlagGetOperation : IOperation
                 _logger.LogInformation("Getting feature flag {FlagName} for subscription {SubscriptionId}",
                     _options.FlagName, subscriptionId);
 
-                var flag = await _featureFlagService.GetFlagAsync(subscriptionId, _options.FlagName);
+                var flag = await _client.FeatureFlags.GetFeatureFlagAsync(_options.FlagName, subscriptionId);
 
                 if (flag == null)
                 {
@@ -73,9 +73,9 @@ internal class FeatureFlagGetOperation : IOperation
                 // Get all flags for subscription
                 _logger.LogInformation("Getting all feature flags for subscription {SubscriptionId}", subscriptionId);
 
-                var flags = await _featureFlagService.GetFlagsForSubscriptionAsync(subscriptionId);
+                var response = await _client.FeatureFlags.GetFeatureFlagsAsync(subscriptionId);
 
-                if (flags.Count == 0)
+                if (response.Flags?.Count == 0 || response.Flags == null)
                 {
                     Console.WriteLine($"No feature flags found for subscription {subscriptionId}");
                     return 0;
@@ -84,7 +84,7 @@ internal class FeatureFlagGetOperation : IOperation
                 Console.WriteLine($"Feature flags for subscription {subscriptionId}:");
                 Console.WriteLine();
 
-                foreach (var flag in flags)
+                foreach (var flag in response.Flags)
                 {
                     Console.WriteLine($"  {flag.FlagName}: {flag.Value}");
                     
@@ -95,7 +95,7 @@ internal class FeatureFlagGetOperation : IOperation
                 }
 
                 Console.WriteLine();
-                Console.WriteLine($"Total: {flags.Count} flags");
+                Console.WriteLine($"Total: {response.Total} flags");
                 return 0;
             }
         }

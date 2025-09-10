@@ -8,13 +8,7 @@ using ProductConstructionService.Cli.Operations;
 namespace ProductConstructionService.Cli.Options;
 
 [Verb("feature-flag-available", HelpText = "List all available feature flags with descriptions")]
-internal class FeatureFlagAvailableOptions : Options
+internal class FeatureFlagAvailableOptions : PcsStatusOptions
 {
     public override IOperation GetOperation(IServiceProvider sp) => ActivatorUtilities.CreateInstance<FeatureFlagAvailableOperation>(sp, this);
-
-    public override Task<IServiceCollection> RegisterServices(IServiceCollection services)
-    {
-        services.AddSingleton(this);
-        return base.RegisterServices(services);
-    }
 }

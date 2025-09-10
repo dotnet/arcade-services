@@ -1,8 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.Common;
 using ProductConstructionService.Cli.Options;
 
 namespace ProductConstructionService.Cli.Operations;
@@ -10,16 +11,16 @@ namespace ProductConstructionService.Cli.Operations;
 internal class FeatureFlagSetOperation : IOperation
 {
     private readonly FeatureFlagSetOptions _options;
-    private readonly IFeatureFlagService _featureFlagService;
+    private readonly IProductConstructionServiceApi _client;
     private readonly ILogger<FeatureFlagSetOperation> _logger;
 
     public FeatureFlagSetOperation(
         FeatureFlagSetOptions options,
-        IFeatureFlagService featureFlagService,
+        IProductConstructionServiceApi client,
         ILogger<FeatureFlagSetOperation> logger)
     {
         _options = options;
-        _featureFlagService = featureFlagService;
+        _client = client;
         _logger = logger;
     }
 
@@ -33,16 +34,17 @@ internal class FeatureFlagSetOperation : IOperation
                 return 1;
             }
 
-            var expiry = _options.ExpiryDays.HasValue ? (TimeSpan?)TimeSpan.FromDays(_options.ExpiryDays.Value) : null;
-
             _logger.LogInformation("Setting feature flag {FlagName} = {Value} for subscription {SubscriptionId}",
                 _options.FlagName, _options.Value, subscriptionId);
 
-            var result = await _featureFlagService.SetFlagAsync(
-                subscriptionId,
-                _options.FlagName,
-                _options.Value,
-                expiry);
+            var request = new SetFeatureFlagRequest(subscriptionId)
+            {
+                FlagName = _options.FlagName,
+                Value = _options.Value,
+                ExpiryDays = _options.ExpiryDays
+            };
+
+            var result = await _client.FeatureFlags.SetFeatureFlagAsync(request);
 
             if (result.Success)
             {

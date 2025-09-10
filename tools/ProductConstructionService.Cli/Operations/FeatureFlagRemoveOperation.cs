@@ -1,8 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.Common;
 using ProductConstructionService.Cli.Options;
 
 namespace ProductConstructionService.Cli.Operations;
@@ -10,16 +10,16 @@ namespace ProductConstructionService.Cli.Operations;
 internal class FeatureFlagRemoveOperation : IOperation
 {
     private readonly FeatureFlagRemoveOptions _options;
-    private readonly IFeatureFlagService _featureFlagService;
+    private readonly IProductConstructionServiceApi _client;
     private readonly ILogger<FeatureFlagRemoveOperation> _logger;
 
     public FeatureFlagRemoveOperation(
         FeatureFlagRemoveOptions options,
-        IFeatureFlagService featureFlagService,
+        IProductConstructionServiceApi client,
         ILogger<FeatureFlagRemoveOperation> logger)
     {
         _options = options;
-        _featureFlagService = featureFlagService;
+        _client = client;
         _logger = logger;
     }
 
@@ -36,7 +36,7 @@ internal class FeatureFlagRemoveOperation : IOperation
             _logger.LogInformation("Removing feature flag {FlagName} for subscription {SubscriptionId}",
                 _options.FlagName, subscriptionId);
 
-            var removed = await _featureFlagService.RemoveFlagAsync(subscriptionId, _options.FlagName);
+            var removed = await _client.FeatureFlags.RemoveFeatureFlagAsync(_options.FlagName, subscriptionId);
 
             if (removed)
             {

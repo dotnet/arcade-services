@@ -1,8 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.Common;
 using ProductConstructionService.Cli.Options;
 
 namespace ProductConstructionService.Cli.Operations;
@@ -10,16 +10,16 @@ namespace ProductConstructionService.Cli.Operations;
 internal class FeatureFlagListOperation : IOperation
 {
     private readonly FeatureFlagListOptions _options;
-    private readonly IFeatureFlagService _featureFlagService;
+    private readonly IProductConstructionServiceApi _client;
     private readonly ILogger<FeatureFlagListOperation> _logger;
 
     public FeatureFlagListOperation(
         FeatureFlagListOptions options,
-        IFeatureFlagService featureFlagService,
+        IProductConstructionServiceApi client,
         ILogger<FeatureFlagListOperation> logger)
     {
         _options = options;
-        _featureFlagService = featureFlagService;
+        _client = client;
         _logger = logger;
     }
 
@@ -38,9 +38,9 @@ internal class FeatureFlagListOperation : IOperation
 
                 _logger.LogInformation("Listing feature flags for subscription {SubscriptionId}", subscriptionId);
 
-                var flags = await _featureFlagService.GetFlagsForSubscriptionAsync(subscriptionId);
+                var response = await _client.FeatureFlags.GetFeatureFlagsAsync(subscriptionId);
 
-                if (flags.Count == 0)
+                if (response.Flags?.Count == 0 || response.Flags == null)
                 {
                     Console.WriteLine($"No feature flags found for subscription {subscriptionId}");
                     return 0;
@@ -49,7 +49,7 @@ internal class FeatureFlagListOperation : IOperation
                 Console.WriteLine($"Feature flags for subscription {subscriptionId}:");
                 Console.WriteLine();
 
-                foreach (var flag in flags)
+                foreach (var flag in response.Flags)
                 {
                     Console.WriteLine($"  {flag.FlagName}: {flag.Value}");
                     
@@ -68,16 +68,16 @@ internal class FeatureFlagListOperation : IOperation
                 }
 
                 Console.WriteLine();
-                Console.WriteLine($"Total: {flags.Count} flags");
+                Console.WriteLine($"Total: {response.Total} flags");
             }
             else
             {
                 // List all flags (admin operation)
                 _logger.LogInformation("Listing all feature flags");
 
-                var flags = await _featureFlagService.GetAllFlagsAsync();
+                var response = await _client.FeatureFlags.GetAllFeatureFlagsAsync();
 
-                if (flags.Count == 0)
+                if (response.Flags?.Count == 0 || response.Flags == null)
                 {
                     Console.WriteLine("No feature flags found in the system");
                     return 0;
@@ -86,7 +86,7 @@ internal class FeatureFlagListOperation : IOperation
                 Console.WriteLine("All feature flags:");
                 Console.WriteLine();
 
-                var groupedFlags = flags.GroupBy(f => f.SubscriptionId).OrderBy(g => g.Key);
+                var groupedFlags = response.Flags.GroupBy(f => f.SubscriptionId).OrderBy(g => g.Key);
 
                 foreach (var group in groupedFlags)
                 {
@@ -113,7 +113,7 @@ internal class FeatureFlagListOperation : IOperation
                     Console.WriteLine();
                 }
 
-                Console.WriteLine($"Total: {flags.Count} flags across {groupedFlags.Count()} subscriptions");
+                Console.WriteLine($"Total: {response.Total} flags across {groupedFlags.Count()} subscriptions");
             }
 
             return 0;
