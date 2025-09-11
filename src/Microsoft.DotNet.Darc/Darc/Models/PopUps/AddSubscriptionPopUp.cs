@@ -59,7 +59,7 @@ internal class AddSubscriptionPopUp : SubscriptionPopUp<SubscriptionData>
                 Line.Empty,
                 new("Excluded assets is a list of package names to be ignored during dependency updates. ", true),
                 new("Asterisks can be used to filter whole namespaces, e.g. - Microsoft.DotNet.Arcade.*", true),
-                new("When used non-source-enabled subscriptions which target directories, it is possible to exclude assets in specified directories", true),
+                new("When used with non-source-enabled subscriptions which target directories, it is possible to exclude assets in specified directories", true),
                 new("e.g. - src/sdk/System.Text.json, or use globbing e.g. - src/**/System.Text.* ", true),
                 Line.Empty,
                 new("In source-enabled (VMR code flow subscriptions) subscriptions, source and target directories define which directory of the VMR (under src/) are the sources synchronized with.", true),
