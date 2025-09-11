@@ -155,7 +155,10 @@ public class UnixPath : LocalPath
 
     protected override string NormalizePath(string s) => s.Replace('\\', '/');
 
-    public static bool IsEmptyPath(string path) => path.Length == 0 || path == null || path[0] == '.';
+    public static bool IsEmptyPath(string path) =>
+        path.Length == 0
+        || path == null
+        || (path[0] == '.' && path.Length == 1);
 
     public override bool Equals(object? obj)
     {

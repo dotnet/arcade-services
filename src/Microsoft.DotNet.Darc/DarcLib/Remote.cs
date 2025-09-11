@@ -243,7 +243,7 @@ public sealed class Remote : IRemote
             if (repoIsVmr)
             {
                 string pathToReplaceWith;
-                if (relativeDependencyBasePath.ToString() == ".")
+                if (relativeDependencyBasePath.ToString() == UnixPath.Empty)
                 {
                     pathToReplaceWith = null;
                 }
@@ -261,7 +261,7 @@ public sealed class Remote : IRemote
                         f.Operation))
                     .ToList();
             }
-            else if (relativeDependencyBasePath.ToString() != ".")
+            else if (relativeDependencyBasePath.ToString() != UnixPath.Empty)
             {
                 engCommonFiles = engCommonFiles
                     .Select(f => new GitFile(
