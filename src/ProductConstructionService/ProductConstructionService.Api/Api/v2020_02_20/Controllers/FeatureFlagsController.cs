@@ -4,7 +4,9 @@
 using System.Net;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Common;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
@@ -14,6 +16,7 @@ namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 /// </summary>
 [Route("feature-flags")]
 [ApiVersion("2020-02-20")]
+[Authorize(Policy = AuthenticationConfiguration.AdminAuthorizationPolicyName)]
 public class FeatureFlagsController : ControllerBase
 {
     private readonly IFeatureFlagService _featureFlagService;
@@ -43,12 +46,18 @@ public class FeatureFlagsController : ControllerBase
             return BadRequest(new FeatureFlagResponse(false, "Request cannot be null"));
         }
 
+        var flag = FeatureFlags.GetByName(request.FlagName);
+        if (flag == null)
+        {
+            return BadRequest(new FeatureFlagResponse(false, $"Unknown feature flag: {request.FlagName}"));
+        }
+
         try
         {
             var expiry = request.ExpiryDays.HasValue ? (TimeSpan?)TimeSpan.FromDays(request.ExpiryDays.Value) : null;
             var result = await _featureFlagService.SetFlagAsync(
                 request.SubscriptionId,
-                request.FlagName,
+                flag,
                 request.Value,
                 expiry);
 
@@ -108,15 +117,21 @@ public class FeatureFlagsController : ControllerBase
             return BadRequest(new FeatureFlagResponse(false, "Flag name cannot be empty"));
         }
 
+        var flag = FeatureFlags.GetByName(flagName);
+        if (flag == null)
+        {
+            return BadRequest(new FeatureFlagResponse(false, $"Unknown feature flag: {flagName}"));
+        }
+
         try
         {
-            var flag = await _featureFlagService.GetFlagAsync(subscriptionId, flagName);
-            if (flag == null)
+            var flagValue = await _featureFlagService.GetFlagAsync(subscriptionId, flag);
+            if (flagValue == null)
             {
                 return NotFound();
             }
 
-            return Ok(flag);
+            return Ok(flagValue);
         }
         catch (Exception ex)
         {
@@ -143,9 +158,15 @@ public class FeatureFlagsController : ControllerBase
             return BadRequest(new FeatureFlagResponse(false, "Flag name cannot be empty"));
         }
 
+        var flag = FeatureFlags.GetByName(flagName);
+        if (flag == null)
+        {
+            return BadRequest(new FeatureFlagResponse(false, $"Unknown feature flag: {flagName}"));
+        }
+
         try
         {
-            var removed = await _featureFlagService.RemoveFlagAsync(subscriptionId, flagName);
+            var removed = await _featureFlagService.RemoveFlagAsync(subscriptionId, flag);
             if (!removed)
             {
                 return NotFound();
@@ -193,8 +214,7 @@ public class FeatureFlagsController : ControllerBase
     {
         try
         {
-            var flags = FeatureFlags.AllFlags.Values.ToList();
-            return Ok(new AvailableFeatureFlagsResponse(flags));
+            return Ok(new AvailableFeatureFlagsResponse([..FeatureFlags.FlagNames]));
         }
         catch (Exception ex)
         {

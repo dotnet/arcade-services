@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Globalization;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
@@ -26,25 +25,19 @@ public class FeatureFlagService : IFeatureFlagService
 
     public async Task<FeatureFlagResponse> SetFlagAsync(
         Guid subscriptionId,
-        string flagName,
+        FeatureFlag flag,
         string value,
         TimeSpan? expiry = null,
         CancellationToken cancellationToken = default)
     {
-        var validation = ValidateFlag(flagName, value);
-        if (!validation.Success)
-        {
-            return validation;
-        }
-
         try
         {
-            var key = GetRedisKey(subscriptionId, flagName);
+            var key = GetRedisKey(subscriptionId, flag);
             var cache = _redisCacheFactory.Create(key);
             
             var flagValue = new FeatureFlagValue(
                 subscriptionId,
-                flagName,
+                flag.Name,
                 value,
                 expiry.HasValue ? DateTimeOffset.UtcNow.Add(expiry.Value) : null,
                 DateTimeOffset.UtcNow,
@@ -54,26 +47,26 @@ public class FeatureFlagService : IFeatureFlagService
             await cache.SetAsync(json, expiry ?? DefaultExpiration);
 
             _logger.LogInformation("Set feature flag {FlagName} = {Value} for subscription {SubscriptionId}", 
-                flagName, value, subscriptionId);
+                flag.Name, value, subscriptionId);
 
             return new FeatureFlagResponse(true, "Feature flag set successfully", flagValue);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to set feature flag {FlagName} for subscription {SubscriptionId}", 
-                flagName, subscriptionId);
+                flag.Name, subscriptionId);
             return new FeatureFlagResponse(false, $"Failed to set feature flag: {ex.Message}");
         }
     }
 
     public async Task<FeatureFlagValue?> GetFlagAsync(
         Guid subscriptionId,
-        string flagName,
+        FeatureFlag flag,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            var key = GetRedisKey(subscriptionId, flagName);
+            var key = GetRedisKey(subscriptionId, flag);
             var cache = _redisCacheFactory.Create(key);
             
             var json = await cache.TryGetAsync();
@@ -89,7 +82,7 @@ public class FeatureFlagService : IFeatureFlagService
             {
                 await cache.TryDeleteAsync();
                 _logger.LogInformation("Expired feature flag {FlagName} removed for subscription {SubscriptionId}", 
-                    flagName, subscriptionId);
+                    flag.Name, subscriptionId);
                 return null;
             }
 
@@ -98,7 +91,7 @@ public class FeatureFlagService : IFeatureFlagService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get feature flag {FlagName} for subscription {SubscriptionId}", 
-                flagName, subscriptionId);
+                flag.Name, subscriptionId);
             return null;
         }
     }
@@ -156,12 +149,12 @@ public class FeatureFlagService : IFeatureFlagService
 
     public async Task<bool> RemoveFlagAsync(
         Guid subscriptionId,
-        string flagName,
+        FeatureFlag flag,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            var key = GetRedisKey(subscriptionId, flagName);
+            var key = GetRedisKey(subscriptionId, flag);
             var cache = _redisCacheFactory.Create(key);
             
             var removed = await cache.TryDeleteAsync();
@@ -169,7 +162,7 @@ public class FeatureFlagService : IFeatureFlagService
             if (removed)
             {
                 _logger.LogInformation("Removed feature flag {FlagName} for subscription {SubscriptionId}", 
-                    flagName, subscriptionId);
+                    flag.Name, subscriptionId);
             }
 
             return removed;
@@ -177,7 +170,7 @@ public class FeatureFlagService : IFeatureFlagService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to remove feature flag {FlagName} for subscription {SubscriptionId}", 
-                flagName, subscriptionId);
+                flag.Name, subscriptionId);
             return false;
         }
     }
@@ -232,189 +225,13 @@ public class FeatureFlagService : IFeatureFlagService
         }
     }
 
-    public FeatureFlagResponse ValidateFlag(string flagName, string value)
+    private static string GetRedisKey(Guid subscriptionId, FeatureFlag flag)
     {
-        if (string.IsNullOrWhiteSpace(flagName))
-        {
-            return new FeatureFlagResponse(false, "Flag name cannot be empty");
-        }
-
-        if (!FeatureFlags.IsValidFlag(flagName))
-        {
-            return new FeatureFlagResponse(false, $"Unknown feature flag: {flagName}. Valid flags are: {string.Join(", ", FeatureFlags.AllFlags.Keys)}");
-        }
-
-        var metadata = FeatureFlags.GetMetadata(flagName);
-        if (metadata == null)
-        {
-            return new FeatureFlagResponse(false, $"No metadata found for flag: {flagName}");
-        }
-
-        // Validate value based on flag type
-        switch (metadata.Type)
-        {
-            case FeatureFlagType.Boolean:
-                if (!bool.TryParse(value, out _))
-                {
-                    return new FeatureFlagResponse(false, $"Invalid boolean value '{value}' for flag {flagName}. Expected: true or false");
-                }
-                break;
-            
-            case FeatureFlagType.Integer:
-                if (!int.TryParse(value, out _))
-                {
-                    return new FeatureFlagResponse(false, $"Invalid integer value '{value}' for flag {flagName}");
-                }
-                break;
-            
-            case FeatureFlagType.Double:
-                if (!double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
-                {
-                    return new FeatureFlagResponse(false, $"Invalid double value '{value}' for flag {flagName}");
-                }
-                break;
-            
-            case FeatureFlagType.String:
-                // Any string is valid, but check for reasonable length
-                if (value?.Length > 1000)
-                {
-                    return new FeatureFlagResponse(false, $"String value too long for flag {flagName}. Maximum length is 1000 characters");
-                }
-                break;
-        }
-
-        return new FeatureFlagResponse(true, "Valid flag");
-    }
-
-    private static string GetRedisKey(Guid subscriptionId, string flagName)
-    {
-        return $"{KeyPrefix}_{subscriptionId}:{flagName}";
+        return $"{KeyPrefix}_{subscriptionId}:{flag.Name}";
     }
 
     private static string GetRedisKeyPattern(Guid subscriptionId)
     {
         return $"{KeyPrefix}_{subscriptionId}:*";
-    }
-}
-
-/// <summary>
-/// Client implementation for strongly-typed access to feature flags.
-/// </summary>
-public class FeatureFlagClient : IFeatureFlagClient
-{
-    private readonly IFeatureFlagService _featureFlagService;
-    private readonly ILogger<FeatureFlagClient> _logger;
-    private readonly Dictionary<string, FeatureFlagValue> _cache = new();
-    private Guid? _subscriptionId;
-
-    public FeatureFlagClient(IFeatureFlagService featureFlagService, ILogger<FeatureFlagClient> logger)
-    {
-        _featureFlagService = featureFlagService;
-        _logger = logger;
-    }
-
-    public async Task InitializeAsync(Guid subscriptionId, CancellationToken cancellationToken = default)
-    {
-        _subscriptionId = subscriptionId;
-        _cache.Clear();
-        
-        try
-        {
-            var flags = await _featureFlagService.GetFlagsForSubscriptionAsync(subscriptionId, cancellationToken);
-            foreach (var flag in flags)
-            {
-                _cache[flag.FlagName] = flag;
-            }
-            
-            _logger.LogDebug("Loaded {Count} feature flags for subscription {SubscriptionId}", 
-                flags.Count, subscriptionId);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to initialize feature flag client for subscription {SubscriptionId}", 
-                subscriptionId);
-        }
-    }
-
-    public async Task<bool> GetBooleanFlagAsync(string flagName, bool defaultValue = false)
-    {
-        var value = await GetFlagValueAsync(flagName);
-        
-        if (string.IsNullOrEmpty(value))
-        {
-            return defaultValue;
-        }
-
-        return bool.TryParse(value, out var result) ? result : defaultValue;
-    }
-
-    public async Task<string> GetStringFlagAsync(string flagName, string defaultValue = "")
-    {
-        var value = await GetFlagValueAsync(flagName);
-        return string.IsNullOrEmpty(value) ? defaultValue : value;
-    }
-
-    public async Task<int> GetIntegerFlagAsync(string flagName, int defaultValue = 0)
-    {
-        var value = await GetFlagValueAsync(flagName);
-        
-        if (string.IsNullOrEmpty(value))
-        {
-            return defaultValue;
-        }
-
-        return int.TryParse(value, out var result) ? result : defaultValue;
-    }
-
-    public async Task<double> GetDoubleFlagAsync(string flagName, double defaultValue = 0.0)
-    {
-        var value = await GetFlagValueAsync(flagName);
-        
-        if (string.IsNullOrEmpty(value))
-        {
-            return defaultValue;
-        }
-
-        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var result) ? result : defaultValue;
-    }
-
-    private async Task<string?> GetFlagValueAsync(string flagName)
-    {
-        if (_subscriptionId == null)
-        {
-            _logger.LogWarning("Feature flag client not initialized with a subscription ID");
-            return null;
-        }
-
-        // Check cache first
-        if (_cache.TryGetValue(flagName, out var cachedFlag))
-        {
-            // Check if flag has expired
-            if (cachedFlag.Expiry.HasValue && cachedFlag.Expiry.Value < DateTimeOffset.UtcNow)
-            {
-                _cache.Remove(flagName);
-                return null;
-            }
-            
-            return cachedFlag.Value;
-        }
-
-        // Not in cache, check Redis directly
-        try
-        {
-            var flag = await _featureFlagService.GetFlagAsync(_subscriptionId.Value, flagName);
-            if (flag != null)
-            {
-                _cache[flagName] = flag;
-                return flag.Value;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to get feature flag {FlagName} for subscription {SubscriptionId}", 
-                flagName, _subscriptionId);
-        }
-
-        return null;
     }
 }

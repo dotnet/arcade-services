@@ -50,7 +50,7 @@ public record FeatureFlagResponse(
 /// <param name="Flags">The list of feature flags.</param>
 /// <param name="Total">The total count of flags.</param>
 public record FeatureFlagListResponse(
-    IReadOnlyList<FeatureFlagValue> Flags,
+    IReadOnlyCollection<FeatureFlagValue> Flags,
     int Total);
 
 /// <summary>
@@ -58,4 +58,4 @@ public record FeatureFlagListResponse(
 /// </summary>
 /// <param name="Flags">The list of available feature flag definitions.</param>
 public record AvailableFeatureFlagsResponse(
-    IReadOnlyList<FeatureFlagMetadata> Flags);
+    IReadOnlyCollection<string> Flags);

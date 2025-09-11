@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Net;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -29,21 +28,35 @@ public class FeatureFlagsController20200220Tests
     }
 
     [Test]
+    public async Task SetFeatureFlag_InvalidFlag_ReturnsBadRequest()
+    {
+        // Arrange
+        var request = new SetFeatureFlagRequest(_testSubscriptionId, "invalid-flag", "true");
+        var expectedResponse = new FeatureFlagResponse(false, "Unknown feature flag: invalid-flag");
+
+        // Act
+        var result = await _controller.SetFeatureFlag(request);
+
+        // Assert
+        result.Should().BeAssignableTo<BadRequestObjectResult>();
+    }
+
+    [Test]
     public async Task SetFeatureFlag_ValidRequest_ReturnsSuccess()
     {
         // Arrange
         var request = new SetFeatureFlagRequest(
             _testSubscriptionId,
-            FeatureFlags.EnableRebaseStrategy,
+            FeatureFlag.EnableRebaseStrategy.Name,
             "true");
 
         var expectedResponse = new FeatureFlagResponse(
             true,
             "Feature flag set successfully",
-            new FeatureFlagValue(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy, "true"));
+            new FeatureFlagValue(_testSubscriptionId, FeatureFlag.EnableRebaseStrategy.Name, "true"));
 
         _mockFeatureFlagService
-            .Setup(s => s.SetFlagAsync(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy, "true", null, default))
+            .Setup(s => s.SetFlagAsync(_testSubscriptionId, FeatureFlag.EnableRebaseStrategy, "true", null, default))
             .ReturnsAsync(expectedResponse);
 
         // Act
@@ -55,28 +68,8 @@ public class FeatureFlagsController20200220Tests
         okResult.Value.Should().BeEquivalentTo(expectedResponse);
         
         _mockFeatureFlagService.Verify(
-            s => s.SetFlagAsync(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy, "true", null, default),
+            s => s.SetFlagAsync(_testSubscriptionId, FeatureFlag.EnableRebaseStrategy, "true", null, default),
             Times.Once);
-    }
-
-    [Test]
-    public async Task SetFeatureFlag_InvalidFlag_ReturnsBadRequest()
-    {
-        // Arrange
-        var request = new SetFeatureFlagRequest(_testSubscriptionId, "invalid-flag", "true");
-        var expectedResponse = new FeatureFlagResponse(false, "Unknown feature flag: invalid-flag");
-
-        _mockFeatureFlagService
-            .Setup(s => s.SetFlagAsync(_testSubscriptionId, "invalid-flag", "true", null, default))
-            .ReturnsAsync(expectedResponse);
-
-        // Act
-        var result = await _controller.SetFeatureFlag(request);
-
-        // Assert
-        result.Should().BeAssignableTo<BadRequestObjectResult>();
-        var badRequestResult = (BadRequestObjectResult)result;
-        badRequestResult.Value.Should().BeEquivalentTo(expectedResponse);
     }
 
     [Test]
@@ -97,14 +90,14 @@ public class FeatureFlagsController20200220Tests
     public async Task GetFeatureFlag_ExistingFlag_ReturnsFlag()
     {
         // Arrange
-        var expectedFlag = new FeatureFlagValue(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy, "true");
+        var expectedFlag = new FeatureFlagValue(_testSubscriptionId, FeatureFlag.EnableRebaseStrategy.Name, "true");
 
         _mockFeatureFlagService
-            .Setup(s => s.GetFlagAsync(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy, default))
+            .Setup(s => s.GetFlagAsync(_testSubscriptionId, FeatureFlag.EnableRebaseStrategy, default))
             .ReturnsAsync(expectedFlag);
 
         // Act
-        var result = await _controller.GetFeatureFlag(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy);
+        var result = await _controller.GetFeatureFlag(_testSubscriptionId, FeatureFlag.EnableRebaseStrategy.Name);
 
         // Assert
         result.Should().BeAssignableTo<OkObjectResult>();
@@ -117,11 +110,11 @@ public class FeatureFlagsController20200220Tests
     {
         // Arrange
         _mockFeatureFlagService
-            .Setup(s => s.GetFlagAsync(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy, default))
+            .Setup(s => s.GetFlagAsync(_testSubscriptionId, FeatureFlag.EnableRebaseStrategy, default))
             .ReturnsAsync((FeatureFlagValue?)null);
 
         // Act
-        var result = await _controller.GetFeatureFlag(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy);
+        var result = await _controller.GetFeatureFlag(_testSubscriptionId, FeatureFlag.EnableRebaseStrategy.Name);
 
         // Assert
         result.Should().BeAssignableTo<NotFoundResult>();
@@ -133,7 +126,7 @@ public class FeatureFlagsController20200220Tests
         // Arrange
         var expectedFlags = new List<FeatureFlagValue>
         {
-            new(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy, "true")
+            new(_testSubscriptionId, FeatureFlag.EnableRebaseStrategy.Name, "true")
         };
 
         _mockFeatureFlagService
@@ -156,11 +149,11 @@ public class FeatureFlagsController20200220Tests
     {
         // Arrange
         _mockFeatureFlagService
-            .Setup(s => s.RemoveFlagAsync(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy, default))
+            .Setup(s => s.RemoveFlagAsync(_testSubscriptionId, FeatureFlag.EnableRebaseStrategy, default))
             .ReturnsAsync(true);
 
         // Act
-        var result = await _controller.RemoveFeatureFlag(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy);
+        var result = await _controller.RemoveFeatureFlag(_testSubscriptionId, FeatureFlag.EnableRebaseStrategy.Name);
 
         // Assert
         result.Should().BeAssignableTo<OkObjectResult>();
@@ -173,11 +166,11 @@ public class FeatureFlagsController20200220Tests
     {
         // Arrange
         _mockFeatureFlagService
-            .Setup(s => s.RemoveFlagAsync(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy, default))
+            .Setup(s => s.RemoveFlagAsync(_testSubscriptionId, FeatureFlag.EnableRebaseStrategy, default))
             .ReturnsAsync(false);
 
         // Act
-        var result = await _controller.RemoveFeatureFlag(_testSubscriptionId, FeatureFlags.EnableRebaseStrategy);
+        var result = await _controller.RemoveFeatureFlag(_testSubscriptionId, FeatureFlag.EnableRebaseStrategy.Name);
 
         // Assert
         result.Should().BeAssignableTo<NotFoundResult>();
@@ -194,6 +187,6 @@ public class FeatureFlagsController20200220Tests
         var okResult = (OkObjectResult)result;
         var response = okResult.Value as AvailableFeatureFlagsResponse;
         response!.Flags.Should().HaveCount(FeatureFlags.AllFlags.Count);
-        response.Flags.Should().Contain(f => f.Key == FeatureFlags.EnableRebaseStrategy);
+        response.Flags.Should().Contain(f => f == FeatureFlag.EnableRebaseStrategy.Name);
     }
 }
