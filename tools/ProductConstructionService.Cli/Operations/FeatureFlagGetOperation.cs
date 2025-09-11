@@ -50,19 +50,9 @@ internal class FeatureFlagGetOperation : IOperation
                 Console.WriteLine($"  Subscription: {flag.SubscriptionId}");
                 Console.WriteLine($"  Value: {flag.Value}");
                 
-                if (flag.Expiry.HasValue)
-                {
-                    Console.WriteLine($"  Expires: {flag.Expiry.Value:yyyy-MM-dd HH:mm:ss} UTC");
-                }
-                
                 if (flag.CreatedAt.HasValue)
                 {
                     Console.WriteLine($"  Created: {flag.CreatedAt.Value:yyyy-MM-dd HH:mm:ss} UTC");
-                }
-                
-                if (flag.UpdatedAt.HasValue)
-                {
-                    Console.WriteLine($"  Updated: {flag.UpdatedAt.Value:yyyy-MM-dd HH:mm:ss} UTC");
                 }
                 
                 return 0;
@@ -86,11 +76,6 @@ internal class FeatureFlagGetOperation : IOperation
                 foreach (var flag in response.Flags)
                 {
                     Console.WriteLine($"  {flag.FlagName}: {flag.Value}");
-                    
-                    if (flag.Expiry.HasValue)
-                    {
-                        Console.WriteLine($"    Expires: {flag.Expiry.Value:yyyy-MM-dd HH:mm:ss} UTC");
-                    }
                 }
 
                 Console.WriteLine();

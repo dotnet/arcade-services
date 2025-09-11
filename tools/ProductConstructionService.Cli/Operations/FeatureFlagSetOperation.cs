@@ -49,11 +49,6 @@ internal class FeatureFlagSetOperation : IOperation
             {
                 Console.WriteLine($"✓ Successfully set feature flag '{_options.FlagName}' = '{_options.Value}' for subscription {subscriptionId}");
                 
-                if (result.Flag?.Expiry.HasValue == true)
-                {
-                    Console.WriteLine($"  Expires: {result.Flag.Expiry.Value:yyyy-MM-dd HH:mm:ss} UTC");
-                }
-                
                 return 0;
             }
             else

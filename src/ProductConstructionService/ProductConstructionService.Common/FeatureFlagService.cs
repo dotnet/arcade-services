@@ -12,7 +12,7 @@ namespace ProductConstructionService.Common;
 public class FeatureFlagService : IFeatureFlagService
 {
     private const string KeyPrefix = "FeatureFlags";
-    private static readonly TimeSpan DefaultExpiration = TimeSpan.FromDays(180);
+    private static readonly TimeSpan? DefaultExpiration = null; // Never expire by default
     
     private readonly IRedisCacheFactory _redisCacheFactory;
     private readonly ILogger<FeatureFlagService> _logger;
@@ -39,8 +39,6 @@ public class FeatureFlagService : IFeatureFlagService
                 subscriptionId,
                 flag.Name,
                 value,
-                expiry.HasValue ? DateTimeOffset.UtcNow.Add(expiry.Value) : null,
-                DateTimeOffset.UtcNow,
                 DateTimeOffset.UtcNow);
 
             var json = JsonSerializer.Serialize(flagValue);
@@ -77,15 +75,6 @@ public class FeatureFlagService : IFeatureFlagService
 
             var flagValue = JsonSerializer.Deserialize<FeatureFlagValue>(json);
             
-            // Check if flag has expired
-            if (flagValue?.Expiry.HasValue == true && flagValue.Expiry.Value < DateTimeOffset.UtcNow)
-            {
-                await cache.TryDeleteAsync();
-                _logger.LogInformation("Expired feature flag {FlagName} removed for subscription {SubscriptionId}", 
-                    flag.Name, subscriptionId);
-                return null;
-            }
-
             return flagValue;
         }
         catch (Exception ex)
@@ -119,15 +108,6 @@ public class FeatureFlagService : IFeatureFlagService
                         var flagValue = JsonSerializer.Deserialize<FeatureFlagValue>(json);
                         if (flagValue != null)
                         {
-                            // Check if flag has expired
-                            if (flagValue.Expiry.HasValue && flagValue.Expiry.Value < DateTimeOffset.UtcNow)
-                            {
-                                await flagCache.TryDeleteAsync();
-                                _logger.LogInformation("Expired feature flag {FlagName} removed for subscription {SubscriptionId}", 
-                                    flagValue.FlagName, subscriptionId);
-                                continue;
-                            }
-                            
                             flags.Add(flagValue);
                         }
                     }
@@ -197,15 +177,6 @@ public class FeatureFlagService : IFeatureFlagService
                         var flagValue = JsonSerializer.Deserialize<FeatureFlagValue>(json);
                         if (flagValue != null)
                         {
-                            // Check if flag has expired
-                            if (flagValue.Expiry.HasValue && flagValue.Expiry.Value < DateTimeOffset.UtcNow)
-                            {
-                                await flagCache.TryDeleteAsync();
-                                _logger.LogInformation("Expired feature flag {FlagName} removed for subscription {SubscriptionId}", 
-                                    flagValue.FlagName, flagValue.SubscriptionId);
-                                continue;
-                            }
-                            
                             flags.Add(flagValue);
                         }
                     }
@@ -248,15 +219,6 @@ public class FeatureFlagService : IFeatureFlagService
                         var flagValue = JsonSerializer.Deserialize<FeatureFlagValue>(json);
                         if (flagValue != null)
                         {
-                            // Check if flag has expired
-                            if (flagValue.Expiry.HasValue && flagValue.Expiry.Value < DateTimeOffset.UtcNow)
-                            {
-                                await flagCache.TryDeleteAsync();
-                                _logger.LogInformation("Expired feature flag {FlagName} removed for subscription {SubscriptionId}", 
-                                    flagValue.FlagName, flagValue.SubscriptionId);
-                                continue;
-                            }
-                            
                             flags.Add(flagValue);
                         }
                     }

@@ -78,19 +78,6 @@ internal class FeatureFlagListOperation : IOperation
         foreach (var flag in response.Flags)
         {
             Console.WriteLine($"  {flag.FlagName}: {flag.Value}");
-
-            if (flag.Expiry.HasValue)
-            {
-                var timeRemaining = flag.Expiry.Value - DateTimeOffset.UtcNow;
-                if (timeRemaining.TotalDays > 0)
-                {
-                    Console.WriteLine($"    Expires in {timeRemaining.TotalDays:F1} days ({flag.Expiry.Value:yyyy-MM-dd})");
-                }
-                else
-                {
-                    Console.WriteLine($"    Expires: {flag.Expiry.Value:yyyy-MM-dd HH:mm:ss} UTC");
-                }
-            }
         }
 
         Console.WriteLine();
@@ -122,19 +109,6 @@ internal class FeatureFlagListOperation : IOperation
             foreach (var flag in group.OrderBy(f => f.FlagName))
             {
                 Console.WriteLine($"  {flag.FlagName}: {flag.Value}");
-
-                if (flag.Expiry.HasValue)
-                {
-                    var timeRemaining = flag.Expiry.Value - DateTimeOffset.UtcNow;
-                    if (timeRemaining.TotalDays > 0)
-                    {
-                        Console.WriteLine($"    Expires in {timeRemaining.TotalDays:F1} days");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"    Expires: {flag.Expiry.Value:yyyy-MM-dd HH:mm:ss} UTC");
-                    }
-                }
             }
 
             Console.WriteLine();

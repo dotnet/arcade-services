@@ -9,16 +9,12 @@ namespace ProductConstructionService.Common;
 /// <param name="SubscriptionId">The subscription ID this flag applies to.</param>
 /// <param name="FlagName">The name of the feature flag.</param>
 /// <param name="Value">The value of the feature flag.</param>
-/// <param name="Expiry">The expiry date for the feature flag, if any.</param>
 /// <param name="CreatedAt">When the flag was created.</param>
-/// <param name="UpdatedAt">When the flag was last updated.</param>
 public record FeatureFlagValue(
     Guid SubscriptionId,
     string FlagName,
     string Value,
-    DateTimeOffset? Expiry = null,
-    DateTimeOffset? CreatedAt = null,
-    DateTimeOffset? UpdatedAt = null);
+    DateTimeOffset? CreatedAt = null);
 
 /// <summary>
 /// Request model for setting a feature flag.

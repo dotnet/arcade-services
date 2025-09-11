@@ -50,19 +50,6 @@ internal class FeatureFlagListByFlagOperation : IOperation
                     Console.WriteLine($"  Created: {flag.CreatedAt.Value:yyyy-MM-dd HH:mm:ss} UTC");
                 }
 
-                if (flag.Expiry.HasValue)
-                {
-                    var timeRemaining = flag.Expiry.Value - DateTimeOffset.UtcNow;
-                    if (timeRemaining.TotalDays > 0)
-                    {
-                        Console.WriteLine($"  Expires in {timeRemaining.TotalDays:F1} days ({flag.Expiry.Value:yyyy-MM-dd})");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"  Expires: {flag.Expiry.Value:yyyy-MM-dd HH:mm:ss} UTC");
-                    }
-                }
-
                 Console.WriteLine();
             }
 
