@@ -152,8 +152,6 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             return Constants.ErrorCode;
         }
 
-
-
         string channel = _options.Channel;
         string sourceRepository = _options.SourceRepository;
         string targetRepository = _options.TargetRepository;

@@ -3,6 +3,7 @@
 
 using Maestro.Data.Models;
 using Maestro.MergePolicies;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using NUnit.Framework;
 
@@ -188,6 +189,49 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             AndShouldHavePullRequestCheckReminder();
             AndShouldHaveInProgressPullRequestState(build2, expectedState: expectedState);
         }
+    }
+
+    [Test]
+    public async Task PendingUpdateShouldCreatePRWhenSubHasTargetDirectories()
+    {
+        GivenATestChannel();
+        GivenASubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = true,
+                UpdateFrequency = UpdateFrequency.EveryBuild
+            },
+            targetDirectory: ".,src/foo,src/bar");
+        Build b = GivenANewBuild(true);
+        UnixPath path1 = UnixPath.Empty;
+        UnixPath path2 = new UnixPath("src/foo");
+        UnixPath path3 = new UnixPath("src/bar");
+        UnixPath[] targetDirectories = [path1, path2, path3];
+
+        WithRequireNonCoherencyUpdates();
+        WithNoRequiredCoherencyUpdates();
+        CreatePullRequestShouldReturnAValidValue(TargetRepo);
+
+        await WhenUpdateAssetsAsyncIsCalled(b, shouldGetUpdates: true);
+
+        ThenGetRequiredUpdatesForMultipleDirectoriesShouldHaveBeenCalled(b, false, targetDirectories);
+        AndCreateNewBranchShouldHaveBeenCalled();
+        AndCommitUpdatesForMultipleDirectoriesShouldHaveBeenCalled(b, 3);
+        AndCreatePullRequestShouldHaveBeenCalled();
+        // create a list of dependency updates for every path and every asset in the build
+        List<DependencyUpdateSummary> dependencyUpdates = b.Assets
+            .SelectMany(a => targetDirectories.Select(dir => new DependencyUpdateSummary
+            {
+                DependencyName = a.Name,
+                FromVersion = a.Version,
+                ToVersion = a.Version,
+                FromCommitSha = NewCommit,
+                ToCommitSha = "sha3333",
+                RelativeBasePath = dir
+            }))
+            .ToList();
+        AndShouldHaveInProgressPullRequestState(b, url: VmrPullRequestUrl, dependencyUpdates: dependencyUpdates);
+        AndShouldHavePullRequestCheckReminder(VmrPullRequestUrl);
     }
 
     protected override void ThenShouldHavePendingUpdateState(Build forBuild, bool _ = false)

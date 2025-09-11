@@ -3,6 +3,7 @@
 
 using Maestro.Data.Models;
 using Maestro.MergePolicies;
+using Microsoft.DotNet.DarcLib.Helpers;
 using NUnit.Framework;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -28,14 +29,14 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
         CreatePullRequestShouldReturnAValidValue();
 
-        await WhenUpdateAssetsAsyncIsCalled(b);
+        await WhenUpdateAssetsAsyncIsCalled(b, shouldGetUpdates: true);
 
         ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false);
         AndCreateNewBranchShouldHaveBeenCalled();
         AndCommitUpdatesShouldHaveBeenCalled(b);
         AndCreatePullRequestShouldHaveBeenCalled();
         AndShouldHavePullRequestCheckReminder();
-        AndShouldHaveInProgressPullRequestState(b);
+        AndShouldHaveInProgressPullRequestState(b, relativeBasePath: UnixPath.Empty);
     }
 
     [TestCase(false)]
@@ -56,7 +57,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
         using (WithExistingPullRequest(b, canUpdate: true))
         {
-            await WhenUpdateAssetsAsyncIsCalled(b);
+            await WhenUpdateAssetsAsyncIsCalled(b, shouldGetUpdates: true);
 
             ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true);
             AndCommitUpdatesShouldHaveBeenCalled(b);
@@ -130,7 +131,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
         CreatePullRequestShouldReturnAValidValue();
 
-        await WhenUpdateAssetsAsyncIsCalled(b);
+        await WhenUpdateAssetsAsyncIsCalled(b, shouldGetUpdates: true);
 
         ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false);
         AndCreateNewBranchShouldHaveBeenCalled();
@@ -146,7 +147,8 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
                         Error = "Repo @ commit does not contain dependency fakeDependency",
                         PotentialSolutions = new List<string>()
                     }
-            ]);
+            ],
+            relativeBasePath: UnixPath.Empty);
     }
 
     [TestCase(false)]
@@ -160,8 +162,8 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
                 Batchable = batchable,
                 UpdateFrequency = UpdateFrequency.EveryBuild
             },
-            "quail.eating.*"); // This should exclude the "quail.eating.ducks" package
-        
+            excludedAssetPatterns: "quail.eating.*"); // This should exclude the "quail.eating.ducks" package
+
         // Create a build with multiple assets, some matching the exclusion pattern
         Build b = GivenANewBuild(true, [
             ("quail.eating.ducks", "1.1.0", false),      // Should be excluded
@@ -176,14 +178,14 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
         CreatePullRequestShouldReturnAValidValue();
 
-        await WhenUpdateAssetsAsyncIsCalled(b);
+        await WhenUpdateAssetsAsyncIsCalled(b, shouldGetUpdates: true);
 
         ThenGetRequiredUpdatesShouldHaveBeenCalled(b, false, assetFilter);
         AndCreateNewBranchShouldHaveBeenCalled();
         AndCommitUpdatesShouldHaveBeenCalled(b, assetFilter);
         AndCreatePullRequestShouldHaveBeenCalled();
         AndShouldHavePullRequestCheckReminder();
-        AndShouldHaveInProgressPullRequestState(b, assetFilter: assetFilter);
+        AndShouldHaveInProgressPullRequestState(b, assetFilter: assetFilter, relativeBasePath: UnixPath.Empty);
     }
 
     [TestCase(false)]
@@ -197,7 +199,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
                 Batchable = batchable,
                 UpdateFrequency = UpdateFrequency.EveryBuild
             },
-            "*"); // This should exclude ALL packages
+            excludedAssetPatterns: "*"); // This should exclude ALL packages
         
         // Create a build with assets - all should be excluded
         Build b = GivenANewBuild(true, [
@@ -227,7 +229,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
                 Batchable = batchable,
                 UpdateFrequency = UpdateFrequency.EveryBuild
             },
-            "quail.*"); // Exclude packages starting with "quail"
+            excludedAssetPatterns: "quail.*"); // Exclude packages starting with "quail"
         
         // Create a build with multiple assets
         Build b = GivenANewBuild(true, [
@@ -243,7 +245,7 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
 
         using (WithExistingPullRequest(b, canUpdate: true, assetFilter: assetFilter))
         {
-            await WhenUpdateAssetsAsyncIsCalled(b);
+            await WhenUpdateAssetsAsyncIsCalled(b, shouldGetUpdates: true);
 
             // Verify that only non-excluded assets were passed
             ThenGetRequiredUpdatesShouldHaveBeenCalled(b, true, assetFilter);

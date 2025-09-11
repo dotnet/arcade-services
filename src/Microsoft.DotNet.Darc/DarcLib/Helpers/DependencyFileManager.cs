@@ -175,13 +175,13 @@ public class DependencyFileManager : IDependencyFileManager
         return dotnetVersion;
     }
 
-    public async Task<(string Name, XmlDocument Content)> ReadNugetConfigAsync(string repoUri, string branch)
+    public async Task<(string Name, XmlDocument Content)> ReadNugetConfigAsync(string repoUri, string branch, UnixPath relativeBasePath = null)
     {
         foreach (var name in VersionFiles.NugetConfigNames)
         {
             try
             {
-                return (name, await ReadXmlFileAsync(name, repoUri, branch));
+                return (name, await ReadXmlFileAsync(GetVersionFilePath(name, relativeBasePath), repoUri, branch));
             }
             catch (DependencyFileNotFoundException)
             {
@@ -484,19 +484,17 @@ public class DependencyFileManager : IDependencyFileManager
         string branch,
         IEnumerable<DependencyDetail> oldDependencies,
         SemanticVersion incomingDotNetSdkVersion,
-        bool? repoHasVersionDetailsProps = null)
+        bool? repoHasVersionDetailsProps = null,
+        UnixPath relativeBasePath = null)
     {
-        // When updating version files, we always want to look in the base folder, even when we're updating it in the VMR
-        // src/arcade version files only get updated during arcade forward flows
-        UnixPath relativeBasePath = null;
         XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch, relativeBasePath);
         XmlDocument versionProps = await ReadVersionPropsAsync(repoUri, branch, relativeBasePath);
         JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, relativeBasePath);
         JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, relativeBasePath);
-        (string nugetConfigName, XmlDocument nugetConfig) = await ReadNugetConfigAsync(repoUri, branch);
+        (string nugetConfigName, XmlDocument nugetConfig) = await ReadNugetConfigAsync(repoUri, branch, relativeBasePath);
         if (!repoHasVersionDetailsProps.HasValue)
         {
-            repoHasVersionDetailsProps = await VersionDetailsPropsExistsAsync(repoUri, branch);
+            repoHasVersionDetailsProps = await VersionDetailsPropsExistsAsync(repoUri, branch, relativeBasePath);
         }
 
         foreach (DependencyDetail itemToUpdate in itemsToUpdate)
@@ -563,26 +561,26 @@ public class DependencyFileManager : IDependencyFileManager
 
         var fileContainer = new GitFileContentContainer
         {
-            GlobalJson = new GitFile(VersionFiles.GlobalJson, globalJson, globalJsonMetadata),
-            VersionDetailsXml = new GitFile(VersionFiles.VersionDetailsXml, versionDetails),
-            NugetConfig = new GitFile(nugetConfigName, nugetConfig),
+            GlobalJson = new GitFile(GetVersionFilePath(VersionFiles.GlobalJson, relativeBasePath), globalJson, globalJsonMetadata),
+            VersionDetailsXml = new GitFile(GetVersionFilePath(VersionFiles.VersionDetailsXml, relativeBasePath), versionDetails),
+            NugetConfig = new GitFile(GetVersionFilePath(nugetConfigName, relativeBasePath), nugetConfig),
         };
 
         // dotnet-tools.json is optional, so only include it if it was found.
         if (toolsConfigurationJson != null)
         {
-            fileContainer.DotNetToolsJson = new GitFile(VersionFiles.DotnetToolsConfigJson, toolsConfigurationJson);
+            fileContainer.DotNetToolsJson = new GitFile(GetVersionFilePath(VersionFiles.DotnetToolsConfigJson, relativeBasePath), toolsConfigurationJson);
         }
 
         if (repoHasVersionDetailsProps.Value)
         {
             fileContainer.VersionDetailsProps = new GitFile(
-                VersionFiles.VersionDetailsProps,
+                GetVersionFilePath(VersionFiles.VersionDetailsProps, relativeBasePath),
                 GenerateVersionDetailsProps(_versionDetailsParser.ParseVersionDetailsXml(versionDetails)));
         }
         else
         {
-            fileContainer.VersionProps = new GitFile(VersionFiles.VersionsProps, versionProps);
+            fileContainer.VersionProps = new GitFile(GetVersionFilePath(VersionFiles.VersionsProps, relativeBasePath), versionProps);
         }
 
         return fileContainer;

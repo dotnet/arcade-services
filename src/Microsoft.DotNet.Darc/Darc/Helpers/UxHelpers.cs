@@ -197,16 +197,15 @@ public static class UxHelpers
               - Source-enabled: {subscription.SourceEnabled}
 
             """);
-
+        if (!string.IsNullOrEmpty(subscription.TargetDirectory))
+        {
+            subInfo.AppendLine($"  - Target Directory: {subscription.TargetDirectory}");
+        }
         if (subscription.SourceEnabled)
         {
             if (!string.IsNullOrEmpty(subscription.SourceDirectory))
             {
                 subInfo.AppendLine($"  - Source Directory: {subscription.SourceDirectory}");
-            }
-            else
-            {
-                subInfo.AppendLine($"  - Target Directory: {subscription.TargetDirectory}");
             }
         }
 

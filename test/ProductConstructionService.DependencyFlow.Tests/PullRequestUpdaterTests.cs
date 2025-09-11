@@ -90,12 +90,13 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     {
         var assets = new List<IReadOnlyCollection<AssetData>>();
         var dependencies = new List<IReadOnlyCollection<DependencyDetail>>();
+        var relativeBasePath = UnixPath.Empty;
 
         UpdateResolver
             .Verify(r => r.GetRequiredNonCoherencyUpdates(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)));
 
         DarcRemotes[TargetRepo]
-            .Verify(r => r.GetDependenciesAsync(TargetRepo, prExists ? InProgressPrHeadBranch : TargetBranch, null));
+            .Verify(r => r.GetDependenciesAsync(TargetRepo, prExists ? InProgressPrHeadBranch : TargetBranch, null, relativeBasePath));
 
         UpdateResolver
             .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies)));
@@ -127,11 +128,11 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         var updatedDependencies = new List<List<DependencyDetail>>();
         DarcRemotes[TargetRepo]
             .Verify(
-                r => r.CommitUpdatesAsync(
+                r => r.GetUpdatesAsync(
                     TargetRepo,
                     InProgressPrHeadBranch,
                     Capture.In(updatedDependencies),
-                    It.IsAny<string>()));
+                    It.IsAny<UnixPath>()));
 
         updatedDependencies.Should()
             .BeEquivalentTo(
@@ -233,21 +234,25 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         pr.Description.Should().Contain("[1]:");
     }
 
-    protected void CreatePullRequestShouldReturnAValidValue()
+    protected void CreatePullRequestShouldReturnAValidValue(string? targetRepo = null, string? prUrl = null)
     {
-        var targetRepo = Subscription.TargetDirectory != null ? VmrUri : TargetRepo;
-        var prUrl = Subscription.TargetDirectory != null ? VmrPullRequestUrl : InProgressPrUrl;
+        var repo = string.IsNullOrEmpty(targetRepo)
+            ? Subscription.TargetDirectory != null ? VmrUri : TargetRepo
+            : targetRepo;
+        var url = string.IsNullOrEmpty(prUrl)
+            ? Subscription.TargetDirectory != null ? VmrPullRequestUrl : InProgressPrUrl
+            : prUrl;
 
-        DarcRemotes.GetOrAddValue(targetRepo, () => new Mock<IRemote>())
+        DarcRemotes.GetOrAddValue(repo, () => new Mock<IRemote>())
             .Setup(s => s.CreatePullRequestAsync(It.IsAny<string>(), It.IsAny<PullRequest>()))
             .Callback<string, PullRequest>((repo, pr) =>
             {
-                if (targetRepo == VmrUri)
+                if (repo == VmrUri)
                 {
                     InProgressPrHeadBranch = pr.HeadBranch;
                 }
             })
-            .ReturnsAsync(prUrl);
+            .ReturnsAsync(url);
     }
 
     protected void AndUpdatePullRequestShouldHaveBeenCalled()
@@ -553,11 +558,13 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         return Disposable.Create(remote.VerifyAll);
     }
 
-    protected void AndShouldHavePullRequestCheckReminder()
+    protected void AndShouldHavePullRequestCheckReminder(string? url = null)
     {
-        var prUrl = Subscription.SourceEnabled
-            ? VmrPullRequestUrl
-            : InProgressPrUrl;
+        var prUrl = string.IsNullOrEmpty(url)
+            ? Subscription.SourceEnabled
+                ? VmrPullRequestUrl
+                : InProgressPrUrl
+            : url;
 
         SetExpectedReminder(Subscription, new PullRequestCheck()
         {
@@ -581,11 +588,16 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         string? overwriteBuildCommit = null,
         InProgressPullRequestState prState = InProgressPullRequestState.Mergeable,
         Func<Asset, bool>? assetFilter = null,
-        bool? sourceRepoNotified = null)
+        bool? sourceRepoNotified = null,
+        UnixPath? relativeBasePath = null,
+        string? url = null,
+        List<DependencyUpdateSummary>? dependencyUpdates = null)
     {
-        var prUrl = Subscription.SourceEnabled
-            ? VmrPullRequestUrl
-            : InProgressPrUrl;
+        var prUrl = string.IsNullOrEmpty(url)
+            ? Subscription.SourceEnabled
+                ? VmrPullRequestUrl
+                : InProgressPrUrl
+            : url;
 
         SetExpectedPullRequestState(
             Subscription,
@@ -599,11 +611,13 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     overwriteBuildCommit,
                     prState,
                     assetFilter,
-                    sourceRepoNotified: sourceRepoNotified));
+                    sourceRepoNotified: sourceRepoNotified,
+                    relativeBasePath,
+                    dependencyUpdates: dependencyUpdates));
     }
 
-    protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, int nextBuildToProcess = 0, InProgressPullRequest? expectedState = null, bool? sourceRepoNotified = null)
-        => AndShouldHaveInProgressPullRequestState(forBuild, nextBuildToProcess, expectedState: expectedState, sourceRepoNotified: sourceRepoNotified);
+    protected void ThenShouldHaveInProgressPullRequestState(Build forBuild, int nextBuildToProcess = 0, InProgressPullRequest? expectedState = null, bool? sourceRepoNotified = null, UnixPath? relativeBasePath = null)
+        => AndShouldHaveInProgressPullRequestState(forBuild, nextBuildToProcess, expectedState: expectedState, sourceRepoNotified: sourceRepoNotified, relativeBasePath: relativeBasePath);
 
     protected void ThenShouldHaveCachedMergePolicyResults(MergePolicyEvaluationResults results)
     {
@@ -656,7 +670,9 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             string? overwriteBuildCommit = null,
             InProgressPullRequestState prState = InProgressPullRequestState.Mergeable,
             Func<Asset, bool>? assetFilter = null,
-            bool? sourceRepoNotified = null)
+            bool? sourceRepoNotified = null,
+            UnixPath? relativeBasePath = null,
+            List<DependencyUpdateSummary>? dependencyUpdates = null)
         => new()
         {
             UpdaterId = GetPullRequestUpdaterId().ToString(),
@@ -672,17 +688,19 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     CommitSha = forBuild.Commit
                 }
             ],
-            RequiredUpdates = forBuild.Assets
-                .Where(assetFilter ?? (_ => true))
-                .Select(d => new DependencyUpdateSummary
-                {
-                    DependencyName = d.Name,
-                    FromVersion = d.Version,
-                    ToVersion = d.Version,
-                    FromCommitSha = NewCommit,
-                    ToCommitSha = "sha3333"
-                })
-                .ToList(),
+            RequiredUpdates = dependencyUpdates
+                ?? forBuild.Assets
+                    .Where(assetFilter ?? (_ => true))
+                    .Select(d => new DependencyUpdateSummary
+                    {
+                        DependencyName = d.Name,
+                        FromVersion = d.Version,
+                        ToVersion = d.Version,
+                        FromCommitSha = NewCommit,
+                        ToCommitSha = "sha3333",
+                        RelativeBasePath = relativeBasePath
+                    })
+                    .ToList(),
             CoherencyCheckSuccessful = coherencyCheckSuccessful,
             CoherencyErrors = coherencyErrors,
             Url = prUrl,
@@ -695,4 +713,73 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 } :
                 []
         };
+
+    protected void ThenGetRequiredUpdatesForMultipleDirectoriesShouldHaveBeenCalled(Build withBuild, bool prExists, params UnixPath[] expectedDirectories)
+    {
+        var assets = new List<IReadOnlyCollection<AssetData>>();
+        var dependencies = new List<IReadOnlyCollection<DependencyDetail>>();
+
+        // Verify the coherency update resolver is called once per directory
+        UpdateResolver
+            .Verify(r => r.GetRequiredNonCoherencyUpdates(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)), 
+                Times.Exactly(expectedDirectories.Length));
+
+        // Verify GetDependenciesAsync is called once for each target directory
+        foreach (var directory in expectedDirectories)
+        {
+            DarcRemotes[TargetRepo]
+                .Verify(r => r.GetDependenciesAsync(TargetRepo, prExists ? InProgressPrHeadBranch : TargetBranch, null, directory), 
+                    Times.Once);
+        }
+
+        UpdateResolver
+            .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies)), 
+                Times.Exactly(expectedDirectories.Length));
+
+        // Verify that assets were processed for each directory
+        assets.Count.Should().Be(expectedDirectories.Length);
+        foreach (var assetCollection in assets)
+        {
+            assetCollection.Should()
+                .BeEquivalentTo(
+                    withBuild.Assets
+                        .Select(a => new AssetData(false)
+                        {
+                            Name = a.Name,
+                            Version = a.Version
+                        })
+                        .ToList());
+        }
+    }
+
+    protected void AndCommitUpdatesForMultipleDirectoriesShouldHaveBeenCalled(Build withUpdatesFromBuild, int expectedDirectoryCount, Func<Asset, bool>? assetFilter = null)
+    {
+        var updatedDependencies = new List<List<DependencyDetail>>();
+        DarcRemotes[TargetRepo]
+            .Verify(
+                r => r.GetUpdatesAsync(
+                    TargetRepo,
+                    InProgressPrHeadBranch,
+                    Capture.In(updatedDependencies),
+                    It.IsAny<UnixPath>()),
+                Times.Exactly(expectedDirectoryCount));
+
+        // Each directory should have processed the same assets
+        var expectedDependencyList = withUpdatesFromBuild.Assets
+            .Where(assetFilter ?? (_ => true))
+            .Select(a => new DependencyDetail
+            {
+                Name = a.Name,
+                Version = a.Version,
+                RepoUri = withUpdatesFromBuild.GitHubRepository,
+                Commit = "sha3333"
+            })
+            .ToList();
+
+        updatedDependencies.Should().HaveCount(expectedDirectoryCount);
+        foreach (var dependencies in updatedDependencies)
+        {
+            dependencies.Should().BeEquivalentTo(expectedDependencyList);
+        }
+    }
 }

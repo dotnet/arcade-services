@@ -1,3 +1,4 @@
+
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
@@ -84,6 +85,9 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
         => GivenASubscription(policy, []);
 
     internal void GivenASubscription(SubscriptionPolicy policy, params string[] excludedAssetPatterns)
+        => GivenASubscription(policy, null, excludedAssetPatterns);
+
+    internal void GivenASubscription(SubscriptionPolicy policy, string? targetDirectory, params string[] excludedAssetPatterns)
     {
         Subscription = new Subscription
         {
@@ -91,6 +95,7 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
             SourceRepository = SourceRepo,
             TargetRepository = TargetRepo,
             TargetBranch = TargetBranch,
+            TargetDirectory = targetDirectory,
             PolicyObject = policy,
             Id = Guid.NewGuid(),
             ExcludedAssets = [..excludedAssetPatterns.Select(pattern => new AssetFilter { Filter = pattern })]
