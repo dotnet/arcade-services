@@ -52,4 +52,28 @@ public class LocalPathTests
                 path1.Path.Replace('\\', Path.DirectorySeparatorChar),
                 path2.Path.Replace('/', Path.DirectorySeparatorChar)));
     }
+
+    [Test]
+    public void UnixPathEqualityTest()
+    {
+        var emptyPath1 = new UnixPath("");
+        var emptyPath2 = UnixPath.Empty;
+        var dotPath = new UnixPath(".");
+        
+        (emptyPath1 == emptyPath2).Should().BeTrue();
+        (emptyPath1 == dotPath).Should().BeTrue();
+        (emptyPath2 == dotPath).Should().BeTrue();
+    }
+
+    [Test]
+    public void UnixPathGetHashCodeTest()
+    {
+        var emptyPath1 = new UnixPath("");
+        var emptyPath2 = UnixPath.Empty;
+        var dotPath = new UnixPath(".");
+
+        emptyPath1.GetHashCode().Should().Be(emptyPath2.GetHashCode());
+        emptyPath1.GetHashCode().Should().Be(dotPath.GetHashCode());
+        emptyPath2.GetHashCode().Should().Be(dotPath.GetHashCode());
+    }
 }
