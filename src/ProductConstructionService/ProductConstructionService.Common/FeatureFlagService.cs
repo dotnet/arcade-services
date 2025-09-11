@@ -132,27 +132,18 @@ public class FeatureFlagService : IFeatureFlagService
         FeatureFlag flag,
         CancellationToken cancellationToken = default)
     {
-        try
-        {
-            var key = GetRedisKey(subscriptionId, flag);
-            var cache = _redisCacheFactory.Create(key);
+        var key = GetRedisKey(subscriptionId, flag);
+        var cache = _redisCacheFactory.Create(key);
             
-            var removed = await cache.TryDeleteAsync();
+        var removed = await cache.TryDeleteAsync();
             
-            if (removed)
-            {
-                _logger.LogInformation("Removed feature flag {FlagName} for subscription {SubscriptionId}", 
-                    flag.Name, subscriptionId);
-            }
-
-            return removed;
-        }
-        catch (Exception ex)
+        if (removed)
         {
-            _logger.LogError(ex, "Failed to remove feature flag {FlagName} for subscription {SubscriptionId}", 
+            _logger.LogInformation("Removed feature flag {FlagName} for subscription {SubscriptionId}", 
                 flag.Name, subscriptionId);
-            return false;
         }
+
+        return removed;
     }
 
     public async Task<IReadOnlyList<FeatureFlagValue>> GetAllFlagsAsync(
