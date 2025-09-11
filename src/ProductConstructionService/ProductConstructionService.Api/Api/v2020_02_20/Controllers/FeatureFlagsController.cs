@@ -222,4 +222,75 @@ public class FeatureFlagsController : ControllerBase
             return StatusCode(500, new FeatureFlagResponse(false, "Internal server error"));
         }
     }
+
+    /// <summary>
+    /// Gets all subscriptions that have a specific feature flag set.
+    /// </summary>
+    /// <param name="flagName">The feature flag name to search for.</param>
+    /// <returns>All subscriptions that have this flag set.</returns>
+    [HttpGet("by-flag/{flagName}")]
+    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(FeatureFlagListResponse), Description = "Subscriptions with the feature flag")]
+    [SwaggerApiResponse(HttpStatusCode.BadRequest, Type = typeof(FeatureFlagResponse), Description = "Invalid flag name")]
+    [ValidateModelState]
+    public async Task<IActionResult> GetSubscriptionsWithFlag([FromRoute] string flagName)
+    {
+        if (string.IsNullOrWhiteSpace(flagName))
+        {
+            return BadRequest(new FeatureFlagResponse(false, "Flag name cannot be empty"));
+        }
+
+        var flag = FeatureFlags.GetByName(flagName);
+        if (flag == null)
+        {
+            return BadRequest(new FeatureFlagResponse(false, $"Unknown feature flag: {flagName}"));
+        }
+
+        try
+        {
+            var flags = await _featureFlagService.GetSubscriptionsWithFlagAsync(flag);
+            return Ok(new FeatureFlagListResponse(flags, flags.Count));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get subscriptions with feature flag {FlagName}", flagName);
+            return StatusCode(500, new FeatureFlagResponse(false, "Internal server error"));
+        }
+    }
+
+    /// <summary>
+    /// Removes a specific feature flag from all subscriptions (admin operation).
+    /// </summary>
+    /// <param name="flagName">The feature flag name to remove from all subscriptions.</param>
+    /// <returns>The result of the operation including the number of flags removed.</returns>
+    [HttpDelete("by-flag/{flagName}")]
+    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(RemoveFlagFromAllResponse), Description = "Flag removal result")]
+    [SwaggerApiResponse(HttpStatusCode.BadRequest, Type = typeof(FeatureFlagResponse), Description = "Invalid flag name")]
+    [ValidateModelState]
+    public async Task<IActionResult> RemoveFlagFromAllSubscriptions([FromRoute] string flagName)
+    {
+        if (string.IsNullOrWhiteSpace(flagName))
+        {
+            return BadRequest(new FeatureFlagResponse(false, "Flag name cannot be empty"));
+        }
+
+        var flag = FeatureFlags.GetByName(flagName);
+        if (flag == null)
+        {
+            return BadRequest(new FeatureFlagResponse(false, $"Unknown feature flag: {flagName}"));
+        }
+
+        try
+        {
+            var removedCount = await _featureFlagService.RemoveFlagFromAllSubscriptionsAsync(flag);
+            return Ok(new RemoveFlagFromAllResponse(
+                true, 
+                removedCount, 
+                $"Removed feature flag '{flagName}' from {removedCount} subscription(s)"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to remove feature flag {FlagName} from all subscriptions", flagName);
+            return StatusCode(500, new RemoveFlagFromAllResponse(false, 0, "Internal server error"));
+        }
+    }
 }

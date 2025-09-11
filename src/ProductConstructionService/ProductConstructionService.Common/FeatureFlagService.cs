@@ -225,6 +225,89 @@ public class FeatureFlagService : IFeatureFlagService
         }
     }
 
+    public async Task<IReadOnlyList<FeatureFlagValue>> GetSubscriptionsWithFlagAsync(
+        FeatureFlag flag,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var pattern = $"{KeyPrefix}_*:{flag.Name}";
+            var cache = _redisCacheFactory.Create("");
+            
+            var flags = new List<FeatureFlagValue>();
+            
+            await foreach (var key in cache.GetKeysAsync(pattern))
+            {
+                var flagCache = _redisCacheFactory.Create(key);
+                var json = await flagCache.TryGetAsync();
+                
+                if (!string.IsNullOrEmpty(json))
+                {
+                    try
+                    {
+                        var flagValue = JsonSerializer.Deserialize<FeatureFlagValue>(json);
+                        if (flagValue != null)
+                        {
+                            // Check if flag has expired
+                            if (flagValue.Expiry.HasValue && flagValue.Expiry.Value < DateTimeOffset.UtcNow)
+                            {
+                                await flagCache.TryDeleteAsync();
+                                _logger.LogInformation("Expired feature flag {FlagName} removed for subscription {SubscriptionId}", 
+                                    flagValue.FlagName, flagValue.SubscriptionId);
+                                continue;
+                            }
+                            
+                            flags.Add(flagValue);
+                        }
+                    }
+                    catch (JsonException ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to deserialize feature flag from key {Key}", key);
+                    }
+                }
+            }
+
+            _logger.LogInformation("Found {Count} subscriptions with feature flag {FlagName}", flags.Count, flag.Name);
+            return flags;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get subscriptions with feature flag {FlagName}", flag.Name);
+            return new List<FeatureFlagValue>();
+        }
+    }
+
+    public async Task<int> RemoveFlagFromAllSubscriptionsAsync(
+        FeatureFlag flag,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var pattern = $"{KeyPrefix}_*:{flag.Name}";
+            var cache = _redisCacheFactory.Create("");
+            
+            var removedCount = 0;
+            
+            await foreach (var key in cache.GetKeysAsync(pattern))
+            {
+                var flagCache = _redisCacheFactory.Create(key);
+                var removed = await flagCache.TryDeleteAsync();
+                if (removed)
+                {
+                    removedCount++;
+                }
+            }
+
+            _logger.LogInformation("Removed feature flag {FlagName} from {Count} subscriptions", flag.Name, removedCount);
+            return removedCount;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to remove feature flag {FlagName} from all subscriptions", flag.Name);
+            return 0;
+        }
+    }
+
     private static string GetRedisKey(Guid subscriptionId, FeatureFlag flag)
     {
         return $"{KeyPrefix}_{subscriptionId}:{flag.Name}";

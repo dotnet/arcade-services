@@ -65,4 +65,24 @@ public interface IFeatureFlagService
     /// <returns>All feature flags in the system.</returns>
     Task<IReadOnlyList<FeatureFlagValue>> GetAllFlagsAsync(
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets all subscriptions that have a specific feature flag set.
+    /// </summary>
+    /// <param name="flag">The feature flag to search for.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>All subscriptions that have this flag set.</returns>
+    Task<IReadOnlyList<FeatureFlagValue>> GetSubscriptionsWithFlagAsync(
+        FeatureFlag flag,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Removes a specific feature flag from all subscriptions (admin operation).
+    /// </summary>
+    /// <param name="flag">The feature flag to remove.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The number of flags removed.</returns>
+    Task<int> RemoveFlagFromAllSubscriptionsAsync(
+        FeatureFlag flag,
+        CancellationToken cancellationToken = default);
 }

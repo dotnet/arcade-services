@@ -45,6 +45,16 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             CancellationToken cancellationToken = default
         );
 
+        Task<Models.FeatureFlagListResponse> GetSubscriptionsWithFlagAsync(
+            string flagName,
+            CancellationToken cancellationToken = default
+        );
+
+        Task<Models.RemoveFlagFromAllResponse> RemoveFlagFromAllSubscriptionsAsync(
+            string flagName,
+            CancellationToken cancellationToken = default
+        );
+
     }
 
     internal partial class FeatureFlags : IServiceOperations<ProductConstructionServiceApi>, IFeatureFlags
@@ -489,6 +499,156 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                 Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedGetAvailableFeatureFlagsRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
+        }
+
+        partial void HandleFailedGetSubscriptionsWithFlagRequest(RestApiException ex);
+
+        public async Task<Models.FeatureFlagListResponse> GetSubscriptionsWithFlagAsync(
+            string flagName,
+            CancellationToken cancellationToken = default
+        )
+        {
+
+            if (string.IsNullOrEmpty(flagName))
+            {
+                throw new ArgumentNullException(nameof(flagName));
+            }
+
+            const string apiVersion = "2020-02-20";
+
+            var _baseUri = Client.Options.BaseUri;
+            var _url = new RequestUriBuilder();
+            _url.Reset(_baseUri);
+            _url.AppendPath(
+                "/api/feature-flags/by-flag/{flagName}".Replace("{flagName}", Uri.EscapeDataString(Client.Serialize(flagName))),
+                false);
+
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+
+
+            using (var _req = Client.Pipeline.CreateRequest())
+            {
+                _req.Uri = _url;
+                _req.Method = RequestMethod.Get;
+
+                using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
+                {
+                    if (_res.Status < 200 || _res.Status >= 300)
+                    {
+                        await OnGetSubscriptionsWithFlagFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    if (_res.ContentStream == null)
+                    {
+                        await OnGetSubscriptionsWithFlagFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    using (var _reader = new StreamReader(_res.ContentStream))
+                    {
+                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
+                        var _body = Client.Deserialize<Models.FeatureFlagListResponse>(_content);
+                        return _body;
+                    }
+                }
+            }
+        }
+
+        internal async Task OnGetSubscriptionsWithFlagFailed(Request req, Response res)
+        {
+            string content = null;
+            if (res.ContentStream != null)
+            {
+                using (var reader = new StreamReader(res.ContentStream))
+                {
+                    content = await reader.ReadToEndAsync().ConfigureAwait(false);
+                }
+            }
+
+            var ex = new RestApiException<Models.ApiError>(
+                req,
+                res,
+                content,
+                Client.Deserialize<Models.ApiError>(content)
+                );
+            HandleFailedGetSubscriptionsWithFlagRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
+        }
+
+        partial void HandleFailedRemoveFlagFromAllSubscriptionsRequest(RestApiException ex);
+
+        public async Task<Models.RemoveFlagFromAllResponse> RemoveFlagFromAllSubscriptionsAsync(
+            string flagName,
+            CancellationToken cancellationToken = default
+        )
+        {
+
+            if (string.IsNullOrEmpty(flagName))
+            {
+                throw new ArgumentNullException(nameof(flagName));
+            }
+
+            const string apiVersion = "2020-02-20";
+
+            var _baseUri = Client.Options.BaseUri;
+            var _url = new RequestUriBuilder();
+            _url.Reset(_baseUri);
+            _url.AppendPath(
+                "/api/feature-flags/by-flag/{flagName}".Replace("{flagName}", Uri.EscapeDataString(Client.Serialize(flagName))),
+                false);
+
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+
+
+            using (var _req = Client.Pipeline.CreateRequest())
+            {
+                _req.Uri = _url;
+                _req.Method = RequestMethod.Delete;
+
+                using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
+                {
+                    if (_res.Status < 200 || _res.Status >= 300)
+                    {
+                        await OnRemoveFlagFromAllSubscriptionsFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    if (_res.ContentStream == null)
+                    {
+                        await OnRemoveFlagFromAllSubscriptionsFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    using (var _reader = new StreamReader(_res.ContentStream))
+                    {
+                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
+                        var _body = Client.Deserialize<Models.RemoveFlagFromAllResponse>(_content);
+                        return _body;
+                    }
+                }
+            }
+        }
+
+        internal async Task OnRemoveFlagFromAllSubscriptionsFailed(Request req, Response res)
+        {
+            string content = null;
+            if (res.ContentStream != null)
+            {
+                using (var reader = new StreamReader(res.ContentStream))
+                {
+                    content = await reader.ReadToEndAsync().ConfigureAwait(false);
+                }
+            }
+
+            var ex = new RestApiException<Models.ApiError>(
+                req,
+                res,
+                content,
+                Client.Deserialize<Models.ApiError>(content)
+                );
+            HandleFailedRemoveFlagFromAllSubscriptionsRequest(ex);
             HandleFailedRequest(ex);
             Client.OnFailedRequest(ex);
             throw ex;

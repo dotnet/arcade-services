@@ -189,4 +189,78 @@ public class FeatureFlagsController20200220Tests
         response!.Flags.Should().HaveCount(FeatureFlags.AllFlags.Count);
         response.Flags.Should().Contain(FeatureFlag.EnableRebaseStrategy.Name);
     }
+
+    [Test]
+    public async Task GetSubscriptionsWithFlag_ValidFlag_ReturnsSubscriptions()
+    {
+        // Arrange
+        var flagValues = new List<FeatureFlagValue>
+        {
+            new(_testSubscriptionId, FeatureFlag.EnableRebaseStrategy.Name, "true"),
+            new(Guid.NewGuid(), FeatureFlag.EnableRebaseStrategy.Name, "false")
+        };
+
+        _mockFeatureFlagService
+            .Setup(s => s.GetSubscriptionsWithFlagAsync(FeatureFlag.EnableRebaseStrategy, default))
+            .ReturnsAsync(flagValues);
+
+        // Act
+        var result = await _controller.GetSubscriptionsWithFlag(FeatureFlag.EnableRebaseStrategy.Name);
+
+        // Assert
+        result.Should().BeAssignableTo<OkObjectResult>();
+        var okResult = (OkObjectResult)result;
+        var response = okResult.Value as FeatureFlagListResponse;
+        response!.Flags.Should().HaveCount(2);
+        response.Total.Should().Be(2);
+    }
+
+    [Test]
+    public async Task GetSubscriptionsWithFlag_InvalidFlag_ReturnsBadRequest()
+    {
+        // Act
+        var result = await _controller.GetSubscriptionsWithFlag("invalid-flag");
+
+        // Assert
+        result.Should().BeAssignableTo<BadRequestObjectResult>();
+        var badRequestResult = (BadRequestObjectResult)result;
+        var response = badRequestResult.Value as FeatureFlagResponse;
+        response!.Success.Should().BeFalse();
+        response.Message.Should().Contain("Unknown feature flag");
+    }
+
+    [Test]
+    public async Task RemoveFlagFromAllSubscriptions_ValidFlag_ReturnsRemovedCount()
+    {
+        // Arrange
+        _mockFeatureFlagService
+            .Setup(s => s.RemoveFlagFromAllSubscriptionsAsync(FeatureFlag.EnableRebaseStrategy, default))
+            .ReturnsAsync(3);
+
+        // Act
+        var result = await _controller.RemoveFlagFromAllSubscriptions(FeatureFlag.EnableRebaseStrategy.Name);
+
+        // Assert
+        result.Should().BeAssignableTo<OkObjectResult>();
+        var okResult = (OkObjectResult)result;
+        var response = okResult.Value as RemoveFlagFromAllResponse;
+        response!.Success.Should().BeTrue();
+        response.RemovedCount.Should().Be(3);
+        response.Message.Should().Contain("Removed feature flag");
+        response.Message.Should().Contain("3 subscription(s)");
+    }
+
+    [Test]
+    public async Task RemoveFlagFromAllSubscriptions_InvalidFlag_ReturnsBadRequest()
+    {
+        // Act
+        var result = await _controller.RemoveFlagFromAllSubscriptions("invalid-flag");
+
+        // Assert
+        result.Should().BeAssignableTo<BadRequestObjectResult>();
+        var badRequestResult = (BadRequestObjectResult)result;
+        var response = badRequestResult.Value as FeatureFlagResponse;
+        response!.Success.Should().BeFalse();
+        response.Message.Should().Contain("Unknown feature flag");
+    }
 }
