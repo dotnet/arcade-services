@@ -1,14 +1,15 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using FluentAssertions;
+using Maestro.Data.Models;
 using Maestro.MergePolicies;
 using Maestro.MergePolicyEvaluation;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.DotNet.DarcLib;
-using Maestro.Data.Models;
 using NUnit.Framework;
-using FluentAssertions;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 internal class MergePolicyEvaluationTests : PullRequestUpdaterTests

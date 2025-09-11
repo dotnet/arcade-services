@@ -383,14 +383,16 @@ public class BackflowConflictResolverTests
                 It.IsAny<string>(),
                 It.IsAny<IEnumerable<DependencyDetail>>(),
                 null,
-                It.IsAny<bool?>()))
+                It.IsAny<bool?>(),
+                It.IsAny<UnixPath>()))
             .Callback((IEnumerable<DependencyDetail> itemsToUpdate,
                        SourceDependency? sourceDependency,
                        string repo,
                        string? commit,
                        IEnumerable<DependencyDetail> oldDependencies,
                        SemanticVersion? incomingDotNetSdkVersion,
-                       bool? _) =>
+                       bool? _,
+                       UnixPath __) =>
             {
                 // Update dependencies in-memory
                 var key = (repo == _vmrPath ? "vmr" : "repo") + "/" + commit;

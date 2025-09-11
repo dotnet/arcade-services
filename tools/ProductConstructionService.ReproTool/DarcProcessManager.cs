@@ -134,6 +134,7 @@ internal class DarcProcessManager(
         string targetRepo,
         string channel,
         string targetBranch,
+        bool sourceEnabled,
         string? sourceDirectory,
         string? targetDirectory,
         bool skipCleanup,
@@ -148,6 +149,8 @@ internal class DarcProcessManager(
             _ => []
         };
 
+        string[] sourceEnabledArg = sourceEnabled ? ["--source-enabled", "true"] : [];
+
         string[] excludedAssetsParameter = excludedAssets != null ?
             [ "--excluded-assets", string.Join(';', excludedAssets) ] :
             [];
@@ -161,8 +164,8 @@ internal class DarcProcessManager(
                 "-q",
                 "--standard-automerge",
                 "--no-trigger",
-                "--source-enabled", directoryArg.Length > 0 ? "true" : "false",
                 "--update-frequency", "none",
+                .. sourceEnabledArg,
                 .. directoryArg,
                 .. excludedAssetsParameter
             ]);

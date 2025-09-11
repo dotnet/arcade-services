@@ -138,6 +138,7 @@ public class NativePath : LocalPath
 public class UnixPath : LocalPath
 {
     public static readonly UnixPath CurrentDir = new(".");
+    public static readonly UnixPath Empty = new(string.Empty);
 
     public UnixPath(string path) : this(path, true)
     {
@@ -148,23 +149,40 @@ public class UnixPath : LocalPath
     }
 
     public static UnixPath operator /(UnixPath left, string right)
-        => new(left.Combine(left.Path, left.NormalizePath(right)), false);
+        => IsEmptyPath(left)
+            ? new(right)
+            : new(left.Combine(left.Path, left.NormalizePath(right)), false);
 
     protected override LocalPath CreateMergedPath(string path) => new UnixPath(path, false);
 
     protected override string NormalizePath(string s) => s.Replace('\\', '/');
 
+    public static bool IsEmptyPath(string path) =>
+        path.Length == 0
+        || (path[0] == '.' && path.Length == 1);
+
     public override bool Equals(object? obj)
     {
-        if (obj is UnixPath nativePath)
+        if (obj is null) return IsEmptyPath(Path);
+        
+        if (obj is string str) return IsEmptyPath(Path) ? IsEmptyPath(str) : Path.Equals(str);
+        
+        if (obj is UnixPath unixPath)
         {
-            return Path.Equals(nativePath.Path);
+            // Both are root paths - they're equal
+            if (IsEmptyPath(Path) && IsEmptyPath(unixPath.Path)) 
+            {
+                return true;
+            }
+            
+            // Regular path comparison
+            return Path.Equals(unixPath.Path);
         }
 
         return base.Equals(obj);
     }
 
-    public override int GetHashCode() => Path.GetHashCode();
+    public override int GetHashCode() => IsEmptyPath(Path) ? 0 : Path.GetHashCode();
 }
 
 /// <summary>

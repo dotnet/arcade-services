@@ -298,4 +298,149 @@ internal class ScenarioTests_GitHubFlow : TestLogic
             expectedCoherencyDependencies,
             coherentParent: GetUniqueAssetName("A1"));
     }
+
+    [Test]
+    public async Task Darc_GitHubFlow_SubWithTargetDirectories()
+    {
+        TestContext.WriteLine("GitHub Dependency Flow with Target Directories");
+
+        List<AssetData> sourceAssets = GetAssetData(GetUniqueAssetName("VmrFoo"), "1.1.0", GetUniqueAssetName("VmrBar"), "2.1.0", GetUniqueAssetName("VmrBaz"), "3.1.0");
+        List<AssetData> build1Assets = GetAssetData(GetUniqueAssetName("VmrFoo"), "1.1.1", GetUniqueAssetName("VmrBar"), "2.1.1", GetUniqueAssetName("VmrBaz"), "3.1.1");
+        List<AssetData> build2Assets = GetAssetData(GetUniqueAssetName("VmrFoo"), "1.2.1", GetUniqueAssetName("VmrBar"), "2.2.1", GetUniqueAssetName("VmrBaz"), "3.2.1");
+
+        var sourceRepoUri = GetGitHubRepoUrl(TestRepository.VmrTestRepoName);
+
+        // Define expected dependencies by directory after the PR update
+        Dictionary<string, List<DependencyDetail>> expectedDependenciesByDirectory1 = new()
+        {
+            ["src/maestro-test1"] = 
+            [
+                new DependencyDetail
+                {
+                    Name = GetUniqueAssetName("VmrFoo"),
+                    Version = "1.1.1",
+                    RepoUri = sourceRepoUri,
+                    Commit = TestRepository.CoherencyTestRepo1Commit,
+                    Type = DependencyType.Product,
+                    Pinned = false
+                },
+                new DependencyDetail
+                {
+                    Name = GetUniqueAssetName("VmrBar"),
+                    Version = "2.1.1",
+                    RepoUri = sourceRepoUri,
+                    Commit = TestRepository.CoherencyTestRepo1Commit,
+                    Type = DependencyType.Product,
+                    Pinned = false
+                },
+                new DependencyDetail
+                {
+                    Name = GetUniqueAssetName("VmrBaz"),
+                    Version = "3.1.0",
+                    RepoUri = sourceRepoUri,
+                    Type = DependencyType.Product,
+                    Pinned = false
+                },
+                new DependencyDetail
+                {
+                    Name = "Microsoft.DotNet.Arcade.Sdk",
+                    Version = "1.0.0-beta.1.9.1.22.1",
+                    RepoUri = "https://github.com/dotnet/arcade",
+                    Commit = "44a0f58d1f465f9c35a24768cf44ba14811c8bfb",
+                    Type = DependencyType.Toolset,
+                    Pinned = false
+                }
+            ],
+            ["src/maestro-test2"] = 
+            [
+                new DependencyDetail
+                {
+                    Name = GetUniqueAssetName("VmrBar"),
+                    Version = "2.1.1",
+                    RepoUri = sourceRepoUri,
+                    Commit = TestRepository.CoherencyTestRepo1Commit,
+                    Type = DependencyType.Product,
+                    Pinned = false
+                },
+                new DependencyDetail
+                {
+                    Name = GetUniqueAssetName("VmrBaz"),
+                    Version = "3.1.0",
+                    RepoUri = sourceRepoUri,
+                    Type = DependencyType.Product,
+                    Pinned = false
+                }
+            ]
+        };
+        Dictionary<string, List<DependencyDetail>> expectedDependenciesByDirectory2 = new()
+        {
+            ["src/maestro-test1"] =
+            [
+                new DependencyDetail
+                {
+                    Name = GetUniqueAssetName("VmrFoo"),
+                    Version = "1.2.1",
+                    RepoUri = sourceRepoUri,
+                    Commit = TestRepository.CoherencyTestRepo1Commit,
+                    Type = DependencyType.Product,
+                    Pinned = false
+                },
+                new DependencyDetail
+                {
+                    Name = GetUniqueAssetName("VmrBar"),
+                    Version = "2.2.1",
+                    RepoUri = sourceRepoUri,
+                    Commit = TestRepository.CoherencyTestRepo1Commit,
+                    Type = DependencyType.Product,
+                    Pinned = false
+                },
+                new DependencyDetail
+                {
+                    Name = GetUniqueAssetName("VmrBaz"),
+                    Version = "3.1.0",
+                    RepoUri = sourceRepoUri,
+                    Type = DependencyType.Product,
+                    Pinned = false
+                },
+                new DependencyDetail
+                {
+                    Name = "Microsoft.DotNet.Arcade.Sdk",
+                    Version = "1.0.0-beta.1.9.1.22.1",
+                    RepoUri = "https://github.com/dotnet/arcade",
+                    Commit = "44a0f58d1f465f9c35a24768cf44ba14811c8bfb",
+                    Type = DependencyType.Toolset,
+                    Pinned = false
+                }
+            ],
+            ["src/maestro-test2"] =
+            [
+                new DependencyDetail
+                {
+                    Name = GetUniqueAssetName("VmrBar"),
+                    Version = "2.2.1",
+                    RepoUri = sourceRepoUri,
+                    Commit = TestRepository.CoherencyTestRepo1Commit,
+                    Type = DependencyType.Product,
+                    Pinned = false
+                },
+                new DependencyDetail
+                {
+                    Name = GetUniqueAssetName("VmrBaz"),
+                    Version = "3.1.0",
+                    RepoUri = sourceRepoUri,
+                    Type = DependencyType.Product,
+                    Pinned = false
+                }
+            ]
+        };
+
+        await GitHubMultipleTargetDirectoriesTestBase(
+            GetTestBranchName(),
+            GetTestChannelName(),
+            sourceAssets,
+            build1Assets,
+            build2Assets,
+            expectedDependenciesByDirectory1,
+            expectedDependenciesByDirectory2);
+    }
 }
