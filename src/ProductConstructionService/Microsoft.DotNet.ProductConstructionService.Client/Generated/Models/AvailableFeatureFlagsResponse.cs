@@ -13,6 +13,6 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         }
 
         [JsonProperty("flags")]
-        public List<FeatureFlagMetadata> Flags { get; set; }
+        public List<string> Flags { get; set; }
     }
 }

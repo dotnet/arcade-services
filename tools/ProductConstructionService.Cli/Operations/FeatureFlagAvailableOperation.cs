@@ -28,20 +28,15 @@ internal class FeatureFlagAvailableOperation : IOperation
             if (response.Flags?.Count == 0 || response.Flags == null)
             {
                 Console.WriteLine("No available feature flags found");
-                return 0;
+                return 1;
             }
 
             Console.WriteLine("Available Feature Flags:");
             Console.WriteLine();
 
-            var flags = response.Flags.OrderBy(f => f.Name);
-
-            foreach (var flag in flags)
+            foreach (var flag in response.Flags)
             {
-                Console.WriteLine($"  {flag.Key}");
-                Console.WriteLine($"    Name: {flag.Name}");
-                Console.WriteLine($"    Type: {flag.Type}");
-                Console.WriteLine($"    Description: {flag.Description}");
+                Console.WriteLine(flag);
                 Console.WriteLine();
             }
 
@@ -49,7 +44,7 @@ internal class FeatureFlagAvailableOperation : IOperation
             if (response.Flags.Count > 0)
             {
                 var firstFlag = response.Flags.First();
-                Console.WriteLine($"  pcs feature-flag-set --subscription-id \"12345678-1234-1234-1234-123456789012\" --flag \"{firstFlag.Key}\" --value \"true\"");
+                Console.WriteLine($"  pcs feature-flag-set --subscription-id \"12345678-1234-1234-1234-123456789012\" --flag \"{firstFlag}\" --value \"true\"");
             }
 
             return 0;
