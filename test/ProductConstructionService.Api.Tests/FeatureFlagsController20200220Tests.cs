@@ -187,6 +187,6 @@ public class FeatureFlagsController20200220Tests
         var okResult = (OkObjectResult)result;
         var response = okResult.Value as AvailableFeatureFlagsResponse;
         response!.Flags.Should().HaveCount(FeatureFlags.AllFlags.Count);
-        response.Flags.Should().Contain(f => f == FeatureFlag.EnableRebaseStrategy.Name);
+        response.Flags.Should().Contain(FeatureFlag.EnableRebaseStrategy.Name);
     }
 }

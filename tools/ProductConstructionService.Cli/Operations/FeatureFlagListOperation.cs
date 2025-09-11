@@ -95,7 +95,7 @@ internal class FeatureFlagListOperation : IOperation
 
         Console.WriteLine();
         Console.WriteLine($"Total: {response.Total} flags");
-        return (flowControl: true, value: default);
+        return (flowControl: true, value: 0);
     }
 
     private async Task<(bool flowControl, int value)> ListAllFlags()
@@ -141,6 +141,6 @@ internal class FeatureFlagListOperation : IOperation
         }
 
         Console.WriteLine($"Total: {response.Total} flags across {groupedFlags.Count()} subscriptions");
-        return (flowControl: true, value: default);
+        return (flowControl: true, value: 0);
     }
 }

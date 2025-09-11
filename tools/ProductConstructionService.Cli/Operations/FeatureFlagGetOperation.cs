@@ -70,7 +70,7 @@ internal class FeatureFlagGetOperation : IOperation
             else
             {
                 // Get all flags for subscription
-                Console.WriteLine($"Getting all feature flags for subscription {{0}}", subscriptionId);
+                Console.WriteLine($"Getting all feature flags for subscription {0}", subscriptionId);
 
                 var response = await _client.FeatureFlags.GetFeatureFlagsAsync(subscriptionId);
 
