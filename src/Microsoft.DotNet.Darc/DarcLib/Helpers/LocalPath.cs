@@ -149,7 +149,9 @@ public class UnixPath : LocalPath
     }
 
     public static UnixPath operator /(UnixPath left, string right)
-        => new(left.Combine(left.Path, left.NormalizePath(right)), false);
+        => IsEmptyPath(left)
+            ? new(right)
+            : new(left.Combine(left.Path, left.NormalizePath(right)), false);
 
     protected override LocalPath CreateMergedPath(string path) => new UnixPath(path, false);
 

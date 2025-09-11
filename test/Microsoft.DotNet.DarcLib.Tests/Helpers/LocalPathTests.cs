@@ -66,6 +66,13 @@ public class LocalPathTests
     }
 
     [Test]
+    public void UnixPathEmptyPathTest()
+    {
+        (UnixPath.Empty / "foo").ToString().Should().Be("foo");
+        (new UnixPath("foo") / UnixPath.Empty / "bar").ToString().Should().Be("foo/bar");
+    }
+
+    [Test]
     public void UnixPathGetHashCodeTest()
     {
         var emptyPath1 = new UnixPath("");
