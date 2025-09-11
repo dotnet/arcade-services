@@ -89,42 +89,34 @@ public class FeatureFlagService : IFeatureFlagService
         Guid subscriptionId,
         CancellationToken cancellationToken = default)
     {
-        try
+        var pattern = GetRedisKeyPattern(subscriptionId);
+        var cache = _redisCacheFactory.Create("");
+            
+        var flags = new List<FeatureFlagValue>();
+            
+        await foreach (var key in cache.GetKeysAsync(pattern))
         {
-            var pattern = GetRedisKeyPattern(subscriptionId);
-            var cache = _redisCacheFactory.Create("");
-            
-            var flags = new List<FeatureFlagValue>();
-            
-            await foreach (var key in cache.GetKeysAsync(pattern))
-            {
-                var flagCache = _redisCacheFactory.Create(key);
-                var json = await flagCache.TryGetAsync();
+            var flagCache = _redisCacheFactory.Create(key);
+            var json = await flagCache.TryGetAsync();
                 
-                if (!string.IsNullOrEmpty(json))
+            if (!string.IsNullOrEmpty(json))
+            {
+                try
                 {
-                    try
+                    var flagValue = JsonSerializer.Deserialize<FeatureFlagValue>(json);
+                    if (flagValue != null)
                     {
-                        var flagValue = JsonSerializer.Deserialize<FeatureFlagValue>(json);
-                        if (flagValue != null)
-                        {
-                            flags.Add(flagValue);
-                        }
-                    }
-                    catch (JsonException ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to deserialize feature flag from key {Key}", key);
+                        flags.Add(flagValue);
                     }
                 }
+                catch (JsonException ex)
+                {
+                    _logger.LogWarning(ex, "Failed to deserialize feature flag from key {Key}", key);
+                }
             }
+        }
 
-            return flags;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to get feature flags for subscription {SubscriptionId}", subscriptionId);
-            return new List<FeatureFlagValue>();
-        }
+        return flags;
     }
 
     public async Task<bool> RemoveFlagAsync(
