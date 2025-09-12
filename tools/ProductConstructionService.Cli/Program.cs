@@ -30,4 +30,9 @@ Type[] GetOptions() =>
         typeof(GetPcsStatusOptions),
         typeof(StartPcsOptions),
         typeof(StopPcsOptions),
+        typeof(FeatureFlagSetOptions),
+        typeof(FeatureFlagGetOptions),
+        typeof(FeatureFlagRemoveOptions),
+        typeof(FeatureFlagListOptions),
+        typeof(FeatureFlagAvailableOptions),
     ];
