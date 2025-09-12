@@ -27,23 +27,23 @@ internal class FeatureFlagAvailableOperation : IOperation
 
             if (response.Flags?.Count == 0 || response.Flags == null)
             {
-                Console.WriteLine("No available feature flags found");
+                _logger.LogInformation("No available feature flags found");
                 return 1;
             }
 
-            Console.WriteLine("Available Feature Flags:");
-            Console.WriteLine();
+            _logger.LogInformation("Available Feature Flags:");
+            _logger.LogInformation("");
 
             foreach (var flag in response.Flags)
             {
-                Console.WriteLine($"- {0}", flag);
+                _logger.LogInformation(" - {Flag}", flag);
             }
 
-            Console.WriteLine("Example usage:");
+            _logger.LogInformation("Example usage:");
             if (response.Flags.Count > 0)
             {
                 var firstFlag = response.Flags.First();
-                Console.WriteLine($"  pcs feature-flag-set --subscription-id \"12345678-1234-1234-1234-123456789012\" --flag \"{firstFlag}\" --value \"true\"");
+                _logger.LogInformation("  pcs feature-flag-set --subscription-id \"12345678-1234-1234-1234-123456789012\" --flag \"{Flag}\" --value \"true\"", firstFlag);
             }
 
             return 0;
@@ -51,7 +51,7 @@ internal class FeatureFlagAvailableOperation : IOperation
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to list available feature flags");
-            Console.WriteLine($"✗ Error: {ex.Message}");
+            _logger.LogError("✗ Error: {Message}", ex.Message);
             return 1;
         }
     }

@@ -204,9 +204,9 @@ public class FeatureFlagsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets the list of all available feature flags.
+    /// Gets the names of all available feature flags.
     /// </summary>
-    /// <returns>The list of available feature flag definitions.</returns>
+    /// <returns>The list of available feature flag names.</returns>
     [HttpGet("available")]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(AvailableFeatureFlagsResponse), Description = "Available feature flags")]
     [ValidateModelState]
@@ -283,14 +283,13 @@ public class FeatureFlagsController : ControllerBase
         {
             var removedCount = await _featureFlagService.RemoveFlagFromAllSubscriptionsAsync(flag);
             return Ok(new RemoveFlagFromAllResponse(
-                true, 
                 removedCount, 
                 $"Removed feature flag '{flagName}' from {removedCount} subscription(s)"));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to remove feature flag {FlagName} from all subscriptions", flagName);
-            return StatusCode(500, new RemoveFlagFromAllResponse(false, 0, "Internal server error"));
+            return StatusCode(500, new RemoveFlagFromAllResponse(0, "Internal server error"));
         }
     }
 }

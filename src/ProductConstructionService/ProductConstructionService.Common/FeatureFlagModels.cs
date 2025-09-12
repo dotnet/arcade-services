@@ -59,10 +59,8 @@ public record AvailableFeatureFlagsResponse(
 /// <summary>
 /// Response model for removing a feature flag from all subscriptions.
 /// </summary>
-/// <param name="Success">Whether the operation was successful.</param>
 /// <param name="RemovedCount">The number of subscriptions from which the flag was removed.</param>
 /// <param name="Message">Any message associated with the operation.</param>
 public record RemoveFlagFromAllResponse(
-    bool Success,
     int RemovedCount,
     string? Message = null);

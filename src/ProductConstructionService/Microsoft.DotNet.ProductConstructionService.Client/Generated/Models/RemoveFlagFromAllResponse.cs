@@ -7,14 +7,10 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
     public partial class RemoveFlagFromAllResponse
     {
-        public RemoveFlagFromAllResponse(bool success, int removedCount)
+        public RemoveFlagFromAllResponse(int removedCount)
         {
-            Success = success;
             RemovedCount = removedCount;
         }
-
-        [JsonProperty("success")]
-        public bool Success { get; set; }
 
         [JsonProperty("removedCount")]
         public int RemovedCount { get; set; }

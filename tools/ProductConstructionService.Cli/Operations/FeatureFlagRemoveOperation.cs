@@ -29,29 +29,29 @@ internal class FeatureFlagRemoveOperation : IOperation
         {
             if (!Guid.TryParse(_options.SubscriptionId, out var subscriptionId))
             {
-                Console.WriteLine($"Error: Invalid subscription ID '{_options.SubscriptionId}'. Must be a valid GUID.");
+                _logger.LogError("Error: Invalid subscription ID '{SubscriptionId}'. Must be a valid GUID.", _options.SubscriptionId);
                 return 1;
             }
 
-            Console.WriteLine($"Removing feature flag {_options.FlagName} for subscription {subscriptionId}");
+            _logger.LogInformation("Removing feature flag {FlagName} for subscription {SubscriptionId}", _options.FlagName, subscriptionId);
 
             var removed = await _client.FeatureFlags.RemoveFeatureFlagAsync(_options.FlagName, subscriptionId);
 
             if (removed)
             {
-                Console.WriteLine($"✓ Successfully removed feature flag '{_options.FlagName}' for subscription {subscriptionId}");
+                _logger.LogInformation("✓ Successfully removed feature flag '{FlagName}' for subscription {SubscriptionId}", _options.FlagName, subscriptionId);
                 return 0;
             }
             else
             {
-                Console.WriteLine($"Feature flag '{_options.FlagName}' not found for subscription {subscriptionId}");
+                _logger.LogInformation("Feature flag '{FlagName}' not found for subscription {SubscriptionId}", _options.FlagName, subscriptionId);
                 return 1;
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to remove feature flag");
-            Console.WriteLine($"✗ Error: {ex.Message}");
+            _logger.LogError("✗ Error: {Message}", ex.Message);
             return 1;
         }
     }

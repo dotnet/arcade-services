@@ -27,38 +27,30 @@ internal class FeatureFlagRemoveFromAllOperation : IOperation
     {
         try
         {
-            Console.WriteLine($"Removing feature flag '{_options.FlagName}' from all subscriptions...");
+            _logger.LogInformation("Removing feature flag '{FlagName}' from all subscriptions...", _options.FlagName);
             
             // First, let's see how many subscriptions have this flag
             var listResponse = await _client.FeatureFlags.GetSubscriptionsWithFlagAsync(_options.FlagName);
             
             if (listResponse.Flags?.Count == 0 || listResponse.Flags == null)
             {
-                Console.WriteLine($"No subscriptions found with feature flag '{_options.FlagName}'");
+                _logger.LogInformation("No subscriptions found with feature flag '{FlagName}'", _options.FlagName);
                 return 0;
             }
 
-            Console.WriteLine($"Found {listResponse.Total} subscription(s) with this flag. Proceeding with removal...");
+            _logger.LogInformation("Found {Total} subscription(s) with this flag. Proceeding with removal...", listResponse.Total);
             
             var response = await _client.FeatureFlags.RemoveFlagFromAllSubscriptionsAsync(_options.FlagName);
 
-            if (response.Success)
+            _logger.LogInformation("✓ {Message}", response.Message);
+            
+            if (response.RemovedCount > 0)
             {
-                Console.WriteLine($"✓ {response.Message}");
-                
-                if (response.RemovedCount > 0)
-                {
-                    Console.WriteLine($"Successfully removed feature flag '{_options.FlagName}' from {response.RemovedCount} subscription(s)");
-                }
-                else
-                {
-                    Console.WriteLine($"Feature flag '{_options.FlagName}' was not found in any subscriptions");
-                }
+                _logger.LogInformation("Successfully removed feature flag '{FlagName}' from {RemovedCount} subscription(s)", _options.FlagName, response.RemovedCount);
             }
             else
             {
-                Console.WriteLine($"✗ Failed to remove feature flag: {response.Message}");
-                return 1;
+                _logger.LogInformation("Feature flag '{FlagName}' was not found in any subscriptions", _options.FlagName);
             }
 
             return 0;
@@ -66,7 +58,7 @@ internal class FeatureFlagRemoveFromAllOperation : IOperation
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to remove feature flag {FlagName} from all subscriptions", _options.FlagName);
-            Console.WriteLine($"✗ Error: {ex.Message}");
+            _logger.LogError("✗ Error: {Message}", ex.Message);
             return 1;
         }
     }

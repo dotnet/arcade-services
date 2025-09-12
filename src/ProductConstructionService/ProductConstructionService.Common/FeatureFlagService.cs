@@ -231,18 +231,26 @@ public class FeatureFlagService : IFeatureFlagService
             
         var removedCount = 0;
             
-        await foreach (var key in cache.GetKeysAsync(pattern))
+        try
         {
-            var flagCache = _redisCacheFactory.Create(key);
-            var removed = await flagCache.TryDeleteAsync();
-            if (removed)
+            await foreach (var key in cache.GetKeysAsync(pattern))
             {
-                removedCount++;
+                var flagCache = _redisCacheFactory.Create(key);
+                var removed = await flagCache.TryDeleteAsync();
+                if (removed)
+                {
+                    removedCount++;
+                }
             }
-        }
 
-        _logger.LogInformation("Removed feature flag {FlagName} from {Count} subscriptions", flag.Name, removedCount);
-        return removedCount;
+            _logger.LogInformation("Removed feature flag {FlagName} from {Count} subscriptions", flag.Name, removedCount);
+            return removedCount;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to remove feature flag {FlagName} from subscriptions after removing {Count} entries", flag.Name, removedCount);
+            throw; // Let the exception bubble up as suggested in the PR comments
+        }
     }
 
     private static string GetRedisKey(Guid subscriptionId, FeatureFlag flag)

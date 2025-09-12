@@ -244,8 +244,8 @@ public class FeatureFlagsController20200220Tests
         result.Should().BeAssignableTo<OkObjectResult>();
         var okResult = (OkObjectResult)result;
         var response = okResult.Value as RemoveFlagFromAllResponse;
-        response!.Success.Should().BeTrue();
-        response.RemovedCount.Should().Be(3);
+        response.Should().NotBeNull();
+        response!.RemovedCount.Should().Be(3);
         response.Message.Should().Contain("Removed feature flag");
         response.Message.Should().Contain("3 subscription(s)");
     }

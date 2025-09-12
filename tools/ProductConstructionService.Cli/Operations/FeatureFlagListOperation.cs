@@ -49,7 +49,7 @@ internal class FeatureFlagListOperation : IOperation
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to list feature flags");
-            Console.WriteLine($"✗ Error: {ex.Message}");
+            _logger.LogError("✗ Error: {Message}", ex.Message);
             return 1;
         }
     }
@@ -58,63 +58,63 @@ internal class FeatureFlagListOperation : IOperation
     {
         if (!Guid.TryParse(_options.SubscriptionId, out var subscriptionId))
         {
-            Console.WriteLine($"Error: Invalid subscription ID '{_options.SubscriptionId}'. Must be a valid GUID.");
+            _logger.LogError("Error: Invalid subscription ID '{SubscriptionId}'. Must be a valid GUID.", _options.SubscriptionId);
             return (flowControl: false, value: 1);
         }
 
-        Console.WriteLine($"Listing feature flags for subscription {subscriptionId}");
+        _logger.LogInformation("Listing feature flags for subscription {SubscriptionId}", subscriptionId);
 
         var response = await _client.FeatureFlags.GetFeatureFlagsAsync(subscriptionId);
 
         if (response.Flags?.Count == 0 || response.Flags == null)
         {
-            Console.WriteLine($"No feature flags found for subscription {subscriptionId}");
+            _logger.LogInformation("No feature flags found for subscription {SubscriptionId}", subscriptionId);
             return (flowControl: false, value: 0);
         }
 
-        Console.WriteLine($"Feature flags for subscription {subscriptionId}:");
-        Console.WriteLine();
+        _logger.LogInformation("Feature flags for subscription {SubscriptionId}:", subscriptionId);
+        _logger.LogInformation("");
 
         foreach (var flag in response.Flags)
         {
-            Console.WriteLine($"  {flag.FlagName}: {flag.Value}");
+            _logger.LogInformation("  {FlagName}: {Value}", flag.FlagName, flag.Value);
         }
 
-        Console.WriteLine();
-        Console.WriteLine($"Total: {response.Total} flags");
+        _logger.LogInformation("");
+        _logger.LogInformation("Total: {Total} flags", response.Total);
         return (flowControl: true, value: 0);
     }
 
     private async Task<(bool flowControl, int value)> ListAllFlags()
     {
-        Console.WriteLine("Listing all feature flags");
+        _logger.LogInformation("Listing all feature flags");
 
         var response = await _client.FeatureFlags.GetAllFeatureFlagsAsync();
 
         if (response.Flags?.Count == 0 || response.Flags == null)
         {
-            Console.WriteLine("No feature flags found in the system");
+            _logger.LogInformation("No feature flags found in the system");
             return (flowControl: false, value: 0);
         }
 
-        Console.WriteLine("All feature flags:");
-        Console.WriteLine();
+        _logger.LogInformation("All feature flags:");
+        _logger.LogInformation("");
 
         var groupedFlags = response.Flags.GroupBy(f => f.SubscriptionId).OrderBy(g => g.Key);
 
         foreach (var group in groupedFlags)
         {
-            Console.WriteLine($"Subscription {group.Key}:");
+            _logger.LogInformation("Subscription {SubscriptionId}:", group.Key);
 
             foreach (var flag in group.OrderBy(f => f.FlagName))
             {
-                Console.WriteLine($"  {flag.FlagName}: {flag.Value}");
+                _logger.LogInformation("  {FlagName}: {Value}", flag.FlagName, flag.Value);
             }
 
-            Console.WriteLine();
+            _logger.LogInformation("");
         }
 
-        Console.WriteLine($"Total: {response.Total} flags across {groupedFlags.Count()} subscriptions");
+        _logger.LogInformation("Total: {Total} flags across {GroupCount} subscriptions", response.Total, groupedFlags.Count());
         return (flowControl: true, value: 0);
     }
 }

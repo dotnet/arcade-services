@@ -30,11 +30,11 @@ internal class FeatureFlagSetOperation : IOperation
         {
             if (!Guid.TryParse(_options.SubscriptionId, out var subscriptionId))
             {
-                Console.WriteLine($"Error: Invalid subscription ID '{_options.SubscriptionId}'. Must be a valid GUID.");
+                _logger.LogError("Error: Invalid subscription ID '{SubscriptionId}'. Must be a valid GUID.", _options.SubscriptionId);
                 return 1;
             }
 
-            Console.WriteLine($"Setting feature flag {_options.FlagName} = {_options.Value} for subscription {subscriptionId}");
+            _logger.LogInformation("Setting feature flag {FlagName} = {Value} for subscription {SubscriptionId}", _options.FlagName, _options.Value, subscriptionId);
 
             var request = new SetFeatureFlagRequest(subscriptionId)
             {
@@ -47,20 +47,20 @@ internal class FeatureFlagSetOperation : IOperation
 
             if (result.Success)
             {
-                Console.WriteLine($"✓ Successfully set feature flag '{_options.FlagName}' = '{_options.Value}' for subscription {subscriptionId}");
+                _logger.LogInformation("✓ Successfully set feature flag '{FlagName}' = '{Value}' for subscription {SubscriptionId}", _options.FlagName, _options.Value, subscriptionId);
                 
                 return 0;
             }
             else
             {
-                Console.WriteLine($"✗ Failed to set feature flag: {result.Message}");
+                _logger.LogError("✗ Failed to set feature flag: {Message}", result.Message);
                 return 1;
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to set feature flag");
-            Console.WriteLine($"✗ Error: {ex.Message}");
+            _logger.LogError("✗ Error: {Message}", ex.Message);
             return 1;
         }
     }

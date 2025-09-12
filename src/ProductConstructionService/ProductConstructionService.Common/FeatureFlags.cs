@@ -31,7 +31,7 @@ public static class FeatureFlags
     ];
 
     /// <summary>
-    /// Validates if a feature flag key is recognized.
+    /// Determines whether the specified flag name is a valid, registered feature flag.
     /// </summary>
     /// <param name="flagName">The feature flag key to validate.</param>
     /// <returns>True if the flag is valid, false otherwise.</returns>

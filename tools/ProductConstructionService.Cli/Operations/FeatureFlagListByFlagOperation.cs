@@ -27,39 +27,39 @@ internal class FeatureFlagListByFlagOperation : IOperation
     {
         try
         {
-            Console.WriteLine($"Listing subscriptions with feature flag '{_options.FlagName}'");
+            _logger.LogInformation("Listing subscriptions with feature flag '{FlagName}'", _options.FlagName);
 
             var response = await _client.FeatureFlags.GetSubscriptionsWithFlagAsync(_options.FlagName);
 
             if (response.Flags?.Count == 0 || response.Flags == null)
             {
-                Console.WriteLine($"No subscriptions found with feature flag '{_options.FlagName}'");
+                _logger.LogInformation("No subscriptions found with feature flag '{FlagName}'", _options.FlagName);
                 return 0;
             }
 
-            Console.WriteLine($"Subscriptions with feature flag '{_options.FlagName}':");
-            Console.WriteLine();
+            _logger.LogInformation("Subscriptions with feature flag '{FlagName}':", _options.FlagName);
+            _logger.LogInformation("");
 
             foreach (var flag in response.Flags.OrderBy(f => f.SubscriptionId))
             {
-                Console.WriteLine($"  Subscription: {flag.SubscriptionId}");
-                Console.WriteLine($"  Value: {flag.Value}");
+                _logger.LogInformation("  Subscription: {SubscriptionId}", flag.SubscriptionId);
+                _logger.LogInformation("  Value: {Value}", flag.Value);
                 
                 if (flag.CreatedAt.HasValue)
                 {
-                    Console.WriteLine($"  Created: {flag.CreatedAt.Value:yyyy-MM-dd HH:mm:ss} UTC");
+                    _logger.LogInformation("  Created: {CreatedAt:yyyy-MM-dd HH:mm:ss} UTC", flag.CreatedAt.Value);
                 }
 
-                Console.WriteLine();
+                _logger.LogInformation("");
             }
 
-            Console.WriteLine($"Total: {response.Total} subscriptions have this flag set");
+            _logger.LogInformation("Total: {Total} subscriptions have this flag set", response.Total);
             return 0;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to list subscriptions with feature flag {FlagName}", _options.FlagName);
-            Console.WriteLine($"✗ Error: {ex.Message}");
+            _logger.LogError("✗ Error: {Message}", ex.Message);
             return 1;
         }
     }

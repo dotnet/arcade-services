@@ -29,63 +29,62 @@ internal class FeatureFlagGetOperation : IOperation
         {
             if (!Guid.TryParse(_options.SubscriptionId, out var subscriptionId))
             {
-                Console.WriteLine($"Error: Invalid subscription ID '{_options.SubscriptionId}'. Must be a valid GUID.");
+                _logger.LogError("Error: Invalid subscription ID '{SubscriptionId}'. Must be a valid GUID.", _options.SubscriptionId);
                 return 1;
             }
 
             if (!string.IsNullOrEmpty(_options.FlagName))
             {
-                Console.WriteLine($"Getting feature flag {_options.FlagName} for subscription {subscriptionId}");
+                _logger.LogInformation("Getting feature flag {FlagName} for subscription {SubscriptionId}", _options.FlagName, subscriptionId);
 
                 var flag = await _client.FeatureFlags.GetFeatureFlagAsync(_options.FlagName, subscriptionId);
 
                 if (flag == null)
                 {
-                    Console.WriteLine($"Feature flag '{_options.FlagName}' not found for subscription {subscriptionId}");
+                    _logger.LogInformation("Feature flag '{FlagName}' not found for subscription {SubscriptionId}", _options.FlagName, subscriptionId);
                     return 1;
                 }
 
-                Console.WriteLine($"Feature flag '{flag.FlagName}':");
-                Console.WriteLine($"  Subscription: {flag.SubscriptionId}");
-                Console.WriteLine($"  Value: {flag.Value}");
+                _logger.LogInformation("Feature flag '{FlagName}':", flag.FlagName);
+                _logger.LogInformation("  Subscription: {SubscriptionId}", flag.SubscriptionId);
+                _logger.LogInformation("  Value: {Value}", flag.Value);
                 
                 if (flag.CreatedAt.HasValue)
                 {
-                    Console.WriteLine($"  Created: {flag.CreatedAt.Value:yyyy-MM-dd HH:mm:ss} UTC");
+                    _logger.LogInformation("  Created: {CreatedAt:yyyy-MM-dd HH:mm:ss} UTC", flag.CreatedAt.Value);
                 }
                 
                 return 0;
             }
             else
             {
-                // Get all flags for subscription
-                Console.WriteLine($"Getting all feature flags for subscription {0}", subscriptionId);
+                _logger.LogInformation("Getting all feature flags for subscription {SubscriptionId}", subscriptionId);
 
                 var response = await _client.FeatureFlags.GetFeatureFlagsAsync(subscriptionId);
 
                 if (response.Flags?.Count == 0 || response.Flags == null)
                 {
-                    Console.WriteLine($"No feature flags found for subscription {subscriptionId}");
+                    _logger.LogInformation("No feature flags found for subscription {SubscriptionId}", subscriptionId);
                     return 0;
                 }
 
-                Console.WriteLine($"Feature flags for subscription {subscriptionId}:");
-                Console.WriteLine();
+                _logger.LogInformation("Feature flags for subscription {SubscriptionId}:", subscriptionId);
+                _logger.LogInformation("");
 
                 foreach (var flag in response.Flags)
                 {
-                    Console.WriteLine($"  {flag.FlagName}: {flag.Value}");
+                    _logger.LogInformation("  {FlagName}: {Value}", flag.FlagName, flag.Value);
                 }
 
-                Console.WriteLine();
-                Console.WriteLine($"Total: {response.Total} flags");
+                _logger.LogInformation("");
+                _logger.LogInformation("Total: {Total} flags", response.Total);
                 return 0;
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get feature flag(s)");
-            Console.WriteLine($"✗ Error: {ex.Message}");
+            _logger.LogError("✗ Error: {Message}", ex.Message);
             return 1;
         }
     }
