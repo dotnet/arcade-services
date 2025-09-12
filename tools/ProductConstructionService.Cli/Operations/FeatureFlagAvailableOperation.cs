@@ -32,7 +32,6 @@ internal class FeatureFlagAvailableOperation : IOperation
             }
 
             _logger.LogInformation("Available Feature Flags:");
-            _logger.LogInformation("");
 
             foreach (var flag in response.Flags)
             {
