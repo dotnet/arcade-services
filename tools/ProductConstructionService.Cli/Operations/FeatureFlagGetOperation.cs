@@ -69,14 +69,12 @@ internal class FeatureFlagGetOperation : IOperation
                 }
 
                 _logger.LogInformation("Feature flags for subscription {SubscriptionId}:", subscriptionId);
-                _logger.LogInformation("");
 
                 foreach (var flag in response.Flags)
                 {
                     _logger.LogInformation("  {FlagName}: {Value}", flag.FlagName, flag.Value);
                 }
 
-                _logger.LogInformation("");
                 _logger.LogInformation("Total: {Total} flags", response.Total);
                 return 0;
             }

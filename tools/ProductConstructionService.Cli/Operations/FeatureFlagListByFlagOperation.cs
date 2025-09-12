@@ -38,7 +38,6 @@ internal class FeatureFlagListByFlagOperation : IOperation
             }
 
             _logger.LogInformation("Subscriptions with feature flag '{FlagName}':", _options.FlagName);
-            _logger.LogInformation("");
 
             foreach (var flag in response.Flags.OrderBy(f => f.SubscriptionId))
             {
@@ -50,7 +49,6 @@ internal class FeatureFlagListByFlagOperation : IOperation
                     _logger.LogInformation("  Created: {CreatedAt:yyyy-MM-dd HH:mm:ss} UTC", flag.CreatedAt.Value);
                 }
 
-                _logger.LogInformation("");
             }
 
             _logger.LogInformation("Total: {Total} subscriptions have this flag set", response.Total);

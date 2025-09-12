@@ -98,7 +98,6 @@ internal class FeatureFlagListOperation : IOperation
         }
 
         _logger.LogInformation("All feature flags:");
-        _logger.LogInformation("");
 
         var groupedFlags = response.Flags.GroupBy(f => f.SubscriptionId).OrderBy(g => g.Key);
 
