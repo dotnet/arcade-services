@@ -33,11 +33,11 @@ public static class FeatureFlags
     /// <summary>
     /// Validates if a feature flag key is recognized.
     /// </summary>
-    /// <param name="flagKey">The feature flag key to validate.</param>
+    /// <param name="flagName">The feature flag key to validate.</param>
     /// <returns>True if the flag is valid, false otherwise.</returns>
-    public static bool IsValidFlag(string flagKey)
+    public static bool IsValidFlag(string flagName)
     {
-        return !string.IsNullOrEmpty(flagKey) && AllFlags.Any(f => f.Name == flagKey);
+        return !string.IsNullOrEmpty(flagName) && AllFlags.Any(f => f.Name == flagName);
     }
 
     public static FeatureFlag? GetByName(string flagName) => AllFlags.FirstOrDefault(f => f.Name == flagName);

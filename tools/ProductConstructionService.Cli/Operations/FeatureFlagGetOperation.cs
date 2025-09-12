@@ -35,7 +35,6 @@ internal class FeatureFlagGetOperation : IOperation
 
             if (!string.IsNullOrEmpty(_options.FlagName))
             {
-                // Get specific flag
                 Console.WriteLine($"Getting feature flag {_options.FlagName} for subscription {subscriptionId}");
 
                 var flag = await _client.FeatureFlags.GetFeatureFlagAsync(_options.FlagName, subscriptionId);

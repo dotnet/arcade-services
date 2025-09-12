@@ -36,8 +36,7 @@ internal class FeatureFlagAvailableOperation : IOperation
 
             foreach (var flag in response.Flags)
             {
-                Console.WriteLine(flag);
-                Console.WriteLine();
+                Console.WriteLine($"- {0}", flag);
             }
 
             Console.WriteLine("Example usage:");

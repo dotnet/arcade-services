@@ -204,7 +204,7 @@ public class FeatureFlagsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets the list of all available feature flags with their metadata.
+    /// Gets the list of all available feature flags.
     /// </summary>
     /// <returns>The list of available feature flag definitions.</returns>
     [HttpGet("available")]
