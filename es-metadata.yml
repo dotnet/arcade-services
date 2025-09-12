@@ -5,4 +5,4 @@ accountableOwners:
 routing:
   defaultAreaPath:
     org: dnceng
-    path: internal\.NET Product Construction Services
+    path: "internal\.NET Product Construction Services"
