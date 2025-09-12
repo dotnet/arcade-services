@@ -24,11 +24,13 @@ internal class BackflowOperation(
     IDependencyFileManager dependencyFileManager,
     IProcessManager processManager,
     IFileSystem fileSystem,
+    IBarApiClient barClient,
     ILogger<BackflowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, backFlower, dependencyTracker, patchHandler, dependencyFileManager, localGitRepoFactory, fileSystem, logger)
+    : CodeFlowOperation(options, vmrInfo, backFlower, dependencyTracker, patchHandler, dependencyFileManager, localGitRepoFactory, fileSystem, barClient, logger)
 {
     private readonly BackflowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
+    private readonly IVmrBackFlower _backFlower = backFlower;
     private readonly IProcessManager _processManager = processManager;
 
     protected override async Task ExecuteInternalAsync(
@@ -46,6 +48,8 @@ internal class BackflowOperation(
         var targetRepoPath = new NativePath(_processManager.FindGitRoot(targetDirectory));
 
         await FlowCodeLocallyAsync(
+            async (mapping, repoPath, build, excludedAssets, targetBranch, headBranch)
+                => await _backFlower.FlowBackAsync(mapping.Name, repoPath, build, excludedAssets, targetBranch, headBranch, false, cancellationToken),
             targetRepoPath,
             isForwardFlow: false,
             additionalRemotes,

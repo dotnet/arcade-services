@@ -11,6 +11,8 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 internal interface ICodeFlowCommandLineOptions : IBaseVmrCommandLineOptions
 {
     string Ref { get; set; }
+    int? BuildId { get; set; }
+    IEnumerable<string> AssetFilters { get; set; }
 }
 
 internal abstract class CodeFlowCommandLineOptions<T>
@@ -26,6 +28,14 @@ internal abstract class CodeFlowCommandLineOptions<T>
     [Option("ref", Required = false, HelpText = "Git reference (commit, branch, tag) to flow. " +
         "Defaults to HEAD of the repository in the current working directory.")]
     public string Ref { get; set; }
+
+    [Option("build-id", Required = false, HelpText = "Optional BAR build ID to flow from. When provided, " +
+        "fetches the build's source SHA and dependencies automatically.")]
+    public int? BuildId { get; set; }
+
+    [Option("asset-filter", Required = false, HelpText = "List of asset filters to exclude from the flow. " +
+        "Supports patterns like 'Microsoft.NETCore.*'. Can be used multiple times.")]
+    public IEnumerable<string> AssetFilters { get; set; }
 
     public abstract IEnumerable<string> Repositories { get; }
 

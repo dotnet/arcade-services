@@ -39,6 +39,7 @@ internal abstract class CodeFlowTestsBase
 
     private readonly CancellationTokenSource _cancellationToken = new();
     protected readonly Mock<IBasicBarClient> _basicBarClient = new();
+    protected readonly Mock<IBarApiClient> _barApiClient = new();
 
     private int _buildId = 100;
     private List<string> _lastFlowCollectedComments = [];
@@ -70,12 +71,16 @@ internal abstract class CodeFlowTestsBase
 
         _basicBarClient.Setup(x => x.GetBuildAsync(It.IsAny<int>()))
              .ReturnsAsync((int id) => _builds[id]);
+        
+        _barApiClient.Setup(x => x.GetBuildAsync(It.IsAny<int>()))
+             .ReturnsAsync((int id) => _builds[id]);
     }
 
     [TearDown]
     public void DeleteCurrentTestDirectory()
     {
         _basicBarClient.Reset();
+        _barApiClient.Reset();
         try
         {
             if (CurrentTestDirectory is not null)
@@ -97,6 +102,7 @@ internal abstract class CodeFlowTestsBase
         .AddLogging(b => b.AddConsole().AddFilter(l => l >= LogLevel.Debug))
         .AddSingleVmrSupport("git", VmrPath, TmpPath, null, null)
         .AddSingleton(_basicBarClient.Object)
+        .AddSingleton(_barApiClient.Object)
         .AddTransient<IRemoteFactory, RemoteFactory>()
         .AddScoped<ICommentCollector, CommentCollector>();
 

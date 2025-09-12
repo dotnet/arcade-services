@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -26,6 +27,7 @@ internal abstract class CodeFlowOperation(
         IDependencyFileManager dependencyFileManager,
         ILocalGitRepoFactory localGitRepoFactory,
         IFileSystem fileSystem,
+        IBarApiClient barClient,
         ILogger<CodeFlowOperation> logger)
     : VmrOperationBase(options, logger)
 {
@@ -37,6 +39,7 @@ internal abstract class CodeFlowOperation(
     private readonly IDependencyFileManager _dependencyFileManager = dependencyFileManager;
     private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
     private readonly IFileSystem _fileSystem = fileSystem;
+    private readonly IBarApiClient _barClient = barClient;
     private readonly ILogger<CodeFlowOperation> _logger = logger;
 
     /// <summary>
@@ -46,6 +49,7 @@ internal abstract class CodeFlowOperation(
     protected abstract IEnumerable<string> GetIgnoredFiles(string mappingName);
 
     protected async Task FlowCodeLocallyAsync(
+        Func<SourceMapping, NativePath, Build, IReadOnlyCollection<string>, string, string, Task<CodeFlowResult>> flow,
         NativePath repoPath,
         bool isForwardFlow,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
@@ -56,11 +60,36 @@ internal abstract class CodeFlowOperation(
         ILocalGitRepo sourceRepo = isForwardFlow ? productRepo : vmr;
         ILocalGitRepo targetRepo = isForwardFlow ? vmr : productRepo;
 
-        _options.Ref = await sourceRepo.GetShaForRefAsync(_options.Ref);
-
         await VerifyLocalRepositoriesAsync(productRepo);
 
         var mappingName = await GetSourceMappingNameAsync(productRepo.Path);
+
+        Build build;
+        IReadOnlyCollection<string> excludedAssets;
+
+        // If build ID is provided, fetch the build from BAR
+        if (_options.BuildId.HasValue)
+        {
+            _logger.LogInformation("Fetching build {buildId} from BAR...", _options.BuildId.Value);
+            build = await _barClient.GetBuildAsync(_options.BuildId.Value);
+            _options.Ref = build.Commit;
+
+            _logger.LogInformation(
+                "Using build {buildId} with commit {buildCommit} from repository {buildRepo}",
+                build.Id,
+                DarcLib.Commit.GetShortSha(build.Commit),
+                build.GitHubRepository ?? build.AzureDevOpsRepository);
+        }
+        else
+        {
+            _options.Ref = await sourceRepo.GetShaForRefAsync(_options.Ref);
+
+            // Create dummy build as before when no build ID is provided
+            build = new(-1, DateTimeOffset.Now, 0, false, false, _options.Ref, [], [], [], [])
+            {
+                GitHubRepository = sourceRepo.Path,
+            };
+        }
 
         _logger.LogInformation(
             "Flowing {sourceRepo}'s commit {sourceSha} to {targetRepo} at {targetDirectory}...",
@@ -69,18 +98,16 @@ internal abstract class CodeFlowOperation(
             !isForwardFlow ? mappingName : "VMR",
             targetRepo.Path);
 
-        Codeflow currentFlow = isForwardFlow
-            ? new ForwardFlow(_options.Ref, await targetRepo.GetShaForRefAsync())
-            : new Backflow(_options.Ref, await targetRepo.GetShaForRefAsync());
-
         await _dependencyTracker.RefreshMetadataAsync();
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
 
-        LastFlows lastFlows;
         try
         {
-            lastFlows = await _codeFlower.GetLastFlowsAsync(mapping, productRepo, currentFlow is Backflow);
+            Codeflow currentFlow = isForwardFlow
+                ? new ForwardFlow(_options.Ref, await targetRepo.GetShaForRefAsync())
+                : new Backflow(_options.Ref, await targetRepo.GetShaForRefAsync());
+            await _codeFlower.GetLastFlowsAsync(mapping, productRepo, currentFlow is Backflow);
         }
         catch (InvalidSynchronizationException)
         {
@@ -107,27 +134,27 @@ internal abstract class CodeFlowOperation(
             await targetRepo.CreateBranchAsync(tmpTargetBranch, true);
             await targetRepo.CreateBranchAsync(tmpHeadBranch, true);
 
-            Build build = new(-1, DateTimeOffset.Now, 0, false, false, currentFlow.SourceSha, [], [], [], [])
+            // Apply asset filtering if provided
+            if (_options.AssetFilters?.Any() == true)
             {
-                GitHubRepository = sourceRepo.Path,
-            };
+                var assetMatcher = _options.AssetFilters.ToList().GetAssetMatcher();
+                excludedAssets = build.Assets
+                    .Where(a => assetMatcher.IsExcluded(a.Name))
+                    .Select(a => a.Name)
+                    .ToList();
+                    
+                _logger.LogInformation("Excluding {count} assets based on filters", excludedAssets.Count);
+            }
+            else
+            {
+                excludedAssets = [];
+            }
 
-            bool hasChanges;
+            CodeFlowResult result;
 
             try
             {
-                hasChanges = await _codeFlower.FlowCodeAsync(
-                    lastFlows,
-                    currentFlow,
-                    productRepo,
-                    mapping,
-                    build,
-                    excludedAssets: [],
-                    tmpTargetBranch,
-                    tmpHeadBranch,
-                    headBranchExisted: false,
-                    forceUpdate: false,
-                    cancellationToken);
+                result = await flow(mapping, repoPath, build, excludedAssets, tmpTargetBranch, tmpHeadBranch);
             }
             catch (Exception e)
             {
@@ -138,7 +165,7 @@ internal abstract class CodeFlowOperation(
                     $"Changes are ready in the {tmpHeadBranch} branch (based on older version of the repo).");
             }
 
-            if (!hasChanges)
+            if (!result.HadUpdates)
             {
                 _logger.LogInformation("No changes to flow between the VMR and {repo}.", mapping.Name);
                 await targetRepo.CheckoutAsync(currentTargetRepoBranch);

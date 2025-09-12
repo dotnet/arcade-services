@@ -25,10 +25,12 @@ internal class ForwardFlowOperation(
         ILocalGitRepoFactory localGitRepoFactory,
         IFileSystem fileSystem,
         IProcessManager processManager,
+        IBarApiClient barClient,
         ILogger<ForwardFlowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, codeFlower, dependencyTracker, patchHandler, dependencyFileManager, localGitRepoFactory, fileSystem, logger)
+    : CodeFlowOperation(options, vmrInfo, codeFlower, dependencyTracker, patchHandler, dependencyFileManager, localGitRepoFactory, fileSystem, barClient, logger)
 {
     private readonly ForwardFlowCommandLineOptions _options = options;
+    private readonly IVmrForwardFlower _forwardFlower = codeFlower;
     private readonly IProcessManager _processManager = processManager;
 
     protected override async Task ExecuteInternalAsync(
@@ -45,6 +47,8 @@ internal class ForwardFlowOperation(
         }
 
         await FlowCodeLocallyAsync(
+            async (mapping, repoPath, build, excludedAssets, targetBranch, headBranch)
+                => await _forwardFlower.FlowForwardAsync(mapping.Name, repoPath, build, excludedAssets, targetBranch, headBranch, _options.VmrPath, false, cancellationToken),
             sourceRepoPath,
             isForwardFlow: true,
             additionalRemotes,
