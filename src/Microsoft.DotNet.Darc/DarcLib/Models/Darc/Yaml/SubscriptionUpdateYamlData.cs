@@ -11,7 +11,7 @@ namespace Microsoft.DotNet.DarcLib.Models.Darc.Yaml;
 /// This is used so that we can have friendly alias names for elements.
 /// </summary>
 #nullable disable
-public class SubscriptionUpdateYamlData : SubscriptionYamlData
+public class SubscriptionUpdateYamlData : InputSubscriptionYamlData
 {
     public const string EnabledElement = "Enabled";
 

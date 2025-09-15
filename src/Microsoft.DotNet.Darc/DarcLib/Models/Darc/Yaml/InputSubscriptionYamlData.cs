@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using YamlDotNet.Serialization;
 
@@ -10,7 +11,7 @@ namespace Microsoft.DotNet.DarcLib.Models.Darc.Yaml;
 /// Helper class for YAML encoding/decoding purposes.
 /// This is used so that we can have friendly alias names for elements.
 /// </summary>
-public class SubscriptionYamlData
+public class InputSubscriptionYamlData
 {
     public const string SourceRepoElement = "Source Repository URL";
     public const string TargetRepoElement = "Target Repository URL";
@@ -61,4 +62,10 @@ public class SubscriptionYamlData
 
     [YamlMember(Alias = TargetDirectoryElement, ApplyNamingConventions = false)]
     public string TargetDirectory { get; set; }
+}
+
+public class FullSubscriptionYamlData : InputSubscriptionYamlData
+{
+    [YamlMember(Alias = "Id", ApplyNamingConventions = false)]
+    public Guid Id { get; set; }
 }

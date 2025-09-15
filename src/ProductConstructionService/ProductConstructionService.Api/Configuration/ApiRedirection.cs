@@ -47,7 +47,7 @@ internal static class ApiRedirection
     public static void UseApiRedirection(this IApplicationBuilder app, bool requireAuth)
     {
         var apiRedirectionTarget = app.ApplicationServices
-            .GetRequiredService<IConfiguration>()
+            .GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>()
             .GetSection(ApiRedirectionConfiguration)[ApiRedirectionTarget];
 
         if (apiRedirectionTarget == null)
