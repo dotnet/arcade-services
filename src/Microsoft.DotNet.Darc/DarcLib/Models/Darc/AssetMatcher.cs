@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.FileSystemGlobbing;
 
 namespace Microsoft.DotNet.DarcLib.Models.Darc;
@@ -48,5 +49,16 @@ public class AssetMatcher : IAssetMatcher
         }
 
         return _matcher.Match(name).HasMatches;
+    }
+
+    public bool IsExcluded(string name, UnixPath relativePath)
+    {
+        if (_matcher == null)
+        {
+            return false;
+        }
+
+        bool isRoot = relativePath == UnixPath.Empty;
+        return IsExcluded(isRoot ? name : $"{relativePath}/{name}");
     }
 }

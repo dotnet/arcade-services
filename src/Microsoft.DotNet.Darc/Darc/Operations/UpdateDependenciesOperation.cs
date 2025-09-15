@@ -27,6 +27,7 @@ internal class UpdateDependenciesOperation : Operation
     private readonly IRemoteFactory _remoteFactory;
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
+    private readonly IFileSystem _fileSystem;
 
     public UpdateDependenciesOperation(
         UpdateDependenciesCommandLineOptions options,
@@ -34,7 +35,8 @@ internal class UpdateDependenciesOperation : Operation
         IRemoteFactory remoteFactory,
         IGitRepoFactory gitRepoFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
-        ILogger<UpdateDependenciesOperation> logger)
+        ILogger<UpdateDependenciesOperation> logger,
+        IFileSystem fileSystem)
     {
         _options = options;
         _logger = logger;
@@ -42,6 +44,7 @@ internal class UpdateDependenciesOperation : Operation
         _remoteFactory = remoteFactory;
         _gitRepoFactory = gitRepoFactory;
         _coherencyUpdateResolver = coherencyUpdateResolver;
+        _fileSystem = fileSystem;
     }
 
     /// <summary>
@@ -54,183 +57,35 @@ internal class UpdateDependenciesOperation : Operation
         try
         {
             var local = new Local(_options.GetRemoteTokenProvider(), _logger);
-            List<DependencyDetail> dependenciesToUpdate = [];
-            bool someUpToDate = false;
-            string finalMessage = $"Local dependencies updated from channel '{_options.Channel}'.";
-
-            // Get a list of all dependencies, then a list of dependencies that the user asked to be updated.
-            // The list of all dependencies will be updated as we go through the update algorithm with the "current set",
-            // which is then fed to a coherency calculation later.
-            List<DependencyDetail> currentDependencies = await local.GetDependenciesAsync(includePinned: false);
-
-            // Figure out what to query for. Load Version.Details.xml and find all repository uris,
-            // optionally restricted by the input dependency parameter.
-            List<DependencyDetail> candidateDependenciesForUpdate = await local.GetDependenciesAsync(_options.Name, false);
-
-            // If the source repository was specified, filter away any local dependencies not from that
-            // source repository.
-            if (!string.IsNullOrEmpty(_options.SourceRepository))
+            var assetMatcher = (_options.ExcludedAssets?.Split(';') ?? null).GetAssetMatcher();
+            List<UnixPath> targetDirectories = [];
+            if (string.IsNullOrEmpty(_options.TargetDirectory))
             {
-                candidateDependenciesForUpdate = candidateDependenciesForUpdate.Where(
-                    dependency => dependency.RepoUri.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase)).ToList();
+                targetDirectories.Add(UnixPath.Empty);
             }
-
-            if (!candidateDependenciesForUpdate.Any())
+            else
             {
-                _logger.LogWarning("Found no dependencies to update.");
-                return Constants.ErrorCode;
-            }
-
-            if (!string.IsNullOrEmpty(_options.Name) && !string.IsNullOrEmpty(_options.Version))
-            {
-                DependencyDetail dependency = candidateDependenciesForUpdate.First();
-                dependency.Version = _options.Version;
-                dependenciesToUpdate.Add(dependency);
-
-                Console.WriteLine($"Updating '{dependency.Name}': '{dependency.Version}' => '{_options.Version}'");
-
-                finalMessage = $"Local dependency {_options.Name} updated to version '{_options.Version}'.";
-            }
-            else if (!string.IsNullOrEmpty(_options.PackagesFolder))
-            {
-                try
+                targetDirectories = [];
+                foreach (var dir in _options.TargetDirectory.Split(','))
                 {
-                    dependenciesToUpdate.AddRange(GetDependenciesFromPackagesFolder(_options.PackagesFolder, candidateDependenciesForUpdate));
-                }
-                catch (DarcException exc)
-                {
-                    _logger.LogError(exc, "Failed to update dependencies based on folder '{folder}'", _options.PackagesFolder);
-                    return Constants.ErrorCode;
-                }
-
-                finalMessage = $"Local dependencies updated based on packages folder {_options.PackagesFolder}.";
-            }
-            else if (_options.BARBuildId > 0)
-            {
-                try
-                {
-                    if (!_options.CoherencyOnly)
+                    if (dir.EndsWith('*'))
                     {
-                        Console.WriteLine($"Looking up build with BAR id {_options.BARBuildId}");
-                        var specificBuild = await _barClient.GetBuildAsync(_options.BARBuildId);
-
-                        int nonCoherencyResult = NonCoherencyUpdatesForBuild(specificBuild, currentDependencies, candidateDependenciesForUpdate, dependenciesToUpdate);
-                        if (nonCoherencyResult != Constants.SuccessCode)
-                        {
-                            _logger.LogError("Failed to update non-coherent parent tied dependencies.");
-                            return nonCoherencyResult;
-                        }
-
-                        string sourceRepo = specificBuild.GetRepository();
-                        string sourceBranch = specificBuild.GetBranch();
-
-                        finalMessage = $"Local dependencies updated based on build with BAR id {_options.BARBuildId} " +
-                                       $"({specificBuild.AzureDevOpsBuildNumber} from {sourceRepo}@{sourceBranch})";
+                        var trimmedDir = dir.TrimEnd('/', '*');
+                        var fullDirPath = new UnixPath(local.GetRepoRoot()) / trimmedDir;
+                        targetDirectories.AddRange(_fileSystem.GetDirectories(fullDirPath).Select(p => new UnixPath(p.Substring(local.GetRepoRoot().Length + 1))));
                     }
-
-                    finalMessage = string.IsNullOrEmpty(finalMessage) ? "Local dependencies successfully updated." : finalMessage;
-                }
-                catch (RestApiException e) when (e.Response.Status == 404)
-                {
-                    _logger.LogError("Could not find build with BAR id '{id}'.", _options.BARBuildId);
-                    return Constants.ErrorCode;
-                }
-            }
-            else if (!_options.CoherencyOnly)
-            {
-                if (string.IsNullOrEmpty(_options.Channel))
-                {
-                    _logger.LogError("Please supply either a channel name (--channel), a packages folder (--packages-folder) " +
-                                    "a BAR build id (--id), or a specific dependency name and version (--name and --version).");
-                    return Constants.ErrorCode;
-                }
-
-                // Start channel query.
-                Task<Channel> channel = _barClient.GetChannelAsync(_options.Channel);
-
-                // Limit the number of BAR queries by grabbing the repo URIs and making a hash set.
-                // We gather the latest build for any dependencies that aren't marked with coherent parent
-                // dependencies, as those will be updated based on additional queries.
-                HashSet<string> repositoryUrisForQuery = candidateDependenciesForUpdate
-                    .Where(dependency => string.IsNullOrEmpty(dependency.CoherentParentDependencyName))
-                    .Select(dependency => dependency.RepoUri)
-                    .ToHashSet();
-
-                var getLatestBuildTaskDictionary = new ConcurrentDictionary<string, Task<Build>>();
-
-                Channel channelInfo = await channel;
-                if (channelInfo == null)
-                {
-                    _logger.LogError("Could not find a channel named '{channel}'.", _options.Channel);
-                    return Constants.ErrorCode;
-                }
-
-                foreach (string repoToQuery in repositoryUrisForQuery)
-                {
-                    Console.WriteLine($"Looking up latest build of {repoToQuery} on {_options.Channel}");
-                    var latestBuild = _barClient.GetLatestBuildAsync(repoToQuery, channelInfo.Id);
-                    getLatestBuildTaskDictionary.TryAdd(repoToQuery, latestBuild);
-                }
-
-                // For each build, first go through and determine the required updates,
-                // updating the "live" dependency information as we go.
-                // Then run a second pass where we update any assets based on coherency information.
-                foreach (KeyValuePair<string, Task<Build>> buildKvPair in getLatestBuildTaskDictionary)
-                {
-                    string repoUri = buildKvPair.Key;
-                    Build build = await buildKvPair.Value;
-
-                    if (build == null)
+                    else
                     {
-                        _logger.LogTrace("No build of '{uri}' found on channel '{channel}'.",
-                            repoUri,
-                            _options.Channel);
-                        continue;
-                    }
-
-                    int nonCoherencyResult = NonCoherencyUpdatesForBuild(build, currentDependencies, candidateDependenciesForUpdate, dependenciesToUpdate);
-                    if (nonCoherencyResult != Constants.SuccessCode)
-                    {
-                        _logger.LogError("Failed to update non-coherent parent tied dependencies.");
-                        return nonCoherencyResult;
+                        targetDirectories.Add(new UnixPath(local.GetRepoRoot()) / dir);
                     }
                 }
             }
 
-            int coherencyResult = await CoherencyUpdatesAsync(currentDependencies, dependenciesToUpdate)
-                        .ConfigureAwait(false);
-            if (coherencyResult != Constants.SuccessCode)
+            ConcurrentDictionary<string, Task<Build>> latestBuildTaskDictionary = new();
+            foreach (var targetDirectory in targetDirectories)
             {
-                _logger.LogError("Failed to update coherent parent tied dependencies.");
-                return coherencyResult;
+                await UpdateDependenciesInDirectory(targetDirectory, local, latestBuildTaskDictionary);
             }
-
-            if (!dependenciesToUpdate.Any())
-            {
-                // If we found some dependencies already up to date,
-                // then we consider this a success. Otherwise, we didn't even
-                // find matching dependencies so we should let the user know.
-                if (someUpToDate)
-                {
-                    Console.WriteLine("All dependencies are up to date.");
-                    return Constants.SuccessCode;
-                }
-                else
-                {
-                    _logger.LogError("Found no dependencies to update.");
-                    return Constants.ErrorCode;
-                }
-            }
-
-            if (_options.DryRun)
-            {
-                return Constants.SuccessCode;
-            }
-
-            // Now call the local updater to run the update
-            await local.UpdateDependenciesAsync(dependenciesToUpdate, _remoteFactory, _gitRepoFactory, _barClient);
-
-            Console.WriteLine(finalMessage);
 
             return Constants.SuccessCode;
         }
@@ -290,6 +145,157 @@ internal class UpdateDependenciesOperation : Operation
         }
 
         return Constants.SuccessCode;
+    }
+
+    private async Task<List<DependencyDetail>> UpdateDependenciesInDirectory(
+        UnixPath relativeBasePath,
+        Local local,
+        ConcurrentDictionary<string, Task<Build>> latestBuildTaskDictionary)
+    {
+        List<DependencyDetail> dependenciesToUpdate = [];
+
+        // Get a list of all dependencies, then a list of dependencies that the user asked to be updated.
+        // The list of all dependencies will be updated as we go through the update algorithm with the "current set",
+        // which is then fed to a coherency calculation later.
+        List<DependencyDetail> currentDependencies = await local.GetDependenciesAsync(includePinned: false, relativeBasePath: relativeBasePath);
+
+        // Figure out what to query for. Load Version.Details.xml and find all repository uris,
+        // optionally restricted by the input dependency parameter.
+        List<DependencyDetail> candidateDependenciesForUpdate = await local.GetDependenciesAsync(_options.Name, false, relativeBasePath);
+
+        // If the source repository was specified, filter away any local dependencies not from that
+        // source repository.
+        if (!string.IsNullOrEmpty(_options.SourceRepository))
+        {
+            candidateDependenciesForUpdate = candidateDependenciesForUpdate.Where(
+                dependency => dependency.RepoUri.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+
+        if (!candidateDependenciesForUpdate.Any())
+        {
+            _logger.LogInformation("Found no dependencies to update in {targetDirectory}.", relativeBasePath);
+            return [];
+        }
+
+        if (!string.IsNullOrEmpty(_options.Name) && !string.IsNullOrEmpty(_options.Version))
+        {
+            DependencyDetail dependency = candidateDependenciesForUpdate.First();
+            dependency.Version = _options.Version;
+            dependenciesToUpdate.Add(dependency);
+
+            Console.WriteLine($"Updating '{dependency.Name}': '{dependency.Version}' => '{_options.Version}' in {relativeBasePath}");
+        }
+        else if (!string.IsNullOrEmpty(_options.PackagesFolder))
+        {
+            try
+            {
+                dependenciesToUpdate.AddRange(GetDependenciesFromPackagesFolder(_options.PackagesFolder, candidateDependenciesForUpdate));
+            }
+            catch (DarcException exc)
+            {
+                _logger.LogError(exc, "Failed to update dependencies based on folder '{folder}'", _options.PackagesFolder);
+                throw;
+            }
+        }
+        else if (_options.BARBuildId > 0)
+        {
+            try
+            {
+                if (!_options.CoherencyOnly)
+                {
+                    Console.WriteLine($"Looking up build with BAR id {_options.BARBuildId}");
+                    var specificBuild = await _barClient.GetBuildAsync(_options.BARBuildId);
+
+                    int nonCoherencyResult = NonCoherencyUpdatesForBuild(specificBuild, currentDependencies, candidateDependenciesForUpdate, dependenciesToUpdate);
+                    if (nonCoherencyResult != Constants.SuccessCode)
+                    {
+                        _logger.LogError("Failed to update non-coherent parent tied dependencies.");
+                        return [];
+                    }
+
+                    string sourceRepo = specificBuild.GetRepository();
+                    string sourceBranch = specificBuild.GetBranch();
+
+                    _logger.LogInformation("Local dependencies updated based on build with BAR id {barId} {azdoBuildNumber} from {sourceRepo}@{sourceBranch}",
+                        _options.BARBuildId,
+                        specificBuild.AzureDevOpsBuildNumber,
+                        sourceRepo,
+                        sourceBranch);
+                }
+            }
+            catch (RestApiException e) when (e.Response.Status == 404)
+            {
+                _logger.LogError("Could not find build with BAR id '{id}'.", _options.BARBuildId);
+                throw;
+            }
+        }
+        else if (!_options.CoherencyOnly)
+        {
+            if (string.IsNullOrEmpty(_options.Channel))
+            {
+                throw new ArgumentException("Please supply either a channel name (--channel), a packages folder (--packages-folder) " +
+                                "a BAR build id (--id), or a specific dependency name and version (--name and --version).");
+            }
+
+            // Start channel query.
+            var channel = await _barClient.GetChannelAsync(_options.Channel)
+                ?? throw new ArgumentException($"Could not find a channel named '{_options.Channel}'.");
+
+            // Limit the number of BAR queries by grabbing the repo URIs and making a hash set.
+            // We gather the latest build for any dependencies that aren't marked with coherent parent
+            // dependencies, as those will be updated based on additional queries.
+            HashSet<string> repositoryUrisForQuery = candidateDependenciesForUpdate
+                .Where(dependency => string.IsNullOrEmpty(dependency.CoherentParentDependencyName))
+                .Select(dependency => dependency.RepoUri)
+                .ToHashSet();
+
+            foreach (var repoToQuery in repositoryUrisForQuery)
+            {
+                if (latestBuildTaskDictionary.ContainsKey(repoToQuery))
+                {
+                    continue;
+                }
+                Console.WriteLine($"Looking up latest build of {repoToQuery} on {_options.Channel}");
+                var latestBuild = _barClient.GetLatestBuildAsync(repoToQuery, channel.Id);
+                latestBuildTaskDictionary.TryAdd(repoToQuery, latestBuild);
+            }
+
+            foreach (var repoToQuery in repositoryUrisForQuery)
+            {
+                Build build = await latestBuildTaskDictionary[repoToQuery];
+                if (build == null)
+                {
+                    _logger.LogTrace("No build of '{uri}' found on channel '{channel}'.", repoToQuery, _options.Channel);
+                    continue;
+                }
+
+                int nonCoherencyResult = NonCoherencyUpdatesForBuild(build, currentDependencies, candidateDependenciesForUpdate, dependenciesToUpdate);
+                if (nonCoherencyResult != Constants.SuccessCode)
+                {
+                    throw new DarcException($"Failed to update non-coherent parent tied dependencies in {relativeBasePath}");
+                }
+            }
+        }
+
+        int coherencyResult = await CoherencyUpdatesAsync(currentDependencies, dependenciesToUpdate)
+                        .ConfigureAwait(false);
+        if (coherencyResult != Constants.SuccessCode)
+        {
+            throw new DarcException($"Failed to update coherent parent tied dependencies in {relativeBasePath}");
+        }
+
+        if (!dependenciesToUpdate.Any())
+        {
+            _logger.LogWarning("Found no dependencies to update in {targetDirectory}", relativeBasePath);
+            return [];
+        }
+
+        if (!_options.DryRun)
+        {
+            await local.UpdateDependenciesAsync(dependenciesToUpdate, _remoteFactory, _gitRepoFactory, _barClient, relativeBasePath);
+        }
+
+        return dependenciesToUpdate;
     }
 
     private async Task<int> CoherencyUpdatesAsync(
