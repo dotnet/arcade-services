@@ -4,9 +4,9 @@
 using System.Collections.Generic;
 using YamlDotNet.Serialization;
 
-namespace Microsoft.DotNet.Darc.Models.PopUps;
+namespace Microsoft.DotNet.DarcLib.Models.Darc.Yaml;
 
-public class MergePolicyData
+public class MergePolicyYamlData
 {
     [YamlMember(Alias = "Name")]
     public string Name { get; set; }

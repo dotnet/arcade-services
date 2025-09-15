@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib.Models.Darc.Yaml;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
@@ -118,6 +119,6 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         public string Repository { get; set; }
 
         [YamlMember(Alias = MergePolicyElement, ApplyNamingConventions = false)]
-        public List<MergePolicyData> MergePolicies { get; set; }
+        public List<MergePolicyYamlData> MergePolicies { get; set; }
     }
 }

@@ -4,13 +4,13 @@
 using System.Collections.Generic;
 using YamlDotNet.Serialization;
 
-namespace Microsoft.DotNet.Darc.Models.PopUps;
+namespace Microsoft.DotNet.DarcLib.Models.Darc.Yaml;
 
 /// <summary>
 /// Helper class for YAML encoding/decoding purposes.
 /// This is used so that we can have friendly alias names for elements.
 /// </summary>
-internal class SubscriptionData
+public class SubscriptionYamlData
 {
     public const string SourceRepoElement = "Source Repository URL";
     public const string TargetRepoElement = "Target Repository URL";
@@ -48,7 +48,7 @@ internal class SubscriptionData
     public List<string> ExcludedAssets { get; set; }
 
     [YamlMember(Alias = MergePolicyElement, ApplyNamingConventions = false)]
-    public List<MergePolicyData> MergePolicies { get; set; }
+    public List<MergePolicyYamlData> MergePolicies { get; set; }
 
     [YamlMember(Alias = FailureNotificationTagsElement, ApplyNamingConventions = false)]
     public string FailureNotificationTags { get; set; }

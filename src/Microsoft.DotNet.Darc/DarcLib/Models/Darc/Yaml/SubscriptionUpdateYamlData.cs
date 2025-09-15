@@ -4,14 +4,14 @@
 using YamlDotNet.Serialization;
 
 #nullable enable
-namespace Microsoft.DotNet.Darc.Models.PopUps;
+namespace Microsoft.DotNet.DarcLib.Models.Darc.Yaml;
 
 /// <summary>
 /// Helper class for YAML encoding/decoding purposes.
 /// This is used so that we can have friendly alias names for elements.
 /// </summary>
 #nullable disable
-internal class SubscriptionUpdateData : SubscriptionData
+public class SubscriptionUpdateYamlData : SubscriptionYamlData
 {
     public const string EnabledElement = "Enabled";
 
