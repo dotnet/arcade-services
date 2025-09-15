@@ -3,16 +3,17 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Net;
-using ProductConstructionService.Api.v2018_07_16.Models;
 using Maestro.Data;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.EntityFrameworkCore;
+using ProductConstructionService.Api.v2018_07_16.Models;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
-
 using Channel = Maestro.Data.Models.Channel;
 
 namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
@@ -27,17 +28,20 @@ public class SubscriptionsController : ControllerBase
     private readonly BuildAssetRegistryContext _context;
     private readonly IWorkItemProducerFactory _workItemProducerFactory;
     private readonly IGitHubInstallationIdResolver _installationIdResolver;
+    private readonly IRemoteFactory _remoteFactory;
     private readonly ILogger<SubscriptionsController> _logger;
 
     public SubscriptionsController(
         BuildAssetRegistryContext context,
         IWorkItemProducerFactory workItemProducerFactory,
         IGitHubInstallationIdResolver installationIdResolver,
+        IRemoteFactory remoteFactory,
         ILogger<SubscriptionsController> logger)
     {
         _context = context;
         _workItemProducerFactory = workItemProducerFactory;
         _installationIdResolver = installationIdResolver;
+        _remoteFactory = remoteFactory;
         _logger = logger;
     }
 
@@ -100,6 +104,14 @@ public class SubscriptionsController : ControllerBase
         return Ok(new Subscription(subscription));
     }
 
+    [HttpPost("{id}/codeflowhistory")]
+    [SwaggerApiResponse(HttpStatusCode.Accepted, Type = typeof(Subscription), Description = "Subscription update has been triggered")]
+    [ValidateModelState]
+    public virtual async Task<IActionResult> GetCodeflowHistory(Guid id)
+    {
+        return await GetCodeflowHistoryCore(id);
+    }
+
     /// <summary>
     ///   Trigger a <see cref="Subscription"/> manually by id
     /// </summary>
@@ -150,6 +162,34 @@ public class SubscriptionsController : ControllerBase
         await EnqueueUpdateSubscriptionWorkItemAsync(id, buildId, force);
 
         return Accepted(new Subscription(subscription));
+    }
+
+    protected async Task<IActionResult> GetCodeflowHistoryCore(Guid id)
+    {
+        Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
+            .Include(sub => sub.Channel)
+            .Include(sub => sub.LastAppliedBuild)
+            .Include(sub => sub.ExcludedAssets)
+            .FirstOrDefaultAsync(sub => sub.Id == id);
+
+        if (subscription == null)
+        {
+            return NotFound();
+        }
+
+        IRemote sourceRemote = await _remoteFactory.CreateRemoteAsync(subscription.SourceRepository);
+
+        IRemote targetRemote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
+
+        var result = new CodeflowHistory
+        {
+            RepoCommits = [],
+            VmrCommits = [],
+            ForwardFlows = [],
+            Backflows = [],
+        };
+
+        return Ok(result);
     }
 
     private async Task EnqueueUpdateSubscriptionWorkItemAsync(Guid subscriptionId, int buildId, bool force = false)
