@@ -93,6 +93,14 @@ public class SubscriptionsController : v2018_07_16.Controllers.SubscriptionsCont
         return Ok(new Subscription(subscription));
     }
 
+    [HttpPost("{id}/codeflowhistory")]
+    [SwaggerApiResponse(HttpStatusCode.Accepted, Type = typeof(Subscription), Description = "Subscription update has been triggered")]
+    [ValidateModelState]
+    public override async Task<IActionResult> GetCodeflowHistory(Guid id)
+    {
+        return await GetCodeflowHistoryCore(id);
+    }
+
     /// <summary>
     ///   Trigger a <see cref="Subscription"/> manually by id
     /// </summary>
