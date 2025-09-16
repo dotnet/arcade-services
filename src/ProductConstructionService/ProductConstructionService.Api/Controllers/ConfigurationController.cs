@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Configuration;
 
 namespace ProductConstructionService.Api.Controllers;
@@ -14,15 +15,21 @@ namespace ProductConstructionService.Api.Controllers;
 [Route("configuration")]
 [ApiVersion("2020-02-20")]
 [Authorize(Policy = AuthenticationConfiguration.AdminAuthorizationPolicyName)]
-public class ConfigurationController(
-        IConfigurationDataIngestor configurationDataIngestor)
+public class ConfigurationController(IConfigurationDataIngestor configurationDataIngestor)
     : Controller
 {
     [HttpGet(Name = "refresh")]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(bool), Description = "Makes PCS refresh in memory subscription configuration")]
     public async Task<IActionResult> RefreshConfiguration(string repoUri, string branch)
     {
-        await configurationDataIngestor.IngestConfiguration(repoUri, branch);
-        return Ok();
+        try
+        {
+            await configurationDataIngestor.IngestConfiguration(repoUri, branch);
+            return Ok();
+        }
+        catch (Exception e)
+        {
+            return BadRequest(new ApiError(e.Message));
+        }
     }
 }
