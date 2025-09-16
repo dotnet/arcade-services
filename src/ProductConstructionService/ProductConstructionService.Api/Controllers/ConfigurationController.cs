@@ -25,7 +25,7 @@ public class ConfigurationController(IConfigurationDataIngestor configurationDat
         try
         {
             await configurationDataIngestor.IngestConfiguration(repoUri, branch);
-            return Ok();
+            return Ok(true);
         }
         catch (Exception e)
         {

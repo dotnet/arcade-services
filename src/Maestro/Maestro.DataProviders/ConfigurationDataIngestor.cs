@@ -114,6 +114,11 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
 
             _logger.LogInformation("Successfully completed configuration ingestion for repository {RepoUri} on branch {Branch}", repoUri, branch);
         }
+        catch (DbUpdateException dbEx)
+        {
+            _logger.LogError(dbEx.InnerException ?? dbEx, "Failed to ingest configuration for repository {RepoUri} on branch {Branch} because of failed SQL constraints", repoUri, branch);
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to ingest configuration for repository {RepoUri} on branch {Branch}", repoUri, branch);
@@ -164,9 +169,9 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
 
             // Add or update any items
             _logger.LogInformation("Adding or updating entities from configuration");
-            AddOrUpdateChannels(existingChannels, ingestedChannels, configurationSource.Id);
-            AddOrUpdateDefaultChannels(existingDefaultChannels, ingestedDefaultChannels, existingChannels, configurationSource.Id);
-            AddOrUpdateSubscriptions(existingSubscriptions, ingestedSubscriptions, existingChannels, configurationSource.Id);
+            AddOrUpdateChannels(existingChannels, ingestedChannels, configurationSource);
+            AddOrUpdateDefaultChannels(existingDefaultChannels, ingestedDefaultChannels, existingChannels, configurationSource);
+            AddOrUpdateSubscriptions(existingSubscriptions, ingestedSubscriptions, existingChannels, configurationSource);
 
             await _context.SaveChangesAsync();
             _logger.LogDebug("Successfully committed database transaction for configuration ingestion");
@@ -183,7 +188,7 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
         Dictionary<Guid, Subscription> existingSubscriptions,
         IReadOnlyCollection<SubscriptionUpdateYamlData> ingestedSubscriptions,
         Dictionary<string, Channel> existingChannels,
-        int id)
+        ConfigurationSource configurationSource)
     {
         _logger.LogInformation("Processing {SubscriptionCount} subscriptions for add/update operations", ingestedSubscriptions.Count);
 
@@ -240,10 +245,11 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
             var subscriptionModel = new Subscription
             {
                 Id = subscription.Id,
+                Channel = channel,
                 SourceRepository = subscription.SourceRepository,
                 TargetRepository = subscription.TargetRepository,
                 TargetBranch = subscription.TargetBranch,
-                Enabled = bool.TryParse(subscription.Enabled, out bool e) && e,
+                Enabled = !bool.TryParse(subscription.Enabled, out bool e) || e,
                 SourceEnabled = bool.TryParse(subscription.SourceEnabled, out bool se) && se,
                 SourceDirectory = subscription.SourceDirectory,
                 TargetDirectory = subscription.TargetDirectory,
@@ -263,7 +269,7 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
                 PullRequestFailureNotificationTags = subscription.FailureNotificationTags,
                 // TODO: Excluded assets need an ID
                 // ExcludedAssets = subscription.ExcludedAssets == null ? [] : [.. subscription.ExcludedAssets.Select(e => new AssetFilter() {  })],
-                ConfigurationSourceId = id,
+                ConfigurationSource = configurationSource,
             };
 
             // Check that we're not about add an existing subscription that is identical
@@ -320,8 +326,7 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
                 existingSubscription.TargetDirectory = subscriptionModel.TargetDirectory;
                 existingSubscription.PolicyObject = subscriptionModel.PolicyObject;
                 existingSubscription.PullRequestFailureNotificationTags = subscriptionModel.PullRequestFailureNotificationTags;
-                existingSubscription.ConfigurationSourceId = subscriptionModel.ConfigurationSourceId;
-                existingSubscription.ChannelId = channel.Id;
+                existingSubscription.Channel = channel;
                 // TODO: Excluded assets need an ID
 
                 _context.Subscriptions.Update(existingSubscription);
@@ -334,7 +339,7 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
     private void AddOrUpdateChannels(
         Dictionary<string, Channel> existingChannels,
         IReadOnlyList<ChannelYamlData> ingestedChannels,
-        int sourceId)
+        ConfigurationSource configurationSource)
     {
         _logger.LogInformation("Processing {ChannelCount} channels for add/update operations", ingestedChannels.Count);
 
@@ -346,7 +351,7 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
                 {
                     Name = channelData.Name,
                     Classification = channelData.Classification,
-                    ConfigurationSourceId = sourceId,
+                    ConfigurationSource = configurationSource,
                 };
                 _logger.LogInformation("Adding new channel {ChannelName}", channelData.Name);
                 var newChannel = _context.Channels.Add(channel);
@@ -364,7 +369,7 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
         List<DefaultChannel> existingDefaultChannels,
         IReadOnlyList<DefaultChannelYamlData> ingestedDefaultChannels,
         Dictionary<string, Channel> existingChannels,
-        int id)
+        ConfigurationSource configurationSource)
     {
         _logger.LogInformation("Processing {DefaultChannelCount} default channels for add/update operations", ingestedDefaultChannels.Count);
 
@@ -390,9 +395,9 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
                 {
                     Repository = repository,
                     Branch = defaultChannelData.Branch,
-                    ChannelId = channel.Id,
+                    Channel = channel,
                     Enabled = defaultChannelData.Enabled,
-                    ConfigurationSourceId = id,
+                    ConfigurationSource = configurationSource,
                 };
                 _logger.LogInformation("Adding new default channel for {Repository} / {Branch} on channel {ChannelName}", 
                     repository, defaultChannelData.Branch, defaultChannelData.Channel);
