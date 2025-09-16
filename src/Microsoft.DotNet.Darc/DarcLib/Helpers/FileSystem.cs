@@ -25,6 +25,8 @@ public class FileSystem : IFileSystem
 
     public string[] GetFiles(string path) => Directory.GetFiles(path);
 
+    public string[] GetFilesRecursive(string path) => Directory.GetFiles(path, "*", SearchOption.AllDirectories);
+
     public string[] GetDirectories(string path) => Directory.GetDirectories(path);
 
     public string? GetFileName(string? path) => Path.GetFileName(path);

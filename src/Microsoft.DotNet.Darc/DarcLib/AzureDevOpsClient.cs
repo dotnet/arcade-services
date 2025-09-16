@@ -559,6 +559,12 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         return $"- ❌ **{result.MergePolicyDisplayName}** {result.Title} - {result.Message}";
     }
 
+    public async Task<IReadOnlyList<GitFile>> GetFilesAsync(string repoUri, string branch, string path)
+    {
+        var branchSha = await GetLastCommitShaAsync(repoUri, branch);
+        return await GetFilesAtCommitAsync(repoUri, branchSha, path);
+    }
+
     /// <summary>
     ///     Retrieve a set of file under a specific path at a commit
     /// </summary>
