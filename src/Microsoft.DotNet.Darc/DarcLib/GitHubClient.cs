@@ -614,7 +614,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
     public async Task<IReadOnlyList<GitFile>> GetFilesAsync(string repoUri, string branch, string path)
     {
-        var branchSha = await GetLastCommitShaAsync(repoUri, branch);
+        var branchSha = await GetLastCommitShaAsync(repoUri, branch) ?? throw new DarcException($"Couldn't get latest commit of {branch}");
         return await GetFilesAtCommitAsync(repoUri, branchSha, path);
     }
 

@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
@@ -67,7 +68,7 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionUpdateYam
         : this(path, forceCreation, gitRepoFactory, logger, subscription, suggestedChannels, suggestedRepositories, availableUpdateFrequencies, availableMergePolicyHelp,
               new SubscriptionUpdateYamlData
               {
-                  Id = GetCurrentSettingForDisplay(subscription.Id.ToString(), subscription.Id.ToString(), false),
+                  Id = Guid.Parse(GetCurrentSettingForDisplay(subscription.Id.ToString(), subscription.Id.ToString(), false)),
                   Channel = GetCurrentSettingForDisplay(subscription.Channel.Name, subscription.Channel.Name, false),
                   SourceRepository = GetCurrentSettingForDisplay(subscription.SourceRepository, subscription.SourceRepository, false),
                   TargetRepository = GetCurrentSettingForDisplay(subscription.TargetRepository, subscription.TargetRepository, false),
