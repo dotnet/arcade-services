@@ -183,13 +183,27 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
             if (!existingSubscriptions.TryGetValue(subscription.Id, out Subscription? existingSubscription))
             {
                 var ns = _context.Subscriptions.Add(subscriptionModel);
-                existingSubscriptions[subscription.Id] = ns.Entity;
+                existingSubscriptions.Add(subscription.Id, ns.Entity);
             }
             else
             {
+                if (existingSubscription.TargetBranch != subscriptionModel.TargetBranch)
+                {
+                    throw new InvalidOperationException($"Changing the target branch of an existing subscription {subscription.Id} is not allowed");
+                }
+
+                if (existingSubscription.TargetRepository != subscriptionModel.TargetRepository)
+                {
+                    throw new InvalidOperationException($"Changing the target repository of an existing subscription {subscription.Id} is not allowed");
+                }
+
+                if (existingSubscription.PolicyObject.Batchable != subscriptionModel.PolicyObject.Batchable)
+                {
+                    throw new InvalidOperationException($"Changing the batchable attribute of an existing subscription {subscription.Id} is not allowed");
+                }
+
                 existingSubscription.SourceRepository = subscriptionModel.SourceRepository;
                 existingSubscription.TargetRepository = subscriptionModel.TargetRepository;
-                existingSubscription.TargetBranch = subscriptionModel.TargetBranch;
                 existingSubscription.Enabled = subscriptionModel.Enabled;
                 existingSubscription.SourceEnabled = subscriptionModel.SourceEnabled;
                 existingSubscription.SourceDirectory = subscriptionModel.SourceDirectory;
@@ -197,6 +211,9 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
                 existingSubscription.PolicyObject = subscriptionModel.PolicyObject;
                 existingSubscription.PullRequestFailureNotificationTags = subscriptionModel.PullRequestFailureNotificationTags;
                 existingSubscription.ConfigurationSourceId = subscriptionModel.ConfigurationSourceId;
+                existingSubscription.ChannelId = channel.Id;
+                // TODO: Excluded assets need an ID
+
                 _context.Subscriptions.Update(existingSubscription);
             }
         }
