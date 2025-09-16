@@ -89,6 +89,16 @@ public class Subscription
     public string TargetDirectory { get; set; }
 
     /// <summary>
+    /// Configuration source for this subscription.
+    /// </summary>
+    public int? ConfigurationSourceId { get; set; }
+
+    /// <summary>
+    /// Navigation property to the configuration source.
+    /// </summary>
+    public ConfigurationSource ConfigurationSource { get; set; }
+
+    /// <summary>
     /// Dependencies to ignore when updating dependencies in subscriptions.
     /// </summary>
     public List<AssetFilter> ExcludedAssets { get; set; }
