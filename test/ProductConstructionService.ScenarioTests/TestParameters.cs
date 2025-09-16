@@ -52,7 +52,7 @@ public class TestParameters : IDisposable
 
     static TestParameters()
     {
-        IConfiguration userSecrets = new ConfigurationBuilder()
+        Microsoft.Extensions.Configuration.IConfiguration userSecrets = new ConfigurationBuilder()
             .AddUserSecrets<TestParameters>()
             .Build();
 
