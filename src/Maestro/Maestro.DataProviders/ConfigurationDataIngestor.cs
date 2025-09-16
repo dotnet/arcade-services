@@ -129,8 +129,6 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
         IReadOnlyList<DefaultChannelYamlData> ingestedDefaultChannels,
         IReadOnlyCollection<SubscriptionUpdateYamlData> ingestedSubscriptions)
     {
-        await using var transaction = await _context.Database.BeginTransactionAsync();
-
         try
         {
             if (configurationSource == null)
@@ -171,7 +169,6 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
             AddOrUpdateSubscriptions(existingSubscriptions, ingestedSubscriptions, existingChannels, configurationSource.Id);
 
             await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
             _logger.LogDebug("Successfully committed database transaction for configuration ingestion");
         }
         catch (Exception ex)
