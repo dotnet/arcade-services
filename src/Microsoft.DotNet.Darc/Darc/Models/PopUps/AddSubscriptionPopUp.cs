@@ -10,7 +10,7 @@ using Microsoft.DotNet.DarcLib.Models.Darc.Yaml;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models.PopUps;
 
-internal class AddSubscriptionPopUp : SubscriptionPopUp<InputSubscriptionYamlData>
+internal class AddSubscriptionPopUp : SubscriptionPopUp<SubscriptionYamlData>
 {
     public AddSubscriptionPopUp(
         string path,
@@ -34,7 +34,7 @@ internal class AddSubscriptionPopUp : SubscriptionPopUp<InputSubscriptionYamlDat
         string? targetDirectory,
         List<string> excludedAssets)
         : base(path, forceCreation, suggestedChannels, suggestedRepositories, availableUpdateFrequencies, availableMergePolicyHelp, logger, gitRepoFactory,
-            new InputSubscriptionYamlData
+            new SubscriptionYamlData
             {
                 Channel = GetCurrentSettingForDisplay(channel, "<required>", false),
                 SourceRepository = GetCurrentSettingForDisplay(sourceRepository, "<required>", false),

@@ -18,7 +18,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps;
 /// <summary>
 /// Common class for subscription management popups.
 /// </summary>
-internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : InputSubscriptionYamlData
+internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : SubscriptionYamlData
 {
     protected readonly TData _data;
     private readonly bool _forceCreation;
@@ -76,7 +76,7 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Inp
 
         foreach (string line in lines)
         {
-            if (line.StartsWith(InputSubscriptionYamlData.SourceEnabledElement))
+            if (line.StartsWith(SubscriptionYamlData.SourceEnabledElement))
             {
                 Contents.AddRange(
                 [
@@ -88,7 +88,7 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Inp
             Contents.Add(new Line(line));
         }
 
-        Contents.Add(new($"Suggested repository URLs for '{InputSubscriptionYamlData.SourceRepoElement}' or '{InputSubscriptionYamlData.TargetRepoElement}':", true));
+        Contents.Add(new($"Suggested repository URLs for '{SubscriptionYamlData.SourceRepoElement}' or '{SubscriptionYamlData.TargetRepoElement}':", true));
 
         foreach (string suggestedRepo in _suggestedRepositories)
         {

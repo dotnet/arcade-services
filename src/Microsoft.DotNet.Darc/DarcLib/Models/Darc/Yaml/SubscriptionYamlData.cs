@@ -7,16 +7,13 @@ using YamlDotNet.Serialization;
 
 namespace Microsoft.DotNet.DarcLib.Models.Darc.Yaml;
 
-/// <summary>
-/// Helper class for YAML encoding/decoding purposes.
-/// This is used so that we can have friendly alias names for elements.
-/// </summary>
-public class InputSubscriptionYamlData
+public class SubscriptionYamlData
 {
     public const string SourceRepoElement = "Source Repository URL";
     public const string TargetRepoElement = "Target Repository URL";
     public const string SourceEnabledElement = "Source Enabled";
 
+    private const string IdElement = "Id";
     private const string ChannelElement = "Channel";
     private const string TargetBranchElement = "Target Branch";
     private const string UpdateFrequencyElement = "Update Frequency";
@@ -26,6 +23,9 @@ public class InputSubscriptionYamlData
     private const string SourceDirectoryElement = "Source Directory";
     private const string TargetDirectoryElement = "Target Directory";
     private const string ExcludedAssetsElement = "Excluded Assets";
+
+    [YamlMember(Alias = IdElement, ApplyNamingConventions = false)]
+    public Guid Id { get; set; }
 
     [YamlMember(Alias = ChannelElement, ApplyNamingConventions = false)]
     public string Channel { get; set; }
@@ -62,10 +62,4 @@ public class InputSubscriptionYamlData
 
     [YamlMember(Alias = TargetDirectoryElement, ApplyNamingConventions = false)]
     public string TargetDirectory { get; set; }
-}
-
-public class FullSubscriptionYamlData : InputSubscriptionYamlData
-{
-    [YamlMember(Alias = "Id", ApplyNamingConventions = false)]
-    public Guid Id { get; set; }
 }

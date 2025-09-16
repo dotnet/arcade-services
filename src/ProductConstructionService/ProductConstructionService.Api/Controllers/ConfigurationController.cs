@@ -33,8 +33,7 @@ public class ConfigurationController(
         var files = await remote.GetFilesAtCommitAsync(repoUri, branchSha, SubscriptionsConfigPath);
 
         IDeserializer serializer = new DeserializerBuilder().Build();
-        var subscriptionsData = serializer.Deserialize<List<FullSubscriptionYamlData>>(
-            string.Join(Environment.NewLine, files.Select(files => files.Content)));
+        var subscriptionsData = files.SelectMany(f => serializer.Deserialize<List<SubscriptionUpdateYamlData>>(f.Content)).ToList();
 
         return Ok();
     }
