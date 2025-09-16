@@ -42,6 +42,24 @@ public class LocalGitClient : ILocalGitClient
         _logger = logger;
     }
 
+    public async Task<IReadOnlyList<GitFile>> GetFilesAsync(string repoUri, string branch, string path)
+    {
+        await _processManager.ExecuteGit(repoUri, "checkout", branch);
+        var pathToReadFrom = new UnixPath(repoUri) / path;
+
+        var filePaths = _fileSystem.GetFilesRecursive(pathToReadFrom);
+
+        var tasks = filePaths.Select(async filePath =>
+        {
+            var content = await _fileSystem.ReadAllTextAsync(filePath);
+            var relativePath = Path.GetRelativePath(repoUri, filePath).Replace(Path.DirectorySeparatorChar, '/');
+            return new GitFile(relativePath, content, ContentEncoding.Utf8);
+        });
+
+        var results = await Task.WhenAll(tasks);
+        return results.Where(gitFile => gitFile != null).ToList()!;
+    }
+
     public async Task<string> GetFileContentsAsync(string relativeFilePath, string repoPath, string? branch)
     {
         // Load non-working-tree version
