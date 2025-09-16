@@ -373,29 +373,32 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
 
         foreach (DefaultChannelYamlData defaultChannelData in ingestedDefaultChannels)
         {
+            string repository = defaultChannelData.Repository.TrimEnd(['/', '?']);
             if (!existingChannels.TryGetValue(defaultChannelData.Channel, out Channel? channel))
             {
                 var message = $"Channel {defaultChannelData.Channel} does not exist";
                 _logger.LogError("Default channel validation failed: {Message}", message);
                 throw new InvalidOperationException(message);
             }
-            
+
             DefaultChannel? defaultChannel = existingDefaultChannels
-                .Where(dc => dc.Repository == defaultChannelData.Repository && dc.Branch == defaultChannelData.Branch && dc.ChannelId == channel.Id)
-                .FirstOrDefault();
+                .FirstOrDefault(dc =>
+                    dc.Repository == repository
+                    && dc.Branch == defaultChannelData.Branch
+                    && dc.ChannelId == channel.Id);
 
             if (defaultChannel == null)
             {
                 defaultChannel = new DefaultChannel
                 {
-                    Repository = defaultChannelData.Repository,
+                    Repository = repository,
                     Branch = defaultChannelData.Branch,
                     ChannelId = channel.Id,
                     Enabled = defaultChannelData.Enabled,
                     ConfigurationSourceId = id,
                 };
                 _logger.LogInformation("Adding new default channel for {Repository} / {Branch} on channel {ChannelName}", 
-                    defaultChannelData.Repository, defaultChannelData.Branch, defaultChannelData.Channel);
+                    repository, defaultChannelData.Branch, defaultChannelData.Channel);
                 var newDc = _context.DefaultChannels.Add(defaultChannel);
                 existingDefaultChannels.Add(newDc.Entity);
             }
