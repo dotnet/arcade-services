@@ -11,6 +11,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc.Yaml;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using YamlDotNet.Serialization;
 
@@ -19,6 +20,7 @@ namespace Maestro.DataProviders;
 
 public interface IConfigurationDataIngestor
 {
+    Task ClearConfiguration(string repoUri, string branch);
     Task IngestConfiguration(string repoUri, string branch);
 }
 
@@ -26,39 +28,111 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
 {
     private readonly BuildAssetRegistryContext _context;
     private readonly IGitRepoFactory _gitRepoFactory;
+    private readonly ILogger<ConfigurationDataIngestor> _logger;
 
     public ConfigurationDataIngestor(
         BuildAssetRegistryContext context,
-        IGitRepoFactory gitRepoFactory)
+        IGitRepoFactory gitRepoFactory,
+        ILogger<ConfigurationDataIngestor> logger)
     {
         _context = context;
         _gitRepoFactory = gitRepoFactory;
+        _logger = logger;
+    }
+
+    public async Task ClearConfiguration(string repoUri, string branch)
+    {
+        _logger.LogInformation("Starting to clear configuration for repository {RepoUri} on branch {Branch}", repoUri, branch);
+
+        if (branch == "staging" || branch == "production")
+        {
+            var message = "Clearing the staging or production configuration is not allowed.";
+            _logger.LogError("Configuration clear operation rejected: {Message} Repository: {RepoUri}, Branch: {Branch}", message, repoUri, branch);
+            throw new InvalidOperationException(message);
+        }
+
+        var configurationSource = await _context.ConfigurationSources
+            .Where(cs => cs.Uri == repoUri && cs.Branch == branch)
+            .FirstOrDefaultAsync();
+
+        if (configurationSource == null)
+        {
+            _logger.LogInformation("No configuration source found for repository {RepoUri} on branch {Branch}. Nothing to clear.", repoUri, branch);
+            return;
+        }
+
+        _logger.LogInformation("Found configuration source {ConfigurationSourceId} for repository {RepoUri} on branch {Branch}. Proceeding with clear operation.", 
+            configurationSource.Id, repoUri, branch);
+
+        await IngestConfigurationInternal(repoUri, branch, configurationSource, [], [], []);
+        _context.ConfigurationSources.Remove(configurationSource);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Successfully cleared configuration for repository {RepoUri} on branch {Branch}", repoUri, branch);
     }
 
     public async Task IngestConfiguration(string repoUri, string branch)
     {
-        IGitRepo repo = _gitRepoFactory.CreateClient(repoUri);
-        IReadOnlyList<GitFile> subscriptionFiles = await repo.GetFilesAsync(repoUri, branch, "subscriptions");
-        IReadOnlyList<GitFile> channelFiles = await repo.GetFilesAsync(repoUri, branch, "channels");
-        IReadOnlyList<GitFile> defaultChannelFiles = await repo.GetFilesAsync(repoUri, branch, "default-channels");
-
-        IDeserializer serializer = new DeserializerBuilder().Build();
-
-        IReadOnlyCollection<SubscriptionUpdateYamlData> ingestedSubscriptions =
-            [.. subscriptionFiles.SelectMany(f => serializer.Deserialize<List<SubscriptionUpdateYamlData>>(f.Content))];
-        IReadOnlyList<ChannelYamlData> ingestedChannels =
-            [.. channelFiles.SelectMany(f => serializer.Deserialize<List<ChannelYamlData>>(f.Content))];
-        IReadOnlyList<DefaultChannelYamlData> ingestedDefaultChannels =
-            [.. defaultChannelFiles.SelectMany(f => serializer.Deserialize<List<DefaultChannelYamlData>>(f.Content))];
-
-        await using var transaction = await _context.Database.BeginTransactionAsync();
+        _logger.LogInformation("Starting configuration ingestion for repository {RepoUri} on branch {Branch}", repoUri, branch);
 
         try
         {
+            IGitRepo repo = _gitRepoFactory.CreateClient(repoUri);
+
+            _logger.LogDebug("Fetching configuration files from repository {RepoUri} on branch {Branch}", repoUri, branch);
+            IReadOnlyList<GitFile> subscriptionFiles = await repo.GetFilesAsync(repoUri, branch, "subscriptions");
+            IReadOnlyList<GitFile> channelFiles = await repo.GetFilesAsync(repoUri, branch, "channels");
+            IReadOnlyList<GitFile> defaultChannelFiles = await repo.GetFilesAsync(repoUri, branch, "default-channels");
+
+            _logger.LogInformation("Retrieved {SubscriptionFileCount} subscription files, {ChannelFileCount} channel files, {DefaultChannelFileCount} default channel files", 
+                subscriptionFiles.Count, channelFiles.Count, defaultChannelFiles.Count);
+
+            IDeserializer serializer = new DeserializerBuilder().Build();
+
+            _logger.LogDebug("Deserializing configuration files");
+            IReadOnlyCollection<SubscriptionUpdateYamlData> ingestedSubscriptions =
+                [.. subscriptionFiles.SelectMany(f => serializer.Deserialize<List<SubscriptionUpdateYamlData>>(f.Content))];
+            IReadOnlyList<ChannelYamlData> ingestedChannels =
+                [.. channelFiles.SelectMany(f => serializer.Deserialize<List<ChannelYamlData>>(f.Content))];
+            IReadOnlyList<DefaultChannelYamlData> ingestedDefaultChannels =
+                [.. defaultChannelFiles.SelectMany(f => serializer.Deserialize<List<DefaultChannelYamlData>>(f.Content))];
+
+            _logger.LogInformation("Deserialized {SubscriptionCount} subscriptions, {ChannelCount} channels, {DefaultChannelCount} default channels", 
+                ingestedSubscriptions.Count, ingestedChannels.Count, ingestedDefaultChannels.Count);
+
             var configurationSource = await _context.ConfigurationSources
                 .Where(cs => cs.Uri == repoUri && cs.Branch == branch)
                 .FirstOrDefaultAsync();
 
+            await IngestConfigurationInternal(
+                repoUri,
+                branch,
+                configurationSource,
+                ingestedChannels,
+                ingestedDefaultChannels,
+                ingestedSubscriptions);
+
+            _logger.LogInformation("Successfully completed configuration ingestion for repository {RepoUri} on branch {Branch}", repoUri, branch);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to ingest configuration for repository {RepoUri} on branch {Branch}", repoUri, branch);
+            throw;
+        }
+    }
+
+    private async Task IngestConfigurationInternal(
+        string repoUri,
+        string branch,
+        ConfigurationSource? configurationSource,
+        IReadOnlyList<ChannelYamlData> ingestedChannels,
+        IReadOnlyList<DefaultChannelYamlData> ingestedDefaultChannels,
+        IReadOnlyCollection<SubscriptionUpdateYamlData> ingestedSubscriptions)
+    {
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
             if (configurationSource == null)
             {
                 configurationSource = new ConfigurationSource
@@ -81,22 +155,30 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
                 .Where(dc => dc.ConfigurationSourceId == configurationSource.Id)
                 .ToList();
 
+            _logger.LogInformation("Found {ExistingSubscriptionCount} existing subscriptions, {ExistingChannelCount} existing channels, {ExistingDefaultChannelCount} existing default channels", 
+                existingSubscriptions.Count, existingChannels.Count, existingDefaultChannels.Count);
+
             // Remove any subscriptions, channels, or default channels that are no longer present in the configuration
+            _logger.LogInformation("Removing entities no longer present in configuration");
             RemoveSubscriptions(existingSubscriptions, ingestedSubscriptions);
             RemoveDefaultChannels(existingDefaultChannels, ingestedDefaultChannels);
             RemoveChannels(existingChannels, ingestedChannels);
 
             // Add or update any items
+            _logger.LogInformation("Adding or updating entities from configuration");
             AddOrUpdateChannels(existingChannels, ingestedChannels, configurationSource.Id);
             AddOrUpdateDefaultChannels(existingDefaultChannels, ingestedDefaultChannels, existingChannels, configurationSource.Id);
             AddOrUpdateSubscriptions(existingSubscriptions, ingestedSubscriptions, existingChannels, configurationSource.Id);
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
+            _logger.LogDebug("Successfully committed database transaction for configuration ingestion");
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Error during internal configuration ingestion for repository {RepoUri} on branch {Branch}. Rolling back transaction.", repoUri, branch);
             // TODO: Handle failure
+            throw;
         }
     }
 
@@ -106,38 +188,55 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
         Dictionary<string, Channel> existingChannels,
         int id)
     {
+        _logger.LogInformation("Processing {SubscriptionCount} subscriptions for add/update operations", ingestedSubscriptions.Count);
+
         foreach (SubscriptionUpdateYamlData subscription in ingestedSubscriptions)
         {
+            _logger.LogInformation("Processing subscription {SubscriptionId} from {SourceRepository} to {TargetRepository}/{TargetBranch} on channel {Channel}", 
+                subscription.Id, subscription.SourceRepository, subscription.TargetRepository, subscription.TargetBranch, subscription.Channel);
+
             if (subscription.Id == Guid.Empty)
             {
-                throw new InvalidOperationException($"Subscription {subscription.SourceRepository} -> {subscription.TargetRepository} / {subscription.TargetBranch} ({subscription.Channel}) has invalid or missing ID");
+                var message = $"Subscription {subscription.SourceRepository} -> {subscription.TargetRepository} / {subscription.TargetBranch} ({subscription.Channel}) has invalid or missing ID";
+                _logger.LogError("Subscription validation failed: {Message}", message);
+                throw new InvalidOperationException(message);
             }
 
             if (!existingChannels.TryGetValue(subscription.Channel, out Channel? channel))
             {
-                throw new InvalidOperationException($"Channel {subscription.Channel} set for subscription {subscription.Id} does not exist");
+                var message = $"Channel {subscription.Channel} set for subscription {subscription.Id} does not exist";
+                _logger.LogError("Subscription validation failed: {Message}", message);
+                throw new InvalidOperationException(message);
             }
 
             if (bool.TryParse(subscription.SourceEnabled, out bool sourceEnabled))
             {
                 if (sourceEnabled && string.IsNullOrEmpty(subscription.SourceDirectory) && string.IsNullOrEmpty(subscription.TargetDirectory))
                 {
-                    throw new InvalidOperationException("The request is invalid. Source-enabled subscriptions require the source or target directory to be set");
+                    var message = "The request is invalid. Source-enabled subscriptions require the source or target directory to be set";
+                    _logger.LogError("Subscription validation failed for {SubscriptionId}: {Message}", subscription.Id, message);
+                    throw new InvalidOperationException(message);
                 }
 
                 if (!sourceEnabled && !string.IsNullOrEmpty(subscription.SourceDirectory))
                 {
-                    throw new InvalidOperationException("The request is invalid. Source directory can be set only for source-enabled subscriptions");
+                    var message = "The request is invalid. Source directory can be set only for source-enabled subscriptions";
+                    _logger.LogError("Subscription validation failed for {SubscriptionId}: {Message}", subscription.Id, message);
+                    throw new InvalidOperationException(message);
                 }
 
                 if (!string.IsNullOrEmpty(subscription.SourceDirectory) && !string.IsNullOrEmpty(subscription.TargetDirectory))
                 {
-                    throw new InvalidOperationException("The request is invalid. Only one of source or target directory can be set");
+                    var message = "The request is invalid. Only one of source or target directory can be set";
+                    _logger.LogError("Subscription validation failed for {SubscriptionId}: {Message}", subscription.Id, message);
+                    throw new InvalidOperationException(message);
                 }
 
                 if (sourceEnabled && bool.TryParse(subscription.Batchable, out bool batchable) && batchable)
                 {
-                    throw new InvalidOperationException("The request is invalid. Batched codeflow subscriptions are not supported.");
+                    var message = "The request is invalid. Batched codeflow subscriptions are not supported.";
+                    _logger.LogError("Subscription validation failed for {SubscriptionId}: {Message}", subscription.Id, message);
+                    throw new InvalidOperationException(message);
                 }
             }
 
@@ -174,18 +273,22 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
             Subscription? equivalentSubscription = FindEquivalentSubscription(existingSubscriptions.Values, subscriptionModel);
             if (equivalentSubscription != null)
             {
-                throw new InvalidOperationException($"The subscription '{equivalentSubscription.Id}' already performs the same update.");
+                var message = $"The subscription '{equivalentSubscription.Id}' already performs the same update.";
+                _logger.LogError("Duplicate subscription detected: {Message}", message);
+                throw new InvalidOperationException(message);
             }
 
             // Check for codeflow subscription conflicts
             var conflictError = ValidateCodeflowSubscriptionConflicts(existingSubscriptions.Values, subscriptionModel);
             if (conflictError != null)
             {
+                _logger.LogError("Codeflow subscription conflict detected for {SubscriptionId}: {ConflictError}", subscription.Id, conflictError);
                 throw new InvalidOperationException(conflictError);
             }
 
             if (!existingSubscriptions.TryGetValue(subscription.Id, out Subscription? existingSubscription))
             {
+                _logger.LogInformation("Adding new subscription {SubscriptionId}", subscription.Id);
                 var ns = _context.Subscriptions.Add(subscriptionModel);
                 existingSubscriptions.Add(subscription.Id, ns.Entity);
             }
@@ -193,17 +296,23 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
             {
                 if (existingSubscription.TargetBranch != subscriptionModel.TargetBranch)
                 {
-                    throw new InvalidOperationException($"Changing the target branch of an existing subscription {subscription.Id} is not allowed");
+                    var message = $"Changing the target branch of an existing subscription {subscription.Id} is not allowed";
+                    _logger.LogError("Subscription update validation failed: {Message}", message);
+                    throw new InvalidOperationException(message);
                 }
 
                 if (existingSubscription.TargetRepository != subscriptionModel.TargetRepository)
                 {
-                    throw new InvalidOperationException($"Changing the target repository of an existing subscription {subscription.Id} is not allowed");
+                    var message = $"Changing the target repository of an existing subscription {subscription.Id} is not allowed";
+                    _logger.LogError("Subscription update validation failed: {Message}", message);
+                    throw new InvalidOperationException(message);
                 }
 
                 if (existingSubscription.PolicyObject.Batchable != subscriptionModel.PolicyObject.Batchable)
                 {
-                    throw new InvalidOperationException($"Changing the batchable attribute of an existing subscription {subscription.Id} is not allowed");
+                    var message = $"Changing the batchable attribute of an existing subscription {subscription.Id} is not allowed";
+                    _logger.LogError("Subscription update validation failed: {Message}", message);
+                    throw new InvalidOperationException(message);
                 }
 
                 existingSubscription.SourceRepository = subscriptionModel.SourceRepository;
@@ -221,6 +330,8 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
                 _context.Subscriptions.Update(existingSubscription);
             }
         }
+
+        _logger.LogDebug("Completed processing subscriptions for add/update operations");
     }
 
     private void AddOrUpdateChannels(
@@ -228,6 +339,8 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
         IReadOnlyList<ChannelYamlData> ingestedChannels,
         int sourceId)
     {
+        _logger.LogInformation("Processing {ChannelCount} channels for add/update operations", ingestedChannels.Count);
+
         foreach (ChannelYamlData channelData in ingestedChannels)
         {
             if (!existingChannels.TryGetValue(channelData.Name, out Channel? channel))
@@ -238,6 +351,7 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
                     Classification = channelData.Classification,
                     ConfigurationSourceId = sourceId,
                 };
+                _logger.LogInformation("Adding new channel {ChannelName}", channelData.Name);
                 var newChannel = _context.Channels.Add(channel);
                 existingChannels[channel.Name] = newChannel.Entity;
             }
@@ -255,11 +369,15 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
         Dictionary<string, Channel> existingChannels,
         int id)
     {
+        _logger.LogInformation("Processing {DefaultChannelCount} default channels for add/update operations", ingestedDefaultChannels.Count);
+
         foreach (DefaultChannelYamlData defaultChannelData in ingestedDefaultChannels)
         {
             if (!existingChannels.TryGetValue(defaultChannelData.Channel, out Channel? channel))
             {
-                throw new InvalidOperationException($"Channel {defaultChannelData.Channel} does not exist");
+                var message = $"Channel {defaultChannelData.Channel} does not exist";
+                _logger.LogError("Default channel validation failed: {Message}", message);
+                throw new InvalidOperationException(message);
             }
             
             DefaultChannel? defaultChannel = existingDefaultChannels
@@ -276,6 +394,8 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
                     Enabled = defaultChannelData.Enabled,
                     ConfigurationSourceId = id,
                 };
+                _logger.LogInformation("Adding new default channel for {Repository} / {Branch} on channel {ChannelName}", 
+                    defaultChannelData.Repository, defaultChannelData.Branch, defaultChannelData.Channel);
                 var newDc = _context.DefaultChannels.Add(defaultChannel);
                 existingDefaultChannels.Add(newDc.Entity);
             }
@@ -293,6 +413,7 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
     {
         if (existingSubscriptions.Count == 0)
         {
+            _logger.LogDebug("No existing subscriptions to remove");
             return;
         }
 
@@ -300,11 +421,22 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
 
         if (newIds.Count != subscriptions.Count)
         {
-            throw new InvalidOperationException("Duplicate subscription IDs found in configuration.");
+            var message = "Duplicate subscription IDs found in configuration.";
+            _logger.LogError("Subscription validation failed: {Message}", message);
+            throw new InvalidOperationException(message);
         }
 
         HashSet<Guid> toRemove = [.. existingSubscriptions.Keys.Except(newIds)];
-        _context.Subscriptions.RemoveRange(existingSubscriptions.Values.Where(s => toRemove.Contains(s.Id)));
+        if (toRemove.Count > 0)
+        {
+            _logger.LogInformation("Removing {SubscriptionCount} subscriptions that are no longer in configuration: {SubscriptionIds}", 
+                toRemove.Count, string.Join(", ", toRemove));
+            _context.Subscriptions.RemoveRange(existingSubscriptions.Values.Where(s => toRemove.Contains(s.Id)));
+        }
+        else
+        {
+            _logger.LogDebug("No subscriptions to remove");
+        }
     }
 
     private void RemoveChannels(
@@ -313,17 +445,29 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
     {
         if (existingChannels.Count == 0)
         {
+            _logger.LogDebug("No existing channels to remove");
             return;
         }
 
         HashSet<string> newNames = [.. channels.Select(c => c.Name)];
         if (newNames.Count != channels.Count)
         {
-            throw new InvalidOperationException("Duplicate channel names found in configuration.");
+            var message = "Duplicate channel names found in configuration.";
+            _logger.LogError("Channel validation failed: {Message}", message);
+            throw new InvalidOperationException(message);
         }
 
         HashSet<string> toRemove = [.. existingChannels.Keys.Except(newNames)];
-        _context.Channels.RemoveRange(existingChannels.Values.Where(c => toRemove.Contains(c.Name)));
+        if (toRemove.Count > 0)
+        {
+            _logger.LogInformation("Removing {ChannelCount} channels that are no longer in configuration: {ChannelNames}", 
+                toRemove.Count, string.Join(", ", toRemove));
+            _context.Channels.RemoveRange(existingChannels.Values.Where(c => toRemove.Contains(c.Name)));
+        }
+        else
+        {
+            _logger.LogDebug("No channels to remove");
+        }
     }
 
     private void RemoveDefaultChannels(
@@ -332,6 +476,7 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
     {
         if (existingDefaultChannels.Count == 0)
         {
+            _logger.LogDebug("No existing default channels to remove");
             return;
         }
 
@@ -341,7 +486,16 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
                 .Where(d => !defaultChannels.Any(c => c.Repository == d.Repository && c.Branch == d.Branch && c.Channel == d.Channel.Name))
                 .Select(d => d.Id)
         ];
-        _context.DefaultChannels.RemoveRange(existingDefaultChannels.Where(dc => toRemove.Contains(dc.Id)));
+
+        if (toRemove.Count > 0)
+        {
+            _logger.LogInformation("Removing {DefaultChannelCount} default channels that are no longer in configuration", toRemove.Count);
+            _context.DefaultChannels.RemoveRange(existingDefaultChannels.Where(dc => toRemove.Contains(dc.Id)));
+        }
+        else
+        {
+            _logger.LogDebug("No default channels to remove");
+        }
     }
 
     /// <summary>
