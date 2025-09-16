@@ -55,6 +55,7 @@ public class BuildAssetRegistryContext(DbContextOptions options)
     public DbSet<BuildChannel> BuildChannels { get; set; }
     public DbSet<BuildDependency> BuildDependencies { get; set; }
     public DbSet<Channel> Channels { get; set; }
+    public DbSet<ConfigurationSource> ConfigurationSources { get; set; }
     public DbSet<DefaultChannel> DefaultChannels { get; set; }
     public DbSet<Subscription> Subscriptions { get; set; }
     public DbSet<SubscriptionUpdate> SubscriptionUpdates { get; set; }
@@ -112,6 +113,10 @@ public class BuildAssetRegistryContext(DbContextOptions options)
             .HasIndex(a => new { a.Name, a.Version });
 
         builder.Entity<Channel>().HasIndex(c => c.Name).IsUnique();
+
+        builder.Entity<ConfigurationSource>()
+            .HasIndex(cs => new { cs.Uri, cs.Branch })
+            .IsUnique();
 
         builder.Entity<BuildChannel>()
             .HasKey(

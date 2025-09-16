@@ -7,28 +7,22 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Maestro.Data.Models;
 
-public class Channel
+public class ConfigurationSource
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int Id { get; set; }
 
     [Required]
-    public string Name { get; set; }
+    [StringLength(500)]
+    public string Uri { get; set; }
 
     [Required]
-    public string Classification { get; set; }
+    [StringLength(100)]
+    public string Branch { get; set; }
 
-    /// <summary>
-    /// Configuration source for this channel.
-    /// </summary>
-    public int? ConfigurationSourceId { get; set; }
-
-    /// <summary>
-    /// Navigation property to the configuration source.
-    /// </summary>
-    public ConfigurationSource ConfigurationSource { get; set; }
-
-    public List<BuildChannel> BuildChannels { get; set; }
+    // Navigation properties
+    public List<Subscription> Subscriptions { get; set; }
+    public List<Channel> Channels { get; set; }
     public List<DefaultChannel> DefaultChannels { get; set; }
 }

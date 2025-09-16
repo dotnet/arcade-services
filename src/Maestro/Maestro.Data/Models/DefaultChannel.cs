@@ -52,5 +52,15 @@ public class DefaultChannel
 
     public bool Enabled { get; set; } = true;
 
+    /// <summary>
+    /// Configuration source for this default channel.
+    /// </summary>
+    public int? ConfigurationSourceId { get; set; }
+
+    /// <summary>
+    /// Navigation property to the configuration source.
+    /// </summary>
+    public ConfigurationSource ConfigurationSource { get; set; }
+
     public Channel Channel { get; set; }
 }
