@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc.Yaml;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json.Linq;
@@ -37,15 +38,18 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
     public async Task IngestConfiguration(string repoUri, string branch)
     {
         IGitRepo repo = _gitRepoFactory.CreateClient(repoUri);
-        List<string> subscriptionFiles = []; // TODO repo.GetFilesAsync(repoUri, branch, "subscriptions");
-        List<string> channelFiles = []; // TODO repo.GetFilesAsync(repoUri, branch, "channels");
-        List<string> defaultChannelFiles = []; // TODO repo.GetFilesAsync(repoUri, branch, "default-channels");
+        IReadOnlyList<GitFile> subscriptionFiles = await repo.GetFilesAsync(repoUri, branch, "subscriptions");
+        IReadOnlyList<GitFile> channelFiles = await repo.GetFilesAsync(repoUri, branch, "channels");
+        IReadOnlyList<GitFile> defaultChannelFiles = await repo.GetFilesAsync(repoUri, branch, "default-channels");
 
         IDeserializer serializer = new DeserializerBuilder().Build();
 
-        IReadOnlyCollection<SubscriptionUpdateYamlData> ingestedSubscriptions = [.. subscriptionFiles.SelectMany(serializer.Deserialize<List<SubscriptionUpdateYamlData>>)];
-        IReadOnlyList<ChannelYamlData> ingestedChannels = [.. channelFiles.SelectMany(serializer.Deserialize<List<ChannelYamlData>>)];
-        IReadOnlyList<DefaultChannelYamlData> ingestedDefaultChannels = [.. defaultChannelFiles.SelectMany(serializer.Deserialize<List<DefaultChannelYamlData>>)];
+        IReadOnlyCollection<SubscriptionUpdateYamlData> ingestedSubscriptions =
+            [.. subscriptionFiles.SelectMany(f => serializer.Deserialize<List<SubscriptionUpdateYamlData>>(f.Content))];
+        IReadOnlyList<ChannelYamlData> ingestedChannels =
+            [.. channelFiles.SelectMany(f => serializer.Deserialize<List<ChannelYamlData>>(f.Content))];
+        IReadOnlyList<DefaultChannelYamlData> ingestedDefaultChannels =
+            [.. defaultChannelFiles.SelectMany(f => serializer.Deserialize<List<DefaultChannelYamlData>>(f.Content))];
 
         await using var transaction = await _context.Database.BeginTransactionAsync();
 
