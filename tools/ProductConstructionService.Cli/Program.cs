@@ -30,4 +30,5 @@ Type[] GetOptions() =>
         typeof(GetPcsStatusOptions),
         typeof(StartPcsOptions),
         typeof(StopPcsOptions),
+        typeof(RefreshConfigurationOptions)
     ];

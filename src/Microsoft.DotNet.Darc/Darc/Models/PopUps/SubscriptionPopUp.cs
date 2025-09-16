@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.Darc.Yaml;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -17,7 +18,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps;
 /// <summary>
 /// Common class for subscription management popups.
 /// </summary>
-internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : SubscriptionData
+internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : SubscriptionYamlData
 {
     protected readonly TData _data;
     private readonly bool _forceCreation;
@@ -75,7 +76,7 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Sub
 
         foreach (string line in lines)
         {
-            if (line.StartsWith(SubscriptionData.SourceEnabledElement))
+            if (line.StartsWith(SubscriptionYamlData.SourceEnabledElement))
             {
                 Contents.AddRange(
                 [
@@ -87,7 +88,7 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Sub
             Contents.Add(new Line(line));
         }
 
-        Contents.Add(new($"Suggested repository URLs for '{SubscriptionData.SourceRepoElement}' or '{SubscriptionData.TargetRepoElement}':", true));
+        Contents.Add(new($"Suggested repository URLs for '{SubscriptionYamlData.SourceRepoElement}' or '{SubscriptionYamlData.TargetRepoElement}':", true));
 
         foreach (string suggestedRepo in _suggestedRepositories)
         {

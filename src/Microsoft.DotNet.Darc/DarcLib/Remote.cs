@@ -436,6 +436,12 @@ public sealed class Remote : IRemote
         return files;
     }
 
+    public async Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path)
+    {
+        _logger.LogInformation("Getting files at commit '{commit}' in repo '{repoUri}' under path '{path}'", commit, repoUri, path);
+        return await _remoteGitClient.GetFilesAtCommitAsync(repoUri, commit, path);
+    }
+
     public async Task CommentPullRequestAsync(string pullRequestUri, string comment)
     {
         await _remoteGitClient.CommentPullRequestAsync(pullRequestUri, comment);
