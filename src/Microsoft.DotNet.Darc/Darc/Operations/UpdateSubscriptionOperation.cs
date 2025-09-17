@@ -12,6 +12,7 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.Darc.Yaml;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -23,15 +24,18 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
 {
     private readonly UpdateSubscriptionCommandLineOptions _options;
     private readonly IGitRepoFactory _gitRepoFactory;
+    private readonly IRemoteFactory _remoteFactory;
 
     public UpdateSubscriptionOperation(
         UpdateSubscriptionCommandLineOptions options,
         IBarApiClient barClient,
         IGitRepoFactory gitRepoFactory,
-        ILogger<UpdateSubscriptionOperation> logger) : base(barClient, logger)
+        IRemoteFactory remoteFactory,
+        ILogger<UpdateSubscriptionOperation> logger) : base(barClient, logger, options, gitRepoFactory, remoteFactory)
     {
         _options = options;
         _gitRepoFactory = gitRepoFactory;
+        _remoteFactory = remoteFactory;
     }
 
     /// <summary>
@@ -252,8 +256,6 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
             targetDirectory = updateSubscriptionPopUp.TargetDirectory;
             excludedAssets = [..updateSubscriptionPopUp.ExcludedAssets];
         }
-
-
 
         try
         {

@@ -19,6 +19,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal abstract class ConfigurationManagementOperation : Operation
 {
     protected static NativePath ChannelConfigurationFileName = new("channels/channels.yaml");
+    protected static NativePath SubscriptionConfigurationFolderPath = new("subscriptions");
 
     private static readonly ISerializer _yamlSerializer = new SerializerBuilder()
         .WithNamingConvention(NullNamingConvention.Instance)
@@ -91,12 +92,19 @@ internal abstract class ConfigurationManagementOperation : Operation
     protected async Task<List<T>> GetConfiguration<T>(string fileName)
     {
         _logger.LogInformation("Reading configuration from {fileName}...", fileName);
-        var contents = await _configurationRepo.GetFileContentsAsync(
-            fileName,
-            _options.ConfigurationRepository,
-            _options.ConfigurationBranch);
+        try
+        {
+            var contents = await _configurationRepo.GetFileContentsAsync(
+                fileName,
+                _options.ConfigurationRepository,
+                _options.ConfigurationBranch);
 
-        return _yamlDeserializer.Deserialize<List<T>>(contents);
+            return _yamlDeserializer.Deserialize<List<T>>(contents);
+        }
+        catch (DependencyFileNotFoundException)
+        {
+            return [];
+        }
     }
 
     protected async Task WriteConfigurationFile(string fileName, object content, string commitMessage)
@@ -134,6 +142,8 @@ internal abstract class ConfigurationManagementOperation : Operation
             Title = title,
             Description = description,
         });
+        var prId = prUrl.Substring(prUrl.LastIndexOf('/') + 1);
+        prUrl = $"{repoUri}/pullrequest/{prId}";
         Console.WriteLine("Created pull request at {0}", prUrl);
     }
 }
