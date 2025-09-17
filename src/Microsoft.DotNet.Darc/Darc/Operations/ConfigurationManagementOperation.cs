@@ -54,7 +54,13 @@ internal abstract class ConfigurationManagementOperation : Operation
         {
             if (!await remote.BranchExistsAsync(_options.ConfigurationRepository, _options.ConfigurationBranch))
             {
-                throw new ArgumentException($"The specified configuration branch '{_options.ConfigurationBranch}' does not exist in {_options.ConfigurationRepository}.");
+                if (string.IsNullOrEmpty(_options.ConfigurationBaseBranch))
+                {
+                    throw new ArgumentException("A base branch must be specified when the configuration branch does not exist.");
+                }
+
+                _logger.LogInformation("The specified configuration branch '{branch}' does not exist. Creating it...", _options.ConfigurationBranch);
+                await remote.CreateNewBranchAsync(_options.ConfigurationRepository, _options.ConfigurationBaseBranch, _options.ConfigurationBranch);
             }
 
             _logger.LogInformation("Using existing configuration branch {branch}", _options.ConfigurationBranch);
