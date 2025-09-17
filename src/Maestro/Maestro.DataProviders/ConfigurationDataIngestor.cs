@@ -3,7 +3,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -80,9 +83,9 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
             IGitRepo repo = _gitRepoFactory.CreateClient(repoUri);
 
             _logger.LogDebug("Fetching configuration files from repository {RepoUri} on branch {Branch}", repoUri, branch);
-            IReadOnlyList<GitFile> subscriptionFiles = await repo.GetFilesAsync(repoUri, branch, "subscriptions");
-            IReadOnlyList<GitFile> channelFiles = await repo.GetFilesAsync(repoUri, branch, "channels");
-            IReadOnlyList<GitFile> defaultChannelFiles = await repo.GetFilesAsync(repoUri, branch, "default-channels");
+            IReadOnlyList<GitFile> subscriptionFiles = await GetFilesAsync(repo, repoUri, branch, "subscriptions");
+            IReadOnlyList<GitFile> channelFiles = await GetFilesAsync(repo, repoUri, branch, "channels");
+            IReadOnlyList<GitFile> defaultChannelFiles = await GetFilesAsync(repo, repoUri, branch, "default-channels");
 
             _logger.LogInformation("Retrieved {SubscriptionFileCount} subscription files, {ChannelFileCount} channel files, {DefaultChannelFileCount} default channel files", 
                 subscriptionFiles.Count, channelFiles.Count, defaultChannelFiles.Count);
@@ -114,14 +117,14 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
 
             _logger.LogInformation("Successfully completed configuration ingestion for repository {RepoUri} on branch {Branch}", repoUri, branch);
         }
-        catch (DbUpdateException dbEx)
+        catch (DbUpdateException e)
         {
-            _logger.LogError(dbEx.InnerException ?? dbEx, "Failed to ingest configuration for repository {RepoUri} on branch {Branch} because of failed SQL constraints", repoUri, branch);
+            _logger.LogError(e.InnerException ?? e, "Failed to ingest configuration for repository {RepoUri} on branch {Branch} because of failed SQL constraints", repoUri, branch);
             throw;
         }
-        catch (Exception ex)
+        catch (Exception e)
         {
-            _logger.LogError(ex, "Failed to ingest configuration for repository {RepoUri} on branch {Branch}", repoUri, branch);
+            _logger.LogError(e, "Failed to ingest configuration for repository {RepoUri} on branch {Branch}", repoUri, branch);
             throw;
         }
     }
@@ -181,6 +184,20 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
             _logger.LogError(ex, "Error during internal configuration ingestion for repository {RepoUri} on branch {Branch}. Rolling back transaction.", repoUri, branch);
             // TODO: Handle failure
             throw;
+        }
+    }
+
+    private async Task<IReadOnlyList<GitFile>> GetFilesAsync(IGitRepo repo, string repoUri, string branch, string path)
+    {
+        try
+        {
+            return await repo.GetFilesAsync(repoUri, branch, path);
+        }
+        catch (Exception e) when (e is FileNotFoundException or DirectoryNotFoundException
+                              || (e is HttpRequestException httpEx && httpEx.StatusCode == HttpStatusCode.NotFound))
+        {
+            _logger.LogWarning("No files found in path {Path} for repository {RepoUri} on branch {Branch}", path, repoUri, branch);
+            return [];
         }
     }
 
