@@ -4,19 +4,23 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.ProductConstructionService.Client;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal abstract class SubscriptionOperationBase : Operation
+internal abstract class SubscriptionOperationBase : ConfigurationManagementOperation
 {
     protected readonly IBarApiClient _barClient;
     protected readonly ILogger _logger;
 
-    protected SubscriptionOperationBase(IBarApiClient barClient, ILogger logger)
+    protected SubscriptionOperationBase(
+        IBarApiClient barClient,
+        ILogger logger,
+        IConfigurationManagementCommandLineOptions options,
+        IGitRepoFactory gitRepoFactory,
+        IRemoteFactory remoteFactory) : base(options, gitRepoFactory, remoteFactory, logger)
     {
         _barClient = barClient;
         _logger = logger;

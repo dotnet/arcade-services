@@ -11,6 +11,7 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.Darc.Yaml;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.Services.Utility;
@@ -30,7 +31,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         ILogger<AddSubscriptionOperation> logger,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
-        IGitRepoFactory gitRepoFactory) : base(barClient, logger)
+        IGitRepoFactory gitRepoFactory) : base(barClient, logger, options, gitRepoFactory, remoteFactory)
     {
         _options = options;
         _remoteFactory = remoteFactory;
@@ -315,32 +316,44 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 }
             }
 
-            Subscription newSubscription = await _barClient.CreateSubscriptionAsync(
-                channel,
-                sourceRepository,
-                targetRepository,
-                targetBranch,
-                updateFrequency,
-                batchable,
-                mergePolicies, 
-                failureNotificationTags,
-                sourceEnabled,
-                sourceDirectory,
-                targetDirectory,
-                excludedAssets);
+            bool openPr = string.IsNullOrEmpty(_options.ConfigurationBranch);
 
-            Console.WriteLine($"Successfully created new subscription with id '{newSubscription.Id}'.");
-
-            // Prompt the user to trigger the subscription unless they have explicitly disallowed it
-            if (!_options.NoTriggerOnCreate)
+            await CreateConfigurationBranchIfNeeded();
+            var subscriptionsFilePath = SubscriptionConfigurationFolderPath / targetRepository.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
+            List<SubscriptionYamlData> subscriptions = await GetConfiguration<SubscriptionYamlData>(subscriptionsFilePath);
+            subscriptions.Add(new SubscriptionYamlData
             {
-                bool triggerAutomatically = _options.TriggerOnCreate || UxHelpers.PromptForYesNo("Trigger this subscription immediately?");
-                if (triggerAutomatically)
+                Id = Guid.NewGuid(),
+                Channel = channel,
+                SourceRepository = sourceRepository,
+                TargetRepository = targetRepository,
+                TargetBranch = targetBranch,
+                UpdateFrequency = updateFrequency,
+                Batchable = batchable ? "true" : "false",
+                MergePolicies = mergePolicies.Select(mp => new MergePolicyYamlData
                 {
-                    await _barClient.TriggerSubscriptionAsync(newSubscription.Id);
-                    Console.WriteLine($"Subscription '{newSubscription.Id}' triggered.");
-                }
+                    Name = mp.Name,
+                    Properties = mp.Properties.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value.ToString())
+                }).ToList(),
+                FailureNotificationTags = failureNotificationTags,
+                SourceEnabled = sourceEnabled ? "true" : "false",
+                SourceDirectory = sourceDirectory,
+                TargetDirectory = targetDirectory,
+                ExcludedAssets = excludedAssets
+            });
+
+            var subscriptionInfo = $"{sourceRepository} ({channel}) ==> {targetRepository} ({targetBranch})";
+            await WriteConfigurationFile(subscriptionsFilePath, subscriptions, $"Adding subscription {subscriptionInfo}");
+            if (!_options.NoPr && (_options.Quiet || UxHelpers.PromptForYesNo($"Create PR with changes in {_options.ConfigurationRepository}?")))
+            {
+                await CreatePullRequest(
+                    _options.ConfigurationRepository,
+                    _options.ConfigurationBranch,
+                    _options.ConfigurationBaseBranch,
+                    $"Add channel '{subscriptionInfo}'",
+                    string.Empty);
             }
+            Console.WriteLine($"Successfully created new subscription");
 
             return Constants.SuccessCode;
         }
