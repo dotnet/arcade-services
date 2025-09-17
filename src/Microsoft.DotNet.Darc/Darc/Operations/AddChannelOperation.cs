@@ -75,6 +75,7 @@ internal class AddChannelOperation : ConfigurationManagementOperation
                 await CreatePullRequest(
                     _options.ConfigurationRepository,
                     _options.ConfigurationBranch,
+                    _options.ConfigurationBaseBranch,
                     $"Add channel '{_options.Name}'",
                     string.Empty);
             }

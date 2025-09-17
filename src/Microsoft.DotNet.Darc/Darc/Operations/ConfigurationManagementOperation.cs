@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -48,7 +48,10 @@ internal abstract class ConfigurationManagementOperation : Operation
 
     protected async Task CreateConfigurationBranchIfNeeded()
     {
-        _logger.LogWarning($"Warning - Maestro channels and subscriptions are now managed as code via a repository{Environment.NewLine}{{uri}}", _options.ConfigurationRepository);
+        var color = Console.ForegroundColor;
+        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.WriteLine($"⚠️⚠️⚠️ Maestro channels and subscriptions are now managed as code via a configuration repository", _options.ConfigurationRepository);
+        Console.ForegroundColor = color;
 
         var remote = await _remoteFactory.CreateRemoteAsync(_options.ConfigurationRepository);
 
@@ -61,11 +64,12 @@ internal abstract class ConfigurationManagementOperation : Operation
                     throw new ArgumentException("A base branch must be specified when the configuration branch does not exist.");
                 }
 
-                _logger.LogInformation("The specified configuration branch '{branch}' does not exist. Creating it...", _options.ConfigurationBranch);
+                Console.WriteLine("The specified configuration branch '{0}' does not exist. Creating it...", _options.ConfigurationBranch);
                 await remote.CreateNewBranchAsync(_options.ConfigurationRepository, _options.ConfigurationBaseBranch, _options.ConfigurationBranch);
+                return;
             }
 
-            _logger.LogInformation("Using existing configuration branch {branch}", _options.ConfigurationBranch);
+            Console.WriteLine("Using existing configuration branch {0}", _options.ConfigurationBranch);
             return;
         }
 
@@ -80,7 +84,7 @@ internal abstract class ConfigurationManagementOperation : Operation
         }
 
         _options.ConfigurationBranch = $"darc/{_options.ConfigurationBaseBranch}-{Guid.NewGuid().ToString().Substring(0, 8)}";
-        _logger.LogInformation("Creating new configuration branch {branch}", _options.ConfigurationBranch);
+        Console.WriteLine("Creating new configuration branch {0}", _options.ConfigurationBranch);
         await remote.CreateNewBranchAsync(_options.ConfigurationRepository, _options.ConfigurationBaseBranch, _options.ConfigurationBranch);
     }
 
@@ -109,7 +113,7 @@ internal abstract class ConfigurationManagementOperation : Operation
 
     protected async Task RemoveConfigurationFile(string fileName)
     {
-        _logger.LogInformation("Removing {fileName} from {branch}...", fileName, _options.ConfigurationBranch);
+        Console.WriteLine("Removing {0} from {1}...", fileName, _options.ConfigurationBranch);
         await _configurationRepo.CommitFilesAsync(
             [
                 new GitFile(fileName, null, ContentEncoding.Utf8, operation: GitFileOperation.Delete)
@@ -121,7 +125,7 @@ internal abstract class ConfigurationManagementOperation : Operation
 
     protected async Task CreatePullRequest(string repoUri, string headBranch, string targetBranch, string title, string description = null)
     {
-        _logger.LogInformation("Creating pull request from {headBranch} to {targetBranch}...", headBranch, targetBranch);
+        Console.WriteLine("Creating pull request from {0} to {1}...", headBranch, targetBranch);
         var remote = await _remoteFactory.CreateRemoteAsync(repoUri);
         var prUrl = await remote.CreatePullRequestAsync(repoUri, new PullRequest()
         {
@@ -130,6 +134,6 @@ internal abstract class ConfigurationManagementOperation : Operation
             Title = title,
             Description = description,
         });
-        _logger.LogInformation("Created pull request at {prUrl}", prUrl);
+        Console.WriteLine("Created pull request at {0}", prUrl);
     }
 }
