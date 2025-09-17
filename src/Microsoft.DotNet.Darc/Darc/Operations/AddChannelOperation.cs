@@ -46,19 +46,17 @@ internal class AddChannelOperation : ConfigurationManagementOperation
                 return Constants.ErrorCode;
             }
 
-            bool openPr = string.IsNullOrEmpty(_options.ConfigurationBranch);
-
-            await CreateConfigurationBranchIfNeeded();
-
-            List<ChannelYamlData> channels = await GetConfiguration<ChannelYamlData>(ChannelConfigurationFileName);
-
-            _logger.LogInformation("Found {channelCount} existing channels", channels.Count);
+            List<ChannelYamlData> channels = await GetConfiguration<ChannelYamlData>(ChannelConfigurationFileName, _options.ConfigurationBaseBranch);
 
             if (channels.Any(c => c.Name == _options.Name))
             {
                 _logger.LogError("An existing channel with name '{channelName}' already exists", _options.Name);
                 return Constants.ErrorCode;
             }
+
+            bool openPr = string.IsNullOrEmpty(_options.ConfigurationBranch);
+
+            await CreateConfigurationBranchIfNeeded();
 
             // TODO: Put the channel in the right spot in the file
             channels.Add(new ChannelYamlData()

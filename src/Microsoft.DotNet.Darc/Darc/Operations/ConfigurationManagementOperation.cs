@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
+#nullable enable
 namespace Microsoft.DotNet.Darc.Operations;
 
 /// <summary>
@@ -49,7 +50,7 @@ internal abstract class ConfigurationManagementOperation : Operation
     protected async Task CreateConfigurationBranchIfNeeded()
     {
         var color = Console.ForegroundColor;
-        Console.ForegroundColor = ConsoleColor.Yellow;
+        Console.ForegroundColor = ConsoleColor.DarkYellow;
         Console.WriteLine($"⚠️⚠️⚠️ Maestro channels and subscriptions are now managed as code via a configuration repository", _options.ConfigurationRepository);
         Console.ForegroundColor = color;
 
@@ -88,13 +89,15 @@ internal abstract class ConfigurationManagementOperation : Operation
         await remote.CreateNewBranchAsync(_options.ConfigurationRepository, _options.ConfigurationBaseBranch, _options.ConfigurationBranch);
     }
 
-    protected async Task<List<T>> GetConfiguration<T>(string fileName)
+    protected async Task<List<T>> GetConfiguration<T>(string fileName, string? branch = null)
     {
+        branch ??= _options.ConfigurationBranch;
+
         _logger.LogInformation("Reading configuration from {fileName}...", fileName);
         var contents = await _configurationRepo.GetFileContentsAsync(
             fileName,
             _options.ConfigurationRepository,
-            _options.ConfigurationBranch);
+            branch);
 
         return _yamlDeserializer.Deserialize<List<T>>(contents);
     }
