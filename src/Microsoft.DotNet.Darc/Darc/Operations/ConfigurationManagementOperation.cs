@@ -134,7 +134,7 @@ internal abstract class ConfigurationManagementOperation : Operation
             "Removing " + fileName);
     }
 
-    protected async Task CreatePullRequest(string repoUri, string headBranch, string targetBranch, string title, string description = null)
+    protected async Task CreatePullRequest(string repoUri, string headBranch, string targetBranch, string title, string? description = null)
     {
         Console.WriteLine("Creating pull request from {0} to {1}...", headBranch, targetBranch);
         var remote = await _remoteFactory.CreateRemoteAsync(repoUri);
