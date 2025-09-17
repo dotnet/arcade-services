@@ -2,10 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.Darc.Yaml;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -13,16 +16,19 @@ using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class AddChannelOperation : Operation
+internal class AddChannelOperation : ConfigurationManagementOperation
 {
     private readonly AddChannelCommandLineOptions _options;
     private readonly ILogger<AddChannelOperation> _logger;
     private readonly IBarApiClient _barClient;
 
     public AddChannelOperation(
-        AddChannelCommandLineOptions options,
-        IBarApiClient barClient,
-        ILogger<AddChannelOperation> logger)
+            AddChannelCommandLineOptions options,
+            IBarApiClient barClient,
+            IGitRepoFactory gitRepoFactory,
+            IRemoteFactory remoteFactory,
+            ILogger<AddChannelOperation> logger)
+        : base(options, gitRepoFactory, remoteFactory, logger)
     {
         _options = options;
         _barClient = barClient;
@@ -45,7 +51,28 @@ internal class AddChannelOperation : Operation
                 return Constants.ErrorCode;
             }
 
-            Channel newChannelInfo = await _barClient.CreateChannelAsync(_options.Name, _options.Classification);
+            await CreateConfigurationBranchIfNeeded();
+
+            List<ChannelYamlData> channels = await GetConfiguration<ChannelYamlData>(ChannelConfigurationFileName);
+
+            if (channels.Any(c => c.Name == _options.Name))
+            {
+                _logger.LogError("An existing channel with name '{channelName}' already exists", _options.Name);
+                return Constants.ErrorCode;
+            }
+
+            // TODO: Put the channel in the right spot in the file
+            channels.Add(new ChannelYamlData()
+            {
+                Name = _options.Name,
+                Classification = _options.Classification
+            });
+
+            await WriteConfigurationFile(ChannelConfigurationFileName, channels, $"Adding channel '{_options.Name}'");
+
+            var newChannelInfo = await _barClient.GetChannelAsync(_options.Name)
+                ?? throw new DarcException("Failed to create new channel.");
+
             switch (_options.OutputFormat)
             {
                 case DarcOutputType.json:
@@ -70,11 +97,6 @@ internal class AddChannelOperation : Operation
         catch (AuthenticationException e)
         {
             Console.WriteLine(e.Message);
-            return Constants.ErrorCode;
-        }
-        catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.Conflict)
-        {
-            _logger.LogError($"An existing channel with name '{_options.Name}' already exists");
             return Constants.ErrorCode;
         }
         catch (Exception e)
