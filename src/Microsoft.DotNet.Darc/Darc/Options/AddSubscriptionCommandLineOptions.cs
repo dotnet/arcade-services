@@ -24,9 +24,6 @@ internal class AddSubscriptionCommandLineOptions : SubscriptionCommandLineOption
     [Option("batchable", HelpText = "Whether this subscription's content can be updated in batches. Not supported when the subscription specifies merge policies or is a codeflow subscription (source-enabled).")]
     public bool Batchable { get; set; }
 
-    [Option('q', "quiet", HelpText = "Non-interactive mode (requires all elements to be passed on the command line).")]
-    public bool Quiet { get; set; }
-
     [Option("read-stdin", HelpText = "Interactive mode style (YAML), but read input from stdin. Implies -q")]
     public bool ReadStandardIn { get; set; }
 
