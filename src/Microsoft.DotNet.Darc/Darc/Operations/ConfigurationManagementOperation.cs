@@ -48,6 +48,8 @@ internal abstract class ConfigurationManagementOperation : Operation
 
     protected async Task CreateConfigurationBranchIfNeeded()
     {
+        _logger.LogWarning($"Warning - Maestro channels and subscriptions are now managed as code via a repository{Environment.NewLine}{{uri}}", _options.ConfigurationRepository);
+
         var remote = await _remoteFactory.CreateRemoteAsync(_options.ConfigurationRepository);
 
         if (!string.IsNullOrEmpty(_options.ConfigurationBranch))
