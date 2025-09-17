@@ -4,6 +4,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <SignAssembly>false</SignAssembly>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <IsPackable>true</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
