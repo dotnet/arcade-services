@@ -18,7 +18,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 /// </summary>
 internal abstract class ConfigurationManagementOperation : Operation
 {
-    protected const string ChannelConfigurationFileName = "channels/channels.yaml";
+    protected static NativePath ChannelConfigurationFileName = new("channels/channels.yaml");
 
     private static readonly ISerializer _yamlSerializer = new SerializerBuilder()
         .WithNamingConvention(NullNamingConvention.Instance)

@@ -172,7 +172,8 @@ public class RemoteRepoBase : GitRepoCloner
         await ExecuteGitCommand(["config", "user.name", user], workingDirectory);
         await ExecuteGitCommand(["config", "user.email", email], workingDirectory);
 
-        File.WriteAllLines(Path.Combine(workingDirectory, ".git/info/sparse-checkout"), ["eng/", ".config/", $"{VersionFiles.NugetConfigNames.First()}", $"{VersionFiles.GlobalJson}"]);
+        // TODO: This has to be handled better, just a hackathon hack for now
+        File.WriteAllLines(Path.Combine(workingDirectory, ".git/info/sparse-checkout"), ["eng/", ".config/", $"{VersionFiles.NugetConfigNames.First()}", $"{VersionFiles.GlobalJson}", "channels/", "default-channels/", "subscriptions/"]);
 
         await ExecuteGitCommand([$"-c", "core.askpass=", "-c", "credential.helper=", "pull", "--depth=1", remote, branch], workingDirectory, secretToMask: pat);
         await ExecuteGitCommand([$"checkout", branch], workingDirectory);
@@ -184,7 +185,6 @@ public class RemoteRepoBase : GitRepoCloner
     ///     Execute a git command
     /// </summary>
     /// <param name="arguments">Arguments to git</param>
-    /// <param name="logger">Logger</param>
     /// <param name="workingDirectory">Working directory</param>
     /// <param name="secretToMask">Mask this secret when calling the logger.</param>
     private async Task ExecuteGitCommand(string[] arguments, string workingDirectory, string secretToMask = null)
