@@ -12,6 +12,7 @@ internal interface IConfigurationManagementCommandLineOptions
     string ConfigurationBranch { get; set; }
     string ConfigurationRepository { get; set; }
     bool Quiet { get; set; }
+    bool NoPr { get; set; }
 }
 
 /// <summary>
@@ -29,6 +30,9 @@ internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLi
 
     [Option("configuration-base-branch", HelpText = "Only applies when configuration branch is being created. Base branch to created the configuration branch off of.", Required = false, Default = "production")]
     public string ConfigurationBaseBranch { get; set; }
+
+    [Option("no-pr", HelpText = "Do not open a PR against the configuration repository (pushes the configuration branch only)", Default = false)]
+    public bool NoPr { get; set; }
 
     [Option('q', "quiet", HelpText = "Non-interactive mode (requires all elements to be passed on the command line).")]
     public bool Quiet { get; set; }

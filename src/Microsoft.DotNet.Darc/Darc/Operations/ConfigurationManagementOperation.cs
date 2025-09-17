@@ -78,6 +78,7 @@ internal abstract class ConfigurationManagementOperation : Operation
 
     protected async Task<List<T>> GetConfiguration<T>(string fileName)
     {
+        _logger.LogInformation("Reading configuration from {fileName}...", fileName);
         var contents = await _configurationRepo.GetFileContentsAsync(
             fileName,
             _options.ConfigurationRepository,
@@ -88,6 +89,7 @@ internal abstract class ConfigurationManagementOperation : Operation
 
     protected async Task WriteConfigurationFile(string fileName, object content, string commitMessage)
     {
+        _logger.LogInformation("Pushing changes of {fileName} to {branch}...", fileName, _options.ConfigurationBranch);
         await _configurationRepo.CommitFilesAsync(
             [
                 new GitFile(fileName, _yamlSerializer.Serialize(content))
@@ -99,6 +101,7 @@ internal abstract class ConfigurationManagementOperation : Operation
 
     protected async Task RemoveConfigurationFile(string fileName)
     {
+        _logger.LogInformation("Removing {fileName} from {branch}...", fileName, _options.ConfigurationBranch);
         await _configurationRepo.CommitFilesAsync(
             [
                 new GitFile(fileName, null, ContentEncoding.Utf8, operation: GitFileOperation.Delete)
@@ -106,5 +109,19 @@ internal abstract class ConfigurationManagementOperation : Operation
             _options.ConfigurationRepository,
             _options.ConfigurationBranch,
             "Removing " + fileName);
+    }
+
+    protected async Task CreatePullRequest(string repoUri, string headBranch, string targetBranch, string title, string description = null)
+    {
+        _logger.LogInformation("Creating pull request from {headBranch} to {targetBranch}...", headBranch, targetBranch);
+        var remote = await _remoteFactory.CreateRemoteAsync(repoUri);
+        var prUrl = await remote.CreatePullRequestAsync(repoUri, new PullRequest()
+        {
+            HeadBranch = headBranch,
+            BaseBranch = targetBranch,
+            Title = title,
+            Description = description,
+        });
+        _logger.LogInformation("Created pull request at {prUrl}", prUrl);
     }
 }
