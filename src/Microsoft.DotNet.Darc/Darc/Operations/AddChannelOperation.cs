@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc.Yaml;
@@ -69,7 +70,7 @@ internal class AddChannelOperation : ConfigurationManagementOperation
             _logger.LogInformation("Adding channel '{channelName}' to {fileName}", _options.Name, ChannelConfigurationFileName);
             await WriteConfigurationFile(ChannelConfigurationFileName, channels, $"Adding channel '{_options.Name}'");
 
-            if (!_options.NoPr)
+            if (!_options.NoPr && (_options.Quiet || UxHelpers.PromptForYesNo($"Create PR with changes in {_options.ConfigurationRepository}?")))
             {
                 await CreatePullRequest(
                     _options.ConfigurationRepository,
