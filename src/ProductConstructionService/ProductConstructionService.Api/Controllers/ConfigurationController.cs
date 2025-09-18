@@ -19,13 +19,13 @@ public class ConfigurationController(IConfigurationDataIngestor configurationDat
     : Controller
 {
     [HttpGet(Name = "refresh")]
-    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(bool), Description = "Refresh subscription configuration from a given source")]
+    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(ConfigurationIngestResults), Description = "Refresh subscription configuration from a given source and return ingestion stats")]
     public async Task<IActionResult> RefreshConfiguration(string repoUri, string branch)
     {
         try
         {
-            await configurationDataIngestor.IngestConfiguration(repoUri, branch);
-            return Ok(true);
+            ConfigurationIngestResults stats = await configurationDataIngestor.IngestConfiguration(repoUri, branch);
+            return Ok(stats);
         }
         catch (Exception e)
         {
@@ -34,7 +34,7 @@ public class ConfigurationController(IConfigurationDataIngestor configurationDat
     }
 
     [HttpDelete(Name = "delete")]
-    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(bool), Description = "Delete in subscription configuration from a given source")]
+    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(ConfigurationIngestResults), Description = "Delete subscription configuration from a given source and return stats of removed entities")]
     [SwaggerApiResponse(HttpStatusCode.BadRequest, Type = typeof(ApiError), Description = "Cannot delete configuration for the specified branch")]
     public async Task<IActionResult> ClearConfiguration(string repoUri, string branch)
     {
@@ -45,8 +45,8 @@ public class ConfigurationController(IConfigurationDataIngestor configurationDat
 
         try
         {
-            await configurationDataIngestor.ClearConfiguration(repoUri, branch);
-            return Ok(true);
+            ConfigurationIngestResults stats = await configurationDataIngestor.ClearConfiguration(repoUri, branch);
+            return Ok(stats);
         }
         catch (Exception e)
         {

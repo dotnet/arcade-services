@@ -23,8 +23,8 @@ namespace Maestro.DataProviders;
 
 public interface IConfigurationDataIngestor
 {
-    Task ClearConfiguration(string repoUri, string branch);
-    Task IngestConfiguration(string repoUri, string branch);
+    Task<ConfigurationIngestResults> ClearConfiguration(string repoUri, string branch);
+    Task<ConfigurationIngestResults> IngestConfiguration(string repoUri, string branch);
 }
 
 public class ConfigurationDataIngestor : IConfigurationDataIngestor
@@ -43,9 +43,11 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
         _logger = logger;
     }
 
-    public async Task ClearConfiguration(string repoUri, string branch)
+    public async Task<ConfigurationIngestResults> ClearConfiguration(string repoUri, string branch)
     {
         _logger.LogInformation("Starting to clear configuration for repository {RepoUri} on branch {Branch}", repoUri, branch);
+
+        var stats = new ConfigurationIngestResults();
 
         if (branch == "staging" || branch == "production")
         {
@@ -61,22 +63,26 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
         if (configurationSource == null)
         {
             _logger.LogInformation("No configuration source found for repository {RepoUri} on branch {Branch}. Nothing to clear.", repoUri, branch);
-            return;
+            return stats;
         }
 
-        _logger.LogInformation("Found configuration source {ConfigurationSourceId} for repository {RepoUri} on branch {Branch}. Proceeding with clear operation.", 
+        _logger.LogInformation("Found configuration source {ConfigurationSourceId} for repository {RepoUri} on branch {Branch}. Proceeding with clear operation.",
             configurationSource.Id, repoUri, branch);
 
-        await IngestConfigurationInternal(repoUri, branch, configurationSource, [], [], []);
+        // Pass empty lists to cause removal of all existing items for this source.
+        await IngestConfigurationInternal(repoUri, branch, configurationSource, [], [], [], stats);
         _context.ConfigurationSources.Remove(configurationSource);
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Successfully cleared configuration for repository {RepoUri} on branch {Branch}", repoUri, branch);
+        return stats;
     }
 
-    public async Task IngestConfiguration(string repoUri, string branch)
+    public async Task<ConfigurationIngestResults> IngestConfiguration(string repoUri, string branch)
     {
         _logger.LogInformation("Starting configuration ingestion for repository {RepoUri} on branch {Branch}", repoUri, branch);
+
+        var stats = new ConfigurationIngestResults();
 
         try
         {
@@ -87,7 +93,7 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
             IReadOnlyList<GitFile> channelFiles = await GetFilesAsync(repo, repoUri, branch, "channels");
             IReadOnlyList<GitFile> defaultChannelFiles = await GetFilesAsync(repo, repoUri, branch, "default-channels");
 
-            _logger.LogInformation("Retrieved {SubscriptionFileCount} subscription files, {ChannelFileCount} channel files, {DefaultChannelFileCount} default channel files", 
+            _logger.LogInformation("Retrieved {SubscriptionFileCount} subscription files, {ChannelFileCount} channel files, {DefaultChannelFileCount} default channel files",
                 subscriptionFiles.Count, channelFiles.Count, defaultChannelFiles.Count);
 
             IDeserializer serializer = new DeserializerBuilder().Build();
@@ -100,7 +106,7 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
             IReadOnlyList<DefaultChannelYamlData> ingestedDefaultChannels =
                 [.. defaultChannelFiles.SelectMany(f => serializer.Deserialize<List<DefaultChannelYamlData>>(f.Content))];
 
-            _logger.LogInformation("Deserialized {SubscriptionCount} subscriptions, {ChannelCount} channels, {DefaultChannelCount} default channels", 
+            _logger.LogInformation("Deserialized {SubscriptionCount} subscriptions, {ChannelCount} channels, {DefaultChannelCount} default channels",
                 ingestedSubscriptions.Count, ingestedChannels.Count, ingestedDefaultChannels.Count);
 
             var configurationSource = await _context.ConfigurationSources
@@ -113,9 +119,11 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
                 configurationSource,
                 ingestedChannels,
                 ingestedDefaultChannels,
-                ingestedSubscriptions);
+                ingestedSubscriptions,
+                stats);
 
             _logger.LogInformation("Successfully completed configuration ingestion for repository {RepoUri} on branch {Branch}", repoUri, branch);
+            return stats;
         }
         catch (DbUpdateException e)
         {
@@ -135,7 +143,8 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
         ConfigurationSource? configurationSource,
         IReadOnlyList<ChannelYamlData> ingestedChannels,
         IReadOnlyList<DefaultChannelYamlData> ingestedDefaultChannels,
-        IReadOnlyCollection<SubscriptionYamlData> ingestedSubscriptions)
+        IReadOnlyCollection<SubscriptionYamlData> ingestedSubscriptions,
+        ConfigurationIngestResults stats)
     {
         try
         {
@@ -161,20 +170,20 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
                 .Where(dc => dc.ConfigurationSourceId == configurationSource.Id)
                 .ToList();
 
-            _logger.LogInformation("Found {ExistingSubscriptionCount} existing subscriptions, {ExistingChannelCount} existing channels, {ExistingDefaultChannelCount} existing default channels", 
+            _logger.LogInformation("Found {ExistingSubscriptionCount} existing subscriptions, {ExistingChannelCount} existing channels, {ExistingDefaultChannelCount} existing default channels",
                 existingSubscriptions.Count, existingChannels.Count, existingDefaultChannels.Count);
 
             // Remove any subscriptions, channels, or default channels that are no longer present in the configuration
             _logger.LogInformation("Removing entities no longer present in configuration");
-            RemoveSubscriptions(existingSubscriptions, ingestedSubscriptions);
-            RemoveDefaultChannels(existingDefaultChannels, ingestedDefaultChannels);
-            RemoveChannels(existingChannels, ingestedChannels);
+            RemoveSubscriptions(existingSubscriptions, ingestedSubscriptions, stats);
+            RemoveDefaultChannels(existingDefaultChannels, ingestedDefaultChannels, stats);
+            RemoveChannels(existingChannels, ingestedChannels, stats);
 
             // Add or update any items
             _logger.LogInformation("Adding or updating entities from configuration");
-            AddOrUpdateChannels(existingChannels, ingestedChannels, configurationSource);
-            AddOrUpdateDefaultChannels(existingDefaultChannels, ingestedDefaultChannels, existingChannels, configurationSource);
-            AddOrUpdateSubscriptions(existingSubscriptions, ingestedSubscriptions, existingChannels, configurationSource);
+            AddOrUpdateChannels(existingChannels, ingestedChannels, configurationSource, stats);
+            AddOrUpdateDefaultChannels(existingDefaultChannels, ingestedDefaultChannels, existingChannels, configurationSource, stats);
+            AddOrUpdateSubscriptions(existingSubscriptions, ingestedSubscriptions, existingChannels, configurationSource, stats);
 
             await _context.SaveChangesAsync();
             _logger.LogDebug("Successfully committed database transaction for configuration ingestion");
@@ -205,13 +214,14 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
         Dictionary<Guid, Subscription> existingSubscriptions,
         IReadOnlyCollection<SubscriptionYamlData> ingestedSubscriptions,
         Dictionary<string, Channel> existingChannels,
-        ConfigurationSource configurationSource)
+        ConfigurationSource configurationSource,
+        ConfigurationIngestResults stats)
     {
         _logger.LogInformation("Processing {SubscriptionCount} subscriptions for add/update operations", ingestedSubscriptions.Count);
 
         foreach (SubscriptionYamlData subscription in ingestedSubscriptions)
         {
-            _logger.LogInformation("Processing subscription {SubscriptionId} from {SourceRepository} to {TargetRepository}/{TargetBranch} on channel {Channel}", 
+            _logger.LogInformation("Processing subscription {SubscriptionId} from {SourceRepository} to {TargetRepository}/{TargetBranch} on channel {Channel}",
                 subscription.Id, subscription.SourceRepository, subscription.TargetRepository, subscription.TargetBranch, subscription.Channel);
 
             if (subscription.Id == Guid.Empty)
@@ -311,6 +321,7 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
                 _logger.LogInformation("Adding new subscription {SubscriptionId}", subscription.Id);
                 var ns = _context.Subscriptions.Add(subscriptionModel);
                 existingSubscriptions.Add(subscription.Id, ns.Entity);
+                stats.Subscriptions.Added++;
             }
             else
             {
@@ -347,6 +358,7 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
                 // TODO: Excluded assets need an ID
 
                 _context.Subscriptions.Update(existingSubscription);
+                stats.Subscriptions.Updated++;
             }
         }
 
@@ -356,7 +368,8 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
     private void AddOrUpdateChannels(
         Dictionary<string, Channel> existingChannels,
         IReadOnlyList<ChannelYamlData> ingestedChannels,
-        ConfigurationSource configurationSource)
+        ConfigurationSource configurationSource,
+        ConfigurationIngestResults stats)
     {
         _logger.LogInformation("Processing {ChannelCount} channels for add/update operations", ingestedChannels.Count);
 
@@ -373,11 +386,13 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
                 _logger.LogInformation("Adding new channel {ChannelName}", channelData.Name);
                 var newChannel = _context.Channels.Add(channel);
                 existingChannels[channel.Name] = newChannel.Entity;
+                stats.Channels.Added++;
             }
             else
             {
                 channel.Classification = channelData.Classification;
                 _context.Channels.Update(channel);
+                stats.Channels.Updated++;
             }
         }
     }
@@ -386,7 +401,8 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
         List<DefaultChannel> existingDefaultChannels,
         IReadOnlyList<DefaultChannelYamlData> ingestedDefaultChannels,
         Dictionary<string, Channel> existingChannels,
-        ConfigurationSource configurationSource)
+        ConfigurationSource configurationSource,
+        ConfigurationIngestResults stats)
     {
         _logger.LogInformation("Processing {DefaultChannelCount} default channels for add/update operations", ingestedDefaultChannels.Count);
 
@@ -416,22 +432,25 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
                     Enabled = defaultChannelData.Enabled,
                     ConfigurationSource = configurationSource,
                 };
-                _logger.LogInformation("Adding new default channel for {Repository} / {Branch} on channel {ChannelName}", 
+                _logger.LogInformation("Adding new default channel for {Repository} / {Branch} on channel {ChannelName}",
                     repository, defaultChannelData.Branch, defaultChannelData.Channel);
                 var newDc = _context.DefaultChannels.Add(defaultChannel);
                 existingDefaultChannels.Add(newDc.Entity);
+                stats.DefaultChannels.Added++;
             }
             else
             {
                 defaultChannel.Enabled = defaultChannelData.Enabled;
                 _context.DefaultChannels.Update(defaultChannel);
+                stats.DefaultChannels.Updated++;
             }
         }
     }
 
     private void RemoveSubscriptions(
         Dictionary<Guid, Subscription> existingSubscriptions,
-        IReadOnlyCollection<SubscriptionYamlData> subscriptions)
+        IReadOnlyCollection<SubscriptionYamlData> subscriptions,
+        ConfigurationIngestResults stats)
     {
         if (existingSubscriptions.Count == 0)
         {
@@ -451,9 +470,10 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
         HashSet<Guid> toRemove = [.. existingSubscriptions.Keys.Except(newIds)];
         if (toRemove.Count > 0)
         {
-            _logger.LogInformation("Removing {SubscriptionCount} subscriptions that are no longer in configuration: {SubscriptionIds}", 
+            _logger.LogInformation("Removing {SubscriptionCount} subscriptions that are no longer in configuration: {SubscriptionIds}",
                 toRemove.Count, string.Join(", ", toRemove));
             _context.Subscriptions.RemoveRange(existingSubscriptions.Values.Where(s => toRemove.Contains(s.Id)));
+            stats.Subscriptions.Removed += toRemove.Count;
         }
         else
         {
@@ -463,7 +483,8 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
 
     private void RemoveChannels(
         Dictionary<string, Channel> existingChannels,
-        IReadOnlyList<ChannelYamlData> channels)
+        IReadOnlyList<ChannelYamlData> channels,
+        ConfigurationIngestResults stats)
     {
         if (existingChannels.Count == 0)
         {
@@ -482,9 +503,10 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
         HashSet<string> toRemove = [.. existingChannels.Keys.Except(newNames)];
         if (toRemove.Count > 0)
         {
-            _logger.LogInformation("Removing {ChannelCount} channels that are no longer in configuration: {ChannelNames}", 
+            _logger.LogInformation("Removing {ChannelCount} channels that are no longer in configuration: {ChannelNames}",
                 toRemove.Count, string.Join(", ", toRemove));
             _context.Channels.RemoveRange(existingChannels.Values.Where(c => toRemove.Contains(c.Name)));
+            stats.Channels.Removed += toRemove.Count;
         }
         else
         {
@@ -494,7 +516,8 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
 
     private void RemoveDefaultChannels(
         List<DefaultChannel> existingDefaultChannels,
-        IReadOnlyList<DefaultChannelYamlData> defaultChannels)
+        IReadOnlyList<DefaultChannelYamlData> defaultChannels,
+        ConfigurationIngestResults stats)
     {
         if (existingDefaultChannels.Count == 0)
         {
@@ -513,6 +536,7 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
         {
             _logger.LogInformation("Removing {DefaultChannelCount} default channels that are no longer in configuration", toRemove.Count);
             _context.DefaultChannels.RemoveRange(existingDefaultChannels.Where(dc => toRemove.Contains(dc.Id)));
+            stats.Channels.Removed += toRemove.Count;
         }
         else
         {

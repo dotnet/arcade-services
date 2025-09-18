@@ -14,13 +14,13 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 {
     public partial interface IConfiguration
     {
-        Task<bool> RefreshConfigurationAsync(
+        Task<Models.ConfigurationIngestResults> RefreshConfigurationAsync(
             string branch,
             string repoUri,
             CancellationToken cancellationToken = default
         );
 
-        Task<bool> ClearConfigurationAsync(
+        Task<Models.ConfigurationIngestResults> ClearConfigurationAsync(
             string branch,
             string repoUri,
             CancellationToken cancellationToken = default
@@ -41,7 +41,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         partial void HandleFailedRefreshConfigurationRequest(RestApiException ex);
 
-        public async Task<bool> RefreshConfigurationAsync(
+        public async Task<Models.ConfigurationIngestResults> RefreshConfigurationAsync(
             string branch,
             string repoUri,
             CancellationToken cancellationToken = default
@@ -98,7 +98,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<bool>(_content);
+                        var _body = Client.Deserialize<Models.ConfigurationIngestResults>(_content);
                         return _body;
                     }
                 }
@@ -130,7 +130,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         partial void HandleFailedClearConfigurationRequest(RestApiException ex);
 
-        public async Task<bool> ClearConfigurationAsync(
+        public async Task<Models.ConfigurationIngestResults> ClearConfigurationAsync(
             string branch,
             string repoUri,
             CancellationToken cancellationToken = default
@@ -187,7 +187,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<bool>(_content);
+                        var _body = Client.Deserialize<Models.ConfigurationIngestResults>(_content);
                         return _body;
                     }
                 }
