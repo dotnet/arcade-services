@@ -56,7 +56,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
             sourceBuildNumber,
             sourceAssets);
 
-        await using IAsyncDisposable _ = await AddBuildToChannelAsync(build.Id, testChannelName);
+        await AddBuildToChannelAsync(build.Id, testChannelName);
 
         using TemporaryDirectory repo = targetAzDO
             ? await CloneAzDoRepositoryAsync(TestRepository.TestRepo2Name)
@@ -217,7 +217,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
                     var repoSha = (await GitGetCurrentSha()).TrimEnd();
                     Build build = await CreateBuildAsync(GetRepoUrl(TestRepository.TestOrg, sourceRepo), sourceBranch, repoSha, sourceBuildNumber, sourceAssets);
 
-                    await using IAsyncDisposable _ = await AddBuildToChannelAsync(build.Id, testChannelName);
+                    await AddBuildToChannelAsync(build.Id, testChannelName);
 
                     // and push it to GH
                     await using (await PushGitBranchAsync("origin", vmrBranch))

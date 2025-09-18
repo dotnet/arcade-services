@@ -90,7 +90,7 @@ internal class ScenarioTests_MergePolicies : ScenarioTestBase
 
         TestContext.WriteLine("Set up build for intake into target repository");
         var build = await CreateBuildAsync(sourceRepoUri, sourceBranch, sourceCommit, sourceBuildNumber, sourceAssets);
-        await using IAsyncDisposable _ = await AddBuildToChannelAsync(build.Id, testChannelName);
+        await AddBuildToChannelAsync(build.Id, testChannelName);
 
         TestContext.WriteLine("Cloning target repo to prepare the target branch");
         using TemporaryDirectory repo = await CloneRepositoryAsync(targetRepo);

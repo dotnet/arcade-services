@@ -856,14 +856,9 @@ internal abstract partial class ScenarioTestBase
         await PcsApi.Subscriptions.TriggerSubscriptionAsync(0, force: false, Guid.Parse(subscriptionId));
     }
 
-    protected static async Task<IAsyncDisposable> AddBuildToChannelAsync(int buildId, string channelName)
+    protected static async Task AddBuildToChannelAsync(int buildId, string channelName)
     {
         await RunDarcAsync("add-build-to-channel", "--id", buildId.ToString(), "--channel", channelName, "--skip-assets-publishing");
-        return AsyncDisposable.Create(async () =>
-        {
-            TestContext.WriteLine($"Removing build {buildId} from channel {channelName}");
-            await RunDarcAsync("delete-build-from-channel", "--id", buildId.ToString(), "--channel", channelName);
-        });
     }
 
     protected static async Task DeleteBuildFromChannelAsync(string buildId, string channelName)
