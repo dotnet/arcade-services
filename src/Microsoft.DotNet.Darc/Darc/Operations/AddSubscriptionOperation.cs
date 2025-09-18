@@ -296,18 +296,36 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 return Constants.ErrorCode;
             }
 
+            await CreateConfigurationBranchIfNeeded();
+            var subscriptionsFilePath = GetConfigurationFilePath(targetRepository);
+            List<SubscriptionYamlData> subscriptions = await GetConfiguration<SubscriptionYamlData>(subscriptionsFilePath);
+            var newSubscription = new SubscriptionYamlData
+            {
+                Id = Guid.NewGuid(),
+                Channel = channel,
+                SourceRepository = sourceRepository,
+                TargetRepository = targetRepository,
+                TargetBranch = targetBranch,
+                UpdateFrequency = updateFrequency,
+                Batchable = batchable ? "true" : "false",
+                MergePolicies = mergePolicies.Select(mp => new MergePolicyYamlData
+                {
+                    Name = mp.Name,
+                    Properties = mp.Properties.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value.ToString())
+                }).ToList(),
+                FailureNotificationTags = failureNotificationTags,
+                SourceEnabled = sourceEnabled ? "true" : "false",
+                SourceDirectory = sourceDirectory,
+                TargetDirectory = targetDirectory,
+                ExcludedAssets = excludedAssets,
+                Enabled = "true"
+            };
             // Check for codeflow subscription conflicts (source-enabled subscriptions)
             if (sourceEnabled)
             {
                 try
                 {
-                    await ValidateCodeflowSubscriptionConflicts(
-                        sourceRepository, 
-                        targetRepository, 
-                        targetBranch, 
-                        sourceDirectory, 
-                        targetDirectory, 
-                        existingSubscriptionId: null); // null for create (no existing subscription id)
+                    ValidateCodeflowSubscriptionConflicts(subscriptions, newSubscription);
                 }
                 catch (ArgumentException)
                 {
@@ -318,10 +336,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
 
             bool openPr = string.IsNullOrEmpty(_options.ConfigurationBranch);
 
-            await CreateConfigurationBranchIfNeeded();
-            var subscriptionsFilePath = SubscriptionConfigurationFolderPath / targetRepository.Split('/', StringSplitOptions.RemoveEmptyEntries).Last();
-            List<SubscriptionYamlData> subscriptions = await GetConfiguration<SubscriptionYamlData>(subscriptionsFilePath);
-            subscriptions.Add(new SubscriptionYamlData
+            SubscriptionYamlData newSub = new()
             {
                 Id = Guid.NewGuid(),
                 Channel = channel,
@@ -340,9 +355,10 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 SourceDirectory = sourceDirectory,
                 TargetDirectory = targetDirectory,
                 ExcludedAssets = excludedAssets
-            });
+            };
+            subscriptions.Add(newSub);
 
-            var subscriptionInfo = $"{sourceRepository} ({channel}) ==> {targetRepository} ({targetBranch})";
+            var subscriptionInfo = GetSubscriptionDescription(newSub);
             await WriteConfigurationFile(subscriptionsFilePath, subscriptions, $"Adding subscription {subscriptionInfo}");
             if (!_options.NoPr && (_options.Quiet || UxHelpers.PromptForYesNo($"Create PR with changes in {_options.ConfigurationRepository}?")))
             {
@@ -350,7 +366,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                     _options.ConfigurationRepository,
                     _options.ConfigurationBranch,
                     _options.ConfigurationBaseBranch,
-                    $"Add channel '{subscriptionInfo}'",
+                    $"Add subscription '{subscriptionInfo}'",
                     string.Empty);
             }
             Console.WriteLine($"Successfully created new subscription");

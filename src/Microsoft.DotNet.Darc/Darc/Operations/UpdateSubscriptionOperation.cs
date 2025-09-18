@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
-using CommandLine;
+using Maestro.Common;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
@@ -46,6 +46,13 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
         // First, try to get the subscription. If it doesn't exist the call will throw and the exception will be
         // caught by `RunOperation`
         Subscription subscription = await _barClient.GetSubscriptionAsync(_options.Id);
+
+        await CreateConfigurationBranchIfNeeded();
+
+        var subscriptionFilePath = GetConfigurationFilePath(subscription.TargetRepository);
+        List<SubscriptionYamlData> subscriptions = await GetConfiguration<SubscriptionYamlData>(subscriptionFilePath, _options.ConfigurationBaseBranch);
+        var subscriptionInFile = subscriptions.FirstOrDefault(s => s.Id == subscription.Id) ??
+            throw new DarcException($"Subscription '{subscription.Id}' not found in configuration file '{subscriptionFilePath}' @ {_options.ConfigurationRepository}/{_options.ConfigurationBaseBranch}.");
 
         var suggestedRepos = _barClient.GetSubscriptionsAsync();
         var suggestedChannels = _barClient.GetChannelsAsync();
@@ -257,38 +264,38 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
             excludedAssets = [..updateSubscriptionPopUp.ExcludedAssets];
         }
 
+        // need to create a new subscription and not change an existing one to properly validate below
+        SubscriptionYamlData updatedSubscription = new()
+        {
+            Channel = channel ?? subscription.Channel.Name,
+            SourceRepository = sourceRepository ?? subscription.SourceRepository,
+            TargetRepository = subscription.TargetRepository,
+            TargetBranch = subscription.TargetBranch,
+            Enabled = enabled ? "true" : "false",
+            MergePolicies = mergePolicies.Select(mp => new MergePolicyYamlData
+            {
+                Name = mp.Name,
+                Properties = mp.Properties.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value.ToString())
+            }).ToList(),
+            FailureNotificationTags = failureNotificationTags,
+            SourceEnabled = sourceEnabled ? "true" : "false",
+            ExcludedAssets = excludedAssets,
+            SourceDirectory = sourceDirectory,
+            TargetDirectory = targetDirectory,
+            UpdateFrequency = updateFrequency,
+            Batchable = batchable ? "true" : "false",
+        };
+
         try
         {
-            var subscriptionToUpdate = new SubscriptionUpdate
-            {
-                ChannelName = channel ?? subscription.Channel.Name,
-                SourceRepository = sourceRepository ?? subscription.SourceRepository,
-                Enabled = enabled,
-                Policy = subscription.Policy,
-                PullRequestFailureNotificationTags = failureNotificationTags,
-                SourceEnabled = sourceEnabled,
-                ExcludedAssets = excludedAssets,
-                SourceDirectory = sourceDirectory,
-                TargetDirectory = targetDirectory,
-            };
-
-            subscriptionToUpdate.Policy.Batchable = batchable;
-            subscriptionToUpdate.Policy.UpdateFrequency = Enum.Parse<UpdateFrequency>(updateFrequency, true);
-
-            subscriptionToUpdate.Policy.MergePolicies = mergePolicies;
-
             // Check for codeflow subscription conflicts (source-enabled subscriptions)
             if (sourceEnabled)
             {
                 try
                 {
-                    await ValidateCodeflowSubscriptionConflicts(
-                        subscriptionToUpdate.SourceRepository, 
-                        subscription.TargetRepository, 
-                        subscription.TargetBranch, 
-                        sourceDirectory, 
-                        targetDirectory, 
-                        subscription.Id); // existing subscription id for updates
+                    ValidateCodeflowSubscriptionConflicts(
+                        subscriptions,
+                        updatedSubscription);
                 }
                 catch (ArgumentException)
                 {
@@ -297,35 +304,31 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                 }
             }
 
-            var updatedSubscription = await _barClient.UpdateSubscriptionAsync(
-                _options.Id,
-                subscriptionToUpdate);
+            // update subscriptionInFile with updatedSubscription values
+            subscriptionInFile.Channel = updatedSubscription.Channel;
+            subscriptionInFile.SourceRepository = updatedSubscription.SourceRepository;
+            subscriptionInFile.Enabled = updatedSubscription.Enabled;
+            subscriptionInFile.MergePolicies = updatedSubscription.MergePolicies;
+            subscriptionInFile.FailureNotificationTags = updatedSubscription.FailureNotificationTags;
+            subscriptionInFile.SourceEnabled = updatedSubscription.SourceEnabled;
+            subscriptionInFile.ExcludedAssets = updatedSubscription.ExcludedAssets;
+            subscriptionInFile.SourceDirectory = updatedSubscription.SourceDirectory;
+            subscriptionInFile.TargetDirectory = updatedSubscription.TargetDirectory;
+            subscriptionInFile.UpdateFrequency = updatedSubscription.UpdateFrequency;
+            subscriptionInFile.Batchable = updatedSubscription.Batchable;
 
-            Console.WriteLine($"Successfully updated subscription with id '{updatedSubscription.Id}'.");
-
-            // Determine whether the subscription should be triggered.
-            if (!_options.NoTriggerOnUpdate)
+            var subscriptionInfo = GetSubscriptionDescription(subscriptionInFile);
+            await WriteConfigurationFile(subscriptionFilePath, subscriptions, $"Adding subscription {subscriptionInfo}");
+            if (!_options.NoPr && (_options.Quiet || UxHelpers.PromptForYesNo($"Create PR with changes in {_options.ConfigurationRepository}?")))
             {
-                bool triggerAutomatically = _options.TriggerOnUpdate;
-                // Determine whether we should prompt if the user hasn't explicitly
-                // said one way or another. We shouldn't prompt if nothing changes or
-                // if non-interesting options have changed
-                if (!triggerAutomatically &&
-                    ((subscriptionToUpdate.ChannelName != subscription.Channel.Name) ||
-                     (subscriptionToUpdate.SourceRepository != subscription.SourceRepository) ||
-                     (subscriptionToUpdate.Enabled.Value && !subscription.Enabled) ||
-                     (subscriptionToUpdate.Policy.UpdateFrequency != UpdateFrequency.None && subscriptionToUpdate.Policy.UpdateFrequency !=
-                         subscription.Policy.UpdateFrequency)))
-                {
-                    triggerAutomatically = UxHelpers.PromptForYesNo("Trigger this subscription immediately?");
-                }
-
-                if (triggerAutomatically)
-                {
-                    await _barClient.TriggerSubscriptionAsync(updatedSubscription.Id);
-                    Console.WriteLine($"Subscription '{updatedSubscription.Id}' triggered.");
-                }
+                await CreatePullRequest(
+                    _options.ConfigurationRepository,
+                    _options.ConfigurationBranch,
+                    _options.ConfigurationBaseBranch,
+                    $"Updating subscription '{subscriptionInfo}'",
+                    string.Empty);
             }
+            Console.WriteLine($"Successfully created new subscription");
 
             return Constants.SuccessCode;
         }

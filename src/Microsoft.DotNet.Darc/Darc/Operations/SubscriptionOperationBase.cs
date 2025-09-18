@@ -2,11 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.Darc.Yaml;
 using Microsoft.Extensions.Logging;
+using Microsoft.TeamFoundation.Build.WebApi;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -29,56 +33,55 @@ internal abstract class SubscriptionOperationBase : ConfigurationManagementOpera
     /// <summary>
     /// Validates that the codeflow subscription doesn't conflict with existing ones
     /// </summary>
-    protected async Task ValidateCodeflowSubscriptionConflicts(
-        string sourceRepository,
-        string targetRepository,
-        string targetBranch,
-        string sourceDirectory,
-        string targetDirectory,
-        Guid? existingSubscriptionId)
+    protected void ValidateCodeflowSubscriptionConflicts(
+        IReadOnlyCollection<SubscriptionYamlData> existingSubscriptions,
+        SubscriptionYamlData subscription)
     {
-        // Check for backflow conflicts (source directory not empty)
-        if (!string.IsNullOrEmpty(sourceDirectory))
+        if (subscription.SourceEnabled == "true")
         {
-            var backflowSubscriptions = await _barClient.GetSubscriptionsAsync(
-                targetRepo: targetRepository,
-                sourceEnabled: true);
+            return;
+        }
 
-            var conflictingBackflowSubscription = backflowSubscriptions.FirstOrDefault(sub =>
-                !string.IsNullOrEmpty(sub.SourceDirectory) &&
-                sub.TargetRepository == targetRepository &&
-                sub.TargetBranch == targetBranch &&
-                sub.Id != existingSubscriptionId);
-
+        // Check for backflow conflicts (source directory not empty)
+        if (!string.IsNullOrEmpty(subscription.SourceDirectory))
+        {
+            var conflictingBackflowSubscription = FindConflictingBackflowSubscription(existingSubscriptions, subscription);
             if (conflictingBackflowSubscription != null)
             {
-                _logger.LogError($"A backflow subscription '{conflictingBackflowSubscription.Id}' already exists for the same target repository and branch. " +
-                               "Only one backflow subscription is allowed per target repository and branch combination.");
-                throw new ArgumentException("Codeflow subscription conflict detected.");
+                throw new DarcException($"A backflow subscription '{conflictingBackflowSubscription.Id}' already exists for the same target repository and branch. " +
+                       "Only one backflow subscription is allowed per target repository and branch combination.");
             }
         }
 
         // Check for forward flow conflicts (target directory not empty)
-        if (!string.IsNullOrEmpty(targetDirectory))
+        if (!string.IsNullOrEmpty(subscription.TargetDirectory))
         {
-            var forwardFlowSubscriptions = await _barClient.GetSubscriptionsAsync(
-                targetRepo: targetRepository,
-                sourceEnabled: true,
-                targetDirectory: targetDirectory);
-
-            var conflictingForwardFlowSubscription = forwardFlowSubscriptions.FirstOrDefault(sub =>
-                !string.IsNullOrEmpty(sub.TargetDirectory) &&
-                sub.TargetRepository == targetRepository &&
-                sub.TargetBranch == targetBranch &&
-                sub.TargetDirectory == targetDirectory &&
-                sub.Id != existingSubscriptionId);
-
+            var conflictingForwardFlowSubscription = FindConflictingForwardFlowSubscription(existingSubscriptions, subscription);
             if (conflictingForwardFlowSubscription != null)
             {
-                _logger.LogError($"A forward flow subscription '{conflictingForwardFlowSubscription.Id}' already exists for the same VMR repository, branch, and target directory. " +
-                               "Only one forward flow subscription is allowed per VMR repository, branch, and target directory combination.");
-                throw new ArgumentException("Codeflow subscription conflict detected.");
+                throw new DarcException($"A forward flow subscription '{conflictingForwardFlowSubscription.Id}' already exists for the same VMR repository, branch, and target directory. " +
+                       "Only one forward flow subscription is allowed per VMR repository, branch, and target directory combination.");
             }
         }
     }
+
+    private static SubscriptionYamlData FindConflictingBackflowSubscription(IReadOnlyCollection<SubscriptionYamlData> existingSubscriptions, SubscriptionYamlData updatedOrNewSubscription) =>
+        existingSubscriptions.FirstOrDefault(sub =>
+            sub.SourceEnabled == "true"
+                && !string.IsNullOrEmpty(sub.SourceDirectory) // Backflow subscription
+                && sub.TargetRepository == updatedOrNewSubscription.TargetRepository
+                && sub.TargetBranch == updatedOrNewSubscription.TargetBranch
+                && sub.Id != updatedOrNewSubscription.Id);
+
+    private static SubscriptionYamlData FindConflictingForwardFlowSubscription(IReadOnlyCollection<SubscriptionYamlData> existingSubscriptions, SubscriptionYamlData updatedOrNewSubscription) =>
+        existingSubscriptions.FirstOrDefault(sub =>
+            sub.SourceEnabled == "true"
+                && !string.IsNullOrEmpty(sub.TargetDirectory) // Forward flow subscription
+                && sub.TargetRepository == updatedOrNewSubscription.TargetRepository
+                && sub.TargetBranch == updatedOrNewSubscription.TargetBranch
+                && sub.TargetDirectory == updatedOrNewSubscription.TargetDirectory
+                && sub.Id != updatedOrNewSubscription.Id);
+
+    protected static string GetConfigurationFilePath(string repoUri) => SubscriptionConfigurationFolderPath / $"{GitRepoUrlUtils.GetRepoNameAndOwner(repoUri).RepoName}.yml";
+    protected static string GetSubscriptionDescription(SubscriptionYamlData s) => $"({s.Id}) {s.SourceRepository} ({= s.Channel}) ==> {s.TargetRepository} ({s.TargetBranch})";
 }

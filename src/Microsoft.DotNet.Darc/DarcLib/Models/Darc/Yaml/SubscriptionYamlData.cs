@@ -23,9 +23,13 @@ public class SubscriptionYamlData
     private const string SourceDirectoryElement = "Source Directory";
     private const string TargetDirectoryElement = "Target Directory";
     private const string ExcludedAssetsElement = "Excluded Assets";
+    public const string EnabledElement = "Enabled";
 
     [YamlMember(Alias = IdElement, ApplyNamingConventions = false)]
     public Guid Id { get; set; }
+
+    [YamlMember(Alias = EnabledElement, ApplyNamingConventions = false)]
+    public string Enabled { get; set; }
 
     [YamlMember(Alias = ChannelElement, ApplyNamingConventions = false)]
     public string Channel { get; set; }
