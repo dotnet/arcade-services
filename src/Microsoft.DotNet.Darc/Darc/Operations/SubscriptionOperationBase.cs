@@ -83,5 +83,5 @@ internal abstract class SubscriptionOperationBase : ConfigurationManagementOpera
                 && sub.Id != updatedOrNewSubscription.Id);
 
     protected static string GetConfigurationFilePath(string repoUri) => SubscriptionConfigurationFolderPath / $"{GitRepoUrlUtils.GetRepoNameAndOwner(repoUri).RepoName}.yml";
-    protected static string GetSubscriptionDescription(SubscriptionYamlData s) => $"({s.Id}) {s.SourceRepository} ({= s.Channel}) ==> {s.TargetRepository} ({s.TargetBranch})";
+    protected static string GetSubscriptionDescription(SubscriptionYamlData s) => $"({s.Id}) {s.SourceRepository} ({s.Channel}) ==> {s.TargetRepository} ({s.TargetBranch})";
 }
