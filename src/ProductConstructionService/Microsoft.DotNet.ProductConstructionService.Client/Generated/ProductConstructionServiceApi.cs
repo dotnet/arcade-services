@@ -30,10 +30,10 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         IAzDo AzDo { get; }
         IBuilds Builds { get; }
         IBuildTime BuildTime { get; }
-        IChannels Channels { get; }
         IConfiguration Configuration { get; }
         IDefaultChannels DefaultChannels { get; }
         IGoal Goal { get; }
+        IChannels Channels { get; }
         IPipelines Pipelines { get; }
         IPullRequest PullRequest { get; }
         IRepository Repository { get; }
@@ -122,13 +122,13 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         public IBuildTime BuildTime { get; }
 
-        public IChannels Channels { get; }
-
         public IConfiguration Configuration { get; }
 
         public IDefaultChannels DefaultChannels { get; }
 
         public IGoal Goal { get; }
+
+        public IChannels Channels { get; }
 
         public IPipelines Pipelines { get; }
 
@@ -153,10 +153,10 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             AzDo = new AzDo(this);
             Builds = new Builds(this);
             BuildTime = new BuildTime(this);
-            Channels = new Channels(this);
             Configuration = new Configuration(this);
             DefaultChannels = new DefaultChannels(this);
             Goal = new Goal(this);
+            Channels = new Channels(this);
             Pipelines = new Pipelines(this);
             PullRequest = new PullRequest(this);
             Repository = new Repository(this);
