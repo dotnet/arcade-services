@@ -658,9 +658,17 @@ internal abstract partial class ScenarioTestBase
         await RefreshConfiguration();
     }
 
-    protected static async Task<string> AddDefaultTestChannelAsync(string testChannelName, string repoUri, string branchName)
+    protected async Task AddDefaultTestChannelAsync(string testChannelName, string repoUri, string branchName)
     {
-        return await RunDarcAsync("add-default-channel", "--channel", testChannelName, "--repo", repoUri, "--branch", branchName, "-q");
+        await RunDarcAsync(
+        [
+            "add-default-channel",
+            "--channel", testChannelName,
+            "--repo", repoUri,
+            "--branch", branchName,
+            ..GetConfigurationManagementDarcArgs(),
+        ]);
+        await RefreshConfiguration();
     }
 
     protected static async Task<string> GetDefaultTestChannelsAsync(string repoUri, string branch)
@@ -668,9 +676,17 @@ internal abstract partial class ScenarioTestBase
         return await RunDarcAsync("get-default-channels", "--source-repo", repoUri, "--branch", branch);
     }
 
-    protected static async Task DeleteDefaultTestChannelAsync(string testChannelName, string repoUri, string branch)
+    protected async Task DeleteDefaultTestChannelAsync(string testChannelName, string repoUri, string branch)
     {
-        await RunDarcAsync("delete-default-channel", "--channel", testChannelName, "--repo", repoUri, "--branch", branch);
+        await RunDarcAsync(
+        [
+            "delete-default-channel",
+            "--channel", testChannelName,
+            "--repo", repoUri,
+            "--branch", branch,
+            ..GetConfigurationManagementDarcArgs(),
+        ]);
+        await RefreshConfiguration();
     }
 
     protected async Task<string> CreateSubscriptionAsync(
