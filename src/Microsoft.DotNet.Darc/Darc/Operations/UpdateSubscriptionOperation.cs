@@ -264,7 +264,6 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
             excludedAssets = [..updateSubscriptionPopUp.ExcludedAssets];
         }
 
-        // need to create a new subscription and not change an existing one to properly validate below
         SubscriptionYamlData updatedSubscription = new()
         {
             Channel = channel ?? subscription.Channel.Name,
