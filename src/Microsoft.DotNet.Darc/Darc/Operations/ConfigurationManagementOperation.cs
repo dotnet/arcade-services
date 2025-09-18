@@ -55,11 +55,9 @@ internal abstract class ConfigurationManagementOperation : Operation
         Console.WriteLine($"⚠️⚠️⚠️ Maestro channels and subscriptions are now managed as code via a configuration repository", _options.ConfigurationRepository);
         Console.ForegroundColor = color;
 
-        var remote = await _remoteFactory.CreateRemoteAsync(_options.ConfigurationRepository);
-
         if (!string.IsNullOrEmpty(_options.ConfigurationBranch))
         {
-            if (!await remote.BranchExistsAsync(_options.ConfigurationRepository, _options.ConfigurationBranch))
+            if (!await _configurationRepo.BranchExists(_options.ConfigurationRepository, _options.ConfigurationBranch))
             {
                 if (string.IsNullOrEmpty(_options.ConfigurationBaseBranch))
                 {
@@ -67,7 +65,7 @@ internal abstract class ConfigurationManagementOperation : Operation
                 }
 
                 Console.WriteLine("The specified configuration branch '{0}' does not exist. Creating it...", _options.ConfigurationBranch);
-                await remote.CreateNewBranchAsync(_options.ConfigurationRepository, _options.ConfigurationBaseBranch, _options.ConfigurationBranch);
+                await _configurationRepo.CreateNewBranchAsync(_options.ConfigurationRepository, _options.ConfigurationBranch, _options.ConfigurationBaseBranch);
                 return;
             }
 
@@ -80,14 +78,14 @@ internal abstract class ConfigurationManagementOperation : Operation
             throw new ArgumentException("A base branch must be specified when the configuration branch is not.");
         }
 
-        if (!await remote.BranchExistsAsync(_options.ConfigurationRepository, _options.ConfigurationBaseBranch))
+        if (!await _configurationRepo.BranchExists(_options.ConfigurationRepository, _options.ConfigurationBaseBranch))
         {
             throw new ArgumentException($"The specified base branch '{_options.ConfigurationBaseBranch}' does not exist.");
         }
 
         _options.ConfigurationBranch = $"darc/{_options.ConfigurationBaseBranch}-{Guid.NewGuid().ToString().Substring(0, 8)}";
         Console.WriteLine("Creating new configuration branch {0}", _options.ConfigurationBranch);
-        await remote.CreateNewBranchAsync(_options.ConfigurationRepository, _options.ConfigurationBaseBranch, _options.ConfigurationBranch);
+        await _configurationRepo.CreateNewBranchAsync(_options.ConfigurationRepository, _options.ConfigurationBaseBranch, _options.ConfigurationBranch);
     }
 
     protected async Task<List<T>> GetConfiguration<T>(string fileName, string? branch = null)

@@ -138,6 +138,9 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         }
     }
 
+    public async Task CreateNewBranchAsync(string repoUri, string newBranch, string baseBranch)
+        => await CreateBranchAsync(repoUri, newBranch, baseBranch);
+
     /// <summary>
     /// Create a new branch in a repository
     /// </summary>
@@ -234,6 +237,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             return false;
         }
     }
+
+    public async Task<bool> BranchExists(string repoUri, string branch) => await DoesBranchExistAsync(repoUri, branch);
 
     /// <summary>
     /// Deletes a branch in a repository
