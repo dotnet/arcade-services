@@ -58,7 +58,7 @@ public class SubscriptionsController : ControllerBase
         int? channelId = null,
         bool? enabled = null)
     {
-        IQueryable<Maestro.Data.Models.Subscription> query = _context.Subscriptions.Include(s => s.Channel);
+        IQueryable<SubscriptionDAO> query = _context.Subscriptions.Include(s => s.Channel);
 
         if (!string.IsNullOrEmpty(sourceRepository))
         {
@@ -93,7 +93,7 @@ public class SubscriptionsController : ControllerBase
     [ValidateModelState]
     public virtual async Task<IActionResult> GetSubscription(Guid id)
     {
-        Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
+        SubscriptionDAO? subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
             .Include(sub => sub.Channel)
             .FirstOrDefaultAsync(sub => sub.Id == id);
 
@@ -129,7 +129,7 @@ public class SubscriptionsController : ControllerBase
 
     protected async Task<IActionResult> TriggerSubscriptionCore(Guid id, int buildId, bool force = false)
     {
-        Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions
+        SubscriptionDAO? subscription = await _context.Subscriptions
             .Include(sub => sub.LastAppliedBuild)
             .Include(sub => sub.Channel)
             .FirstOrDefaultAsync(sub => sub.Id == id);
@@ -227,7 +227,7 @@ public class SubscriptionsController : ControllerBase
 
     private async Task EnqueueUpdateSubscriptionWorkItemAsync(Guid subscriptionId, int buildId, bool force = false)
     {
-        Maestro.Data.Models.Subscription? subscriptionToUpdate;
+        SubscriptionDAO? subscriptionToUpdate;
         if (buildId != 0)
         {
             // Update using a specific build
@@ -302,7 +302,7 @@ public class SubscriptionsController : ControllerBase
 
         foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
         {
-            Maestro.Data.Models.Subscription? subscriptionWithBuilds = await _context.Subscriptions
+            SubscriptionDAO? subscriptionWithBuilds = await _context.Subscriptions
                 .Where(s => s.Id == subscription.Id)
                 .Include(s => s.Channel)
                 .ThenInclude(c => c.BuildChannels)
@@ -347,7 +347,7 @@ public class SubscriptionsController : ControllerBase
     [ValidateModelState]
     public virtual async Task<IActionResult> UpdateSubscription(Guid id, [FromBody] SubscriptionUpdate update)
     {
-        Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions.Where(sub => sub.Id == id)
+        SubscriptionDAO? subscription = await _context.Subscriptions.Where(sub => sub.Id == id)
             .FirstOrDefaultAsync();
 
         if (subscription == null)
@@ -393,7 +393,7 @@ public class SubscriptionsController : ControllerBase
 
         if (doUpdate)
         {
-            Maestro.Data.Models.Subscription? equivalentSubscription = await FindEquivalentSubscription(subscription);
+            SubscriptionDAO? equivalentSubscription = await FindEquivalentSubscription(subscription);
             if (equivalentSubscription != null)
             {
                 return BadRequest(
@@ -421,7 +421,7 @@ public class SubscriptionsController : ControllerBase
     [ValidateModelState]
     public virtual async Task<IActionResult> DeleteSubscription(Guid id)
     {
-        Maestro.Data.Models.Subscription? subscription =
+        SubscriptionDAO? subscription =
             await _context.Subscriptions.FirstOrDefaultAsync(sub => sub.Id == id);
 
         if (subscription == null)
@@ -452,7 +452,7 @@ public class SubscriptionsController : ControllerBase
     [Paginated(typeof(SubscriptionHistoryItem))]
     public virtual async Task<IActionResult> GetSubscriptionHistory(Guid id)
     {
-        Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions.Where(sub => sub.Id == id)
+        SubscriptionDAO? subscription = await _context.Subscriptions.Where(sub => sub.Id == id)
             .FirstOrDefaultAsync();
 
         if (subscription == null)
@@ -523,11 +523,11 @@ public class SubscriptionsController : ControllerBase
             }
         }
 
-        Maestro.Data.Models.Subscription subscriptionModel = subscription.ToDb();
+        SubscriptionDAO subscriptionModel = subscription.ToDb();
         subscriptionModel.Channel = channel;
         subscriptionModel.Id = Guid.NewGuid();
 
-        Maestro.Data.Models.Subscription? equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);
+        SubscriptionDAO? equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);
         if (equivalentSubscription != null)
         {
             return Conflict(
@@ -614,7 +614,7 @@ public class SubscriptionsController : ControllerBase
     /// </summary>
     /// <param name="updatedOrNewSubscription">Subscription model with updated data.</param>
     /// <returns>Subscription if it is found, null otherwise</returns>
-    private async Task<Maestro.Data.Models.Subscription?> FindEquivalentSubscription(Maestro.Data.Models.Subscription updatedOrNewSubscription)
+    private async Task<SubscriptionDAO?> FindEquivalentSubscription(SubscriptionDAO updatedOrNewSubscription)
     {
         // Compare subscriptions based on the 4 key elements:
         // - Channel
