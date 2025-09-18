@@ -8,13 +8,14 @@ using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.EntityFrameworkCore;
+using ProductConstructionService.Api.Controllers.Models;
 using ProductConstructionService.Api.v2018_07_16.Models;
+using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 using Channel = Maestro.Data.Models.Channel;
+using SubscriptionDAO = Maestro.Data.Models.Subscription;
 
 namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 
@@ -28,20 +29,20 @@ public class SubscriptionsController : ControllerBase
     private readonly BuildAssetRegistryContext _context;
     private readonly IWorkItemProducerFactory _workItemProducerFactory;
     private readonly IGitHubInstallationIdResolver _installationIdResolver;
-    private readonly IRemoteFactory _remoteFactory;
+    private readonly ICodeflowHistoryManager _codeflowHistoryManager;
     private readonly ILogger<SubscriptionsController> _logger;
 
     public SubscriptionsController(
         BuildAssetRegistryContext context,
         IWorkItemProducerFactory workItemProducerFactory,
         IGitHubInstallationIdResolver installationIdResolver,
-        IRemoteFactory remoteFactory,
+        ICodeflowHistoryManager codeflowHistoryManager,
         ILogger<SubscriptionsController> logger)
     {
         _context = context;
         _workItemProducerFactory = workItemProducerFactory;
         _installationIdResolver = installationIdResolver;
-        _remoteFactory = remoteFactory;
+        _codeflowHistoryManager = codeflowHistoryManager;
         _logger = logger;
     }
 
@@ -166,30 +167,62 @@ public class SubscriptionsController : ControllerBase
 
     protected async Task<IActionResult> GetCodeflowHistoryCore(Guid id)
     {
-        Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
-            .Include(sub => sub.Channel)
+        var subscription = await _context.Subscriptions
             .Include(sub => sub.LastAppliedBuild)
-            .Include(sub => sub.ExcludedAssets)
             .FirstOrDefaultAsync(sub => sub.Id == id);
 
-        if (subscription == null)
+        if (subscription == null || !subscription.SourceEnabled)
         {
             return NotFound();
         }
 
-        IRemote sourceRemote = await _remoteFactory.CreateRemoteAsync(subscription.SourceRepository);
+        var oppositeDirectionSubscription = await _context.Subscriptions
+            .Include(sub => sub.LastAppliedBuild)
+            .Include(sub => sub.Channel)
+            .Where(sub =>
+                sub.SourceRepository == subscription.TargetRepository ||
+                sub.TargetRepository == subscription.SourceRepository)
+            .FirstOrDefaultAsync();
 
-        IRemote targetRemote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
-
-        var result = new CodeflowHistory
+        if (oppositeDirectionSubscription?.SourceEnabled != true)
         {
-            RepoCommits = [],
-            VmrCommits = [],
-            ForwardFlows = [],
-            Backflows = [],
+            oppositeDirectionSubscription = null;
+        }
+
+        bool isForwardFlow = !string.IsNullOrEmpty(subscription.TargetDirectory);
+
+        var cachedFlows = await _codeflowHistoryManager.GetCachedCodeflowHistory(id);
+
+        var oppositeCachedFlows = oppositeDirectionSubscription != null
+            ? await _codeflowHistoryManager.GetCachedCodeflowHistory(oppositeDirectionSubscription.Id)
+            : null;
+
+        var lastCommit = subscription.LastAppliedBuild.Commit;
+
+        bool resultIsOutdated = IsCodeflowHistoryOutdated(subscription, cachedFlows) ||
+            IsCodeflowHistoryOutdated(oppositeDirectionSubscription, oppositeCachedFlows);
+
+        var result = new CodeflowHistoryResult
+        {
+            ResultIsOutdated = resultIsOutdated,
+            ForwardFlowHistory = isForwardFlow
+            ? cachedFlows
+            : oppositeCachedFlows,
+            BackflowHistory = isForwardFlow
+            ? oppositeCachedFlows
+            : cachedFlows,
         };
 
         return Ok(result);
+    }
+
+    private static bool IsCodeflowHistoryOutdated(
+        SubscriptionDAO? subscription,
+        CodeflowHistory? cachedFlows)
+    {
+        string? lastCachedCodeflow = cachedFlows?.Codeflows.LastOrDefault()?.SourceCommitSha;
+        string? lastAppliedCommit = subscription?.LastAppliedBuild?.Commit;
+        return !string.Equals(lastCachedCodeflow, lastAppliedCommit, StringComparison.Ordinal);
     }
 
     private async Task EnqueueUpdateSubscriptionWorkItemAsync(Guid subscriptionId, int buildId, bool force = false)

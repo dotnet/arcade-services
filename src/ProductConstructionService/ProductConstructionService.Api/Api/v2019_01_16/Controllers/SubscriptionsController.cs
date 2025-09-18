@@ -7,8 +7,10 @@ using Maestro.Data;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.v2019_01_16.Models;
+using ProductConstructionService.Common;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api.Api.v2019_01_16.Controllers;
@@ -26,8 +28,9 @@ public class SubscriptionsController : v2018_07_16.Controllers.SubscriptionsCont
         BuildAssetRegistryContext context,
         IWorkItemProducerFactory workItemProducerFactory,
         IGitHubInstallationIdResolver gitHubInstallationRetriever,
+        ICodeflowHistoryManager codeflowHistoryManager,
         ILogger<SubscriptionsController> logger)
-        : base(context, workItemProducerFactory, gitHubInstallationRetriever, logger)
+        : base(context, workItemProducerFactory, gitHubInstallationRetriever, codeflowHistoryManager, logger)
     {
         _context = context;
     }
