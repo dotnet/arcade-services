@@ -30,6 +30,7 @@ internal abstract partial class ScenarioTestBase
     private static readonly TimeSpan WAIT_DELAY = TimeSpan.FromSeconds(25);
 
     private string _packageNameSalt = null!;
+    private string _configurationBranchName = null!;
 
     // We need this for tests where we have multiple updates
     private readonly Dictionary<long, DateTimeOffset> _lastUpdatedPrTimes = [];
@@ -44,6 +45,14 @@ internal abstract partial class ScenarioTestBase
     public void BaseSetup()
     {
         _packageNameSalt = Guid.NewGuid().ToString().Substring(0, 8);
+        _configurationBranchName = string.Concat("scenario-tests/", Guid.NewGuid().ToString().AsSpan(0, 8));
+    }
+
+    [TearDown]
+    public async Task BaseTearDown()
+    {
+        _lastUpdatedPrTimes.Clear();
+        await DeleteConfigurationAsync();
     }
 
     protected async Task<Octokit.PullRequest> WaitForPullRequestAsync(string targetRepo, string targetBranch)
@@ -567,46 +576,21 @@ internal abstract partial class ScenarioTestBase
         return TestHelpers.RunExecutableAsync(TestParameters.GitExePath, args);
     }
 
-    protected static async Task<AsyncDisposableValue<string>> CreateTestChannelAsync(string testChannelName)
+    protected async Task CreateTestChannelAsync(string testChannelName)
     {
-        var message = "";
+        TestContext.WriteLine($"Creating test channel {testChannelName}");
 
-        try
-        {
-            message = await DeleteTestChannelAsync(testChannelName);
-        }
-        catch (ScenarioTestException)
-        {
-            // If there are subscriptions associated the the channel then a previous test clean up failed
-            // Run a subscription clean up and try again
-            try
-            {
-                await DeleteSubscriptionsForChannel(testChannelName);
-                await DeleteTestChannelAsync(testChannelName);
-            }
-            catch (ScenarioTestException)
-            {
-                // Otherwise ignore failures from delete-channel, its just a pre-cleanup that isn't really part of the test
-                // And if the test previously succeeded then it'll fail because the channel doesn't exist
-            }
-        }
+        await RunDarcAsync(
+        [
+            "add-channel",
+            "--name", testChannelName,
+            "--classification", "test",
+            ..GetConfigurationManagementDarcArgs(),
+        ]);
 
-        await RunDarcAsync("add-channel", "--name", testChannelName, "--classification", "test");
-
-        return AsyncDisposableValue.Create(testChannelName, async () =>
-        {
-            TestContext.WriteLine($"Cleaning up Test Channel {testChannelName}");
-            try
-            {
-                var doubleDelete = await DeleteTestChannelAsync(testChannelName);
-            }
-            catch (ScenarioTestException)
-            {
-                // Ignore failures from delete-channel on cleanup, this delete is here to ensure that the channel is deleted
-                // even if the test does not do an explicit delete as part of the test. Other failures are typical that the channel has already been deleted.
-            }
-        });
+        await RefreshConfiguration();
     }
+
     protected static async Task AddDependenciesToLocalRepo(string repoPath, string name, string repoUri, bool isToolset = false)
     {
         using (ChangeDirectory(repoPath))
@@ -663,9 +647,15 @@ internal abstract partial class ScenarioTestBase
         return await RunDarcAsync("get-channels");
     }
 
-    protected static async Task<string?> DeleteTestChannelAsync(string testChannelName)
+    protected async Task DeleteTestChannelAsync(string testChannelName)
     {
-        return await RunDarcAsync("delete-channel", "--name", testChannelName);
+        await RunDarcAsync(
+            [
+                "delete-channel",
+                "--name", testChannelName,
+                ..GetConfigurationManagementDarcArgs(),
+            ]);
+        await RefreshConfiguration();
     }
 
     protected static async Task<string> AddDefaultTestChannelAsync(string testChannelName, string repoUri, string branchName)
@@ -1283,5 +1273,30 @@ internal abstract partial class ScenarioTestBase
         pr.Mergeable.Should().BeFalse("PR " + pr.HtmlUrl + " should have conflicts");
         pr.MergeableState.ToString().Should().Be("dirty", "PR " + pr.HtmlUrl + " should be dirty");
         return pr;
+    }
+
+    private IEnumerable<string> GetConfigurationManagementDarcArgs() =>
+    [
+        "--configuration-repository", TestParameters.ConfigurationRepoUri,
+        "--configuration-base-branch", "main",
+        "--configuration-branch", _configurationBranchName,
+        "--no-pr",
+        "--quiet"
+    ];
+
+    private async Task RefreshConfiguration() =>
+        await PcsApi.Configuration.RefreshConfigurationAsync(_configurationBranchName, TestParameters.ConfigurationRepoUri);
+
+    private async Task DeleteConfigurationAsync()
+    {
+        await PcsApi.Configuration.ClearConfigurationAsync(_configurationBranchName, TestParameters.ConfigurationRepoUri);
+
+        try
+        {
+            await AzDoClient.DeleteBranchAsync(TestParameters.ConfigurationRepoUri, _configurationBranchName);
+        }
+        catch
+        {
+        }
     }
 }

@@ -20,7 +20,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         var productRepo = GetGitHubRepoUrl(TestRepository.TestRepo1Name);
         var targetBranchName = GetTestBranchName();
 
-        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(channelName);
+        await CreateTestChannelAsync(channelName);
 
         await using AsyncDisposableValue<string> subscriptionId = await CreateForwardFlowSubscriptionAsync(
             channelName,
@@ -78,7 +78,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         var productRepo = GetGitHubRepoUrl(TestRepository.TestRepo1Name);
         var targetBranchName = GetTestBranchName();
 
-        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(channelName);
+        await CreateTestChannelAsync(channelName);
 
         await using AsyncDisposableValue<string> subscriptionId = await CreateForwardFlowSubscriptionAsync(
             channelName,
@@ -247,7 +247,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         var productRepo = GetGitHubRepoUrl(TestRepository.TestRepo1Name);
         var targetBranchName = GetTestBranchName();
 
-        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(channelName);
+        await CreateTestChannelAsync(channelName);
 
         await using AsyncDisposableValue<string> subscriptionId = await CreateForwardFlowSubscriptionAsync(
             channelName,
@@ -322,7 +322,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         var productRepo = GetGitHubRepoUrl(TestRepository.TestRepo1Name);
         var targetBranchName = GetTestBranchName();
 
-        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(channelName);
+        await CreateTestChannelAsync(channelName);
 
         await using AsyncDisposableValue<string> subscriptionId = await CreateBackwardFlowSubscriptionAsync(
             channelName,

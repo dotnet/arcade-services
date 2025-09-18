@@ -83,8 +83,7 @@ internal class ScenarioTests_MergePolicies : ScenarioTestBase
             },
         ];
 
-        TestContext.WriteLine($"Creating test channel {testChannelName}");
-        await using AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName);
+        await CreateTestChannelAsync(testChannelName);
 
         TestContext.WriteLine($"Adding a subscription from ${sourceRepo} to ${targetRepo}");
         await using AsyncDisposableValue<string> sub = await CreateSubscriptionAsync(testChannelName, sourceRepo, targetRepo, targetBranch, "none", "maestro-auth-test", additionalOptions: args);
