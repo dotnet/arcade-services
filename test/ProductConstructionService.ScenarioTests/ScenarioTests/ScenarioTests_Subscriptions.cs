@@ -34,7 +34,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
         await CreateTestChannelAsync(channel2Name);
 
         TestContext.WriteLine("Testing various command line parameters of add-subscription");
-        await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(
+        string subscription1Id = await CreateSubscriptionAsync(
             channel1Name, repo1Name, repo2Name, targetBranch, "everyWeek", "maestro-auth-test");
 
         var expectedSubscription1 = SubscriptionBuilder.BuildSubscription(
@@ -42,15 +42,15 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
             repo2Uri,
             targetBranch,
             channel1Name,
-            subscription1Id.Value,
+            subscription1Id,
             Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryWeek,
             false);
 
         var expectedSubscription1Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription1, null);
 
-        await ValidateSubscriptionInfo(subscription1Id.Value, expectedSubscription1Info);
+        await ValidateSubscriptionInfo(subscription1Id, expectedSubscription1Info);
 
-        await using AsyncDisposableValue<string> subscription2Id = await CreateSubscriptionAsync(
+        string subscription2Id = await CreateSubscriptionAsync(
             channel1Name, repo1Name, repo1Name, targetBranch, "none", "maestro-auth-test",
             ["--all-checks-passed", "--no-requested-changes", "--ignore-checks", "WIP,license/cla"], targetIsAzDo: true);
 
@@ -59,7 +59,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
             repo1AzDoUri,
             targetBranch,
             channel1Name,
-            subscription2Id.Value,
+            subscription2Id,
             Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.None,
             false,
             [MergePolicyConstants.AllCheckSuccessfulMergePolicyName, MergePolicyConstants.NoRequestedChangesMergePolicyName],
@@ -67,9 +67,9 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
 
         var expectedSubscription2Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription2, null);
 
-        await ValidateSubscriptionInfo(subscription2Id.Value, expectedSubscription2Info);
+        await ValidateSubscriptionInfo(subscription2Id, expectedSubscription2Info);
 
-        await using AsyncDisposableValue<string> subscription3Id = await CreateSubscriptionAsync(
+        string subscription3Id = await CreateSubscriptionAsync(
             channel2Name, repo1Name, repo2Name, targetBranch, "none", "maestro-auth-test",
             ["--all-checks-passed", "--no-requested-changes", "--ignore-checks", "WIP,license/cla"]);
 
@@ -78,7 +78,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
             repo2Uri,
             targetBranch,
             channel2Name,
-            subscription3Id.Value,
+            subscription3Id,
             Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.None,
             false,
             [MergePolicyConstants.AllCheckSuccessfulMergePolicyName, MergePolicyConstants.NoRequestedChangesMergePolicyName],
@@ -86,7 +86,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
 
         var expectedSubscription3Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription3, null);
 
-        await ValidateSubscriptionInfo(subscription3Id.Value, expectedSubscription3Info);
+        await ValidateSubscriptionInfo(subscription3Id, expectedSubscription3Info);
 
         // Disable the first two subscriptions, but not the third.
         TestContext.WriteLine("Disable the subscriptions for test channel 1");
@@ -94,17 +94,17 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
 
         // Disable one by id (classic usage) to make sure that works
         TestContext.WriteLine("Disable the third subscription by id");
-        await SetSubscriptionStatusById(false, subscription3Id.Value);
+        await SetSubscriptionStatusById(false, subscription3Id);
 
         // Re-enable
         TestContext.WriteLine("Enable the third subscription by id");
-        await SetSubscriptionStatusById(true, subscription3Id.Value);
+        await SetSubscriptionStatusById(true, subscription3Id);
 
-        (await GetSubscriptionInfo(subscription3Id.Value)).Should().Contain("Enabled: True", $"Expected subscription {subscription3Id} to be enabled");
+        (await GetSubscriptionInfo(subscription3Id)).Should().Contain("Enabled: True", $"Expected subscription {subscription3Id} to be enabled");
 
         // Mass delete the subscriptions. Delete the first two but not the third.
         TestContext.WriteLine("Delete the subscriptions for test channel 1");
-        var message = await DeleteSubscriptionsForChannel(channel1Name);
+        await DeleteSubscriptionsForChannel(channel1Name);
 
         // Check that there are no subscriptions against channel1 now
         TestContext.WriteLine("Verify that there are no subscriptions in test channel 1");
@@ -112,8 +112,8 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
 
         // Validate the third subscription, which should still exist
         TestContext.WriteLine("Verify that the third subscription still exists, then delete it");
-        await ValidateSubscriptionInfo(subscription3Id.Value, expectedSubscription3Info);
-        var message2 = await DeleteSubscriptionById(subscription3Id.Value);
+        await ValidateSubscriptionInfo(subscription3Id, expectedSubscription3Info);
+        await DeleteSubscriptionById(subscription3Id);
 
         // Attempt to create a batchable subscription with merge policies.
         // Should fail, merge policies are set separately for batched subs
@@ -124,7 +124,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
 
         // Create a batchable subscription
         TestContext.WriteLine("Create a batchable subscription");
-        await using AsyncDisposableValue<string> batchSubscriptionId = await CreateSubscriptionAsync(
+        string batchSubscriptionId = await CreateSubscriptionAsync(
             channel1Name, repo1Name, repo2Name, targetBranch, "everyWeek", "maestro-auth-test", additionalOptions: ["--batchable"]);
 
         var expectedBatchedSubscription = SubscriptionBuilder.BuildSubscription(
@@ -132,14 +132,14 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
             repo2Uri,
             targetBranch,
             channel1Name,
-            batchSubscriptionId.Value,
+            batchSubscriptionId,
             Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryWeek,
             true);
 
         var expectedBatchedSubscriptionInfo = UxHelpers.GetTextSubscriptionDescription(expectedBatchedSubscription, null);
 
-        await ValidateSubscriptionInfo(batchSubscriptionId.Value, expectedBatchedSubscriptionInfo);
-        await DeleteSubscriptionById(batchSubscriptionId.Value);
+        await ValidateSubscriptionInfo(batchSubscriptionId, expectedBatchedSubscriptionInfo);
+        await DeleteSubscriptionById(batchSubscriptionId);
 
         TestContext.WriteLine("Testing YAML for darc add-subscription");
 
@@ -156,22 +156,22 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                     Excluded Assets: []
                     ";
 
-        await using AsyncDisposableValue<string> yamlSubscriptionId = await CreateSubscriptionAsync(yamlDefinition);
+        string yamlSubscriptionId = await CreateSubscriptionAsync(yamlDefinition);
 
         var expectedYamlSubscription = SubscriptionBuilder.BuildSubscription(
             repo1Uri,
             repo2Uri,
             targetBranch,
             channel1Name,
-            yamlSubscriptionId.Value,
+            yamlSubscriptionId,
             Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryWeek,
             false,
             [MergePolicyConstants.StandardMergePolicyName]);
 
         var expectedYamlSubscriptionInfo = UxHelpers.GetTextSubscriptionDescription(expectedYamlSubscription, null);
 
-        await ValidateSubscriptionInfo(yamlSubscriptionId.Value, expectedYamlSubscriptionInfo);
-        await DeleteSubscriptionById(yamlSubscriptionId.Value);
+        await ValidateSubscriptionInfo(yamlSubscriptionId, expectedYamlSubscriptionInfo);
+        await DeleteSubscriptionById(yamlSubscriptionId);
 
         TestContext.WriteLine("Change casing of the various properties. Expecting no changes.");
 
@@ -188,21 +188,21 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                     Excluded Assets: []
                     ";
 
-        await using AsyncDisposableValue<string> yamlSubscription2Id = await CreateSubscriptionAsync(yamlDefinition2);
+        string yamlSubscription2Id = await CreateSubscriptionAsync(yamlDefinition2);
 
         var expectedYamlSubscription2 = SubscriptionBuilder.BuildSubscription(
             repo1Uri,
             repo2Uri,
             targetBranch,
             channel1Name,
-            yamlSubscription2Id.Value,
+            yamlSubscription2Id,
             Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryWeek, false,
             [MergePolicyConstants.StandardMergePolicyName]);
 
         var expectedYamlSubscriptionInfo2 = UxHelpers.GetTextSubscriptionDescription(expectedYamlSubscription2, null);
 
-        await ValidateSubscriptionInfo(yamlSubscription2Id.Value, expectedYamlSubscriptionInfo2);
-        await DeleteSubscriptionById(yamlSubscription2Id.Value);
+        await ValidateSubscriptionInfo(yamlSubscription2Id, expectedYamlSubscriptionInfo2);
+        await DeleteSubscriptionById(yamlSubscription2Id);
 
         TestContext.WriteLine("Attempt to add multiple of the same merge policy checks. Should fail.");
 
@@ -232,7 +232,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
             await CreateSubscriptionAsync(yamlDefinition3), "Attempt to create a subscription with multiples of the same merge policy.");
 
         TestContext.WriteLine("Testing duplicate subscription handling...");
-        AsyncDisposableValue<string> yamlSubscription3Id = await CreateSubscriptionAsync(channel1Name, repo1Name, repo2Name, targetBranch, "everyWeek", "maestro-auth-test");
+        string yamlSubscription3Id = await CreateSubscriptionAsync(channel1Name, repo1Name, repo2Name, targetBranch, "everyWeek", "maestro-auth-test");
 
         Assert.ThrowsAsync<ScenarioTestException>(async () =>
             await CreateSubscriptionAsync(channel1Name, repo1Name, repo2Name, targetBranch, "everyWeek", "maestro-auth-test"),
@@ -242,7 +242,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
             await CreateSubscriptionAsync(channel1Name, repo1Name, repo2Name, targetBranch, "everyweek", "maestro-auth-test"),
             "Attempt to create a subscription with the same values as an existing subscription (except for the casing of one parameter.");
 
-        await DeleteSubscriptionById(yamlSubscription3Id.Value);
+        await DeleteSubscriptionById(yamlSubscription3Id);
 
         TestContext.WriteLine("End of test case. Starting clean up.");
     }

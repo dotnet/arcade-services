@@ -107,7 +107,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         }
     }
 
-    protected static async Task<AsyncDisposableValue<string>> CreateForwardFlowSubscriptionAsync(
+    protected async Task<string> CreateForwardFlowSubscriptionAsync(
         string sourceChannelName,
         string sourceRepo,
         string targetRepo,
@@ -126,7 +126,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 targetDirectory: targetDirectory,
                 batchable: batchable);
 
-    protected static async Task<AsyncDisposableValue<string>> CreateBackwardFlowSubscriptionAsync(
+    protected async Task<string> CreateBackwardFlowSubscriptionAsync(
         string sourceChannelName,
         string sourceRepo,
         string targetRepo,
@@ -143,7 +143,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 sourceOrg,
                 sourceDirectory: sourceDirectory);
 
-    private static async Task<AsyncDisposableValue<string>> CreateSourceEnabledSubscriptionAsync(
+    private async Task<string> CreateSourceEnabledSubscriptionAsync(
         string sourceChannelName,
         string sourceRepo,
         string targetRepo,
@@ -152,7 +152,6 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string sourceOrg = "dotnet",
         bool sourceIsAzDo = false,
         bool targetIsAzDo = false,
-        bool trigger = false,
         string? sourceDirectory = null,
         string? targetDirectory = null,
         bool batchable = false)
@@ -182,16 +181,15 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         }
 
         return await CreateSubscriptionAsync(
-                sourceChannelName,
-                sourceRepo,
-                targetRepo,
-                targetBranch,
-                updateFrequency,
-                sourceOrg,
-                additionalOptions,
-                sourceIsAzDo,
-                targetIsAzDo,
-                trigger);
+            sourceChannelName,
+            sourceRepo,
+            targetRepo,
+            targetBranch,
+            updateFrequency,
+            sourceOrg,
+            additionalOptions,
+            sourceIsAzDo,
+            targetIsAzDo);
     }
 
     public async Task<PullRequest> WaitForPullRequestComment(
