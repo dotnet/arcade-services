@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models.PopUps;
 
-internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionUpdateYamlData>
+internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionYamlData>
 {
     private readonly ILogger _logger;
 
@@ -28,7 +28,7 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionUpdateYam
         IEnumerable<string> suggestedRepositories,
         IEnumerable<string> availableUpdateFrequencies,
         IEnumerable<string> availableMergePolicyHelp,
-        SubscriptionUpdateYamlData data)
+        SubscriptionYamlData data)
         : base(path, forceCreation, suggestedChannels, suggestedRepositories, availableUpdateFrequencies, availableMergePolicyHelp, logger, gitRepoFactory, data,
             header: [
                 new Line($"Use this form to update the values of subscription '{subscription.Id}'.", true),
@@ -66,7 +66,7 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionUpdateYam
         string targetDirectory,
         List<string> excludedAssets)
         : this(path, forceCreation, gitRepoFactory, logger, subscription, suggestedChannels, suggestedRepositories, availableUpdateFrequencies, availableMergePolicyHelp,
-              new SubscriptionUpdateYamlData
+              new SubscriptionYamlData
               {
                   Id = Guid.Parse(GetCurrentSettingForDisplay(subscription.Id.ToString(), subscription.Id.ToString(), false)),
                   Channel = GetCurrentSettingForDisplay(subscription.Channel.Name, subscription.Channel.Name, false),
@@ -86,7 +86,7 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionUpdateYam
     {
     }
 
-    protected override async Task<int> ParseAndValidateData(SubscriptionUpdateYamlData data)
+    protected override async Task<int> ParseAndValidateData(SubscriptionYamlData data)
     {
         int result = await base.ParseAndValidateData(data);
         if (result != Constants.SuccessCode)

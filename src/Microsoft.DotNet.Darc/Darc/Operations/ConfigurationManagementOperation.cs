@@ -19,8 +19,8 @@ namespace Microsoft.DotNet.Darc.Operations;
 /// </summary>
 internal abstract class ConfigurationManagementOperation : Operation
 {
-    protected static NativePath ChannelConfigurationFileName = new("channels/channels.yaml");
-    protected static NativePath SubscriptionConfigurationFolderPath = new("subscriptions");
+    protected static UnixPath ChannelConfigurationFileName = new("channels/channels.yaml");
+    protected static UnixPath SubscriptionConfigurationFolderPath = new("subscriptions");
 
     private static readonly ISerializer _yamlSerializer = new SerializerBuilder()
         .WithNamingConvention(NullNamingConvention.Instance)

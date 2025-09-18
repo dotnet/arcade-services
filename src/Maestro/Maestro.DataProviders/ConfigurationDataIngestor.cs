@@ -93,8 +93,8 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
             IDeserializer serializer = new DeserializerBuilder().Build();
 
             _logger.LogDebug("Deserializing configuration files");
-            IReadOnlyCollection<SubscriptionUpdateYamlData> ingestedSubscriptions =
-                [.. subscriptionFiles.SelectMany(f => serializer.Deserialize<List<SubscriptionUpdateYamlData>>(f.Content))];
+            IReadOnlyCollection<SubscriptionYamlData> ingestedSubscriptions =
+                [.. subscriptionFiles.SelectMany(f => serializer.Deserialize<List<SubscriptionYamlData>>(f.Content))];
             IReadOnlyList<ChannelYamlData> ingestedChannels =
                 [.. channelFiles.SelectMany(f => serializer.Deserialize<List<ChannelYamlData>>(f.Content))];
             IReadOnlyList<DefaultChannelYamlData> ingestedDefaultChannels =
@@ -135,7 +135,7 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
         ConfigurationSource? configurationSource,
         IReadOnlyList<ChannelYamlData> ingestedChannels,
         IReadOnlyList<DefaultChannelYamlData> ingestedDefaultChannels,
-        IReadOnlyCollection<SubscriptionUpdateYamlData> ingestedSubscriptions)
+        IReadOnlyCollection<SubscriptionYamlData> ingestedSubscriptions)
     {
         try
         {
@@ -203,13 +203,13 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
 
     private void AddOrUpdateSubscriptions(
         Dictionary<Guid, Subscription> existingSubscriptions,
-        IReadOnlyCollection<SubscriptionUpdateYamlData> ingestedSubscriptions,
+        IReadOnlyCollection<SubscriptionYamlData> ingestedSubscriptions,
         Dictionary<string, Channel> existingChannels,
         ConfigurationSource configurationSource)
     {
         _logger.LogInformation("Processing {SubscriptionCount} subscriptions for add/update operations", ingestedSubscriptions.Count);
 
-        foreach (SubscriptionUpdateYamlData subscription in ingestedSubscriptions)
+        foreach (SubscriptionYamlData subscription in ingestedSubscriptions)
         {
             _logger.LogInformation("Processing subscription {SubscriptionId} from {SourceRepository} to {TargetRepository}/{TargetBranch} on channel {Channel}", 
                 subscription.Id, subscription.SourceRepository, subscription.TargetRepository, subscription.TargetBranch, subscription.Channel);
@@ -431,7 +431,7 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
 
     private void RemoveSubscriptions(
         Dictionary<Guid, Subscription> existingSubscriptions,
-        IReadOnlyCollection<SubscriptionUpdateYamlData> subscriptions)
+        IReadOnlyCollection<SubscriptionYamlData> subscriptions)
     {
         if (existingSubscriptions.Count == 0)
         {
