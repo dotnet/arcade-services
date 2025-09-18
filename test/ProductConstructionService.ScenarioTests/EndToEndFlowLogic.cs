@@ -32,12 +32,12 @@ internal abstract class TestLogic : ScenarioTestBase
         await CreateTestChannelAsync(testChannelName);
 
         TestContext.WriteLine($"Adding a subscription from {source1RepoName} to {targetRepoName}");
-        await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(testChannelName, source1RepoName, targetRepoName, targetBranch,
+        string subscription1Id = await CreateSubscriptionAsync(testChannelName, source1RepoName, targetRepoName, targetBranch,
             UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: ["--batchable"],
             sourceIsAzDo: isAzDoTest, targetIsAzDo: isAzDoTest);
 
         TestContext.WriteLine($"Adding a subscription from {source2RepoName} to {targetRepoName}");
-        await using AsyncDisposableValue<string> subscription2Id = await CreateSubscriptionAsync(testChannelName, source2RepoName, targetRepoName, targetBranch,
+        string subscription2Id = await CreateSubscriptionAsync(testChannelName, source2RepoName, targetRepoName, targetBranch,
             UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: ["--batchable"],
             sourceIsAzDo: isAzDoTest, targetIsAzDo: isAzDoTest);
 
@@ -66,8 +66,8 @@ internal abstract class TestLogic : ScenarioTestBase
                 await using (await PushGitBranchAsync("origin", targetBranch))
                 {
                     TestContext.WriteLine("Trigger the dependency update");
-                    await TriggerSubscriptionAsync(subscription1Id.Value);
-                    await TriggerSubscriptionAsync(subscription2Id.Value);
+                    await TriggerSubscriptionAsync(subscription1Id);
+                    await TriggerSubscriptionAsync(subscription2Id);
 
                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
@@ -107,8 +107,13 @@ internal abstract class TestLogic : ScenarioTestBase
 
         await CreateTestChannelAsync(testChannelName);
 
-        await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionForEndToEndTests(
-            testChannelName, sourceRepoName, targetRepoName, targetBranch, allChecks, false);
+        string subscription1Id = await CreateSubscriptionForEndToEndTests(
+            testChannelName,
+            sourceRepoName,
+            targetRepoName,
+            targetBranch,
+            allChecks,
+            false);
 
         TestContext.WriteLine("Set up build for intake into target repository");
         Build build = await CreateBuildAsync(sourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit, SourceBuildNumber, sourceAssets);
@@ -130,7 +135,7 @@ internal abstract class TestLogic : ScenarioTestBase
                 await using (await PushGitBranchAsync("origin", targetBranch))
                 {
                     TestContext.WriteLine("Trigger the dependency update");
-                    await TriggerSubscriptionAsync(subscription1Id.Value);
+                    await TriggerSubscriptionAsync(subscription1Id);
 
                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
@@ -162,7 +167,7 @@ internal abstract class TestLogic : ScenarioTestBase
 
         await CreateTestChannelAsync(testChannelName);
 
-        await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionForEndToEndTests(
+        string subscription1Id = await CreateSubscriptionForEndToEndTests(
             testChannelName, sourceRepoName, targetRepoName, targetBranch, allChecks, false);
 
         TestContext.WriteLine("Set up build for intake into target repository");
@@ -191,7 +196,7 @@ internal abstract class TestLogic : ScenarioTestBase
                 await using (await PushGitBranchAsync("origin", targetBranch))
                 {
                     TestContext.WriteLine("Trigger the dependency update");
-                    await TriggerSubscriptionAsync(subscription1Id.Value);
+                    await TriggerSubscriptionAsync(subscription1Id);
 
                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
@@ -224,7 +229,7 @@ internal abstract class TestLogic : ScenarioTestBase
 
         await CreateTestChannelAsync(testChannelName);
 
-        await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(
+        string subscription1Id = await CreateSubscriptionAsync(
             testChannelName,
             sourceRepoName,
             targetRepoName,
@@ -232,9 +237,9 @@ internal abstract class TestLogic : ScenarioTestBase
             UpdateFrequency.None.ToString(),
             "maestro-auth-test",
             additionalOptions: ["--validate-coherency"],
-            trigger: true,
             sourceIsAzDo: false,
             targetIsAzDo: false);
+        await TriggerSubscriptionAsync(subscription1Id);
 
         TestContext.WriteLine("Set up build for intake into target repository");
         Build build1 = await CreateBuildAsync(sourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit,
@@ -261,7 +266,7 @@ internal abstract class TestLogic : ScenarioTestBase
                 await using (await PushGitBranchAsync("origin", targetBranch))
                 {
                     TestContext.WriteLine("Trigger the dependency update");
-                    await TriggerSubscriptionAsync(subscription1Id.Value);
+                    await TriggerSubscriptionAsync(subscription1Id);
 
                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
@@ -284,7 +289,7 @@ internal abstract class TestLogic : ScenarioTestBase
                     await using (await PushGitBranchAsync("origin", targetBranch))
                     {
                         TestContext.WriteLine("Trigger the dependency update");
-                        await TriggerSubscriptionAsync(subscription1Id.Value);
+                        await TriggerSubscriptionAsync(subscription1Id);
 
                         TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
@@ -317,7 +322,7 @@ internal abstract class TestLogic : ScenarioTestBase
 
         await CreateTestChannelAsync(testChannelName);
 
-        await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionForEndToEndTests(
+        string subscription1Id = await CreateSubscriptionForEndToEndTests(
             testChannelName, sourceRepoName, targetRepoName, targetBranch, allChecks, false);
 
         TestContext.WriteLine("Set up build for intake into target repository");
@@ -341,7 +346,7 @@ internal abstract class TestLogic : ScenarioTestBase
                 await using (await PushGitBranchAsync("origin", targetBranch))
                 {
                     TestContext.WriteLine("Trigger the dependency update");
-                    await TriggerSubscriptionAsync(subscription1Id.Value);
+                    await TriggerSubscriptionAsync(subscription1Id);
 
                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
                     await CheckNonBatchedGitHubPullRequest(
@@ -359,7 +364,7 @@ internal abstract class TestLogic : ScenarioTestBase
                     await AddBuildToChannelAsync(build2.Id, testChannelName);
 
                     TestContext.WriteLine("Trigger the dependency update");
-                    await TriggerSubscriptionAsync(subscription1Id.Value);
+                    await TriggerSubscriptionAsync(subscription1Id);
 
                     TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
                     await CheckNonBatchedGitHubPullRequest(
@@ -377,7 +382,7 @@ internal abstract class TestLogic : ScenarioTestBase
                     await DeleteBuildFromChannelAsync(build2.Id.ToString(), testChannelName);
 
                     TestContext.WriteLine("Trigger the dependency update");
-                    await TriggerSubscriptionAsync(subscription1Id.Value);
+                    await TriggerSubscriptionAsync(subscription1Id);
 
                     TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
 
@@ -408,7 +413,7 @@ internal abstract class TestLogic : ScenarioTestBase
 
         await CreateTestChannelAsync(testChannelName);
 
-        await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionForEndToEndTests(
+        string subscription1Id = await CreateSubscriptionForEndToEndTests(
             testChannelName, sourceRepoName, targetRepoName, targetBranch, false, true);
 
         TestContext.WriteLine("Set up build for intake into target repository");
@@ -431,7 +436,7 @@ internal abstract class TestLogic : ScenarioTestBase
                 await using (await PushGitBranchAsync("origin", targetBranch))
                 {
                     TestContext.WriteLine("Trigger the dependency update");
-                    await TriggerSubscriptionAsync(subscription1Id.Value);
+                    await TriggerSubscriptionAsync(subscription1Id);
 
                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
                     await CheckNonBatchedAzDoPullRequest(
@@ -448,7 +453,7 @@ internal abstract class TestLogic : ScenarioTestBase
                     Build build2 = await CreateBuildAsync(sourceRepoUri, sourceBranch, TestRepository.CoherencyTestRepo2Commit, Source2BuildNumber, updatedSourceAssets);
 
                     TestContext.WriteLine("Trigger the dependency update");
-                    await TriggerSubscriptionAsync(subscription1Id.Value);
+                    await TriggerSubscriptionAsync(subscription1Id);
 
                     TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
                     await CheckNonBatchedAzDoPullRequest(
@@ -466,7 +471,7 @@ internal abstract class TestLogic : ScenarioTestBase
                     await DeleteBuildFromChannelAsync(build2.Id.ToString(), testChannelName);
 
                     TestContext.WriteLine("Trigger the dependency update");
-                    await TriggerSubscriptionAsync(subscription1Id.Value);
+                    await TriggerSubscriptionAsync(subscription1Id);
 
                     TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
                     await CheckNonBatchedAzDoPullRequest(
@@ -495,7 +500,7 @@ internal abstract class TestLogic : ScenarioTestBase
 
         await CreateTestChannelAsync(testChannelName);
 
-        await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionForEndToEndTests(
+        string subscription1Id = await CreateSubscriptionForEndToEndTests(
             testChannelName, sourceRepoName, targetRepoName, targetBranch, allChecks, true);
 
         TestContext.WriteLine("Set up build for intake into target repository");
@@ -518,7 +523,7 @@ internal abstract class TestLogic : ScenarioTestBase
                 await using (await PushGitBranchAsync("origin", targetBranch))
                 {
                     TestContext.WriteLine("Trigger the dependency update");
-                    await TriggerSubscriptionAsync(subscription1Id.Value);
+                    await TriggerSubscriptionAsync(subscription1Id);
 
                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
@@ -556,35 +561,26 @@ internal abstract class TestLogic : ScenarioTestBase
         }
     }
 
-    private static async Task<AsyncDisposableValue<string>> CreateSubscriptionForEndToEndTests(string testChannelName, string sourceRepoName,
-        string targetRepoName, string targetBranch, bool allChecks, bool isAzDoTest)
+    private async Task<string> CreateSubscriptionForEndToEndTests(
+        string testChannelName,
+        string sourceRepoName,
+        string targetRepoName,
+        string targetBranch,
+        bool allChecks,
+        bool isAzDoTest)
     {
-        if (allChecks)
-        {
-            return await CreateSubscriptionAsync(
-                testChannelName,
-                sourceRepoName,
-                targetRepoName,
-                targetBranch,
-                UpdateFrequency.None.ToString(),
-                "maestro-auth-test",
-                additionalOptions: ["--all-checks-passed", "--validate-coherency", "--ignore-checks", "license/cla"],
-                trigger: true,
-                sourceIsAzDo: isAzDoTest,
-                targetIsAzDo: isAzDoTest);
-        }
-        else
-        {
-            return await CreateSubscriptionAsync(
-                testChannelName,
-                sourceRepoName,
-                targetRepoName,
-                targetBranch,
-                UpdateFrequency.None.ToString(),
-                "maestro-auth-test",
-                sourceIsAzDo: isAzDoTest,
-                targetIsAzDo: isAzDoTest);
-        }
+        string subscriptionId = await CreateSubscriptionAsync(
+            testChannelName,
+            sourceRepoName,
+            targetRepoName,
+            targetBranch,
+            UpdateFrequency.None.ToString(),
+            "maestro-auth-test",
+            additionalOptions: allChecks ? ["--all-checks-passed", "--validate-coherency", "--ignore-checks", "license/cla"] : [],
+            sourceIsAzDo: isAzDoTest,
+            targetIsAzDo: isAzDoTest);
+        await TriggerSubscriptionAsync(subscriptionId);
+        return subscriptionId;
     }
 
     public async Task GitHubMultipleTargetDirectoriesTestBase(
@@ -607,9 +603,16 @@ internal abstract class TestLogic : ScenarioTestBase
         await CreateTestChannelAsync(testChannelName);
 
         TestContext.WriteLine($"Adding a subscription from {sourceRepoName} to {targetRepoName} with target directories");
-        await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(testChannelName, sourceRepoName, targetRepoName, targetBranch,
-            UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: ["--target-directory", targetDirectories, "--excluded-assets", $"**/{sourceAssets[2].Name}"],
-            sourceIsAzDo: false, targetIsAzDo: false);
+        string subscription1Id = await CreateSubscriptionAsync(
+            testChannelName,
+            sourceRepoName,
+            targetRepoName,
+            targetBranch,
+            UpdateFrequency.None.ToString(),
+            "maestro-auth-test",
+            additionalOptions: ["--target-directory", targetDirectories, "--excluded-assets", $"**/{sourceAssets[2].Name}"],
+            sourceIsAzDo: false,
+            targetIsAzDo: false);
 
         TestContext.WriteLine("Set the first build for intake into target repository");
         Build build1 = await CreateBuildAsync(sourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit, SourceBuildNumber, build1Assets);
@@ -634,7 +637,7 @@ internal abstract class TestLogic : ScenarioTestBase
                 await using (await PushGitBranchAsync("origin", targetBranch))
                 {
                     TestContext.WriteLine("Trigger the dependency update");
-                    await TriggerSubscriptionAsync(subscription1Id.Value);
+                    await TriggerSubscriptionAsync(subscription1Id);
 
                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
@@ -654,7 +657,7 @@ internal abstract class TestLogic : ScenarioTestBase
                     await AddBuildToChannelAsync(build2.Id, testChannelName);
 
                     TestContext.WriteLine("Trigger the dependency update");
-                    await TriggerSubscriptionAsync(subscription1Id.Value);
+                    await TriggerSubscriptionAsync(subscription1Id);
 
                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 

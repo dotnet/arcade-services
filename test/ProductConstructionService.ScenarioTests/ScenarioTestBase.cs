@@ -673,7 +673,7 @@ internal abstract partial class ScenarioTestBase
         await RunDarcAsync("delete-default-channel", "--channel", testChannelName, "--repo", repoUri, "--branch", branch);
     }
 
-    protected static async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(
+    protected async Task<string> CreateSubscriptionAsync(
         string sourceChannelName,
         string sourceRepo,
         string targetRepo,
@@ -682,22 +682,21 @@ internal abstract partial class ScenarioTestBase
         string sourceOrg = "dotnet",
         List<string>? additionalOptions = null,
         bool sourceIsAzDo = false,
-        bool targetIsAzDo = false,
-        bool trigger = false)
+        bool targetIsAzDo = false)
     {
         var sourceUrl = sourceIsAzDo ? GetAzDoRepoUrl(sourceRepo) : GetRepoUrl(sourceOrg, sourceRepo);
         var targetUrl = targetIsAzDo ? GetAzDoRepoUrl(targetRepo) : GetGitHubRepoUrl(targetRepo);
 
         string[] command =
          [
-            "add-subscription", "-q",
+            "add-subscription",
             "--channel", sourceChannelName,
             "--source-repo", sourceUrl,
             "--target-repo", targetUrl,
             "--target-branch", targetBranch,
             "--update-frequency", updateFrequency,
-            trigger? "--trigger" : "--no-trigger",
-            .. additionalOptions ?? []
+            .. additionalOptions ?? [],
+            .. GetConfigurationManagementDarcArgs(),
         ];
 
         var output = await RunDarcAsync(command);
@@ -708,44 +707,22 @@ internal abstract partial class ScenarioTestBase
             throw new ScenarioTestException("Unable to create subscription.");
         }
 
-        var subscriptionId = match.Groups[1].Value;
-        return AsyncDisposableValue.Create(subscriptionId, async () =>
-        {
-            TestContext.WriteLine($"Cleaning up Test Subscription {subscriptionId}");
-            try
-            {
-                await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet");
-            }
-            catch (ScenarioTestException)
-            {
-                // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
-            }
-        });
+        await RefreshConfiguration();
+        return match.Groups[1].Value;
     }
 
-    protected static async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string yamlDefinition)
+    protected async Task<string> CreateSubscriptionAsync(string yamlDefinition)
     {
-        var output = await RunDarcAsyncWithInput(yamlDefinition, "add-subscription", "-q", "--read-stdin", "--no-trigger");
+        var output = await RunDarcAsyncWithInput(yamlDefinition, ["add-subscription", "-q", "--read-stdin", .. GetConfigurationManagementDarcArgs()]);
 
-        Match match = Regex.Match(output, "Successfully created new subscription with id '([a-f0-9-]+)'");
-        if (match.Success)
+        Match match = Regex.Match(output, "New subscription '([a-f0-9-]+)' added into");
+        if (!match.Success)
         {
-            var subscriptionId = match.Groups[1].Value;
-            return AsyncDisposableValue.Create(subscriptionId, async () =>
-            {
-                TestContext.WriteLine($"Cleaning up Test Subscription {subscriptionId}");
-                try
-                {
-                    await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet");
-                }
-                catch (ScenarioTestException)
-                {
-                    // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
-                }
-            });
+            throw new ScenarioTestException("Unable to create subscription.");
         }
 
-        throw new ScenarioTestException("Unable to create subscription.");
+        await RefreshConfiguration();
+        return match.Groups[1].Value;
     }
 
     protected static async Task<string> GetSubscriptionInfo(string subscriptionId)
@@ -768,14 +745,16 @@ internal abstract partial class ScenarioTestBase
         await RunDarcAsync("subscription-status", "--id", subscriptionId, enableSub ? "--enable" : "-d", "--quiet");
     }
 
-    protected static async Task<string> DeleteSubscriptionsForChannel(string channelName)
+    protected async Task DeleteSubscriptionsForChannel(string channelName)
     {
-        return await RunDarcAsync("delete-subscriptions", "--channel", channelName, "--quiet");
+        await RunDarcAsync(["delete-subscriptions", "--channel", channelName, .. GetConfigurationManagementDarcArgs()]);
+        await RefreshConfiguration();
     }
 
-    protected static async Task<string> DeleteSubscriptionById(string subscriptionId)
+    protected async Task DeleteSubscriptionById(string subscriptionId)
     {
-        return await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet");
+        await RunDarcAsync(["delete-subscriptions", "--id", subscriptionId, .. GetConfigurationManagementDarcArgs()]);
+        await RefreshConfiguration();
     }
 
     protected static Task<Build> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, List<AssetData> assets)

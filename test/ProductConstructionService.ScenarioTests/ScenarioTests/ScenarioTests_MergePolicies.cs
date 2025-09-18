@@ -86,7 +86,7 @@ internal class ScenarioTests_MergePolicies : ScenarioTestBase
         await CreateTestChannelAsync(testChannelName);
 
         TestContext.WriteLine($"Adding a subscription from ${sourceRepo} to ${targetRepo}");
-        await using AsyncDisposableValue<string> sub = await CreateSubscriptionAsync(testChannelName, sourceRepo, targetRepo, targetBranch, "none", "maestro-auth-test", additionalOptions: args);
+        string sub = await CreateSubscriptionAsync(testChannelName, sourceRepo, targetRepo, targetBranch, "none", "maestro-auth-test", additionalOptions: args);
 
         TestContext.WriteLine("Set up build for intake into target repository");
         var build = await CreateBuildAsync(sourceRepoUri, sourceBranch, sourceCommit, sourceBuildNumber, sourceAssets);
@@ -105,7 +105,7 @@ internal class ScenarioTests_MergePolicies : ScenarioTestBase
             await RunGitAsync("commit", "-am", "Add dependencies.");
             await using IAsyncDisposable ___ = await PushGitBranchAsync("origin", targetBranch);
 
-            await TriggerSubscriptionAsync(sub.Value);
+            await TriggerSubscriptionAsync(sub);
 
             TestContext.WriteLine($"Waiting on PR to be opened in ${targetRepoUri}");
             var testResult = await CheckGithubPullRequestChecks(targetRepo, targetBranch);

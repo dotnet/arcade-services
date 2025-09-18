@@ -40,10 +40,21 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
 
         await CreateTestChannelAsync(testChannelName);
 
-        await using AsyncDisposableValue<string> sub =
-            await CreateSubscriptionAsync(testChannelName, TestRepository.TestArcadeName, TestRepository.TestRepo2Name, targetBranch, "none", TestRepository.TestOrg, targetIsAzDo: targetAzDO);
-        Build build =
-            await CreateBuildAsync(GetRepoUrl(TestRepository.TestOrg, TestRepository.TestArcadeName), sourceBranch, TestRepository.ArcadeTestRepoCommit, sourceBuildNumber, sourceAssets);
+        string sub = await CreateSubscriptionAsync(
+            testChannelName,
+            TestRepository.TestArcadeName,
+            TestRepository.TestRepo2Name,
+            targetBranch,
+            "none",
+            TestRepository.TestOrg,
+            targetIsAzDo: targetAzDO);
+
+        Build build = await CreateBuildAsync(
+            GetRepoUrl(TestRepository.TestOrg, TestRepository.TestArcadeName),
+            sourceBranch,
+            TestRepository.ArcadeTestRepoCommit,
+            sourceBuildNumber,
+            sourceAssets);
 
         await using IAsyncDisposable _ = await AddBuildToChannelAsync(build.Id, testChannelName);
 
@@ -60,7 +71,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
                 "--repo", sourceRepoUri);
             await RunGitAsync("commit", "-am", "Add dependencies.");
             await using IAsyncDisposable __ = await PushGitBranchAsync("origin", targetBranch);
-            await TriggerSubscriptionAsync(sub.Value);
+            await TriggerSubscriptionAsync(sub);
 
             var expectedTitle = $"[{targetBranch}] Update dependencies from {TestRepository.TestOrg}/{TestRepository.TestArcadeName}";
             DependencyDetail expectedDependency = new()
@@ -178,8 +189,13 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
         ];
 
         await CreateTestChannelAsync(testChannelName);
-        await using AsyncDisposableValue<string> sub =
-            await CreateSubscriptionAsync(testChannelName, sourceRepo, TestRepository.TestRepo1Name, targetBranch, "none", TestRepository.TestOrg);
+        string sub = await CreateSubscriptionAsync(
+            testChannelName,
+            sourceRepo,
+            TestRepository.TestRepo1Name,
+            targetBranch,
+            "none",
+            TestRepository.TestOrg);
 
         TemporaryDirectory testRepoFolder = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
         TemporaryDirectory vmrFolder = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
@@ -206,7 +222,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
                     // and push it to GH
                     await using (await PushGitBranchAsync("origin", vmrBranch))
                     {
-                        await TriggerSubscriptionAsync(sub.Value);
+                        await TriggerSubscriptionAsync(sub);
 
                         var expectedTitle = $"[{targetBranch}] Update dependencies from {TestRepository.TestOrg}/{sourceRepo}";
 
