@@ -369,7 +369,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                     $"Add subscription '{subscriptionInfo}'",
                     string.Empty);
             }
-            Console.WriteLine($"Successfully created new subscription");
+            Console.WriteLine($"New subscription {newSub.Id} added into {_options.ConfigurationBranch}");
 
             return Constants.SuccessCode;
         }
