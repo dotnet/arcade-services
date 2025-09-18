@@ -38,8 +38,8 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
             }
         ];
 
-        await using AsyncDisposableValue<string> channel =
-            await CreateTestChannelAsync(testChannelName);
+        await CreateTestChannelAsync(testChannelName);
+
         await using AsyncDisposableValue<string> sub =
             await CreateSubscriptionAsync(testChannelName, TestRepository.TestArcadeName, TestRepository.TestRepo2Name, targetBranch, "none", TestRepository.TestOrg, targetIsAzDo: targetAzDO);
         Build build =
@@ -177,7 +177,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
             }
         ];
 
-        await using AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName);
+        await CreateTestChannelAsync(testChannelName);
         await using AsyncDisposableValue<string> sub =
             await CreateSubscriptionAsync(testChannelName, sourceRepo, TestRepository.TestRepo1Name, targetBranch, "none", TestRepository.TestOrg);
 

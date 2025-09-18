@@ -49,6 +49,7 @@ public class TestParameters : IDisposable
     public static int AzureDevOpsBuildId => 144618;
     public static int AzureDevOpsBuildDefinitionId => 6;
     public static List<string> BaseDarcRunArgs => _baseDarcRunArgs!;
+    public static string ConfigurationRepoUri { get; }
 
     static TestParameters()
     {
@@ -70,6 +71,9 @@ public class TestParameters : IDisposable
             ?? userSecrets["AZDO_TOKEN"];
         darcDir = Environment.GetEnvironmentVariable("DARC_DIR");
         darcVersion = Environment.GetEnvironmentVariable("DARC_VERSION") ?? userSecrets["DARC_VERSION"];
+        ConfigurationRepoUri = Environment.GetEnvironmentVariable("CONFIGURATION_REPO_URI")
+            ?? userSecrets["CONFIGURATION_REPO_URI"]
+            ?? "https://dev.azure.com/dnceng/internal/_git/dotnet-maestro-configuration-test";
     }
 
     [OneTimeSetUp]
