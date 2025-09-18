@@ -7,10 +7,12 @@ using Maestro.Data;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using ProductConstructionService.Api.v2020_02_20.Models;
+using ProductConstructionService.Common;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
@@ -33,8 +35,10 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         IGitHubInstallationIdResolver gitHubInstallationRetriever,
         IWorkItemProducerFactory workItemProducerFactory,
         IOptions<EnvironmentNamespaceOptions> environmentNamespaceOptions,
+        IRemoteFactory remoteFactory,
+        ICodeflowHistoryManager codeflowHistoryManager,
         ILogger<SubscriptionsController> logger)
-        : base(context, workItemProducerFactory, gitHubInstallationRetriever, environmentNamespaceOptions, logger)
+        : base(context, workItemProducerFactory, gitHubInstallationRetriever, remoteFactory, codeflowHistoryManager, environmentNamespaceOptions, logger)
     {
         _context = context;
         _gitHubClientFactory = gitHubClientFactory;
