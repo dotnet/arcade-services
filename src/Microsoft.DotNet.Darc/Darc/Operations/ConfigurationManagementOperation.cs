@@ -34,18 +34,21 @@ internal abstract class ConfigurationManagementOperation : Operation
     private readonly IRemoteFactory _remoteFactory;
     private readonly ILogger _logger;
     private readonly IGitRepo _configurationRepo;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory;
 
     protected ConfigurationManagementOperation(
         IConfigurationManagementCommandLineOptions options,
         IGitRepoFactory gitRepoFactory,
         IRemoteFactory remoteFactory,
-        ILogger logger)
+        ILogger logger,
+        ILocalGitRepoFactory localGitRepoFactory)
     {
         _options = options;
         _remoteFactory = remoteFactory;
         _logger = logger;
 
         _configurationRepo = gitRepoFactory.CreateClient(_options.ConfigurationRepository);
+        _localGitRepoFactory = localGitRepoFactory;
     }
 
     protected async Task CreateConfigurationBranchIfNeeded()
@@ -111,13 +114,43 @@ internal abstract class ConfigurationManagementOperation : Operation
     protected async Task WriteConfigurationFile(string fileName, object content, string commitMessage)
     {
         _logger.LogInformation("Pushing changes of {fileName} to {branch}...", fileName, _options.ConfigurationBranch);
+        
+        string yamlContent = _yamlSerializer.Serialize(content);
+        
+        // Add empty lines between YAML list items (lines starting with "- ")
+        var lines = yamlContent.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+        var modifiedLines = new List<string>();
+        
+        for (int i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            
+            // If this line starts a new list item (starts with "- ") and it's not the first item,
+            // add an empty line before it
+            if (line.StartsWith("- ") && i > 0 && modifiedLines.Count > 0)
+            {
+                modifiedLines.Add(string.Empty);
+            }
+            
+            modifiedLines.Add(line);
+        }
+        
+        string formattedYamlContent = string.Join(Environment.NewLine, modifiedLines);
+        
         await _configurationRepo.CommitFilesAsync(
             [
-                new GitFile(fileName, _yamlSerializer.Serialize(content))
+                new GitFile(fileName, formattedYamlContent)
             ],
             _options.ConfigurationRepository,
             _options.ConfigurationBranch,
             commitMessage);
+
+        if (_configurationRepo.GetType() == typeof(LocalLibGit2Client))
+        {
+            var local = _localGitRepoFactory.Create(new NativePath(_options.ConfigurationRepository));
+            await local.StageAsync(["."]);
+            await local.CommitAsync(commitMessage, allowEmpty: false);
+        }
     }
 
     protected async Task RemoveConfigurationFile(string fileName)

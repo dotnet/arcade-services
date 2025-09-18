@@ -31,7 +31,8 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         ILogger<AddSubscriptionOperation> logger,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
-        IGitRepoFactory gitRepoFactory) : base(barClient, logger, options, gitRepoFactory, remoteFactory)
+        IGitRepoFactory gitRepoFactory,
+        ILocalGitRepoFactory localGitRepoFactory) : base(barClient, logger, options, gitRepoFactory, remoteFactory, localGitRepoFactory)
     {
         _options = options;
         _remoteFactory = remoteFactory;
@@ -277,24 +278,24 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             IRemote targetVerifyRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
             bool onlyCheckBranch = sourceEnabled && !string.IsNullOrEmpty(targetDirectory); 
-            bool targetBranchExists = await UxHelpers.VerifyAndConfirmBranchExistsAsync(targetVerifyRemote, targetRepository, targetBranch, !_options.Quiet, onlyCheckBranch);
+            //bool targetBranchExists = await UxHelpers.VerifyAndConfirmBranchExistsAsync(targetVerifyRemote, targetRepository, targetBranch, !_options.Quiet, onlyCheckBranch);
 
-            if (!targetBranchExists)
-            {
-                Console.WriteLine("Aborting subscription creation.");
-                return Constants.ErrorCode;
-            }
+            //if (!targetBranchExists)
+            //{
+            //    Console.WriteLine("Aborting subscription creation.");
+            //    return Constants.ErrorCode;
+            //}
 
             // Verify the source.
             IRemote sourceVerifyRemote = await _remoteFactory.CreateRemoteAsync(sourceRepository);
 
-            bool sourceRepositoryExists = await UxHelpers.VerifyAndConfirmRepositoryExistsAsync(sourceVerifyRemote, sourceRepository, !_options.Quiet);
+            //bool sourceRepositoryExists = await UxHelpers.VerifyAndConfirmRepositoryExistsAsync(sourceVerifyRemote, sourceRepository, !_options.Quiet);
 
-            if (!sourceRepositoryExists)
-            {
-                Console.WriteLine("Aborting subscription creation.");
-                return Constants.ErrorCode;
-            }
+            //if (!sourceRepositoryExists)
+            //{
+            //    Console.WriteLine("Aborting subscription creation.");
+            //    return Constants.ErrorCode;
+            //}
 
             await CreateConfigurationBranchIfNeeded();
             var subscriptionsFilePath = GetConfigurationFilePath(targetRepository);
