@@ -701,7 +701,7 @@ internal abstract partial class ScenarioTestBase
 
         var output = await RunDarcAsync(command);
 
-        Match match = Regex.Match(output, "Successfully created new subscription with id '([a-f0-9-]+)'");
+        Match match = Regex.Match(output, "New subscription ([a-f0-9-]+) added into");
         if (!match.Success)
         {
             throw new ScenarioTestException("Unable to create subscription.");
@@ -715,7 +715,7 @@ internal abstract partial class ScenarioTestBase
     {
         var output = await RunDarcAsyncWithInput(yamlDefinition, ["add-subscription", "-q", "--read-stdin", .. GetConfigurationManagementDarcArgs()]);
 
-        Match match = Regex.Match(output, "New subscription '([a-f0-9-]+)' added into");
+        Match match = Regex.Match(output, "New subscription ([a-f0-9-]+) added into");
         if (!match.Success)
         {
             throw new ScenarioTestException("Unable to create subscription.");
