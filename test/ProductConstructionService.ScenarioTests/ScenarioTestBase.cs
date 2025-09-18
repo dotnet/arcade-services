@@ -1289,7 +1289,8 @@ internal abstract partial class ScenarioTestBase
 
     private async Task DeleteConfigurationAsync()
     {
-        await PcsApi.Configuration.ClearConfiguration(_configurationBranchName, TestParameters.ConfigurationRepoUri);
+        await PcsApi.Configuration.ClearConfigurationAsync(_configurationBranchName, TestParameters.ConfigurationRepoUri);
+
         try
         {
             await AzDoClient.DeleteBranchAsync(TestParameters.ConfigurationRepoUri, _configurationBranchName);
