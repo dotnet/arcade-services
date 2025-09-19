@@ -4,13 +4,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Maestro.Common;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc.Yaml;
 using Microsoft.Extensions.Logging;
-using Microsoft.TeamFoundation.Build.WebApi;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -24,7 +22,8 @@ internal abstract class SubscriptionOperationBase : ConfigurationManagementOpera
         ILogger logger,
         IConfigurationManagementCommandLineOptions options,
         IGitRepoFactory gitRepoFactory,
-        IRemoteFactory remoteFactory) : base(options, gitRepoFactory, remoteFactory, logger)
+        IRemoteFactory remoteFactory,
+        ILocalGitRepoFactory localGitRepoFactory) : base(options, gitRepoFactory, remoteFactory, logger, localGitRepoFactory)
     {
         _barClient = barClient;
         _logger = logger;
@@ -82,6 +81,16 @@ internal abstract class SubscriptionOperationBase : ConfigurationManagementOpera
                 && sub.TargetDirectory == updatedOrNewSubscription.TargetDirectory
                 && sub.Id != updatedOrNewSubscription.Id);
 
-    protected static string GetConfigurationFilePath(string repoUri) => SubscriptionConfigurationFolderPath / $"{GitRepoUrlUtils.GetRepoNameAndOwner(repoUri).RepoName}.yml";
+    protected static string GetConfigurationFilePath(string repoUri)
+    {
+        try
+        {
+            return SubscriptionConfigurationFolderPath / $"{GitRepoUrlUtils.GetRepoNameAndOwner(repoUri).RepoName}.yml";
+        }
+        catch (Exception)
+        {
+            return SubscriptionConfigurationFolderPath / repoUri.Split('/', StringSplitOptions.RemoveEmptyEntries).Last() + ".yml";
+        }
+    }
     protected static string GetSubscriptionDescription(SubscriptionYamlData s) => $"({s.Id}) {s.SourceRepository} ({s.Channel}) ==> {s.TargetRepository} ({s.TargetBranch})";
 }

@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -32,6 +33,10 @@ public interface IGitRepo
     Task<List<GitTreeItem>> LsTreeAsync(string uri, string gitRef, string path = null);
 
     Task<IReadOnlyList<GitFile>> GetFilesAsync(string repoUri, string branch, string path);
+
+    Task<bool> BranchExists(string repoUri, string branch);
+
+    Task CreateNewBranchAsync(string repoUri, string baseBranch, string newBranch);
 
     async Task<bool> IsRepoVmrAsync(string repoUri, string branch)
     {

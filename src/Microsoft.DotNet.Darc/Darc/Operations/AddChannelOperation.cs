@@ -23,8 +23,9 @@ internal class AddChannelOperation : ConfigurationManagementOperation
             AddChannelCommandLineOptions options,
             IGitRepoFactory gitRepoFactory,
             IRemoteFactory remoteFactory,
-            ILogger<AddChannelOperation> logger)
-        : base(options, gitRepoFactory, remoteFactory, logger)
+            ILogger<AddChannelOperation> logger,
+            ILocalGitRepoFactory localGitRepoFactory)
+        : base(options, gitRepoFactory, remoteFactory, logger, localGitRepoFactory)
     {
         _options = options;
         _logger = logger;

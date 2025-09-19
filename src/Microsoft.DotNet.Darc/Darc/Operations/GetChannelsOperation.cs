@@ -75,7 +75,8 @@ internal class GetChannelsOperation : Operation
                 new
                 {
                     id = channel.Id,
-                    name = channel.Name
+                    name = channel.Name,
+                    classification = channel.Classification, 
                 })
         };
 

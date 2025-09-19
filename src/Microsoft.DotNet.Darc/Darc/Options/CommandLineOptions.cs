@@ -184,6 +184,8 @@ public abstract class CommandLineOptions : ICommandLineOptions
         });
         services.TryAddSingleton<IRedisCacheClient, NoOpRedisClient>();
         services.TryAddSingleton<ICommentCollector, CommentCollector>();
+        services.TryAddTransient<ILocalGitRepoFactory, LocalGitRepoFactory>();
+        services.TryAddTransient<ILocalGitClient, LocalGitClient>();
 
         return services;
     }

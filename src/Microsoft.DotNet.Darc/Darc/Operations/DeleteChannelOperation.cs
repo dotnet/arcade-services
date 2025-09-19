@@ -24,8 +24,9 @@ internal class DeleteChannelOperation : ConfigurationManagementOperation
             DeleteChannelCommandLineOptions options,
             IGitRepoFactory gitRepoFactory,
             IRemoteFactory remoteFactory,
-            ILogger<DeleteChannelOperation> logger)
-        : base(options, gitRepoFactory, remoteFactory, logger)
+            ILogger<DeleteChannelOperation> logger,
+            ILocalGitRepoFactory localGitRepoFactory)
+        : base(options, gitRepoFactory, remoteFactory, logger, localGitRepoFactory)
     {
         _options = options;
         _logger = logger;

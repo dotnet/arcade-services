@@ -31,7 +31,8 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         ILogger<AddSubscriptionOperation> logger,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
-        IGitRepoFactory gitRepoFactory) : base(barClient, logger, options, gitRepoFactory, remoteFactory)
+        IGitRepoFactory gitRepoFactory,
+        ILocalGitRepoFactory localGitRepoFactory) : base(barClient, logger, options, gitRepoFactory, remoteFactory, localGitRepoFactory)
     {
         _options = options;
         _remoteFactory = remoteFactory;

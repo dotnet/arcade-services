@@ -31,7 +31,8 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
         IBarApiClient barClient,
         IGitRepoFactory gitRepoFactory,
         IRemoteFactory remoteFactory,
-        ILogger<UpdateSubscriptionOperation> logger) : base(barClient, logger, options, gitRepoFactory, remoteFactory)
+        ILogger<UpdateSubscriptionOperation> logger,
+        ILocalGitRepoFactory localGitRepoFactory) : base(barClient, logger, options, gitRepoFactory, remoteFactory, localGitRepoFactory)
     {
         _options = options;
         _gitRepoFactory = gitRepoFactory;

@@ -145,6 +145,9 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         throw new DependencyFileNotFoundException(filePath, $"{repoName}", branchOrCommit, lastException);
     }
 
+    public async Task CreateNewBranchAsync(string repoUri, string newBranch, string baseBranch)
+        => await CreateBranchAsync(repoUri, newBranch, baseBranch);
+
     /// <summary>
     /// Create a new branch in a repository
     /// </summary>
@@ -233,6 +236,8 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         var refs = ((JArray)content["value"]).ToObject<List<AzureDevOpsRef>>();
         return refs.Any(refs => refs.Name == $"refs/heads/{branch}");
     }
+
+    public async Task<bool> BranchExists(string repoUri, string branch) => await DoesBranchExistAsync(repoUri, branch);
 
     /// <summary>
     /// Deletes a branch in a repository

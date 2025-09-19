@@ -60,6 +60,12 @@ public class LocalGitClient : ILocalGitClient
         return results.Where(gitFile => gitFile != null).ToList()!;
     }
 
+    public async Task<bool> BranchExists(string repoUri, string branch)
+    {
+        var result = await _processManager.ExecuteGit(repoUri, "rev-parse", "--verify", branch);
+        return result.Succeeded;
+    }
+
     public async Task<string> GetFileContentsAsync(string relativeFilePath, string repoPath, string? branch)
     {
         // Load non-working-tree version
@@ -134,6 +140,12 @@ public class LocalGitClient : ILocalGitClient
         // Also remove untracked files (in case files were removed in index)
         result = await _processManager.ExecuteGit(repoPath, ["clean", "-xdf", relativePath], cancellationToken: CancellationToken.None);
         result.ThrowIfFailed("Failed to clean the working tree!");
+    }
+
+    public async Task CreateNewBranchAsync(string repoUri, string newBranch, string baseBranch)
+    {
+        await CheckoutAsync(repoUri, baseBranch);
+        await CreateBranchAsync(repoUri, newBranch, true);
     }
 
     public async Task CreateBranchAsync(string repoPath, string branchName, bool overwriteExistingBranch = false)
