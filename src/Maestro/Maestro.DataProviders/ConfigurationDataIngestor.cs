@@ -97,11 +97,11 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
 
             _logger.LogDebug("Deserializing configuration files");
             IReadOnlyCollection<SubscriptionYamlData> ingestedSubscriptions =
-                [.. subscriptionFiles.SelectMany(f => serializer.Deserialize<List<SubscriptionYamlData>>(f.Content))];
+                [.. subscriptionFiles.SelectMany(f => serializer.Deserialize<List<SubscriptionYamlData>>(f.Content) ?? [])];
             IReadOnlyList<ChannelYamlData> ingestedChannels =
-                [.. channelFiles.SelectMany(f => serializer.Deserialize<List<ChannelYamlData>>(f.Content))];
+                [.. channelFiles.SelectMany(f => serializer.Deserialize<List<ChannelYamlData>>(f.Content) ?? [])];
             IReadOnlyList<DefaultChannelYamlData> ingestedDefaultChannels =
-                [.. defaultChannelFiles.SelectMany(f => serializer.Deserialize<List<DefaultChannelYamlData>>(f.Content))];
+                [.. defaultChannelFiles.SelectMany(f => serializer.Deserialize<List<DefaultChannelYamlData>>(f.Content) ?? [])];
 
             _logger.LogInformation("Deserialized {SubscriptionCount} subscriptions, {ChannelCount} channels, {DefaultChannelCount} default channels",
                 ingestedSubscriptions.Count, ingestedChannels.Count, ingestedDefaultChannels.Count);
