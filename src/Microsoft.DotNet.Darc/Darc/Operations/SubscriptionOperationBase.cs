@@ -89,7 +89,7 @@ internal abstract class SubscriptionOperationBase : ConfigurationManagementOpera
         }
         catch (Exception)
         {
-            return SubscriptionConfigurationFolderPath / "unknown.yml";
+            return SubscriptionConfigurationFolderPath / repoUri.Split('/', StringSplitOptions.RemoveEmptyEntries).Last() + ".yml";
         }
     }
     protected static string GetSubscriptionDescription(SubscriptionYamlData s) => $"({s.Id}) {s.SourceRepository} ({s.Channel}) ==> {s.TargetRepository} ({s.TargetBranch})";
