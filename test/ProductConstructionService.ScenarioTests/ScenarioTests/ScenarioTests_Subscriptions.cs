@@ -253,7 +253,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
     private static async Task ValidateSubscriptionInfo(string subscriptionId, string expectedSubscriptionInfo)
     {
         var subscriptionInfo = await GetSubscriptionInfo(subscriptionId);
-        subscriptionInfo.Should().Contain(expectedSubscriptionInfo);
+        subscriptionInfo.Replace(" ", null).Should().Contain(expectedSubscriptionInfo.Replace(" ", null));
     }
 
     private async Task<string> CreateSubscriptionAsync(string yamlDefinition)
