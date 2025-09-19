@@ -164,6 +164,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         string sourceDirectory = _options.SourceDirectory;
         string targetDirectory = _options.TargetDirectory;
         string failureNotificationTags = _options.FailureNotificationTags;
+        string id = _options.Id;
         List<string> excludedAssets = _options.ExcludedAssets != null ? [.._options.ExcludedAssets.Split(';', StringSplitOptions.RemoveEmptyEntries)] : [];
 
         if (!string.IsNullOrEmpty(sourceDirectory) && !string.IsNullOrEmpty(targetDirectory))
@@ -302,7 +303,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             List<SubscriptionYamlData> subscriptions = await GetConfiguration<SubscriptionYamlData>(subscriptionsFilePath);
             var newSubscription = new SubscriptionYamlData
             {
-                Id = Guid.NewGuid(),
+                Id = string.IsNullOrEmpty(id) ? Guid.NewGuid() : Guid.Parse(id),
                 Channel = channel,
                 SourceRepository = sourceRepository,
                 TargetRepository = targetRepository,
@@ -361,7 +362,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             subscriptions.Add(newSub);
 
             var subscriptionInfo = GetSubscriptionDescription(newSub);
-            await WriteConfigurationFile(subscriptionsFilePath, subscriptions, $"Adding subscription {subscriptionInfo}");
+            await WriteConfigurationFile(subscriptionsFilePath, subscriptions.OrderBy(s => s.Channel), $"Adding subscription {subscriptionInfo}");
             if (!_options.NoPr && (_options.Quiet || UxHelpers.PromptForYesNo($"Create PR with changes in {_options.ConfigurationRepository}?")))
             {
                 await CreatePullRequest(

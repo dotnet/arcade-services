@@ -9,6 +9,9 @@ namespace Microsoft.DotNet.Darc.Options;
 [Verb("add-subscription", HelpText = "Add a new subscription.")]
 internal class AddSubscriptionCommandLineOptions : SubscriptionCommandLineOptions<AddSubscriptionOperation>
 {
+    [Option("id", HelpText = "Subscription's id (guid). If not set, it will be a random Guid")]
+    public string Id { get; set; }
+
     [Option("channel", HelpText = "Name of channel to pull from.")]
     public string Channel { get; set; }
 
