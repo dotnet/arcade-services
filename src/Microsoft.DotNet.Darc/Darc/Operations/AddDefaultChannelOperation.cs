@@ -24,9 +24,10 @@ internal class AddDefaultChannelOperation : ConfigurationManagementOperation
     public AddDefaultChannelOperation(
             AddDefaultChannelCommandLineOptions options,
             IGitRepoFactory gitRepoFactory,
+            ILocalGitRepoFactory localGitRepoFactory,
             IRemoteFactory remoteFactory,
             ILogger<AddDefaultChannelOperation> logger)
-        : base(options, gitRepoFactory, remoteFactory, logger)
+        : base(options, gitRepoFactory, remoteFactory, logger, localGitRepoFactory)
     {
         _options = options;
         _logger = logger;
