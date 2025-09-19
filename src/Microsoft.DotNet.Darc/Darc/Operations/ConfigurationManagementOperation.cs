@@ -96,13 +96,12 @@ internal abstract class ConfigurationManagementOperation : Operation
     {
         branch ??= _options.ConfigurationBranch;
 
-        _logger.LogInformation("Reading configuration from {fileName}...", fileName);
         try
         {
             var contents = await _configurationRepo.GetFileContentsAsync(
                 fileName,
                 _options.ConfigurationRepository,
-                _options.ConfigurationBranch);
+                branch);
 
             return _yamlDeserializer.Deserialize<List<T>>(contents) ?? [];
         }
