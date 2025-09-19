@@ -338,30 +338,14 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
 
             bool openPr = string.IsNullOrEmpty(_options.ConfigurationBranch);
 
-            SubscriptionYamlData newSub = new()
+            if (subscriptions.Any(s => s.Id == newSubscription.Id))
             {
-                Id = Guid.NewGuid(),
-                Enabled = "true",
-                Channel = channel,
-                SourceRepository = sourceRepository,
-                TargetRepository = targetRepository,
-                TargetBranch = targetBranch,
-                UpdateFrequency = updateFrequency,
-                Batchable = batchable ? "true" : "false",
-                MergePolicies = mergePolicies.Select(mp => new MergePolicyYamlData
-                {
-                    Name = mp.Name,
-                    Properties = mp.Properties.ToDictionary(kvp => kvp.Key, kvp => (object)kvp.Value.ToString())
-                }).ToList(),
-                FailureNotificationTags = failureNotificationTags,
-                SourceEnabled = sourceEnabled ? "true" : "false",
-                SourceDirectory = sourceDirectory,
-                TargetDirectory = targetDirectory,
-                ExcludedAssets = excludedAssets
-            };
-            subscriptions.Add(newSub);
+                _logger.LogError($"A subscription with id {newSubscription.Id} already exists.");
+                return Constants.ErrorCode;
+            }
+            subscriptions.Add(newSubscription);
 
-            var subscriptionInfo = GetSubscriptionDescription(newSub);
+            var subscriptionInfo = GetSubscriptionDescription(newSubscription);
             await WriteConfigurationFile(subscriptionsFilePath, subscriptions.OrderBy(s => s.Channel), $"Adding subscription {subscriptionInfo}");
             if (!_options.NoPr && (_options.Quiet || UxHelpers.PromptForYesNo($"Create PR with changes in {_options.ConfigurationRepository}?")))
             {
@@ -372,7 +356,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                     $"Add subscription '{subscriptionInfo}'",
                     string.Empty);
             }
-            Console.WriteLine($"New subscription {newSub.Id} added into {_options.ConfigurationBranch}");
+            Console.WriteLine($"New subscription {newSubscription.Id} added into {_options.ConfigurationBranch}");
 
             return Constants.SuccessCode;
         }
