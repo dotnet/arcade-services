@@ -44,7 +44,7 @@ internal class AddDefaultChannelOperation : ConfigurationManagementOperation
                 ? $"-regex:{_options.Branch}"
                 : GitHelpers.NormalizeBranchName(_options.Branch);
 
-            if (!await UxHelpers.VerifyAndConfirmBranchExistsAsync(repoRemote, _options.Repository, _options.Branch, !_options.NoConfirmation))
+            if (!await UxHelpers.VerifyAndConfirmBranchExistsAsync(repoRemote, _options.Repository, _options.Branch, !_options.Quiet))
             {
                 Console.WriteLine("Aborting default channel creation.");
                 return Constants.ErrorCode;
@@ -74,7 +74,7 @@ internal class AddDefaultChannelOperation : ConfigurationManagementOperation
             defaultChannels = [..defaultChannels.OrderBy(c => c.Repository).ThenBy(c => c.Branch).ThenBy(c => c.Channel)];
 
             _logger.LogInformation("Adding default channel for {repo} / {branch} to {fileName}", _options.Repository, _options.Branch, ChannelConfigurationFileName);
-            await WriteConfigurationFile(ChannelConfigurationFileName, defaultChannels, $"Adding default channel for '{_options.Repository} / {_options.Branch}'");
+            await WriteConfigurationFile(DefaultChannelConfigurationFileName, defaultChannels, $"Adding default channel for '{_options.Repository} / {_options.Branch}'");
 
             if (!_options.NoPr && (_options.Quiet || UxHelpers.PromptForYesNo($"Create PR with changes in {_options.ConfigurationRepository}?")))
             {

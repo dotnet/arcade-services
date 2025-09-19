@@ -2,28 +2,36 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.Darc.Yaml;
 using Microsoft.DotNet.ProductConstructionService.Client;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 
+#nullable enable
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
+internal class DefaultChannelStatusOperation : ConfigurationManagementOperation
 {
     private readonly DefaultChannelStatusCommandLineOptions _options;
     private readonly ILogger<DefaultChannelStatusOperation> _logger;
+    private readonly IRemoteFactory _remoteFactory;
 
     public DefaultChannelStatusOperation(
         DefaultChannelStatusCommandLineOptions options,
-        IBarApiClient barClient,
+        IGitRepoFactory gitRepoFactory,
+        IRemoteFactory remoteFactory,
         ILogger<DefaultChannelStatusOperation> logger)
-        : base(options, barClient)
+        : base(options, gitRepoFactory, remoteFactory, logger)
     {
         _options = options;
         _logger = logger;
+        _remoteFactory = remoteFactory;
     }
 
     /// <summary>
@@ -40,35 +48,58 @@ internal class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
 
         try
         {
-            DefaultChannel resolvedChannel = await ResolveSingleChannel();
-            if (resolvedChannel == null)
+            IRemote repoRemote = await _remoteFactory.CreateRemoteAsync(_options.Repository);
+
+            // Normalize the branch name
+            string normalizedBranch = GitHelpers.NormalizeBranchName(_options.Branch);
+
+            if (!await UxHelpers.VerifyAndConfirmBranchExistsAsync(repoRemote, _options.Repository, normalizedBranch, !_options.Quiet))
             {
+                Console.WriteLine("Aborting default channel status change.");
                 return Constants.ErrorCode;
             }
 
-            bool enabled;
-            if (_options.Enable)
+            List<DefaultChannelYamlData> defaultChannels = await GetConfiguration<DefaultChannelYamlData>(DefaultChannelConfigurationFileName, _options.ConfigurationBaseBranch);
+
+            DefaultChannelYamlData? channelToUpdate = defaultChannels.FirstOrDefault(c => 
+                c.Repository == _options.Repository &&
+                c.Branch == normalizedBranch &&
+                c.Channel == _options.Channel);
+
+            if (channelToUpdate == null)
             {
-                if (resolvedChannel.Enabled)
-                {
-                    Console.WriteLine($"Default channel association is already enabled");
-                    return Constants.ErrorCode;
-                }
-                enabled = true;
-            }
-            else
-            {
-                if (!resolvedChannel.Enabled)
-                {
-                    Console.WriteLine($"Default channel association is already disabled");
-                    return Constants.ErrorCode;
-                }
-                enabled = false;
+                _logger.LogError("Could not find default channel for repository '{repository}', branch '{branch}', channel '{channel}'", 
+                    _options.Repository, normalizedBranch, _options.Channel);
+                return Constants.ErrorCode;
             }
 
-            await _barClient.UpdateDefaultChannelAsync(resolvedChannel.Id, enabled: enabled);
+            bool targetEnabled = _options.Enable;
+            
+            if (channelToUpdate.Enabled == targetEnabled)
+            {
+                Console.WriteLine($"Default channel association is already {(targetEnabled ? "enabled" : "disabled")}");
+                return Constants.ErrorCode;
+            }
 
-            Console.WriteLine($"Default channel association has been {(enabled ? "enabled" : "disabled")}.");
+            await CreateConfigurationBranchIfNeeded();
+
+            channelToUpdate.Enabled = targetEnabled;
+
+            string action = targetEnabled ? "Enabling" : "Disabling";
+            _logger.LogInformation("{action} default channel for {repo} / {branch} in {fileName}", action, _options.Repository, normalizedBranch, DefaultChannelConfigurationFileName);
+            await WriteConfigurationFile(DefaultChannelConfigurationFileName, defaultChannels, $"{action} default channel for '{_options.Repository} / {normalizedBranch}'");
+
+            if (!_options.NoPr && (_options.Quiet || UxHelpers.PromptForYesNo($"Create PR with changes in {_options.ConfigurationRepository}?")))
+            {
+                await CreatePullRequest(
+                    _options.ConfigurationRepository,
+                    _options.ConfigurationBranch,
+                    _options.ConfigurationBaseBranch,
+                    $"{action} default channel for '{_options.Repository} / {normalizedBranch}'",
+                    string.Empty);
+            }
+
+            Console.WriteLine($"Default channel association has been {(targetEnabled ? "enabled" : "disabled")}.");
 
             return Constants.SuccessCode;
         }

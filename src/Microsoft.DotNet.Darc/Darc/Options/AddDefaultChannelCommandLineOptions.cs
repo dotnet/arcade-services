@@ -20,7 +20,4 @@ internal class AddDefaultChannelCommandLineOptions : ConfigurationManagementComm
 
     [Option("regex", Required = false, HelpText = "If specified, the value of the 'branch' option will be treated as a regular expression for matching branch names.", Default = false)]
     public bool UseBranchAsRegex { get; set; }
-
-    [Option('q', "quiet", HelpText = "Do not prompt if the target repository/branch does not exist.")]
-    public bool NoConfirmation { get; set; }
 }
