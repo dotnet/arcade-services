@@ -1116,13 +1116,13 @@ internal abstract partial class ScenarioTestBase
         return pr;
     }
 
-    protected IEnumerable<string> GetConfigurationManagementDarcArgs(bool quiet = true) =>
+    protected IEnumerable<string> GetConfigurationManagementDarcArgs() =>
     [
         "--configuration-repository", TestParameters.ConfigurationRepoUri,
         "--configuration-base-branch", "main",
         "--configuration-branch", _configurationBranchName,
         "--no-pr",
-        (quiet ? "--quiet" : "")
+        "--quiet",
     ];
 
     protected async Task RefreshConfiguration() =>

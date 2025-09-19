@@ -258,7 +258,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
 
     private async Task<string> CreateSubscriptionAsync(string yamlDefinition)
     {
-        var output = await RunDarcAsyncWithInput(yamlDefinition, ["add-subscription", "-q", "--read-stdin", .. GetConfigurationManagementDarcArgs()]);
+        var output = await RunDarcAsyncWithInput(yamlDefinition, ["add-subscription", "--read-stdin", .. GetConfigurationManagementDarcArgs()]);
 
         Match match = Regex.Match(output, "New subscription ([a-f0-9-]+) added into");
         if (!match.Success)

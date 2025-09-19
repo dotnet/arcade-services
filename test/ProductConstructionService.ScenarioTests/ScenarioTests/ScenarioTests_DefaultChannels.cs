@@ -55,7 +55,7 @@ internal class ScenarioTests_DefaultChannels : ScenarioTestBase
             "--channel", testChannelName,
             "--repo", repoUri,
             "--branch", branchName,
-            ..GetConfigurationManagementDarcArgs(quiet: false),
+            ..GetConfigurationManagementDarcArgs(),
         ]);
         await RefreshConfiguration();
     }
