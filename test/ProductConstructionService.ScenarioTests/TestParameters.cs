@@ -104,15 +104,22 @@ public class TestParameters : IDisposable
             }
         });
 
-        _baseDarcRunArgs = [
-            "--bar-uri", TestParameters.PcsBaseUri,
-            "--github-pat", TestParameters.GitHubToken,
-            "--azdev-pat", TestParameters.AzDoToken,
-            TestParameters.IsCI ? "--ci" : ""
+        _baseDarcRunArgs =
+        [
+            "--bar-uri", PcsBaseUri,
+            "--github-pat", GitHubToken,
+            "--azdev-pat", AzDoToken,
+            IsCI ? "--ci" : ""
         ];
-        if (!string.IsNullOrEmpty(TestParameters.PcsToken))
+
+        if (IsCI)
         {
-            _baseDarcRunArgs.AddRange(["--p", TestParameters.PcsToken]);
+            _baseDarcRunArgs.Add("--ci");
+        }
+        
+        if (!string.IsNullOrEmpty(PcsToken))
+        {
+            _baseDarcRunArgs.AddRange(["--p", PcsToken]);
         }
 
         Assembly assembly = typeof(TestParameters).Assembly;

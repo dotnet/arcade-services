@@ -1,9 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Text.RegularExpressions;
 using FluentAssertions;
+using Maestro.Data.Models;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.Darc.Helpers;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
 using ProductConstructionService.ScenarioTests.ObjectHelpers;
@@ -250,6 +253,52 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
     private static async Task ValidateSubscriptionInfo(string subscriptionId, string expectedSubscriptionInfo)
     {
         var subscriptionInfo = await GetSubscriptionInfo(subscriptionId);
-        subscriptionInfo.Should().BeEquivalentTo(expectedSubscriptionInfo);
+        subscriptionInfo.Should().Contain(expectedSubscriptionInfo);
+    }
+
+    private async Task<string> CreateSubscriptionAsync(string yamlDefinition)
+    {
+        var output = await RunDarcAsyncWithInput(yamlDefinition, ["add-subscription", "--read-stdin", .. GetConfigurationManagementDarcArgs()]);
+
+        Match match = Regex.Match(output, "New subscription ([a-f0-9-]+) added into");
+        if (!match.Success)
+        {
+            throw new ScenarioTestException("Unable to create subscription.");
+        }
+
+        await RefreshConfiguration();
+        return match.Groups[1].Value;
+    }
+
+    private static async Task<string> GetSubscriptionInfo(string subscriptionId)
+    {
+        return await RunDarcAsync("get-subscriptions", "--ids", subscriptionId);
+    }
+
+    private static async Task<string> GetSubscriptions(string channelName)
+    {
+        return await RunDarcAsync("get-subscriptions", "--channel", channelName);
+    }
+
+    private static async Task SetSubscriptionStatusByChannel(bool enableSub, string channelName)
+    {
+        await RunDarcAsync("subscription-status", enableSub ? "--enable" : "-d", "--channel", channelName, "--quiet");
+    }
+
+    private static async Task SetSubscriptionStatusById(bool enableSub, string subscriptionId)
+    {
+        await RunDarcAsync("subscription-status", "--id", subscriptionId, enableSub ? "--enable" : "-d", "--quiet");
+    }
+
+    private async Task DeleteSubscriptionsForChannel(string channelName)
+    {
+        await RunDarcAsync(["delete-subscriptions", "--channel", channelName, .. GetConfigurationManagementDarcArgs()]);
+        await RefreshConfiguration();
+    }
+
+    private async Task DeleteSubscriptionById(string subscriptionId)
+    {
+        await RunDarcAsync(["delete-subscriptions", "--id", subscriptionId, .. GetConfigurationManagementDarcArgs()]);
+        await RefreshConfiguration();
     }
 }

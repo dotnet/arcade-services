@@ -2,32 +2,34 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.Darc.Yaml;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class AddDefaultChannelOperation : Operation
+internal class AddDefaultChannelOperation : ConfigurationManagementOperation
 {
     private readonly AddDefaultChannelCommandLineOptions _options;
     private readonly ILogger<AddDefaultChannelOperation> _logger;
-    private readonly IBarApiClient _barClient;
     private readonly IRemoteFactory _remoteFactory;
 
     public AddDefaultChannelOperation(
-        AddDefaultChannelCommandLineOptions options,
-        ILogger<AddDefaultChannelOperation> logger,
-        IBarApiClient barClient,
-        IRemoteFactory remoteFactory)
+            AddDefaultChannelCommandLineOptions options,
+            IGitRepoFactory gitRepoFactory,
+            IRemoteFactory remoteFactory,
+            ILogger<AddDefaultChannelOperation> logger)
+        : base(options, gitRepoFactory, remoteFactory, logger)
     {
         _options = options;
         _logger = logger;
-        _barClient = barClient;
         _remoteFactory = remoteFactory;
     }
 
@@ -38,15 +40,51 @@ internal class AddDefaultChannelOperation : Operation
             IRemote repoRemote = await _remoteFactory.CreateRemoteAsync(_options.Repository);
 
             // Users can ignore the flag and pass in -regex: but to prevent typos we'll avoid that.
-            _options.Branch = _options.UseBranchAsRegex ? $"-regex:{_options.Branch}" : GitHelpers.NormalizeBranchName(_options.Branch);
+            _options.Branch = _options.UseBranchAsRegex
+                ? $"-regex:{_options.Branch}"
+                : GitHelpers.NormalizeBranchName(_options.Branch);
 
-            if (!(await UxHelpers.VerifyAndConfirmBranchExistsAsync(repoRemote, _options.Repository, _options.Branch, !_options.NoConfirmation)))
+            if (!await UxHelpers.VerifyAndConfirmBranchExistsAsync(repoRemote, _options.Repository, _options.Branch, !_options.Quiet))
             {
                 Console.WriteLine("Aborting default channel creation.");
                 return Constants.ErrorCode;
             }
 
-            await _barClient.AddDefaultChannelAsync(_options.Repository, _options.Branch, _options.Channel);
+            List<DefaultChannelYamlData> defaultChannels = await GetConfiguration<DefaultChannelYamlData>(DefaultChannelConfigurationFileName, _options.ConfigurationBaseBranch);
+
+            if (defaultChannels.Any(c => c.Repository == _options.Repository
+                                         && c.Branch == _options.Branch
+                                         && c.Channel == _options.Channel))
+            {
+                _logger.LogError("This default channel already exists");
+                return Constants.ErrorCode;
+            }
+
+            bool openPr = string.IsNullOrEmpty(_options.ConfigurationBranch);
+
+            await CreateConfigurationBranchIfNeeded();
+
+            defaultChannels.Add(new DefaultChannelYamlData()
+            {
+                Repository = _options.Repository,
+                Branch = _options.Branch,
+                Channel = _options.Channel,
+            });
+
+            defaultChannels = [..defaultChannels.OrderBy(c => c.Repository).ThenBy(c => c.Branch).ThenBy(c => c.Channel)];
+
+            _logger.LogInformation("Adding default channel for {repo} / {branch} to {fileName}", _options.Repository, _options.Branch, ChannelConfigurationFileName);
+            await WriteConfigurationFile(DefaultChannelConfigurationFileName, defaultChannels, $"Adding default channel for '{_options.Repository} / {_options.Branch}'");
+
+            if (!_options.NoPr && (_options.Quiet || UxHelpers.PromptForYesNo($"Create PR with changes in {_options.ConfigurationRepository}?")))
+            {
+                await CreatePullRequest(
+                    _options.ConfigurationRepository,
+                    _options.ConfigurationBranch,
+                    _options.ConfigurationBaseBranch,
+                    $"Add default channel for '{_options.Repository} / {_options.Branch}'",
+                    string.Empty);
+            }
 
             return Constants.SuccessCode;
         }

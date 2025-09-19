@@ -66,9 +66,6 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
             return stats;
         }
 
-        _logger.LogInformation("Found configuration source {ConfigurationSourceId} for repository {RepoUri} on branch {Branch}. Proceeding with clear operation.",
-            configurationSource.Id, repoUri, branch);
-
         // Pass empty lists to cause removal of all existing items for this source.
         await IngestConfigurationInternal(repoUri, branch, configurationSource, [], [], [], stats);
         _context.ConfigurationSources.Remove(configurationSource);
@@ -472,7 +469,10 @@ public class ConfigurationDataIngestor : IConfigurationDataIngestor
         {
             _logger.LogInformation("Removing {SubscriptionCount} subscriptions that are no longer in configuration: {SubscriptionIds}",
                 toRemove.Count, string.Join(", ", toRemove));
+
+            _context.SubscriptionUpdates.RemoveRange(_context.SubscriptionUpdates.Where(s => toRemove.Contains(s.SubscriptionId)));
             _context.Subscriptions.RemoveRange(existingSubscriptions.Values.Where(s => toRemove.Contains(s.Id)));
+
             stats.Subscriptions.Removed += toRemove.Count;
         }
         else

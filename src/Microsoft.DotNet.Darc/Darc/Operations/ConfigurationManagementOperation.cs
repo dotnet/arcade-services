@@ -19,6 +19,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 /// </summary>
 internal abstract class ConfigurationManagementOperation : Operation
 {
+    protected static UnixPath DefaultChannelConfigurationFileName = new("default-channels/default-channels.yml");
     protected static UnixPath ChannelConfigurationFileName = new("channels/channels.yml");
     protected static UnixPath SubscriptionConfigurationFolderPath = new("subscriptions");
 

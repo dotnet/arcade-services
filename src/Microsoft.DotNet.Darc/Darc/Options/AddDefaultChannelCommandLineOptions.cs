@@ -7,7 +7,7 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("add-default-channel", HelpText = "Add a channel that a build of a branch+repository is automatically applied to.")]
-internal class AddDefaultChannelCommandLineOptions : CommandLineOptions<AddDefaultChannelOperation>
+internal class AddDefaultChannelCommandLineOptions : ConfigurationManagementCommandLineOptions<AddDefaultChannelOperation>
 {
     [Option("channel", Required = true, HelpText = "Name of channel that a build of 'branch' and 'repo' should be applied to.")]
     public string Channel { get; set; }
@@ -20,7 +20,4 @@ internal class AddDefaultChannelCommandLineOptions : CommandLineOptions<AddDefau
 
     [Option("regex", Required = false, HelpText = "If specified, the value of the 'branch' option will be treated as a regular expression for matching branch names.", Default = false)]
     public bool UseBranchAsRegex { get; set; }
-
-    [Option('q', "quiet", HelpText = "Do not prompt if the target repository/branch does not exist.")]
-    public bool NoConfirmation { get; set; }
 }
