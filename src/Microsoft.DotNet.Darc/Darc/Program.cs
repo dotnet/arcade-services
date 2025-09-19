@@ -32,7 +32,7 @@ internal static class Program
         if (args.FirstOrDefault() == "vmr")
         {
             options = GetVmrOptions();
-            args = args.Skip(1).ToArray();
+            args = [.. args.Skip(1)];
         }
         else
         {
@@ -42,7 +42,7 @@ internal static class Program
         // If we're using the 'get-asset' command, we don't want to interfere with the --version parameter it has
         bool useAutoVersion = args.FirstOrDefault() != "get-asset";
 
-        Parser parser = new Parser(settings => { settings.AutoVersion = useAutoVersion; settings.HelpWriter = Console.Error; });
+        Parser parser = new(settings => { settings.AutoVersion = useAutoVersion; settings.HelpWriter = Console.Error; });
 
         return parser.ParseArguments(args, options)
                 .MapResult(
@@ -74,7 +74,7 @@ internal static class Program
 
                         return ret;
                     },
-                    (errs => 1));
+                    errs => 1);
     }
 
     /// <summary>
@@ -134,7 +134,6 @@ internal static class Program
         typeof(SubscriptionsStatusCommandLineOptions),
         typeof(TriggerSubscriptionsCommandLineOptions),
         typeof(UpdateBuildCommandLineOptions),
-        typeof(UpdateChannelCommandLineOptions),
         typeof(UpdateDependenciesCommandLineOptions),
         typeof(UpdateSubscriptionCommandLineOptions),
         typeof(VerifyCommandLineOptions),
