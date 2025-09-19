@@ -19,7 +19,7 @@ namespace Microsoft.DotNet.Darc.Operations;
 /// </summary>
 internal abstract class ConfigurationManagementOperation : Operation
 {
-    protected static UnixPath ChannelConfigurationFileName = new("channels/channels.yaml");
+    protected static UnixPath ChannelConfigurationFileName = new("channels/channels.yml");
     protected static UnixPath SubscriptionConfigurationFolderPath = new("subscriptions");
 
     private static readonly ISerializer _yamlSerializer = new SerializerBuilder()
@@ -103,7 +103,7 @@ internal abstract class ConfigurationManagementOperation : Operation
                 _options.ConfigurationRepository,
                 _options.ConfigurationBranch);
 
-            return _yamlDeserializer.Deserialize<List<T>>(contents);
+            return _yamlDeserializer.Deserialize<List<T>>(contents) ?? [];
         }
         catch (DependencyFileNotFoundException)
         {
