@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
@@ -14,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class AddChannelOperation : ConfigurationManagementOperation
+internal class AddChannelOperation : ChannelManagementOperation
 {
     private readonly AddChannelCommandLineOptions _options;
     private readonly ILogger<AddChannelOperation> _logger;
@@ -47,11 +45,11 @@ internal class AddChannelOperation : ConfigurationManagementOperation
                 return Constants.ErrorCode;
             }
 
-            List<ChannelYamlData> channels = await GetConfiguration<ChannelYamlData>(ChannelConfigurationFileName, _options.ConfigurationBaseBranch);
-
-            if (channels.Any(c => c.Name == _options.Name))
+            // Check if channel already exists in any category file
+            var existingChannel = await FindChannelInCategoryFiles(_options.Name, _options.ConfigurationBaseBranch);
+            if (existingChannel != null)
             {
-                _logger.LogError("An existing channel with name '{channelName}' already exists", _options.Name);
+                _logger.LogError("An existing channel with name '{channelName}' already exists in category '{category}'", _options.Name, existingChannel.Category);
                 return Constants.ErrorCode;
             }
 
@@ -59,15 +57,15 @@ internal class AddChannelOperation : ConfigurationManagementOperation
 
             await CreateConfigurationBranchIfNeeded();
 
-            // TODO: Put the channel in the right spot in the file
-            channels.Add(new ChannelYamlData()
+            // Create the new channel
+            var newChannel = new ChannelYamlData()
             {
                 Name = _options.Name,
                 Classification = _options.Classification
-            });
+            };
 
-            _logger.LogInformation("Adding channel '{channelName}' to {fileName}", _options.Name, ChannelConfigurationFileName);
-            await WriteConfigurationFile(ChannelConfigurationFileName, channels, $"Adding channel '{_options.Name}'");
+            // Add channel to the appropriate category file
+            await AddChannelToCategoryFile(newChannel, $"Adding channel '{_options.Name}'");
 
             if (!_options.NoPr && (_options.Quiet || UxHelpers.PromptForYesNo($"Create PR with changes in {_options.ConfigurationRepository}?")))
             {

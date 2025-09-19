@@ -2,20 +2,17 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Models.Darc.Yaml;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal class DeleteChannelOperation : ConfigurationManagementOperation
+internal class DeleteChannelOperation : ChannelManagementOperation
 {
     private readonly DeleteChannelCommandLineOptions _options;
     private readonly ILogger<DeleteChannelOperation> _logger;
@@ -36,11 +33,11 @@ internal class DeleteChannelOperation : ConfigurationManagementOperation
     {
         try
         {
-            List<ChannelYamlData> channels = await GetConfiguration<ChannelYamlData>(ChannelConfigurationFileName, _options.ConfigurationBaseBranch);
-            ChannelYamlData? channel = channels.FirstOrDefault(c => c.Name == _options.Name);
-            if (channel == null)
+            // Find the channel across all category files
+            ChannelWithCategory? channelWithCategory = await FindChannelInCategoryFiles(_options.Name, _options.ConfigurationBaseBranch);
+            if (channelWithCategory == null)
             {
-                _logger.LogError("Could not find channel with name '{channelName}'", _options.Name);
+                _logger.LogError("Could not find channel with name '{channelName}' in any category file", _options.Name);
                 return Constants.ErrorCode;
             }
 
@@ -48,10 +45,8 @@ internal class DeleteChannelOperation : ConfigurationManagementOperation
 
             await CreateConfigurationBranchIfNeeded();
 
-            channels.Remove(channel);
-
-            _logger.LogInformation("Removing channel '{channelName}' from {fileName}", _options.Name, ChannelConfigurationFileName);
-            await WriteConfigurationFile(ChannelConfigurationFileName, channels, $"Removing channel '{_options.Name}'");
+            // Remove channel from its category file
+            await RemoveChannelFromCategoryFile(channelWithCategory, $"Removing channel '{_options.Name}'");
 
             if (!_options.NoPr && (_options.Quiet || UxHelpers.PromptForYesNo($"Create PR with changes in {_options.ConfigurationRepository}?")))
             {

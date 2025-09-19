@@ -15,7 +15,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Helpers
     /// </summary>
     public static class ChannelCategorizer
     {
-        private static readonly ImmutableArray<string> s_categoryNames = 
+        public static readonly ImmutableArray<string> CategoryNames = 
             // .NET 6-20
             Enumerable.Range(0, 16).Select(v => $".NET {20 - v}")
                 .Concat(new[]
@@ -31,7 +31,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Helpers
         public static List<ChannelCategory> CategorizeChannels(IEnumerable<Channel> channels)
         {
             // Create fresh category instances for each call to avoid static state issues
-            var categories = s_categoryNames.Select(name => new ChannelCategory(name)).ToList();
+            var categories = CategoryNames.Select(name => new ChannelCategory(name)).ToList();
             var otherCategory = categories.First(c => c.Name == "Other");
             var testCategory = categories.First(c => c.Name == "Test");
 
