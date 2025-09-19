@@ -30,4 +30,20 @@ internal class ScenarioTests_Channels : ScenarioTestBase
         var returnedChannel2 = await GetTestChannelsAsync();
         returnedChannel2.Should().NotContain(testChannelName, "Channel was not deleted");
     }
+
+    private async Task DeleteTestChannelAsync(string testChannelName)
+    {
+        await RunDarcAsync(
+            [
+                "delete-channel",
+                "--name", testChannelName,
+                ..GetConfigurationManagementDarcArgs(),
+            ]);
+        await RefreshConfiguration();
+    }
+
+    private static async Task<string> GetTestChannelsAsync()
+    {
+        return await RunDarcAsync("get-channels");
+    }
 }

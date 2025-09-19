@@ -642,52 +642,6 @@ internal abstract partial class ScenarioTestBase
             }
         }
     }
-    protected static async Task<string> GetTestChannelsAsync()
-    {
-        return await RunDarcAsync("get-channels");
-    }
-
-    protected async Task DeleteTestChannelAsync(string testChannelName)
-    {
-        await RunDarcAsync(
-            [
-                "delete-channel",
-                "--name", testChannelName,
-                ..GetConfigurationManagementDarcArgs(),
-            ]);
-        await RefreshConfiguration();
-    }
-
-    protected async Task AddDefaultTestChannelAsync(string testChannelName, string repoUri, string branchName)
-    {
-        await RunDarcAsync(
-        [
-            "add-default-channel",
-            "--channel", testChannelName,
-            "--repo", repoUri,
-            "--branch", branchName,
-            ..GetConfigurationManagementDarcArgs(),
-        ]);
-        await RefreshConfiguration();
-    }
-
-    protected static async Task<string> GetDefaultTestChannelsAsync(string repoUri, string branch)
-    {
-        return await RunDarcAsync("get-default-channels", "--source-repo", repoUri, "--branch", branch);
-    }
-
-    protected async Task DeleteDefaultTestChannelAsync(string testChannelName, string repoUri, string branch)
-    {
-        await RunDarcAsync(
-        [
-            "delete-default-channel",
-            "--channel", testChannelName,
-            "--repo", repoUri,
-            "--branch", branch,
-            ..GetConfigurationManagementDarcArgs(),
-        ]);
-        await RefreshConfiguration();
-    }
 
     protected async Task<string> CreateSubscriptionAsync(
         string sourceChannelName,
@@ -727,52 +681,6 @@ internal abstract partial class ScenarioTestBase
         return match.Groups[1].Value;
     }
 
-    protected async Task<string> CreateSubscriptionAsync(string yamlDefinition)
-    {
-        var output = await RunDarcAsyncWithInput(yamlDefinition, ["add-subscription", "-q", "--read-stdin", .. GetConfigurationManagementDarcArgs()]);
-
-        Match match = Regex.Match(output, "New subscription ([a-f0-9-]+) added into");
-        if (!match.Success)
-        {
-            throw new ScenarioTestException("Unable to create subscription.");
-        }
-
-        await RefreshConfiguration();
-        return match.Groups[1].Value;
-    }
-
-    protected static async Task<string> GetSubscriptionInfo(string subscriptionId)
-    {
-        return await RunDarcAsync("get-subscriptions", "--ids", subscriptionId);
-    }
-
-    protected static async Task<string> GetSubscriptions(string channelName)
-    {
-        return await RunDarcAsync("get-subscriptions", "--channel", channelName);
-    }
-
-    protected static async Task SetSubscriptionStatusByChannel(bool enableSub, string channelName)
-    {
-        await RunDarcAsync("subscription-status", enableSub ? "--enable" : "-d", "--channel", channelName, "--quiet");
-    }
-
-    protected static async Task SetSubscriptionStatusById(bool enableSub, string subscriptionId)
-    {
-        await RunDarcAsync("subscription-status", "--id", subscriptionId, enableSub ? "--enable" : "-d", "--quiet");
-    }
-
-    protected async Task DeleteSubscriptionsForChannel(string channelName)
-    {
-        await RunDarcAsync(["delete-subscriptions", "--channel", channelName, .. GetConfigurationManagementDarcArgs()]);
-        await RefreshConfiguration();
-    }
-
-    protected async Task DeleteSubscriptionById(string subscriptionId)
-    {
-        await RunDarcAsync(["delete-subscriptions", "--id", subscriptionId, .. GetConfigurationManagementDarcArgs()]);
-        await RefreshConfiguration();
-    }
-
     protected static Task<Build> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, List<AssetData> assets)
     {
         return CreateBuildAsync(repositoryUrl, branch, commit, buildNumber, assets, []);
@@ -799,18 +707,6 @@ internal abstract partial class ScenarioTestBase
         });
 
         return build;
-    }
-
-    protected static async Task<string> GetDarcBuildAsync(int buildId)
-    {
-        var buildString = await RunDarcAsync("get-build", "--id", buildId.ToString());
-        return buildString;
-    }
-
-    protected static async Task<string> UpdateBuildAsync(int buildId, string updateParams)
-    {
-        var buildString = await RunDarcAsync("update-build", "--id", buildId.ToString(), updateParams);
-        return buildString;
     }
 
     protected static async Task AddDependenciesToLocalRepo(
@@ -964,12 +860,6 @@ internal abstract partial class ScenarioTestBase
         await RunGitAsync("checkout", commit);
     }
 
-    protected static async Task FastForwardAsync()
-    {
-        await RunGitAsync("fetch", "origin");
-        await RunGitAsync("pull");
-    }
-
     protected static async Task CheckoutRemoteBranchAsync(string branchName)
     {
         await RunGitAsync("fetch", "origin", branchName);
@@ -1060,25 +950,6 @@ internal abstract partial class ScenarioTestBase
         return asset;
     }
 
-    protected static List<AssetData> GetSingleAssetData(string assetName, string assetVersion)
-    {
-        return
-        [
-            new AssetData(false)
-            {
-                Name = assetName,
-                Version = assetVersion,
-                Locations =
-                [
-                    new AssetLocationData(LocationType.NugetFeed)
-                    {
-                        Location = @"https://pkgs.dev.azure.com/dnceng/public/_packaging/NotARealFeed/nuget/v3/index.json"
-                    }
-                ]
-            }
-        ];
-    }
-
     protected static async Task SetRepositoryPolicies(string repoUri, string branchName, string[]? policyParams = null)
     {
         string[] commandParams = ["set-repository-policies", "-q", "--repo", repoUri, "--branch", branchName, .. policyParams ?? []];
@@ -1089,26 +960,6 @@ internal abstract partial class ScenarioTestBase
     protected static async Task<string> GetRepositoryPolicies(string repoUri, string branchName)
     {
         return await RunDarcAsync("get-repository-policies", "--all", "--repo", repoUri, "--branch", branchName);
-    }
-
-    protected static async Task WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, Octokit.PullRequest pr, Octokit.Repository repo, int attempts = 40)
-    {
-        while (attempts-- > 0)
-        {
-            TestContext.WriteLine($"Starting check for merge, attempts remaining {attempts}");
-            pr = await GitHubApi.PullRequest.Get(repo.Id, pr.Number);
-
-            if (pr.State == Octokit.ItemState.Closed)
-            {
-                return;
-            }
-
-            await Task.Delay(WAIT_DELAY);
-        }
-
-        var waitTime = WAIT_DELAY * attempts;
-        throw new ScenarioTestException(
-            $"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {waitTime.Minutes} minutes");
     }
 
     protected async Task<bool> CheckGithubPullRequestChecks(string targetRepoName, string targetBranch)
@@ -1265,19 +1116,19 @@ internal abstract partial class ScenarioTestBase
         return pr;
     }
 
-    private IEnumerable<string> GetConfigurationManagementDarcArgs() =>
+    protected IEnumerable<string> GetConfigurationManagementDarcArgs(bool quiet = true) =>
     [
         "--configuration-repository", TestParameters.ConfigurationRepoUri,
         "--configuration-base-branch", "main",
         "--configuration-branch", _configurationBranchName,
         "--no-pr",
-        "--quiet"
+        (quiet ? "--quiet" : "")
     ];
 
-    private async Task RefreshConfiguration() =>
+    protected async Task RefreshConfiguration() =>
         await PcsApi.Configuration.RefreshConfigurationAsync(_configurationBranchName, TestParameters.ConfigurationRepoUri);
 
-    private async Task DeleteConfigurationAsync()
+    protected async Task DeleteConfigurationAsync()
     {
         await PcsApi.Configuration.ClearConfigurationAsync(_configurationBranchName, TestParameters.ConfigurationRepoUri);
 
