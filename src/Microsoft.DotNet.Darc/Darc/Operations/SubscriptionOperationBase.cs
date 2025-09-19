@@ -85,7 +85,7 @@ internal abstract class SubscriptionOperationBase : ConfigurationManagementOpera
     {
         try
         {
-            var (repoName, owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repoUri);)
+            var (repoName, owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repoUri);
             return SubscriptionConfigurationFolderPath / $"{owner}-{repoName}.yml";
         }
         catch (Exception)
