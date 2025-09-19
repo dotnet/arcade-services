@@ -340,6 +340,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             SubscriptionYamlData newSub = new()
             {
                 Id = Guid.NewGuid(),
+                Enabled = "true",
                 Channel = channel,
                 SourceRepository = sourceRepository,
                 TargetRepository = targetRepository,
