@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
@@ -10,20 +11,26 @@ using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using LibGit2Sharp;
 using Maestro.Common;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.GitHub;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Microsoft.TeamFoundation.TestManagement.WebApi;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Octokit;
+using static System.Net.WebRequestMethods;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
@@ -1490,5 +1497,191 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             UpdatedAt = pr.UpdatedAt,
             HeadBranchSha = pr.Head.Sha,
         };
+    public Task<List<Commit>> FetchLatestRepoCommitsAsync(string repoUrl, string branch, int maxCount)
+        => throw new NotImplementedException();
+
+    public async Task<List<Commit>> FetchNewerRepoCommitsAsync(
+        string repoUrl,
+        string branch,
+        string commitSha,
+        int maxCount)
+    {
+        if (maxCount <= 0)
+        {
+            maxCount = 100;
+        }
+
+        (string owner, string repo) = ParseRepoUri(repoUrl);
+
+        var request = new CommitRequest
+        {
+            Sha = branch ?? "main",
+        };
+
+        var options = new ApiOptions
+        {
+            PageSize = maxCount,
+            PageCount = 1,
+            StartPage = 1
+        };
+
+        var allCommits = new List<Commit>();
+
+        while (allCommits.Count < maxCount)
+        {
+            var commits = await GetClient(owner, repo)
+                .Repository
+                .Commit
+                .GetAll(owner, repo, request, options);
+
+            foreach (Octokit.GitHubCommit c in commits)
+            {
+                var convertedCommit = new Commit(
+                    c.Author?.Login,
+                    c.Commit.Sha,
+                    c.Commit.Message);
+
+                allCommits.Add(convertedCommit);
+                if (convertedCommit.Sha.Equals(commitSha))
+                {
+                    break;
+                }
+            }
+
+            if (commits.Count < options.PageSize)
+            {
+                break;
+            }
+
+            options.StartPage++;
+        }
+
+        return [.. allCommits.Take(maxCount)];
+    }
+
+    public async Task<ForwardFlow?> GetLastIncomingForwardFlow(string vmrUrl, string mappingName, string commit)
+    {
+        var content = await GetFileContentAtCommit(
+            vmrUrl,
+            commit,
+            VmrInfo.DefaultRelativeSourceManifestPath);
+
+        var lastForwardFlowRepoSha = SourceManifest
+            .FromJson(content)?
+            .GetRepoVersion(mappingName)
+            .CommitSha;
+
+        if (lastForwardFlowRepoSha == null)
+        {
+            return null;
+        }
+
+        int lineNumber = content.Split(Environment.NewLine)
+            .ToList()
+            .FindIndex(line => line.Contains(lastForwardFlowRepoSha));
+
+
+        string lastForwardFlowVmrSha = await BlameLineAsync(
+            vmrUrl,
+            commit,
+            VmrInfo.DefaultRelativeSourceManifestPath,
+            lineNumber);
+
+        return new ForwardFlow(lastForwardFlowRepoSha, lastForwardFlowVmrSha);
+    }
+
+    public async Task<Backflow?> GetLastIncomingBackflow(string repoUrl, string commit)
+    {
+        var content = await GetFileContentAtCommit(
+            repoUrl,
+            commit,
+            VersionFiles.VersionDetailsXml);
+
+        var lastBackflowVmrSha = VersionDetailsParser
+            .ParseVersionDetailsXml(content)?
+            .Source?
+            .Sha;
+
+        if (lastBackflowVmrSha == null)
+        {
+            return null;
+        }
+
+        int lineNumber = content
+            .Split(Environment.NewLine)
+            .ToList()
+            .FindIndex(line =>
+                line.Contains(VersionDetailsParser.SourceElementName) &&
+                line.Contains(lastBackflowVmrSha));
+        
+        string lastBackflowRepoSha = await BlameLineAsync(
+            repoUrl,
+            commit,
+            VersionFiles.VersionDetailsXml,
+            lineNumber);
+
+        return new Backflow(lastBackflowVmrSha, lastBackflowRepoSha);
+    }
+
+    private async Task<string> BlameLineAsync(string repoUrl, string commitOrBranch, string filePath, int lineNumber)
+    {
+        (string owner, string repo) = ParseRepoUri(repoUrl);
+
+        string query = $@"""
+        {{
+          repository(owner: {owner}, name: {repo}) {{
+            object(expression: ""{commitOrBranch}:{filePath}"") {{
+              ... on Blob {{
+                blame {{
+                  ranges {{
+                    startingLine
+                    endingLine
+                    commit {{ oid }}
+                  }}
+                }}
+              }}
+            }}
+          }}
+        }}""";
+        
+        var client = CreateHttpClient(repoUrl);
+
+        var requestBody = new { query };
+        var content = new StringContent(JsonConvert.SerializeObject(requestBody, _serializerSettings));
+
+        var response = await client.PostAsync("", content);
+        response.EnsureSuccessStatusCode();
+
+        using var stream = await response.Content.ReadAsStreamAsync();
+        using var doc = await JsonDocument.ParseAsync(stream);
+
+        var ranges = doc.RootElement
+            .GetProperty("data")
+            .GetProperty("repository")
+            .GetProperty("object")
+            .GetProperty("blame")
+            .GetProperty("ranges")
+            .EnumerateArray();
+
+        foreach (var range in ranges)
+        {
+            int start = range.GetProperty("startingLine").GetInt32();
+            int end = range.GetProperty("endingLine").GetInt32();
+
+            if (lineNumber >= start && lineNumber <= end)
+            {
+                return range.GetProperty("commit").GetProperty("oid").GetString()!;
+            }
+        }
+
+        throw new InvalidOperationException($"Line {lineNumber} not found in blame data.");
+    }
+
+    private async Task<string> GetFileContentAtCommit(string repoUrl, string commit, string filePath)
+    {
+        (string owner, string repo) = ParseRepoUri(repoUrl);
+        var file = await GetClient(repoUrl).Repository.Content.GetAllContentsByRef(owner, repo, filePath, commit);
+        return Encoding.UTF8.GetString(Convert.FromBase64String(file[0].Content));
+>>>>>>> 0973d0ff2 (Codeflow graphs WIP)
     }
 }

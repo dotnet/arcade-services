@@ -1944,4 +1944,15 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         UpdatedAt = DateTimeOffset.UtcNow,
         HeadBranchSha = pr.LastMergeSourceCommit.CommitId,
     };
+
+    public Task<List<Commit>> FetchLatestRepoCommits(string repoUrl, string branch, int maxCount)
+        => throw new NotImplementedException();
+
+    public Task<List<Commit>> FetchLatestFetchNewerRepoCommitsAsyncRepoCommits(
+        string repoUrl,
+        string branch,
+        string commitSha,
+        int maxCount)
+        => throw new NotImplementedException();
+>>>>>>> 0973d0ff2 (Codeflow graphs WIP)
 }

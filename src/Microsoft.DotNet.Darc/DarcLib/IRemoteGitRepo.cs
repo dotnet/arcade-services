@@ -167,6 +167,27 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// Returns a list of tree names (directories) under a given path in a given branch
     /// </summary>
     Task<IReadOnlyCollection<string>> GetGitTreeNames(string path, string repoUri, string branch);
+
+    /// <summary>
+    /// Returns the latest commits for a given repository and branch, up to maxCount
+    /// </summary>
+    Task<List<Commit>> FetchLatestRepoCommitsAsync(string repoUrl, string branch, int maxCount);
+
+    /// <summary>
+    /// Returns the latest commits for a given repository and branch that are newer than
+    /// the given commit, fetching up to maxCount commits in total.
+    /// </summary>
+    Task<List<Commit>> FetchNewerRepoCommitsAsync(string repoUrl, string branch, string commitSha, int maxCount);
+
+    /// <summary>
+    /// Get the last forward flow that was merged onto the given VMR at the specified commit
+    /// </summary>
+    Task<Tuple<string, string>?> GetLastIncomingForwardFlow(string vmrUrl, string branch, string commit);
+
+    /// <summary>
+    /// Get the last back flow that was merged onto the given repo at the specified commit
+    /// </summary>
+    Task<Tuple<string, string>?> GetLastIncomingBackflow(string repoUrl, string commit);
 }
 
 #nullable disable

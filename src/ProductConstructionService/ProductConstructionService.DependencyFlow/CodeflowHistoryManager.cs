@@ -1,10 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.DarcLib;
-using Maestro.Data.Models;
+using ProductConstructionService.Common;
 
-namespace ProductConstructionService.Common;
+namespace ProductConstructionService.DependencyFlow;
 
 public interface ICodeflowHistoryManager
 {
@@ -32,19 +31,16 @@ public record CodeflowGraphCommit(
     DateTimeOffset CommitDate,
     string Author,
     string Description,
-    List<CodeflowGraphCommit> IncomingCodeflows);
+    List<CodeflowGraphCommit> OutgoingFlows);
 
 public class CodeflowHistoryManager : ICodeflowHistoryManager
 {
     private readonly IRedisCacheFactory _redisCacheFactory;
-    private readonly IRemoteFactory _remoteFactory;
+    private readonly IRemote _remote;
 
-    public CodeflowHistoryManager(
-        IRedisCacheFactory cacheFactory,
-        IRemoteFactory remoteFactory)
+    public CodeflowHistoryManager(IRedisCacheFactory cacheFactory)
     {
         _redisCacheFactory = cacheFactory;
-        _remoteFactory = remoteFactory;
     }
 
     public async void RefreshCodeflowHistory(string repo, string branch)
@@ -57,13 +53,13 @@ public class CodeflowHistoryManager : ICodeflowHistoryManager
         await Task.CompletedTask;
     }
 
-    public async Task<CodeflowHistoryResult> GetCodeflowHistory(Subscription subscription, bool fetchLatest)
+    public async Task<CodeflowHistoryResult> GetCodeflowHistory(Guid? subscriptionId, bool fetchLatest)
     {
-
     }
 
     public async Task<CodeflowHistory?> GetCachedCodeflowHistoryAsync(Guid? subscriptionId)
     {
+
         string id = subscriptionId.ToString()!;
 
         var cache = _redisCacheFactory.Create<CodeflowHistory>(id);
@@ -73,43 +69,10 @@ public class CodeflowHistoryManager : ICodeflowHistoryManager
     }
 
 
-    public async Task<CodeflowHistory?> FetchLatestCodeflowHistoryAsync(Subscription subscription)
+    public async Task<CodeflowHistory?> FetchLatestCodeflowHistoryAsync(Guid? subscriptionId)
     {
-        var cachedCommits = await GetCachedCodeflowHistoryAsync(subscription.Id);
 
-        var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
-
-        var latestCommits = await remote.FetchNewerRepoCommitsAsync(
-            subscription.TargetBranch,
-            subscription.TargetBranch,
-            cachedCommits?.Commits.FirstOrDefault()?.CommitSha,
-            500);
-
-        var latestCachedCodeflow = cachedCommits?.Commits.FirstOrDefault(
-            x => x.IncomingCodeflows.Count > 0);
-
-        var codeFlows = await FetchLatestIncomingCodeflows(
-            subscription.TargetRepository,
-            subscription.TargetBranch,
-            latestCachedCodeflow,
-            remote);
-
-        return null;
-    }
-
-    private async Task<List<CodeflowGraphCommit>> FetchLatestIncomingCodeflows(
-        string repo,
-        string branch,
-        CodeflowGraphCommit? latestCachedCommit,
-        IRemote? remote)
-    {
-        if (remote == null)
-        {
-            remote = await _remoteFactory.CreateRemoteAsync(repo);
-        }
-
-        var lastFlow = remote.GetLastIncomingCodeflow(branch, latestCachedCommit?.CommitSha);
-
+        await Task.CompletedTask;
         return null;
     }
 }

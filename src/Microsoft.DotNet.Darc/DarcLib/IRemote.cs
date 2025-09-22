@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Maestro.MergePolicyEvaluation;
@@ -260,5 +261,30 @@ public interface IRemote
     /// <returns></returns>
     Task<IReadOnlyCollection<string>> GetGitTreeNames(string path, string repoUri, string branch);
 
-    #endregion
+    /// <summary>
+    /// Fetches the latest commits from a repository branch, up to maxCount
+    /// </summary>
+    /// <param name="repoUrl">Full url of the git repository</param>
+    /// <param name="branch">Name of the git branch in the repo</param>
+    /// <param name="maxCount">Maximum count of commits to fetch</param>
+    /// <returns>List of commits</returns>
+    Task<List<Commit>> FetchLatestRepoCommitsAsync(string repoUrl, string branch, int maxCount = 100);
+
+
+    /// <summary>
+    /// Fetches the latest commits from a repository branch that are newer than the specified
+    /// commit, fetching up to maxCount commits in total.
+    /// </summary>
+    /// <param name="repoUrl">Full url of the git repository</param>
+    /// <param name="branch">Name of the git branch in the repo</param>
+    /// <param name="commitSha">Sha of the commit to fetch newer commits than</param>
+    /// <param name="maxCount">Maximum count of commits to fetch</param>
+    /// <returns>List of commits</returns>
+    Task<List<Commit>> FetchNewerRepoCommitsAsync(string repoUrl, string branch, string commitSha, int maxCount = 100);
+
+
+    Task<Tuple<string, string>> GetLastIncomingForwardflow(string vmrUrl, string commit);
+    Task<Tuple<string, string>> GetLastIncomingBackflow(string repoUrl, string commit);
+
+        #endregion
 }

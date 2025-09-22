@@ -173,7 +173,7 @@ public class SubscriptionsController : ControllerBase
         return Accepted(new Subscription(subscription));
     }
 
-    protected async Task<IActionResult> GetCodeflowHistoryCore(Guid id)
+    protected async Task<IActionResult> GetCodeflowHistoryCore(Guid id, bool fetchNewChanges)
     {
         var subscription = await _context.Subscriptions
             .Include(sub => sub.LastAppliedBuild)
@@ -199,11 +199,14 @@ public class SubscriptionsController : ControllerBase
 
         bool isForwardFlow = !string.IsNullOrEmpty(subscription.TargetDirectory);
 
-        var cachedFlows = await _codeflowHistoryManager.GetCachedCodeflowHistory(id);
+        CodeflowHistory? cachedFlows;
+        CodeflowHistory? oppositeCachedFlows;
 
-        var oppositeCachedFlows = oppositeDirectionSubscription != null
-            ? await _codeflowHistoryManager.GetCachedCodeflowHistory(oppositeDirectionSubscription.Id)
-            : null;
+        cachedFlows = await _codeflowHistoryManager.FetchLatestCodeflowHistoryAsync(id);
+
+        oppositeCachedFlows = await _codeflowHistoryManager.FetchLatestCodeflowHistoryAsync(
+            oppositeDirectionSubscription?.Id);
+
 
         var lastCommit = subscription.LastAppliedBuild.Commit;
 
