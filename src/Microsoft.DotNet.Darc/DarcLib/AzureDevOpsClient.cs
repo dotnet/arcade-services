@@ -1871,4 +1871,14 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             throw;
         }
     }
+
+    public Task<List<Commit>> FetchLatestRepoCommits(string repoUrl, string branch, int maxCount)
+        => throw new NotImplementedException();
+
+    public Task<List<Commit>> FetchLatestFetchNewerRepoCommitsAsyncRepoCommits(
+        string repoUrl,
+        string branch,
+        string commitSha,
+        int maxCount)
+        => throw new NotImplementedException();
 }

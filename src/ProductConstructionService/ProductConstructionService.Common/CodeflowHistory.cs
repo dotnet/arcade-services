@@ -4,13 +4,3 @@
 using Microsoft.DotNet.DarcLib;
 
 namespace ProductConstructionService.Common;
-
-public record CodeflowHistory(
-    List<Commit> Commits,
-    List<CodeflowRecord> Codeflows);
-
-
-public record CodeflowRecord(
-    string SourceCommitSha,
-    string TargetCommitSha,
-    DateTimeOffset CodeflowMergeDate);
