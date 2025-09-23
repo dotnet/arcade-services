@@ -2,10 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Runtime.Serialization;
 
 namespace Maestro.MergePolicies;
-[DataContract]
+
 public record SubscriptionUpdateSummary
 {
     public SubscriptionUpdateSummary(Guid subscriptionId, int buildId, string sourceRepo, string commitSha)
@@ -16,15 +15,11 @@ public record SubscriptionUpdateSummary
         CommitSha = commitSha;
     }
 
-    [DataMember]
     public Guid SubscriptionId { get; set; }
 
-    [DataMember]
     public int BuildId { get; set; }
 
-    [DataMember]
     public string SourceRepo { get; set; }
 
-    [DataMember]
     public string CommitSha { get; set; }
 }
