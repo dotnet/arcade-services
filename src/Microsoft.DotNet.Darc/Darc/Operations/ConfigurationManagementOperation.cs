@@ -89,7 +89,7 @@ internal abstract class ConfigurationManagementOperation : Operation
 
         _options.ConfigurationBranch = $"darc/{_options.ConfigurationBaseBranch}-{Guid.NewGuid().ToString().Substring(0, 8)}";
         Console.WriteLine("Creating new configuration branch {0}", _options.ConfigurationBranch);
-        await _configurationRepo.CreateNewBranchAsync(_options.ConfigurationRepository, _options.ConfigurationBaseBranch, _options.ConfigurationBranch);
+        await _configurationRepo.CreateNewBranchAsync(_options.ConfigurationRepository, _options.ConfigurationBranch, _options.ConfigurationBaseBranch);
     }
 
     protected async Task<List<T>> GetConfiguration<T>(string fileName, string? branch = null)
