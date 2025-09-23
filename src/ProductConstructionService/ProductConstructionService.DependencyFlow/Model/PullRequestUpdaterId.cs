@@ -3,7 +3,7 @@
 
 using System.Text;
 
-namespace ProductConstructionService.DependencyFlow;
+namespace ProductConstructionService.DependencyFlow.Model;
 
 public class UpdaterId
 {

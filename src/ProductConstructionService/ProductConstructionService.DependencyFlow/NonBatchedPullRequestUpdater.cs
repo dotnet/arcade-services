@@ -8,6 +8,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
+using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;

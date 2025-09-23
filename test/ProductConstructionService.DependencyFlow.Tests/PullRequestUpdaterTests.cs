@@ -19,7 +19,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
+using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
+
+using Asset = Maestro.Data.Models.Asset;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -252,7 +255,13 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     InProgressPrHeadBranch = pr.HeadBranch;
                 }
             })
-            .ReturnsAsync(url);
+            .ReturnsAsync(new PullRequest
+            {
+                Url = url,
+                HeadBranch = InProgressPrHeadBranch,
+                BaseBranch = TargetBranch,
+                Status = PrStatus.Open,
+            });
     }
 
     protected void AndUpdatePullRequestShouldHaveBeenCalled()
@@ -476,7 +485,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 Status = prStatus,
                 HeadBranch = InProgressPrHeadBranch,
                 BaseBranch = TargetBranch,
-                TargetBranchCommitSha = "sha123456",
+                HeadBranchSha = "sha123456",
             });
 
         if (willFlowNewBuild

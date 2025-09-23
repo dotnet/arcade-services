@@ -6,6 +6,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using ProductConstructionService.DependencyFlow.Model;
 using Asset = ProductConstructionService.DependencyFlow.Model.Asset;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
