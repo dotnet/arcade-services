@@ -7,6 +7,7 @@ using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
+using ProductConstructionService.DependencyFlow.Model;
 using ClientModels = Microsoft.DotNet.ProductConstructionService.Client.Models;
 
 namespace ProductConstructionService.DependencyFlow.Tests;

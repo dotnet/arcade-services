@@ -2,11 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.MergePolicies;
-using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
 #nullable disable
-namespace ProductConstructionService.DependencyFlow;
+namespace ProductConstructionService.DependencyFlow.Model;
 
 public class InProgressPullRequest : DependencyFlowWorkItem
 {

@@ -4,6 +4,7 @@
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib.Helpers;
 using NUnit.Framework;
+using ProductConstructionService.DependencyFlow.Model;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 

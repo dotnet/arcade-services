@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Moq;
 using NUnit.Framework;
+using ProductConstructionService.DependencyFlow.Model;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
@@ -98,7 +99,7 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
             TargetDirectory = targetDirectory,
             PolicyObject = policy,
             Id = Guid.NewGuid(),
-            ExcludedAssets = [..excludedAssetPatterns.Select(pattern => new AssetFilter { Filter = pattern })]
+            ExcludedAssets = [.. excludedAssetPatterns.Select(pattern => new AssetFilter { Filter = pattern })]
         };
         ContextUpdates.Add(context => context.Subscriptions.Add(Subscription));
     }
@@ -135,7 +136,7 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
             DateProduced = DateTimeOffset.UtcNow,
             Assets =
             [
-                ..assets.Select(a => new Asset
+                ..assets.Select(a => new Maestro.Data.Models.Asset
                 {
                     Name = a.name,
                     Version = a.version,

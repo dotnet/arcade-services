@@ -5,6 +5,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Logging;
+using ProductConstructionService.DependencyFlow.Model;
 
 namespace ProductConstructionService.DependencyFlow;
 

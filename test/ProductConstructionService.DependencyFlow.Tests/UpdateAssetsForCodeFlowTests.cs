@@ -6,6 +6,7 @@ using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using NUnit.Framework;
+using ProductConstructionService.DependencyFlow.Model;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
