@@ -68,6 +68,13 @@ public interface ILocalGitClient
     Task CheckoutAsync(string repoPath, string refToCheckout);
 
     /// <summary>
+    ///     Checkout the repo to the specified state using the force flag.
+    /// </summary>
+    /// <param name="repoPath">Path to a git repository</param>
+    /// <param name="refToCheckout">Tag, branch, or commit to checkout</param>
+    Task ForceCheckoutAsync(string repoPath, string refToCheckout);
+
+    /// <summary>
     ///     Resets the working tree (or a given subpath) to match the index.
     /// </summary>
     /// <param name="repoPath">Path to the root of the repo</param>
