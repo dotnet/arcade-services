@@ -125,7 +125,7 @@ public abstract class CloneManager
         {
             var result = await repo.RunGitCommandAsync(["clean", "-fdqx", "."], cancellationToken);
             result.ThrowIfFailed("Couldn't clean the repository");
-            await repo.CheckoutAsync(checkoutRef);
+            await repo.ForceCheckoutAsync(checkoutRef);
         }
 
         if (resetToRemote)
