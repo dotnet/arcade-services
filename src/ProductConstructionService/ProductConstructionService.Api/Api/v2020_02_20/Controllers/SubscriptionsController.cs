@@ -7,9 +7,11 @@ using Maestro.Data;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.v2020_02_20.Models;
+using ProductConstructionService.Common;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
@@ -31,8 +33,9 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         IGitHubClientFactory gitHubClientFactory,
         IGitHubInstallationIdResolver gitHubInstallationRetriever,
         IWorkItemProducerFactory workItemProducerFactory,
+        ICodeflowHistoryManager codeflowHistoryManager,
         ILogger<SubscriptionsController> logger)
-        : base(context, workItemProducerFactory, gitHubInstallationRetriever, logger)
+        : base(context, workItemProducerFactory, gitHubInstallationRetriever, codeflowHistoryManager, logger)
     {
         _context = context;
         _gitHubClientFactory = gitHubClientFactory;
@@ -142,6 +145,14 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
     public override async Task<IActionResult> TriggerSubscription(Guid id, [FromQuery(Name = "bar-build-id")] int buildId = 0, [FromQuery(Name = "force")] bool force = false)
     {
         return await TriggerSubscriptionCore(id, buildId, force);
+    }
+
+    [HttpPost("{id}/codeflowhistory")]
+    [SwaggerApiResponse(HttpStatusCode.Accepted, Type = typeof(Subscription), Description = "Subscription update has been triggered")]
+    [ValidateModelState]
+    public override async Task<IActionResult> GetCodeflowHistory(Guid id)
+    {
+        return await GetCodeflowHistoryCore(id);
     }
 
     [ApiRemoved]

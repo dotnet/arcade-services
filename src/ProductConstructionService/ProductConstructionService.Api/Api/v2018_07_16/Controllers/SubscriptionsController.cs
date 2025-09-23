@@ -3,17 +3,19 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Net;
-using ProductConstructionService.Api.v2018_07_16.Models;
 using Maestro.Data;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using ProductConstructionService.Api.Controllers.Models;
+using ProductConstructionService.Api.v2018_07_16.Models;
+using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
-
 using Channel = Maestro.Data.Models.Channel;
+using SubscriptionDAO = Maestro.Data.Models.Subscription;
 
 namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 
@@ -27,17 +29,20 @@ public class SubscriptionsController : ControllerBase
     private readonly BuildAssetRegistryContext _context;
     private readonly IWorkItemProducerFactory _workItemProducerFactory;
     private readonly IGitHubInstallationIdResolver _installationIdResolver;
+    private readonly ICodeflowHistoryManager _codeflowHistoryManager;
     private readonly ILogger<SubscriptionsController> _logger;
 
     public SubscriptionsController(
         BuildAssetRegistryContext context,
         IWorkItemProducerFactory workItemProducerFactory,
         IGitHubInstallationIdResolver installationIdResolver,
+        ICodeflowHistoryManager codeflowHistoryManager,
         ILogger<SubscriptionsController> logger)
     {
         _context = context;
         _workItemProducerFactory = workItemProducerFactory;
         _installationIdResolver = installationIdResolver;
+        _codeflowHistoryManager = codeflowHistoryManager;
         _logger = logger;
     }
 
@@ -53,7 +58,7 @@ public class SubscriptionsController : ControllerBase
         int? channelId = null,
         bool? enabled = null)
     {
-        IQueryable<Maestro.Data.Models.Subscription> query = _context.Subscriptions.Include(s => s.Channel);
+        IQueryable<SubscriptionDAO> query = _context.Subscriptions.Include(s => s.Channel);
 
         if (!string.IsNullOrEmpty(sourceRepository))
         {
@@ -88,7 +93,7 @@ public class SubscriptionsController : ControllerBase
     [ValidateModelState]
     public virtual async Task<IActionResult> GetSubscription(Guid id)
     {
-        Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
+        SubscriptionDAO? subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
             .Include(sub => sub.Channel)
             .FirstOrDefaultAsync(sub => sub.Id == id);
 
@@ -98,6 +103,14 @@ public class SubscriptionsController : ControllerBase
         }
 
         return Ok(new Subscription(subscription));
+    }
+
+    [HttpPost("{id}/codeflowhistory")]
+    [SwaggerApiResponse(HttpStatusCode.Accepted, Type = typeof(Subscription), Description = "Subscription update has been triggered")]
+    [ValidateModelState]
+    public virtual async Task<IActionResult> GetCodeflowHistory(Guid id)
+    {
+        return await GetCodeflowHistoryCore(id);
     }
 
     /// <summary>
@@ -116,7 +129,7 @@ public class SubscriptionsController : ControllerBase
 
     protected async Task<IActionResult> TriggerSubscriptionCore(Guid id, int buildId, bool force = false)
     {
-        Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions
+        SubscriptionDAO? subscription = await _context.Subscriptions
             .Include(sub => sub.LastAppliedBuild)
             .Include(sub => sub.Channel)
             .FirstOrDefaultAsync(sub => sub.Id == id);
@@ -152,9 +165,72 @@ public class SubscriptionsController : ControllerBase
         return Accepted(new Subscription(subscription));
     }
 
+    protected async Task<IActionResult> GetCodeflowHistoryCore(Guid id, bool fetchNewChanges)
+    {
+        var subscription = await _context.Subscriptions
+            .Include(sub => sub.LastAppliedBuild)
+            .FirstOrDefaultAsync(sub => sub.Id == id);
+
+        if (subscription == null || !subscription.SourceEnabled)
+        {
+            return NotFound();
+        }
+
+        var oppositeDirectionSubscription = await _context.Subscriptions
+            .Include(sub => sub.LastAppliedBuild)
+            .Include(sub => sub.Channel)
+            .Where(sub =>
+                sub.SourceRepository == subscription.TargetRepository ||
+                sub.TargetRepository == subscription.SourceRepository)
+            .FirstOrDefaultAsync();
+
+        if (oppositeDirectionSubscription?.SourceEnabled != true)
+        {
+            oppositeDirectionSubscription = null;
+        }
+
+        bool isForwardFlow = !string.IsNullOrEmpty(subscription.TargetDirectory);
+
+        CodeflowHistory? cachedFlows;
+        CodeflowHistory? oppositeCachedFlows;
+
+        cachedFlows = await _codeflowHistoryManager.FetchLatestCodeflowHistoryAsync(id);
+
+        oppositeCachedFlows = await _codeflowHistoryManager.FetchLatestCodeflowHistoryAsync(
+            oppositeDirectionSubscription?.Id);
+
+
+        var lastCommit = subscription.LastAppliedBuild.Commit;
+
+        bool resultIsOutdated = IsCodeflowHistoryOutdated(subscription, cachedFlows) ||
+            IsCodeflowHistoryOutdated(oppositeDirectionSubscription, oppositeCachedFlows);
+
+        var result = new CodeflowHistoryResult
+        {
+            ResultIsOutdated = resultIsOutdated,
+            ForwardFlowHistory = isForwardFlow
+            ? cachedFlows
+            : oppositeCachedFlows,
+            BackflowHistory = isForwardFlow
+            ? oppositeCachedFlows
+            : cachedFlows,
+        };
+
+        return Ok(result);
+    }
+
+    private static bool IsCodeflowHistoryOutdated(
+        SubscriptionDAO? subscription,
+        CodeflowHistory? cachedFlows)
+    {
+        string? lastCachedCodeflow = cachedFlows?.Codeflows.LastOrDefault()?.SourceCommitSha;
+        string? lastAppliedCommit = subscription?.LastAppliedBuild?.Commit;
+        return !string.Equals(lastCachedCodeflow, lastAppliedCommit, StringComparison.Ordinal);
+    }
+
     private async Task EnqueueUpdateSubscriptionWorkItemAsync(Guid subscriptionId, int buildId, bool force = false)
     {
-        Maestro.Data.Models.Subscription? subscriptionToUpdate;
+        SubscriptionDAO? subscriptionToUpdate;
         if (buildId != 0)
         {
             // Update using a specific build
@@ -229,7 +305,7 @@ public class SubscriptionsController : ControllerBase
 
         foreach (var subscription in enabledSubscriptionsWithTargetFrequency)
         {
-            Maestro.Data.Models.Subscription? subscriptionWithBuilds = await _context.Subscriptions
+            SubscriptionDAO? subscriptionWithBuilds = await _context.Subscriptions
                 .Where(s => s.Id == subscription.Id)
                 .Include(s => s.Channel)
                 .ThenInclude(c => c.BuildChannels)
@@ -274,7 +350,7 @@ public class SubscriptionsController : ControllerBase
     [ValidateModelState]
     public virtual async Task<IActionResult> UpdateSubscription(Guid id, [FromBody] SubscriptionUpdate update)
     {
-        Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions.Where(sub => sub.Id == id)
+        SubscriptionDAO? subscription = await _context.Subscriptions.Where(sub => sub.Id == id)
             .FirstOrDefaultAsync();
 
         if (subscription == null)
@@ -320,7 +396,7 @@ public class SubscriptionsController : ControllerBase
 
         if (doUpdate)
         {
-            Maestro.Data.Models.Subscription? equivalentSubscription = await FindEquivalentSubscription(subscription);
+            SubscriptionDAO? equivalentSubscription = await FindEquivalentSubscription(subscription);
             if (equivalentSubscription != null)
             {
                 return BadRequest(
@@ -348,7 +424,7 @@ public class SubscriptionsController : ControllerBase
     [ValidateModelState]
     public virtual async Task<IActionResult> DeleteSubscription(Guid id)
     {
-        Maestro.Data.Models.Subscription? subscription =
+        SubscriptionDAO? subscription =
             await _context.Subscriptions.FirstOrDefaultAsync(sub => sub.Id == id);
 
         if (subscription == null)
@@ -379,7 +455,7 @@ public class SubscriptionsController : ControllerBase
     [Paginated(typeof(SubscriptionHistoryItem))]
     public virtual async Task<IActionResult> GetSubscriptionHistory(Guid id)
     {
-        Maestro.Data.Models.Subscription? subscription = await _context.Subscriptions.Where(sub => sub.Id == id)
+        SubscriptionDAO? subscription = await _context.Subscriptions.Where(sub => sub.Id == id)
             .FirstOrDefaultAsync();
 
         if (subscription == null)
@@ -450,11 +526,11 @@ public class SubscriptionsController : ControllerBase
             }
         }
 
-        Maestro.Data.Models.Subscription subscriptionModel = subscription.ToDb();
+        SubscriptionDAO subscriptionModel = subscription.ToDb();
         subscriptionModel.Channel = channel;
         subscriptionModel.Id = Guid.NewGuid();
 
-        Maestro.Data.Models.Subscription? equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);
+        SubscriptionDAO? equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);
         if (equivalentSubscription != null)
         {
             return Conflict(
@@ -541,7 +617,7 @@ public class SubscriptionsController : ControllerBase
     /// </summary>
     /// <param name="updatedOrNewSubscription">Subscription model with updated data.</param>
     /// <returns>Subscription if it is found, null otherwise</returns>
-    private async Task<Maestro.Data.Models.Subscription?> FindEquivalentSubscription(Maestro.Data.Models.Subscription updatedOrNewSubscription)
+    private async Task<SubscriptionDAO?> FindEquivalentSubscription(SubscriptionDAO updatedOrNewSubscription)
     {
         // Compare subscriptions based on the 4 key elements:
         // - Channel
