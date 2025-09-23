@@ -255,7 +255,13 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     InProgressPrHeadBranch = pr.HeadBranch;
                 }
             })
-            .ReturnsAsync(url);
+            .ReturnsAsync(new PullRequest
+            {
+                Url = url,
+                HeadBranch = InProgressPrHeadBranch,
+                BaseBranch = TargetBranch,
+                Status = PrStatus.Open,
+            });
     }
 
     protected void AndUpdatePullRequestShouldHaveBeenCalled()
@@ -479,7 +485,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 Status = prStatus,
                 HeadBranch = InProgressPrHeadBranch,
                 BaseBranch = TargetBranch,
-                TargetBranchCommitSha = "sha123456",
+                HeadBranchSha = "sha123456",
             });
 
         if (willFlowNewBuild
