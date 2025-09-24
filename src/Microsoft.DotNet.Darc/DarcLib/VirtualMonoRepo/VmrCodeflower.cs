@@ -32,6 +32,7 @@ public interface IVmrCodeFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
+        bool keepConflicts,
         bool forceUpdate,
         CancellationToken cancellationToken = default);
 }
@@ -102,6 +103,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
+        bool keepConflicts,
         bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
@@ -139,6 +141,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 targetBranch,
                 headBranch,
                 headBranchExisted,
+                keepConflicts,
                 forceUpdate,
                 cancellationToken);
         }
@@ -189,6 +192,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
+        bool keepConflicts,
         bool forceUpdate,
         CancellationToken cancellationToken);
 
@@ -418,6 +422,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 targetBranch,
                 headBranch,
                 headBranchExisted: true, // Head branch was created when we rewound to the previous flow
+                keepConflicts: false,
                 forceUpdate,
                 cancellationToken);
 

@@ -32,6 +32,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
     /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="targetVmrUri">URI of the VMR to update</param>
+    /// <param name="keepConflicts">Preserve file changes with conflict markers when conflicts occur</param>
     /// <param name="forceUpdate">Force the update to be performed</param>
     /// <returns>CodeFlowResult containing information about the codeflow calculation</returns>
     Task<CodeFlowResult> FlowForwardAsync(
@@ -42,6 +43,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
         string targetBranch,
         string headBranch,
         string targetVmrUri,
+        bool keepConflicts,
         bool forceUpdate,
         CancellationToken cancellationToken = default);
 }
@@ -102,6 +104,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string targetBranch,
         string headBranch,
         string targetVmrUri,
+        bool keepConflicts,
         bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
@@ -125,6 +128,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             targetBranch,
             headBranch,
             headBranchExisted,
+            keepConflicts,
             forceUpdate,
             cancellationToken);
 
@@ -225,6 +229,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
+        bool keepConflicts,
         bool forceUpdate,
         CancellationToken cancellationToken)
     {
@@ -244,6 +249,21 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             {
                 _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
                 throw new ConflictInPrBranchException(e.Result.StandardError, targetBranch, mapping.Name, isForwardFlow: true);
+            }
+
+            // If we want to keep the conflicts, we need to reapply the patches again and leave the conflicts in place
+            if (keepConflicts)
+            {
+                _logger.LogInformation("Conflicts encountered - preparing conflicted files");
+                await _vmrUpdater.UpdateRepository(
+                    mapping,
+                    build,
+                    additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
+                    resetToRemoteWhenCloningRepo: ShouldResetClones,
+                    keepConflicts: true,
+                    cancellationToken: cancellationToken);
+
+                throw new InvalidOperationException($"Patch application was expected to fail with {nameof(PatchApplicationLeftConflictsException)} but hasn't");
             }
 
             bool hadChanges = false;

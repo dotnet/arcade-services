@@ -3,7 +3,7 @@
 
 using ProductConstructionService.WorkItems;
 
-namespace ProductConstructionService.DependencyFlow.Tests;
+namespace ProductConstructionService.DependencyFlow.Tests.Mocks;
 
 internal class MockReminderManagerFactory : IReminderManagerFactory
 {

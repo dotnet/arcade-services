@@ -15,23 +15,30 @@ public class PatchApplicationFailedException(
         VmrIngestionPatch patch,
         ProcessExecutionResult result,
         bool reverseApply)
-    : Exception(GetExceptionMessage(patch, result, reverseApply))
+    : DarcException
 {
     public VmrIngestionPatch Patch { get; } = patch;
     public ProcessExecutionResult Result { get; } = result;
 
-    private static string GetExceptionMessage(VmrIngestionPatch patch, ProcessExecutionResult result, bool reverseApply)
-        => $"Failed to {(reverseApply ? "reverse-apply" : "apply")} the patch {Path.GetFileName(patch.Path)} to {patch.ApplicationPath ?? "/"}."
+    public override string Message
+        => $"Failed to {(reverseApply ? "reverse-apply" : "apply")} the patch {Path.GetFileName(Patch.Path)} to {Patch.ApplicationPath ?? "/"}."
             + Environment.NewLine
             + Environment.NewLine
-            + result;
+            + Result;
+}
+
+public class PatchApplicationLeftConflictsException(IReadOnlyCollection<UnixPath> conflictedFiles, NativePath repoPath)
+    : DarcException("The patch left the repository in a conflicted state")
+{
+    public IReadOnlyCollection<UnixPath> ConflictedFiles { get; } = conflictedFiles;
+    public NativePath RepoPath { get; } = repoPath;
 }
 
 /// <summary>
 ///     Exception thrown when the service can't apply an update to the PR branch due to a conflict
 ///     between the source repo and a change that was made in the PR after it was opened.
 /// </summary>
-public class ConflictInPrBranchException : Exception
+public class ConflictInPrBranchException : DarcException
 {
     private static readonly Regex AlreadyExistsRegex = new("patch failed: (.+): already exist in index");
     private static readonly Regex PatchFailedRegex = new("error: patch failed: (.*):");
@@ -104,6 +111,6 @@ public class NonLinearCodeflowException(string currentSha, string previousSha)
 /// This exception is used when the current codeflow cannot be applied, and if a codeflow PR already exists, then it
 /// is blocked from receiving new flows.
 /// </summary>
-public class BlockingCodeflowException(string msg) : Exception(msg)
+public class BlockingCodeflowException(string msg) : DarcException(msg)
 {
 }

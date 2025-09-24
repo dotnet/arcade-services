@@ -1,10 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.ServiceModel.Channels;
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -17,15 +15,18 @@ using Subscription = Microsoft.DotNet.ProductConstructionService.Client.Models.S
 namespace ProductConstructionService.ReproTool.Operations;
 
 internal class ReproOperation(
-    IBarApiClient prodBarClient,
-    ReproOptions options,
-    DarcProcessManager darcProcessManager,
-    [FromKeyedServices("local")] IProductConstructionServiceApi localPcsApi,
-    GitHubClient ghClient,
-    ILogger<ReproOperation> logger) : Operation(logger, ghClient, localPcsApi)
+        IBarApiClient prodBarClient,
+        ReproOptions options,
+        DarcProcessManager darcProcessManager,
+        [FromKeyedServices("local")] IProductConstructionServiceApi localPcsApi,
+        GitHubClient ghClient,
+        ILogger<ReproOperation> logger)
+    : Operation(logger, ghClient, localPcsApi)
 {
     internal override async Task RunAsync()
     {
+        await darcProcessManager.InitializeAsync();
+
         logger.LogInformation("Fetching {subscriptionId} subscription from BAR",
             options.Subscription);
         var subscription = await prodBarClient.GetSubscriptionAsync(options.Subscription);
@@ -41,7 +42,7 @@ internal class ReproOperation(
         }
         else
         {
-             await ReproDependencyFlowSubscription(subscription);
+            await ReproDependencyFlowSubscription(subscription);
         }
 
     }
@@ -170,7 +171,7 @@ internal class ReproOperation(
 
         if (options.BuildId == null)
         {
-             throw new ArgumentException("A buildId must be provided to flow a dependency update subscription");
+            throw new ArgumentException("A buildId must be provided to flow a dependency update subscription");
         }
         var build = await prodBarClient.GetBuildAsync(options.BuildId.Value);
 

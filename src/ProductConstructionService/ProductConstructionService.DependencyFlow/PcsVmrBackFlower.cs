@@ -25,15 +25,14 @@ internal interface IPcsVmrBackFlower : IVmrBackFlower
     /// <param name="subscription">Subscription to flow</param>
     /// <param name="build">Build to flow</param>
     /// <param name="targetBranch">Target branch to make the changes on</param>
-    /// <returns>
-    ///     Boolean whether there were any changes to be flown
-    ///     and a path to the local repo where the new branch is created
-    ///  </returns>
+    /// <param name="keepConflicts">Preserve file changes with conflict markers when conflicts occur</param>
+    /// <param name="forceUpdate">Force the update to be performed</param>
     Task<CodeFlowResult> FlowBackAsync(
         Subscription subscription,
         Build build,
         string targetBranch,
-        bool forceApply,
+        bool keepConflicts,
+        bool forceUpdate,
         CancellationToken cancellationToken = default);
 }
 
@@ -74,6 +73,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         Subscription subscription,
         Build build,
         string targetBranch,
+        bool keepConflicts,
         bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
@@ -94,6 +94,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             subscription.TargetBranch,
             targetBranch,
             headBranchExisted,
+            keepConflicts,
             forceUpdate,
             cancellationToken);
 
