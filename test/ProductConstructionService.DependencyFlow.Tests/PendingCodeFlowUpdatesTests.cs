@@ -102,7 +102,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             AndShouldHaveInProgressPullRequestState(
                 oldBuild,
                 nextBuildToProcess: newBuild.Id,
-                overwriteBuildCommit: ConflictPRRemoteSha,
+                headBranchSha: ConflictPRRemoteSha,
                 prState: InProgressPullRequestState.Conflict);
         }
     }
@@ -128,7 +128,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             AndShouldHaveInProgressPullRequestState(
                 build,
                 nextBuildToProcess: build.Id,
-                overwriteBuildCommit: ConflictPRRemoteSha,
+                headBranchSha: ConflictPRRemoteSha,
                 prState: InProgressPullRequestState.Conflict);
         }
     }
@@ -147,14 +147,14 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         Build oldBuild = GivenANewBuild(true);
         Build newBuild = GivenANewBuild(true);
         newBuild.Commit = "sha123456";
-        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, prAlreadyHasConflict: true, latestCommitToReturn: "sha4444", willFlowNewBuild: true))
+        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, prAlreadyHasConflict: true, headBranchSha: "sha4444", willFlowNewBuild: true))
         {
             ExpectPrMetadataToBeUpdated();
             await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true);
             ThenCodeShouldHaveBeenFlownForward(newBuild);
             AndShouldHaveNoPendingUpdateState();
             AndShouldHavePullRequestCheckReminder();
-            AndShouldHaveInProgressPullRequestState(newBuild);
+            AndShouldHaveInProgressPullRequestState(newBuild, headBranchSha: "sha4444");
         }
     }
 }

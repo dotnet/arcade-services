@@ -1158,7 +1158,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs;
         string? previousSourceSha; // is null in some edge cases like onboarding a new repository
 
-        var codeFlowRes = await ExecuteCodeFlowAsync(pr, update, subscription, build, prHeadBranch, forceUpdate, isForwardFlow);
+        var codeFlowRes = await ExecuteCodeFlowAsync(pr, prInfo, update, subscription, build, prHeadBranch, forceUpdate, isForwardFlow);
 
         if (codeFlowRes == null)
         {
@@ -1386,8 +1386,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             throw;
         }
     }
+
     private async Task<CodeFlowResult?> ExecuteCodeFlowAsync(
         InProgressPullRequest? pr,
+        PullRequest? prInfo,
         SubscriptionUpdateWorkItem update,
         SubscriptionDTO subscription,
         BuildDTO build,
@@ -1429,9 +1431,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         catch (ConflictInPrBranchException conflictException)
         {
-            if (pr != null)
+            if (pr != null && prInfo != null)
             {
-                await HandlePrUpdateConflictAsync(conflictException.ConflictedFiles, update, subscription, pr, prHeadBranch);
+                await HandlePrUpdateConflictAsync(conflictException.ConflictedFiles, update, subscription, pr, prInfo);
             }
             return null;
         }
@@ -1487,7 +1489,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         SubscriptionUpdateWorkItem update,
         SubscriptionDTO subscription,
         InProgressPullRequest pr,
-        string prHeadBranch)
+        PullRequest prInfo)
     {
         _commentCollector.AddComment(
             PullRequestCommentBuilder.BuildNotifyAboutConflictingUpdateComment(
@@ -1495,11 +1497,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 update,
                 subscription,
                 pr,
-                prHeadBranch),
+                prInfo.HeadBranch),
             CommentType.Warning);
 
         pr.MergeState = InProgressPullRequestState.Conflict;
         pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
+        pr.HeadBranchSha = prInfo.HeadBranchSha;
 
         await _pullRequestState.SetAsync(pr);
         await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
