@@ -31,7 +31,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 {
     private const long InstallationId = 1174;
     protected const string InProgressPrUrl = "https://github.com/owner/repo/pull/10";
-    protected string? InProgressPrHeadBranch { get; private set; } = "pr.head.branch";
+    protected string InProgressPrHeadBranch { get; private set; } = "pr.head.branch";
+    protected string InProgressPrHeadBranchSha { get; private set; } = "pr.head.branch.sha";
     protected const string ConflictPRRemoteSha = "sha3333";
 
     private Mock<IPcsVmrBackFlower> _backFlower = null!;
@@ -396,6 +397,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 new PullRequest
                 {
                     HeadBranch = InProgressPrHeadBranch,
+                    HeadBranchSha = InProgressPrHeadBranchSha,
                     BaseBranch = TargetBranch,
                     Status = prStatus,
                 });
@@ -484,8 +486,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             {
                 Status = prStatus,
                 HeadBranch = InProgressPrHeadBranch,
+                HeadBranchSha = InProgressPrHeadBranchSha,
                 BaseBranch = TargetBranch,
-                HeadBranchSha = "sha123456",
             });
 
         if (willFlowNewBuild
@@ -520,11 +522,11 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
         if (flowerWillHaveConflict || prAlreadyHasConflict)
         {
-            remote
-                .Setup(x => x.GetLatestCommitAsync(It.IsAny<string>(), It.IsAny<string>()))
-                .ReturnsAsync(latestCommitToReturn);
+            // TODO - this doesn't get called anymore but I guess we should mock something else?
+            //remote
+            //    .Setup(x => x.GetLatestCommitAsync(It.IsAny<string>(), It.IsAny<string>()))
+            //    .ReturnsAsync(latestCommitToReturn);
         }
-
 
         if (mockMergePolicyEvaluator)
         {
@@ -546,8 +548,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     It.IsAny<IRemote>(),
                     It.IsAny<IReadOnlyList<MergePolicyDefinition>>(),
                     It.IsAny<MergePolicyEvaluationResults?>(),
-                    It.IsAny<string>()
-                    ))
+                    It.IsAny<string>()))
                 .ReturnsAsync(results.Results);
 
             if (prStatus == PrStatus.Open)
@@ -686,6 +687,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         {
             UpdaterId = GetPullRequestUpdaterId().ToString(),
             HeadBranch = InProgressPrHeadBranch,
+            HeadBranchSha = InProgressPrHeadBranchSha,
             SourceSha = overwriteBuildCommit ?? forBuild.Commit,
             ContainedSubscriptions =
             [
