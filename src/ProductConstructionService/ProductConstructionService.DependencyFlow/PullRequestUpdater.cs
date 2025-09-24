@@ -1472,10 +1472,18 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
         }
+
         if (!codeFlowRes.HadUpdates)
         {
             _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}", subscription.Id);
         }
+
+        // The head branch SHA might have been changed by the latest flow so we need to refresh it before we store it in Redis
+        if (prInfo != null)
+        {
+            prInfo.HeadBranchSha = await _gitClient.GetShaForRefAsync(codeFlowRes.RepoPath, prHeadBranch);
+        }
+
         return codeFlowRes;
     }
 
