@@ -423,11 +423,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         PullRequestUpdateSummary prSummary = CreatePrSummaryFromInProgressPr(pr, targetRepository);
         MergePolicyEvaluationResults? cachedResults = await _mergePolicyEvaluationState.TryGetStateAsync();
 
-        IEnumerable<MergePolicyEvaluationResult> updatedMergePolicyResults = await _mergePolicyEvaluator.EvaluateAsync(prSummary, remote, policyDefinitions, cachedResults, prInfo.TargetBranchCommitSha);
+        IEnumerable<MergePolicyEvaluationResult> updatedMergePolicyResults = await _mergePolicyEvaluator.EvaluateAsync(prSummary, remote, policyDefinitions, cachedResults, prInfo.HeadBranchSha);
 
         MergePolicyEvaluationResults updatedResult = new(
             updatedMergePolicyResults.ToImmutableList(),
-            prInfo.TargetBranchCommitSha);
+            prInfo.HeadBranchSha);
 
         await _mergePolicyEvaluationState.SetAsync(updatedResult);
 
@@ -532,7 +532,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     ///     Creates a pull request from the given updates.
     /// </summary>
     /// <returns>The pull request url when a pr was created; <see langref="null" /> if no PR is necessary</returns>
-    private async Task<string?> CreatePullRequestAsync(SubscriptionUpdateWorkItem update, BuildDTO build)
+    private async Task<PullRequest?> CreatePullRequestAsync(SubscriptionUpdateWorkItem update, BuildDTO build)
     {
         (var targetRepository, var targetBranch) = await GetTargetAsync();
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
@@ -575,7 +575,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             var commitMessage = "Failed to perform coherency update for one or more dependencies.";
             await darcRemote.CommitUpdatesAsync(filesToCommit: [], targetRepository, newBranchName, commitMessage);
             var prDescription = $"Coherency update: {commitMessage} Please review the GitHub checks or run `darc update-dependencies --coherency-only` locally against {newBranchName} for more information.";
-            var prUrl = await darcRemote.CreatePullRequestAsync(
+            PullRequest pr = await darcRemote.CreatePullRequestAsync(
                 targetRepository,
                 new PullRequest
                 {
@@ -584,23 +584,24 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     BaseBranch = targetBranch,
                     HeadBranch = newBranchName,
                 });
-            List<CoherencyErrorDetails> agregatedCoherencyErrors = repoDependencyUpdates.GetAgregatedCoherencyErrors();
+
+            List<CoherencyErrorDetails> aggregatedCoherencyErrors = repoDependencyUpdates.GetAgregatedCoherencyErrors();
 
             InProgressPullRequest inProgressPr = new()
             {
                 UpdaterId = Id.ToString(),
-                Url = prUrl,
+                Url = pr.Url,
                 HeadBranch = newBranchName,
                 SourceSha = update.SourceSha,
                 ContainedSubscriptions = [],
                 RequiredUpdates = [],
                 CoherencyCheckSuccessful = false,
-                CoherencyErrors = agregatedCoherencyErrors.Count > 0 ? agregatedCoherencyErrors : null,
+                CoherencyErrors = aggregatedCoherencyErrors.Count > 0 ? aggregatedCoherencyErrors : null,
                 CodeFlowDirection = CodeFlowDirection.None,
             };
 
             await SetPullRequestCheckReminder(inProgressPr, isCodeFlow);
-            return prUrl;
+            return pr;
         }
 
         try
@@ -619,7 +620,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     CommitSha = repoDependencyUpdates.SubscriptionUpdate.SourceSha
                 };
 
-            var prUrl = await darcRemote.CreatePullRequestAsync(
+            PullRequest pr = await darcRemote.CreatePullRequestAsync(
                 targetRepository,
                 new PullRequest
                 {
@@ -629,12 +630,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     HeadBranch = newBranchName,
                 });
 
-            List<CoherencyErrorDetails> agregatedCoherencyErrors = repoDependencyUpdates.GetAgregatedCoherencyErrors();
+            List<CoherencyErrorDetails> aggregatedCoherencyErrors = repoDependencyUpdates.GetAgregatedCoherencyErrors();
 
             var inProgressPr = new InProgressPullRequest
             {
                 UpdaterId = Id.ToString(),
-                Url = prUrl,
+                Url = pr.Url,
                 HeadBranch = newBranchName,
                 SourceSha = update.SourceSha,
 
@@ -648,21 +649,21 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     .ToList(),
 
                 CoherencyCheckSuccessful = repoDependencyUpdates.CoherencyCheckSuccessful,
-                CoherencyErrors = agregatedCoherencyErrors.Count > 0 ? agregatedCoherencyErrors : null,
+                CoherencyErrors = aggregatedCoherencyErrors.Count > 0 ? aggregatedCoherencyErrors : null,
                 CodeFlowDirection = CodeFlowDirection.None,
             };
 
-            if (!string.IsNullOrEmpty(prUrl))
+            if (!string.IsNullOrEmpty(pr?.Url))
             {
                 await AddDependencyFlowEventsAsync(
                     inProgressPr.ContainedSubscriptions,
                     DependencyFlowEventType.Created,
                     DependencyFlowEventReason.New,
                     MergePolicyCheckResult.PendingPolicies,
-                    prUrl);
+                    pr.Url);
 
                 await SetPullRequestCheckReminder(inProgressPr, isCodeFlow);
-                return prUrl;
+                return pr;
             }
 
             // If we did not create a PR, then mark the dependency flow as completed as nothing to do.
@@ -1333,7 +1334,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 currentDescription: null,
                 isForwardFlow: isForwardFlow);
 
-            var prUrl = await darcRemote.CreatePullRequestAsync(
+            PullRequest pr = await darcRemote.CreatePullRequestAsync(
                 subscription.TargetRepository,
                 new PullRequest
                 {
@@ -1346,7 +1347,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             InProgressPullRequest inProgressPr = new()
             {
                 UpdaterId = Id.ToString(),
-                Url = prUrl,
+                Url = pr.Url,
                 HeadBranch = prBranch,
                 SourceSha = update.SourceSha,
                 ContainedSubscriptions =
@@ -1370,13 +1371,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 DependencyFlowEventType.Created,
                 DependencyFlowEventReason.New,
                 MergePolicyCheckResult.PendingPolicies,
-                prUrl);
+                pr.Url);
 
             inProgressPr.LastUpdate = DateTime.UtcNow;
             await SetPullRequestCheckReminder(inProgressPr, isCodeFlow: true);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
 
-            _logger.LogInformation("Code flow pull request created: {prUrl}", prUrl);
+            _logger.LogInformation("Code flow pull request created: {prUrl}", pr.Url);
 
             return inProgressPr;
         }

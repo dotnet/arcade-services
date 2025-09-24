@@ -79,7 +79,15 @@ public class LocalGitClient : ILocalGitClient
     public async Task CheckoutAsync(string repoPath, string refToCheckout)
     {
         var result = await _processManager.ExecuteGit(repoPath, ["checkout", refToCheckout]);
+
         result.ThrowIfFailed($"Failed to check out {refToCheckout} in {repoPath}");
+    }
+
+    public async Task ForceCheckoutAsync(string repoPath, string refToCheckout)
+    {
+        var result = await _processManager.ExecuteGit(repoPath, ["checkout", refToCheckout, "-f"]);
+
+        result.ThrowIfFailed($"Failed to force-checkout to {refToCheckout} in {repoPath}");
     }
 
     public async Task ResetWorkingTree(NativePath repoPath, UnixPath? relativePath = null)

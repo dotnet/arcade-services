@@ -225,11 +225,10 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Sub
             }
         }
 
-        // When we disable the source flow, we zero out the source/target directory
+        // When we disable the source flow, we zero out the source directory
         if (!sourceEnabled)
         {
             outputYamlData.SourceDirectory = null;
-            outputYamlData.TargetDirectory = null;
         }
 
         _data.FailureNotificationTags = ParseSetting(outputYamlData.FailureNotificationTags, _data.FailureNotificationTags, false);

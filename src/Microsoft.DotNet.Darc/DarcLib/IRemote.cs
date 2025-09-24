@@ -62,8 +62,8 @@ public interface IRemote
     /// </summary>
     /// <param name="repoUri">Repository uri.</param>
     /// <param name="pullRequest">Information about pull request to create.</param>
-    /// <returns>URI of new pull request.</returns>
-    Task<string> CreatePullRequestAsync(string repoUri, PullRequest pullRequest);
+    /// <returns>Pull request information.</returns>
+    Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest);
 
     /// <summary>
     ///     Update a pull request with new data.

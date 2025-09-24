@@ -76,15 +76,14 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// </summary>
     /// <param name="repoUri">Repo to create the pull request for.</param>
     /// <param name="pullRequest">Pull request data</param>
-    /// <returns></returns>
-    Task<string> CreatePullRequestAsync(string repoUri, PullRequest pullRequest);
+    /// <returns>Pull request information.</returns>
+    Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest);
 
     /// <summary>
     ///     Update a pull request with new information
     /// </summary>
     /// <param name="pullRequestUri">Uri of pull request to update</param>
     /// <param name="pullRequest">Pull request info to update</param>
-    /// <returns></returns>
     Task UpdatePullRequestAsync(string pullRequestUri, PullRequest pullRequest);
 
 
@@ -94,7 +93,6 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// <param name="pullRequestUrl">Uri of pull request to merge</param>
     /// <param name="parameters">Settings for merge</param>
     /// <param name="mergeCommitMessage">Commit message used to merge the pull request</param>
-    /// <returns></returns>
     Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string mergeCommitMessage);
 
     /// <summary>
@@ -186,11 +184,12 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
 #nullable disable
 public class PullRequest
 {
+    public string Url { get; set; }
     public string Title { get; set; }
     public string Description { get; set; }
     public string BaseBranch { get; set; }
     public string HeadBranch { get; set; }
     public PrStatus Status { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
-    public string TargetBranchCommitSha { get; set; }
+    public string HeadBranchSha { get; set; }
 }
