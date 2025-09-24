@@ -260,6 +260,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             {
                 Url = url,
                 HeadBranch = InProgressPrHeadBranch,
+                HeadBranchSha = InProgressPrHeadBranchSha,
                 BaseBranch = TargetBranch,
                 Status = PrStatus.Open,
             });
