@@ -276,7 +276,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                     keepConflicts: true,
                     cancellationToken: cancellationToken);
 
-                throw new InvalidOperationException($"Patch application was expected to fail with {nameof(PatchApplicationLeftConflictsException)} but hasn't");
+                throw new InvalidOperationException("Patch application was expected to fail and leave conflicts when applying with 'keepConflicts: true', but it succeeded unexpectedly. This indicates an unhandled edge case or logic error.");
             }
 
             bool hadChanges = false;

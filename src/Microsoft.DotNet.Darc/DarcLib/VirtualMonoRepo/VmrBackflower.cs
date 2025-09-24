@@ -259,7 +259,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                     keepConflicts: true,
                     cancellationToken: cancellationToken);
 
-                throw new InvalidOperationException($"Patch application was expected to fail with {nameof(PatchApplicationLeftConflictsException)} but hasn't");
+                throw new InvalidOperationException("Patch application did not fail as expected when retaining conflicts. The operation is in an unexpected state.");
             }
 
             // Otherwise, we have a conflicting change in the last backflow PR (before merging)
