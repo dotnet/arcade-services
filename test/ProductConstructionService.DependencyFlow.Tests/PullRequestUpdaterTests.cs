@@ -32,7 +32,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
     private const long InstallationId = 1174;
     protected const string InProgressPrUrl = "https://github.com/owner/repo/pull/10";
     protected string InProgressPrHeadBranch { get; private set; } = "pr.head.branch";
-    protected string InProgressPrHeadBranchSha { get; private set; } = "pr.head.branch.sha";
+    protected const string InProgressPrHeadBranchSha = "pr.head.branch.sha";
     protected const string ConflictPRRemoteSha = "sha3333";
 
     private Mock<IPcsVmrBackFlower> _backFlower = null!;
@@ -426,21 +426,21 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         int nextBuildToProcess = 0,
         bool newChangeWillConflict = false,
         bool prAlreadyHasConflict = false,
-        string headBranchSha = ConflictPRRemoteSha,
+        string? headBranchSha = null,
         bool willFlowNewBuild = false,
         bool mockMergePolicyEvaluator = true,
         bool? sourceRepoNotified = null)
         => WithExistingCodeFlowPullRequest(
-                forBuild,
-                PrStatus.Open,
-                canUpdate ? null : MergePolicyEvaluationStatus.Pending,
-                nextBuildToProcess,
-                newChangeWillConflict,
-                prAlreadyHasConflict,
-                headBranchSha,
-                willFlowNewBuild: willFlowNewBuild,
-                mockMergePolicyEvaluator: mockMergePolicyEvaluator,
-                sourceRepoNotified: sourceRepoNotified);
+            forBuild,
+            PrStatus.Open,
+            canUpdate ? null : MergePolicyEvaluationStatus.Pending,
+            nextBuildToProcess,
+            newChangeWillConflict,
+            prAlreadyHasConflict,
+            headBranchSha,
+            willFlowNewBuild: willFlowNewBuild,
+            mockMergePolicyEvaluator: mockMergePolicyEvaluator,
+            sourceRepoNotified: sourceRepoNotified);
 
     protected IDisposable WithExistingCodeFlowPullRequest(
         Build forBuild,
@@ -449,7 +449,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         int nextBuildToProcess = 0,
         bool flowerWillHaveConflict = false,
         bool prAlreadyHasConflict = false,
-        string headBranchSha = ConflictPRRemoteSha,
+        string? headBranchSha = null,
         bool willFlowNewBuild = false,
         bool mockMergePolicyEvaluator = true,
         bool? sourceRepoNotified = null)
@@ -468,18 +468,24 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 forBuild,
                 prUrl,
                 nextBuildToProcess,
-                headBranchSha:
-                    prAlreadyHasConflict
-                        ? ConflictPRRemoteSha
-                        : forBuild.Commit,
-                prState:
-                    prAlreadyHasConflict
-                        ? InProgressPullRequestState.Conflict
-                        : InProgressPullRequestState.Mergeable,
+                headBranchSha: prAlreadyHasConflict
+                    ? ConflictPRRemoteSha
+                    : InProgressPrHeadBranchSha,
+                prState: prAlreadyHasConflict
+                    ? InProgressPullRequestState.Conflict
+                    : InProgressPullRequestState.Mergeable,
                 sourceRepoNotified: sourceRepoNotified);
             SetState(Subscription, pr);
             SetExpectedPullRequestState(Subscription, pr);
         });
+
+        headBranchSha ??= flowerWillHaveConflict || prAlreadyHasConflict
+            ? ConflictPRRemoteSha
+            : InProgressPrHeadBranchSha;
+
+        _gitClient
+            .Setup(x => x.GetShaForRefAsync(It.IsAny<string>(), InProgressPrHeadBranch))
+            .ReturnsAsync(headBranchSha);
 
         var remote = DarcRemotes.GetOrAddValue(targetRepo, () => CreateMock<IRemote>());
         remote
@@ -488,13 +494,12 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             {
                 Status = prStatus,
                 HeadBranch = InProgressPrHeadBranch,
-                HeadBranchSha = flowerWillHaveConflict || prAlreadyHasConflict ? headBranchSha : InProgressPrHeadBranchSha,
+                HeadBranchSha = headBranchSha,
                 BaseBranch = TargetBranch,
             });
 
         if (willFlowNewBuild && !string.IsNullOrEmpty(Subscription.TargetDirectory))
         {
-            // TODO: This sounds off
             // Source manifest is used only for forward flow PRs
             remote
                 .Setup(x => x.GetSourceManifestAsync(It.IsAny<string>(), It.IsAny<string>()))
