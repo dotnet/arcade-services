@@ -80,7 +80,7 @@ internal abstract class CodeFlowOperation(
         LastFlows lastFlows;
         try
         {
-            lastFlows = await _codeFlower.GetLastFlowsAsync(mapping, productRepo, currentFlow is Backflow);
+            lastFlows = await _codeFlower.GetLastFlowsAsync(mapping.Name, productRepo, currentFlow is Backflow);
         }
         catch (InvalidSynchronizationException)
         {

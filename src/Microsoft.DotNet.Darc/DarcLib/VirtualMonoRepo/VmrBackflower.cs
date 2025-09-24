@@ -28,6 +28,7 @@ public interface IVmrBackFlower : IVmrCodeFlower
     /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
     /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
     /// <param name="headBranch">New/existing branch to make the changes on</param>
+    /// <param name="keepConflicts">Preserve file changes with conflict markers when conflicts occur instead of rebasing to an older commit recursively</param>
     Task<CodeFlowResult> FlowBackAsync(
         string mapping,
         NativePath targetRepo,
@@ -105,6 +106,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             build,
             targetBranch,
             headBranch,
+            keepConflicts,
             cancellationToken);
 
         return await FlowBackAsync(
@@ -309,20 +311,9 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
+        bool keepConflicts,
         CancellationToken cancellationToken)
     {
-        if (!headBranchExisted)
-        {
-            // If the target branch did not exist, we need to make sure it is created in the right location
-            await targetRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
-            await targetRepo.CreateBranchAsync(headBranch, true);
-        }
-        else
-        {
-            // If it did, we need to check out the last point of synchronization on it
-            await targetRepo.CheckoutAsync(lastFlows.LastBackFlow!.RepoSha);
-        }
-
         var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-{Commit.GetShortSha(lastFlows.LastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}.patch";
         var branchName = currentFlow.GetBranchName();
         IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, branchName, headBranch);
@@ -420,6 +411,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         Build build,
         string targetBranch,
         string headBranch,
+        bool keepConflicts,
         CancellationToken cancellationToken)
     {
         await _vmrCloneManager.PrepareVmrAsync([build.GetRepository()], [build.Commit], build.Commit, ShouldResetVmr, cancellationToken);
@@ -446,7 +438,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 ShouldResetVmr,
                 cancellationToken);
 
-            LastFlows lastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
+            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true);
             return (true, mapping, lastFlows);
         }
         catch (NotFoundException)
@@ -468,9 +460,16 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 throw new TargetBranchNotFoundException($"Failed to find target branch {targetBranch} in {string.Join(", ", remotes)}", e);
             }
 
-            LastFlows lastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
-            await targetRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
-            await targetRepo.CreateBranchAsync(headBranch);
+            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true);
+
+            // When we want to keep the conflicts, we create the branch where the base branch is
+            // When we don't, we rebase our branch on the previous flow
+            if (!keepConflicts)
+            {
+                await targetRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
+            }
+
+            await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
             return (false, mapping, lastFlows);
         }
     }
@@ -531,7 +530,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 resetToRemote: false,
                 cancellationToken);
 
-            previousFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
+            previousFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true);
             previousFlow = previousFlows.LastBackFlow
                 ?? throw new DarcException($"No more backflows found to recreate from {previousFlowSha}");
         }

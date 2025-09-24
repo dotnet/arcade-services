@@ -83,7 +83,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             targetBranch,
             cancellationToken);
 
-        var lastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
+        var lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true);
 
         var result = await FlowBackAsync(
             mapping,

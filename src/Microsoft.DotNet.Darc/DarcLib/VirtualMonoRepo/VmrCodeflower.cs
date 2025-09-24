@@ -18,7 +18,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 public interface IVmrCodeFlower
 {
     Task<LastFlows> GetLastFlowsAsync(
-        SourceMapping mapping,
+        string mappingName,
         ILocalGitRepo repoClone,
         bool currentIsBackflow);
 
@@ -157,6 +157,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 targetBranch,
                 headBranch,
                 headBranchExisted,
+                keepConflicts,
                 cancellationToken);
         }
 
@@ -181,6 +182,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="headBranchExisted">Did we just create the headbranch or are we updating an existing one?</param>
+    /// <param name="keepConflicts">Preserve file changes with conflict markers when conflicts occur instead of rebasing to an older commit recursively</param>
     /// <returns>True if there were changes to flow</returns>
     protected abstract Task<bool> SameDirectionFlowAsync(
         SourceMapping mapping,
@@ -208,6 +210,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="headBranchExisted">Did we just create the headbranch or are we updating an existing one?</param>
+    /// <param name="keepConflicts">Preserve file changes with conflict markers when conflicts occur instead of rebasing to an older commit recursively</param>
     /// <returns>True if there were changes to flow</returns>
     protected abstract Task<bool> OppositeDirectionFlowAsync(
         SourceMapping mapping,
@@ -218,6 +221,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
+        bool keepConflicts,
         CancellationToken cancellationToken);
 
     /// <summary>
@@ -264,14 +268,14 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// Checks the last flows between a repo and a VMR and returns the most recent one.
     /// </summary>
     public async Task<LastFlows> GetLastFlowsAsync(
-        SourceMapping mapping,
+        string mappingName,
         ILocalGitRepo repoClone,
         bool currentIsBackflow)
     {
         await _dependencyTracker.RefreshMetadataAsync();
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
 
-        ForwardFlow lastForwardFlow = await GetLastForwardFlow(mapping.Name);
+        ForwardFlow lastForwardFlow = await GetLastForwardFlow(mappingName);
         Backflow? lastBackflow = await GetLastBackflow(repoClone.Path);
 
         if (lastBackflow is null)
