@@ -225,7 +225,9 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _logger.LogInformation("Created {count} patch(es)", patches.Count);
 
         string newBranchName = currentFlow.GetBranchName();
-        IWorkBranch? workBranch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, newBranchName, headBranch);
+        IWorkBranch? workBranch = !keepConflicts
+            ? await _workBranchFactory.CreateWorkBranchAsync(targetRepo, newBranchName, headBranch)
+            : null;
 
         try
         {

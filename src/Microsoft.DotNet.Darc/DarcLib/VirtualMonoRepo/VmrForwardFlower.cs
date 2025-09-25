@@ -335,9 +335,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             // Check out the last flow's commit in the PR branch to create the work branch on
             await vmr.CheckoutAsync(lastFlows.LastForwardFlow.VmrSha);
             await _dependencyTracker.RefreshMetadataAsync();
+            workBranch = await _workBranchFactory.CreateWorkBranchAsync(vmr, branchName);
         }
-
-        workBranch = await _workBranchFactory.CreateWorkBranchAsync(vmr, branchName);
 
         await sourceRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
 
