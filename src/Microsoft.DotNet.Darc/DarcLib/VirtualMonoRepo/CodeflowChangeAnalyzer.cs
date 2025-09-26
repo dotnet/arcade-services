@@ -96,7 +96,8 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         if (mappingName != VmrInfo.ArcadeMappingName)
         {
             changedFiles = changedFiles
-                .Where(file => !file.StartsWith(Constants.CommonScriptFilesPath, StringComparison.OrdinalIgnoreCase));
+                .Where(file => file.Length < Constants.CommonScriptFilesPath.Length ||
+                               !file.StartsWith(Constants.CommonScriptFilesPath, StringComparison.OrdinalIgnoreCase));
         }
 
         if (!changedFiles.Any())
@@ -179,7 +180,8 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
     private static bool ContainsUnexpectedChange(string line, IEnumerable<string> expectedContents)
     {
         // Characters belonging to the diff command output
-        if (IgnoredDiffLines.Any(line.StartsWith))
+        if (IgnoredDiffLines.Any(IgnoredDiffLine => line.Length >= IgnoredDiffLine.Length &&
+            line.StartsWith(IgnoredDiffLine)))
         {
             return false;
         }
