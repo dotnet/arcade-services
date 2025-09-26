@@ -90,7 +90,9 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
 
         IEnumerable<string> changedFiles = result.GetOutputLines()
             .Where(file => !ignoredFiles.Contains(file))
-            .Select(file => file.Substring(vmrSourcesPath.Length + 1));
+            .Select(file => file.Length < vmrSourcesPath.Length + 1
+                            ? file
+                            : file.Substring(vmrSourcesPath.Length + 1));
 
         // For non-arcade repos, we also ignore eng/common changes
         if (mappingName != VmrInfo.ArcadeMappingName)
