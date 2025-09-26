@@ -102,7 +102,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         var targetRepo = _localGitRepoFactory.Create(targetRepoPath);
         (bool headBranchExisted, SourceMapping mapping, LastFlows lastFlows) = await PrepareVmrAndRepo(
             mappingName,
-            targetRepo,
             build,
             targetBranch,
             headBranch,
@@ -224,9 +223,9 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         _logger.LogInformation("Created {count} patch(es)", patches.Count);
 
-        string newBranchName = currentFlow.GetBranchName();
+        // We create a work branch only if we don't want to keep the conflicts
         IWorkBranch? workBranch = !keepConflicts
-            ? await _workBranchFactory.CreateWorkBranchAsync(targetRepo, newBranchName, headBranch)
+            ? await _workBranchFactory.CreateWorkBranchAsync(targetRepo, currentFlow.GetBranchName(), headBranch)
             : null;
 
         try
@@ -407,16 +406,15 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             : null;
     }
 
-    private async Task<(bool, SourceMapping, LastFlows)> PrepareVmrAndRepo(
+    protected async Task<(bool, SourceMapping, LastFlows, ILocalGitRepo)> PrepareVmrAndRepo(
         string mappingName,
-        ILocalGitRepo targetRepo,
         Build build,
         string targetBranch,
         string headBranch,
         bool keepConflicts,
         CancellationToken cancellationToken)
     {
-        await _vmrCloneManager.PrepareVmrAsync([build.GetRepository()], [build.Commit], build.Commit, ShouldResetVmr, cancellationToken);
+        await _vmrCloneManager.PrepareVmrAsync([build.GetRepository()], [build.Commit], build.Commit, ShouldResetClones, cancellationToken);
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
         ISourceComponent repoInfo = _sourceManifest.GetRepoVersion(mappingName);
@@ -426,8 +424,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             .OrderRemotesByLocalPublicOther()
             .ToArray();
 
-        // Refresh the repo
-        await targetRepo.FetchAllAsync(remotes, cancellationToken);
+        ILocalGitRepo targetRepo;
 
         try
         {
@@ -437,11 +434,11 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 remotes,
                 [targetBranch, headBranch],
                 headBranch,
-                ShouldResetVmr,
+                ShouldResetClones,
                 cancellationToken);
 
             LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true);
-            return (true, mapping, lastFlows);
+            return (true, mapping, lastFlows, targetRepo);
         }
         catch (NotFoundException)
         {
@@ -453,7 +450,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                     remotes,
                     [targetBranch],
                     targetBranch,
-                    ShouldResetVmr,
+                    ShouldResetClones,
                     cancellationToken);
             }
             catch (Exception e)
@@ -463,16 +460,9 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             }
 
             LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true);
-
-            // When we want to keep the conflicts, we create the branch where the base branch is
-            // When we don't, we rebase our branch on the previous flow
-            if (!keepConflicts)
-            {
-                await targetRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
-            }
-
+            await targetRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
             await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
-            return (false, mapping, lastFlows);
+            return (false, mapping, lastFlows, targetRepo);
         }
     }
 
@@ -598,5 +588,5 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / VmrInfo.ArcadeRepoDir / Constants.CommonScriptFilesPath;
     protected override bool TargetRepoIsVmr() => false;
     // During backflow, we're flowing a specific VMR commit that the build was built from, so we should just check it out
-    protected virtual bool ShouldResetVmr => false;
+    protected virtual bool ShouldResetClones => false;
 }
