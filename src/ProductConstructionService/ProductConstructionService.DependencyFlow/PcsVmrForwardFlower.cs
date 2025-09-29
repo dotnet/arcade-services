@@ -22,13 +22,13 @@ internal interface IPcsVmrForwardFlower
     /// <param name="subscription">Subscription to flow</param>
     /// <param name="build">Build to flow</param>
     /// <param name="headBranch">Branch to flow to (or to create)</param>
-    /// <param name="keepConflicts">Preserve file changes with conflict markers when conflicts occur</param>
+    /// <param name="rebase">Rebases changes (and leaves conflict markers in place) instead of recreating the previous flows recursively</param>
     /// <param name="forceUpdate">Force the update to be performed</param>
     Task<CodeFlowResult> FlowForwardAsync(
         Subscription subscription,
         Build build,
         string headBranch,
-        bool keepConflicts,
+        bool rebase,
         bool forceUpdate,
         CancellationToken cancellationToken = default);
 }
@@ -64,7 +64,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         Subscription subscription,
         Build build,
         string headBranch,
-        bool keepConflicts,
+        bool rebase,
         bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
@@ -82,7 +82,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             subscription.TargetBranch,
             headBranch,
             subscription.TargetRepository,
-            keepConflicts,
+            rebase,
             forceUpdate,
             cancellationToken);
     }

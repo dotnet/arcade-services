@@ -32,7 +32,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
     /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="targetVmrUri">URI of the VMR to update</param>
-    /// <param name="keepConflicts">Preserve file changes with conflict markers when conflicts occur instead of rebasing to an older commit recursively</param>
+    /// <param name="rebase">Rebases changes (and leaves conflict markers in place) instead of recreating the previous flows recursively</param>
     /// <param name="forceUpdate">Force the update to be performed</param>
     /// <returns>CodeFlowResult containing information about the codeflow calculation</returns>
     Task<CodeFlowResult> FlowForwardAsync(
@@ -43,7 +43,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
         string targetBranch,
         string headBranch,
         string targetVmrUri,
-        bool keepConflicts,
+        bool rebase,
         bool forceUpdate,
         CancellationToken cancellationToken = default);
 }
@@ -104,7 +104,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string targetBranch,
         string headBranch,
         string targetVmrUri,
-        bool keepConflicts,
+        bool rebase,
         bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
@@ -115,7 +115,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             sourceRepo,
             targetBranch,
             headBranch,
-            keepConflicts,
+            rebase,
             cancellationToken);
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
@@ -135,7 +135,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             targetBranch,
             headBranch,
             headBranchExisted,
-            keepConflicts,
+            rebase,
             forceUpdate,
             cancellationToken);
 
@@ -181,7 +181,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         ILocalGitRepo sourceRepo,
         string baseBranch,
         string headBranch,
-        bool keepConflicts,
+        bool rebase,
         CancellationToken cancellationToken)
     {
         _vmrInfo.VmrUri = vmrUri;
@@ -221,7 +221,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
             // When we want to keep the conflicts, we create the branch where the base branch is
             // When we don't, we rebase our branch on the previous flow
-            if (!keepConflicts)
+            if (!rebase)
             {
                 await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
                 await _dependencyTracker.RefreshMetadataAsync();
@@ -242,7 +242,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
-        bool keepConflicts,
+        bool rebase,
         bool forceUpdate,
         CancellationToken cancellationToken)
     {
@@ -265,7 +265,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             }
 
             // If we want to keep the conflicts, we need to reapply the patches again and leave the conflicts in place
-            if (keepConflicts)
+            if (rebase)
             {
                 _logger.LogInformation("Conflicts encountered - preparing conflicted files");
                 await _vmrUpdater.UpdateRepository(
@@ -323,14 +323,14 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
-        bool keepConflicts,
+        bool rebase,
         CancellationToken cancellationToken)
     {
         // When updating an existing PR, we create a work branch to make the changes on
         IWorkBranch? workBranch = null;
         var branchName = currentFlow.GetBranchName();
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        if (headBranchExisted && !keepConflicts)
+        if (headBranchExisted && !rebase)
         {
             // Check out the last flow's commit in the PR branch to create the work branch on
             await vmr.CheckoutAsync(lastFlows.LastForwardFlow.VmrSha);

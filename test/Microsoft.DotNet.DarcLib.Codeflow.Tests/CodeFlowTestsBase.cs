@@ -232,7 +232,7 @@ internal abstract class CodeFlowTestsBase
             excludedAssets,
             "main",
             branch,
-            keepConflicts: false,
+            rebase: false,
             forceUpdate: forceUpdate,
             cancellationToken: _cancellationToken.Token);
 
@@ -263,7 +263,7 @@ internal abstract class CodeFlowTestsBase
             "main",
             branch,
             VmrPath,
-            keepConflicts: false,
+            rebase: false,
             forceUpdate,
             cancellationToken: _cancellationToken.Token);
 

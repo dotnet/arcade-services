@@ -126,7 +126,7 @@ internal abstract class CodeFlowOperation(
                     tmpTargetBranch,
                     tmpHeadBranch,
                     headBranchExisted: false,
-                    keepConflicts: true,
+                    rebase: true,
                     forceUpdate: false,
                     cancellationToken);
             }

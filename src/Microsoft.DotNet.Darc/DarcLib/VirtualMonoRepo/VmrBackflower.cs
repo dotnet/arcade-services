@@ -28,7 +28,8 @@ public interface IVmrBackFlower : IVmrCodeFlower
     /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
     /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
     /// <param name="headBranch">New/existing branch to make the changes on</param>
-    /// <param name="keepConflicts">Preserve file changes with conflict markers when conflicts occur instead of rebasing to an older commit recursively</param>
+    /// <param name="rebase">Rebases changes (and leaves conflict markers in place) instead of recreating the previous flows recursively</param>
+    /// <param name="forceUpdate">Apply updates always, even when no or non-meaningful changes only are flown</param>
     Task<CodeFlowResult> FlowBackAsync(
         string mapping,
         NativePath targetRepo,
@@ -36,7 +37,7 @@ public interface IVmrBackFlower : IVmrCodeFlower
         IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
         string headBranch,
-        bool keepConflicts,
+        bool rebase,
         bool forceUpdate,
         CancellationToken cancellationToken = default);
 }
@@ -95,7 +96,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
         string headBranch,
-        bool keepConflicts,
+        bool rebase,
         bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
@@ -105,7 +106,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             headBranch,
             targetRepoPath,
-            keepConflicts,
+            rebase,
             cancellationToken);
 
         return await FlowBackAsync(
@@ -117,7 +118,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             headBranch,
             headBranchExisted,
-            keepConflicts,
+            rebase,
             forceUpdate,
             cancellationToken);
     }
@@ -131,7 +132,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
-        bool keepConflicts,
+        bool rebase,
         bool forceUpdate,
         CancellationToken cancellationToken)
     {
@@ -146,7 +147,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             headBranch,
             headBranchExisted,
-            keepConflicts,
+            rebase,
             forceUpdate,
             cancellationToken);
 
@@ -180,7 +181,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
-        bool keepConflicts,
+        bool rebase,
         bool forceUpdate,
         CancellationToken cancellationToken)
     {
@@ -224,7 +225,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _logger.LogInformation("Created {count} patch(es)", patches.Count);
 
         // We create a work branch only if we don't want to keep the conflicts
-        IWorkBranch? workBranch = !keepConflicts
+        IWorkBranch? workBranch = !rebase
             ? await _workBranchFactory.CreateWorkBranchAsync(targetRepo, currentFlow.GetBranchName(), headBranch)
             : null;
 
@@ -250,7 +251,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             }
 
             // If we want to keep the conflicts, we need to reapply the patches again and leave the conflicts in place
-            if (keepConflicts)
+            if (rebase)
             {
                 _logger.LogInformation("Conflicts encountered during patch application. Retaining conflicts");
                 await _vmrPatchHandler.ApplyPatches(
@@ -312,7 +313,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
-        bool keepConflicts,
+        bool rebase,
         CancellationToken cancellationToken)
     {
         var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-{Commit.GetShortSha(lastFlows.LastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}.patch";
@@ -412,7 +413,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         string headBranch,
         NativePath? targetRepoPath,
-        bool keepConflicts,
+        bool rebase,
         CancellationToken cancellationToken)
     {
         await _vmrCloneManager.PrepareVmrAsync([build.GetRepository()], [build.Commit], build.Commit, ShouldResetClones, cancellationToken);
@@ -451,7 +452,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                     cancellationToken);
             }
 
-            LastFlows lastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
+            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true);
             return (true, mapping, lastFlows, targetRepo);
         }
         catch (NotFoundException)
