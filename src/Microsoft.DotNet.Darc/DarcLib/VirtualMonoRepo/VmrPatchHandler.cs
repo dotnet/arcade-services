@@ -206,12 +206,53 @@ public class VmrPatchHandler : IVmrPatchHandler
     }
 
     /// <summary>
+    /// Applies a set of patches by applying all patches, preserving conflicts in the index.
+    /// In case of failures, collects all conflicted files into a single exception.
+    /// </summary>
+    public async Task ApplyPatches(
+        IEnumerable<VmrIngestionPatch> patches,
+        NativePath targetDirectory,
+        bool removePatchAfter,
+        bool keepConflicts,
+        bool reverseApply = false,
+        CancellationToken cancellationToken = default)
+    {
+        List<UnixPath> conflicts = [];
+
+        foreach (var patch in patches)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                await ApplyPatch(
+                    patch,
+                    targetDirectory,
+                    removePatchAfter: removePatchAfter,
+                    keepConflicts: keepConflicts,
+                    reverseApply: reverseApply,
+                    cancellationToken);
+            }
+            catch (PatchApplicationLeftConflictsException e)
+            {
+                conflicts.AddRange(e.ConflictedFiles);
+            }
+        }
+
+        if (conflicts.Count > 0)
+        {
+            throw new PatchApplicationLeftConflictsException([..conflicts.Distinct()], targetDirectory);
+        }
+    }
+
+    /// <summary>
     /// Applies a given patch file onto given mapping's subrepository.
     /// </summary>
     public async Task ApplyPatch(
         VmrIngestionPatch patch,
         NativePath targetDirectory,
         bool removePatchAfter,
+        bool keepConflicts,
         bool reverseApply = false,
         CancellationToken cancellationToken = default)
     {
@@ -254,6 +295,11 @@ public class VmrPatchHandler : IVmrPatchHandler
             args.Add("--reverse");
         }
 
+        if (keepConflicts)
+        {
+            args.Add("--3way");
+        }
+
         // Where to apply the patch into (usualy src/[repo name] but can be root for VMR's non-src/ content)
         if (patch.ApplicationPath != null)
         {
@@ -269,9 +315,40 @@ public class VmrPatchHandler : IVmrPatchHandler
         args.Add(patch.Path);
 
         var result = await _processManager.ExecuteGit(targetDirectory, args, cancellationToken: CancellationToken.None);
-
         if (!result.Succeeded)
         {
+            // When we are applying and wish to keep conflicts in the working tree, we need to clean up a bit:
+            if (keepConflicts)
+            {
+                // Collect the list of conflicted files:
+                cancellationToken.ThrowIfCancellationRequested();
+                var conflictedFilesResult = await _processManager.ExecuteGit(
+                    targetDirectory,
+                    ["diff", "--name-only", "--diff-filter=U"],
+                    cancellationToken: CancellationToken.None);
+                conflictedFilesResult.ThrowIfFailed("Failed to get a list of conflicted files after patch application failed");
+
+                IReadOnlyCollection<UnixPath> conflictedFiles = [..conflictedFilesResult.GetOutputLines().Select(f => new UnixPath(f))];
+                if (conflictedFiles.Count == 0)
+                {
+                    _logger.LogWarning("Patch application failed, but no conflicted files were found in the output. Full output: {output}", conflictedFilesResult);
+                    throw new PatchApplicationFailedException(patch, result, reverseApply);
+                }
+
+                // Put them in the conflicted state with conflict markers (by default they are resolved using --ours strategy):
+                foreach (var file in conflictedFiles)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var checkoutResult = await _processManager.ExecuteGit(
+                        targetDirectory,
+                        ["checkout", "--merge", "--", file],
+                        cancellationToken: CancellationToken.None);
+                    checkoutResult.ThrowIfFailed($"Failed to set the conflicted state for {file} after patch application failed");
+                }
+
+                throw new PatchApplicationLeftConflictsException(conflictedFiles, targetDirectory);
+            }
+
             throw new PatchApplicationFailedException(patch, result, reverseApply);
         }
 

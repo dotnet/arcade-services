@@ -32,6 +32,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
     /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="targetVmrUri">URI of the VMR to update</param>
+    /// <param name="keepConflicts">Preserve file changes with conflict markers when conflicts occur instead of rebasing to an older commit recursively</param>
     /// <param name="forceUpdate">Force the update to be performed</param>
     /// <returns>CodeFlowResult containing information about the codeflow calculation</returns>
     Task<CodeFlowResult> FlowForwardAsync(
@@ -42,6 +43,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
         string targetBranch,
         string headBranch,
         string targetVmrUri,
+        bool keepConflicts,
         bool forceUpdate,
         CancellationToken cancellationToken = default);
 }
@@ -102,11 +104,19 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string targetBranch,
         string headBranch,
         string targetVmrUri,
+        bool keepConflicts,
         bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
         ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
-        (bool headBranchExisted, LastFlows lastFlows) = await PrepareHeadBranch(targetVmrUri, mappingName, sourceRepo, targetBranch, headBranch, cancellationToken);
+        (bool headBranchExisted, LastFlows lastFlows) = await PrepareHeadBranch(
+            targetVmrUri,
+            mappingName,
+            sourceRepo,
+            targetBranch,
+            headBranch,
+            keepConflicts,
+            cancellationToken);
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
         ISourceComponent repoInfo = _sourceManifest.GetRepoVersion(mapping.Name);
@@ -125,6 +135,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             targetBranch,
             headBranch,
             headBranchExisted,
+            keepConflicts,
             forceUpdate,
             cancellationToken);
 
@@ -170,6 +181,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         ILocalGitRepo sourceRepo,
         string baseBranch,
         string headBranch,
+        bool keepConflicts,
         CancellationToken cancellationToken)
     {
         _vmrInfo.VmrUri = vmrUri;
@@ -183,8 +195,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 ShouldResetVmr,
                 cancellationToken);
 
-            SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
-            LastFlows lastFlows = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
+            LastFlows lastFlows = await GetLastFlowsAsync(mappingName, sourceRepo, currentIsBackflow: false);
             return (true, lastFlows);
         }
         catch (NotFoundException)
@@ -206,11 +217,17 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 throw new TargetBranchNotFoundException($"Failed to find target branch {baseBranch} in {vmrUri}", e);
             }
 
-            SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
-            LastFlows lastFlows = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
-            await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
+            LastFlows lastFlows = await GetLastFlowsAsync(mappingName, sourceRepo, currentIsBackflow: false);
+
+            // When we want to keep the conflicts, we create the branch where the base branch is
+            // When we don't, we rebase our branch on the previous flow
+            if (!keepConflicts)
+            {
+                await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
+                await _dependencyTracker.RefreshMetadataAsync();
+            }
+
             await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
-            await _dependencyTracker.RefreshMetadataAsync();
             return (false, lastFlows);
         }
     }
@@ -225,6 +242,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
+        bool keepConflicts,
         bool forceUpdate,
         CancellationToken cancellationToken)
     {
@@ -244,6 +262,21 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             {
                 _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
                 throw new ConflictInPrBranchException(e.Result.StandardError, targetBranch, mapping.Name, isForwardFlow: true);
+            }
+
+            // If we want to keep the conflicts, we need to reapply the patches again and leave the conflicts in place
+            if (keepConflicts)
+            {
+                _logger.LogInformation("Conflicts encountered - preparing conflicted files");
+                await _vmrUpdater.UpdateRepository(
+                    mapping,
+                    build,
+                    additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
+                    resetToRemoteWhenCloningRepo: ShouldResetClones,
+                    keepConflicts: true,
+                    cancellationToken: cancellationToken);
+
+                throw new InvalidOperationException("Patch application was expected to fail and leave conflicts when applying with 'keepConflicts: true', but it succeeded unexpectedly. This indicates an unhandled edge case or logic error.");
             }
 
             bool hadChanges = false;
@@ -290,18 +323,19 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
+        bool keepConflicts,
         CancellationToken cancellationToken)
     {
         // When updating an existing PR, we create a work branch to make the changes on
         IWorkBranch? workBranch = null;
         var branchName = currentFlow.GetBranchName();
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        if (headBranchExisted)
+        if (headBranchExisted && !keepConflicts)
         {
             // Check out the last flow's commit in the PR branch to create the work branch on
             await vmr.CheckoutAsync(lastFlows.LastForwardFlow.VmrSha);
-            workBranch = await _workBranchFactory.CreateWorkBranchAsync(vmr, branchName);
             await _dependencyTracker.RefreshMetadataAsync();
+            workBranch = await _workBranchFactory.CreateWorkBranchAsync(vmr, branchName);
         }
 
         await sourceRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
@@ -414,7 +448,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 cancellationToken);
 
             await sourceRepo.CheckoutAsync(_sourceManifest.GetRepoVersion(mapping.Name).CommitSha);
-            previousFlows = await GetLastFlowsAsync(mapping, sourceRepo, currentIsBackflow: false);
+            previousFlows = await GetLastFlowsAsync(mapping.Name, sourceRepo, currentIsBackflow: false);
             previousFlow = previousFlows.LastForwardFlow;
         }
 

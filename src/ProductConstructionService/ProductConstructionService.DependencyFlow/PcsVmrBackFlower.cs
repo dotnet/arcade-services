@@ -23,26 +23,19 @@ internal interface IPcsVmrBackFlower : IVmrBackFlower
     /// <param name="subscription">Subscription to flow</param>
     /// <param name="build">Build to flow</param>
     /// <param name="targetBranch">Target branch to make the changes on</param>
-    /// <returns>
-    ///     Boolean whether there were any changes to be flown
-    ///     and a path to the local repo where the new branch is created
-    ///  </returns>
+    /// <param name="keepConflicts">Preserve file changes with conflict markers when conflicts occur</param>
+    /// <param name="forceUpdate">Force the update to be performed</param>
     Task<CodeFlowResult> FlowBackAsync(
         Subscription subscription,
         Build build,
         string targetBranch,
-        bool forceApply,
+        bool keepConflicts,
+        bool forceUpdate,
         CancellationToken cancellationToken = default);
 }
 
 internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
 {
-    private readonly ISourceManifest _sourceManifest;
-    private readonly IVmrDependencyTracker _dependencyTracker;
-    private readonly IVmrCloneManager _vmrCloneManager;
-    private readonly IRepositoryCloneManager _repositoryCloneManager;
-    private readonly ILogger<VmrCodeFlower> _logger;
-
     public PcsVmrBackFlower(
             IVmrInfo vmrInfo,
             ISourceManifest sourceManifest,
@@ -61,17 +54,13 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             ILogger<VmrCodeFlower> logger)
         : base(vmrInfo, sourceManifest, dependencyTracker, vmrCloneManager, repositoryCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, vmrPatchHandler, workBranchFactory, versionFileConflictResolver, fileSystem, barClient, commentCollector, logger)
     {
-        _sourceManifest = sourceManifest;
-        _dependencyTracker = dependencyTracker;
-        _vmrCloneManager = vmrCloneManager;
-        _repositoryCloneManager = repositoryCloneManager;
-        _logger = logger;
     }
 
     public async Task<CodeFlowResult> FlowBackAsync(
         Subscription subscription,
         Build build,
         string headBranch,
+        bool keepConflicts,
         bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
@@ -81,6 +70,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             subscription.TargetBranch,
             headBranch,
             targetRepoPath: null,
+            keepConflicts,
             cancellationToken);
 
         var result = await FlowBackAsync(
@@ -92,6 +82,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             subscription.TargetBranch,
             headBranch,
             headBranchExisted,
+            keepConflicts,
             forceUpdate,
             cancellationToken);
 

@@ -61,6 +61,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         string? targetRevision,
         CodeFlowParameters codeFlowParameters,
         bool resetToRemoteWhenCloningRepo = false,
+        bool keepConflicts = false,
         CancellationToken cancellationToken = default)
     {
         await _dependencyTracker.RefreshMetadataAsync();
@@ -82,6 +83,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
                 restoreVmrPatches: true,
                 codeFlowParameters,
                 resetToRemoteWhenCloningRepo,
+                keepConflicts,
                 cancellationToken);
             return true;
         }
@@ -97,6 +99,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
         bool restoreVmrPatches,
         CodeFlowParameters codeFlowParameters,
         bool resetToRemoteWhenCloningRepo = false,
+        bool keepConflicts = false,
         CancellationToken cancellationToken = default)
     {
         VmrDependencyVersion currentVersion = _dependencyTracker.GetDependencyVersion(update.Mapping)
@@ -160,6 +163,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             currentVersion.Sha,
             commitMessage,
             restoreVmrPatches,
+            keepConflicts,
             codeFlowParameters,
             cancellationToken: cancellationToken);
     }

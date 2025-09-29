@@ -1416,6 +1416,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     subscription,
                     build,
                     prHeadBranch,
+                    keepConflicts: false,
                     forceUpdate,
                     cancellationToken: default);
             }
@@ -1425,6 +1426,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     subscription,
                     build,
                     prHeadBranch,
+                    keepConflicts: false,
                     forceUpdate,
                     cancellationToken: default);
             }

@@ -184,6 +184,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
             Constants.EmptyGitObject,
             commitMessage,
             restoreVmrPatches: false,
+            keepConflicts: false,
             codeFlowParameters,
             cancellationToken: cancellationToken);
 

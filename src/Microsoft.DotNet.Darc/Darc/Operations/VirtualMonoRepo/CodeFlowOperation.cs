@@ -80,7 +80,7 @@ internal abstract class CodeFlowOperation(
         LastFlows lastFlows;
         try
         {
-            lastFlows = await _codeFlower.GetLastFlowsAsync(mapping, productRepo, currentFlow is Backflow);
+            lastFlows = await _codeFlower.GetLastFlowsAsync(mapping.Name, productRepo, currentFlow is Backflow);
         }
         catch (InvalidSynchronizationException)
         {
@@ -126,6 +126,7 @@ internal abstract class CodeFlowOperation(
                     tmpTargetBranch,
                     tmpHeadBranch,
                     headBranchExisted: false,
+                    keepConflicts: true,
                     forceUpdate: false,
                     cancellationToken);
             }
@@ -232,10 +233,12 @@ internal abstract class CodeFlowOperation(
             ignoreLineEndings: false,
             cancellationToken);
 
-        foreach (VmrIngestionPatch patch in patches)
-        {
-            await _patchHandler.ApplyPatch(patch, targetRepo.Path, removePatchAfter: true, cancellationToken: cancellationToken);
-        }
+        await _patchHandler.ApplyPatches(
+            patches,
+            targetRepo.Path,
+            removePatchAfter: true,
+            keepConflicts: true,
+            cancellationToken: cancellationToken);
     }
 
     private async Task CleanUp(
