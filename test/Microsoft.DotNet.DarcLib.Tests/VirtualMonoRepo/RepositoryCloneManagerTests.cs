@@ -342,6 +342,161 @@ public class RepositoryCloneManagerTests
         }
     }
 
+    [Test]
+    public async Task ClonesIntoTargetPath_WhenCloneDoesNotExist()
+    {
+        // Arrange
+        var clonePath = new NativePath("/test/repo/path");
+        var cancellationToken = CancellationToken.None;
+
+        _fileSystem.Setup(fs => fs.DirectoryExists(clonePath.Path))
+            .Returns(false);
+
+        _repoCloner.Setup(cloner => cloner.CloneNoCheckoutAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
+
+        _localGitRepo.Setup(client => client.AddRemoteIfMissingAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync("origin");
+
+        _localGitRepo.Setup(client => client.FetchAllAsync(
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyCollection<string>>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _localGitRepo.Setup(client => client.CheckoutAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _manager.PrepareCloneAsync(
+            clonePath,
+            [RepoUri],
+            [Ref],
+            Ref,
+            false,
+            cancellationToken);
+
+        // Assert
+        Assert.That(result.Path, Is.EqualTo(clonePath));
+
+        _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Once);
+        _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref), Times.Once);
+        _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "reset", "--hard" }, It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Test]
+    public async Task ClonesIntoTargetPath_WhenCloneExistsAndNeedsRefresh()
+    {
+        // Arrange
+        var clonePath = new NativePath("/test/existing/repo");
+        var remoteUris = new List<string> { "https://github.com/test/repo.git", "https://github.com/fork/repo.git" };
+        var requestedRefs = new List<string> { "main", "feature-branch" };
+        var cancellationToken = CancellationToken.None;
+
+        _fileSystem.Setup(fs => fs.DirectoryExists(clonePath.Path))
+            .Returns(true);
+
+        _localGitRepo.Setup(client => client.AddRemoteIfMissingAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync("origin");
+
+        _localGitRepo.Setup(client => client.FetchAllAsync(
+                It.IsAny<string>(),
+                It.IsAny<IReadOnlyCollection<string>>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _localGitRepo.Setup(client => client.CheckoutAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _manager.PrepareCloneAsync(
+            clonePath,
+            remoteUris,
+            requestedRefs,
+            Ref,
+            true,
+            cancellationToken);
+
+        // Assert
+        Assert.That(result.Path, Is.EqualTo(clonePath));
+        _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
+        _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref), Times.Once);
+        _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "reset", "--hard" }, It.IsAny<CancellationToken>()), Times.Once);
+        _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "for-each-ref", "--format=%(upstream:short)", "refs/heads/" + Ref }, It.IsAny<CancellationToken>()), Times.Once);
+        _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "clean", "-fdqx", "." }, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Test]
+    public async Task ClonesIntoTargetPath_WhenCloneExistsAndDoesNotNeedRefresh()
+    {
+        // Arrange
+        var clonePath = new NativePath("/test/cached/repo");
+        var cancellationToken = CancellationToken.None;
+
+        _fileSystem.Setup(fs => fs.DirectoryExists(clonePath.Path))
+            .Returns(true);
+
+        // Simulate that all requested refs are already available locally
+        _localGitRepo.Setup(client => client.GitRefExists(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _localGitRepo.Setup(client => client.CheckoutAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _manager.PrepareCloneAsync(
+            clonePath,
+            [RepoUri],
+            [Ref],
+            Ref,
+            false,
+            cancellationToken);
+
+        // Assert
+        Assert.That(result.Path, Is.EqualTo(clonePath));
+        // Verify that no fetching occurred since refs were already available
+        _localGitRepo.Verify(client => client.FetchAllAsync(
+            It.IsAny<string>(),
+            It.IsAny<IReadOnlyCollection<string>>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+        _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
+        _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref), Times.Once);
+        _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "reset", "--hard" }, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private class RemoteState
+    {
+        public string RemoteUri { get; set; }
+
+        public IReadOnlyCollection<string> CommitsContained { get; set; }
+
+        public bool IsCloned { get; set; }
+
+        public RemoteState(string remoteUri, params string[] commitsContained)
+        {
+            RemoteUri = remoteUri;
+            CommitsContained = commitsContained;
+        }
+    }
+
     /// <summary>
     /// Sets up the mocks to simulate gradual fetching of given commits from given remotes.
     /// </summary>
@@ -377,21 +532,6 @@ public class RepositoryCloneManagerTests
                         ? GitObjectType.Commit
                         : GitObjectType.Unknown;
                 });
-        }
-    }
-
-    private class RemoteState
-    {
-        public string RemoteUri { get; set; }
-
-        public IReadOnlyCollection<string> CommitsContained { get; set; }
-
-        public bool IsCloned { get; set; }
-
-        public RemoteState(string remoteUri, params string[] commitsContained)
-        {
-            RemoteUri = remoteUri;
-            CommitsContained = commitsContained;
         }
     }
 }

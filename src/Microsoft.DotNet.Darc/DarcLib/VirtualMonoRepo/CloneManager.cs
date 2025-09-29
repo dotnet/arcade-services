@@ -172,6 +172,8 @@ public abstract class CloneManager
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        NativePath clonePath;
+
         if (_upToDateRepos.Contains(remoteUri))
         {
             var path = _clones[remoteUri];
@@ -181,11 +183,14 @@ public abstract class CloneManager
             }
 
             _upToDateRepos.Remove(remoteUri);
+            clonePath = path;
         }
-
-        var clonePath = _clones.TryGetValue(remoteUri, out var cachedPath)
-            ? cachedPath
-            : GetClonePath(dirName);
+        else
+        {
+            clonePath = _clones.TryGetValue(remoteUri, out var cachedPath)
+                ? cachedPath
+                : GetClonePath(dirName);
+        }
 
         if (!_fileSystem.DirectoryExists(clonePath))
         {
