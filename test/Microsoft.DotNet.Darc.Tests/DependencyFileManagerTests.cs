@@ -114,6 +114,66 @@ public class DependencyFileManagerTests
         doubleUpdatedfile.Content.Should().Be(expectedOutputText, "Repeated invocation of UpdatePackageSources() caused incremental changes to nuget.config");
     }
 
+    [Test]
+    public async Task UpdatePackageSourcesWithPackageMappingsTest()
+    {
+        var dependencyFileManager = new DependencyFileManager((IGitRepo)null, new VersionDetailsParser(), NullLogger.Instance);
+        
+        string testName = "AddPackageSourceMappingsForDarcFeeds";
+        string[] managedFeeds = new string[] {
+            "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-standard-a5b5f2e1/nuget/v3/index.json",
+            "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json"
+        };
+
+        string inputNugetPath = Path.Combine(
+            Environment.CurrentDirectory,
+            TestInputsRootDir,
+            ConfigFilesInput,
+            testName,
+            InputNugetConfigFile);
+        string inputXmlContent = await File.ReadAllTextAsync(inputNugetPath);
+        var inputNuGetConfigFile = DependencyFileManager.GetXmlDocument(inputXmlContent);
+
+        var configFileUpdateData = new Dictionary<string, HashSet<string>>
+        {
+            { "testKey", new HashSet<string>(managedFeeds) }
+        };
+        var managedFeedsForTest = dependencyFileManager.FlattenLocationsAndSplitIntoGroups(configFileUpdateData);
+
+        // Create package-to-feed mapping for this test
+        var packageToFeedMapping = new Dictionary<string, HashSet<string>>
+        {
+            { "System.Collections.Immutable", new HashSet<string> { "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json" } },
+            { "System.Text.Json", new HashSet<string> { "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json" } },
+            { "NETStandard.Library", new HashSet<string> { "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-standard-a5b5f2e1/nuget/v3/index.json" } }
+        };
+
+        XmlDocument updatedConfigFile =
+            dependencyFileManager.UpdatePackageSources(inputNuGetConfigFile, managedFeedsForTest, packageToFeedMapping);
+
+        var outputNugetPath = Path.Combine(
+            Environment.CurrentDirectory,
+            TestInputsRootDir,
+            ConfigFilesInput,
+            testName,
+            OutputNugetConfigFile);
+        string expectedOutputText = await File.ReadAllTextAsync(outputNugetPath);
+
+        // Dump the output xml using the git file manager
+        var file = new GitFile(null, updatedConfigFile);
+
+        // Normalize the \r\n newlines in the expected output to \n if they
+        // exist (GitFile normalizes these before writing)
+        expectedOutputText = expectedOutputText.Replace(Environment.NewLine, "\n");
+
+        file.Content.Should().Be(expectedOutputText);
+
+        // Test idempotency
+        XmlDocument doubleUpdatedConfigFile = dependencyFileManager.UpdatePackageSources(updatedConfigFile, managedFeedsForTest, packageToFeedMapping);
+        var doubleUpdatedfile = new GitFile(null, doubleUpdatedConfigFile);
+        doubleUpdatedfile.Content.Should().Be(expectedOutputText, "Repeated invocation of UpdatePackageSources() caused incremental changes to nuget.config");
+    }
+
     [TestCase("SimpleDuplicated.props", true)]
     [TestCase("DuplicatedSameConditions.props", true)]
     [TestCase("AlternateNamesDuplicated.props", true)]

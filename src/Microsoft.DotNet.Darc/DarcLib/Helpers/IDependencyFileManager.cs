@@ -82,7 +82,7 @@ public interface IDependencyFileManager
         bool? repoHasVersionDetailsProps = null,
         UnixPath? relativeBasePath = null);
 
-    XmlDocument UpdatePackageSources(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo);
+    XmlDocument UpdatePackageSources(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo, Dictionary<string, HashSet<string>>? packageToFeedMapping = null);
 
     Task<bool> Verify(string repo, string branch);
 
