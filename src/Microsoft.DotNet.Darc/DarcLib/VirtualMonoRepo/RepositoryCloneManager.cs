@@ -65,6 +65,25 @@ public interface IRepositoryCloneManager
         string checkoutRef,
         bool resetToRemote = false,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Uses an existing clone of a repository and prepares it by fetching from given remotes one-by-one until all requested commits are available.
+    /// Then checks out the given ref.
+    /// </summary>
+    /// <param name="clonePath">Path to an existing clone</param>
+    /// <param name="mapping">Mapping that clone is associated with</param>
+    /// <param name="remoteUris">Remotes to fetch one by one</param>
+    /// <param name="requestedRefs">List of refs that need to be available</param>
+    /// <param name="checkoutRef">Ref to check out at the end</param>
+    /// <param name="resetToRemote">Whether to reset the branch to the remote one</param>
+    /// <returns>Path to the clone</returns>
+    Task<ILocalGitRepo> PrepareCloneAsync(
+        NativePath clonePath,
+        IReadOnlyCollection<string> remoteUris,
+        IReadOnlyCollection<string> requestedRefs,
+        string checkoutRef,
+        bool resetToRemote = false,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -121,4 +140,15 @@ public class RepositoryCloneManager : CloneManager, IRepositoryCloneManager
         bool resetToRemote = false,
         CancellationToken cancellationToken = default)
         => PrepareCloneInternalAsync(mapping.Name, remoteUris, requestedRefs, checkoutRef, resetToRemote, cancellationToken);
+
+    public Task<ILocalGitRepo> PrepareCloneAsync(
+        NativePath clonePath,
+        IReadOnlyCollection<string> remoteUris,
+        IReadOnlyCollection<string> requestedRefs,
+        string checkoutRef,
+        bool resetToRemote = false,
+        CancellationToken cancellationToken = default)
+    {
+        return PrepareCloneInternalAsync(clonePath, remoteUris, requestedRefs, checkoutRef, resetToRemote, cancellationToken);
+    }
 }
