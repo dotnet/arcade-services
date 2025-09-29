@@ -47,6 +47,22 @@ public abstract class CloneManager
         _logger = logger;
     }
 
+    protected async Task<ILocalGitRepo> PrepareCloneInternalAsync(
+        NativePath clonePath,
+        IReadOnlyCollection<string> remoteUris,
+        IReadOnlyCollection<string> requestedRefs,
+        string checkoutRef,
+        bool resetToRemote = false,
+        CancellationToken cancellationToken = default)
+    {
+        foreach (var uri in remoteUris)
+        {
+            _clones[uri] = clonePath;
+        }
+
+        return await PrepareCloneInternalAsync(_fileSystem.GetDirectoryName(clonePath.Path)!, remoteUris, requestedRefs, checkoutRef, resetToRemote, cancellationToken);
+    }
+
     /// <summary>
     /// Prepares a clone of a repository by fetching from given remotes one-by-one until all requested commits are available.
     /// Then checks out the given ref.
