@@ -151,7 +151,7 @@ public abstract class CloneManager
             result.ThrowIfFailed("Couldn't get upstream branch for the current branch");
             var upstream = result.StandardOutput.Trim();
 
-            // If ref to check out is not a branch, we don't have an upstream
+            // Only reset if we have an upstream branch to reset to
             if (!string.IsNullOrEmpty(upstream))
             {
                 // reset the branch to the remote one
