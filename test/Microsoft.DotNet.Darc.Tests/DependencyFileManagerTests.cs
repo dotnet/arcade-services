@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Xml;
 using FluentAssertions;
@@ -166,12 +167,13 @@ public class DependencyFileManagerTests
         // exist (GitFile normalizes these before writing)
         expectedOutputText = expectedOutputText.Replace(Environment.NewLine, "\n");
 
-        file.Content.Should().Be(expectedOutputText);
+        // Use NUnit's Assert instead of FluentAssertions due to whitespace sensitivity
+        NUnit.Framework.Assert.AreEqual(expectedOutputText, file.Content);
 
         // Test idempotency
         XmlDocument doubleUpdatedConfigFile = dependencyFileManager.UpdatePackageSources(updatedConfigFile, managedFeedsForTest, packageToFeedMapping);
         var doubleUpdatedfile = new GitFile(null, doubleUpdatedConfigFile);
-        doubleUpdatedfile.Content.Should().Be(expectedOutputText, "Repeated invocation of UpdatePackageSources() caused incremental changes to nuget.config");
+        NUnit.Framework.Assert.AreEqual(expectedOutputText, doubleUpdatedfile.Content, "Repeated invocation of UpdatePackageSources() caused incremental changes to nuget.config");
     }
 
     [TestCase("SimpleDuplicated.props", true)]
