@@ -94,7 +94,11 @@ public class CodeflowChangeAnalyzerTests
             src/test-repo/eng/common/build.ps1
             """;
 
+        var emptyGitDiffOutput = string.Empty;  // no versioning files are changed
+
         SetChangedFiles(gitDiffOutput);
+
+        SetGitDiff(emptyGitDiffOutput);
 
         // Act
         var result = await _analyzer.ForwardFlowHasMeaningfulChangesAsync(TestMappingName, TestHeadBranch, TestTargetBranch);
@@ -151,8 +155,6 @@ public class CodeflowChangeAnalyzerTests
             @@ -21 +21 @@
             -    "Microsoft.DotNet.Arcade.Sdk": "10.0.0-beta.25304.106"
             +    "Microsoft.DotNet.Arcade.Sdk": "10.0.0-beta.25306.103"
-            diff --git a/src/source-manifest.json b/src/source-manifest.json
-            index 6cb979ccc3a..90ec6500113 100644
             """;
 
         SetChangedFiles(gitDiffOutput);
