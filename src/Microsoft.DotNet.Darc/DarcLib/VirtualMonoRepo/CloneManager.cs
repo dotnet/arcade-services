@@ -151,13 +151,17 @@ public abstract class CloneManager
             result.ThrowIfFailed("Couldn't get upstream branch for the current branch");
             var upstream = result.StandardOutput.Trim();
 
-            // reset the branch to the remote one
-            result = await _localGitRepo.RunGitCommandAsync(path, ["reset", "--hard", upstream], cancellationToken);
-            result.ThrowIfFailed($"Couldn't reset to remote ref {upstream}");
+            // Only reset if we have an upstream branch to reset to
+            if (!string.IsNullOrEmpty(upstream))
+            {
+                // reset the branch to the remote one
+                result = await _localGitRepo.RunGitCommandAsync(path, ["reset", "--hard", upstream], cancellationToken);
+                result.ThrowIfFailed($"Couldn't reset to remote ref {upstream}");
 
-            // also clean the repo
-            result = await _localGitRepo.RunGitCommandAsync(path, ["clean", "-fdqx", "."], cancellationToken);
-            result.ThrowIfFailed("Couldn't clean the repository");
+                // also clean the repo
+                result = await _localGitRepo.RunGitCommandAsync(path, ["clean", "-fdqx", "."], cancellationToken);
+                result.ThrowIfFailed("Couldn't clean the repository");
+            }
         }
 
         return repo;

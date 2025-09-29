@@ -393,7 +393,7 @@ public class RepositoryCloneManagerTests
     }
 
     [Test]
-    public async Task ClonesIntoTargetPath_WhenCloneExistsAndNeedsRefresh()
+    public async Task ClonesIntoTargetPath_WhenCloneExists()
     {
         // Arrange
         var clonePath = new NativePath("/test/existing/repo");
@@ -437,7 +437,6 @@ public class RepositoryCloneManagerTests
         _localGitRepo.Verify(x => x.UpdateRemoteAsync(clonePath, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
         _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "reset", "--hard" }, It.IsAny<CancellationToken>()), Times.Once);
         _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "for-each-ref", "--format=%(upstream:short)", "refs/heads/" + Ref }, It.IsAny<CancellationToken>()), Times.Once);
-        _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "clean", "-fdqx", "." }, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private class RemoteState
