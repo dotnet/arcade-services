@@ -412,9 +412,9 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         ILocalGitRepo targetRepo;
 
+        // Try to see if both base and target branch are available
         try
         {
-            // Try to see if both base and target branch are available
             if (targetRepoPath == null)
             {
                 targetRepo = await _repositoryCloneManager.PrepareCloneAsync(
@@ -441,9 +441,9 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
         catch (NotFoundException)
         {
+            // If target branch does not exist, we create it off of the base branch
             try
             {
-                // If target branch does not exist, we create it off of the base branch
                 if (targetRepoPath == null)
                 {
                     targetRepo = await _repositoryCloneManager.PrepareCloneAsync(
