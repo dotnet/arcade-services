@@ -434,52 +434,10 @@ public class RepositoryCloneManagerTests
         Assert.That(result.Path, Is.EqualTo(clonePath));
         _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
         _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref), Times.Once);
+        _localGitRepo.Verify(x => x.UpdateRemoteAsync(clonePath, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
         _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "reset", "--hard" }, It.IsAny<CancellationToken>()), Times.Once);
         _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "for-each-ref", "--format=%(upstream:short)", "refs/heads/" + Ref }, It.IsAny<CancellationToken>()), Times.Once);
         _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "clean", "-fdqx", "." }, It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Test]
-    public async Task ClonesIntoTargetPath_WhenCloneExistsAndDoesNotNeedRefresh()
-    {
-        // Arrange
-        var clonePath = new NativePath("/test/cached/repo");
-        var cancellationToken = CancellationToken.None;
-
-        _fileSystem.Setup(fs => fs.DirectoryExists(clonePath.Path))
-            .Returns(true);
-
-        // Simulate that all requested refs are already available locally
-        _localGitRepo.Setup(client => client.GitRefExists(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
-        _localGitRepo.Setup(client => client.CheckoutAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>()))
-            .Returns(Task.CompletedTask);
-
-        // Act
-        var result = await _manager.PrepareCloneAsync(
-            clonePath,
-            [RepoUri],
-            [Ref],
-            Ref,
-            false,
-            cancellationToken);
-
-        // Assert
-        Assert.That(result.Path, Is.EqualTo(clonePath));
-        // Verify that no fetching occurred since refs were already available
-        _localGitRepo.Verify(client => client.FetchAllAsync(
-            It.IsAny<string>(),
-            It.IsAny<IReadOnlyCollection<string>>(),
-            It.IsAny<CancellationToken>()), Times.Never);
-        _repoCloner.Verify(x => x.CloneNoCheckoutAsync(RepoUri, clonePath, null), Times.Never);
-        _localGitRepo.Verify(x => x.CheckoutAsync(clonePath, Ref), Times.Once);
-        _localGitRepo.Verify(x => x.RunGitCommandAsync(clonePath, new[] { "reset", "--hard" }, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private class RemoteState
