@@ -37,12 +37,6 @@ internal interface IPcsVmrBackFlower : IVmrBackFlower
 
 internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
 {
-    private readonly ISourceManifest _sourceManifest;
-    private readonly IVmrDependencyTracker _dependencyTracker;
-    private readonly IVmrCloneManager _vmrCloneManager;
-    private readonly IRepositoryCloneManager _repositoryCloneManager;
-    private readonly ILogger<VmrCodeFlower> _logger;
-
     public PcsVmrBackFlower(
             IVmrInfo vmrInfo,
             ISourceManifest sourceManifest,
@@ -61,11 +55,6 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             ILogger<VmrCodeFlower> logger)
         : base(vmrInfo, sourceManifest, dependencyTracker, vmrCloneManager, repositoryCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, vmrPatchHandler, workBranchFactory, versionFileConflictResolver, fileSystem, barClient, commentCollector, logger)
     {
-        _sourceManifest = sourceManifest;
-        _dependencyTracker = dependencyTracker;
-        _vmrCloneManager = vmrCloneManager;
-        _repositoryCloneManager = repositoryCloneManager;
-        _logger = logger;
     }
 
     public async Task<CodeFlowResult> FlowBackAsync(
