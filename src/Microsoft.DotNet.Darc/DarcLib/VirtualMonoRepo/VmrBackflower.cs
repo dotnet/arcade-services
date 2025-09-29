@@ -106,7 +106,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         return await FlowBackAsync(
             mapping,
-            _localGitRepoFactory.Create(targetRepoPath),
+            targetRepo,
             lastFlows,
             build,
             excludedAssets,
@@ -427,7 +427,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             }
             else
             {
-
                 targetRepo = await _repositoryCloneManager.PrepareCloneAsync(
                     targetRepoPath,
                     remotes,
