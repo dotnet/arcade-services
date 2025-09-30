@@ -115,7 +115,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             sourceRepo,
             targetBranch,
             headBranch,
-            rebase,
             cancellationToken);
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
@@ -181,7 +180,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         ILocalGitRepo sourceRepo,
         string baseBranch,
         string headBranch,
-        bool rebase,
         CancellationToken cancellationToken)
     {
         _vmrInfo.VmrUri = vmrUri;
@@ -219,15 +217,10 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
             LastFlows lastFlows = await GetLastFlowsAsync(mappingName, sourceRepo, currentIsBackflow: false);
 
-            // When we want to keep the conflicts, we create the branch where the base branch is
-            // When we don't, we rebase our branch on the previous flow
-            if (!rebase)
-            {
-                await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
-                await _dependencyTracker.RefreshMetadataAsync();
-            }
-
+            await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
+            await _dependencyTracker.RefreshMetadataAsync();
             await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
+
             return (false, lastFlows);
         }
     }
@@ -330,7 +323,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         IWorkBranch? workBranch = null;
         var branchName = currentFlow.GetBranchName();
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        if (headBranchExisted && !rebase)
+
+        if (headBranchExisted)
         {
             // Check out the last flow's commit in the PR branch to create the work branch on
             await vmr.CheckoutAsync(lastFlows.LastForwardFlow.VmrSha);

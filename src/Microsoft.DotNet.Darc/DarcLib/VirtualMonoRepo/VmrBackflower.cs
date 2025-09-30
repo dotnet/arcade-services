@@ -224,10 +224,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         _logger.LogInformation("Created {count} patch(es)", patches.Count);
 
-        // We create a work branch only if we don't want to keep the conflicts
-        IWorkBranch? workBranch = !rebase
-            ? await _workBranchFactory.CreateWorkBranchAsync(targetRepo, currentFlow.GetBranchName(), headBranch)
-            : null;
+        string newBranchName = currentFlow.GetBranchName();
+        IWorkBranch? workBranch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, newBranchName, headBranch);
 
         try
         {
@@ -316,6 +314,18 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool rebase,
         CancellationToken cancellationToken)
     {
+        if (!headBranchExisted)
+        {
+            // If the target branch did not exist, we need to make sure it is created in the right location
+            await targetRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
+            await targetRepo.CreateBranchAsync(headBranch, true);
+        }
+        else
+        {
+            // If it did, we need to check out the last point of synchronization on it
+            await targetRepo.CheckoutAsync(lastFlows.LastBackFlow!.RepoSha);
+        }
+
         var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-{Commit.GetShortSha(lastFlows.LastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}.patch";
         var branchName = currentFlow.GetBranchName();
         IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, branchName, headBranch);
