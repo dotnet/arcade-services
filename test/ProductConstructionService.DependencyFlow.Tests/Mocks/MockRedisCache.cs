@@ -3,7 +3,7 @@
 
 using ProductConstructionService.Common;
 
-namespace ProductConstructionService.DependencyFlow.Tests;
+namespace ProductConstructionService.DependencyFlow.Tests.Mocks;
 
 internal class MockRedisCache : IRedisCache
 {
