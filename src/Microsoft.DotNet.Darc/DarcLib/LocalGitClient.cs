@@ -596,4 +596,37 @@ public class LocalGitClient : ILocalGitClient
         result = await _processManager.ExecuteGit(repoPath, "add", file);
         result.ThrowIfFailed($"Failed to stage resolved conflict in {file} in {repoPath}");
     }
+
+    public async Task<string> GetMergeBase(
+        string repoPath,
+        string commitOrBranchA,
+        string commitOrBranchB)
+    {
+        ProcessExecutionResult result = await _processManager.ExecuteGit(
+            repoPath,
+            "merge-base",
+            commitOrBranchA,
+            commitOrBranchB);
+
+        result.ThrowIfFailed($"Failed to find a common ancestor for {commitOrBranchA} and {commitOrBranchB}");
+
+        return result.GetOutputLines().First();
+    }
+
+    public async Task<IReadOnlyCollection<string>> GetChangedFiles(
+        string repoPath,
+        string baseCommitOrBranch,
+        string targetCommitOrBranch)
+    {
+        var result = await _processManager.ExecuteGit(
+            repoPath,
+            "diff",
+            "--name-only",
+            $"{baseCommitOrBranch}..{targetCommitOrBranch}");
+
+        result.ThrowIfFailed($"Failed to get the list of changed files between {baseCommitOrBranch} and " +
+            $"{targetCommitOrBranch}");
+
+        return result.GetOutputLines();
+    }
 }

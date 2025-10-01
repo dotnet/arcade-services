@@ -269,4 +269,25 @@ public interface ILocalGitClient
     ///     Resolves a conflict in a given file to ours/theirs.
     /// </summary>
     Task ResolveConflict(string repoPath, string file, bool ours);
+
+    /// <summary>
+    /// Finds the best common ancestor (merge base) between two commits or branches in the repository.
+    /// </summary>
+    /// <param name="commitOrBranchA">The SHA, reference name, or branch name of the first commit or branch to compare.</param>
+    /// <param name="commitOrBranchB">The SHA, reference name, or branch name of the second commit or branch to compare.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the SHA of the merge base commit, or
+    /// null if no common ancestor exists.</returns>
+    Task<string> GetMergeBase(string repoPath, string commitOrBranchA, string commitOrBranchB);
+
+    /// <summary>
+    /// Gets a collection of file paths that have changed between the specified base and target commits or branches.
+    /// </summary>
+    /// <param name="baseCommitOrBranch">The commit SHA or branch name to use as the base for the comparison.</param>
+    /// <param name="targetCommitOrBranch">The commit SHA or branch name to compare against the base.</param>
+    /// <returns>A read-only collection of strings representing the relative paths of files that differ between the
+    /// base and target. The collection is empty if there are no changed files.</returns>
+    Task<IReadOnlyCollection<string>> GetChangedFiles(
+        string repoPath,
+        string baseCommitOrBranch,
+        string targetCommitOrBranch);
 }

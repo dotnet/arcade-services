@@ -72,8 +72,10 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
     {
         _logger.LogInformation("Checking if the flow can be skipped for {mappingName}", mappingName);
 
-        var commonAncestor = await GetCommonAncestor(headBranch, targetBranch);
-        var changedFiles = await GetChangedFiles(headBranch, commonAncestor);
+        ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+
+        var commonAncestor = await vmr.GetMergeBase(headBranch, targetBranch);
+        var changedFiles = await vmr.GetChangedFiles(commonAncestor, headBranch);
 
         if (HasSourceChanges(mappingName, changedFiles))
         {
@@ -103,9 +105,9 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
             .ToHashSet();
 
         var meaningfulChanges = changedFiles
-                .Where(file => file.StartsWith(mappingSrc, StringComparison.OrdinalIgnoreCase))
-                .Where(file => !repoVersionFilesInVmr.Any(
-                    v => string.Equals(v, file, StringComparison.OrdinalIgnoreCase)));
+            .Where(file => file.StartsWith(mappingSrc, StringComparison.OrdinalIgnoreCase))
+            .Where(file => !repoVersionFilesInVmr.Any(
+                v => string.Equals(v, file, StringComparison.OrdinalIgnoreCase)));
 
         if (mappingName != VmrInfo.ArcadeMappingName)
         {
@@ -166,26 +168,6 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         }
 
         return false;
-    }
-
-    private async Task<string> GetCommonAncestor(string headBranch, string targetBranch)
-    {
-        ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-
-        ProcessExecutionResult result = await vmr.ExecuteGitCommand("merge-base", targetBranch, headBranch);
-        result.ThrowIfFailed($"Failed to find a common ancestor for {targetBranch} and {headBranch}");
-
-        return result.GetOutputLines().First();
-    }
-
-    private async Task<IReadOnlyCollection<string>> GetChangedFiles(string headBranch, string commonAncestor)
-    {
-        ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-
-        var result = await vmr.ExecuteGitCommand("diff", "--name-only", $"{commonAncestor}..{headBranch}");
-        result.ThrowIfFailed($"Failed to get the list of changed files between {commonAncestor} and {headBranch}");
-
-        return result.GetOutputLines();
     }
 
     private async Task<Build?> GetBuildFromSourceTag(ILocalGitRepo vmr, string mappingName, string branch)

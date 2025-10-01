@@ -120,6 +120,14 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
 
     public async Task<GitObjectType> GetRefType(string gitRef, CancellationToken cancellationToken = default)
         => await _localGitClient.GetRefType(Path, gitRef, cancellationToken);
+    public async Task<string> GetMergeBase(string commitOrBranchA, string commitOrBrancB)
+        => await _localGitClient.GetMergeBase(Path, commitOrBranchA, commitOrBrancB);
+
+    public async Task<IReadOnlyCollection<string>> GetChangedFiles(
+        string baseCommitOrBranch,
+        string targetCommitOrBranch)
+        => await _localGitClient.GetChangedFiles(Path, baseCommitOrBranch, targetCommitOrBranch);
+
 
     public override string ToString() => Path;
 }
