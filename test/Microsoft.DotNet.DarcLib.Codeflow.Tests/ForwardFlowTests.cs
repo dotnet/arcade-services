@@ -82,17 +82,17 @@ internal class ForwardFlowTests : CodeFlowTests
 
         // Now we make several changes in the repo and try to locally flow them via darc
         await File.WriteAllTextAsync(_productRepoFilePath, "New content in the individual repo again");
-        await File.WriteAllTextAsync(_productRepoFilePath + "_2", "New file in the repo");
+        await File.WriteAllTextAsync(_productRepoFilePath + "_2", "New file from the repo");
         await GitOperations.CommitAll(ProductRepoPath, "New content in the individual repo again");
-
-        var options = new ForwardFlowCommandLineOptions()
-        {
-            VmrPath = VmrPath,
-            TmpPath = TmpPath,
-        };
 
         async Task<string[]> CallDarcForwardFlowOperation()
         {
+            var options = new ForwardFlowCommandLineOptions()
+            {
+                VmrPath = VmrPath,
+                TmpPath = TmpPath,
+            };
+
             var operation = ActivatorUtilities.CreateInstance<ForwardFlowOperation>(ServiceProvider, options);
             var currentDirectory = Directory.GetCurrentDirectory();
             Directory.SetCurrentDirectory(ProductRepoPath);
@@ -123,7 +123,7 @@ internal class ForwardFlowTests : CodeFlowTests
         ];
         stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
         CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo again");
-        CheckFileContents(new NativePath(_productRepoVmrFilePath.Path + "_2"), "New file in the repo");
+        CheckFileContents(VmrPath / expectedFiles[1], "New file from the repo");
 
         // Now we reset, make a conflicting change and see if darc can handle it and the conflict appears
         await GitOperations.ExecuteGitCommand(VmrPath, "reset", "--hard");
@@ -136,9 +136,9 @@ internal class ForwardFlowTests : CodeFlowTests
         // Verify that a file is in a conflicted state
         (await GitOperations.ExecuteGitCommand(VmrPath, ["diff", "--name-status"])).StandardOutput.Should().MatchRegex(@$"^U\s+{Regex.Escape(expectedFiles[0])}");
         (await File.ReadAllTextAsync(_productRepoVmrFilePath)).Should().Contain(">>>>>");
-        CheckFileContents(new NativePath(_productRepoVmrFilePath.Path + "_2"), "New file in the repo");
+        CheckFileContents(VmrPath / expectedFiles[1], "New file from the repo");
 
-        await GitOperations.ExecuteGitCommand(VmrPath, "add", "-A");
+        await GitOperations.ExecuteGitCommand(VmrPath, ["add", "--", ..expectedFiles]);
         await GitOperations.CommitAll(VmrPath, "Commit staged files");
         await GitOperations.CheckAllIsCommitted(VmrPath);
     }
