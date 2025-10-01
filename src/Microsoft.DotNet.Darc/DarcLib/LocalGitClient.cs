@@ -599,16 +599,16 @@ public class LocalGitClient : ILocalGitClient
 
     public async Task<string> GetMergeBaseAsync(
         string repoPath,
-        string commitOrBranchA,
-        string commitOrBranchB)
+        string gitRefA,
+        string gitRefB)
     {
         ProcessExecutionResult result = await _processManager.ExecuteGit(
             repoPath,
             "merge-base",
-            commitOrBranchA,
-            commitOrBranchB);
+            gitRefA,
+            gitRefB);
 
-        result.ThrowIfFailed($"Failed to find a common ancestor for {commitOrBranchA} and {commitOrBranchB}");
+        result.ThrowIfFailed($"Failed to find a common ancestor for {gitRefA} and {gitRefB}");
 
         return result.GetOutputLines().First();
     }

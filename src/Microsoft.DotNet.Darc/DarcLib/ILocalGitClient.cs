@@ -271,13 +271,9 @@ public interface ILocalGitClient
     Task ResolveConflict(string repoPath, string file, bool ours);
 
     /// <summary>
-    /// Finds the best common ancestor (merge base) between two commits or branches in the repository.
+    /// Finds the best common ancestor (merge base) between two git refs in the repository.
     /// </summary>
-    /// <param name="commitOrBranchA">The SHA, reference name, or branch name of the first commit or branch to compare.</param>
-    /// <param name="commitOrBranchB">The SHA, reference name, or branch name of the second commit or branch to compare.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the SHA of the merge base commit, or
-    /// null if no common ancestor exists.</returns>
-    Task<string> GetMergeBaseAsync(string repoPath, string commitOrBranchA, string commitOrBranchB);
+    Task<string> GetMergeBaseAsync(string repoPath, string gitRefA, string gitRefB);
 
     /// <summary>
     /// Gets a collection of file paths that have changed between the specified base and target commits or branches.
