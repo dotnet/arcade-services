@@ -75,7 +75,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         var commonAncestor = await GetCommonAncestor(headBranch, targetBranch);
         var changedFiles = await GetChangedFiles(headBranch, commonAncestor);
 
-     if (HasSourceChanges(mappingName, changedFiles))
+        if (HasSourceChanges(mappingName, changedFiles))
         {
             return true;
         }
@@ -89,7 +89,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         return false;
     }
 
-    private bool HasSourceChanges(string mappingName, List<string> changedFiles)
+    private bool HasSourceChanges(string mappingName, IReadOnlyCollection<string> changedFiles)
     {
         var mappingSrc = VmrInfo.GetRelativeRepoSourcesPath(mappingName);
 
@@ -103,8 +103,9 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
             .ToHashSet();
 
         var meaningfulChanges = changedFiles
-                .Where(file => file.StartsWith(mappingSrc))
-                .Where(file => !repoVersionFilesInVmr.Contains(file));
+                .Where(file => file.StartsWith(mappingSrc, StringComparison.OrdinalIgnoreCase))
+                .Where(file => !repoVersionFilesInVmr.Any(
+                    v => string.Equals(v, file, StringComparison.OrdinalIgnoreCase)));
 
         if (mappingName != VmrInfo.ArcadeMappingName)
         {
@@ -143,6 +144,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
             "--",
             ..versionFileInclusionRules
         ]);
+
         result.ThrowIfFailed($"Failed to get the changes between {ancestorCommit} and {headBranch}");
 
         // We load all different pieces of build information that would be expected in the diff output
@@ -156,6 +158,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         ];
 
         IEnumerable<string> diffLines = result.GetOutputLines();
+
         if (diffLines.Any(line => ContainsUnexpectedChange(line, expectedContents)))
         {
             _logger.LogInformation("Flow contains version file changes that warrant PR creation");
@@ -175,14 +178,14 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         return result.GetOutputLines().First();
     }
 
-    private async Task<List<string>> GetChangedFiles(string headBranch, string commonAncestor)
+    private async Task<IReadOnlyCollection<string>> GetChangedFiles(string headBranch, string commonAncestor)
     {
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
         var result = await vmr.ExecuteGitCommand("diff", "--name-only", $"{commonAncestor}..{headBranch}");
         result.ThrowIfFailed($"Failed to get the list of changed files between {commonAncestor} and {headBranch}");
 
-        return [.. result.GetOutputLines()];
+        return result.GetOutputLines();
     }
 
     private async Task<Build?> GetBuildFromSourceTag(ILocalGitRepo vmr, string mappingName, string branch)
