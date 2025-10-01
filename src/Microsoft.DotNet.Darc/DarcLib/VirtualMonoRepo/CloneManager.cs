@@ -47,6 +47,22 @@ public abstract class CloneManager
         _logger = logger;
     }
 
+    protected async Task<ILocalGitRepo> PrepareCloneInternalAsync(
+        NativePath clonePath,
+        IReadOnlyCollection<string> remoteUris,
+        IReadOnlyCollection<string> requestedRefs,
+        string checkoutRef,
+        bool resetToRemote = false,
+        CancellationToken cancellationToken = default)
+    {
+        foreach (var uri in remoteUris)
+        {
+            _clones[uri] = clonePath;
+        }
+
+        return await PrepareCloneInternalAsync(_fileSystem.GetDirectoryName(clonePath.Path)!, remoteUris, requestedRefs, checkoutRef, resetToRemote, cancellationToken);
+    }
+
     /// <summary>
     /// Prepares a clone of a repository by fetching from given remotes one-by-one until all requested commits are available.
     /// Then checks out the given ref.
@@ -135,13 +151,17 @@ public abstract class CloneManager
             result.ThrowIfFailed("Couldn't get upstream branch for the current branch");
             var upstream = result.StandardOutput.Trim();
 
-            // reset the branch to the remote one
-            result = await _localGitRepo.RunGitCommandAsync(path, ["reset", "--hard", upstream], cancellationToken);
-            result.ThrowIfFailed($"Couldn't reset to remote ref {upstream}");
+            // Only reset if we have an upstream branch to reset to
+            if (!string.IsNullOrEmpty(upstream))
+            {
+                // reset the branch to the remote one
+                result = await _localGitRepo.RunGitCommandAsync(path, ["reset", "--hard", upstream], cancellationToken);
+                result.ThrowIfFailed($"Couldn't reset to remote ref {upstream}");
 
-            // also clean the repo
-            result = await _localGitRepo.RunGitCommandAsync(path, ["clean", "-fdqx", "."], cancellationToken);
-            result.ThrowIfFailed("Couldn't clean the repository");
+                // also clean the repo
+                result = await _localGitRepo.RunGitCommandAsync(path, ["clean", "-fdqx", "."], cancellationToken);
+                result.ThrowIfFailed("Couldn't clean the repository");
+            }
         }
 
         return repo;
@@ -156,6 +176,8 @@ public abstract class CloneManager
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        NativePath clonePath;
+
         if (_upToDateRepos.Contains(remoteUri))
         {
             var path = _clones[remoteUri];
@@ -165,11 +187,14 @@ public abstract class CloneManager
             }
 
             _upToDateRepos.Remove(remoteUri);
+            clonePath = path;
         }
-
-        var clonePath = _clones.TryGetValue(remoteUri, out var cachedPath)
-            ? cachedPath
-            : GetClonePath(dirName);
+        else
+        {
+            clonePath = _clones.TryGetValue(remoteUri, out var cachedPath)
+                ? cachedPath
+                : GetClonePath(dirName);
+        }
 
         if (!_fileSystem.DirectoryExists(clonePath))
         {
