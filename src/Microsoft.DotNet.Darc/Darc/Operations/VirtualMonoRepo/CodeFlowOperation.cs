@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
@@ -22,9 +21,10 @@ internal abstract class CodeFlowOperation(
         IVmrInfo vmrInfo,
         IVmrCodeFlower codeFlower,
         IVmrDependencyTracker dependencyTracker,
-        IVmrPatchHandler patchHandler,
         IDependencyFileManager dependencyFileManager,
         ILocalGitRepoFactory localGitRepoFactory,
+        IVmrCloneManager vmrCloneManager,
+        IRepositoryCloneManager repoCloneManager,
         IFileSystem fileSystem,
         ILogger<CodeFlowOperation> logger)
     : VmrOperationBase(options, logger)
@@ -33,9 +33,10 @@ internal abstract class CodeFlowOperation(
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly IVmrCodeFlower _codeFlower = codeFlower;
     private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
-    private readonly IVmrPatchHandler _patchHandler = patchHandler;
     private readonly IDependencyFileManager _dependencyFileManager = dependencyFileManager;
     private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
+    private readonly IVmrCloneManager _vmrCloneManager = vmrCloneManager;
+    private readonly IRepositoryCloneManager _repoCloneManager = repoCloneManager;
     private readonly IFileSystem _fileSystem = fileSystem;
     private readonly ILogger<CodeFlowOperation> _logger = logger;
 
@@ -51,6 +52,12 @@ internal abstract class CodeFlowOperation(
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
+        //if (isForwardFlow)
+        //{
+        //    await _vmrCloneManager.PrepareVmrAsync();
+        //    await _repoCloneManager.PrepareCloneAsync(repoPath, [_vmrInfo.VmrPath.Path], ["HEAD"], "HEAD", resetToRemote: false, cancellationToken);
+        //}
+
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         ILocalGitRepo productRepo = _localGitRepoFactory.Create(repoPath);
         ILocalGitRepo sourceRepo = isForwardFlow ? productRepo : vmr;
@@ -91,72 +98,42 @@ internal abstract class CodeFlowOperation(
                 "Please make sure your repository and the VMR are up to date.");
         }
 
-        string currentSourceRepoBranch = await sourceRepo.GetCheckedOutBranchAsync();
         string currentTargetRepoBranch = await targetRepo.GetCheckedOutBranchAsync();
 
-        // We create a temporary branch at the current checkout
-        // We flow the changes into another temporary branch
-        // Later we merge tmpBranch2 into tmpBranch1
-        // Then we look at the diff and stage that from the original repo checkout
-        // This way user only sees the staged files
-        string tmpTargetBranch = "darc/tmp/" + Guid.NewGuid().ToString();
-        string tmpHeadBranch = "darc/tmp/" + Guid.NewGuid().ToString();
+        Build build = new(-1, DateTimeOffset.Now, 0, false, false, currentFlow.SourceSha, [], [], [], [])
+        {
+            GitHubRepository = sourceRepo.Path,
+        };
+
+        bool hasChanges;
 
         try
         {
-            await targetRepo.CreateBranchAsync(tmpTargetBranch, true);
-            await targetRepo.CreateBranchAsync(tmpHeadBranch, true);
-
-            Build build = new(-1, DateTimeOffset.Now, 0, false, false, currentFlow.SourceSha, [], [], [], [])
-            {
-                GitHubRepository = sourceRepo.Path,
-            };
-
-            bool hasChanges;
-
-            try
-            {
-                hasChanges = await _codeFlower.FlowCodeAsync(
-                    lastFlows,
-                    currentFlow,
-                    productRepo,
-                    mapping,
-                    build,
-                    excludedAssets: [],
-                    tmpTargetBranch,
-                    tmpHeadBranch,
-                    headBranchExisted: false,
-                    rebase: true,
-                    forceUpdate: false,
-                    cancellationToken);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Failed to flow changes between the VMR and {repo}", mappingName);
-
-                throw new InvalidSynchronizationException(
-                    "Failed to flow changes on top of the checked out commit - possibly due to conflicts. " +
-                    $"Changes are ready in the {tmpHeadBranch} branch (based on older version of the repo).");
-            }
-
-            if (!hasChanges)
-            {
-                _logger.LogInformation("No changes to flow between the VMR and {repo}.", mapping.Name);
-                await targetRepo.CheckoutAsync(currentTargetRepoBranch);
-                return;
-            }
-
-            await StageChangesFromBranch(targetRepo, mappingName, currentTargetRepoBranch, tmpHeadBranch, cancellationToken);
+            hasChanges = await _codeFlower.FlowCodeAsync(
+                lastFlows,
+                currentFlow,
+                productRepo,
+                mapping,
+                build,
+                excludedAssets: [],
+                currentTargetRepoBranch,
+                currentTargetRepoBranch,
+                headBranchExisted: false,
+                rebase: true,
+                forceUpdate: false,
+                cancellationToken);
         }
-        catch
+        catch (Exception e)
         {
-            await targetRepo.ResetWorkingTree();
+            _logger.LogError(e, "Failed to flow changes between the VMR and {repo}", mappingName);
+            return;
+        }
+
+        if (!hasChanges)
+        {
+            _logger.LogInformation("No changes to flow between the VMR and {repo}.", mapping.Name);
             await targetRepo.CheckoutAsync(currentTargetRepoBranch);
-            throw;
-        }
-        finally
-        {
-            await CleanUp(sourceRepo, targetRepo, currentSourceRepoBranch, tmpTargetBranch, tmpHeadBranch);
+            return;
         }
 
         _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
@@ -202,69 +179,5 @@ internal abstract class CodeFlowOperation(
         }
 
         return versionDetails.Source.Mapping;
-    }
-
-    /// <summary>
-    /// Takes a diff between the originally checked out branch and the newly flowed changes
-    /// and stages those changes on top of the previously checked out branch.
-    /// </summary>
-    /// <param name="targetRepo">Repo where to do this</param>
-    /// <param name="checkedOutBranch">Previously checked out branch</param>
-    /// <param name="branchWithChanges">Branch to diff</param>
-    private async Task StageChangesFromBranch(
-        ILocalGitRepo targetRepo,
-        string mappingName,
-        string checkedOutBranch,
-        string branchWithChanges,
-        CancellationToken cancellationToken)
-    {
-        await targetRepo.CheckoutAsync(checkedOutBranch);
-
-        string patchName = _vmrInfo.TmpPath / (Guid.NewGuid() + ".patch");
-        List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
-            patchName,
-            await targetRepo.GetShaForRefAsync(checkedOutBranch),
-            await targetRepo.GetShaForRefAsync(branchWithChanges),
-            path: null,
-            filters: [.. GetIgnoredFiles(mappingName).Select(VmrPatchHandler.GetExclusionRule)],
-            relativePaths: false,
-            workingDir: targetRepo.Path,
-            applicationPath: null,
-            ignoreLineEndings: false,
-            cancellationToken);
-
-        await _patchHandler.ApplyPatches(
-            patches,
-            targetRepo.Path,
-            removePatchAfter: true,
-            keepConflicts: true,
-            cancellationToken: cancellationToken);
-    }
-
-    private async Task CleanUp(
-        ILocalGitRepo sourceRepo,
-        ILocalGitRepo targetRepo,
-        string currentSourceRepoBranch,
-        string tmpTargetBranch,
-        string tmpHeadBranch)
-    {
-        _logger.LogInformation("Cleaning up...");
-
-        try
-        {
-            await targetRepo.DeleteBranchAsync(tmpTargetBranch);
-        }
-        catch
-        {
-        }
-        try
-        {
-            await targetRepo.DeleteBranchAsync(tmpHeadBranch);
-        }
-        catch
-        {
-        }
-
-        await sourceRepo.CheckoutAsync(currentSourceRepoBranch);
     }
 }

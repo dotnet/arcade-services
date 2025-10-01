@@ -329,12 +329,10 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         // When updating an existing PR, we create a work branch to make the changes on
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
-        if (headBranchExisted)
-        {
-            // Check out the last flow's commit in the PR branch to create the work branch on
-            await vmr.CheckoutAsync(lastFlows.LastForwardFlow.VmrSha);
-            await _dependencyTracker.RefreshMetadataAsync();
-        }
+        // If a PR branch exists, check out the last flow's commit in the PR branch
+        // If a PR branch does not exist, check out the last flow's commit in the target branch
+        await vmr.CheckoutAsync(headBranchExisted ? lastFlows.LastForwardFlow.VmrSha : lastFlows.LastFlow.VmrSha);
+        await _dependencyTracker.RefreshMetadataAsync();
 
         IWorkBranch? workBranch = headBranchExisted || rebase
             ? await _workBranchFactory.CreateWorkBranchAsync(vmr, currentFlow.GetBranchName(), headBranch)

@@ -35,6 +35,11 @@ internal class GitOperationsHelper
         }
     }
 
+    public async Task<ProcessExecutionResult> ExecuteGitCommand(NativePath repo, params string[] args)
+    {
+        return await _processManager.ExecuteGit(repo, args);
+    }
+
     public async Task InitialCommit(NativePath repo)
     {
         await _processManager.ExecuteGit(repo, "init", "-b", "main");

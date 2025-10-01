@@ -19,13 +19,14 @@ internal class BackflowOperation(
     IVmrInfo vmrInfo,
     IVmrBackFlower backFlower,
     IVmrDependencyTracker dependencyTracker,
-    IVmrPatchHandler patchHandler,
     ILocalGitRepoFactory localGitRepoFactory,
+    IVmrCloneManager vmrCloneManager,
+    IRepositoryCloneManager repoCloneManager,
     IDependencyFileManager dependencyFileManager,
     IProcessManager processManager,
     IFileSystem fileSystem,
     ILogger<BackflowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, backFlower, dependencyTracker, patchHandler, dependencyFileManager, localGitRepoFactory, fileSystem, logger)
+    : CodeFlowOperation(options, vmrInfo, backFlower, dependencyTracker, dependencyFileManager, localGitRepoFactory, vmrCloneManager, repoCloneManager, fileSystem, logger)
 {
     private readonly BackflowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;

@@ -37,6 +37,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly ILocalGitClient _localGitClient;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IRepositoryCloneManager _cloneManager;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
@@ -46,6 +47,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         IVmrInfo vmrInfo,
         IVmrDependencyTracker dependencyTracker,
         ILocalGitClient localGitClient,
+        ILocalGitRepoFactory localGitRepoFactory,
         IRepositoryCloneManager cloneManager,
         IProcessManager processManager,
         IFileSystem fileSystem,
@@ -54,6 +56,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
         _localGitClient = localGitClient;
+        _localGitRepoFactory = localGitRepoFactory;
         _cloneManager = cloneManager;
         _processManager = processManager;
         _fileSystem = fileSystem;
@@ -271,8 +274,10 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         _logger.LogInformation((reverseApply ? "Reverse-applying" : "Applying") + " patch {patchPath} to {path}...", patch.Path, patch.ApplicationPath ?? "root of the VMR");
 
+        ILocalGitRepo repo = _localGitRepoFactory.Create(targetDirectory);
+
         // This will help ignore some CR/LF issues (e.g. files with both endings)
-        (await _processManager.ExecuteGit(targetDirectory, ["config", "apply.ignoreWhitespace", "change"], cancellationToken: cancellationToken))
+        (await repo.ExecuteGitCommand(["config", "apply.ignoreWhitespace", "change"], cancellationToken: cancellationToken))
             .ThrowIfFailed("Failed to set git config whitespace settings");
 
         var args = new List<string>
@@ -314,7 +319,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         args.Add(patch.Path);
 
-        var result = await _processManager.ExecuteGit(targetDirectory, args, cancellationToken: CancellationToken.None);
+        var result = await repo.ExecuteGitCommand([..args], cancellationToken: CancellationToken.None);
         if (!result.Succeeded)
         {
             // When we are applying and wish to keep conflicts in the working tree, we need to clean up a bit:
@@ -322,10 +327,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             {
                 // Collect the list of conflicted files:
                 cancellationToken.ThrowIfCancellationRequested();
-                var conflictedFilesResult = await _processManager.ExecuteGit(
-                    targetDirectory,
-                    ["diff", "--name-only", "--diff-filter=U"],
-                    cancellationToken: CancellationToken.None);
+                var conflictedFilesResult = await repo.ExecuteGitCommand(["diff", "--name-only", "--diff-filter=U"], CancellationToken.None);
                 conflictedFilesResult.ThrowIfFailed("Failed to get a list of conflicted files after patch application failed");
 
                 IReadOnlyCollection<UnixPath> conflictedFiles = [..conflictedFilesResult.GetOutputLines().Select(f => new UnixPath(f))];
@@ -336,15 +338,9 @@ public class VmrPatchHandler : IVmrPatchHandler
                 }
 
                 // Put them in the conflicted state with conflict markers (by default they are resolved using --ours strategy):
-                foreach (var file in conflictedFiles)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var checkoutResult = await _processManager.ExecuteGit(
-                        targetDirectory,
-                        ["checkout", "--merge", "--", file],
-                        cancellationToken: CancellationToken.None);
-                    checkoutResult.ThrowIfFailed($"Failed to set the conflicted state for {file} after patch application failed");
-                }
+                cancellationToken.ThrowIfCancellationRequested();
+                var checkoutResult = await repo.ExecuteGitCommand(["checkout", "--merge", "--", "."], CancellationToken.None);
+                checkoutResult.ThrowIfFailed("Failed to set the conflicted state after patch application failed");
 
                 throw new PatchApplicationLeftConflictsException(conflictedFiles, targetDirectory);
             }
