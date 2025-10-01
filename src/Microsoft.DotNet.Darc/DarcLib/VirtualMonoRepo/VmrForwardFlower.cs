@@ -337,7 +337,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         }
 
         IWorkBranch? workBranch = headBranchExisted || rebase
-            ? await _workBranchFactory.CreateWorkBranchAsync(vmr, currentFlow.GetBranchName())
+            ? await _workBranchFactory.CreateWorkBranchAsync(vmr, currentFlow.GetBranchName(), headBranch)
             : null;
 
         await sourceRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
