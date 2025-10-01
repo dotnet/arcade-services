@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
@@ -513,38 +514,65 @@ internal class BackflowTests : CodeFlowTests
 
         // Now we make several changes in the VMR and try to locally flow them via darc
         await File.WriteAllTextAsync(_productRepoVmrFilePath, "New content in the VMR again");
+        await File.WriteAllTextAsync(_productRepoFilePath + "_2", "New file from the VMR");
         await GitOperations.CommitAll(VmrPath, "New content in the VMR again");
 
-        var options = new BackflowCommandLineOptions()
+        async Task<string[]> CallDarcBackflowOperation()
         {
-            VmrPath = VmrPath,
-            TmpPath = TmpPath,
-            Repository = ProductRepoPath,
-        };
+            var options = new BackflowCommandLineOptions()
+            {
+                VmrPath = VmrPath,
+                TmpPath = TmpPath,
+                Repository = ProductRepoPath,
+            };
 
-        var operation = ActivatorUtilities.CreateInstance<BackflowOperation>(ServiceProvider, options);
-        var currentDirectory = Directory.GetCurrentDirectory();
-        Directory.SetCurrentDirectory(VmrPath);
-        try
-        {
-            var result = await operation.ExecuteAsync();
-            result.Should().Be(0);
+            var operation = ActivatorUtilities.CreateInstance<BackflowOperation>(ServiceProvider, options);
+            var currentDirectory = Directory.GetCurrentDirectory();
+            Directory.SetCurrentDirectory(VmrPath);
+            try
+            {
+                var result = await operation.ExecuteAsync();
+                result.Should().Be(0);
+            }
+            finally
+            {
+                Directory.SetCurrentDirectory(currentDirectory);
+            }
+
+            var gitResult = await GitOperations.ExecuteGitCommand(ProductRepoPath, "diff", "--name-only", "--cached");
+            gitResult.Succeeded.Should().BeTrue("Git diff should succeed");
+            return gitResult.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
         }
-        finally
-        {
-            Directory.SetCurrentDirectory(currentDirectory);
-        }
+
+        // We check if everything got staged properly
+        var stagedFiles = await CallDarcBackflowOperation();
 
         // Verify that expected files are staged
-        CheckFileContents(_productRepoFilePath, "New content in the VMR again");
-        var processManager = ServiceProvider.GetRequiredService<IProcessManager>();
+        string[] expectedFiles =
+        [
+            _productRepoFileName,
+            _productRepoFileName + "_2",
+            VersionFiles.VersionDetailsXml,
+        ];
+        stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
+        CheckFileContents(_productRepoFilePath, "New content in the individual repo again");
+        CheckFileContents(ProductRepoPath / expectedFiles[1], "New file from the VMR");
 
-        var gitResult = await processManager.ExecuteGit(ProductRepoPath, "diff", "--name-only", "--cached");
-        gitResult.Succeeded.Should().BeTrue("Git diff should succeed");
-        var stagedFiles = gitResult.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-        stagedFiles.Should().BeEquivalentTo([_productRepoFileName], "There should be staged files after backflow");
+        // Now we reset, make a conflicting change and see if darc can handle it and the conflict appears
+        await GitOperations.ExecuteGitCommand(ProductRepoPath, "reset", "--hard");
+        await File.WriteAllTextAsync(_productRepoFilePath, "A conflicting change in the repo");
+        await GitOperations.CommitAll(ProductRepoPath, "A conflicting change in the repo");
 
-        gitResult = await processManager.ExecuteGit(ProductRepoPath, "commit", "-m", "Commit staged files");
+        stagedFiles = await CallDarcBackflowOperation();
+        stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
+
+        // Verify that a file is in a conflicted state
+        (await GitOperations.ExecuteGitCommand(ProductRepoPath, ["diff", "--name-status"])).StandardOutput.Should().MatchRegex(@$"^U\s+{Regex.Escape(expectedFiles[0])}");
+        (await File.ReadAllTextAsync(_productRepoFilePath)).Should().Contain(">>>>>");
+        CheckFileContents(new NativePath(expectedFiles[1]), "New file from the VMR");
+
+        await GitOperations.ExecuteGitCommand(ProductRepoPath, ["add", "--", ..expectedFiles]);
+        await GitOperations.CommitAll(ProductRepoPath, "Commit staged files");
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
     }
 
