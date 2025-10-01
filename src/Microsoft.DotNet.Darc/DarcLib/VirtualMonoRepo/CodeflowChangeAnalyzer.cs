@@ -60,82 +60,97 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
     /// Checks whether the flow contains meaningful changes that warrant a PR creation.
     /// If it only contains version file changes that happened during the last backflow, we can skip it.
     /// Example:
-    ///   - Changed files are only `source-manifest.json` and version files (Version.Details.xml, Versions.props, global.json...)
+    ///   - Changed files are only `source-manifest.json` and version files (Version.Details.xml, Versions.props,
+    ///   global.json...)
     ///   - The version file changes are only bumps of dependencies that were backflowed
     /// </summary>
-    /// <returns>True, if there are no meaningful changes that warrant a PR creation</returns>
-    public async Task<bool> ForwardFlowHasMeaningfulChangesAsync(string mappingName, string headBranch, string targetBranch)
+    /// <returns> True, if there are no meaningful changes that warrant a PR creation</returns>
+    public async Task<bool> ForwardFlowHasMeaningfulChangesAsync(
+        string mappingName,
+        string headBranch,
+        string targetBranch)
     {
         _logger.LogInformation("Checking if the flow can be skipped for {mappingName}", mappingName);
 
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
-        // We find a common ancestor so that we can analyze the differences with the target branch
-        ProcessExecutionResult result = await vmr.ExecuteGitCommand("merge-base", targetBranch, headBranch);
-        result.ThrowIfFailed($"Failed to find a common ancestor for {targetBranch} and {headBranch}");
+        var commonAncestor = await vmr.GetMergeBaseAsync(headBranch, targetBranch);
+        var changedFiles = await vmr.GetChangedFilesAsync(commonAncestor, headBranch);
 
-        var commonAncestor = result.GetOutputLines().First();
-
-        result = await vmr.ExecuteGitCommand("diff", "--name-only", $"{commonAncestor}..{headBranch}");
-        result.ThrowIfFailed($"Failed to get the list of changed files between {commonAncestor} and {headBranch}");
-
-        var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(mappingName);
-
-        string[] ignoredFiles =
-        [
-            VmrInfo.DefaultRelativeSourceManifestPath,
-            // we ignore VersionDetailsProps because it is generated from VersionDetails.xml
-            VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.VersionDetailsProps,
-        ];
-
-        IEnumerable<string> changedFiles = result.GetOutputLines()
-            .Where(file => !ignoredFiles.Contains(file))
-            .Select(file => file.Substring(vmrSourcesPath.Length + 1));
-
-        // For non-arcade repos, we also ignore eng/common changes
-        if (mappingName != VmrInfo.ArcadeMappingName)
+        if (HasSourceChanges(mappingName, changedFiles))
         {
-            changedFiles = changedFiles
-                .Where(file => !file.StartsWith(Constants.CommonScriptFilesPath, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (!changedFiles.Any())
-        {
-            _logger.LogInformation("No meaningful changes detected, code flow can be skipped");
-            return false;
-        }
-
-        var unknownChangedFiles = changedFiles
-            .Except(DependencyFileManager.CodeflowDependencyFiles, StringComparer.OrdinalIgnoreCase);
-
-        if (unknownChangedFiles.Any())
-        {
-            _logger.LogInformation("Flow contains changes that warrant PR creation");
             return true;
         }
 
-        return await CheckDiffForChanges(vmr, mappingName, headBranch, commonAncestor, ignoredFiles);
+        if (await HasMeaningfulVersioningChanges(mappingName, headBranch, commonAncestor))
+        {
+            return true;
+        }
+
+        _logger.LogInformation("No meaningful changes detected, code flow can be skipped");
+        return false;
     }
 
-    private async Task<bool> CheckDiffForChanges(
-        ILocalGitRepo vmr,
+    private bool HasSourceChanges(string mappingName, IReadOnlyCollection<string> changedFiles)
+    {
+        var mappingSrc = VmrInfo.GetRelativeRepoSourcesPath(mappingName);
+
+        var versionDetailsPropsFile =
+            VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.VersionDetailsProps;
+
+        var repoVersionFilesInVmr = DependencyFileManager.CodeflowDependencyFiles
+            .Select(file => new UnixPath(mappingSrc) / file)
+            .Append(versionDetailsPropsFile)
+            .Select(unixPath => unixPath.ToString())
+            .ToHashSet();
+
+        var meaningfulChanges = changedFiles
+            .Where(file => file.StartsWith(mappingSrc, StringComparison.OrdinalIgnoreCase))
+            .Where(file => !repoVersionFilesInVmr.Any(
+                v => v.Equals(file, StringComparison.OrdinalIgnoreCase)));
+
+        if (mappingName != VmrInfo.ArcadeMappingName)
+        {
+            // for repos that are not arcade, we don't include their eng/common folder
+            var mappingEngCommon = mappingSrc / Constants.CommonScriptFilesPath;
+
+            meaningfulChanges = meaningfulChanges
+                .Where(file => !file.StartsWith(mappingEngCommon, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (meaningfulChanges.Any())
+        {
+            _logger.LogInformation("Flow contains source changes that warrant PR creation");
+            return true;
+        }
+
+        return false;
+    }
+
+    private async Task<bool> HasMeaningfulVersioningChanges(
         string mappingName,
         string headBranch,
-        string targetBranch,
-        string[] ignoredFiles)
+        string ancestorCommit)
     {
+        ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+
+        var versionFileInclusionRules = DependencyFileManager.CodeflowDependencyFiles
+            .Select(VmrPatchHandler.GetInclusionRule)
+            .ToList();
+
         var result = await vmr.ExecuteGitCommand(
         [
             "diff",
             "-U0",
-            $"{targetBranch}..{headBranch}",
+            $"{ancestorCommit}..{headBranch}",
             "--",
-            ..ignoredFiles.Select(VmrPatchHandler.GetExclusionRule)
+            ..versionFileInclusionRules
         ]);
-        result.ThrowIfFailed($"Failed to get the changes between {targetBranch} and {headBranch}");
+
+        result.ThrowIfFailed($"Failed to get the changes between {ancestorCommit} and {headBranch}");
 
         // We load all different pieces of build information that would be expected in the diff output
-        Build? build1 = await GetBuildFromSourceTag(vmr, mappingName, targetBranch);
+        Build? build1 = await GetBuildFromSourceTag(vmr, mappingName, ancestorCommit);
         Build? build2 = await GetBuildFromSourceTag(vmr, mappingName, headBranch);
 
         List<string> expectedContents =
@@ -145,13 +160,13 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         ];
 
         IEnumerable<string> diffLines = result.GetOutputLines();
+
         if (diffLines.Any(line => ContainsUnexpectedChange(line, expectedContents)))
         {
-            _logger.LogInformation("Unexpected changes detected, code flow will proceed");
+            _logger.LogInformation("Flow contains version file changes that warrant PR creation");
             return true;
         }
 
-        _logger.LogInformation("No meaningful changes detected, code flow can be skipped");
         return false;
     }
 
