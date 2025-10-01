@@ -20,6 +20,7 @@ using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
 using ProductConstructionService.DependencyFlow.Model;
+using ProductConstructionService.DependencyFlow.Tests.Mocks;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
 using Asset = Maestro.Data.Models.Asset;
