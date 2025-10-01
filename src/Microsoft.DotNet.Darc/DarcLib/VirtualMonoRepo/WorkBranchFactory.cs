@@ -3,6 +3,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -13,9 +14,13 @@ public interface IWorkBranchFactory
     Task<IWorkBranch> CreateWorkBranchAsync(ILocalGitRepo repo, string branchName, string? baseBranch = null);
 }
 
-public class WorkBranchFactory(ILogger<WorkBranch> logger) : IWorkBranchFactory
+public class WorkBranchFactory(
+        IServiceProvider serviceProvider,
+        ILogger<WorkBranchFactory> logger)
+    : IWorkBranchFactory
 {
-    private readonly ILogger<WorkBranch> _logger = logger;
+    private readonly IServiceProvider _serviceProvider = serviceProvider;
+    private readonly ILogger<WorkBranchFactory> _logger = logger;
 
     public async Task<IWorkBranch> CreateWorkBranchAsync(ILocalGitRepo repo, string branchName, string? baseBranch = null)
     {
@@ -40,6 +45,6 @@ public class WorkBranchFactory(ILogger<WorkBranch> logger) : IWorkBranchFactory
 
         await repo.CreateBranchAsync(branchName, overwriteExistingBranch: true);
 
-        return new WorkBranch(repo, _logger, baseBranch, branchName);
+        return ActivatorUtilities.CreateInstance<WorkBranch>(_serviceProvider, repo, baseBranch, branchName);
     }
 }

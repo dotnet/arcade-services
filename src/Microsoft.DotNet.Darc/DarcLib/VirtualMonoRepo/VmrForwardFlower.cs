@@ -327,8 +327,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         CancellationToken cancellationToken)
     {
         // When updating an existing PR, we create a work branch to make the changes on
-        IWorkBranch? workBranch = null;
-        var branchName = currentFlow.GetBranchName();
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
         if (headBranchExisted)
@@ -336,8 +334,11 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             // Check out the last flow's commit in the PR branch to create the work branch on
             await vmr.CheckoutAsync(lastFlows.LastForwardFlow.VmrSha);
             await _dependencyTracker.RefreshMetadataAsync();
-            workBranch = await _workBranchFactory.CreateWorkBranchAsync(vmr, branchName);
         }
+
+        IWorkBranch? workBranch = headBranchExisted || rebase
+            ? await _workBranchFactory.CreateWorkBranchAsync(vmr, currentFlow.GetBranchName())
+            : null;
 
         await sourceRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
 
@@ -381,12 +382,18 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             resetToRemoteWhenCloningRepo: ShouldResetClones,
             cancellationToken: cancellationToken);
 
-        if (hadChanges && headBranchExisted)
+        if (hadChanges && (headBranchExisted || rebase))
         {
+            if (rebase)
+            {
+                await workBranch!.RebaseAsync(keepConflicts: true, cancellationToken);
+                return true;
+            }
+
             try
             {
                 // Re-use the previous commit message
-                var commitMessage = (await vmr.RunGitCommandAsync(["log", "-1", "--pretty=%B"], CancellationToken.None)).StandardOutput;
+                var commitMessage = (await vmr.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
                 await workBranch!.MergeBackAsync(commitMessage);
             }
             catch (WorkBranchInConflictException e)

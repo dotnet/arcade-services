@@ -299,6 +299,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             headBranch,
             workBranch,
+            rebase,
             cancellationToken);
 
         return true;
@@ -329,9 +330,10 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
 
         var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-{Commit.GetShortSha(lastFlows.LastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}.patch";
-        var branchName = currentFlow.GetBranchName();
-        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, branchName, headBranch);
-        _logger.LogInformation("Created temporary branch {branchName} in {repoDir}", branchName, targetRepo);
+        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(
+            targetRepo,
+            currentFlow.GetBranchName(),
+            headBranch);
 
         // We leave the inlined submodules in the VMR
         var exclusions = GetPatchExclusions(mapping);
@@ -398,6 +400,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             headBranch,
             workBranch,
+            rebase,
             cancellationToken);
 
         return true;
@@ -604,6 +607,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         string headBranch,
         IWorkBranch? workBranch,
+        bool rebase,
         CancellationToken cancellationToken)
     {
         var commitMessage = $"""
@@ -617,14 +621,21 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         if (workBranch != null)
         {
-            try
+            if (rebase)
             {
-                await workBranch.MergeBackAsync(commitMessage);
+                await workBranch.RebaseAsync(keepConflicts: true, cancellationToken);
             }
-            catch (WorkBranchInConflictException e)
+            else
             {
-                _logger.LogInformation(e.Message);
-                throw new ConflictInPrBranchException(e.ExecutionResult.StandardError, targetBranch, mapping.Name, isForwardFlow: false);
+                try
+                {
+                    await workBranch.MergeBackAsync(commitMessage);
+                }
+                catch (WorkBranchInConflictException e)
+                {
+                    _logger.LogInformation(e.Message);
+                    throw new ConflictInPrBranchException(e.ExecutionResult.StandardError, targetBranch, mapping.Name, isForwardFlow: false);
+                }
             }
         }
 
