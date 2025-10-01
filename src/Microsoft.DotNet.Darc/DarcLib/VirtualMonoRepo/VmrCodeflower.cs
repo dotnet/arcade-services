@@ -114,7 +114,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             return false;
         }
 
-        if (lastFlow.Name != currentFlow.Name && headBranchExisted && !forceUpdate)
+        if (lastFlow.IsBack != currentFlow.IsBack && headBranchExisted && !forceUpdate)
         {
             _commentCollector.AddComment(CannotFlowAdditionalFlowsInPrMsg, CommentType.Warning);
             throw new BlockingCodeflowException("Cannot apply codeflow on PR head branch because an opposite direction flow has been merged.");
@@ -128,7 +128,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             lastFlow.TargetSha);
 
         bool hasChanges;
-        if (lastFlow.Name == currentFlow.Name)
+        if (lastFlow.IsBack == currentFlow.IsBack)
         {
             _logger.LogInformation("Current flow is in the same direction");
             hasChanges = await SameDirectionFlowAsync(

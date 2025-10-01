@@ -225,7 +225,9 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _logger.LogInformation("Created {count} patch(es)", patches.Count);
 
         string newBranchName = currentFlow.GetBranchName();
-        IWorkBranch? workBranch = await _workBranchFactory.CreateWorkBranchAsync(targetRepo, newBranchName, headBranch);
+        IWorkBranch? workBranch = rebase
+            ? null
+            : await _workBranchFactory.CreateWorkBranchAsync(targetRepo, newBranchName, headBranch);
 
         try
         {
@@ -498,8 +500,14 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             }
 
             LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true);
-            await targetRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
-            await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
+
+            // Rebase strategy works on top of the target branch unless it's opposite direction
+            if (!rebase || lastFlows.LastFlow.IsForward)
+            {
+                await targetRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
+                await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
+            }
+
             return (false, mapping, lastFlows, targetRepo);
         }
     }

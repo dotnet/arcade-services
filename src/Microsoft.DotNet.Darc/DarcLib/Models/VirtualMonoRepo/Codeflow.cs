@@ -16,6 +16,10 @@ public abstract record Codeflow(string SourceSha, string TargetSha)
     public string GetBranchName() => $"darc/{Name}/{Commit.GetShortSha(SourceSha)}-{Commit.GetShortSha(TargetSha)}";
 
     public abstract string Name { get; }
+
+    public bool IsForward => this is ForwardFlow;
+
+    public bool IsBack => this is Backflow;
 }
 
 public record ForwardFlow(string RepoSha, string VmrSha) : Codeflow(RepoSha, VmrSha)

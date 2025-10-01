@@ -115,6 +115,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             sourceRepo,
             targetBranch,
             headBranch,
+            rebase,
             cancellationToken);
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
@@ -180,6 +181,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         ILocalGitRepo sourceRepo,
         string baseBranch,
         string headBranch,
+        bool rebase,
         CancellationToken cancellationToken)
     {
         _vmrInfo.VmrUri = vmrUri;
@@ -217,8 +219,13 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
             LastFlows lastFlows = await GetLastFlowsAsync(mappingName, sourceRepo, currentIsBackflow: false);
 
-            await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
-            await _dependencyTracker.RefreshMetadataAsync();
+            // Rebase strategy works on top of the target branch unless it's opposite direction
+            if (!rebase || lastFlows.LastFlow.IsBack)
+            {
+                await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
+                await _dependencyTracker.RefreshMetadataAsync();
+            }
+
             await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
             return (false, lastFlows);
@@ -351,7 +358,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
             cancellationToken: cancellationToken);
 
-        result.ThrowIfFailed($"Failed to remove files from {sourceRepo}");
+        result.ThrowIfFailed($"Failed to remove files from the VMR");
 
         // Save the current sha we're flowing from before changing it to the zero commit
         var currentSha = _dependencyTracker.GetDependencyVersion(mapping)?.Sha
