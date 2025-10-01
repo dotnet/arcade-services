@@ -6,7 +6,6 @@ using Maestro.Data.Models;
 using Maestro.MergePolicies;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NUnit.Framework;
@@ -93,18 +92,18 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
         {
             ExpectPrMetadataToBeUpdated();
 
-            MergePolicyEvaluationResults mergePolicyEvaluationResults = new MergePolicyEvaluationResults(
-                new List<MergePolicyEvaluationResult> { AlwaysFailMergePolicyResult, DeprecatedMergePolicyResult }.AsReadOnly(),
-                newBuild.Commit);
+            var mergePolicyEvaluationResults = new MergePolicyEvaluationResults(
+                [ AlwaysFailMergePolicyResult, DeprecatedMergePolicyResult ],
+                InProgressPrHeadBranchSha);
 
             SetState(Subscription, mergePolicyEvaluationResults);
 
             //todo find a way to inject a real mergepolicyevaluator
             await WhenUpdateAssetsAsyncIsCalled(newBuild);
 
-            MergePolicyEvaluationResults expectedMergePolicyEvaluationResults = new MergePolicyEvaluationResults(
-                new List<MergePolicyEvaluationResult> { AlwaysFailMergePolicyResult }.AsReadOnly(),
-                newBuild.Commit);
+            var expectedMergePolicyEvaluationResults = new MergePolicyEvaluationResults(
+                [ AlwaysFailMergePolicyResult ],
+                InProgressPrHeadBranchSha);
 
             ThenShouldHaveCachedMergePolicyResults(expectedMergePolicyEvaluationResults);
 

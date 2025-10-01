@@ -96,13 +96,12 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
-        var targetRepo = _localGitRepoFactory.Create(targetRepoPath);
-        (bool headBranchExisted, SourceMapping mapping, LastFlows lastFlows) = await PrepareVmrAndRepo(
+        (bool headBranchExisted, SourceMapping mapping, LastFlows lastFlows, ILocalGitRepo targetRepo) = await PrepareVmrAndRepo(
             mappingName,
-            targetRepo,
             build,
             targetBranch,
             headBranch,
+            targetRepoPath,
             cancellationToken);
 
         return await FlowBackAsync(
@@ -393,15 +392,15 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             : null;
     }
 
-    private async Task<(bool, SourceMapping, LastFlows)> PrepareVmrAndRepo(
+    protected async Task<(bool, SourceMapping, LastFlows, ILocalGitRepo)> PrepareVmrAndRepo(
         string mappingName,
-        ILocalGitRepo targetRepo,
         Build build,
         string targetBranch,
         string headBranch,
+        NativePath? targetRepoPath,
         CancellationToken cancellationToken)
     {
-        await _vmrCloneManager.PrepareVmrAsync([build.GetRepository()], [build.Commit], build.Commit, ShouldResetVmr, cancellationToken);
+        await _vmrCloneManager.PrepareVmrAsync([build.GetRepository()], [build.Commit], build.Commit, ShouldResetClones, cancellationToken);
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
         ISourceComponent repoInfo = _sourceManifest.GetRepoVersion(mappingName);
@@ -411,35 +410,60 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             .OrderRemotesByLocalPublicOther()
             .ToArray();
 
-        // Refresh the repo
-        await targetRepo.FetchAllAsync(remotes, cancellationToken);
+        ILocalGitRepo targetRepo;
 
+        // Try to see if both base and target branch are available
         try
         {
-            // Try to see if both base and target branch are available
-            targetRepo = await _repositoryCloneManager.PrepareCloneAsync(
-                mapping,
-                remotes,
-                [targetBranch, headBranch],
-                headBranch,
-                ShouldResetVmr,
-                cancellationToken);
-
-            LastFlows lastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
-            return (true, mapping, lastFlows);
-        }
-        catch (NotFoundException)
-        {
-            try
+            if (targetRepoPath == null)
             {
-                // If target branch does not exist, we create it off of the base branch
                 targetRepo = await _repositoryCloneManager.PrepareCloneAsync(
                     mapping,
                     remotes,
-                    [targetBranch],
-                    targetBranch,
-                    ShouldResetVmr,
+                    [targetBranch, headBranch],
+                    headBranch,
+                    ShouldResetClones,
                     cancellationToken);
+            }
+            else
+            {
+                targetRepo = await _repositoryCloneManager.PrepareCloneAsync(
+                    targetRepoPath,
+                    remotes,
+                    [targetBranch, headBranch],
+                    headBranch,
+                    ShouldResetClones,
+                    cancellationToken);
+            }
+
+            LastFlows lastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
+            return (true, mapping, lastFlows, targetRepo);
+        }
+        catch (NotFoundException)
+        {
+            // If target branch does not exist, we create it off of the base branch
+            try
+            {
+                if (targetRepoPath == null)
+                {
+                    targetRepo = await _repositoryCloneManager.PrepareCloneAsync(
+                        mapping,
+                        remotes,
+                        [targetBranch],
+                        targetBranch,
+                        ShouldResetClones,
+                        cancellationToken);
+                }
+                else
+                {
+                    targetRepo = await _repositoryCloneManager.PrepareCloneAsync(
+                        targetRepoPath,
+                        remotes,
+                        [targetBranch],
+                        targetBranch,
+                        ShouldResetClones,
+                        cancellationToken);
+                }
             }
             catch (Exception e)
             {
@@ -450,7 +474,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             LastFlows lastFlows = await GetLastFlowsAsync(mapping, targetRepo, currentIsBackflow: true);
             await targetRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
             await targetRepo.CreateBranchAsync(headBranch);
-            return (false, mapping, lastFlows);
+            return (false, mapping, lastFlows, targetRepo);
         }
     }
 
@@ -576,5 +600,5 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     protected override NativePath GetEngCommonPath(NativePath sourceRepo) => sourceRepo / VmrInfo.ArcadeRepoDir / Constants.CommonScriptFilesPath;
     protected override bool TargetRepoIsVmr() => false;
     // During backflow, we're flowing a specific VMR commit that the build was built from, so we should just check it out
-    protected virtual bool ShouldResetVmr => false;
+    protected virtual bool ShouldResetClones => false;
 }

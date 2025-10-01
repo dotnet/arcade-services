@@ -3,7 +3,7 @@
 
 using Moq;
 
-namespace ProductConstructionService.DependencyFlow.Tests;
+namespace ProductConstructionService.DependencyFlow.Tests.Mocks;
 
 public class VerifyableMockRepository : MockRepository
 {

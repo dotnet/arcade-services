@@ -143,7 +143,8 @@ public class PullRequestCommentBuilderTests
             UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
             Url = url,
             HeadBranch = "pr.head.branch",
-            SourceSha = "pr.head.sha",
+            HeadBranchSha = "pr.head.sha",
+            SourceSha = "update.source.sha",
             ContainedSubscriptions = containedSubscriptions,
             SourceRepoNotified = false
         };
@@ -167,7 +168,8 @@ public class PullRequestCommentBuilderTests
             UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
             Url = url,
             HeadBranch = "pr.head.branch",
-            SourceSha = "pr.head.sha",
+            HeadBranchSha = "pr.head.sha",
+            SourceSha = "update.source.sha",
             ContainedSubscriptions = containedSubscriptions,
             SourceRepoNotified = false
         };
