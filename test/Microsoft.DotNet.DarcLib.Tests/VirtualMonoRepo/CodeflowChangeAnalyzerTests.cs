@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -45,12 +46,8 @@ public class CodeflowChangeAnalyzerTests
             .Returns(_localGitRepo.Object);
 
         _localGitRepo
-            .Setup(x => x.ExecuteGitCommand("merge-base", TestTargetBranch, TestHeadBranch))
-            .ReturnsAsync(new ProcessExecutionResult()
-            {
-                ExitCode = 0,
-                StandardOutput = TestAncestorCommit,
-            });
+            .Setup(x => x.GetMergeBaseAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(TestAncestorCommit);
 
         _analyzer = new CodeflowChangeAnalyzer(
             _localGitRepoFactory.Object,
@@ -64,18 +61,17 @@ public class CodeflowChangeAnalyzerTests
     public async Task ForwardFlowHasMeaningfulChangesAsync_WithUnexpectedChangedFiles_ShouldReturnTrue()
     {
         // Arrange
-        var gitDiffOutput =
-            """
-            src/source-manifest.json
-            src/test-repo/eng/common/build.ps1
-            src/test-repo/Program.cs
-            src/test-repo/Library.cs
-            src/test-repo/global.json
-            src/test-repo/eng/Version.Details.xml
-            src/test-repo/eng/Versions.props
-            """;
+        IReadOnlyCollection<string> changedFiles = [
+            "src/source-manifest.json",
+            "src/test-repo/eng/common/build.ps1",
+            "src/test-repo/Program.cs",
+            "src/test-repo/Library.cs",
+            "src/test-repo/global.json",
+            "src/test-repo/eng/Version.Details.xml",
+            "src/test-repo/eng/Versions.props",
+            ];
 
-        SetChangedFiles(gitDiffOutput);
+        SetChangedFiles(changedFiles);
 
         // Act
         var result = await _analyzer.ForwardFlowHasMeaningfulChangesAsync(TestMappingName, TestHeadBranch, TestTargetBranch);
@@ -88,15 +84,14 @@ public class CodeflowChangeAnalyzerTests
     public async Task ForwardFlowHasMeaningfulChangesAsync_WithExpectedChangedFiles_ShouldReturnFalse()
     {
         // Arrange
-        var gitDiffOutput =
-            """
-            src/source-manifest.json
-            src/test-repo/eng/common/build.ps1
-            """;
+        IReadOnlyCollection<string> changedFiles = [
+            "src/source-manifest.json",
+            "src/test-repo/eng/common/build.ps1",
+            ];
 
         var emptyGitDiffOutput = string.Empty;  // no versioning files are changed
 
-        SetChangedFiles(gitDiffOutput);
+        SetChangedFiles(changedFiles);
 
         SetGitDiff(emptyGitDiffOutput);
 
@@ -111,14 +106,13 @@ public class CodeflowChangeAnalyzerTests
     public async Task ForwardFlowHasMeaningfulChangesAsync_WithNoUnexpectedChanges_ShouldReturnFalse()
     {
         // Arrange
-        var gitDiffOutput =
-            """
-            src/test-repo/eng/common/build.ps1
-            src/source-manifest.json
-            src/test-repo/global.json
-            src/test-repo/eng/Version.Details.xml
-            src/test-repo/eng/Version.Details.props
-            """;
+        IReadOnlyCollection<string> changedFiles = [
+            "src/test-repo/eng/common/build.ps1",
+            "src/source-manifest.json",
+            "src/test-repo/global.json",
+            "src/test-repo/eng/Version.Details.xml",
+            "src/test-repo/eng/Version.Details.props",
+            ];
 
         var gitDiffWithIgnoredOutput =
             """
@@ -157,7 +151,7 @@ public class CodeflowChangeAnalyzerTests
             +    "Microsoft.DotNet.Arcade.Sdk": "10.0.0-beta.25306.103"
             """;
 
-        SetChangedFiles(gitDiffOutput);
+        SetChangedFiles(changedFiles);
         SetGitDiff(gitDiffWithIgnoredOutput);
         SetupVersionDetailsAndBuilds();
 
@@ -172,14 +166,13 @@ public class CodeflowChangeAnalyzerTests
     public async Task ForwardFlowHasMeaningfulChangesAsync_WithUnexpectedChanges_ShouldReturnTrue()
     {
         // Arrange
-        var gitDiffOutput =
-            """
-            src/source-manifest.json
-            src/test-repo/eng/common/build.ps1
-            src/test-repo/global.json
-            src/test-repo/eng/Version.Details.xml
-            src/test-repo/eng/Versions.props
-            """;
+        IReadOnlyCollection<string> changedFiles = [
+            "src/source-manifest.json",
+            "src/test-repo/eng/common/build.ps1",
+            "src/test-repo/global.json",
+            "src/test-repo/eng/Version.Details.xml",
+            "src/test-repo/eng/Versions.props",
+            ];
 
         var gitDiffWithIgnoredOutput =
             """
@@ -192,7 +185,7 @@ public class CodeflowChangeAnalyzerTests
             +    <SomeUnexpectedElement>NewValue</SomeUnexpectedElement>";
             """;
 
-        SetChangedFiles(gitDiffOutput);
+        SetChangedFiles(changedFiles);
         SetGitDiff(gitDiffWithIgnoredOutput);
         SetupVersionDetailsAndBuilds();
 
@@ -203,17 +196,11 @@ public class CodeflowChangeAnalyzerTests
         result.Should().BeTrue();
     }
 
-    private void SetChangedFiles(string output)
+    private void SetChangedFiles(IReadOnlyCollection<string> changedFiles)
     {
-        var result = new ProcessExecutionResult()
-        {
-            StandardOutput = output,
-            ExitCode = 0,
-        };
-
         _localGitRepo
-            .Setup(x => x.ExecuteGitCommand("diff", "--name-only", $"{TestAncestorCommit}..{TestHeadBranch}"))
-            .ReturnsAsync(result);
+            .Setup(x => x.GetChangedFilesAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync(changedFiles);
     }
 
     private void SetGitDiff(string output)
