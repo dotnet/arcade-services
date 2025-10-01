@@ -74,8 +74,8 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
 
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
-        var commonAncestor = await vmr.GetMergeBase(headBranch, targetBranch);
-        var changedFiles = await vmr.GetChangedFiles(commonAncestor, headBranch);
+        var commonAncestor = await vmr.GetMergeBaseAsync(headBranch, targetBranch);
+        var changedFiles = await vmr.GetChangedFilesAsync(commonAncestor, headBranch);
 
         if (HasSourceChanges(mappingName, changedFiles))
         {
@@ -107,7 +107,7 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         var meaningfulChanges = changedFiles
             .Where(file => file.StartsWith(mappingSrc, StringComparison.OrdinalIgnoreCase))
             .Where(file => !repoVersionFilesInVmr.Any(
-                v => string.Equals(v, file, StringComparison.OrdinalIgnoreCase)));
+                v => v.Equals(file, StringComparison.OrdinalIgnoreCase)));
 
         if (mappingName != VmrInfo.ArcadeMappingName)
         {

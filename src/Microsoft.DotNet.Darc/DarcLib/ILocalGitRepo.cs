@@ -245,7 +245,7 @@ public interface ILocalGitRepo
     /// <param name="commitOrBranchB">The SHA, reference name, or branch name of the second commit or branch to compare.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the SHA of the merge base commit, or
     /// null if no common ancestor exists.</returns>
-    Task<string> GetMergeBase(string commitOrBranchA, string commitOrBranchB);
+    Task<string> GetMergeBaseAsync(string commitOrBranchA, string commitOrBranchB);
 
     /// <summary>
     /// Gets a collection of file paths that have changed between the specified base and target commits or branches.
@@ -254,5 +254,5 @@ public interface ILocalGitRepo
     /// <param name="targetCommitOrBranch">The commit SHA or branch name to compare against the base. Cannot be null or empty.</param>
     /// <returns>A read-only collection of strings representing the relative paths of files that differ between the base and
     /// target. The collection is empty if there are no changed files.</returns>
-    Task<IReadOnlyCollection<string>> GetChangedFiles(string baseCommitOrBranch, string targetCommitOrBranch);
+    Task<IReadOnlyCollection<string>> GetChangedFilesAsync(string baseCommitOrBranch, string targetCommitOrBranch);
 }

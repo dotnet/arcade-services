@@ -597,7 +597,7 @@ public class LocalGitClient : ILocalGitClient
         result.ThrowIfFailed($"Failed to stage resolved conflict in {file} in {repoPath}");
     }
 
-    public async Task<string> GetMergeBase(
+    public async Task<string> GetMergeBaseAsync(
         string repoPath,
         string commitOrBranchA,
         string commitOrBranchB)
@@ -613,7 +613,7 @@ public class LocalGitClient : ILocalGitClient
         return result.GetOutputLines().First();
     }
 
-    public async Task<IReadOnlyCollection<string>> GetChangedFiles(
+    public async Task<IReadOnlyCollection<string>> GetChangedFilesAsync(
         string repoPath,
         string baseCommitOrBranch,
         string targetCommitOrBranch)
@@ -625,7 +625,7 @@ public class LocalGitClient : ILocalGitClient
             $"{baseCommitOrBranch}..{targetCommitOrBranch}");
 
         result.ThrowIfFailed($"Failed to get the list of changed files between {baseCommitOrBranch} and " +
-            $"{targetCommitOrBranch}");
+            targetCommitOrBranch);
 
         return result.GetOutputLines();
     }
