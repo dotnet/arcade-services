@@ -91,12 +91,7 @@ public class WorkBranch(
         _logger.LogInformation("Rebasing {branchName} onto {mainBranch}...", _workBranch, OriginalBranch);
         await _repo.CheckoutAsync(OriginalBranch);
 
-        // TODO: Replace with _repo.GetMergeBaseCommitAsync() when available
-        ProcessExecutionResult result = await _repo.ExecuteGitCommand(
-            ["merge-base", _workBranch, OriginalBranch],
-            cancellationToken);
-        result.ThrowIfFailed($"Failed to find a common ancestor for {_workBranch} and {OriginalBranch}");
-        string mergeBase = result.StandardOutput.Trim();
+        string mergeBase = await _repo.GetMergeBaseAsync(_workBranch, OriginalBranch);
 
         List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
             _vmrInfo.TmpPath / $"{_workBranch.Replace('\\', '-').Replace('/', '-')}.patch",
