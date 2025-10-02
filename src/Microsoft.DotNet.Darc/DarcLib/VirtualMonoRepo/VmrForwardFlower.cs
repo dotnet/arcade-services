@@ -174,6 +174,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     /// If fails, checks out the base branch instead, finds the last synchronization point
     /// and creates the head branch at that point.
     /// </summary>
+    /// <param name="rebase">Creates the head branch on top of target branch instead</param>
     /// <returns>True if the head branch already existed</returns>
     private async Task<(bool, LastFlows)> PrepareHeadBranch(
         string vmrUri,
@@ -219,8 +220,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
             LastFlows lastFlows = await GetLastFlowsAsync(mappingName, sourceRepo, currentIsBackflow: false);
 
-            // Rebase strategy works on top of the target branch unless it's opposite direction
-            if (!rebase || lastFlows.LastFlow.IsBack)
+            // Rebase strategy works on top of the target branch, non-rebase starts from the last point of synchronization
+            if (!rebase)
             {
                 await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
                 await _dependencyTracker.RefreshMetadataAsync();
@@ -334,6 +335,12 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             await vmr.CheckoutAsync(lastFlows.LastForwardFlow.VmrSha);
             await _dependencyTracker.RefreshMetadataAsync();
         }
+        else if (rebase)
+        {
+            // If we're rebasing, we want to be on top of the target branch
+            await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
+            await _dependencyTracker.RefreshMetadataAsync();
+        } 
 
         IWorkBranch? workBranch = headBranchExisted || rebase
             ? await _workBranchFactory.CreateWorkBranchAsync(vmr, currentFlow.GetBranchName(), headBranch)

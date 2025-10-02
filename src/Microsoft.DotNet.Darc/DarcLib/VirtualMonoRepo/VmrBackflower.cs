@@ -317,16 +317,15 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool rebase,
         CancellationToken cancellationToken)
     {
-        if (!headBranchExisted)
+        if (headBranchExisted)
         {
-            // If the target branch did not exist, we need to make sure it is created in the right location
-            await targetRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
-            await targetRepo.CreateBranchAsync(headBranch, true);
-        }
-        else
-        {
-            // If it did, we need to check out the last point of synchronization on it
+            // If a PR branch exists, check out the last flow's commit in the PR branch
             await targetRepo.CheckoutAsync(lastFlows.LastBackFlow!.RepoSha);
+        }
+        else if (rebase)
+        {
+            // For the rebase strategy, we want to create the work branch on the last flow's checkpoint
+            await targetRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
         }
 
         var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-{Commit.GetShortSha(lastFlows.LastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}.patch";
@@ -504,12 +503,13 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
             LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true);
 
-            // Rebase strategy works on top of the target branch unless it's opposite direction
-            if (!rebase || lastFlows.LastFlow.IsForward)
+            // Rebase strategy works on top of the target branch, non-rebase starts from the last point of synchronization
+            if (!rebase)
             {
                 await targetRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
-                await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
             }
+
+            await targetRepo.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
             return (false, mapping, lastFlows, targetRepo);
         }

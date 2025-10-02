@@ -514,7 +514,7 @@ internal class BackflowTests : CodeFlowTests
 
         // Now we make several changes in the VMR and try to locally flow them via darc
         await File.WriteAllTextAsync(_productRepoVmrFilePath, "New content in the VMR again");
-        await File.WriteAllTextAsync(_productRepoFilePath + "_2", "New file from the VMR");
+        await File.WriteAllTextAsync(_productRepoVmrFilePath + "_2", "New file from the VMR");
         await GitOperations.CommitAll(VmrPath, "New content in the VMR again");
 
         async Task<string[]> CallDarcBackflowOperation()
@@ -544,9 +544,6 @@ internal class BackflowTests : CodeFlowTests
             return gitResult.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
         }
 
-        // We check if everything got staged properly
-        var stagedFiles = await CallDarcBackflowOperation();
-
         // Verify that expected files are staged
         string[] expectedFiles =
         [
@@ -554,6 +551,9 @@ internal class BackflowTests : CodeFlowTests
             _productRepoFileName + "_2",
             VersionFiles.VersionDetailsXml,
         ];
+
+        // We check if everything got staged properly
+        var stagedFiles = await CallDarcBackflowOperation();
         stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
         CheckFileContents(_productRepoFilePath, "New content in the individual repo again");
         CheckFileContents(ProductRepoPath / expectedFiles[1], "New file from the VMR");

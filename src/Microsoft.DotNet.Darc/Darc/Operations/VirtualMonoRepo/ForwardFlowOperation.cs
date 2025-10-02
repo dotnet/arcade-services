@@ -22,12 +22,10 @@ internal class ForwardFlowOperation(
         IVmrDependencyTracker dependencyTracker,
         IDependencyFileManager dependencyFileManager,
         ILocalGitRepoFactory localGitRepoFactory,
-        IVmrCloneManager vmrCloneManager,
-        IRepositoryCloneManager repoCloneManager,
         IFileSystem fileSystem,
         IProcessManager processManager,
         ILogger<ForwardFlowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, codeFlower, dependencyTracker, dependencyFileManager, localGitRepoFactory, vmrCloneManager, repoCloneManager, fileSystem, logger)
+    : CodeFlowOperation(options, vmrInfo, codeFlower, dependencyTracker, dependencyFileManager, localGitRepoFactory, fileSystem, logger)
 {
     private readonly ForwardFlowCommandLineOptions _options = options;
     private readonly IProcessManager _processManager = processManager;

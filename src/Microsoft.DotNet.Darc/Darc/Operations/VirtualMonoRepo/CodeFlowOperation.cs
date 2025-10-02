@@ -23,8 +23,6 @@ internal abstract class CodeFlowOperation(
         IVmrDependencyTracker dependencyTracker,
         IDependencyFileManager dependencyFileManager,
         ILocalGitRepoFactory localGitRepoFactory,
-        IVmrCloneManager vmrCloneManager,
-        IRepositoryCloneManager repoCloneManager,
         IFileSystem fileSystem,
         ILogger<CodeFlowOperation> logger)
     : VmrOperationBase(options, logger)
@@ -35,8 +33,6 @@ internal abstract class CodeFlowOperation(
     private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
     private readonly IDependencyFileManager _dependencyFileManager = dependencyFileManager;
     private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
-    private readonly IVmrCloneManager _vmrCloneManager = vmrCloneManager;
-    private readonly IRepositoryCloneManager _repoCloneManager = repoCloneManager;
     private readonly IFileSystem _fileSystem = fileSystem;
     private readonly ILogger<CodeFlowOperation> _logger = logger;
 
@@ -52,12 +48,6 @@ internal abstract class CodeFlowOperation(
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        //if (isForwardFlow)
-        //{
-        //    await _vmrCloneManager.PrepareVmrAsync();
-        //    await _repoCloneManager.PrepareCloneAsync(repoPath, [_vmrInfo.VmrPath.Path], ["HEAD"], "HEAD", resetToRemote: false, cancellationToken);
-        //}
-
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         ILocalGitRepo productRepo = _localGitRepoFactory.Create(repoPath);
         ILocalGitRepo sourceRepo = isForwardFlow ? productRepo : vmr;
