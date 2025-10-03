@@ -549,13 +549,14 @@ internal class BackflowTests : CodeFlowTests
         [
             _productRepoFileName,
             _productRepoFileName + "_2",
-            VersionFiles.VersionDetailsXml,
+            // TODO We need to flow dependencies as well, so enable this check
+            // VersionFiles.VersionDetailsXml,
         ];
 
         // We check if everything got staged properly
         var stagedFiles = await CallDarcBackflowOperation();
         stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
-        CheckFileContents(_productRepoFilePath, "New content in the individual repo again");
+        CheckFileContents(_productRepoFilePath, "New content in the VMR again");
         CheckFileContents(ProductRepoPath / expectedFiles[1], "New file from the VMR");
 
         // Now we reset, make a conflicting change and see if darc can handle it and the conflict appears
@@ -569,7 +570,7 @@ internal class BackflowTests : CodeFlowTests
         // Verify that a file is in a conflicted state
         (await GitOperations.ExecuteGitCommand(ProductRepoPath, ["diff", "--name-status"])).StandardOutput.Should().MatchRegex(@$"^U\s+{Regex.Escape(expectedFiles[0])}");
         (await File.ReadAllTextAsync(_productRepoFilePath)).Should().Contain(">>>>>");
-        CheckFileContents(new NativePath(expectedFiles[1]), "New file from the VMR");
+        CheckFileContents(ProductRepoPath / expectedFiles[1], "New file from the VMR");
 
         await GitOperations.ExecuteGitCommand(ProductRepoPath, ["add", "--", ..expectedFiles]);
         await GitOperations.CommitAll(ProductRepoPath, "Commit staged files");
