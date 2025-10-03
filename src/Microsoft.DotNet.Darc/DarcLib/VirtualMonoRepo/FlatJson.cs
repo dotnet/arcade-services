@@ -62,10 +62,7 @@ public class FlatJson
                     changes.Add(new JsonVersionProperty(kvp.Key, NodeComparisonResult.Updated, newValue));
                 }
             }
-            else if (!kvp.Value.Equals(newValue))
-            {
-                changes.Add(new JsonVersionProperty(kvp.Key, NodeComparisonResult.Updated, newValue));
-            }
+            changes.Add(new JsonVersionProperty(kvp.Key, NodeComparisonResult.Updated, newValue));
         }
 
         foreach (var kvp in otherJson.FlatValues)

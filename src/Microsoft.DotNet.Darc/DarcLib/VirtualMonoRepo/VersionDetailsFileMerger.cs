@@ -132,12 +132,7 @@ public class VersionDetailsFileMerger : VmrVersionFileMerger, IVersionDetailsFil
             }
         }
 
-        // Check if there are any actual changes
-        return dependencyChanges
-            .Where(change => change.From?.Version != change.To?.Version
-                || change.From?.Commit != change.To?.Commit
-                || change.From?.RepoUri != change.To?.RepoUri)
-            .ToList();
+        return dependencyChanges;
     }
 
     private async Task<VersionFileChanges<DependencyUpdate>> ApplyVersionDetailsChangesAsync(ILocalGitRepo repo, VersionFileChanges<DependencyUpdate> changes, string? mapping = null)
