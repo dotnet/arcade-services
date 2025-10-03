@@ -24,7 +24,7 @@ internal class BackflowOperation(
     IVmrDependencyTracker dependencyTracker,
     ILocalGitRepoFactory localGitRepoFactory,
     IDependencyFileManager dependencyFileManager,
-    IBarApiClient barApiClient,
+    IBasicBarClient barApiClient,
     IProcessManager processManager,
     IFileSystem fileSystem,
     ILogger<BackflowOperation> logger)
@@ -33,7 +33,6 @@ internal class BackflowOperation(
     private readonly BackflowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly IBackflowConflictResolver _backflowConflictResolver = backflowConflictResolver;
-    private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
     private readonly IProcessManager _processManager = processManager;
 
     protected override async Task ExecuteInternalAsync(

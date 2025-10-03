@@ -1,11 +1,14 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
+using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
@@ -200,6 +203,49 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
 
         await File.WriteAllTextAsync(VmrPath / VersionFiles.GlobalJson, Constants.VmrBaseGlobalJsonTemplate);
         await GitOperations.CommitAll(VmrPath, "Create global json in vmr`s base");
+    }
+
+    protected async Task<string[]> CallDarcForwardflow()
+        => await CallDarcCodeFlowOperation<ForwardFlowOperation>(
+            new ForwardFlowCommandLineOptions
+            {
+                VmrPath = VmrPath,
+                TmpPath = TmpPath,
+            },
+            ProductRepoPath,
+            VmrPath);
+
+    protected async Task<string[]> CallDarcBackflow()
+        => await CallDarcCodeFlowOperation<BackflowOperation>(
+            new BackflowCommandLineOptions
+            {
+                VmrPath = VmrPath,
+                TmpPath = TmpPath,
+                Repository = ProductRepoPath,
+            },
+            VmrPath,
+            ProductRepoPath);
+
+    private async Task<string[]> CallDarcCodeFlowOperation<T>(ICodeFlowCommandLineOptions options, NativePath sourceRepo, NativePath targetRepo)
+        where T : CodeFlowOperation
+    {
+
+        var operation = ActivatorUtilities.CreateInstance<T>(ServiceProvider, options);
+        var currentDirectory = Directory.GetCurrentDirectory();
+        Directory.SetCurrentDirectory(sourceRepo);
+        try
+        {
+            var result = await operation.ExecuteAsync();
+            result.Should().Be(0);
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(currentDirectory);
+        }
+
+        var gitResult = await GitOperations.ExecuteGitCommand(targetRepo, "diff", "--name-only", "--cached");
+        gitResult.Succeeded.Should().BeTrue("Git diff should succeed");
+        return gitResult.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
     }
 }
 

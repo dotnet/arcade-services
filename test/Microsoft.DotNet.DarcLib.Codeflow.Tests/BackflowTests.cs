@@ -479,33 +479,6 @@ internal class BackflowTests : CodeFlowTests
         await File.WriteAllTextAsync(_productRepoVmrFilePath + "_2", "New file from the VMR");
         await GitOperations.CommitAll(VmrPath, "New content in the VMR again");
 
-        async Task<string[]> CallDarcBackflowOperation()
-        {
-            var options = new BackflowCommandLineOptions()
-            {
-                VmrPath = VmrPath,
-                TmpPath = TmpPath,
-                Repository = ProductRepoPath,
-            };
-
-            var operation = ActivatorUtilities.CreateInstance<BackflowOperation>(ServiceProvider, options);
-            var currentDirectory = Directory.GetCurrentDirectory();
-            Directory.SetCurrentDirectory(VmrPath);
-            try
-            {
-                var result = await operation.ExecuteAsync();
-                result.Should().Be(0);
-            }
-            finally
-            {
-                Directory.SetCurrentDirectory(currentDirectory);
-            }
-
-            var gitResult = await GitOperations.ExecuteGitCommand(ProductRepoPath, "diff", "--name-only", "--cached");
-            gitResult.Succeeded.Should().BeTrue("Git diff should succeed");
-            return gitResult.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-        }
-
         // Verify that expected files are staged
         string[] expectedFiles =
         [
@@ -516,7 +489,7 @@ internal class BackflowTests : CodeFlowTests
         ];
 
         // We check if everything got staged properly
-        var stagedFiles = await CallDarcBackflowOperation();
+        var stagedFiles = await CallDarcBackflow();
         stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
         CheckFileContents(_productRepoFilePath, "New content in the VMR again");
         CheckFileContents(ProductRepoPath / expectedFiles[1], "New file from the VMR");
@@ -526,7 +499,7 @@ internal class BackflowTests : CodeFlowTests
         await File.WriteAllTextAsync(_productRepoFilePath, "A conflicting change in the repo");
         await GitOperations.CommitAll(ProductRepoPath, "A conflicting change in the repo");
 
-        stagedFiles = await CallDarcBackflowOperation();
+        stagedFiles = await CallDarcBackflow();
         stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
 
         // Verify that a file is in a conflicted state

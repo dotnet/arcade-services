@@ -123,6 +123,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 excludedAssets,
                 comparisonFlow,
                 currentFlow,
+                rebase,
                 cancellationToken);
 
             return new VersionFileUpdateResult(conflictedFiles, updates);
@@ -283,6 +284,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         IReadOnlyCollection<string>? excludedAssets,
         Codeflow comparisonFlow,
         Backflow currentFlow,
+        bool rebase,
         CancellationToken cancellationToken)
     {
         var headBranchDependencies = (await GetRepoDependencies(targetRepo, commit: null! /* working tree */));
@@ -470,10 +472,13 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             Environment.NewLine,
             BuildDependencyUpdateCommitMessage(dependencyUpdates));
 
-        await targetRepo.CommitAsync(
+        if (!rebase)
+        {
+            await targetRepo.CommitAsync(
             commitMessage,
             allowEmpty: false,
             cancellationToken: cancellationToken);
+        }
 
         return dependencyUpdates;
     }

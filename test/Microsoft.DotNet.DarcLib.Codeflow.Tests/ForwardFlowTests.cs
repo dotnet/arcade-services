@@ -8,10 +8,8 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
@@ -85,34 +83,7 @@ internal class ForwardFlowTests : CodeFlowTests
         await File.WriteAllTextAsync(_productRepoFilePath + "_2", "New file from the repo");
         await GitOperations.CommitAll(ProductRepoPath, "New content in the individual repo again");
 
-        async Task<string[]> CallDarcForwardFlowOperation()
-        {
-            var options = new ForwardFlowCommandLineOptions()
-            {
-                VmrPath = VmrPath,
-                TmpPath = TmpPath,
-            };
-
-            var operation = ActivatorUtilities.CreateInstance<ForwardFlowOperation>(ServiceProvider, options);
-            var currentDirectory = Directory.GetCurrentDirectory();
-            Directory.SetCurrentDirectory(ProductRepoPath);
-            try
-            {
-                var result = await operation.ExecuteAsync();
-                result.Should().Be(0);
-            }
-            finally
-            {
-                Directory.SetCurrentDirectory(currentDirectory);
-            }
-
-            var gitResult = await GitOperations.ExecuteGitCommand(VmrPath, "diff", "--name-only", "--cached");
-            gitResult.Succeeded.Should().BeTrue("Git diff should succeed");
-            return gitResult.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-        }
-
-        // We check if everything got staged properly
-        var stagedFiles = await CallDarcForwardFlowOperation();
+        var stagedFiles = await CallDarcForwardflow();
 
         // Verify that expected files are staged
         string[] expectedFiles =
@@ -130,7 +101,7 @@ internal class ForwardFlowTests : CodeFlowTests
         await File.WriteAllTextAsync(_productRepoVmrFilePath, "A conflicting change in the VMR");
         await GitOperations.CommitAll(VmrPath, "A conflicting change in the VMR");
 
-        stagedFiles = await CallDarcForwardFlowOperation();
+        stagedFiles = await CallDarcForwardflow();
         stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
 
         // Verify that a file is in a conflicted state
@@ -138,7 +109,7 @@ internal class ForwardFlowTests : CodeFlowTests
         (await File.ReadAllTextAsync(_productRepoVmrFilePath)).Should().Contain(">>>>>");
         CheckFileContents(VmrPath / expectedFiles[1], "New file from the repo");
 
-        await GitOperations.ExecuteGitCommand(VmrPath, ["add", "--", ..expectedFiles]);
+        await GitOperations.ExecuteGitCommand(VmrPath, ["add", "--", .. expectedFiles]);
         await GitOperations.CommitAll(VmrPath, "Commit staged files");
         await GitOperations.CheckAllIsCommitted(VmrPath);
     }

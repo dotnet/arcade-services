@@ -23,7 +23,7 @@ internal abstract class CodeFlowOperation(
         IVmrDependencyTracker dependencyTracker,
         IDependencyFileManager dependencyFileManager,
         ILocalGitRepoFactory localGitRepoFactory,
-        IBarApiClient barApiClient,
+        IBasicBarClient barApiClient,
         IFileSystem fileSystem,
         ILogger<CodeFlowOperation> logger)
     : VmrOperationBase(options, logger)
@@ -34,7 +34,7 @@ internal abstract class CodeFlowOperation(
     private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
     private readonly IDependencyFileManager _dependencyFileManager = dependencyFileManager;
     private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
-    private readonly IBarApiClient _barApiClient = barApiClient;
+    private readonly IBasicBarClient _barApiClient = barApiClient;
     private readonly IFileSystem _fileSystem = fileSystem;
     private readonly ILogger<CodeFlowOperation> _logger = logger;
 

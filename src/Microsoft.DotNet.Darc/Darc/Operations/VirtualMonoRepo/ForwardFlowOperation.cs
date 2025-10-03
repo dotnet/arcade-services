@@ -24,7 +24,7 @@ internal class ForwardFlowOperation(
         IVmrDependencyTracker dependencyTracker,
         IDependencyFileManager dependencyFileManager,
         ILocalGitRepoFactory localGitRepoFactory,
-        IBarApiClient barApiClient,
+        IBasicBarClient barApiClient,
         IFileSystem fileSystem,
         IProcessManager processManager,
         ILogger<ForwardFlowOperation> logger)
