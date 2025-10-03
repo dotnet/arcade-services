@@ -162,6 +162,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             excludedAssets,
             headBranchExisted,
+            rebase,
             cancellationToken);
 
         return new CodeFlowResult(

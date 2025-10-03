@@ -45,6 +45,7 @@ public class VmrPatchHandlerTests
     private readonly Mock<IVmrInfo> _vmrInfo = new();
     private readonly Mock<IVmrDependencyTracker> _dependencyTracker = new();
     private readonly Mock<ILocalGitClient> _localGitRepo = new();
+    private readonly Mock<ILocalGitRepoFactory> _localGitRepoFactory = new();
     private readonly Mock<IRepositoryCloneManager> _cloneManager = new();
     private readonly Mock<IProcessManager> _processManager = new();
     private readonly Mock<IFileSystem> _fileSystem = new();
@@ -91,6 +92,9 @@ public class VmrPatchHandlerTests
         _localGitRepo.Reset();
         _localGitRepo.SetReturnsDefault(Task.FromResult(new List<GitSubmoduleInfo>()));
 
+        _localGitRepoFactory.Reset();
+        _localGitRepoFactory.SetReturnsDefault(_localGitRepo.Object);
+
         _cloneManager.Reset();
         _cloneManager
             .Setup(x => x.PrepareCloneAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
@@ -124,6 +128,7 @@ public class VmrPatchHandlerTests
             _vmrInfo.Object,
             _dependencyTracker.Object,
             _localGitRepo.Object,
+            _localGitRepoFactory.Object,
             _cloneManager.Object,
             _processManager.Object,
             _fileSystem.Object,
@@ -725,6 +730,7 @@ public class VmrPatchHandlerTests
             _vmrInfo.Object,
             _dependencyTracker.Object,
             _localGitRepo.Object,
+            _localGitRepoFactory.Object,
             _cloneManager.Object,
             _processManager.Object,
             _fileSystem.Object,

@@ -35,6 +35,7 @@ public interface IBackflowConflictResolver
         string branchToMerge,
         IReadOnlyCollection<string>? excludedAssets,
         bool headBranchExisted,
+        bool rebase,
         CancellationToken cancellationToken);
 }
 
@@ -90,6 +91,61 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         string branchToMerge,
         IReadOnlyCollection<string>? excludedAssets,
         bool headBranchExisted,
+        bool rebase,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyCollection<UnixPath> conflictedFiles = rebase
+            ? []
+            : await TryMergingBranchAndResolveConflicts(
+                mapping,
+                lastFlows,
+                currentFlow,
+                targetRepo,
+                headBranch,
+                branchToMerge,
+                headBranchExisted,
+                cancellationToken);
+
+        try
+        {
+            var comparisonFlow = headBranchExisted
+                ? lastFlows.LastFlow
+                : lastFlows.LastBackFlow
+                    // If there were no backflows, this means we only had forward flows.
+                    // We need to make sure that we capture all changes made in the forward flows by comparing the current dependencies against an empty commit
+                    ?? new Backflow(Constants.EmptyGitObject, Constants.EmptyGitObject);
+
+            var updates = await BackflowDependenciesAndToolset(
+                mapping.Name,
+                targetRepo,
+                branchToMerge,
+                build,
+                excludedAssets,
+                comparisonFlow,
+                currentFlow,
+                cancellationToken);
+
+            return new VersionFileUpdateResult(conflictedFiles, updates);
+        }
+        catch (Exception e)
+        {
+            // We don't want to push this as there is some problem
+            _logger.LogError(e, "Failed to update dependencies after merging {branchToMerge} into {headBranch} in {repoPath}",
+                branchToMerge,
+                headBranch,
+                targetRepo.Path);
+            throw;
+        }
+    }
+
+    private async Task<IReadOnlyCollection<UnixPath>> TryMergingBranchAndResolveConflicts(
+        SourceMapping mapping,
+        LastFlows lastFlows,
+        Backflow currentFlow,
+        ILocalGitRepo targetRepo,
+        string headBranch,
+        string branchToMerge,
+        bool headBranchExisted,
         CancellationToken cancellationToken)
     {
         IReadOnlyCollection<UnixPath> conflictedFiles = await TryMergingBranch(
@@ -119,35 +175,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 cancellationToken: CancellationToken.None);
         }
 
-        try
-        {
-            var comparisonFlow = headBranchExisted
-                ? lastFlows.LastFlow
-                : lastFlows.LastBackFlow
-                    // If there were no backflows, this means we only had forward flows.
-                    // We need to make sure that we capture all changes made in the forward flows by comparing the current dependencies against an empty commit
-                    ?? new Backflow(Constants.EmptyGitObject, Constants.EmptyGitObject);
-
-            var updates = await BackflowDependenciesAndToolset(
-                mapping.Name,
-                targetRepo,
-                branchToMerge,
-                build,
-                excludedAssets,
-                comparisonFlow,
-                currentFlow,
-                cancellationToken);
-            return new VersionFileUpdateResult(conflictedFiles, updates);
-        }
-        catch (Exception e)
-        {
-            // We don't want to push this as there is some problem
-            _logger.LogError(e, "Failed to update dependencies after merging {branchToMerge} into {headBranch} in {repoPath}",
-                branchToMerge,
-                headBranch,
-                targetRepo.Path);
-            throw;
-        }
+        return conflictedFiles;
     }
 
     /// <summary>

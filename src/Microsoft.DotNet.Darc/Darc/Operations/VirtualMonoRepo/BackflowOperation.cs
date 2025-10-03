@@ -8,7 +8,9 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -18,16 +20,20 @@ internal class BackflowOperation(
     BackflowCommandLineOptions options,
     IVmrInfo vmrInfo,
     IVmrBackFlower backFlower,
+    IBackflowConflictResolver backflowConflictResolver,
     IVmrDependencyTracker dependencyTracker,
     ILocalGitRepoFactory localGitRepoFactory,
     IDependencyFileManager dependencyFileManager,
+    IBarApiClient barApiClient,
     IProcessManager processManager,
     IFileSystem fileSystem,
     ILogger<BackflowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, backFlower, dependencyTracker, dependencyFileManager, localGitRepoFactory, fileSystem, logger)
+    : CodeFlowOperation(options, vmrInfo, backFlower, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
 {
     private readonly BackflowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
+    private readonly IBackflowConflictResolver _backflowConflictResolver = backflowConflictResolver;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
     private readonly IProcessManager _processManager = processManager;
 
     protected override async Task ExecuteInternalAsync(
@@ -52,4 +58,27 @@ internal class BackflowOperation(
     }
 
     protected override IEnumerable<string> GetIgnoredFiles(string mapping) => DependencyFileManager.CodeflowDependencyFiles;
+
+    protected override async Task UpdateToolsetAndDependenciesAsync(
+        SourceMapping mapping,
+        LastFlows lastFlows,
+        Codeflow currentFlow,
+        ILocalGitRepo targetRepo,
+        Build build,
+        string branch,
+        CancellationToken cancellationToken)
+    {
+        await _backflowConflictResolver.TryMergingBranchAndUpdateDependencies(
+            mapping,
+            lastFlows,
+            (Backflow)currentFlow,
+            targetRepo,
+            build,
+            branch,
+            branch,
+            [],
+            headBranchExisted: true,
+            rebase: true,
+            cancellationToken);
+    }
 }

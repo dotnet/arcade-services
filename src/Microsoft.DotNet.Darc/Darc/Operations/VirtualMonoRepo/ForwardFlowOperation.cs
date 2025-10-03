@@ -9,7 +9,9 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -22,10 +24,11 @@ internal class ForwardFlowOperation(
         IVmrDependencyTracker dependencyTracker,
         IDependencyFileManager dependencyFileManager,
         ILocalGitRepoFactory localGitRepoFactory,
+        IBarApiClient barApiClient,
         IFileSystem fileSystem,
         IProcessManager processManager,
         ILogger<ForwardFlowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, codeFlower, dependencyTracker, dependencyFileManager, localGitRepoFactory, fileSystem, logger)
+    : CodeFlowOperation(options, vmrInfo, codeFlower, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
 {
     private readonly ForwardFlowCommandLineOptions _options = options;
     private readonly IProcessManager _processManager = processManager;
@@ -56,4 +59,7 @@ internal class ForwardFlowOperation(
         .. DependencyFileManager.CodeflowDependencyFiles
             .Select(f => VmrInfo.GetRelativeRepoSourcesPath(mapping) / f)
     ];
+
+    protected override Task UpdateToolsetAndDependenciesAsync(SourceMapping mapping, LastFlows lastFlows, Codeflow currentFlow, ILocalGitRepo targetRepo, Build build, string branch, CancellationToken cancellationToken)
+        => Task.CompletedTask;
 }

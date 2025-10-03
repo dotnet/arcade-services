@@ -109,6 +109,14 @@ internal abstract class VmrOperationBase : Operation
                 _logger.LogInformation("{message}", e.Message);
                 return true;
             }
+            catch (PatchApplicationLeftConflictsException e)
+            {
+                _logger.LogInformation(
+                    "Failed to synchronize repo {name} due to conflicts left in the working tree.{exception}",
+                    repoName,
+                    Environment.NewLine + e.Message);
+                return false;
+            }
             catch (Exception e)
             {
                 _logger.LogError(

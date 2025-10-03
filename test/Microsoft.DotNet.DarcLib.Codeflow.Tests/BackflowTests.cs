@@ -74,47 +74,7 @@ internal class BackflowTests : CodeFlowTests
 
         await EnsureTestRepoIsInitialized();
 
-        var repo = GetLocal(ProductRepoPath);
-
-        await repo.RemoveDependencyAsync(FakePackageName);
-
-        await repo.AddDependencyAsync(new DependencyDetail
-        {
-            Name = "Package.A1",
-            Version = "1.0.0",
-            RepoUri = "https://github.com/dotnet/repo1",
-            Commit = "a01",
-            Type = DependencyType.Product,
-        });
-
-        await repo.AddDependencyAsync(new DependencyDetail
-        {
-            Name = "Package.B1",
-            Version = "1.0.0",
-            RepoUri = "https://github.com/dotnet/repo1",
-            Commit = "b02",
-            Type = DependencyType.Product,
-        });
-
-        await repo.AddDependencyAsync(new DependencyDetail
-        {
-            Name = "Package.C2",
-            Version = "1.0.0",
-            RepoUri = "https://github.com/dotnet/repo2",
-            Commit = "c03",
-            Type = DependencyType.Product,
-        });
-
-        await repo.AddDependencyAsync(new DependencyDetail
-        {
-            Name = "Package.D3",
-            Version = "1.0.0",
-            RepoUri = "https://github.com/dotnet/repo3",
-            Commit = "d04",
-            Type = DependencyType.Product,
-        });
-
-        await GitOperations.CommitAll(ProductRepoPath, "Set up version files");
+        await AddDependencies(ProductRepoPath);
 
         // Create global.json in src/arcade/ and in VMRs base
         Directory.CreateDirectory(ArcadeInVmrPath);
@@ -508,6 +468,8 @@ internal class BackflowTests : CodeFlowTests
         await GitOperations.Checkout(ProductRepoPath, "main");
         await GitOperations.Checkout(VmrPath, "main");
 
+        await AddDependencies(ProductRepoPath);
+
         codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
@@ -549,8 +511,8 @@ internal class BackflowTests : CodeFlowTests
         [
             _productRepoFileName,
             _productRepoFileName + "_2",
-            // TODO We need to flow dependencies as well, so enable this check
-            // VersionFiles.VersionDetailsXml,
+            VersionFiles.VersionDetailsXml,
+            VersionFiles.VersionDetailsProps,
         ];
 
         // We check if everything got staged properly
@@ -610,6 +572,51 @@ internal class BackflowTests : CodeFlowTests
         await GitOperations.Checkout(VmrPath, branch2Name);
         var act = () => CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch);
         await act.Should().ThrowAsync<NonLinearCodeflowException>("The backflow should fail as the target branch already has changes from another VMR branch");
+    }
+
+    private async Task AddDependencies(NativePath repoPath)
+    {
+        var repo = GetLocal(repoPath);
+
+        await repo.RemoveDependencyAsync(FakePackageName);
+
+        await repo.AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.A1",
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "a01",
+            Type = DependencyType.Product,
+        });
+
+        await repo.AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.B1",
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "b02",
+            Type = DependencyType.Product,
+        });
+
+        await repo.AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.C2",
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo2",
+            Commit = "c03",
+            Type = DependencyType.Product,
+        });
+
+        await repo.AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.D3",
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo3",
+            Commit = "d04",
+            Type = DependencyType.Product,
+        });
+
+        await GitOperations.CommitAll(repoPath, "Set up version files");
     }
 }
 

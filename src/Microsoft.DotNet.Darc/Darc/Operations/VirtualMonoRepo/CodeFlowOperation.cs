@@ -23,6 +23,7 @@ internal abstract class CodeFlowOperation(
         IVmrDependencyTracker dependencyTracker,
         IDependencyFileManager dependencyFileManager,
         ILocalGitRepoFactory localGitRepoFactory,
+        IBarApiClient barApiClient,
         IFileSystem fileSystem,
         ILogger<CodeFlowOperation> logger)
     : VmrOperationBase(options, logger)
@@ -33,6 +34,7 @@ internal abstract class CodeFlowOperation(
     private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
     private readonly IDependencyFileManager _dependencyFileManager = dependencyFileManager;
     private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
+    private readonly IBarApiClient _barApiClient = barApiClient;
     private readonly IFileSystem _fileSystem = fileSystem;
     private readonly ILogger<CodeFlowOperation> _logger = logger;
 
@@ -42,6 +44,18 @@ internal abstract class CodeFlowOperation(
     /// </summary>
     protected abstract IEnumerable<string> GetIgnoredFiles(string mappingName);
 
+    /// <summary>
+    /// Once code is flow, updates toolset and dependencies (even after a failed patch left behind conflicts).
+    /// </summary>
+    protected abstract Task UpdateToolsetAndDependenciesAsync(
+        SourceMapping mapping,
+        LastFlows lastFlows,
+        Codeflow currentFlow,
+        ILocalGitRepo targetRepo,
+        Build build,
+        string branch,
+        CancellationToken cancellationToken);
+
     protected async Task FlowCodeLocallyAsync(
         NativePath repoPath,
         bool isForwardFlow,
@@ -50,14 +64,12 @@ internal abstract class CodeFlowOperation(
     {
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         ILocalGitRepo productRepo = _localGitRepoFactory.Create(repoPath);
-        ILocalGitRepo sourceRepo = isForwardFlow ? productRepo : vmr;
         ILocalGitRepo targetRepo = isForwardFlow ? vmr : productRepo;
 
-        _options.Ref = await sourceRepo.GetShaForRefAsync(_options.Ref);
+        Build build = await GetBuildAsync(_vmrInfo.VmrPath);
+        string mappingName = await GetSourceMappingNameAsync(productRepo.Path);
 
         await VerifyLocalRepositoriesAsync(productRepo);
-
-        var mappingName = await GetSourceMappingNameAsync(productRepo.Path);
 
         _logger.LogInformation(
             "Flowing {sourceRepo}'s commit {sourceSha} to {targetRepo} at {targetDirectory}...",
@@ -90,11 +102,6 @@ internal abstract class CodeFlowOperation(
 
         string currentTargetRepoBranch = await targetRepo.GetCheckedOutBranchAsync();
 
-        Build build = new(-1, DateTimeOffset.Now, 0, false, false, currentFlow.SourceSha, [], [], [], [])
-        {
-            GitHubRepository = sourceRepo.Path,
-        };
-
         bool hasChanges;
 
         try
@@ -113,10 +120,16 @@ internal abstract class CodeFlowOperation(
                 forceUpdate: false,
                 cancellationToken);
         }
-        catch (Exception e)
+        finally
         {
-            _logger.LogError(e, "Failed to flow changes between the VMR and {repo}", mappingName);
-            return;
+            await UpdateToolsetAndDependenciesAsync(
+                mapping,
+                lastFlows,
+                currentFlow,
+                targetRepo,
+                build,
+                currentTargetRepoBranch,
+                cancellationToken);
         }
 
         if (!hasChanges)
@@ -127,6 +140,38 @@ internal abstract class CodeFlowOperation(
         }
 
         _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
+    }
+
+    private async Task<Build> GetBuildAsync(NativePath sourceRepoPath)
+    {
+        ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(sourceRepoPath);
+
+        Build build;
+        if (_options.Build == 0)
+        {
+            _options.Ref = await sourceRepo.GetShaForRefAsync(_options.Ref);
+            build = new(-1, DateTimeOffset.Now, 0, false, false, _options.Ref, [], [], [], [])
+            {
+                GitHubRepository = sourceRepo.Path,
+            };
+        }
+        else
+        {
+            build = await _barApiClient.GetBuildAsync(_options.Build);
+
+            try
+            {
+                _options.Ref = await sourceRepo.GetShaForRefAsync(build.Commit);
+            }
+            catch (ProcessFailedException)
+            {
+                throw new DarcException(
+                    $"The commit {build.Commit} associated with build {_options.Build} could not be found in {sourceRepo.Path}. " +
+                    "Please make sure you have the latest changes from the remote and that you are using the correct repository.");
+            }
+        }
+
+        return build;
     }
 
     protected async Task VerifyLocalRepositoriesAsync(ILocalGitRepo repo)
