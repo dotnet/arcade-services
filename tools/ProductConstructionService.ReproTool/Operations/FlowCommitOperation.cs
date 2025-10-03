@@ -57,34 +57,16 @@ internal class FlowCommitOperation : Operation
         Channel? channel = channels.FirstOrDefault(c => c.Name == _options.Channel)
             ?? await _localPcsApi.Channels.CreateChannelAsync("test", _options.Channel);
 
-        var (repoName, owner) = GitRepoUrlUtils.GetRepoNameAndOwner(_options.SourceRepository);
-        var (sourceRepoName, sourceOwner) = (repoName, owner);
+        var (sourceRepo, sourceOwner) = GitRepoUrlUtils.GetRepoNameAndOwner(_options.SourceRepository);
+        var (targetRepo, targetOwner) = GitRepoUrlUtils.GetRepoNameAndOwner(_options.TargetRepository);
 
-        bool? isBackflow = null;
-        try
-        {
-            (repoName, owner) = GitRepoUrlUtils.GetRepoNameAndOwner(_options.TargetRepository);
-            await _ghClient.Repository.Content.GetAllContents(owner, repoName, SourceMappingsPath);
-            isBackflow = false;
-        }
-        catch { }
-
-        if (!isBackflow.HasValue)
-        {
-            try
-            {
-                (repoName, owner) = GitRepoUrlUtils.GetRepoNameAndOwner(_options.SourceRepository);
-                await _ghClient.Repository.Content.GetAllContents(owner, repoName, SourceMappingsPath);
-                isBackflow = true;
-            }
-            catch { }
-        }
+        var (isSourceEnabled, isForwardFlow) = await GetCodeflowMetadata(_options.SourceRepository, _options.TargetRepository);
 
         var subscriptions = await _localPcsApi.Subscriptions.ListSubscriptionsAsync(
             channelId: channel.Id,
             sourceRepository: _options.SourceRepository,
             targetRepository: _options.TargetRepository,
-            sourceEnabled: isBackflow.HasValue);
+            sourceEnabled: isSourceEnabled);
 
         Subscription subscription = subscriptions.FirstOrDefault(s => s.TargetBranch == _options.TargetBranch)
             ?? await _localPcsApi.Subscriptions.CreateAsync(
@@ -99,17 +81,33 @@ internal class FlowCommitOperation : Operation
                     },
                     null)
                 {
-                    SourceEnabled = isBackflow.HasValue,
-                    SourceDirectory = isBackflow == true ? repoName : null,
-                    TargetDirectory = isBackflow == false ? sourceRepoName : null,
+                    SourceEnabled = isSourceEnabled,
+                    SourceDirectory = isForwardFlow ? null : targetRepo,
+                    TargetDirectory = isForwardFlow ? sourceRepo : null,
                 });
 
-        var commit = (await _ghClient.Repository.Branch.Get(sourceOwner, sourceRepoName, _options.SourceBranch)).Commit;
+        string sourceCommit;
+
+        if (string.IsNullOrEmpty(_options.SourceCommit) && string.IsNullOrEmpty(_options.SourceBranch))
+        {
+            throw new ArgumentException("Please provide a source-branch or source-commit value.");
+        }
+
+        if (string.IsNullOrEmpty(_options.SourceCommit))
+        {
+            sourceCommit = (await _ghClient.Repository.Branch.Get(sourceOwner, sourceRepo, _options.SourceBranch))
+                .Commit.Sha;
+        }
+        else
+        {
+            sourceCommit = _options.SourceCommit;
+        }
 
         _logger.LogInformation("Creating build for {repo}@{branch} (commit {commit})",
             _options.SourceRepository,
             _options.SourceBranch,
-            Microsoft.DotNet.DarcLib.Commit.GetShortSha(commit.Sha));
+            Microsoft.DotNet.DarcLib.Commit.GetShortSha(sourceCommit));
+
         List<AssetData> assets;
         if (_options.RealBuildId > 0)
         {
@@ -126,13 +124,17 @@ internal class FlowCommitOperation : Operation
             ];
         }
 
+        _logger.LogInformation("source commit is {}", sourceCommit);
+        _logger.LogInformation("Subscription is source enbaled: {}", isSourceEnabled);
+        _logger.LogInformation("Subscription is forward-flow: {}", isForwardFlow);
+
         var build = await _localPcsApi.Builds.CreateAsync(new BuildData(
-                commit.Sha,
+                sourceCommit,
                 "dnceng",
                 "internal",
                 $"{DateTime.UtcNow:yyyyMMdd}.{new Random().Next(1, 75)}",
-                $"https://dev.azure.com/dnceng/internal/_git/{owner}-{repoName}",
-                _options.SourceBranch,
+                $"https://dev.azure.com/dnceng/internal/_git/{sourceOwner}-{sourceRepo}",
+                _options.SourceBranch ?? sourceCommit,
                 released: false,
                 stable: false)
             {
@@ -148,5 +150,41 @@ internal class FlowCommitOperation : Operation
         await TriggerSubscriptionAsync(subscription.Id.ToString(), build.Id);
 
         _logger.LogInformation("Subscription triggered. Wait for a PR in {url}", $"{_options.TargetRepository}/pulls");
+    }
+
+    private async Task<bool> IsRepoVmr(string repoName, string repoOwner)
+    {
+        try
+        {
+            await _ghClient.Repository.Content.GetAllContents(repoOwner, repoName, SourceManifestPath);
+            return true;
+        }
+        catch (Octokit.ApiException e)
+        {
+            if (e.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return false;
+            }
+            throw;
+        }
+    }
+
+    private async Task<(bool isSourceEnabled, bool isForwardFlow)> GetCodeflowMetadata(
+        string sourceUri,
+        string targetUri)
+    {
+        var (targetRepo, targetOwner) = GitRepoUrlUtils.GetRepoNameAndOwner(targetUri);
+        if (await IsRepoVmr(targetRepo, targetOwner))
+        {
+            return (true, true);
+        }
+
+        var (sourceRepo, sourceOwner) = GitRepoUrlUtils.GetRepoNameAndOwner(sourceUri);
+        if (await IsRepoVmr(sourceRepo, sourceOwner))
+        {
+            return (true, false);
+        }
+
+        return (false, false);
     }
 }
