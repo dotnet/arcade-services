@@ -79,11 +79,11 @@ public class VersionDetailsFileMerger : VmrVersionFileMerger, IVersionDetailsFil
         var previousSourceRepoChanges = await GetDependencies(sourceRepo, sourceRepoPreviousRef, sourceRepoVersionDetailsRelativePath);
         var currentSourceRepoChanges = await GetDependencies(sourceRepo, sourceRepoCurrentRef, sourceRepoVersionDetailsRelativePath);
 
-        List<DependencyUpdate> targetChanges = ComputeChanges(
+        List<DependencyUpdate> targetChanges = ComputeDependencyDiffs(
             previousTargetRepoChanges,
             currentTargetRepoChanges);
 
-        List<DependencyUpdate> sourceChanges = ComputeChanges(
+        List<DependencyUpdate> sourceChanges = ComputeDependencyDiffs(
             previousSourceRepoChanges,
             currentSourceRepoChanges);
 
@@ -105,7 +105,7 @@ public class VersionDetailsFileMerger : VmrVersionFileMerger, IVersionDetailsFil
             : _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: false);
     }
 
-    private static List<DependencyUpdate> ComputeChanges(VersionDetails before, VersionDetails after)
+    private static List<DependencyUpdate> ComputeDependencyDiffs(VersionDetails before, VersionDetails after)
     {
         var dependencyChanges = before.Dependencies
             .Select(dep => new DependencyUpdate()
