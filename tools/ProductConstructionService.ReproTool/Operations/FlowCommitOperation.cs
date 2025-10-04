@@ -125,7 +125,7 @@ internal class FlowCommitOperation : Operation
         }
 
         _logger.LogInformation("source commit is {}", sourceCommit);
-        _logger.LogInformation("Subscription is source enbaled: {}", isSourceEnabled);
+        _logger.LogInformation("Subscription is source enabled: {}", isSourceEnabled);
         _logger.LogInformation("Subscription is forward-flow: {}", isForwardFlow);
 
         var build = await _localPcsApi.Builds.CreateAsync(new BuildData(
