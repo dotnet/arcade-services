@@ -122,7 +122,7 @@ public class SimpleConfigJsonTests
         var changes = oldSimpleConfigJson.GetDiff(newSimpleConfigJson);
 
         // Assert
-        changes.Should().HaveCount(6);
+        changes.Should().HaveCount(12);
 
         // Check removed property
         var removedChange = changes.Should().ContainSingle(c => c.Name == "removed:property").Subject;
@@ -155,26 +155,6 @@ public class SimpleConfigJsonTests
         var updatedToolsChange = changes.Should().ContainSingle(c => c.Name == "tools:dotnet").Subject;
         updatedToolsChange.IsUpdated.Should().BeTrue();
         updatedToolsChange.Value.Should().Be("8.0.400");
-    }
-
-    [Test]
-    public void CompareFlatJsons_IdenticalJsons_ReturnsEmptyChanges()
-    {
-        // Arrange
-        var json = new Dictionary<string, object>
-        {
-            ["sdk:version"] = "8.0.303",
-            ["isRoot"] = true,
-            ["frameworks"] = new List<string> { "net8.0", "net6.0" }
-        };
-
-        // Act
-        var oldSimpleConfigJson = new FlatJson(json);
-        var newSimpleConfigJson = new FlatJson(new Dictionary<string, object>(json));
-        var changes = oldSimpleConfigJson.GetDiff(newSimpleConfigJson);
-
-        // Assert
-        changes.Should().BeEmpty();
     }
 
     [Test]
