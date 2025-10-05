@@ -48,20 +48,25 @@ public class FlatJson
             if (!otherJson.FlatValues.TryGetValue(kvp.Key, out var newValue))
             {
                 changes.Add(new JsonVersionProperty(kvp.Key, NodeComparisonResult.Removed, null));
+                continue;
             }
-            else if (kvp.Value.GetType() != newValue.GetType())
+
+            if (kvp.Value.GetType() != newValue.GetType())
             {
                 throw new ArgumentException($"Key {kvp.Key} value has different types in old and new json");
             }
-            else if (kvp.Value.GetType() == typeof(List<string>))
+
+            if (kvp.Value.GetType() == typeof(List<string>))
             {
                 var oldList = (List<string>)kvp.Value;
                 var newList = (List<string>)newValue;
                 if (!oldList.SequenceEqual(newList))
                 {
                     changes.Add(new JsonVersionProperty(kvp.Key, NodeComparisonResult.Updated, newValue));
+                    continue;
                 }
             }
+
             changes.Add(new JsonVersionProperty(kvp.Key, NodeComparisonResult.Updated, newValue));
         }
 

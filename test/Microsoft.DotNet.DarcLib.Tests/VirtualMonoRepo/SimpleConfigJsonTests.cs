@@ -122,7 +122,7 @@ public class SimpleConfigJsonTests
         var changes = oldSimpleConfigJson.GetDiff(newSimpleConfigJson);
 
         // Assert
-        changes.Should().HaveCount(12);
+        changes.Should().HaveCount(10);
 
         // Check removed property
         var removedChange = changes.Should().ContainSingle(c => c.Name == "removed:property").Subject;
