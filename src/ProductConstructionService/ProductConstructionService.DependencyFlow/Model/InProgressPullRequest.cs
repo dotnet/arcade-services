@@ -23,7 +23,7 @@ public class InProgressPullRequest : DependencyFlowWorkItem
     /// <summary>
     /// SHA of the head commit of the PR branch.
     /// </summary>
-    public required string HeadBranchSha { get; set; }
+    public string HeadBranchSha { get; set; }
 
     /// <summary>
     /// SHA of the commit the update is coming from.

@@ -20,14 +20,14 @@ This file should be imported by eng/Versions.props
     <MicrosoftDotNetKustoPackageVersion>1.1.0-beta.25215.1</MicrosoftDotNetKustoPackageVersion>
     <MicrosoftDotNetServicesUtilityPackageVersion>1.1.0-beta.25215.1</MicrosoftDotNetServicesUtilityPackageVersion>
     <!-- dotnet/arcade dependencies -->
-    <MicrosoftDotNetArcadeSdkPackageVersion>8.0.0-beta.25475.2</MicrosoftDotNetArcadeSdkPackageVersion>
-    <MicrosoftDotNetBuildTasksFeedPackageVersion>8.0.0-beta.25475.2</MicrosoftDotNetBuildTasksFeedPackageVersion>
-    <MicrosoftDotNetSignToolPackageVersion>8.0.0-beta.25475.2</MicrosoftDotNetSignToolPackageVersion>
-    <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>8.0.0-beta.25475.2</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
-    <MicrosoftDotNetVersionToolsPackageVersion>8.0.0-beta.25475.2</MicrosoftDotNetVersionToolsPackageVersion>
+    <MicrosoftDotNetArcadeSdkPackageVersion>8.0.0-beta.25504.1</MicrosoftDotNetArcadeSdkPackageVersion>
+    <MicrosoftDotNetBuildTasksFeedPackageVersion>8.0.0-beta.25504.1</MicrosoftDotNetBuildTasksFeedPackageVersion>
+    <MicrosoftDotNetSignToolPackageVersion>8.0.0-beta.25504.1</MicrosoftDotNetSignToolPackageVersion>
+    <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>8.0.0-beta.25504.1</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
+    <MicrosoftDotNetVersionToolsPackageVersion>8.0.0-beta.25504.1</MicrosoftDotNetVersionToolsPackageVersion>
     <!-- dotnet/dnceng dependencies -->
-    <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.25475.2</MicrosoftDncEngConfigurationBootstrapPackageVersion>
-    <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.25475.2</MicrosoftDncEngSecretManagerPackageVersion>
+    <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.25501.1</MicrosoftDncEngConfigurationBootstrapPackageVersion>
+    <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.25501.1</MicrosoftDncEngSecretManagerPackageVersion>
   </PropertyGroup>
   <!--Property group for alternate package version names-->
   <PropertyGroup>
