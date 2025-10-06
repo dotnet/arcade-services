@@ -44,6 +44,6 @@ internal class UpdateDependenciesCommandLineOptions : CommandLineOptions<UpdateD
 
     [Option("excluded-assets", HelpText = "Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded." +
         " When used with dependency flow subscriptions with specified target directories, it is possible to exclude assets in specific directories" +
-        " e.g. - src/sdk/System.Text.json, or use globbing e.g. - src/*/System.Text.* ")]
+        " e.g. src/sdk/System.Text.json or src/*/System.Text.* ")]
     public string ExcludedAssets { get; set; }
 }
