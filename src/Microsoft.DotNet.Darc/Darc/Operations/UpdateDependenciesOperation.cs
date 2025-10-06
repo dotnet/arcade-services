@@ -57,7 +57,7 @@ internal class UpdateDependenciesOperation : Operation
         try
         {
             var local = new Local(_options.GetRemoteTokenProvider(), _logger);
-            var excludedAssetsMatcher = (_options.ExcludedAssets?.Split(';') ?? null).GetAssetMatcher();
+            var excludedAssetsMatcher = _options.ExcludedAssets?.Split(';').GetAssetMatcher();
             List<UnixPath> targetDirectories = [];
             if (string.IsNullOrEmpty(_options.TargetDirectory))
             {
