@@ -1,57 +1,55 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Runtime.Serialization;
 using Maestro.MergePolicies;
-using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
 #nullable disable
-namespace ProductConstructionService.DependencyFlow;
+namespace ProductConstructionService.DependencyFlow.Model;
 
-[DataContract]
 public class InProgressPullRequest : DependencyFlowWorkItem
 {
-    [DataMember]
+    /// <summary>
+    /// URL of the pull request.
+    /// Note: not the regular URL you'd visit in your browser, but the API URL.
+    /// </summary>
     public required string Url { get; set; }
 
-    [DataMember]
+    /// <summary>
+    /// Name of the branch from which changes are proposed.
+    /// </summary>
     public required string HeadBranch { get; set; }
 
-    [DataMember]
+    /// <summary>
+    /// SHA of the head commit of the PR branch.
+    /// </summary>
+    public string HeadBranchSha { get; set; }
+
+    /// <summary>
+    /// SHA of the commit the update is coming from.
+    /// </summary>
     public required string SourceSha { get; set; }
 
-    [DataMember]
     public bool? CoherencyCheckSuccessful { get; set; }
 
-    [DataMember]
     public List<CoherencyErrorDetails> CoherencyErrors { get; set; }
 
-    [DataMember]
     public MergePolicyCheckResult MergePolicyResult { get; init; }
 
-    [DataMember]
     public List<SubscriptionPullRequestUpdate> ContainedSubscriptions { get; set; }
 
-    [DataMember]
     public List<DependencyUpdateSummary> RequiredUpdates { get; set; }
 
-    [DataMember]
     public bool? SourceRepoNotified { get; set; }
 
-    [DataMember]
     public DateTime LastUpdate { get; set; } = DateTime.UtcNow;
 
-    [DataMember]
     public DateTime LastCheck { get; set; } = DateTime.UtcNow;
 
-    [DataMember]
     public DateTime? NextCheck { get; set; }
 
-    [DataMember]
     public InProgressPullRequestState MergeState { get; set; }
 
-    [DataMember]
     public Dictionary<Guid, int> NextBuildsToProcess { get; set; } = [];
 
     public CodeFlowDirection CodeFlowDirection { get; set; }

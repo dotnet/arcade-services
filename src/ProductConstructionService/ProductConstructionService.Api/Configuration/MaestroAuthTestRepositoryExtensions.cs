@@ -4,6 +4,7 @@
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 
 namespace ProductConstructionService.Api.Configuration;
 
@@ -38,8 +39,7 @@ public static class MaestroAuthTestRepositoryExtensions
             bool resetToRemote = false,
             CancellationToken cancellationToken = default)
         {
-            remoteUris = [.. remoteUris.Select(uri => uri.Replace("github.com/dotnet/", "github.com/maestro-auth-test/"))];
-            return await _cloneManager.PrepareCloneAsync(mapping, remoteUris, requestedRefs, checkoutRef, resetToRemote, cancellationToken);
+            return await _cloneManager.PrepareCloneAsync(mapping, ReplaceDotnetWithMaestroAuthTest(remoteUris), requestedRefs, checkoutRef, resetToRemote, cancellationToken);
         }
 
         public async Task<ILocalGitRepo> PrepareCloneAsync(
@@ -48,8 +48,7 @@ public static class MaestroAuthTestRepositoryExtensions
             bool resetToRemote = false,
             CancellationToken cancellationToken = default)
         {
-            repoUri = repoUri.Replace("github.com/dotnet/", "github.com/maestro-auth-test/");
-            return await _cloneManager.PrepareCloneAsync(repoUri, checkoutRef, resetToRemote, cancellationToken);
+            return await _cloneManager.PrepareCloneAsync(ReplaceDotnetWithMaestroAuthTest(repoUri), checkoutRef, resetToRemote, cancellationToken);
         }
 
         public async Task<ILocalGitRepo> PrepareCloneAsync(
@@ -59,8 +58,18 @@ public static class MaestroAuthTestRepositoryExtensions
             bool resetToRemote = false,
             CancellationToken cancellationToken = default)
         {
-            remoteUris = [.. remoteUris.Select(uri => uri.Replace("github.com/dotnet/", "github.com/maestro-auth-test/"))];
-            return await _cloneManager.PrepareCloneAsync(mapping, remoteUris, checkoutRef, resetToRemote, cancellationToken);
+            return await _cloneManager.PrepareCloneAsync(mapping, ReplaceDotnetWithMaestroAuthTest(remoteUris), checkoutRef, resetToRemote, cancellationToken);
         }
+
+        public Task<ILocalGitRepo> PrepareCloneAsync(NativePath clonePath, IReadOnlyCollection<string> remoteUris, IReadOnlyCollection<string> requestedRefs, string checkoutRef, bool resetToRemote = false, CancellationToken cancellationToken = default)
+        {
+            return _cloneManager.PrepareCloneAsync(clonePath, ReplaceDotnetWithMaestroAuthTest(remoteUris), requestedRefs, checkoutRef, resetToRemote, cancellationToken);
+        }
+
+        private static IReadOnlyCollection<string> ReplaceDotnetWithMaestroAuthTest(IReadOnlyCollection<string> uris)
+            => [.. uris.Select(ReplaceDotnetWithMaestroAuthTest)];
+
+        private static string ReplaceDotnetWithMaestroAuthTest(string uri)
+            => uri.Replace("github.com/dotnet/", "github.com/maestro-auth-test/");
     }
 }

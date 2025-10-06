@@ -304,27 +304,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     {
         (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
         Octokit.PullRequest pr = await GetClient(owner, repo).PullRequest.Get(owner, repo, id);
-
-        PrStatus status;
-        if (pr.State == ItemState.Closed)
-        {
-            status = pr.Merged == true ? PrStatus.Merged : PrStatus.Closed;
-        }
-        else
-        {
-            status = PrStatus.Open;
-        }
-
-        return new PullRequest
-        {
-            Title = pr.Title,
-            Description = pr.Body,
-            BaseBranch = pr.Base.Ref,
-            HeadBranch = pr.Head.Ref,
-            Status = status,
-            UpdatedAt = pr.UpdatedAt,
-            TargetBranchCommitSha = pr.Head.Sha,
-        };
+        return ToDarcLibPullRequest(pr);
     }
 
     /// <summary>
@@ -332,7 +312,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// </summary>
     /// <param name="repoUri">Repo to create the pull request for.</param>
     /// <param name="pullRequest">Pull request data</param>
-    public async Task<string> CreatePullRequestAsync(string repoUri, PullRequest pullRequest)
+    public async Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest)
     {
         (string owner, string repo) = ParseRepoUri(repoUri);
 
@@ -344,7 +324,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         try
         {
             Octokit.PullRequest createdPullRequest = await GetClient(repoUri).PullRequest.Create(owner, repo, pr);
-            return createdPullRequest.Url;
+            return ToDarcLibPullRequest(createdPullRequest);
         }
         catch (ApiValidationException)
         {
@@ -1412,5 +1392,30 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             _logger.LogError(ex, $"Failed to get folder names from path '{path}' in repo '{repoUri}' on branch '{branch}'");
             throw;
         }
+    }
+
+    private static PullRequest ToDarcLibPullRequest(Octokit.PullRequest pr)
+    {
+        PrStatus status;
+        if (pr.State == ItemState.Closed)
+        {
+            status = pr.Merged == true ? PrStatus.Merged : PrStatus.Closed;
+        }
+        else
+        {
+            status = PrStatus.Open;
+        }
+
+        return new PullRequest
+        {
+            Url = pr.Url,
+            Title = pr.Title,
+            Description = pr.Body,
+            BaseBranch = pr.Base.Ref,
+            HeadBranch = pr.Head.Ref,
+            Status = status,
+            UpdatedAt = pr.UpdatedAt,
+            HeadBranchSha = pr.Head.Sha,
+        };
     }
 }

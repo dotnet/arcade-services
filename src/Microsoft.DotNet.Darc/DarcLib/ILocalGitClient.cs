@@ -68,6 +68,13 @@ public interface ILocalGitClient
     Task CheckoutAsync(string repoPath, string refToCheckout);
 
     /// <summary>
+    ///     Checkout the repo to the specified state using the force flag.
+    /// </summary>
+    /// <param name="repoPath">Path to a git repository</param>
+    /// <param name="refToCheckout">Tag, branch, or commit to checkout</param>
+    Task ForceCheckoutAsync(string repoPath, string refToCheckout);
+
+    /// <summary>
     ///     Resets the working tree (or a given subpath) to match the index.
     /// </summary>
     /// <param name="repoPath">Path to the root of the repo</param>
@@ -262,4 +269,21 @@ public interface ILocalGitClient
     ///     Resolves a conflict in a given file to ours/theirs.
     /// </summary>
     Task ResolveConflict(string repoPath, string file, bool ours);
+
+    /// <summary>
+    /// Finds the best common ancestor (merge base) between two git refs in the repository.
+    /// </summary>
+    Task<string> GetMergeBaseAsync(string repoPath, string gitRefA, string gitRefB);
+
+    /// <summary>
+    /// Gets a collection of file paths that have changed between the specified base and target commits or branches.
+    /// </summary>
+    /// <param name="baseCommitOrBranch">The commit SHA or branch name to use as the base for the comparison.</param>
+    /// <param name="targetCommitOrBranch">The commit SHA or branch name to compare against the base.</param>
+    /// <returns>A read-only collection of strings representing the relative paths of files that differ between the
+    /// base and target. The collection is empty if there are no changed files.</returns>
+    Task<IReadOnlyCollection<string>> GetChangedFilesAsync(
+        string repoPath,
+        string baseCommitOrBranch,
+        string targetCommitOrBranch);
 }

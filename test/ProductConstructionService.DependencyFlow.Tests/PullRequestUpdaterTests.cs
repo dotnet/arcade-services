@@ -19,7 +19,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
+using ProductConstructionService.DependencyFlow.Model;
+using ProductConstructionService.DependencyFlow.Tests.Mocks;
 using ProductConstructionService.DependencyFlow.WorkItems;
+
+using Asset = Maestro.Data.Models.Asset;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -28,7 +32,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 {
     private const long InstallationId = 1174;
     protected const string InProgressPrUrl = "https://github.com/owner/repo/pull/10";
-    protected string? InProgressPrHeadBranch { get; private set; } = "pr.head.branch";
+    protected string InProgressPrHeadBranch { get; private set; } = "pr.head.branch";
+    protected const string InProgressPrHeadBranchSha = "pr.head.branch.sha";
     protected const string ConflictPRRemoteSha = "sha3333";
 
     private Mock<IPcsVmrBackFlower> _backFlower = null!;
@@ -252,7 +257,14 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     InProgressPrHeadBranch = pr.HeadBranch;
                 }
             })
-            .ReturnsAsync(url);
+            .ReturnsAsync(new PullRequest
+            {
+                Url = url,
+                HeadBranch = InProgressPrHeadBranch,
+                HeadBranchSha = InProgressPrHeadBranchSha,
+                BaseBranch = TargetBranch,
+                Status = PrStatus.Open,
+            });
     }
 
     protected void AndUpdatePullRequestShouldHaveBeenCalled()
@@ -268,6 +280,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     {
                         BaseBranch = TargetBranch,
                         HeadBranch = InProgressPrHeadBranch,
+                        HeadBranchSha = InProgressPrHeadBranchSha,
                         Status = PrStatus.Open,
                     }
                 },
@@ -387,6 +400,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 new PullRequest
                 {
                     HeadBranch = InProgressPrHeadBranch,
+                    HeadBranchSha = InProgressPrHeadBranchSha,
                     BaseBranch = TargetBranch,
                     Status = prStatus,
                 });
@@ -413,21 +427,21 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         int nextBuildToProcess = 0,
         bool newChangeWillConflict = false,
         bool prAlreadyHasConflict = false,
-        string latestCommitToReturn = ConflictPRRemoteSha,
+        string? headBranchSha = null,
         bool willFlowNewBuild = false,
         bool mockMergePolicyEvaluator = true,
         bool? sourceRepoNotified = null)
         => WithExistingCodeFlowPullRequest(
-                forBuild,
-                PrStatus.Open,
-                canUpdate ? null : MergePolicyEvaluationStatus.Pending,
-                nextBuildToProcess,
-                newChangeWillConflict,
-                prAlreadyHasConflict,
-                latestCommitToReturn,
-                willFlowNewBuild: willFlowNewBuild,
-                mockMergePolicyEvaluator: mockMergePolicyEvaluator,
-                sourceRepoNotified: sourceRepoNotified);
+            forBuild,
+            PrStatus.Open,
+            canUpdate ? null : MergePolicyEvaluationStatus.Pending,
+            nextBuildToProcess,
+            newChangeWillConflict,
+            prAlreadyHasConflict,
+            headBranchSha,
+            willFlowNewBuild: willFlowNewBuild,
+            mockMergePolicyEvaluator: mockMergePolicyEvaluator,
+            sourceRepoNotified: sourceRepoNotified);
 
     protected IDisposable WithExistingCodeFlowPullRequest(
         Build forBuild,
@@ -436,7 +450,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         int nextBuildToProcess = 0,
         bool flowerWillHaveConflict = false,
         bool prAlreadyHasConflict = false,
-        string latestCommitToReturn = ConflictPRRemoteSha,
+        string? headBranchSha = null,
         bool willFlowNewBuild = false,
         bool mockMergePolicyEvaluator = true,
         bool? sourceRepoNotified = null)
@@ -455,18 +469,24 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 forBuild,
                 prUrl,
                 nextBuildToProcess,
-                overwriteBuildCommit:
-                    prAlreadyHasConflict
-                        ? ConflictPRRemoteSha
-                        : forBuild.Commit,
-                prState:
-                    prAlreadyHasConflict
-                        ? InProgressPullRequestState.Conflict
-                        : InProgressPullRequestState.Mergeable,
+                headBranchSha: prAlreadyHasConflict
+                    ? ConflictPRRemoteSha
+                    : InProgressPrHeadBranchSha,
+                prState: prAlreadyHasConflict
+                    ? InProgressPullRequestState.Conflict
+                    : InProgressPullRequestState.Mergeable,
                 sourceRepoNotified: sourceRepoNotified);
             SetState(Subscription, pr);
             SetExpectedPullRequestState(Subscription, pr);
         });
+
+        headBranchSha ??= flowerWillHaveConflict || prAlreadyHasConflict
+            ? ConflictPRRemoteSha
+            : InProgressPrHeadBranchSha;
+
+        _gitClient
+            .Setup(x => x.GetShaForRefAsync(It.IsAny<string>(), InProgressPrHeadBranch))
+            .ReturnsAsync(headBranchSha);
 
         var remote = DarcRemotes.GetOrAddValue(targetRepo, () => CreateMock<IRemote>());
         remote
@@ -475,17 +495,16 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             {
                 Status = prStatus,
                 HeadBranch = InProgressPrHeadBranch,
+                HeadBranchSha = headBranchSha,
                 BaseBranch = TargetBranch,
-                TargetBranchCommitSha = "sha123456",
             });
 
-        if (willFlowNewBuild
-            && !string.IsNullOrEmpty(Subscription.TargetDirectory))
+        if (willFlowNewBuild && !string.IsNullOrEmpty(Subscription.TargetDirectory))
         {
-            //Source manifest is used only for forward flow PRs
+            // Source manifest is used only for forward flow PRs
             remote
-            .Setup(x => x.GetSourceManifestAsync(It.IsAny<string>(), It.IsAny<string>()))
-            .ReturnsAsync((SourceManifest?)null);
+                .Setup(x => x.GetSourceManifestAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync((SourceManifest?)null);
         }
 
         if (flowerWillHaveConflict)
@@ -506,16 +525,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     "branch",
                     "repo",
                     isForwardFlow: true));
-
         }
-
-        if (flowerWillHaveConflict || prAlreadyHasConflict)
-        {
-            remote
-                .Setup(x => x.GetLatestCommitAsync(It.IsAny<string>(), It.IsAny<string>()))
-                .ReturnsAsync(latestCommitToReturn);
-        }
-
 
         if (mockMergePolicyEvaluator)
         {
@@ -537,21 +547,20 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     It.IsAny<IRemote>(),
                     It.IsAny<IReadOnlyList<MergePolicyDefinition>>(),
                     It.IsAny<MergePolicyEvaluationResults?>(),
-                    It.IsAny<string>()
-                    ))
+                    It.IsAny<string>()))
                 .ReturnsAsync(results.Results);
 
             if (prStatus == PrStatus.Open)
             {
                 remote
-                .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, results.Results.ToImmutableList()))
+                    .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, results.Results.ToImmutableList()))
                     .Returns(Task.CompletedTask);
             }
         }
         else
         {
             remote
-            .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, It.IsAny<IReadOnlyCollection<MergePolicyEvaluationResult>>()))
+                .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, It.IsAny<IReadOnlyCollection<MergePolicyEvaluationResult>>()))
                 .Returns(Task.CompletedTask);
         }
 
@@ -585,7 +594,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         bool? coherencyCheckSuccessful = true,
         List<CoherencyErrorDetails>? coherencyErrors = null,
         InProgressPullRequest? expectedState = null,
-        string? overwriteBuildCommit = null,
+        string? headBranchSha = null,
         InProgressPullRequestState prState = InProgressPullRequestState.Mergeable,
         Func<Asset, bool>? assetFilter = null,
         bool? sourceRepoNotified = null,
@@ -608,7 +617,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     nextBuildToProcess,
                     coherencyCheckSuccessful,
                     coherencyErrors,
-                    overwriteBuildCommit,
+                    headBranchSha,
                     prState,
                     assetFilter,
                     sourceRepoNotified: sourceRepoNotified,
@@ -667,7 +676,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             int nextBuildToProcess = 0,
             bool? coherencyCheckSuccessful = true,
             List<CoherencyErrorDetails>? coherencyErrors = null,
-            string? overwriteBuildCommit = null,
+            string? headBranchSha = null,
             InProgressPullRequestState prState = InProgressPullRequestState.Mergeable,
             Func<Asset, bool>? assetFilter = null,
             bool? sourceRepoNotified = null,
@@ -677,7 +686,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         {
             UpdaterId = GetPullRequestUpdaterId().ToString(),
             HeadBranch = InProgressPrHeadBranch,
-            SourceSha = overwriteBuildCommit ?? forBuild.Commit,
+            HeadBranchSha = headBranchSha ?? InProgressPrHeadBranchSha,
+            SourceSha = forBuild.Commit,
             ContainedSubscriptions =
             [
                 new SubscriptionPullRequestUpdate

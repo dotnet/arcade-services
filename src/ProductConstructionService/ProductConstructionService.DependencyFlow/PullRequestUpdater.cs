@@ -294,6 +294,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         _logger.LogInformation("Pull request {url} is {status}", pr.Url, prInfo.Status);
 
+        // If we're about to update the PR, we should set the default reminder delay,
+        // otherwise we should use the time since the last update to determine when to check again
+        var delay = tryingToUpdate
+            ? DefaultReminderDelay
+            : GetReminderDelay(prInfo.UpdatedAt);
+
         switch (prInfo.Status)
         {
             // If the PR is currently open, then evaluate the merge policies, which will potentially
@@ -326,43 +332,30 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     case MergePolicyCheckResult.NoPolicies:
                     case MergePolicyCheckResult.FailedToMerge:
                         _logger.LogInformation("Pull request {url} still active (updatable) - keeping tracking it", pr.Url);
+
                         // Check if we think the PR has a conflict
                         if (pr.MergeState == InProgressPullRequestState.Conflict)
                         {
                             // If we think so, check if the PR head branch still has the same commit as the one we remembered.
                             // If it doesn't, we should try to update the PR again, the conflicts might be resolved
-                            var latestCommit = await remote.GetLatestCommitAsync(targetRepository, pr.HeadBranch);
-                            if (latestCommit == pr.SourceSha)
+                            if (pr.HeadBranchSha == prInfo.HeadBranchSha)
                             {
                                 return (PullRequestStatus.InProgressCannotUpdate, prInfo);
                             }
                         }
-                        // If we're about to update the PR, we should set the default reminder delay
-                        await SetPullRequestCheckReminder(
-                            pr,
-                            isCodeFlow,
-                            tryingToUpdate ?
-                                DefaultReminderDelay :
-                                GetReminderDelay(prInfo.UpdatedAt));
+
+                        await SetPullRequestCheckReminder(pr, prInfo, isCodeFlow, delay);
+
                         return (PullRequestStatus.InProgressCanUpdate, prInfo);
 
                     case MergePolicyCheckResult.PendingPolicies:
                         _logger.LogInformation("Pull request {url} still active (not updatable at the moment) - keeping tracking it", pr.Url);
-                        await SetPullRequestCheckReminder(
-                            pr,
-                            isCodeFlow,
-                            tryingToUpdate ?
-                                DefaultReminderDelay :
-                                GetReminderDelay(prInfo.UpdatedAt));
+                        await SetPullRequestCheckReminder(pr, prInfo, isCodeFlow, delay);
+
                         return (PullRequestStatus.InProgressCannotUpdate, prInfo);
 
                     default:
-                        await SetPullRequestCheckReminder(
-                            pr,
-                            isCodeFlow,
-                            tryingToUpdate ?
-                                DefaultReminderDelay :
-                                GetReminderDelay(prInfo.UpdatedAt));
+                        await SetPullRequestCheckReminder(pr, prInfo, isCodeFlow, delay);
                         throw new NotImplementedException($"Unknown merge policy check result {mergePolicyResult}");
                 }
 
@@ -423,11 +416,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         PullRequestUpdateSummary prSummary = CreatePrSummaryFromInProgressPr(pr, targetRepository);
         MergePolicyEvaluationResults? cachedResults = await _mergePolicyEvaluationState.TryGetStateAsync();
 
-        IEnumerable<MergePolicyEvaluationResult> updatedMergePolicyResults = await _mergePolicyEvaluator.EvaluateAsync(prSummary, remote, policyDefinitions, cachedResults, prInfo.TargetBranchCommitSha);
+        IEnumerable<MergePolicyEvaluationResult> updatedMergePolicyResults = await _mergePolicyEvaluator.EvaluateAsync(prSummary, remote, policyDefinitions, cachedResults, prInfo.HeadBranchSha);
 
         MergePolicyEvaluationResults updatedResult = new(
             updatedMergePolicyResults.ToImmutableList(),
-            prInfo.TargetBranchCommitSha);
+            prInfo.HeadBranchSha);
 
         await _mergePolicyEvaluationState.SetAsync(updatedResult);
 
@@ -532,7 +525,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     ///     Creates a pull request from the given updates.
     /// </summary>
     /// <returns>The pull request url when a pr was created; <see langref="null" /> if no PR is necessary</returns>
-    private async Task<string?> CreatePullRequestAsync(SubscriptionUpdateWorkItem update, BuildDTO build)
+    private async Task<PullRequest?> CreatePullRequestAsync(SubscriptionUpdateWorkItem update, BuildDTO build)
     {
         (var targetRepository, var targetBranch) = await GetTargetAsync();
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
@@ -575,7 +568,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             var commitMessage = "Failed to perform coherency update for one or more dependencies.";
             await darcRemote.CommitUpdatesAsync(filesToCommit: [], targetRepository, newBranchName, commitMessage);
             var prDescription = $"Coherency update: {commitMessage} Please review the GitHub checks or run `darc update-dependencies --coherency-only` locally against {newBranchName} for more information.";
-            var prUrl = await darcRemote.CreatePullRequestAsync(
+            PullRequest pr = await darcRemote.CreatePullRequestAsync(
                 targetRepository,
                 new PullRequest
                 {
@@ -584,23 +577,25 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     BaseBranch = targetBranch,
                     HeadBranch = newBranchName,
                 });
-            List<CoherencyErrorDetails> agregatedCoherencyErrors = repoDependencyUpdates.GetAgregatedCoherencyErrors();
+
+            List<CoherencyErrorDetails> aggregatedCoherencyErrors = repoDependencyUpdates.GetAgregatedCoherencyErrors();
 
             InProgressPullRequest inProgressPr = new()
             {
                 UpdaterId = Id.ToString(),
-                Url = prUrl,
+                Url = pr.Url,
                 HeadBranch = newBranchName,
+                HeadBranchSha = pr.HeadBranchSha,
                 SourceSha = update.SourceSha,
                 ContainedSubscriptions = [],
                 RequiredUpdates = [],
                 CoherencyCheckSuccessful = false,
-                CoherencyErrors = agregatedCoherencyErrors.Count > 0 ? agregatedCoherencyErrors : null,
+                CoherencyErrors = aggregatedCoherencyErrors.Count > 0 ? aggregatedCoherencyErrors : null,
                 CodeFlowDirection = CodeFlowDirection.None,
             };
 
-            await SetPullRequestCheckReminder(inProgressPr, isCodeFlow);
-            return prUrl;
+            await SetPullRequestCheckReminder(inProgressPr, pr, isCodeFlow);
+            return pr;
         }
 
         try
@@ -619,7 +614,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     CommitSha = repoDependencyUpdates.SubscriptionUpdate.SourceSha
                 };
 
-            var prUrl = await darcRemote.CreatePullRequestAsync(
+            PullRequest pr = await darcRemote.CreatePullRequestAsync(
                 targetRepository,
                 new PullRequest
                 {
@@ -629,13 +624,14 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     HeadBranch = newBranchName,
                 });
 
-            List<CoherencyErrorDetails> agregatedCoherencyErrors = repoDependencyUpdates.GetAgregatedCoherencyErrors();
+            List<CoherencyErrorDetails> aggregatedCoherencyErrors = repoDependencyUpdates.GetAgregatedCoherencyErrors();
 
             var inProgressPr = new InProgressPullRequest
             {
                 UpdaterId = Id.ToString(),
-                Url = prUrl,
+                Url = pr.Url,
                 HeadBranch = newBranchName,
+                HeadBranchSha = pr.HeadBranchSha,
                 SourceSha = update.SourceSha,
 
                 ContainedSubscriptions = [subscriptionUpdate],
@@ -648,21 +644,21 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     .ToList(),
 
                 CoherencyCheckSuccessful = repoDependencyUpdates.CoherencyCheckSuccessful,
-                CoherencyErrors = agregatedCoherencyErrors.Count > 0 ? agregatedCoherencyErrors : null,
+                CoherencyErrors = aggregatedCoherencyErrors.Count > 0 ? aggregatedCoherencyErrors : null,
                 CodeFlowDirection = CodeFlowDirection.None,
             };
 
-            if (!string.IsNullOrEmpty(prUrl))
+            if (!string.IsNullOrEmpty(pr?.Url))
             {
                 await AddDependencyFlowEventsAsync(
                     inProgressPr.ContainedSubscriptions,
                     DependencyFlowEventType.Created,
                     DependencyFlowEventReason.New,
                     MergePolicyCheckResult.PendingPolicies,
-                    prUrl);
+                    pr.Url);
 
-                await SetPullRequestCheckReminder(inProgressPr, isCodeFlow);
-                return prUrl;
+                await SetPullRequestCheckReminder(inProgressPr, pr, isCodeFlow);
+                return pr;
             }
 
             // If we did not create a PR, then mark the dependency flow as completed as nothing to do.
@@ -780,7 +776,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         await darcRemote.UpdatePullRequestAsync(pr.Url, prInfo);
         pr.LastUpdate = DateTime.UtcNow;
         pr.NextBuildsToProcess.Remove(update.SubscriptionId);
-        await SetPullRequestCheckReminder(pr, isCodeFlow: update.SubscriptionType == SubscriptionType.DependenciesAndSources);
+        await SetPullRequestCheckReminder(pr, prInfo, isCodeFlow: update.SubscriptionType == SubscriptionType.DependenciesAndSources);
 
         _logger.LogInformation("Pull request '{prUrl}' updated", pr.Url);
     }
@@ -974,7 +970,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
     private static string GetNewBranchName(string targetBranch) => $"darc-{targetBranch}-{Guid.NewGuid()}";
 
-    private async Task SetPullRequestCheckReminder(InProgressPullRequest prState, bool isCodeFlow, TimeSpan reminderDelay)
+    private async Task SetPullRequestCheckReminder(InProgressPullRequest prState, PullRequest prInfo, bool isCodeFlow, TimeSpan reminderDelay)
     {
         var reminder = new PullRequestCheck()
         {
@@ -985,13 +981,14 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         prState.LastCheck = DateTime.UtcNow;
         prState.NextCheck = prState.LastCheck + reminderDelay;
+        prState.HeadBranchSha = prInfo.HeadBranchSha;
 
         await _pullRequestCheckReminders.SetReminderAsync(reminder, reminderDelay, isCodeFlow);
         await _pullRequestState.SetAsync(prState);
     }
 
-   private async Task SetPullRequestCheckReminder(InProgressPullRequest prSate, bool isCodeFlow) =>
-        await SetPullRequestCheckReminder(prSate, isCodeFlow, DefaultReminderDelay);
+   private async Task SetPullRequestCheckReminder(InProgressPullRequest prSate, PullRequest prInfo, bool isCodeFlow) =>
+        await SetPullRequestCheckReminder(prSate, prInfo, isCodeFlow, DefaultReminderDelay);
 
     private async Task ClearAllStateAsync(bool isCodeFlow, bool clearPendingUpdates)
     {
@@ -1130,7 +1127,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 update.SubscriptionId,
                 update.SourceSha);
 
-            await SetPullRequestCheckReminder(pr, isCodeFlow: true);
+            await SetPullRequestCheckReminder(pr, prInfo!, isCodeFlow: true);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
             return;
         }
@@ -1140,7 +1137,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             _logger.LogInformation("Failed to update pr {url} for {subscription} because it is blocked from future updates",
                 pr.Url,
                 update.SubscriptionId);
-            await SetPullRequestCheckReminder(pr, isCodeFlow: true);
+            await SetPullRequestCheckReminder(pr, prInfo!, isCodeFlow: true);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
             return;
         }
@@ -1161,7 +1158,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs;
         string? previousSourceSha; // is null in some edge cases like onboarding a new repository
 
-        var codeFlowRes = await ExecuteCodeFlowAsync(pr, update, subscription, build, prHeadBranch, forceUpdate, isForwardFlow);
+        var codeFlowRes = await ExecuteCodeFlowAsync(pr, prInfo, update, subscription, build, prHeadBranch, forceUpdate, isForwardFlow);
 
         if (codeFlowRes == null)
         {
@@ -1304,7 +1301,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             pullRequest.LastUpdate = DateTime.UtcNow;
             pullRequest.MergeState = InProgressPullRequestState.Mergeable;
             pullRequest.NextBuildsToProcess.Remove(update.SubscriptionId);
-            await SetPullRequestCheckReminder(pullRequest, isCodeFlow: true);
+            await SetPullRequestCheckReminder(pullRequest, prInfo!, isCodeFlow: true);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
         }
     }
@@ -1333,7 +1330,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 currentDescription: null,
                 isForwardFlow: isForwardFlow);
 
-            var prUrl = await darcRemote.CreatePullRequestAsync(
+            PullRequest pr = await darcRemote.CreatePullRequestAsync(
                 subscription.TargetRepository,
                 new PullRequest
                 {
@@ -1346,8 +1343,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             InProgressPullRequest inProgressPr = new()
             {
                 UpdaterId = Id.ToString(),
-                Url = prUrl,
+                Url = pr.Url,
                 HeadBranch = prBranch,
+                HeadBranchSha = pr.HeadBranchSha,
                 SourceSha = update.SourceSha,
                 ContainedSubscriptions =
                 [
@@ -1370,13 +1368,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 DependencyFlowEventType.Created,
                 DependencyFlowEventReason.New,
                 MergePolicyCheckResult.PendingPolicies,
-                prUrl);
+                pr.Url);
 
             inProgressPr.LastUpdate = DateTime.UtcNow;
-            await SetPullRequestCheckReminder(inProgressPr, isCodeFlow: true);
+            await SetPullRequestCheckReminder(inProgressPr, pr, isCodeFlow: true);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
 
-            _logger.LogInformation("Code flow pull request created: {prUrl}", prUrl);
+            _logger.LogInformation("Code flow pull request created: {prUrl}", pr.Url);
 
             return inProgressPr;
         }
@@ -1388,8 +1386,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             throw;
         }
     }
+
     private async Task<CodeFlowResult?> ExecuteCodeFlowAsync(
         InProgressPullRequest? pr,
+        PullRequest? prInfo,
         SubscriptionUpdateWorkItem update,
         SubscriptionDTO subscription,
         BuildDTO build,
@@ -1431,9 +1431,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         catch (ConflictInPrBranchException conflictException)
         {
-            if (pr != null)
+            if (pr != null && prInfo != null)
             {
-                await HandlePrUpdateConflictAsync(conflictException.ConflictedFiles, update, subscription, pr, prHeadBranch);
+                await HandlePrUpdateConflictAsync(conflictException.ConflictedFiles, update, subscription, pr, prInfo);
             }
             return null;
         }
@@ -1470,12 +1470,21 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 scope.SetSuccess();
             }
 
+            // We store it the new head branch SHA in Redis (without having to have to query the remote repo)
+            if (prInfo != null)
+            {
+                var repoPath = isForwardFlow ? _vmrInfo.VmrPath : codeFlowRes.RepoPath;
+                prInfo.HeadBranchSha = await _gitClient.GetShaForRefAsync(repoPath, prHeadBranch);
+            }
+
             await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
         }
+
         if (!codeFlowRes.HadUpdates)
         {
             _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}", subscription.Id);
         }
+
         return codeFlowRes;
     }
 
@@ -1489,7 +1498,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         SubscriptionUpdateWorkItem update,
         SubscriptionDTO subscription,
         InProgressPullRequest pr,
-        string prHeadBranch)
+        PullRequest prInfo)
     {
         _commentCollector.AddComment(
             PullRequestCommentBuilder.BuildNotifyAboutConflictingUpdateComment(
@@ -1497,28 +1506,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 update,
                 subscription,
                 pr,
-                prHeadBranch),
+                prInfo.HeadBranch),
             CommentType.Warning);
 
-        // If the headBranch gets updated, we will retry to update it with previously conflicting changes. If these changes still cause a conflict, we should update the
-        // InProgressPullRequest with the latest commit from the remote branch
-        var remoteCommit = pr.SourceSha;
-        var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
-        try
-        {
-            remoteCommit = await remote.GetLatestCommitAsync(subscription.TargetRepository, pr.HeadBranch);
-        }
-        catch (Exception e)
-        {
-            _logger.LogWarning("Couldn't get latest commit of {repo}/{commit}. Failed with exception {message}",
-                subscription.TargetRepository,
-                pr.HeadBranch,
-                e.Message);
-        }
-
         pr.MergeState = InProgressPullRequestState.Conflict;
-        pr.SourceSha = remoteCommit;
         pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
+        pr.HeadBranchSha = prInfo.HeadBranchSha;
+
         await _pullRequestState.SetAsync(pr);
         await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
         await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);

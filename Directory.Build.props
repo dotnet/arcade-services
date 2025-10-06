@@ -28,17 +28,19 @@
     -->
     <NoWarn>$(NoWarn);MSB3270</NoWarn>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>12.0</LangVersion>
     <IsShipping>false</IsShipping>
     <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
     <!-- 
-      This compiler property is required for debugging the BarViz project locally.
-      
-      When set to `full`, all debugging information will be made available together with the built
-      artifacts. If not present, Visual Studio debugger will fail to connect to the browser during
-      the debugging session
+      This compiler property is required for debugging the BarViz project locally.  
+      https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-options/code-generation#debugtype
+
+      If set to anything but `portable` VS and VS Code will fail to connect to a running BarViz debug process 
+      due to maybe some missing debug symbols or attributes. Either way the documentation linked also recommends having
+      `portable` instead of `full`, so no harm should be done
     -->
-    <DebugType>Full</DebugType>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
 
     <EnableCentralPackageVersions>true</EnableCentralPackageVersions>
     <CentralPackagesFile>$(MSBuildThisFileDirectory)eng/Packages.props</CentralPackagesFile>

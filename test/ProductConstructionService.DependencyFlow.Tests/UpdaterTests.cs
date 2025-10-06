@@ -12,6 +12,8 @@ using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
 using ProductConstructionService.Common;
+using ProductConstructionService.DependencyFlow.Model;
+using ProductConstructionService.DependencyFlow.Tests.Mocks;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.Tests;

@@ -6,6 +6,7 @@ using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using NUnit.Framework;
+using ProductConstructionService.DependencyFlow.Model;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
 
@@ -44,6 +45,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             UpdaterId = GetPullRequestUpdaterId(Subscription).Id,
             Url = VmrPullRequestUrl,
             HeadBranch = InProgressPrHeadBranch,
+            HeadBranchSha = InProgressPrHeadBranchSha,
             SourceSha = build.Commit,
             ContainedSubscriptions =
             [
@@ -171,6 +173,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                 UpdaterId = GetPullRequestUpdaterId(Subscription).Id,
                 Url = VmrPullRequestUrl,
                 HeadBranch = InProgressPrHeadBranch,
+                HeadBranchSha = InProgressPrHeadBranchSha,
                 SourceSha = build2.Commit,
                 ContainedSubscriptions =
                 [

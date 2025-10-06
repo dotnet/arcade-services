@@ -335,22 +335,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             throw new NotImplementedException("Expected that source and target ref names returned from pull request API include refs/heads");
         }
 
-        return new PullRequest
-        {
-            Title = pr.Title,
-            Description = pr.Description,
-            BaseBranch = pr.TargetRefName.Substring(RefsHeadsPrefix.Length),
-            HeadBranch = pr.SourceRefName.Substring(RefsHeadsPrefix.Length),
-            Status = pr.Status switch
-            {
-                PullRequestStatus.Active => PrStatus.Open,
-                PullRequestStatus.Completed => PrStatus.Merged,
-                PullRequestStatus.Abandoned => PrStatus.Closed,
-                _ => PrStatus.None,
-            },
-            UpdatedAt = DateTimeOffset.UtcNow,
-            TargetBranchCommitSha = pr.LastMergeTargetCommit.CommitId,
-        };
+        return ToDarcLibPullRequest(pr);
     }
 
     /// <summary>
@@ -358,8 +343,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// </summary>
     /// <param name="repoUri">Repository URI</param>
     /// <param name="pullRequest">Pull request data</param>
-    /// <returns>URL of new pull request</returns>
-    public async Task<string> CreatePullRequestAsync(string repoUri, PullRequest pullRequest)
+    public async Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest)
     {
         (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
 
@@ -377,7 +361,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             projectName,
             repoName);
 
-        return createdPr.Url;
+        return ToDarcLibPullRequest(createdPr);
     }
 
     /// <summary>
@@ -385,7 +369,6 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// </summary>
     /// <param name="pullRequestUri">Uri of pull request to update</param>
     /// <param name="pullRequest">Pull request info to update</param>
-    /// <returns></returns>
     public async Task UpdatePullRequestAsync(string pullRequestUri, PullRequest pullRequest)
     {
         (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUri);
@@ -1008,7 +991,6 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// <param name="repoUri">Remote repository URI</param>
     /// <param name="branch">Branch to push to</param>
     /// <param name="commitMessage">Commit message</param>
-    /// <returns></returns>
     public async Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
         => await CommitFilesAsync(
             filesToCommit,
@@ -1540,7 +1522,6 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     ///  See https://github.com/dotnet/arcade/issues/5811 
     /// </summary>
     /// <param name="str">String to be shortened if necessary</param>
-    /// <returns></returns>
     private static string TruncateDescriptionIfNeeded(string str)
     {
         if (str.Length > MaxPullRequestDescriptionLength)
@@ -1871,4 +1852,22 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             throw;
         }
     }
+
+    private static PullRequest ToDarcLibPullRequest(GitPullRequest pr) => new()
+    {
+        Url = pr.Url,
+        Title = pr.Title,
+        Description = pr.Description,
+        BaseBranch = pr.TargetRefName.Substring(RefsHeadsPrefix.Length),
+        HeadBranch = pr.SourceRefName.Substring(RefsHeadsPrefix.Length),
+        Status = pr.Status switch
+        {
+            PullRequestStatus.Active => PrStatus.Open,
+            PullRequestStatus.Completed => PrStatus.Merged,
+            PullRequestStatus.Abandoned => PrStatus.Closed,
+            _ => PrStatus.None,
+        },
+        UpdatedAt = DateTimeOffset.UtcNow,
+        HeadBranchSha = pr.LastMergeSourceCommit.CommitId,
+    };
 }
