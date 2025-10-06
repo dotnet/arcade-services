@@ -16,10 +16,10 @@ internal class FlowCommitOptions : Options
     [Option("source-repo", HelpText = "Repo (full URI) to flow the commit from (must be under maestro-auth-test/)", Required = true)]
     public required string SourceRepository { get; init; }
 
-    [Option("source-branch", HelpText = "Branch whose commit will be flown. Ignored if source-commit is provided.", Required = false)]
+    [Option("source-branch", HelpText = "Either --source-branch or --source-commit is required. Branch whose commit will be flown. Ignored if source-commit is provided.", Required = false)]
     public string? SourceBranch { get; init; }
 
-    [Option("source-commit", HelpText = "Source commit that will be flown", Required = false)]
+    [Option("source-commit", HelpText = "Either --source-branch or --source-commit is required. Source commit that will be flown.", Required = false)]
     public string? SourceCommit { get; init; }
 
     [Option("target-repo", HelpText = "Repo (full URI) to flow the commit to (must be under maestro-auth-test/)", Required = true)]
