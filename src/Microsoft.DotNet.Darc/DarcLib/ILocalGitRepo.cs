@@ -134,7 +134,7 @@ public interface ILocalGitRepo
     /// <returns>File contents</returns>
     Task<string?> GetFileFromGitAsync(
         string relativeFilePath,
-        string revision = "HEAD",
+        string? revision = "HEAD",
         string? outputPath = null);
 
     /// <summary>

@@ -95,7 +95,7 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
                     $"Merge {targetRepoJsonRelativePath} changes from VMR");
         }
 
-        await targetRepo.StageAsync(["."]);
+        await targetRepo.StageAsync([targetRepoJsonRelativePath]);
     }
 
     private static async Task<string> GetJsonFromGit(ILocalGitRepo repo, string jsonRelativePath, string reference, bool allowMissingFile) =>

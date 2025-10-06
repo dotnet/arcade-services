@@ -153,6 +153,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 targetBranch,
                 currentFlow,
                 lastFlows,
+                rebase,
                 cancellationToken);
         }
 

@@ -173,7 +173,7 @@ public class LocalGitClient : ILocalGitClient
 
     public async Task StageAsync(string repoPath, IEnumerable<string> pathsToStage, CancellationToken cancellationToken = default)
     {
-        var result = await _processManager.ExecuteGit(repoPath, pathsToStage.Prepend("add"), cancellationToken: cancellationToken);
+        var result = await _processManager.ExecuteGit(repoPath, ["add", ..pathsToStage], cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to stage {string.Join(", ", pathsToStage)} in {repoPath}");
     }
 
@@ -423,7 +423,7 @@ public class LocalGitClient : ILocalGitClient
         return result.GetOutputLines();
     }
 
-    public async Task<string?> GetFileFromGitAsync(string repoPath, string relativeFilePath, string revision = "HEAD", string? outputPath = null)
+    public async Task<string?> GetFileFromGitAsync(string repoPath, string relativeFilePath, string? revision = "HEAD", string? outputPath = null)
     {
         // git show doesn't work with windows paths \\, so replace it with a /
         var args = new List<string>

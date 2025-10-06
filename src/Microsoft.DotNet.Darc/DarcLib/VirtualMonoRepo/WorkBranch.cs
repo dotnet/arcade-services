@@ -106,12 +106,20 @@ public class WorkBranch(
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        await _patchHandler.ApplyPatches(
-            patches,
-            _repo.Path,
-            removePatchAfter: true,
-            keepConflicts,
-            cancellationToken: cancellationToken);
+        try
+        {
+            await _patchHandler.ApplyPatches(
+                patches,
+                _repo.Path,
+                removePatchAfter: true,
+                keepConflicts,
+                cancellationToken: cancellationToken);
+        }
+        catch (PatchApplicationLeftConflictsException)
+        {
+            await _repo.DeleteBranchAsync(_workBranch);
+            throw;
+        }
 
         await _repo.DeleteBranchAsync(_workBranch);
     }
