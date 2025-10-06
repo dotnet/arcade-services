@@ -58,28 +58,7 @@ internal class UpdateDependenciesOperation : Operation
         {
             var local = new Local(_options.GetRemoteTokenProvider(), _logger);
             var excludedAssetsMatcher = _options.ExcludedAssets?.Split(';').GetAssetMatcher();
-            List<UnixPath> targetDirectories = [];
-            if (string.IsNullOrEmpty(_options.TargetDirectory))
-            {
-                targetDirectories.Add(UnixPath.Empty);
-            }
-            else
-            {
-                targetDirectories = [];
-                foreach (var dir in _options.TargetDirectory.Split(','))
-                {
-                    if (dir.EndsWith('*'))
-                    {
-                        var trimmedDir = dir.TrimEnd('/', '*');
-                        var fullDirPath = new UnixPath(local.GetRepoRoot()) / trimmedDir;
-                        targetDirectories.AddRange(_fileSystem.GetDirectories(fullDirPath).Select(p => new UnixPath(p.Substring(local.GetRepoRoot().Length + 1))));
-                    }
-                    else
-                    {
-                        targetDirectories.Add(new UnixPath(dir));
-                    }
-                }
-            }
+            List<UnixPath> targetDirectories = ResolveTargetDirectories(local);
 
             ConcurrentDictionary<string, Task<Build>> latestBuildTaskDictionary = new();
             foreach (var targetDirectory in targetDirectories)
@@ -104,6 +83,34 @@ internal class UpdateDependenciesOperation : Operation
             _logger.LogError(e, "Failed to update dependencies.");
             return Constants.ErrorCode;
         }
+    }
+
+    private List<UnixPath> ResolveTargetDirectories(Local local)
+    {
+        List<UnixPath> targetDirectories = [];
+        if (string.IsNullOrEmpty(_options.TargetDirectory))
+        {
+            targetDirectories.Add(UnixPath.Empty);
+        }
+        else
+        {
+            targetDirectories = [];
+            foreach (var dir in _options.TargetDirectory.Split(','))
+            {
+                if (dir.EndsWith('*'))
+                {
+                    var trimmedDir = dir.TrimEnd('/', '*');
+                    var fullDirPath = new UnixPath(local.GetRepoRoot()) / trimmedDir;
+                    targetDirectories.AddRange(_fileSystem.GetDirectories(fullDirPath).Select(p => new UnixPath(p.Substring(local.GetRepoRoot().Length + 1))));
+                }
+                else
+                {
+                    targetDirectories.Add(new UnixPath(dir));
+                }
+            }
+        }
+
+        return targetDirectories;
     }
 
     private int NonCoherencyUpdatesForBuild(
