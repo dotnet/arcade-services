@@ -118,7 +118,7 @@ public class Local
                 if (repoIsVmr)
                 {
                     string pathToReplaceWith;
-                    if (relativeDependencyBasePath.ToString() == UnixPath.Empty)
+                    if (relativeDependencyBasePath == UnixPath.Empty)
                     {
                         pathToReplaceWith = null;
                     }
@@ -236,10 +236,17 @@ public class Local
     {
         var sourceFolder = Path.Combine(_repoRootDir.Value, dependencyRelativeBasePath ?? string.Empty, path);
         var files = Directory.GetFiles(sourceFolder, "*.*", SearchOption.AllDirectories);
+
         return files
-            .Select(file => new GitFile(
-                file.Remove(0, _repoRootDir.Value.Length + 1).Replace("\\", "/"),
-                File.ReadAllText(file)))
+            .Select(file =>
+            {
+                var relativePath = file.Remove(0, _repoRootDir.Value.Length + 1).Replace("\\", "/");
+                if (relativePath.StartsWith("./"))
+                {
+                    relativePath = relativePath.Substring(2);
+                }
+                return new GitFile(relativePath, File.ReadAllText(file));
+            })
             .ToList();
     }
 
