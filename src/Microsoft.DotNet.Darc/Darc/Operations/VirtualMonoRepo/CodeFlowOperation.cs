@@ -64,9 +64,10 @@ internal abstract class CodeFlowOperation(
     {
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         ILocalGitRepo productRepo = _localGitRepoFactory.Create(repoPath);
+        ILocalGitRepo sourceRepo = isForwardFlow ? productRepo : vmr;
         ILocalGitRepo targetRepo = isForwardFlow ? vmr : productRepo;
 
-        Build build = await GetBuildAsync(_vmrInfo.VmrPath);
+        Build build = await GetBuildAsync(sourceRepo.Path);
         string mappingName = await GetSourceMappingNameAsync(productRepo.Path);
 
         await VerifyLocalRepositoriesAsync(productRepo);

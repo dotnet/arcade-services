@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
@@ -126,7 +127,7 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
         await File.WriteAllTextAsync(_productRepoFilePath, newContent);
         await GitOperations.CommitAll(ProductRepoPath, $"Changing a repo file to '{newContent}'");
 
-        var codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         CheckFileContents(_productRepoVmrFilePath, newContent);
         await GitOperations.CheckAllIsCommitted(VmrPath);
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
@@ -140,7 +141,7 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
         await File.WriteAllTextAsync(_productRepoVmrPath / _productRepoFileName, newContent);
         await GitOperations.CommitAll(VmrPath, $"Changing a VMR file to '{newContent}'");
 
-        var codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        var codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         CheckFileContents(_productRepoFilePath, newContent);
         return codeFlowResult;
     }
@@ -205,28 +206,36 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
         await GitOperations.CommitAll(VmrPath, "Create global json in vmr`s base");
     }
 
-    protected async Task<string[]> CallDarcForwardflow()
+    protected async Task<string[]> CallDarcForwardflow(int buildId = 0, string[]? expectedConflicts = null)
         => await CallDarcCodeFlowOperation<ForwardFlowOperation>(
             new ForwardFlowCommandLineOptions
             {
                 VmrPath = VmrPath,
                 TmpPath = TmpPath,
+                Build = buildId,
             },
             ProductRepoPath,
-            VmrPath);
+            VmrPath,
+            expectedConflicts);
 
-    protected async Task<string[]> CallDarcBackflow()
+    protected async Task<string[]> CallDarcBackflow(int buildId = 0, string[]? expectedConflicts = null)
         => await CallDarcCodeFlowOperation<BackflowOperation>(
             new BackflowCommandLineOptions
             {
                 VmrPath = VmrPath,
                 TmpPath = TmpPath,
                 Repository = ProductRepoPath,
+                Build = buildId,
             },
             VmrPath,
-            ProductRepoPath);
+            ProductRepoPath,
+            expectedConflicts);
 
-    private async Task<string[]> CallDarcCodeFlowOperation<T>(ICodeFlowCommandLineOptions options, NativePath sourceRepo, NativePath targetRepo)
+    private async Task<string[]> CallDarcCodeFlowOperation<T>(
+            ICodeFlowCommandLineOptions options,
+            NativePath sourceRepo,
+            NativePath targetRepo,
+            string[]? expectedConflicts)
         where T : CodeFlowOperation
     {
 
@@ -236,7 +245,24 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
         try
         {
             var result = await operation.ExecuteAsync();
-            result.Should().Be(0);
+
+            if (expectedConflicts == null || expectedConflicts.Length == 0)
+            {
+                result.Should().Be(0);
+            }
+            else
+            {
+                result.Should().Be(42);
+
+                foreach (var expectedFile in expectedConflicts)
+                {
+                    var diff = await GitOperations.ExecuteGitCommand(targetRepo, ["diff", "--name-status"]);
+                    diff.StandardOutput.Should().MatchRegex(@$"^U\s+{Regex.Escape(expectedFile)}");
+
+                    var expectedFilePath = targetRepo / expectedFile;
+                    (await File.ReadAllTextAsync(expectedFilePath)).Should().Contain(">>>>>");
+                }
+            }
         }
         finally
         {

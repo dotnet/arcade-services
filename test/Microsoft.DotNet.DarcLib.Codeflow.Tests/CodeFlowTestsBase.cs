@@ -208,7 +208,7 @@ internal abstract class CodeFlowTestsBase
             cancellationToken: _cancellationToken.Token);
     }
 
-    protected async Task<CodeFlowResult> CallDarcBackflow(
+    protected async Task<CodeFlowResult> CallBackflow(
         string mappingName,
         NativePath repoPath,
         string branch,
@@ -244,7 +244,7 @@ internal abstract class CodeFlowTestsBase
         return codeFlowResult; 
     }
 
-    protected async Task<CodeFlowResult> CallDarcForwardflow(
+    protected async Task<CodeFlowResult> CallForwardflow(
         string mappingName,
         NativePath repoPath,
         string branch,

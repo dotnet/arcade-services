@@ -30,7 +30,7 @@ internal class ForwardFlowTests : CodeFlowTests
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
         // Flow again - should be a no-op
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldNotHaveUpdates();
         await GitOperations.Checkout(VmrPath, "main");
         await GitOperations.DeleteBranch(VmrPath, branchName);
@@ -56,7 +56,7 @@ internal class ForwardFlowTests : CodeFlowTests
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
 
         // We used the changes from the repo - let's verify flowing back won't change anything
-        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
     }
 
@@ -83,7 +83,7 @@ internal class ForwardFlowTests : CodeFlowTests
         await File.WriteAllTextAsync(_productRepoFilePath + "_2", "New file from the repo");
         await GitOperations.CommitAll(ProductRepoPath, "New content in the individual repo again");
 
-        var stagedFiles = await CallDarcForwardflow();
+        string[] stagedFiles = await CallDarcForwardflow();
 
         // Verify that expected files are staged
         string[] expectedFiles =
@@ -101,17 +101,17 @@ internal class ForwardFlowTests : CodeFlowTests
         await File.WriteAllTextAsync(_productRepoVmrFilePath, "A conflicting change in the VMR");
         await GitOperations.CommitAll(VmrPath, "A conflicting change in the VMR");
 
-        stagedFiles = await CallDarcForwardflow();
+        var build = CreateNewRepoBuild(
+        [
+            ("Package.A1", "1.0.1"),
+            ("Package.B1", "1.0.1"),
+            ("Package.C2", "1.0.1"),
+            ("Package.D3", "1.0.1"),
+        ]);
+
+        stagedFiles = await CallDarcForwardflow(build.Id, [expectedFiles[0]]);
         stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
-
-        // Verify that a file is in a conflicted state
-        (await GitOperations.ExecuteGitCommand(VmrPath, ["diff", "--name-status"])).StandardOutput.Should().MatchRegex(@$"^U\s+{Regex.Escape(expectedFiles[0])}");
-        (await File.ReadAllTextAsync(_productRepoVmrFilePath)).Should().Contain(">>>>>");
         CheckFileContents(VmrPath / expectedFiles[1], "New file from the repo");
-
-        await GitOperations.ExecuteGitCommand(VmrPath, ["add", "--", .. expectedFiles]);
-        await GitOperations.CommitAll(VmrPath, "Commit staged files");
-        await GitOperations.CheckAllIsCommitted(VmrPath);
     }
 
     [Test]
@@ -144,7 +144,7 @@ internal class ForwardFlowTests : CodeFlowTests
 
         // Level the repo and the VMR
         const string branchName = nameof(MeaninglessChangesAreSkippedTest);
-        var codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
@@ -158,7 +158,7 @@ internal class ForwardFlowTests : CodeFlowTests
                 ("Package.D3", "2.0.0"),
             ]);
 
-        codeFlowResult = await CallDarcBackflow(
+        codeFlowResult = await CallBackflow(
             Constants.ProductRepoName,
             ProductRepoPath,
             branchName + "-backflow",
@@ -168,19 +168,19 @@ internal class ForwardFlowTests : CodeFlowTests
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
 
         // We flow to VMR again to level the content
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
         var secondBuild = await CreateNewVmrBuild(
-            [
-                ("Package.A1", "3.0.0"),
-                ("Package.B1", "3.0.0"),
-                ("Package.C2", "3.0.0"),
-                ("Package.D3", "3.0.0"),
-            ]);
+        [
+            ("Package.A1", "3.0.0"),
+            ("Package.B1", "3.0.0"),
+            ("Package.C2", "3.0.0"),
+            ("Package.D3", "3.0.0"),
+        ]);
 
-        codeFlowResult = await CallDarcBackflow(
+        codeFlowResult = await CallBackflow(
             Constants.ProductRepoName,
             ProductRepoPath,
             branchName + "-backflow",
@@ -190,7 +190,7 @@ internal class ForwardFlowTests : CodeFlowTests
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
 
         // Now we try to flow forward and expect no meaningful changes to be detected
-        codeFlowResult = await CallDarcForwardflow(
+        codeFlowResult = await CallForwardflow(
             Constants.ProductRepoName,
             ProductRepoPath,
             branchName,
@@ -215,7 +215,7 @@ internal class ForwardFlowTests : CodeFlowTests
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
         // Flow again - should be a no-op
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldNotHaveUpdates();
 
         await GitOperations.Checkout(ProductRepoPath, "main");
@@ -232,7 +232,7 @@ internal class ForwardFlowTests : CodeFlowTests
 
         // Commits #1 and #2 are not related
         // Now we flow the main commit into the VMR which is not forked yet
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
@@ -242,7 +242,7 @@ internal class ForwardFlowTests : CodeFlowTests
 
         // Now we try to flow the release/10.0 commit from the repo into the VMR release/10.0 branch
         await GitOperations.Checkout(ProductRepoPath, "release/10.0");
-        Func<Task> act = async () => await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "2");
+        Func<Task> act = async () => await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "2");
         await act.Should().ThrowAsync<NonLinearCodeflowException>();
     }
 }
