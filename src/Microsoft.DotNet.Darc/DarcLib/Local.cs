@@ -136,7 +136,7 @@ public class Local
                             f.Operation))
                         .ToList();
                 }
-                else if (relativeDependencyBasePath.ToString() != UnixPath.Empty)
+                else if (relativeDependencyBasePath != UnixPath.Empty)
                 {
                     engCommonFiles = engCommonFiles
                         .Select(f => new GitFile(
