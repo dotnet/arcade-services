@@ -60,13 +60,13 @@ internal class FlowCommitOperation : Operation
         var (sourceRepo, sourceOwner) = GitRepoUrlUtils.GetRepoNameAndOwner(_options.SourceRepository);
         var (targetRepo, targetOwner) = GitRepoUrlUtils.GetRepoNameAndOwner(_options.TargetRepository);
 
-        var (isSourceEnabled, isForwardFlow) = await GetCodeflowMetadata(_options.SourceRepository, _options.TargetRepository);
+        bool isForwardFlow = await IsForwardFlow(sourceOwner, sourceRepo, targetOwner, targetRepo);
 
         var subscriptions = await _localPcsApi.Subscriptions.ListSubscriptionsAsync(
             channelId: channel.Id,
             sourceRepository: _options.SourceRepository,
             targetRepository: _options.TargetRepository,
-            sourceEnabled: isSourceEnabled);
+            sourceEnabled: true);
 
         Subscription subscription = subscriptions.FirstOrDefault(s => s.TargetBranch == _options.TargetBranch)
             ?? await _localPcsApi.Subscriptions.CreateAsync(
@@ -81,7 +81,7 @@ internal class FlowCommitOperation : Operation
                     },
                     null)
                 {
-                    SourceEnabled = isSourceEnabled,
+                    SourceEnabled = true,
                     SourceDirectory = isForwardFlow ? null : targetRepo,
                     TargetDirectory = isForwardFlow ? sourceRepo : null,
                 });
@@ -124,8 +124,7 @@ internal class FlowCommitOperation : Operation
             ];
         }
 
-        _logger.LogInformation("source commit is {}", sourceCommit);
-        _logger.LogInformation("Subscription is source enbaled: {}", isSourceEnabled);
+        _logger.LogInformation("Source commit is {}", sourceCommit);
         _logger.LogInformation("Subscription is forward-flow: {}", isForwardFlow);
 
         var build = await _localPcsApi.Builds.CreateAsync(new BuildData(
@@ -152,7 +151,7 @@ internal class FlowCommitOperation : Operation
         _logger.LogInformation("Subscription triggered. Wait for a PR in {url}", $"{_options.TargetRepository}/pulls");
     }
 
-    private async Task<bool> IsRepoVmr(string repoName, string repoOwner)
+    private async Task<bool> IsVmr(string repoName, string repoOwner)
     {
         try
         {
@@ -169,22 +168,22 @@ internal class FlowCommitOperation : Operation
         }
     }
 
-    private async Task<(bool isSourceEnabled, bool isForwardFlow)> GetCodeflowMetadata(
-        string sourceUri,
-        string targetUri)
+    private async Task<bool> IsForwardFlow(
+        string sourceOwner,
+        string sourceRepo,
+        string targetOwner,
+        string targetRepo)
     {
-        var (targetRepo, targetOwner) = GitRepoUrlUtils.GetRepoNameAndOwner(targetUri);
-        if (await IsRepoVmr(targetRepo, targetOwner))
+        if (await IsVmr(targetRepo, targetOwner))
         {
-            return (true, true);
+            return true;
         }
 
-        var (sourceRepo, sourceOwner) = GitRepoUrlUtils.GetRepoNameAndOwner(sourceUri);
-        if (await IsRepoVmr(sourceRepo, sourceOwner))
+        if (await IsVmr(sourceRepo, sourceOwner))
         {
-            return (true, false);
+            return false;
         }
 
-        return (false, false);
+        throw new InvalidOperationException("Neither the source nor the target repository appears to be a VMR.");
     }
 }
