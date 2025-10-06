@@ -57,7 +57,7 @@ internal class UpdateDependenciesOperation : Operation
         try
         {
             var local = new Local(_options.GetRemoteTokenProvider(), _logger);
-            var assetMatcher = (_options.ExcludedAssets?.Split(';') ?? null).GetAssetMatcher();
+            var excludedAssetsMatcher = (_options.ExcludedAssets?.Split(';') ?? null).GetAssetMatcher();
             List<UnixPath> targetDirectories = [];
             if (string.IsNullOrEmpty(_options.TargetDirectory))
             {
@@ -84,7 +84,7 @@ internal class UpdateDependenciesOperation : Operation
             ConcurrentDictionary<string, Task<Build>> latestBuildTaskDictionary = new();
             foreach (var targetDirectory in targetDirectories)
             {
-                await UpdateDependenciesInDirectory(targetDirectory, local, latestBuildTaskDictionary);
+                await UpdateDependenciesInDirectory(targetDirectory, local, latestBuildTaskDictionary, excludedAssetsMatcher);
             }
 
             return Constants.SuccessCode;
@@ -110,9 +110,12 @@ internal class UpdateDependenciesOperation : Operation
         Build build,
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> candidateDependenciesForUpdate,
-        List<DependencyDetail> dependenciesToUpdate)
+        List<DependencyDetail> dependenciesToUpdate,
+        IAssetMatcher excludedAssetsMatcher,
+        UnixPath relativeBasePath)
     {
         List<AssetData> assetData = build.Assets
+            .Where(a => !excludedAssetsMatcher.IsExcluded(a.Name, relativeBasePath))
             .Select(a => new AssetData(a.NonShipping)
             {
                 Name = a.Name,
@@ -150,7 +153,8 @@ internal class UpdateDependenciesOperation : Operation
     private async Task UpdateDependenciesInDirectory(
         UnixPath relativeBasePath,
         Local local,
-        ConcurrentDictionary<string, Task<Build>> latestBuildTaskDictionary)
+        ConcurrentDictionary<string, Task<Build>> latestBuildTaskDictionary,
+        IAssetMatcher excludedAssetsMatcher)
     {
         List<DependencyDetail> dependenciesToUpdate = [];
 
@@ -200,11 +204,22 @@ internal class UpdateDependenciesOperation : Operation
 
             if (_options.BARBuildId > 0)
             {
-                await RunNonCoherencyUpdateForSpecificBuild(currentDependencies, candidateDependenciesForUpdate, dependenciesToUpdate);
+                await RunNonCoherencyUpdateForSpecificBuild(
+                    currentDependencies,
+                    candidateDependenciesForUpdate,
+                    dependenciesToUpdate,
+                    excludedAssetsMatcher,
+                    relativeBasePath);
             }
             else if (!string.IsNullOrEmpty(_options.Channel))
             {
-                await RunNonCoherencyUpdateForChannel(latestBuildTaskDictionary, currentDependencies, candidateDependenciesForUpdate, dependenciesToUpdate, relativeBasePath);
+                await RunNonCoherencyUpdateForChannel(
+                    latestBuildTaskDictionary,
+                    currentDependencies,
+                    candidateDependenciesForUpdate,
+                    dependenciesToUpdate,
+                    excludedAssetsMatcher,
+                    relativeBasePath);
             }
         }
 
@@ -308,7 +323,9 @@ internal class UpdateDependenciesOperation : Operation
     private async Task RunNonCoherencyUpdateForSpecificBuild(
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> candidateDependenciesForUpdate,
-        List<DependencyDetail> dependenciesToUpdate)
+        List<DependencyDetail> dependenciesToUpdate,
+        IAssetMatcher excludedAssetsMatcher,
+        UnixPath relativeBasePath)
     {
         try
         {
@@ -318,7 +335,9 @@ internal class UpdateDependenciesOperation : Operation
                 specificBuild,
                 currentDependencies,
                 candidateDependenciesForUpdate,
-                dependenciesToUpdate);
+                dependenciesToUpdate,
+                excludedAssetsMatcher,
+                relativeBasePath);
             if (nonCoherencyResult != Constants.SuccessCode)
             {
                 _logger.LogError("    Failed to update non-coherent parent tied dependencies.");
@@ -346,6 +365,7 @@ internal class UpdateDependenciesOperation : Operation
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> candidateDependenciesForUpdate,
         List<DependencyDetail> dependenciesToUpdate,
+        IAssetMatcher excludedAssetsMatcher,
         UnixPath relativeBasePath)
     {
         // Start channel query.
@@ -384,7 +404,9 @@ internal class UpdateDependenciesOperation : Operation
                 build,
                 currentDependencies,
                 candidateDependenciesForUpdate,
-                dependenciesToUpdate);
+                dependenciesToUpdate,
+                excludedAssetsMatcher,
+                relativeBasePath);
             if (nonCoherencyResult != Constants.SuccessCode)
             {
                 throw new DarcException($"Failed to update non-coherent parent tied dependencies in {relativeBasePath}");

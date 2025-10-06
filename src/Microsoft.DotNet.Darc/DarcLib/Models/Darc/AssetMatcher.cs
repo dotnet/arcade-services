@@ -30,6 +30,7 @@ public static class AssetFilterExtensions
 public interface IAssetMatcher
 {
     bool IsExcluded(string name);
+    bool IsExcluded(string name, UnixPath relativePath);
 }
 
 public class AssetMatcher : IAssetMatcher
