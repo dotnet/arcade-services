@@ -339,6 +339,9 @@ public class VmrPatchHandler : IVmrPatchHandler
                 throw new PatchApplicationFailedException(patch, result, reverseApply);
             }
 
+            // Add any new files
+            await repo.ExecuteGitCommand(["add -A"], cancellationToken);
+
             // Put them in the conflicted state with conflict markers (by default they are resolved using --ours strategy):
             cancellationToken.ThrowIfCancellationRequested();
             var checkoutResult = await repo.ExecuteGitCommand(["checkout", "--merge", "--", "."], CancellationToken.None);
