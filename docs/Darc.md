@@ -708,18 +708,10 @@ If your repository still uses the legacy approach where dependency properties ar
 you can migrate to the new approach:
 
 1. Create an empty `eng/Version.Details.props` file
-2. Add the import to `eng/Versions.props`:
-   ```xml
-   <Import Project="Version.Details.props" Condition="Exists('Version.Details.props')" />
-   ```
-3. Run `darc update-dependencies` to regenerate version properties
-4. Remove the auto-generated properties from `Versions.props`
-5. Keep any manually-managed properties in `Versions.props`
 
-The `Version.Details.props` merge policy will automatically validate that:
-- Properties from `Version.Details.props` don't conflict with properties in `Versions.props`
-- The import statement exists in `Versions.props`
-- All dependencies have corresponding properties (unless marked with `SkipProperty`)
+The file will be automatically populated during the next dependency update. The `Version.Details.props` 
+merge policy will provide further instructions on any additional configuration required, such as adding 
+the necessary import statement to `Versions.props` or resolving any property conflicts
 
 ### Adding dependency flow
 
