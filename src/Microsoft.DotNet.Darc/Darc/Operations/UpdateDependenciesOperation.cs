@@ -509,16 +509,14 @@ internal class UpdateDependenciesOperation : Operation
             throw new DarcException("The --subscription parameter cannot be used with --coherency-only.");
         }
 
-        // Note: --target-directory and --excluded-assets from command line are ignored when using --subscription
-        // The subscription's own settings will be used instead.
         if (!string.IsNullOrEmpty(_options.TargetDirectory))
         {
-            _logger.LogWarning("The --target-directory parameter is ignored when using --subscription. The subscription's target directory will be used.");
+            throw new DarcException("The --subscription parameter cannot be used with --target-directory. The subscription already specifies a target directory.");
         }
 
         if (!string.IsNullOrEmpty(_options.ExcludedAssets))
         {
-            _logger.LogWarning("The --excluded-assets parameter is ignored when using --subscription. The subscription's excluded assets will be used.");
+            throw new DarcException("The --subscription parameter cannot be used with --excluded-assets. The subscription already specifies excluded assets.");
         }
 
         // Parse and validate subscription ID
@@ -540,6 +538,12 @@ internal class UpdateDependenciesOperation : Operation
         catch (RestApiException e) when (e.Response.Status == 404)
         {
             throw new DarcException($"Subscription with ID '{subscriptionId}' not found.", e);
+        }
+
+        // Check if subscription is source-enabled (VMR code flow)
+        if (subscription.SourceEnabled)
+        {
+            throw new DarcException("Source-enabled subscriptions (VMR code flow) are not supported with --subscription. This parameter is only for dependency flow subscriptions.");
         }
 
         Console.WriteLine($"Simulating subscription '{subscription.Id}':");
