@@ -33,6 +33,8 @@ internal class ForwardFlowOperation(
     private readonly ForwardFlowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
+    private readonly IFileSystem _fileSystem = fileSystem;
     private readonly IProcessManager _processManager = processManager;
 
     protected override async Task ExecuteInternalAsync(
@@ -62,15 +64,17 @@ internal class ForwardFlowOperation(
             .Select(f => VmrInfo.GetRelativeRepoSourcesPath(mapping) / f)
     ];
 
-    protected override Task UpdateToolsetAndDependenciesAsync(
+    protected override async Task UpdateToolsetAndDependenciesAsync(
         SourceMapping mapping,
         LastFlows lastFlows,
         Codeflow currentFlow,
+        ILocalGitRepo sourceRepo,
         ILocalGitRepo targetRepo,
         Build build,
         string branch,
         CancellationToken cancellationToken)
     {
+        // Update source manifest
         var sourceManifest = SourceManifest.FromFile(_vmrInfo.SourceManifestPath);
         var version = sourceManifest.GetRepoVersion(mapping.Name) as IVersionedSourceComponent
             ?? throw new DarcException($"Failed to find repo version for {mapping.Name} in source manifest at {_vmrInfo.SourceManifestPath}");
@@ -83,6 +87,23 @@ internal class ForwardFlowOperation(
             OfficialBuildId: null,
             BarId: version.BarId));
 
-        return Task.CompletedTask;
+        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+
+        var targetPath = _vmrInfo.GetRepoSourcesPath(mapping) / DarcLib.Constants.CommonScriptFilesPath;
+
+        // Copy eng/common
+        try
+        {
+            _fileSystem.DeleteDirectory(targetPath, recursive: true);
+        }
+        catch { }
+
+        // TODO: Handle file permissions (if devs run this on Windows)
+        _fileSystem.CopyDirectory(
+             sourceRepo.Path / DarcLib.Constants.CommonScriptFilesPath,
+            targetPath,
+            true);
+
+        await vmr.StageAsync([targetPath, _vmrInfo.SourceManifestPath], cancellationToken);
     }
 }
