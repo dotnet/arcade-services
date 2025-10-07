@@ -575,11 +575,7 @@ internal class UpdateDependenciesOperation : Operation
         _options.Channel = subscription.Channel.Name;
         _options.SourceRepository = subscription.SourceRepository;
         _options.BARBuildId = latestBuild.Id;
-        
-        if (!string.IsNullOrEmpty(subscription.TargetDirectory))
-        {
-            _options.TargetDirectory = subscription.TargetDirectory;
-        }
+        _options.TargetDirectory = subscription.TargetDirectory;
 
         if (subscription.ExcludedAssets?.Any() == true)
         {
