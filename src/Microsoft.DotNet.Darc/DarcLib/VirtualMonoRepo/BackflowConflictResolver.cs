@@ -94,6 +94,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         bool rebase,
         CancellationToken cancellationToken)
     {
+        // If we are rebasing, we are already on top of the branch and we don't need to merge it
         IReadOnlyCollection<UnixPath> conflictedFiles = rebase
             ? []
             : await TryMergingBranchAndResolveConflicts(
@@ -476,12 +477,13 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             Environment.NewLine,
             BuildDependencyUpdateCommitMessage(dependencyUpdates));
 
+        // When rebasing, we only want to stage the changes, not commit them
         if (!rebase)
         {
             await targetRepo.CommitAsync(
-            commitMessage,
-            allowEmpty: false,
-            cancellationToken: cancellationToken);
+                commitMessage,
+                allowEmpty: false,
+                cancellationToken: cancellationToken);
         }
 
         return dependencyUpdates;
