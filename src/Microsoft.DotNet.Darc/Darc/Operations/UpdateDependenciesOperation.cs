@@ -529,11 +529,8 @@ internal class UpdateDependenciesOperation : Operation
         Subscription subscription;
         try
         {
-            subscription = await _barClient.GetSubscriptionAsync(subscriptionId);
-            if (subscription == null)
-            {
-                throw new DarcException($"Subscription with ID '{subscriptionId}' not found.");
-            }
+            subscription = await _barClient.GetSubscriptionAsync(subscriptionId)
+                ?? throw new DarcException($"Subscription with ID '{subscriptionId}' not found.");
         }
         catch (RestApiException e) when (e.Response.Status == 404)
         {
