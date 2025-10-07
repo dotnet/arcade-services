@@ -236,7 +236,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 patches,
                 targetRepo.Path,
                 removePatchAfter: true,
-                keepConflicts: false,
+                keepConflicts: rebase,
                 cancellationToken: cancellationToken);
         }
         catch (PatchApplicationFailedException e)
@@ -249,20 +249,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             {
                 _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
                 throw new ConflictInPrBranchException(e.Result.StandardError, targetBranch, mapping.Name, isForwardFlow: false);
-            }
-
-            // If we want to keep the conflicts, we need to reapply the patches again and leave the conflicts in place
-            if (rebase)
-            {
-                _logger.LogInformation("Conflicts encountered during patch application. Retaining conflicts");
-                await _vmrPatchHandler.ApplyPatches(
-                    patches,
-                    targetRepo.Path,
-                    removePatchAfter: true,
-                    keepConflicts: true,
-                    cancellationToken: cancellationToken);
-
-                throw new InvalidOperationException("Patch application did not fail as expected when retaining conflicts. The operation is in an unexpected state.");
             }
 
             // Otherwise, we have a conflicting change in the last backflow PR (before merging)

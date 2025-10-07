@@ -255,6 +255,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 build,
                 additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
                 resetToRemoteWhenCloningRepo: ShouldResetClones,
+                keepConflicts: true,
                 cancellationToken: cancellationToken);
         }
         catch (PatchApplicationFailedException e)
@@ -264,21 +265,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             {
                 _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
                 throw new ConflictInPrBranchException(e.Result.StandardError, targetBranch, mapping.Name, isForwardFlow: true);
-            }
-
-            // If we want to keep the conflicts, we need to reapply the patches again and leave the conflicts in place
-            if (rebase)
-            {
-                _logger.LogInformation("Conflicts encountered - preparing conflicted files");
-                await _vmrUpdater.UpdateRepository(
-                    mapping,
-                    build,
-                    additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
-                    resetToRemoteWhenCloningRepo: ShouldResetClones,
-                    keepConflicts: true,
-                    cancellationToken: cancellationToken);
-
-                throw new InvalidOperationException("Patch application was expected to fail and leave conflicts when applying with 'keepConflicts: true', but it succeeded unexpectedly. This indicates an unhandled edge case or logic error.");
             }
 
             bool hadChanges = false;
