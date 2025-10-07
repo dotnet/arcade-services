@@ -59,11 +59,7 @@ internal class UpdateDependenciesOperation : Operation
             // If subscription ID is provided, fetch subscription metadata and populate options
             if (!string.IsNullOrEmpty(_options.SubscriptionId))
             {
-                int result = await PopulateOptionsFromSubscriptionAsync();
-                if (result != Constants.SuccessCode)
-                {
-                    return result;
-                }
+                await PopulateOptionsFromSubscriptionAsync();
             }
 
             var local = new Local(_options.GetRemoteTokenProvider(), _logger);
@@ -480,7 +476,7 @@ internal class UpdateDependenciesOperation : Operation
     /// Fetch subscription metadata and populate command options based on subscription settings.
     /// This allows the subscription to be simulated using the existing update logic.
     /// </summary>
-    private async Task<int> PopulateOptionsFromSubscriptionAsync()
+    private async Task PopulateOptionsFromSubscriptionAsync()
     {
         // Validate that subscription is not used with conflicting options
         if (!string.IsNullOrEmpty(_options.Channel))
@@ -585,7 +581,5 @@ internal class UpdateDependenciesOperation : Operation
         {
             _options.ExcludedAssets = string.Join(";", subscription.ExcludedAssets);
         }
-
-        return Constants.SuccessCode;
     }
 }
