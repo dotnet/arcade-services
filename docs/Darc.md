@@ -702,11 +702,6 @@ a corresponding property generated:
 - If ALL dependencies from a repository have `SkipProperty="true"`, no repository header
   comment will be generated in `Version.Details.props`
 
-**When to use SkipProperty:**
-- Dependencies used only in test projects where versions are managed differently
-- Dependencies that are transitively referenced but don't need explicit version properties
-- Dependencies where the consuming repository uses a different mechanism to reference the version
-
 #### Migration from Versions.props to Version.Details.props
 
 If your repository still uses the legacy approach where dependency properties are in `Versions.props`,
