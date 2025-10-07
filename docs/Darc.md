@@ -384,6 +384,31 @@ index 8e5dab10..ede83435 100644
  }
 ```
 
+#### Simulating a subscription update
+
+Sometimes you may want to locally test what a specific Maestro subscription would do before it runs automatically. The `--subscription` parameter allows you to simulate a subscription update locally:
+
+```
+PS C:\enlistments\runtime> darc update-dependencies --subscription 12345678-1234-1234-1234-123456789012 --dry-run
+
+Simulating subscription '12345678-1234-1234-1234-123456789012':
+  Source: https://github.com/dotnet/arcade (channel: .NET Tools - Latest)
+  Target: https://github.com/dotnet/runtime#main
+Processing directory: root
+    Updating 'Microsoft.DotNet.Arcade.Sdk': '1.0.0-beta.19080.6' => '1.0.0-beta.19081.3' (from build '20190131.3' of 'https://github.com/dotnet/arcade')
+  [DRY RUN] Would update 1 dependencies in root
+Dry run complete. No changes were made.
+```
+
+This feature:
+- Fetches the subscription metadata from Maestro (source repo, channel, target repo/branch, excluded assets, target directory)
+- Determines which build Maestro would apply for that subscription
+- Shows what updates would be made
+- Respects the subscription's target directory and excluded assets filters
+- Works with `--dry-run` to preview changes without modifying files
+
+**Note**: The `--subscription` parameter cannot be used with `--channel`, `--id`, `--packages-folder`, `--name`/`--version`, `--source-repo`, or `--coherency-only` as these would conflict with the subscription's own settings.
+
 ### Removing dependencies from a repository
 
 Removing a dependency from a repository involves simply removing the appropriate
@@ -2564,6 +2589,7 @@ This command has two additional non-default modes:
 - Use a local package folder as input, avoiding a remote call to the
 build asset registry (--packages-folder)
 - Update a specific dependency to a new version (--name and --version)
+- Simulate a specific Maestro subscription locally (--subscription)
 
 This command is especially useful after adding new dependencies to a repository.
 See [Updating dependencies in your local
