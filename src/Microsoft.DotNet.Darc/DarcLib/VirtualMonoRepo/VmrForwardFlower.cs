@@ -255,7 +255,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 build,
                 additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
                 resetToRemoteWhenCloningRepo: ShouldResetClones,
-                keepConflicts: true,
+                keepConflicts: rebase,
                 cancellationToken: cancellationToken);
         }
         catch (PatchApplicationFailedException e)

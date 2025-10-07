@@ -322,30 +322,29 @@ public class VmrPatchHandler : IVmrPatchHandler
         var result = await repo.ExecuteGitCommand([..args], cancellationToken: CancellationToken.None);
         if (!result.Succeeded)
         {
-            // When we are applying and wish to keep conflicts in the working tree, we need to clean up a bit:
-            if (keepConflicts)
+            if (!keepConflicts)
             {
-                // Collect the list of conflicted files:
-                cancellationToken.ThrowIfCancellationRequested();
-                var conflictedFilesResult = await repo.ExecuteGitCommand(["diff", "--name-only", "--diff-filter=U"], CancellationToken.None);
-                conflictedFilesResult.ThrowIfFailed("Failed to get a list of conflicted files after patch application failed");
-
-                IReadOnlyCollection<UnixPath> conflictedFiles = [..conflictedFilesResult.GetOutputLines().Select(f => new UnixPath(f))];
-                if (conflictedFiles.Count == 0)
-                {
-                    _logger.LogWarning("Patch application failed, but no conflicted files were found in the output. Full output: {output}", conflictedFilesResult);
-                    throw new PatchApplicationFailedException(patch, result, reverseApply);
-                }
-
-                // Put them in the conflicted state with conflict markers (by default they are resolved using --ours strategy):
-                cancellationToken.ThrowIfCancellationRequested();
-                var checkoutResult = await repo.ExecuteGitCommand(["checkout", "--merge", "--", "."], CancellationToken.None);
-                checkoutResult.ThrowIfFailed("Failed to set the conflicted state after patch application failed");
-
-                throw new PatchApplicationLeftConflictsException(conflictedFiles, targetDirectory);
+                throw new PatchApplicationFailedException(patch, result, reverseApply);
             }
 
-            throw new PatchApplicationFailedException(patch, result, reverseApply);
+            // When we are applying and wish to keep conflicts in the working tree, we need to clean up a bit
+            cancellationToken.ThrowIfCancellationRequested();
+            var conflictedFilesResult = await repo.ExecuteGitCommand(["diff", "--name-only", "--diff-filter=U"], CancellationToken.None);
+            conflictedFilesResult.ThrowIfFailed("Failed to get a list of conflicted files after patch application failed");
+
+            IReadOnlyCollection<UnixPath> conflictedFiles = [.. conflictedFilesResult.GetOutputLines().Select(f => new UnixPath(f))];
+            if (conflictedFiles.Count == 0)
+            {
+                _logger.LogWarning("Patch application failed, but no conflicted files were found in the output. Full output: {output}", conflictedFilesResult);
+                throw new PatchApplicationFailedException(patch, result, reverseApply);
+            }
+
+            // Put them in the conflicted state with conflict markers (by default they are resolved using --ours strategy):
+            cancellationToken.ThrowIfCancellationRequested();
+            var checkoutResult = await repo.ExecuteGitCommand(["checkout", "--merge", "--", "."], CancellationToken.None);
+            checkoutResult.ThrowIfFailed("Failed to set the conflicted state after patch application failed");
+
+            throw new PatchApplicationLeftConflictsException(conflictedFiles, targetDirectory);
         }
 
         _logger.LogDebug("{output}", result.ToString());
