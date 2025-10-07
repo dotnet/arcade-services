@@ -478,6 +478,55 @@ internal class UpdateDependenciesOperation : Operation
     /// </summary>
     private async Task<int> UpdateDependenciesFromSubscriptionAsync()
     {
+        // Validate that subscription is not used with conflicting options
+        if (!string.IsNullOrEmpty(_options.Channel))
+        {
+            _logger.LogError("The --subscription parameter cannot be used with --channel. The subscription already specifies a channel.");
+            return Constants.ErrorCode;
+        }
+
+        if (_options.BARBuildId > 0)
+        {
+            _logger.LogError("The --subscription parameter cannot be used with --id. The subscription determines which build to use.");
+            return Constants.ErrorCode;
+        }
+
+        if (!string.IsNullOrEmpty(_options.PackagesFolder))
+        {
+            _logger.LogError("The --subscription parameter cannot be used with --packages-folder.");
+            return Constants.ErrorCode;
+        }
+
+        if (!string.IsNullOrEmpty(_options.Name) && !string.IsNullOrEmpty(_options.Version))
+        {
+            _logger.LogError("The --subscription parameter cannot be used with --name and --version. The subscription determines which dependencies to update.");
+            return Constants.ErrorCode;
+        }
+
+        if (!string.IsNullOrEmpty(_options.SourceRepository))
+        {
+            _logger.LogError("The --subscription parameter cannot be used with --source-repo. The subscription already specifies a source repository.");
+            return Constants.ErrorCode;
+        }
+
+        if (_options.CoherencyOnly)
+        {
+            _logger.LogError("The --subscription parameter cannot be used with --coherency-only.");
+            return Constants.ErrorCode;
+        }
+
+        // Note: --target-directory and --excluded-assets from command line are ignored when using --subscription
+        // The subscription's own settings will be used instead.
+        if (!string.IsNullOrEmpty(_options.TargetDirectory))
+        {
+            _logger.LogWarning("The --target-directory parameter is ignored when using --subscription. The subscription's target directory will be used.");
+        }
+
+        if (!string.IsNullOrEmpty(_options.ExcludedAssets))
+        {
+            _logger.LogWarning("The --excluded-assets parameter is ignored when using --subscription. The subscription's excluded assets will be used.");
+        }
+
         // Parse and validate subscription ID
         if (!Guid.TryParse(_options.SubscriptionId, out Guid subscriptionId))
         {
