@@ -16,6 +16,9 @@ internal class UpdateDependenciesCommandLineOptions : CommandLineOptions<UpdateD
     [Option('c', "channel", HelpText = "Channel to pull dependencies from.")]
     public string Channel { get; set; }
 
+    [Option("subscription", HelpText = "Subscription ID to simulate. When provided, updates dependencies as the specified subscription would.")]
+    public string SubscriptionId { get; set; }
+
     [Option('n', "name", HelpText = "Optional name of dependency to update. Otherwise all " +
                                     "dependencies existing on 'channel' are updated.")]
     public string Name { get; set; }

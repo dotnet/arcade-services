@@ -56,6 +56,12 @@ internal class UpdateDependenciesOperation : Operation
     {
         try
         {
+            // If subscription ID is provided, use subscription-based update logic
+            if (!string.IsNullOrEmpty(_options.SubscriptionId))
+            {
+                return await UpdateDependenciesFromSubscriptionAsync();
+            }
+
             var local = new Local(_options.GetRemoteTokenProvider(), _logger);
             var excludedAssetsMatcher = _options.ExcludedAssets?.Split(';').GetAssetMatcher();
             List<UnixPath> targetDirectories = ResolveTargetDirectories(local);
@@ -464,5 +470,165 @@ internal class UpdateDependenciesOperation : Operation
         }
 
         return updatedDependencies;
+    }
+
+    /// <summary>
+    /// Update dependencies based on a subscription's configuration.
+    /// This simulates what Maestro would do for the specified subscription.
+    /// </summary>
+    private async Task<int> UpdateDependenciesFromSubscriptionAsync()
+    {
+        // Parse and validate subscription ID
+        if (!Guid.TryParse(_options.SubscriptionId, out Guid subscriptionId))
+        {
+            _logger.LogError("Invalid subscription ID '{subscriptionId}'. Please provide a valid GUID.", _options.SubscriptionId);
+            return Constants.ErrorCode;
+        }
+
+        // Fetch subscription metadata
+        Subscription subscription;
+        try
+        {
+            subscription = await _barClient.GetSubscriptionAsync(subscriptionId);
+            if (subscription == null)
+            {
+                _logger.LogError("Subscription with ID '{subscriptionId}' not found.", subscriptionId);
+                return Constants.ErrorCode;
+            }
+        }
+        catch (RestApiException e) when (e.Response.Status == 404)
+        {
+            _logger.LogError("Subscription with ID '{subscriptionId}' not found.", subscriptionId);
+            return Constants.ErrorCode;
+        }
+
+        Console.WriteLine($"Simulating subscription '{subscription.Id}':");
+        Console.WriteLine($"  Source: {subscription.SourceRepository} (channel: {subscription.Channel.Name})");
+        Console.WriteLine($"  Target: {subscription.TargetRepository}#{subscription.TargetBranch}");
+
+        if (!string.IsNullOrEmpty(subscription.TargetDirectory))
+        {
+            Console.WriteLine($"  Target directory: {subscription.TargetDirectory}");
+        }
+
+        if (subscription.ExcludedAssets?.Any() == true)
+        {
+            Console.WriteLine($"  Excluded assets: {string.Join(", ", subscription.ExcludedAssets)}");
+        }
+
+        // Determine the build to use (same logic as Maestro)
+        Build buildToApply;
+        try
+        {
+            buildToApply = await _barClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
+            if (buildToApply == null)
+            {
+                _logger.LogError("No builds found for repository '{repo}' on channel '{channel}'.", 
+                    subscription.SourceRepository, subscription.Channel.Name);
+                return Constants.ErrorCode;
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Failed to get latest build for subscription.");
+            return Constants.ErrorCode;
+        }
+
+        Console.WriteLine($"  Selected build: {buildToApply.AzureDevOpsBuildNumber} (BAR ID: {buildToApply.Id})");
+        Console.WriteLine($"  Build commit: {buildToApply.Commit}");
+        Console.WriteLine();
+
+        // Apply subscription's target directory and excluded assets settings
+        var local = new Local(_options.GetRemoteTokenProvider(), _logger);
+        
+        // Build excluded assets matcher from subscription settings
+        string excludedAssetsPattern = subscription.ExcludedAssets?.Any() == true 
+            ? string.Join(";", subscription.ExcludedAssets)
+            : null;
+        var excludedAssetsMatcher = excludedAssetsPattern?.Split(';').GetAssetMatcher();
+
+        // Resolve target directories from subscription settings
+        List<UnixPath> targetDirectories;
+        if (!string.IsNullOrEmpty(subscription.TargetDirectory))
+        {
+            // Use subscription's target directory
+            var previousTargetDirectory = _options.TargetDirectory;
+            _options.TargetDirectory = subscription.TargetDirectory;
+            targetDirectories = ResolveTargetDirectories(local);
+            _options.TargetDirectory = previousTargetDirectory;
+        }
+        else
+        {
+            // Use root directory
+            targetDirectories = [UnixPath.Empty];
+        }
+
+        // Process updates for each target directory
+        foreach (var targetDirectory in targetDirectories)
+        {
+            List<DependencyDetail> dependenciesToUpdate = [];
+            List<DependencyDetail> currentDependencies = await local.GetDependenciesAsync(includePinned: false, relativeBasePath: targetDirectory);
+            
+            // Get dependencies from the source repository
+            List<DependencyDetail> candidateDependenciesForUpdate = currentDependencies
+                .Where(d => d.RepoUri.Equals(subscription.SourceRepository, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            var dependenciesRelativeFolder = targetDirectory == UnixPath.Empty ? "root" : targetDirectory;
+            Console.WriteLine($"Processing directory: {dependenciesRelativeFolder}");
+
+            if (!candidateDependenciesForUpdate.Any())
+            {
+                _logger.LogInformation("  No dependencies from source repository '{repo}' found in this directory.", subscription.SourceRepository);
+                continue;
+            }
+
+            // Apply updates from the selected build
+            int nonCoherencyResult = NonCoherencyUpdatesForBuild(
+                buildToApply,
+                currentDependencies,
+                candidateDependenciesForUpdate,
+                dependenciesToUpdate,
+                excludedAssetsMatcher,
+                targetDirectory);
+
+            if (nonCoherencyResult != Constants.SuccessCode)
+            {
+                _logger.LogError("Failed to compute dependency updates.");
+                return Constants.ErrorCode;
+            }
+
+            // Apply coherency updates
+            int coherencyResult = await CoherencyUpdatesAsync(currentDependencies, dependenciesToUpdate);
+            if (coherencyResult != Constants.SuccessCode)
+            {
+                _logger.LogError("Failed to apply coherency updates.");
+                return Constants.ErrorCode;
+            }
+
+            if (!dependenciesToUpdate.Any())
+            {
+                _logger.LogInformation("  No dependencies to update in this directory.");
+                continue;
+            }
+
+            // Apply updates to local files
+            if (!_options.DryRun)
+            {
+                await local.UpdateDependenciesAsync(dependenciesToUpdate, _remoteFactory, _gitRepoFactory, _barClient, targetDirectory);
+                Console.WriteLine($"  Updated {dependenciesToUpdate.Count} dependencies in {dependenciesRelativeFolder}");
+            }
+            else
+            {
+                Console.WriteLine($"  [DRY RUN] Would update {dependenciesToUpdate.Count} dependencies in {dependenciesRelativeFolder}");
+            }
+        }
+
+        Console.WriteLine();
+        Console.WriteLine(_options.DryRun 
+            ? "Dry run complete. No changes were made." 
+            : "Subscription simulation complete. Dependencies have been updated.");
+
+        return Constants.SuccessCode;
     }
 }
