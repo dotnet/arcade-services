@@ -31,6 +31,8 @@ internal class ForwardFlowOperation(
     : CodeFlowOperation(options, vmrInfo, codeFlower, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
 {
     private readonly ForwardFlowCommandLineOptions _options = options;
+    private readonly IVmrInfo _vmrInfo = vmrInfo;
+    private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
     private readonly IProcessManager _processManager = processManager;
 
     protected override async Task ExecuteInternalAsync(
@@ -60,6 +62,27 @@ internal class ForwardFlowOperation(
             .Select(f => VmrInfo.GetRelativeRepoSourcesPath(mapping) / f)
     ];
 
-    protected override Task UpdateToolsetAndDependenciesAsync(SourceMapping mapping, LastFlows lastFlows, Codeflow currentFlow, ILocalGitRepo targetRepo, Build build, string branch, CancellationToken cancellationToken)
-        => Task.CompletedTask;
+    protected override Task UpdateToolsetAndDependenciesAsync(
+        SourceMapping mapping,
+        LastFlows lastFlows,
+        Codeflow currentFlow,
+        ILocalGitRepo targetRepo,
+        Build build,
+        string branch,
+        CancellationToken cancellationToken)
+    {
+        var sourceManifest = SourceManifest.FromFile(_vmrInfo.SourceManifestPath);
+        var version = sourceManifest.GetRepoVersion(mapping.Name) as IVersionedSourceComponent
+            ?? throw new DarcException($"Failed to find repo version for {mapping.Name} in source manifest at {_vmrInfo.SourceManifestPath}");
+
+        _dependencyTracker.UpdateDependencyVersion(new(
+            mapping,
+            version.RemoteUri,
+            currentFlow.SourceSha,
+            Parent: null,
+            OfficialBuildId: null,
+            BarId: version.BarId));
+
+        return Task.CompletedTask;
+    }
 }
