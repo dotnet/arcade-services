@@ -10,6 +10,7 @@ using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
 
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
@@ -101,7 +102,7 @@ internal class ForwardFlowTests : CodeFlowTests
         await File.WriteAllTextAsync(_productRepoVmrFilePath, "A conflicting change in the VMR");
         await GitOperations.CommitAll(VmrPath, "A conflicting change in the VMR");
 
-        var build = CreateNewRepoBuild(
+        Build build = await CreateNewRepoBuild(
         [
             ("Package.A1", "1.0.1"),
             ("Package.B1", "1.0.1"),
