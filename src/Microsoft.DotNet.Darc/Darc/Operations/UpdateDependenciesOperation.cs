@@ -484,11 +484,6 @@ internal class UpdateDependenciesOperation : Operation
             throw new DarcException("The --subscription parameter cannot be used with --channel. The subscription already specifies a channel.");
         }
 
-        if (_options.BARBuildId > 0)
-        {
-            throw new DarcException("The --subscription parameter cannot be used with --id. The subscription determines which build to use.");
-        }
-
         if (!string.IsNullOrEmpty(_options.PackagesFolder))
         {
             throw new DarcException("The --subscription parameter cannot be used with --packages-folder.");
@@ -512,11 +507,6 @@ internal class UpdateDependenciesOperation : Operation
         if (!string.IsNullOrEmpty(_options.TargetDirectory))
         {
             throw new DarcException("The --subscription parameter cannot be used with --target-directory. The subscription already specifies a target directory.");
-        }
-
-        if (!string.IsNullOrEmpty(_options.ExcludedAssets))
-        {
-            throw new DarcException("The --subscription parameter cannot be used with --excluded-assets. The subscription already specifies excluded assets.");
         }
 
         // Parse and validate subscription ID
@@ -557,24 +547,33 @@ internal class UpdateDependenciesOperation : Operation
             Console.WriteLine($"  Excluded assets: {string.Join(", ", subscription.ExcludedAssets)}");
         }
 
-        // Find the latest build from the source repository on the channel
-        Build latestBuild = await _barClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
-        if (latestBuild == null)
+        // Find the latest build from the source repository on the channel (unless build ID is provided)
+        if (_options.BARBuildId == 0)
         {
-            throw new DarcException($"No builds found for repository '{subscription.SourceRepository}' on channel '{subscription.Channel.Name}'.");
+            Build latestBuild = await _barClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
+            if (latestBuild == null)
+            {
+                throw new DarcException($"No builds found for repository '{subscription.SourceRepository}' on channel '{subscription.Channel.Name}'.");
+            }
+
+            Console.WriteLine($"  Latest build: {latestBuild.AzureDevOpsBuildNumber} (BAR ID: {latestBuild.Id})");
+            Console.WriteLine($"  Build commit: {latestBuild.Commit}");
+            _options.BARBuildId = latestBuild.Id;
+        }
+        else
+        {
+            Console.WriteLine($"  Using provided build ID: {_options.BARBuildId}");
         }
 
-        Console.WriteLine($"  Latest build: {latestBuild.AzureDevOpsBuildNumber} (BAR ID: {latestBuild.Id})");
-        Console.WriteLine($"  Build commit: {latestBuild.Commit}");
         Console.WriteLine();
 
         // Populate options from subscription settings
         _options.Channel = subscription.Channel.Name;
         _options.SourceRepository = subscription.SourceRepository;
-        _options.BARBuildId = latestBuild.Id;
         _options.TargetDirectory = subscription.TargetDirectory;
 
-        if (subscription.ExcludedAssets?.Any() == true)
+        // Use subscription's excluded assets only if not provided via command line
+        if (string.IsNullOrEmpty(_options.ExcludedAssets) && subscription.ExcludedAssets?.Any() == true)
         {
             _options.ExcludedAssets = string.Join(";", subscription.ExcludedAssets);
         }
