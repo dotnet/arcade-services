@@ -485,38 +485,32 @@ internal class UpdateDependenciesOperation : Operation
         // Validate that subscription is not used with conflicting options
         if (!string.IsNullOrEmpty(_options.Channel))
         {
-            _logger.LogError("The --subscription parameter cannot be used with --channel. The subscription already specifies a channel.");
-            return Constants.ErrorCode;
+            throw new DarcException("The --subscription parameter cannot be used with --channel. The subscription already specifies a channel.");
         }
 
         if (_options.BARBuildId > 0)
         {
-            _logger.LogError("The --subscription parameter cannot be used with --id. The subscription determines which build to use.");
-            return Constants.ErrorCode;
+            throw new DarcException("The --subscription parameter cannot be used with --id. The subscription determines which build to use.");
         }
 
         if (!string.IsNullOrEmpty(_options.PackagesFolder))
         {
-            _logger.LogError("The --subscription parameter cannot be used with --packages-folder.");
-            return Constants.ErrorCode;
+            throw new DarcException("The --subscription parameter cannot be used with --packages-folder.");
         }
 
         if (!string.IsNullOrEmpty(_options.Name) && !string.IsNullOrEmpty(_options.Version))
         {
-            _logger.LogError("The --subscription parameter cannot be used with --name and --version. The subscription determines which dependencies to update.");
-            return Constants.ErrorCode;
+            throw new DarcException("The --subscription parameter cannot be used with --name and --version. The subscription determines which dependencies to update.");
         }
 
         if (!string.IsNullOrEmpty(_options.SourceRepository))
         {
-            _logger.LogError("The --subscription parameter cannot be used with --source-repo. The subscription already specifies a source repository.");
-            return Constants.ErrorCode;
+            throw new DarcException("The --subscription parameter cannot be used with --source-repo. The subscription already specifies a source repository.");
         }
 
         if (_options.CoherencyOnly)
         {
-            _logger.LogError("The --subscription parameter cannot be used with --coherency-only.");
-            return Constants.ErrorCode;
+            throw new DarcException("The --subscription parameter cannot be used with --coherency-only.");
         }
 
         // Note: --target-directory and --excluded-assets from command line are ignored when using --subscription
@@ -534,8 +528,7 @@ internal class UpdateDependenciesOperation : Operation
         // Parse and validate subscription ID
         if (!Guid.TryParse(_options.SubscriptionId, out Guid subscriptionId))
         {
-            _logger.LogError("Invalid subscription ID '{subscriptionId}'. Please provide a valid GUID.", _options.SubscriptionId);
-            return Constants.ErrorCode;
+            throw new DarcException($"Invalid subscription ID '{_options.SubscriptionId}'. Please provide a valid GUID.");
         }
 
         // Fetch subscription metadata
@@ -545,14 +538,12 @@ internal class UpdateDependenciesOperation : Operation
             subscription = await _barClient.GetSubscriptionAsync(subscriptionId);
             if (subscription == null)
             {
-                _logger.LogError("Subscription with ID '{subscriptionId}' not found.", subscriptionId);
-                return Constants.ErrorCode;
+                throw new DarcException($"Subscription with ID '{subscriptionId}' not found.");
             }
         }
         catch (RestApiException e) when (e.Response.Status == 404)
         {
-            _logger.LogError("Subscription with ID '{subscriptionId}' not found.", subscriptionId);
-            return Constants.ErrorCode;
+            throw new DarcException($"Subscription with ID '{subscriptionId}' not found.", e);
         }
 
         Console.WriteLine($"Simulating subscription '{subscription.Id}':");
@@ -569,11 +560,21 @@ internal class UpdateDependenciesOperation : Operation
             Console.WriteLine($"  Excluded assets: {string.Join(", ", subscription.ExcludedAssets)}");
         }
 
+        // Find the latest build from the source repository on the channel
+        Build latestBuild = await _barClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
+        if (latestBuild == null)
+        {
+            throw new DarcException($"No builds found for repository '{subscription.SourceRepository}' on channel '{subscription.Channel.Name}'.");
+        }
+
+        Console.WriteLine($"  Latest build: {latestBuild.AzureDevOpsBuildNumber} (BAR ID: {latestBuild.Id})");
+        Console.WriteLine($"  Build commit: {latestBuild.Commit}");
         Console.WriteLine();
 
         // Populate options from subscription settings
         _options.Channel = subscription.Channel.Name;
         _options.SourceRepository = subscription.SourceRepository;
+        _options.BARBuildId = latestBuild.Id;
         
         if (!string.IsNullOrEmpty(subscription.TargetDirectory))
         {
