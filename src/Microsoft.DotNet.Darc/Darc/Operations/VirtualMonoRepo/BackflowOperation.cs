@@ -28,10 +28,11 @@ internal class BackflowOperation(
     IProcessManager processManager,
     IFileSystem fileSystem,
     ILogger<BackflowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, backFlower, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
+    : CodeFlowOperation(options, vmrInfo, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
 {
     private readonly BackflowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
+    private readonly IVmrBackFlower _backFlower = backFlower;
     private readonly IBackflowConflictResolver _backflowConflictResolver = backflowConflictResolver;
     private readonly IProcessManager _processManager = processManager;
 
@@ -56,29 +57,49 @@ internal class BackflowOperation(
             cancellationToken);
     }
 
-    protected override IEnumerable<string> GetIgnoredFiles(string mapping) => DependencyFileManager.CodeflowDependencyFiles;
-
-    protected override async Task UpdateToolsetAndDependenciesAsync(
-        SourceMapping mapping,
-        LastFlows lastFlows,
-        Codeflow currentFlow,
-        ILocalGitRepo sourceRepo,
-        ILocalGitRepo targetRepo,
+    protected override async Task<bool> FlowCodeAsync(
+        ILocalGitRepo productRepo,
         Build build,
-        string branch,
+        Codeflow currentFlow,
+        SourceMapping mapping,
+        string targetBranch,
+        string headBranch,
         CancellationToken cancellationToken)
     {
-        await _backflowConflictResolver.TryMergingBranchAndUpdateDependencies(
-            mapping,
-            lastFlows,
-            (Backflow)currentFlow,
-            targetRepo,
-            build,
-            branch,
-            branch,
-            [],
-            headBranchExisted: true,
-            rebase: true,
-            cancellationToken);
+        LastFlows lastFlows = await _backFlower.GetLastFlowsAsync(
+            mapping.Name,
+            productRepo,
+            currentIsBackflow: true);
+
+        try
+        {
+            var result = await _backFlower.FlowBackAsync(
+                mapping.Name,
+                productRepo.Path,
+                build,
+                excludedAssets: [], // TODO: Fill from subscription
+                targetBranch,
+                headBranch,
+                rebase: true,
+                forceUpdate: false,
+                cancellationToken);
+
+            return result.HadUpdates;
+        }
+        finally
+        {
+            await _backflowConflictResolver.TryMergingBranchAndUpdateDependencies(
+                mapping,
+                lastFlows,
+                (Backflow)currentFlow,
+                productRepo,
+                build,
+                targetBranch,
+                headBranch,
+                [],
+                headBranchExisted: true,
+                rebase: true,
+                cancellationToken);
+        }
     }
 }

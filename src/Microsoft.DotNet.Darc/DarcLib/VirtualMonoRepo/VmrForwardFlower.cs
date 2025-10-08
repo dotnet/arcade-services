@@ -115,7 +115,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             sourceRepo,
             targetBranch,
             headBranch,
-            rebase,
             cancellationToken);
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
@@ -175,7 +174,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     /// If fails, checks out the base branch instead, finds the last synchronization point
     /// and creates the head branch at that point.
     /// </summary>
-    /// <param name="rebase">Creates the head branch on top of target branch instead</param>
     /// <returns>True if the head branch already existed</returns>
     private async Task<(bool, LastFlows)> PrepareHeadBranch(
         string vmrUri,
@@ -183,7 +181,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         ILocalGitRepo sourceRepo,
         string baseBranch,
         string headBranch,
-        bool rebase,
         CancellationToken cancellationToken)
     {
         _vmrInfo.VmrUri = vmrUri;
@@ -222,12 +219,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             LastFlows lastFlows = await GetLastFlowsAsync(mappingName, sourceRepo, currentIsBackflow: false);
 
             // Rebase strategy works on top of the target branch, non-rebase starts from the last point of synchronization
-            if (!rebase)
-            {
-                await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
-                await _dependencyTracker.RefreshMetadataAsync();
-            }
-
+            await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
+            await _dependencyTracker.RefreshMetadataAsync();
             await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
             return (false, lastFlows);
@@ -248,14 +241,25 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         bool forceUpdate,
         CancellationToken cancellationToken)
     {
+        IWorkBranch? workBranch = null;
+        if (rebase)
+        {
+            workBranch = await _workBranchFactory.CreateWorkBranchAsync(
+                _localGitRepoFactory.Create(_vmrInfo.VmrPath),
+                currentFlow.GetBranchName(),
+                headBranch);
+        }
+
+        bool hadChanges;
+
         try
         {
-            return await _vmrUpdater.UpdateRepository(
+            hadChanges = await _vmrUpdater.UpdateRepository(
                 mapping,
                 build,
                 additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
                 resetToRemoteWhenCloningRepo: ShouldResetClones,
-                keepConflicts: rebase,
+                keepConflicts: false,
                 cancellationToken: cancellationToken);
         }
         catch (PatchApplicationFailedException e)
@@ -267,7 +271,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 throw new ConflictInPrBranchException(e.Result.StandardError, targetBranch, mapping.Name, isForwardFlow: true);
             }
 
-            bool hadChanges = false;
+            hadChanges = false;
 
             // This happens when a conflicting change was made in the last backflow PR (before merging)
             // The scenario is described here: https://github.com/dotnet/dotnet/tree/main/docs/VMR-Full-Code-Flow.md#conflicts
@@ -297,9 +301,14 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 // Commit anything staged only (e.g. reset reverted files)
                 await _localGitClient.CommitAmendAsync(_vmrInfo.VmrPath, cancellationToken);
             }
-
-            return hadChanges;
         }
+
+        if (hadChanges && rebase)
+        {
+            await workBranch!.RebaseAsync(cancellationToken);
+        }
+
+        return hadChanges;
     }
 
     protected override async Task<bool> OppositeDirectionFlowAsync(

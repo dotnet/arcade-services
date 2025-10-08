@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -103,8 +104,10 @@ internal class ForwardFlowTests : CodeFlowTests
             VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName,
             VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName + "-added-in-repo",
             VmrInfo.SourcesDir / Constants.ProductRepoName / DarcLib.Constants.CommonScriptFilesPath / "build.ps2",
+            VmrInfo.SourcesDir / Constants.ProductRepoName / VersionFiles.VersionDetailsXml,
             VmrInfo.DefaultRelativeSourceManifestPath
         ];
+
         stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
         CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo again");
         CheckFileContents(VmrPath / expectedFiles[1], "New file from the repo");

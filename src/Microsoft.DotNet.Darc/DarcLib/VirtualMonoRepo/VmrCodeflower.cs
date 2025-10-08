@@ -21,20 +21,6 @@ public interface IVmrCodeFlower
         string mappingName,
         ILocalGitRepo repoClone,
         bool currentIsBackflow);
-
-    Task<bool> FlowCodeAsync(
-        LastFlows lastFlows,
-        Codeflow currentFlow,
-        ILocalGitRepo repo,
-        SourceMapping mapping,
-        Build build,
-        IReadOnlyCollection<string>? excludedAssets,
-        string targetBranch,
-        string headBranch,
-        bool headBranchExisted,
-        bool rebase,
-        bool forceUpdate,
-        CancellationToken cancellationToken = default);
 }
 
 /// <summary>

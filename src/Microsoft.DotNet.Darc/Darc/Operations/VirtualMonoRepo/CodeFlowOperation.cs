@@ -19,7 +19,6 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 internal abstract class CodeFlowOperation(
         ICodeFlowCommandLineOptions options,
         IVmrInfo vmrInfo,
-        IVmrCodeFlower codeFlower,
         IVmrDependencyTracker dependencyTracker,
         IDependencyFileManager dependencyFileManager,
         ILocalGitRepoFactory localGitRepoFactory,
@@ -30,32 +29,12 @@ internal abstract class CodeFlowOperation(
 {
     private readonly ICodeFlowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
-    private readonly IVmrCodeFlower _codeFlower = codeFlower;
     private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
     private readonly IDependencyFileManager _dependencyFileManager = dependencyFileManager;
     private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
     private readonly IBasicBarClient _barApiClient = barApiClient;
     private readonly IFileSystem _fileSystem = fileSystem;
     private readonly ILogger<CodeFlowOperation> _logger = logger;
-
-    /// <summary>
-    /// Returns a list of files that should be ignored when flowing changes forward.
-    /// These mostly include code flow metadata which should not get updated in local flows.
-    /// </summary>
-    protected abstract IEnumerable<string> GetIgnoredFiles(string mappingName);
-
-    /// <summary>
-    /// Once code is flowed, updates toolset and dependencies (even if a failed patch left behind conflicts).
-    /// </summary>
-    protected abstract Task UpdateToolsetAndDependenciesAsync(
-        SourceMapping mapping,
-        LastFlows lastFlows,
-        Codeflow currentFlow,
-        ILocalGitRepo sourceRepo,
-        ILocalGitRepo targetRepo,
-        Build build,
-        string branch,
-        CancellationToken cancellationToken);
 
     protected async Task FlowCodeLocallyAsync(
         NativePath repoPath,
@@ -88,52 +67,16 @@ internal abstract class CodeFlowOperation(
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
 
-        LastFlows lastFlows;
-        try
-        {
-            lastFlows = await _codeFlower.GetLastFlowsAsync(mapping.Name, productRepo, currentFlow is Backflow);
-        }
-        catch (InvalidSynchronizationException)
-        {
-            // We're trying to synchronize an old repo commit on top of a VMR commit that had other synchronization with the repo since.
-            throw new InvalidSynchronizationException(
-                "Failed to flow changes. The VMR is out of sync with the repository. " +
-                "This could be due to a more recent code flow that happened between the checked-out commits. " +
-                "Please make sure your repository and the VMR are up to date.");
-        }
-
         string currentTargetRepoBranch = await targetRepo.GetCheckedOutBranchAsync();
 
-        bool hasChanges;
-
-        try
-        {
-            hasChanges = await _codeFlower.FlowCodeAsync(
-                lastFlows,
-                currentFlow,
-                productRepo,
-                mapping,
-                build,
-                excludedAssets: [],
-                currentTargetRepoBranch,
-                currentTargetRepoBranch,
-                headBranchExisted: false,
-                rebase: true,
-                forceUpdate: false,
-                cancellationToken);
-        }
-        finally
-        {
-            await UpdateToolsetAndDependenciesAsync(
-                mapping,
-                lastFlows,
-                currentFlow,
-                sourceRepo,
-                targetRepo,
-                build,
-                currentTargetRepoBranch,
-                cancellationToken);
-        }
+        bool hasChanges = await FlowCodeAsync(
+            productRepo,
+            build,
+            currentFlow,
+            mapping,
+            currentTargetRepoBranch,
+            $"darc/{mappingName}/{DarcLib.Commit.GetShortSha(_options.Ref)}",
+            cancellationToken);
 
         if (!hasChanges)
         {
@@ -144,6 +87,15 @@ internal abstract class CodeFlowOperation(
 
         _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
     }
+
+    protected abstract Task<bool> FlowCodeAsync(
+        ILocalGitRepo productRepo,
+        Build build,
+        Codeflow currentFlow,
+        SourceMapping mapping,
+        string targetBranch,
+        string headBranch,
+        CancellationToken cancellationToken);
 
     private async Task<Build> GetBuildAsync(NativePath sourceRepoPath)
     {

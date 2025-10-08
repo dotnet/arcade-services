@@ -109,6 +109,11 @@ public abstract class VmrManagerBase
             await _credScanSuppressionsGenerator.UpdateCredScanSuppressions(cancellationToken);
         }
 
+        if (keepConflicts)
+        {
+            return;
+        }
+
         // Commit without adding files as they were added to index directly
         await CommitAsync(commitMessage);
 

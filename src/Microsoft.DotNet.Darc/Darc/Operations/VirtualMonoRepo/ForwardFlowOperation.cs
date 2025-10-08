@@ -19,7 +19,7 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal class ForwardFlowOperation(
         ForwardFlowCommandLineOptions options,
-        IVmrForwardFlower codeFlower,
+        IVmrForwardFlower forwardFlower,
         IVmrInfo vmrInfo,
         IVmrDependencyTracker dependencyTracker,
         IDependencyFileManager dependencyFileManager,
@@ -28,9 +28,10 @@ internal class ForwardFlowOperation(
         IFileSystem fileSystem,
         IProcessManager processManager,
         ILogger<ForwardFlowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, codeFlower, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
+    : CodeFlowOperation(options, vmrInfo, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
 {
     private readonly ForwardFlowCommandLineOptions _options = options;
+    private readonly IVmrForwardFlower _forwardFlower = forwardFlower;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
     private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
@@ -56,37 +57,47 @@ internal class ForwardFlowOperation(
             cancellationToken);
     }
 
-    protected override IEnumerable<string> GetIgnoredFiles(string mapping) =>
-    [
-        VmrInfo.DefaultRelativeSourceManifestPath,
-        .. DependencyFileManager.CodeflowDependencyFiles
-            .Select(f => VmrInfo.GetRelativeRepoSourcesPath(mapping) / f)
-    ];
-
-    protected override async Task UpdateToolsetAndDependenciesAsync(
-        SourceMapping mapping,
-        LastFlows lastFlows,
-        Codeflow currentFlow,
-        ILocalGitRepo sourceRepo,
-        ILocalGitRepo targetRepo,
+    protected override async Task<bool> FlowCodeAsync(
+        ILocalGitRepo productRepo,
         Build build,
-        string branch,
+        Codeflow currentFlow,
+        SourceMapping mapping,
+        string targetBranch,
+        string headBranch,
         CancellationToken cancellationToken)
     {
-        // Update source manifest
-        var sourceManifest = SourceManifest.FromFile(_vmrInfo.SourceManifestPath);
-        var version = sourceManifest.GetRepoVersion(mapping.Name) as IVersionedSourceComponent
-            ?? throw new DarcException($"Failed to find repo version for {mapping.Name} in source manifest at {_vmrInfo.SourceManifestPath}");
+        try
+        {
+            CodeFlowResult result = await _forwardFlower.FlowForwardAsync(
+                mapping.Name,
+                productRepo.Path,
+                build,
+                excludedAssets: [], // TODO: Fill from subscription
+                targetBranch,
+                headBranch,
+                _vmrInfo.VmrPath,
+                rebase: true,
+                forceUpdate: false,
+                cancellationToken);
 
-        _dependencyTracker.UpdateDependencyVersion(new(
-            mapping,
-            version.RemoteUri,
-            currentFlow.SourceSha,
-            Parent: null,
-            OfficialBuildId: null,
-            BarId: version.BarId));
+            return result.HadUpdates;
+        }
+        finally
+        {
+            // Update source manifest
+            var sourceManifest = SourceManifest.FromFile(_vmrInfo.SourceManifestPath);
+            var version = (IVersionedSourceComponent)sourceManifest.GetRepoVersion(mapping.Name);
 
-        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
+            _dependencyTracker.UpdateDependencyVersion(new(
+                mapping,
+                version.RemoteUri,
+                currentFlow.SourceSha,
+                Parent: null,
+                OfficialBuildId: null,
+                BarId: version.BarId));
+
+            var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+            await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
+        }
     }
 }

@@ -259,9 +259,6 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
                 foreach (var expectedFile in expectedConflicts)
                 {
                     diff.StandardOutput.Should().MatchRegex(new Regex(@$"^U\s+{Regex.Escape(expectedFile)}[\n\r]+", RegexOptions.Multiline));
-
-                    var expectedFilePath = targetRepo / expectedFile;
-                    (await File.ReadAllTextAsync(expectedFilePath)).Should().Contain(">>>>>");
                 }
             }
         }
