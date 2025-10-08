@@ -610,7 +610,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             if (rebase)
             {
-                await workBranch.RebaseAsync(keepConflicts: true, cancellationToken);
+                await workBranch.RebaseAsync(cancellationToken);
             }
             else
             {

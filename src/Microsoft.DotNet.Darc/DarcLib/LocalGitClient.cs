@@ -629,4 +629,17 @@ public class LocalGitClient : ILocalGitClient
 
         return result.GetOutputLines();
     }
+
+    public async Task<IReadOnlyCollection<UnixPath>> GetConflictedFilesAsync(
+        string repoPath,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _processManager.ExecuteGit(
+            repoPath,
+            ["diff", "--name-only", "--diff-filter=U"],
+            cancellationToken: cancellationToken);
+        result.ThrowIfFailed("Failed to get a list of conflicted files");
+
+        return [.. result.GetOutputLines().Select(f => new UnixPath(f))];
+    }
 }

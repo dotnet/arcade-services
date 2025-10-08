@@ -251,4 +251,12 @@ public interface ILocalGitRepo
     /// <returns>A read-only collection of strings representing the relative paths of files that differ between the base and
     /// target. The collection is empty if there are no changed files.</returns>
     Task<IReadOnlyCollection<string>> GetChangedFilesAsync(string baseCommitOrBranch, string targetCommitOrBranch);
+
+    /// <summary>
+    /// Gets a collection of file paths that are currently in a conflicted state.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>A read-only collection of UnixPath representing the relative paths of files that are in conflict.
+    /// The collection is empty if there are no conflicted files.</returns>
+    Task<IReadOnlyCollection<UnixPath>> GetConflictedFilesAsync(CancellationToken cancellationToken = default);
 }

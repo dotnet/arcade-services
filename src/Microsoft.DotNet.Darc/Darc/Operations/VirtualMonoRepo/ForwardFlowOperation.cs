@@ -34,7 +34,6 @@ internal class ForwardFlowOperation(
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
     private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
-    private readonly IFileSystem _fileSystem = fileSystem;
     private readonly IProcessManager _processManager = processManager;
 
     protected override async Task ExecuteInternalAsync(
@@ -88,22 +87,6 @@ internal class ForwardFlowOperation(
             BarId: version.BarId));
 
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-
-        var targetPath = _vmrInfo.GetRepoSourcesPath(mapping) / DarcLib.Constants.CommonScriptFilesPath;
-
-        // Copy eng/common
-        try
-        {
-            _fileSystem.DeleteDirectory(targetPath, recursive: true);
-        }
-        catch { }
-
-        // TODO: Handle file permissions (if devs run this on Windows)
-        _fileSystem.CopyDirectory(
-             sourceRepo.Path / DarcLib.Constants.CommonScriptFilesPath,
-            targetPath,
-            true);
-
-        await vmr.StageAsync([targetPath, _vmrInfo.SourceManifestPath], cancellationToken);
+        await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
     }
 }

@@ -254,10 +254,11 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
             {
                 result.Should().Be(42);
 
+                var diff = await GitOperations.ExecuteGitCommand(targetRepo, ["diff", "--name-status"]);
+
                 foreach (var expectedFile in expectedConflicts)
                 {
-                    var diff = await GitOperations.ExecuteGitCommand(targetRepo, ["diff", "--name-status"]);
-                    diff.StandardOutput.Should().MatchRegex(@$"^U\s+{Regex.Escape(expectedFile)}");
+                    diff.StandardOutput.Should().MatchRegex(new Regex(@$"^U\s+{Regex.Escape(expectedFile)}[\n\r]+", RegexOptions.Multiline));
 
                     var expectedFilePath = targetRepo / expectedFile;
                     (await File.ReadAllTextAsync(expectedFilePath)).Should().Contain(">>>>>");

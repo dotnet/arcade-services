@@ -286,4 +286,13 @@ public interface ILocalGitClient
         string repoPath,
         string baseCommitOrBranch,
         string targetCommitOrBranch);
+
+    /// <summary>
+    /// Gets a collection of file paths that are currently in a conflicted state.
+    /// </summary>
+    /// <returns>A read-only collection of UnixPath representing the relative paths of files that are in conflict.
+    /// The collection is empty if there are no conflicted files.</returns>
+    Task<IReadOnlyCollection<UnixPath>> GetConflictedFilesAsync(
+        string repoPath,
+        CancellationToken cancellationToken = default);
 }

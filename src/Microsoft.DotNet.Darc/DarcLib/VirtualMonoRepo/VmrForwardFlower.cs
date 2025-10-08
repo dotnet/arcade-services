@@ -379,7 +379,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         {
             if (rebase)
             {
-                await workBranch!.RebaseAsync(keepConflicts: true, cancellationToken);
+                await workBranch!.RebaseAsync(cancellationToken);
                 return true;
             }
 

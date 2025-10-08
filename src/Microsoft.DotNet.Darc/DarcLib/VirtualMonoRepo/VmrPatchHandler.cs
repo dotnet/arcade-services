@@ -329,23 +329,22 @@ public class VmrPatchHandler : IVmrPatchHandler
 
             // When we are applying and wish to keep conflicts in the working tree, we need to clean up a bit
             cancellationToken.ThrowIfCancellationRequested();
-            var conflictedFilesResult = await repo.ExecuteGitCommand(["diff", "--name-only", "--diff-filter=U"], CancellationToken.None);
-            conflictedFilesResult.ThrowIfFailed("Failed to get a list of conflicted files after patch application failed");
-
-            IReadOnlyCollection<UnixPath> conflictedFiles = [.. conflictedFilesResult.GetOutputLines().Select(f => new UnixPath(f))];
+            var conflictedFiles = await repo.GetConflictedFilesAsync(cancellationToken);
+            
             if (conflictedFiles.Count == 0)
             {
-                _logger.LogWarning("Patch application failed, but no conflicted files were found in the output. Full output: {output}", conflictedFilesResult);
+                _logger.LogWarning("Patch application failed, but no conflicted files were found");
                 throw new PatchApplicationFailedException(patch, result, reverseApply);
             }
 
-            // Add any new files
-            await repo.ExecuteGitCommand(["add -A"], cancellationToken);
-
             // Put them in the conflicted state with conflict markers (by default they are resolved using --ours strategy):
             cancellationToken.ThrowIfCancellationRequested();
-            var checkoutResult = await repo.ExecuteGitCommand(["checkout", "--merge", "--", "."], CancellationToken.None);
-            checkoutResult.ThrowIfFailed("Failed to set the conflicted state after patch application failed");
+
+            foreach (var file in conflictedFiles)
+            {
+                var checkoutResult = await repo.ExecuteGitCommand(["checkout", "--merge", "--", file], CancellationToken.None);
+                checkoutResult.ThrowIfFailed($"Failed to set the conflicted state for {file} after patch application failed");
+            }
 
             throw new PatchApplicationLeftConflictsException(conflictedFiles, targetDirectory);
         }

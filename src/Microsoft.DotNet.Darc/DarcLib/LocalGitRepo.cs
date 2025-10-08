@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -128,6 +129,18 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
         string targetCommitOrBranch)
         => await _localGitClient.GetChangedFilesAsync(Path, baseCommitOrBranch, targetCommitOrBranch);
 
+    /// <summary>
+    /// Gets a collection of file paths that are currently in a conflicted state.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>A read-only collection of UnixPath representing the relative paths of files that are in conflict</returns>
+    public async Task<IReadOnlyCollection<UnixPath>> GetConflictedFilesAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await ExecuteGitCommand(["diff", "--name-only", "--diff-filter=U"], cancellationToken);
+        result.ThrowIfFailed("Failed to get a list of conflicted files");
+
+        return [.. result.GetOutputLines().Select(f => new UnixPath(f))];
+    }
 
     public override string ToString() => Path;
 }

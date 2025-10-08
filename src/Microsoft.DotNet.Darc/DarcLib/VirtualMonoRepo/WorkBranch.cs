@@ -21,7 +21,7 @@ public interface IWorkBranch
     /// Performs a custom "squash rebase" where it takes a diff from the work branch and applies it on top of the original branch.
     /// </summary>
     /// <param name="keepConflicts">Either leave conflict markers in place or fail to apply the changes completely</param>
-    Task RebaseAsync(bool keepConflicts, CancellationToken cancellationToken = default);
+    Task RebaseAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Name of the original branch where the work branch was created from.
@@ -33,18 +33,14 @@ public interface IWorkBranch
 /// Helper class that creates a new git branch when initialized and can merge this branch back into the original branch.
 /// </summary>
 public class WorkBranch(
-        IVmrInfo vmrInfo,
         ILocalGitRepo repo,
-        IVmrPatchHandler patchHandler,
         ILogger logger,
         string originalBranch,
         string workBranch)
     : IWorkBranch
 {
     private readonly ILogger _logger = logger;
-    private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly ILocalGitRepo _repo = repo;
-    private readonly IVmrPatchHandler _patchHandler = patchHandler;
     private readonly string _workBranch = workBranch;
 
     public string OriginalBranch { get; } = originalBranch;
@@ -86,42 +82,26 @@ public class WorkBranch(
         await _repo.DeleteBranchAsync(_workBranch);
     }
 
-    public async Task RebaseAsync(bool keepConflicts, CancellationToken cancellationToken = default)
+    public async Task RebaseAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Rebasing {branchName} onto {mainBranch}...", _workBranch, OriginalBranch);
-        await _repo.CheckoutAsync(OriginalBranch);
-
-        string mergeBase = await _repo.GetMergeBaseAsync(_workBranch, OriginalBranch);
-
-        List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
-            _vmrInfo.TmpPath / $"{_workBranch.Replace('\\', '-').Replace('/', '-')}.patch",
-            mergeBase,
-            _workBranch,
-            path: null,
-            filters: [],
-            relativePaths: false,
-            workingDir: _repo.Path,
-            applicationPath: null,
-            cancellationToken: cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
+        await _repo.CheckoutAsync(OriginalBranch);
 
         try
         {
-            await _patchHandler.ApplyPatches(
-                patches,
-                _repo.Path,
-                removePatchAfter: true,
-                keepConflicts,
-                cancellationToken: cancellationToken);
+            var result = await _repo.ExecuteGitCommand(["merge", "--squash", _workBranch], cancellationToken);
+            if (!result.Succeeded)
+            {
+                IReadOnlyCollection<UnixPath> conflictedFiles = await _repo.GetConflictedFilesAsync(CancellationToken.None);
+                throw new PatchApplicationLeftConflictsException(conflictedFiles, _repo.Path);
+            }
         }
-        catch (PatchApplicationLeftConflictsException)
+        finally
         {
             await _repo.DeleteBranchAsync(_workBranch);
-            throw;
         }
-
-        await _repo.DeleteBranchAsync(_workBranch);
     }
 }
 
