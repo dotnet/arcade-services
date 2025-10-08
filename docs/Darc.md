@@ -1327,8 +1327,8 @@ PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9"
                       --source-repo https://github.com/dotnet/runtime
                       --target-repo https://github.com/dotnet/sdk
                       --target-branch main --update-frequency everyBuild
-                      --target-directory "src/sdk,eng/common"
-                      --excluded-assets "src/sdk/System.Text.Json"
+                      --target-directory "src/sdk,src/templating"
+                      --excluded-assets "src/sdk/System.Text.Json;src/*/System.IO.*"
                       --standard-automerge -q
 
 Successfully created new subscription with id 'a1b2c3d4-5678-90ab-cdef-123456789012'.
