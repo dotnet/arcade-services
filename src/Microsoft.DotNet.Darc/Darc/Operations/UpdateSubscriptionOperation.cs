@@ -251,6 +251,34 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
             sourceDirectory = updateSubscriptionPopUp.SourceDirectory;
             targetDirectory = updateSubscriptionPopUp.TargetDirectory;
             excludedAssets = [..updateSubscriptionPopUp.ExcludedAssets];
+
+            // Validate that immutable fields have not been changed
+            var immutableFieldErrors = new List<string>();
+
+            if (updateSubscriptionPopUp.TargetRepository != subscription.TargetRepository)
+            {
+                immutableFieldErrors.Add($"Target Repository URL (cannot be changed from '{subscription.TargetRepository}')");
+            }
+
+            if (updateSubscriptionPopUp.TargetBranch != subscription.TargetBranch)
+            {
+                immutableFieldErrors.Add($"Target Branch (cannot be changed from '{subscription.TargetBranch}')");
+            }
+
+            if (updateSubscriptionPopUp.SourceEnabled != subscription.SourceEnabled)
+            {
+                immutableFieldErrors.Add($"Source Enabled (cannot be changed from '{subscription.SourceEnabled}')");
+            }
+
+            if (immutableFieldErrors.Any())
+            {
+                _logger.LogError("The following immutable fields cannot be modified:");
+                foreach (var error in immutableFieldErrors)
+                {
+                    _logger.LogError($"  - {error}");
+                }
+                return Constants.ErrorCode;
+            }
         }
 
 
