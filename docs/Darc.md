@@ -1277,8 +1277,8 @@ A subscription has a few parts:
   merge policies are currently unsupported in darc*
 - (Optional) Target directories - A comma-separated list of paths where dependency 
   updates are applied. This allows updates to be scoped to specific directories 
-  within the repository. Use '.' for the repository root. Paths support globbing 
-  at the end (e.g., `src/*`)
+  within the repository. Use '.' for the repository root. Paths can include a wildcard 
+  (`*`) at the end to match multiple directories (e.g., `src/*`)
 
 `add-subscription` has two modes of operation:
 - Interactive mode (default) - Interactive mode will take whatever input parameters were
@@ -1315,7 +1315,7 @@ PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9 Dev"
                        --target-branch main --update-frequency everyBuild
                        --target-directory "src/sdk,src/runtime" --standard-automerge -q
 
-# Use globbing to target multiple directories
+# Use wildcards to target multiple directories
 PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9 Dev"
                        --source-repo https://github.com/dotnet/runtime
                        --target-repo https://github.com/dotnet/sdk
@@ -2744,8 +2744,8 @@ information.
 **Target Directories**: You can use the `--target-directory` parameter to specify 
 one or more directories (comma-separated) where dependency updates should be applied. 
 This is useful when a repository has multiple Version.Details.xml files in different 
-locations. Use '.' for the repository root. Paths support globbing at the end 
-(e.g., `src/*`).
+locations. Use '.' for the repository root. Paths can include a wildcard (`*`) at the 
+end to match multiple directories (e.g., `src/*`).
 
 When using `--target-directory`, you can also use `--excluded-assets` to exclude 
 specific assets in specific directories (e.g., `src/sdk/System.Text.Json` or 
@@ -2806,7 +2806,7 @@ Processing directory: src/runtime
   Updating 'Microsoft.NETCore.App.Runtime.linux-x64': '9.0.0-preview.1.23456.7' => '9.0.0-preview.1.23457.1'
 Local dependencies updated from channel '.NET 9 Dev'.
 
-# Use globbing to update all subdirectories
+# Use wildcards to update all subdirectories
 PS C:\enlistments\sdk> darc update-dependencies --channel ".NET 9 Dev" --target-directory "src/*"
 
 # Exclude specific assets in specific directories
@@ -2833,7 +2833,8 @@ policies, enabled status, batchable status, target directories, and excluded ass
 
 **Target Directories**: For dependency flow subscriptions, you can specify multiple 
 target directories (comma-separated) where dependency updates should be applied. 
-Use '.' for the repository root. Paths support globbing at the end (e.g., `src/*`).
+Use '.' for the repository root. Paths can include a wildcard (`*`) at the end to match 
+multiple directories (e.g., `src/*`).
 
 When using target directories with `--excluded-assets`, you can exclude specific 
 assets in specific directories (e.g., `src/sdk/System.Text.Json` or `src/*/System.Text.*`).
