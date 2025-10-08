@@ -1108,8 +1108,8 @@ PS D:\enlistments\arcade> darc get-goal --definition-id 6 --channel ".Net 5 Dev"
 ### **`add-dependency`**
 
 Add a new tracked dependency to the Version.Detail.xml file in your local repo.
-This dependency is also added to eng/Version.Details.props (if it exists) or eng/Versions.props, 
-as well as global.json (for certain dependencies, such as the Arcade SDK). This new dependency 
+This dependency is also added to `eng/Version.Details.props` (if it exists) or `eng/Versions.props`, 
+as well as `global.json` (for certain dependencies, such as the Arcade SDK). This new dependency 
 can then be updated using [update-dependencies](#update-dependencies). After merging the changes 
 into the remote github or AzDO repository, the dependency can be updated by Maestro++
 if there is a corresponding subscription targeting that repo.
