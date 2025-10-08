@@ -7,6 +7,7 @@ using CommandLine;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -44,7 +45,7 @@ internal abstract class VmrCommandLineOptionsBase<T> : CommandLineOptions<T> whe
             azureDevOpsToken ??= localDarcSettings?.AzureDevOpsToken;
         }
 
-        tmpPath = Path.GetFullPath(tmpPath ?? Path.GetTempPath());
+        tmpPath = Path.GetFullPath(tmpPath ?? new NativePath(Path.GetTempPath()) / Constants.DefaultDarcClonesDirectoryName);
 
         services.AddSingleVmrSupport(GitLocation, VmrPath, tmpPath, gitHubToken, azureDevOpsToken);
         services.TryAddTransient<IVmrScanner, VmrCloakedFileScanner>();
