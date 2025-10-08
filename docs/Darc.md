@@ -696,7 +696,7 @@ a corresponding property generated:
 ```
 
 **Important notes about SkipProperty:**
-- The dependency will still be tracked in Version.Details.xml
+- The dependency will still be tracked in `Version.Details.xml`
 - Maestro will still update the dependency version through subscriptions
 - No property will be generated in `Version.Details.props` or `Versions.props`
 - If ALL dependencies from a repository have `SkipProperty="true"`, no repository header
