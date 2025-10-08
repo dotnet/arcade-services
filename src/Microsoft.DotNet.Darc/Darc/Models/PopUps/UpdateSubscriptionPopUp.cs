@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -13,6 +14,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps;
 internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionUpdateData>
 {
     private readonly ILogger _logger;
+    private readonly Subscription _originalSubscription;
 
     public bool Enabled => bool.Parse(_data.Enabled);
 
@@ -46,6 +48,7 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionUpdateDat
             ])
     {
         _logger = logger;
+        _originalSubscription = subscription;
     }
 
     public UpdateSubscriptionPopUp(
@@ -99,6 +102,47 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionUpdateDat
         }
 
         _data.Enabled = ParseSetting(data.Enabled, _data.Enabled, false)!;
+
+        // Validate that immutable fields have not been changed
+        var immutableFieldErrors = new List<string>();
+
+        // Check if Id has changed
+        string? parsedId = ParseSetting(data.Id, _originalSubscription.Id.ToString(), false);
+        if (!string.IsNullOrEmpty(parsedId) && parsedId != _originalSubscription.Id.ToString())
+        {
+            immutableFieldErrors.Add($"Id (cannot be changed from '{_originalSubscription.Id}')");
+        }
+
+        // Check if TargetRepository has changed
+        string? parsedTargetRepo = ParseSetting(data.TargetRepository, _originalSubscription.TargetRepository, false);
+        if (!string.IsNullOrEmpty(parsedTargetRepo) && parsedTargetRepo != _originalSubscription.TargetRepository)
+        {
+            immutableFieldErrors.Add($"Target Repository URL (cannot be changed from '{_originalSubscription.TargetRepository}')");
+        }
+
+        // Check if TargetBranch has changed
+        string? parsedTargetBranch = ParseSetting(data.TargetBranch, _originalSubscription.TargetBranch, false);
+        if (!string.IsNullOrEmpty(parsedTargetBranch) && parsedTargetBranch != _originalSubscription.TargetBranch)
+        {
+            immutableFieldErrors.Add($"Target Branch (cannot be changed from '{_originalSubscription.TargetBranch}')");
+        }
+
+        // Check if SourceEnabled has changed
+        string? parsedSourceEnabled = ParseSetting(data.SourceEnabled, _originalSubscription.SourceEnabled.ToString(), false);
+        if (!string.IsNullOrEmpty(parsedSourceEnabled) && parsedSourceEnabled != _originalSubscription.SourceEnabled.ToString())
+        {
+            immutableFieldErrors.Add($"Source Enabled (cannot be changed from '{_originalSubscription.SourceEnabled}')");
+        }
+
+        if (immutableFieldErrors.Any())
+        {
+            _logger.LogError("The following immutable fields cannot be modified:");
+            foreach (var error in immutableFieldErrors)
+            {
+                _logger.LogError($"  - {error}");
+            }
+            return Constants.ErrorCode;
+        }
 
         return Constants.SuccessCode;
     }
