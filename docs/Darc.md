@@ -1275,6 +1275,10 @@ A subscription has a few parts:
   merge policies are set on a repository level rather than a per-subscription
   level, as they end up shared between several subscriptions. *Note: repository
   merge policies are currently unsupported in darc*
+- (Optional) Target directories - A comma-separated list of paths where dependency 
+  updates are applied. This allows updates to be scoped to specific directories 
+  within the repository. Use '.' for the repository root. Paths support globbing 
+  at the end (e.g., `src/*`)
 
 `add-subscription` has two modes of operation:
 - Interactive mode (default) - Interactive mode will take whatever input parameters were
@@ -1296,6 +1300,52 @@ PS D:\enlistments\arcade-services> darc add-subscription --channel ".NET Tools -
 
 Successfully created new subscription with id '4f300f68-8800-4b14-328e-08d68308fe30'.
 ```
+
+**Using Target Directories**:
+
+The `--target-directory` parameter allows you to specify where dependency updates should 
+be applied within the target repository. This is useful for repositories with multiple 
+projects or configurations that need different dependency update behaviors.
+
+```
+# Update dependencies only in specific directories
+PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9 Dev"
+                       --source-repo https://github.com/dotnet/runtime
+                       --target-repo https://github.com/dotnet/sdk
+                       --target-branch main --update-frequency everyBuild
+                       --target-directory "src/sdk,src/runtime" --standard-automerge -q
+
+# Use globbing to target multiple directories
+PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9 Dev"
+                       --source-repo https://github.com/dotnet/runtime
+                       --target-repo https://github.com/dotnet/sdk
+                       --target-branch main --update-frequency everyBuild
+                       --target-directory "src/*" --standard-automerge -q
+
+# Target repository root
+PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9 Dev"
+                       --source-repo https://github.com/dotnet/runtime
+                       --target-repo https://github.com/dotnet/sdk
+                       --target-branch main --update-frequency everyBuild
+                       --target-directory "." --standard-automerge -q
+```
+
+When using `--target-directory`, you can also use `--excluded-assets` to exclude specific 
+assets in specific directories. For example:
+
+```
+# Exclude specific assets in specific directories
+PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9 Dev"
+                       --source-repo https://github.com/dotnet/runtime
+                       --target-repo https://github.com/dotnet/sdk
+                       --target-branch main --update-frequency everyBuild
+                       --target-directory "src/sdk,src/runtime"
+                       --excluded-assets "src/sdk/System.Text.Json;src/*/System.Text.*" -q
+```
+
+**Note**: Target directories are only supported for dependency flow subscriptions, not 
+source-enabled (VMR code flow) subscriptions. For VMR subscriptions, use `--source-directory` 
+or `--target-directory` to specify a single VMR directory under `src/`.
 
 **Available merge policies**
 
@@ -2691,6 +2741,16 @@ See [Updating dependencies in your local
 repository](#updating-dependencies-in-your-local-repository) for more
 information.
 
+**Target Directories**: You can use the `--target-directory` parameter to specify 
+one or more directories (comma-separated) where dependency updates should be applied. 
+This is useful when a repository has multiple Version.Details.xml files in different 
+locations. Use '.' for the repository root. Paths support globbing at the end 
+(e.g., `src/*`).
+
+When using `--target-directory`, you can also use `--excluded-assets` to exclude 
+specific assets in specific directories (e.g., `src/sdk/System.Text.Json` or 
+`src/*/System.Text.*`).
+
 **Sample**
 ```
 PS C:\enlistments\core-setup> darc update-dependencies --channel ".NET 5 Dev"
@@ -2735,6 +2795,26 @@ Updating 'Microsoft.DotNet.Wpf.GitHub': '5.0.0-alpha1.19462.16' => '5.0.0-alpha1
 Local dependencies updated from channel '.NET 5 Dev'.
 ```
 
+**Using target directories**:
+```
+# Update dependencies in specific directories only
+PS C:\enlistments\sdk> darc update-dependencies --channel ".NET 9 Dev" --target-directory "src/sdk,src/runtime"
+
+Processing directory: src/sdk
+  Updating 'Microsoft.NETCore.App.Runtime.win-x64': '9.0.0-preview.1.23456.7' => '9.0.0-preview.1.23457.1'
+Processing directory: src/runtime
+  Updating 'Microsoft.NETCore.App.Runtime.linux-x64': '9.0.0-preview.1.23456.7' => '9.0.0-preview.1.23457.1'
+Local dependencies updated from channel '.NET 9 Dev'.
+
+# Use globbing to update all subdirectories
+PS C:\enlistments\sdk> darc update-dependencies --channel ".NET 9 Dev" --target-directory "src/*"
+
+# Exclude specific assets in specific directories
+PS C:\enlistments\sdk> darc update-dependencies --channel ".NET 9 Dev" 
+                       --target-directory "src/sdk,src/runtime"
+                       --excluded-assets "src/sdk/System.Text.Json;src/*/System.Text.*"
+```
+
 **See Also**:
 - [add](#add)
 - [get-dependencies](#get-dependencies)
@@ -2746,6 +2826,17 @@ Update an existing subscription. Opens an editor so that some properties of a
 subscription may be altered. Because of the way that Maestro++ tracks pull
 requests, the *target* parameters of a subscription (target repository and
 target branch) may not be edited.
+
+You can use the `-q` flag to update specific properties via command line without 
+opening an editor. Properties that can be updated include update frequency, merge 
+policies, enabled status, batchable status, target directories, and excluded assets.
+
+**Target Directories**: For dependency flow subscriptions, you can specify multiple 
+target directories (comma-separated) where dependency updates should be applied. 
+Use '.' for the repository root. Paths support globbing at the end (e.g., `src/*`).
+
+When using target directories with `--excluded-assets`, you can exclude specific 
+assets in specific directories (e.g., `src/sdk/System.Text.Json` or `src/*/System.Text.*`).
 
 **Sample**:
 ```
@@ -2770,6 +2861,20 @@ https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet
   - Batchable: False
   - Merge Policies:
     Standard
+```
+
+**Updating target directories via command line**:
+```
+# Update subscription to target specific directories
+PS D:\enlistments\websdk> darc update-subscription --id 1abbb4c1-19d8-4912-fab8-08d6a19aff91
+                          --target-directory "src/sdk,src/runtime" -q
+Successfully updated subscription with id '1abbb4c1-19d8-4912-fab8-08d6a19aff91'.
+
+# Update subscription with directory-specific asset exclusions
+PS D:\enlistments\websdk> darc update-subscription --id 1abbb4c1-19d8-4912-fab8-08d6a19aff91
+                          --target-directory "src/*"
+                          --excluded-assets "src/sdk/System.Text.Json;src/*/System.Text.*" -q
+Successfully updated subscription with id '1abbb4c1-19d8-4912-fab8-08d6a19aff91'.
 ```
 
 **See also**:
