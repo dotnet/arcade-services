@@ -695,7 +695,7 @@ a corresponding property generated:
 </Dependency>
 ```
 
-**Important notes about SkipProperty:**
+**Important notes about `SkipProperty`:**
 - The dependency will still be tracked in `Version.Details.xml`
 - Maestro will still update the dependency version through subscriptions
 - No property will be generated in `Version.Details.props` or `Versions.props`
