@@ -324,23 +324,12 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         CancellationToken cancellationToken)
     {
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+        await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
 
-        // If a PR branch exists, check out the last flow's commit in the PR branch
-        if (headBranchExisted)
-        {
-            await vmr.CheckoutAsync(lastFlows.LastForwardFlow.VmrSha);
-            await _dependencyTracker.RefreshMetadataAsync();
-        }
-        else if (rebase)
-        {
-            // If we're rebasing, we want to be on top of the target branch
-            await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
-            await _dependencyTracker.RefreshMetadataAsync();
-        } 
-
-        IWorkBranch? workBranch = headBranchExisted || rebase
-            ? await _workBranchFactory.CreateWorkBranchAsync(vmr, currentFlow.GetBranchName(), headBranch)
-            : null;
+        IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(
+            vmr,
+            currentFlow.GetBranchName(),
+            headBranch);
 
         await sourceRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
 

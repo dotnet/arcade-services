@@ -19,6 +19,7 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 internal abstract class CodeFlowOperation(
         ICodeFlowCommandLineOptions options,
         IVmrInfo vmrInfo,
+        IVmrCloneManager vmrCloneManager,
         IVmrDependencyTracker dependencyTracker,
         IDependencyFileManager dependencyFileManager,
         ILocalGitRepoFactory localGitRepoFactory,
@@ -29,6 +30,7 @@ internal abstract class CodeFlowOperation(
 {
     private readonly ICodeFlowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
+    private readonly IVmrCloneManager _vmrCloneManager = vmrCloneManager;
     private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
     private readonly IDependencyFileManager _dependencyFileManager = dependencyFileManager;
     private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
@@ -59,6 +61,9 @@ internal abstract class CodeFlowOperation(
             !isForwardFlow ? mappingName : "VMR",
             targetRepo.Path);
 
+        // Tell the VMR clone manager about the local VMR
+        await _vmrCloneManager.RegisterVmrAsync(_vmrInfo.VmrPath);
+
         Codeflow currentFlow = isForwardFlow
             ? new ForwardFlow(_options.Ref, await targetRepo.GetShaForRefAsync())
             : new Backflow(_options.Ref, await targetRepo.GetShaForRefAsync());
@@ -75,7 +80,6 @@ internal abstract class CodeFlowOperation(
             currentFlow,
             mapping,
             currentTargetRepoBranch,
-            $"darc/{mappingName}/{DarcLib.Commit.GetShortSha(_options.Ref)}",
             cancellationToken);
 
         if (!hasChanges)
@@ -93,7 +97,6 @@ internal abstract class CodeFlowOperation(
         Build build,
         Codeflow currentFlow,
         SourceMapping mapping,
-        string targetBranch,
         string headBranch,
         CancellationToken cancellationToken);
 

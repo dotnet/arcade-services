@@ -37,6 +37,11 @@ public interface ILocalGitRepo
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    ///    Retrieves a list of remotes in the repository.
+    /// </summary>
+    Task<List<(string Name, string Uri)>> GetRemotesAsync();
+
+    /// <summary>
     ///     Retrieves SHA of the commit that last changed the given line in the given file.
     /// </summary>
     /// <param name="relativeFilePath">Relative path to the file inside of the repository</param>

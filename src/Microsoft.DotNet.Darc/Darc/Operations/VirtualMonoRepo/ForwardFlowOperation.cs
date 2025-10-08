@@ -21,6 +21,7 @@ internal class ForwardFlowOperation(
         ForwardFlowCommandLineOptions options,
         IVmrForwardFlower forwardFlower,
         IVmrInfo vmrInfo,
+        IVmrCloneManager vmrCloneManager,
         IVmrDependencyTracker dependencyTracker,
         IDependencyFileManager dependencyFileManager,
         ILocalGitRepoFactory localGitRepoFactory,
@@ -28,7 +29,7 @@ internal class ForwardFlowOperation(
         IFileSystem fileSystem,
         IProcessManager processManager,
         ILogger<ForwardFlowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
+    : CodeFlowOperation(options, vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
 {
     private readonly ForwardFlowCommandLineOptions _options = options;
     private readonly IVmrForwardFlower _forwardFlower = forwardFlower;
@@ -62,7 +63,6 @@ internal class ForwardFlowOperation(
         Build build,
         Codeflow currentFlow,
         SourceMapping mapping,
-        string targetBranch,
         string headBranch,
         CancellationToken cancellationToken)
     {
@@ -73,11 +73,11 @@ internal class ForwardFlowOperation(
                 productRepo.Path,
                 build,
                 excludedAssets: [], // TODO: Fill from subscription
-                targetBranch,
+                headBranch,
                 headBranch,
                 _vmrInfo.VmrPath,
                 rebase: true,
-                forceUpdate: false,
+                forceUpdate: true,
                 cancellationToken);
 
             return result.HadUpdates;

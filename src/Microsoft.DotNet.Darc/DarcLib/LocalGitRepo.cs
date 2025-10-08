@@ -34,6 +34,9 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
     public async Task<string> AddRemoteIfMissingAsync(string repoUrl, CancellationToken cancellationToken = default)
         => await _localGitClient.AddRemoteIfMissingAsync(Path, repoUrl, cancellationToken);
 
+    public async Task<List<(string Name, string Uri)>> GetRemotesAsync()
+        => await _localGitClient.GetRemotesAsync(Path);
+
     public async Task<string> BlameLineAsync(string relativeFilePath, int line, string? blameFromCommit = null)
         => await _localGitClient.BlameLineAsync(Path, relativeFilePath, line, blameFromCommit);
 

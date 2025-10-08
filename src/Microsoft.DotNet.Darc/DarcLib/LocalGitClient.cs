@@ -275,24 +275,8 @@ public class LocalGitClient : ILocalGitClient
     /// <returns>Name of the remote</returns>
     public async Task<string> AddRemoteIfMissingAsync(string repoPath, string repoUrl, CancellationToken cancellationToken = default)
     {
-        var result = await _processManager.ExecuteGit(repoPath, ["remote", "-v"], cancellationToken: cancellationToken);
-        result.ThrowIfFailed($"Failed to get remotes for {repoPath}");
-
-        string? remoteName = null;
-
-        foreach (var line in result.GetOutputLines())
-        {
-            // This doesn't work if the repo path has a whitespace
-            var parts = line.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            var name = parts[0];
-            var url = parts[1];
-
-            if (url == repoUrl)
-            {
-                remoteName = name;
-                break;
-            }
-        }
+        var remotes = await GetRemotesAsync(repoPath);
+        var remoteName = remotes.FirstOrDefault(r => r.Uri.Equals(repoUrl, StringComparison.OrdinalIgnoreCase)).Name;
 
         if (remoteName == null)
         {
@@ -301,11 +285,31 @@ public class LocalGitClient : ILocalGitClient
             // Remote names don't matter much but should be stable
             remoteName = StringUtils.GetXxHash64(repoUrl);
 
-            result = await _processManager.ExecuteGit(repoPath, ["remote", "add", remoteName, repoUrl], cancellationToken: cancellationToken);
+            var result = await _processManager.ExecuteGit(repoPath, ["remote", "add", remoteName, repoUrl], cancellationToken: cancellationToken);
             result.ThrowIfFailed($"Failed to add remote {remoteName} ({repoUrl}) to {repoPath}");
         }
 
         return remoteName;
+    }
+
+    public async Task<List<(string Name, string Uri)>> GetRemotesAsync(string repoPath)
+    {
+        var result = await _processManager.ExecuteGit(repoPath, ["remote", "-v"]);
+        result.ThrowIfFailed($"Failed to get remotes for {repoPath}");
+
+        List<(string, string)> remotes = [];
+
+        foreach (var line in result.GetOutputLines())
+        {
+            // This doesn't work if the repo path has a whitespace
+            var parts = line.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var name = parts[0];
+            var url = parts[1];
+
+            remotes.Add((name, url));
+        }
+
+        return remotes;
     }
 
     public async Task UpdateRemoteAsync(string repoPath, string remoteName, CancellationToken cancellationToken = default)

@@ -21,6 +21,7 @@ internal class BackflowOperation(
     IVmrInfo vmrInfo,
     IVmrBackFlower backFlower,
     IBackflowConflictResolver backflowConflictResolver,
+    IVmrCloneManager vmrCloneManager,
     IVmrDependencyTracker dependencyTracker,
     ILocalGitRepoFactory localGitRepoFactory,
     IDependencyFileManager dependencyFileManager,
@@ -28,7 +29,7 @@ internal class BackflowOperation(
     IProcessManager processManager,
     IFileSystem fileSystem,
     ILogger<BackflowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
+    : CodeFlowOperation(options, vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
 {
     private readonly BackflowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
@@ -62,7 +63,6 @@ internal class BackflowOperation(
         Build build,
         Codeflow currentFlow,
         SourceMapping mapping,
-        string targetBranch,
         string headBranch,
         CancellationToken cancellationToken)
     {
@@ -78,10 +78,10 @@ internal class BackflowOperation(
                 productRepo.Path,
                 build,
                 excludedAssets: [], // TODO: Fill from subscription
-                targetBranch,
+                headBranch,
                 headBranch,
                 rebase: true,
-                forceUpdate: false,
+                forceUpdate: true,
                 cancellationToken);
 
             return result.HadUpdates;
@@ -94,7 +94,7 @@ internal class BackflowOperation(
                 (Backflow)currentFlow,
                 productRepo,
                 build,
-                targetBranch,
+                headBranch,
                 headBranch,
                 [],
                 headBranchExisted: true,

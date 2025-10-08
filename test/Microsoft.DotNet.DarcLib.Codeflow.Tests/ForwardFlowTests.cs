@@ -105,7 +105,7 @@ internal class ForwardFlowTests : CodeFlowTests
             VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName + "-added-in-repo",
             VmrInfo.SourcesDir / Constants.ProductRepoName / DarcLib.Constants.CommonScriptFilesPath / "build.ps2",
             VmrInfo.SourcesDir / Constants.ProductRepoName / VersionFiles.VersionDetailsXml,
-            VmrInfo.DefaultRelativeSourceManifestPath
+            VmrInfo.DefaultRelativeSourceManifestPath,
         ];
 
         stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
