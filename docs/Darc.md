@@ -1287,6 +1287,30 @@ Upon saving and closing the editor, or running the darc command if in command
 line mode (`-q`), the darc tool submits the new subscription to Maestro++. If
 successful, the id of the new subscription is returned.
 
+**Target Directories and Asset Filtering**:
+
+For dependency flow subscriptions, you can specify which directories in the target repository
+should receive dependency updates using the `--target-directory` parameter. This parameter accepts
+a comma-separated list of paths where dependency updates will be applied. Use `.` to target the
+repository root. These paths support globbing, but only at the end of the path (e.g., `src/*`).
+
+When combined with target directories, the `--excluded-assets` parameter allows you to exclude
+specific assets from being updated in particular directories. This is useful for fine-grained
+control over which dependencies are updated where. Asset filters support wildcards for package
+names, and when used with target directories, you can specify directory paths to exclude assets
+in specific locations.
+
+Examples:
+- Update all directories: `--target-directory "."`
+- Update multiple specific directories: `--target-directory "src/sdk,eng/tools"`
+- Update with globbing: `--target-directory "src/*"`
+- Exclude assets globally: `--excluded-assets "Microsoft.NETCore.App;System.Text.Json"`
+- Exclude assets in specific directories: `--excluded-assets "src/sdk/System.Text.Json;src/*/System.Text.*"`
+
+**Note**: For source-enabled (VMR code flow) subscriptions, `--target-directory` and `--source-directory`
+define which directory of the VMR (under `src/`) the sources are synchronized with. In this case, only
+a single directory should be specified, not a comma-separated list.
+
 **Sample**:
 ```
 PS D:\enlistments\arcade-services> darc add-subscription --channel ".NET Tools - Latest"
@@ -1295,6 +1319,19 @@ PS D:\enlistments\arcade-services> darc add-subscription --channel ".NET Tools -
                                    --target-branch master --update-frequency everyDay --all-checks-passed -q
 
 Successfully created new subscription with id '4f300f68-8800-4b14-328e-08d68308fe30'.
+```
+
+**Sample with target directories**:
+```
+PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9"
+                      --source-repo https://github.com/dotnet/runtime
+                      --target-repo https://github.com/dotnet/sdk
+                      --target-branch main --update-frequency everyBuild
+                      --target-directory "src/sdk,eng/common"
+                      --excluded-assets "src/sdk/System.Text.Json"
+                      --standard-automerge -q
+
+Successfully created new subscription with id 'a1b2c3d4-5678-90ab-cdef-123456789012'.
 ```
 
 **Available merge policies**
@@ -2686,6 +2723,19 @@ build asset registry (--packages-folder)
 - Update a specific dependency to a new version (--name and --version)
 - Simulate a specific Maestro subscription locally (--subscription)
 
+**Target Directories and Asset Filtering**:
+
+Similar to subscriptions, `update-dependencies` supports targeting specific directories and
+excluding assets:
+
+- **Target Directories** (`--target-directory`): Specify a comma-separated list of paths where
+  dependency updates should be applied. Use `.` for the repository root. Paths support globbing
+  at the end (e.g., `src/*`). When specified, only dependencies in those directories will be updated.
+
+- **Excluded Assets** (`--excluded-assets`): A semicolon-delimited list of asset filters (package
+  names with wildcards allowed). When used with target directories, you can exclude specific assets
+  in particular directories (e.g., `src/sdk/System.Text.Json` or `src/*/System.Text.*`).
+
 This command is especially useful after adding new dependencies to a repository.
 See [Updating dependencies in your local
 repository](#updating-dependencies-in-your-local-repository) for more
@@ -2735,6 +2785,19 @@ Updating 'Microsoft.DotNet.Wpf.GitHub': '5.0.0-alpha1.19462.16' => '5.0.0-alpha1
 Local dependencies updated from channel '.NET 5 Dev'.
 ```
 
+**Sample with target directories**:
+```
+PS C:\enlistments\sdk> darc update-dependencies --channel ".NET 9" 
+                      --target-directory "src/sdk,eng/common"
+                      --excluded-assets "src/sdk/System.Text.Json"
+
+Processing directory: src/sdk
+  Updating 'Microsoft.NETCore.App': '9.0.0-preview.1.12345.1' => '9.0.0-preview.1.12346.5'
+Processing directory: eng/common
+  Updating 'Microsoft.DotNet.Arcade.Sdk': '9.0.0-beta.12345.1' => '9.0.0-beta.12346.3'
+Local dependencies updated from channel '.NET 9'.
+```
+
 **See Also**:
 - [add](#add)
 - [get-dependencies](#get-dependencies)
@@ -2746,6 +2809,19 @@ Update an existing subscription. Opens an editor so that some properties of a
 subscription may be altered. Because of the way that Maestro++ tracks pull
 requests, the *target* parameters of a subscription (target repository and
 target branch) may not be edited.
+
+**Updatable Properties**:
+
+In addition to update frequency and merge policies, you can update:
+
+- **Target Directories** (`--target-directory`): For dependency flow subscriptions, you can specify
+  a comma-separated list of paths where dependency updates should be applied. Use `.` for the
+  repository root. Paths support globbing at the end (e.g., `src/*`). For source-enabled (VMR code
+  flow) subscriptions, this should be a single directory path.
+
+- **Excluded Assets** (`--excluded-assets`): A semicolon-delimited list of asset filters (package
+  names with wildcards allowed). When used with target directories, you can exclude specific assets
+  in particular directories (e.g., `src/sdk/System.Text.Json` or `src/*/System.Text.*`).
 
 **Sample**:
 ```
@@ -2770,6 +2846,15 @@ https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet
   - Batchable: False
   - Merge Policies:
     Standard
+```
+
+**Sample updating target directories**:
+```
+PS D:\enlistments\sdk> darc update-subscription --id a1b2c3d4-5678-90ab-cdef-123456789012
+                      --target-directory "src/sdk,src/cli,eng/common"
+                      --excluded-assets "src/sdk/System.Text.Json;Microsoft.NETCore.App"
+                      -q
+Successfully updated subscription with id 'a1b2c3d4-5678-90ab-cdef-123456789012'.
 ```
 
 **See also**:
