@@ -14,6 +14,7 @@ public class Constants
     public const int ErrorCode = 42;
     public const int SuccessCode = 0;
     public const int MaxPopupTries = 3;
+    public const string DefaultDarcClonesDirectoryName = "darc-clones";
     public static readonly string DarcDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".darc");
 
     /// <summary>

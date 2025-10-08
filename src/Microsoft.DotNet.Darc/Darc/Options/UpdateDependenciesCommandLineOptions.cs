@@ -16,6 +16,9 @@ internal class UpdateDependenciesCommandLineOptions : CommandLineOptions<UpdateD
     [Option('c', "channel", HelpText = "Channel to pull dependencies from.")]
     public string Channel { get; set; }
 
+    [Option("subscription", HelpText = "Subscription ID to simulate. When provided, updates dependencies as the specified subscription would.")]
+    public string SubscriptionId { get; set; }
+
     [Option('n', "name", HelpText = "Optional name of dependency to update. Otherwise all " +
                                     "dependencies existing on 'channel' are updated.")]
     public string Name { get; set; }
@@ -36,4 +39,14 @@ internal class UpdateDependenciesCommandLineOptions : CommandLineOptions<UpdateD
 
     [Option("coherency-only", HelpText = "Only do coherency updates.")]
     public bool CoherencyOnly { get; set; }
+
+    [Option("target-directory", HelpText = "In source enabled subs: Name of the VMR target directory which are the repository sources synchronized to." +
+        " In dependency flow subscriptions: Comma separated list of paths ('.' for repo root) where the dependency updates are applied." +
+        " These paths support globbing, but only at the end of the path, e.g src/*")]
+    public string TargetDirectory { get; set; }
+
+    [Option("excluded-assets", HelpText = "Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded." +
+        " When used with dependency flow subscriptions with specified target directories, it is possible to exclude assets in specific directories" +
+        " e.g. src/sdk/System.Text.json or src/*/System.Text.* ")]
+    public string ExcludedAssets { get; set; }
 }

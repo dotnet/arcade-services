@@ -14,6 +14,7 @@ use darc to achieve them, as well as a general reference guide to darc commands.
   - ['Pinning' dependencies so they do not
     update](#pinning-dependencies-so-they-do-not-update)
   - [Coherent parent dependencies](#coherent-parent-dependencies)
+  - [Version.Details.props and the SkipProperty attribute](#versiondetailsprops-and-the-skipproperty-attribute)
   - [Adding dependency flow](#adding-dependency-flow)
   - [Halting and restarting dependency flow](#halting-and-restarting-dependency-flow)
   - [Viewing the dependency graph](#viewing-the-dependency-graph)
@@ -198,6 +199,7 @@ information about each one:
 - Source sha
 - Source repository
 - Is the dependency version pinned (can be it automatically updated?)
+- Should the dependency property be skipped (see below for details)
 - Dependency type (toolset or product)
 
 The [`darc add-dependency`](#add-dependency) command adds a new dependency.  It takes a number of
@@ -212,20 +214,35 @@ darc add-dependency --name 'Microsoft.NETCore.App' --type 'product' --repo https
 ```
 
 This will add a new dependency called 'Microsoft.NETCore.App' to eng/Version.Details.xml under the
-product section. The version, repo, and sha information will be left blank.  A
-corresponding PropertyGroup entry in eng/Versions.props will be added, with the same
-version number. The property name is derived off of the dependency name, with
-the .'s and -'s removed and "PackageVersion" added onto the end. *Note: If
+product section. The version, repo, and sha information will be left blank.  
+
+#### Version Files and Properties
+
+When a dependency is added, properties are created in version files based on whether the repository
+uses the newer `Version.Details.props` file or the legacy `Versions.props` approach:
+
+- **Version.Details.props** (Recommended for new repositories): If `eng/Version.Details.props` exists,
+  dependency version properties will be automatically generated in this file. This file is auto-generated
+  by Maestro and should not be manually edited. The `Versions.props` file should import this file:
+  ```xml
+  <Import Project="Version.Details.props" Condition="Exists('Version.Details.props')" />
+  ```
+
+- **Versions.props** (Legacy): If `Version.Details.props` does not exist, properties will be added to
+  `eng/Versions.props` directly. This is the traditional approach for older repositories.
+
+In both cases, the property name is derived from the dependency name, with
+.'s and -'s removed and "PackageVersion" added onto the end. *Note: If
 eng/Versions.props's existing version property names end with the suffix
 'Version', darc will append that instead.*
 
-eng/Versions.props after add command.
+Example generated property:
 ```
-<MicrosoftNETCoreAppPackageVersion></MicrosoftNETCoreAppPackageVersion>
+<MicrosoftNETCoreAppPackageVersion>3.0.0-preview-27401-3</MicrosoftNETCoreAppPackageVersion>
 ```
 
-After doing this, you can use the generated `MicrosoftNETCoreAppPackageVersion`
-property as inputs to a PackageReference element or wherever else may need a
+After adding, you can use the generated property (e.g., `MicrosoftNETCoreAppPackageVersion`)
+as inputs to a PackageReference element or wherever else may need a
 version number.
 
 After adding, it is recommended that you use darc to fill out the missing
@@ -383,6 +400,31 @@ index 8e5dab10..ede83435 100644
    }
  }
 ```
+
+#### Simulating a subscription update
+
+Sometimes you may want to locally test what a specific Maestro subscription would do before it runs automatically. The `--subscription` parameter allows you to simulate a subscription update locally:
+
+```
+PS C:\enlistments\runtime> darc update-dependencies --subscription 12345678-1234-1234-1234-123456789012 --dry-run
+
+Simulating subscription '12345678-1234-1234-1234-123456789012':
+  Source: https://github.com/dotnet/arcade (channel: .NET Tools - Latest)
+  Target: https://github.com/dotnet/runtime#main
+Processing directory: root
+    Updating 'Microsoft.DotNet.Arcade.Sdk': '1.0.0-beta.19080.6' => '1.0.0-beta.19081.3' (from build '20190131.3' of 'https://github.com/dotnet/arcade')
+  [DRY RUN] Would update 1 dependencies in root
+Dry run complete. No changes were made.
+```
+
+This feature:
+- Fetches the subscription metadata from Maestro (source repo, channel, target repo/branch, excluded assets, target directory)
+- Determines which build Maestro would apply for that subscription
+- Shows what updates would be made
+- Respects the subscription's target directory and excluded assets filters
+- Works with `--dry-run` to preview changes without modifying files
+
+**Note**: The `--subscription` parameter cannot be used with `--channel`, `--id`, `--packages-folder`, `--name`/`--version`, `--source-repo`, or `--coherency-only` as these would conflict with the subscription's own settings.
 
 ### Removing dependencies from a repository
 
@@ -620,6 +662,81 @@ PS D:\enlistments\extensions\eng> cat .\Version.Details.xml
   </ToolsetDependencies>
 </Dependencies>
 ```
+
+### Version.Details.props and the SkipProperty attribute
+
+As repositories have evolved, a new pattern has emerged for managing dependency version properties
+more cleanly. The `Version.Details.props` file provides a separation of concerns between
+auto-generated dependency properties and manually managed version properties.
+
+#### What is Version.Details.props?
+
+`Version.Details.props` is an MSBuild properties file that is automatically generated by Maestro
+based on the contents of `Version.Details.xml`. When this file exists in the `eng/` folder,
+Maestro will generate dependency version properties into this file instead of directly into
+`Versions.props`.
+
+**Key characteristics:**
+- **Auto-generated**: This file is created and maintained automatically by Maestro dependency flow.
+- **Do not manually edit**: Changes will be overwritten by automation during dependency updates.
+- **Must be imported**: The `Versions.props` file should import this file with:
+  ```xml
+  <Import Project="Version.Details.props" Condition="Exists('Version.Details.props')" />
+  ```
+
+**Example `Version.Details.props` file:**
+```xml
+<!--
+This file is auto-generated by the Maestro dependency flow system.
+Do not edit it manually, as it will get overwritten by automation.
+This file should be imported by eng/Versions.props
+-->
+<Project>
+  <PropertyGroup>
+    <!-- dotnet/arcade dependencies -->
+    <MicrosoftDotNetArcadeSdkPackageVersion>1.0.0-beta.19080.6</MicrosoftDotNetArcadeSdkPackageVersion>
+    <!-- dotnet/core-setup dependencies -->
+    <MicrosoftNETCoreAppPackageVersion>3.0.0-preview-27401-3</MicrosoftNETCoreAppPackageVersion>
+  </PropertyGroup>
+</Project>
+```
+
+#### The SkipProperty attribute
+
+In some cases, you may want to track a dependency in `Version.Details.xml` for flow purposes,
+but you don't want Maestro to generate a version property for it. This is useful when:
+
+- The dependency is only used for specific purposes (e.g., testing, documentation)
+- The version property is managed manually elsewhere
+- The dependency doesn't require a property in the build files
+
+You can use the `SkipProperty` attribute to indicate that a dependency should not have
+a corresponding property generated:
+
+```xml
+<Dependency Name="Some.Testing.Package" Version="1.2.3" SkipProperty="true">
+  <Uri>https://github.com/dotnet/some-repo</Uri>
+  <Sha>abc123def456</Sha>
+</Dependency>
+```
+
+**Important notes about `SkipProperty`:**
+- The dependency will still be tracked in `Version.Details.xml`
+- Maestro will still update the dependency version through subscriptions
+- No property will be generated in `Version.Details.props` or `Versions.props`
+- If ALL dependencies from a repository have `SkipProperty="true"`, no repository header
+  comment will be generated in `Version.Details.props`
+
+#### Migration from Versions.props to Version.Details.props
+
+If your repository still uses the legacy approach where dependency properties are in `Versions.props`,
+you can migrate to the new approach:
+
+1. Create an empty `eng/Version.Details.props` file
+
+The file will be automatically populated during the next dependency update. The `Version.Details.props` 
+merge policy will provide further instructions on any additional configuration required, such as adding 
+the necessary import statement to `Versions.props` or resolving any property conflicts
 
 ### Adding dependency flow
 
@@ -1016,14 +1133,17 @@ PS D:\enlistments\arcade> darc get-goal --definition-id 6 --channel ".Net 5 Dev"
 ### **`add-dependency`**
 
 Add a new tracked dependency to the Version.Detail.xml file in your local repo.
-This dependency is also added to eng/Versions.props as well as global.json (for certain
-dependencies, such as the Arcade SDK). This new dependency can then be updated using
-[update-dependencies](#update-dependencies). After merging the changes into
-the remote github or AzDO repository, the dependency can be updated by Maestro++
+This dependency is also added to `eng/Version.Details.props` (if it exists) or `eng/Versions.props`, 
+as well as `global.json` (for certain dependencies, such as the Arcade SDK). This new dependency 
+can then be updated using [update-dependencies](#update-dependencies). After merging the changes 
+into the remote github or AzDO repository, the dependency can be updated by Maestro++
 if there is a corresponding subscription targeting that repo.
 
 When adding a new dependency, only name and type are required.  For a detailed
-discussion on adding new dependencies to a repository, see [Adding dependencies to a repository](#adding-dependencies-to-a-repository)
+discussion on adding new dependencies to a repository, see [Adding dependencies to a repository](#adding-dependencies-to-a-repository).
+
+See also [Version.Details.props and the SkipProperty attribute](#versiondetailsprops-and-the-skipproperty-attribute) 
+for information on how dependency properties are generated.
 
 **Sample**
 
@@ -2564,6 +2684,7 @@ This command has two additional non-default modes:
 - Use a local package folder as input, avoiding a remote call to the
 build asset registry (--packages-folder)
 - Update a specific dependency to a new version (--name and --version)
+- Simulate a specific Maestro subscription locally (--subscription)
 
 This command is especially useful after adding new dependencies to a repository.
 See [Updating dependencies in your local

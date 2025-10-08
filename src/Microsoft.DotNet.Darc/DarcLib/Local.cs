@@ -60,11 +60,16 @@ public class Local
     ///     Updates existing dependencies in the dependency files
     /// </summary>
     /// <param name="dependencies">Dependencies that need updates.</param>
-    public async Task UpdateDependenciesAsync(List<DependencyDetail> dependencies, IRemoteFactory remoteFactory, IGitRepoFactory gitRepoFactory, IBasicBarClient barClient)
+    public async Task UpdateDependenciesAsync(
+        List<DependencyDetail> dependencies,
+        IRemoteFactory remoteFactory,
+        IGitRepoFactory gitRepoFactory,
+        IBasicBarClient barClient,
+        UnixPath relativeDependencyBasePath = null)
     {
         // Read the current dependency files and grab their locations so that nuget.config can be updated appropriately.
         // Update the incoming dependencies with locations.
-        List<DependencyDetail> oldDependencies = await GetDependenciesAsync();
+        List<DependencyDetail> oldDependencies = await GetDependenciesAsync(relativeBasePath: relativeDependencyBasePath);
 
         var locationResolver = new AssetLocationResolver(barClient);
         await locationResolver.AddAssetLocationToDependenciesAsync(oldDependencies);
@@ -74,25 +79,32 @@ public class Local
         DependencyDetail arcadeItem = dependencies.GetArcadeUpdate();
         SemanticVersion targetDotNetVersion = null;
         var repoIsVmr = true;
-        var relativeBasePath = VmrInfo.ArcadeRepoDir;
+        var arcadeRelativeBasePath = VmrInfo.ArcadeRepoDir;
 
         if (arcadeItem != null)
         {
             var fileManager = new DependencyFileManager(gitRepoFactory, _versionDetailsParser, _logger);
             try
             {
-                targetDotNetVersion = await fileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, relativeBasePath);
+                targetDotNetVersion = await fileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, arcadeRelativeBasePath);
             }
             catch (DependencyFileNotFoundException)
             {
                 // global.json not found in src/arcade meaning that repo is not the VMR
                 repoIsVmr = false;
-                relativeBasePath = null;
-                targetDotNetVersion = await fileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, relativeBasePath);
+                arcadeRelativeBasePath = null;
+                targetDotNetVersion = await fileManager.ReadToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit, arcadeRelativeBasePath);
             }
         }
 
-        var fileContainer = await _fileManager.UpdateDependencyFiles(dependencies, sourceDependency: null, _repoRootDir.Value, null, oldDependencies, targetDotNetVersion);
+        var fileContainer = await _fileManager.UpdateDependencyFiles(
+            dependencies,
+            sourceDependency: null,
+            _repoRootDir.Value,
+            branch: null,
+            oldDependencies,
+            targetDotNetVersion,
+            relativeBasePath: relativeDependencyBasePath);
         List<GitFile> filesToUpdate = fileContainer.GetFilesToCommit();
 
         if (arcadeItem != null)
@@ -100,14 +112,35 @@ public class Local
             try
             {
                 IRemote arcadeRemote = await remoteFactory.CreateRemoteAsync(arcadeItem.RepoUri);
-                List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit, relativeBasePath);
+                List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit, arcadeRelativeBasePath);
                 // If we're updating arcade from a VMR build, the eng/common files will be in the src/arcade repo
                 // so we need to strip the src/arcade prefix from the file paths.
                 if (repoIsVmr)
                 {
+                    string pathToReplaceWith;
+                    if (relativeDependencyBasePath == UnixPath.Empty)
+                    {
+                        pathToReplaceWith = null;
+                    }
+                    else
+                    {
+                        pathToReplaceWith = relativeDependencyBasePath.ToString();
+                    }
+
                     engCommonFiles = engCommonFiles
                         .Select(f => new GitFile(
-                            f.FilePath.Replace("src/arcade/", null),
+                            f.FilePath.Replace(VmrInfo.ArcadeRepoDir, pathToReplaceWith, StringComparison.InvariantCultureIgnoreCase).TrimStart('/'),
+                            f.Content,
+                            f.ContentEncoding,
+                            f.Mode,
+                            f.Operation))
+                        .ToList();
+                }
+                else if (relativeDependencyBasePath != UnixPath.Empty)
+                {
+                    engCommonFiles = engCommonFiles
+                        .Select(f => new GitFile(
+                            relativeDependencyBasePath / f.FilePath,
                             f.Content,
                             f.ContentEncoding,
                             f.Mode,
@@ -117,7 +150,7 @@ public class Local
 
                 filesToUpdate.AddRange(engCommonFiles);
 
-                List<GitFile> localEngCommonFiles = GetFilesAtRelativeRepoPathAsync(Constants.CommonScriptFilesPath);
+                List<GitFile> localEngCommonFiles = GetFilesAtRelativeRepoPathAsync(Constants.CommonScriptFilesPath, relativeDependencyBasePath);
 
                 foreach (GitFile file in localEngCommonFiles)
                 {
@@ -199,14 +232,23 @@ public class Local
         return remoteName;
     }
 
-    private List<GitFile> GetFilesAtRelativeRepoPathAsync(string path)
+    private List<GitFile> GetFilesAtRelativeRepoPathAsync(string path, UnixPath dependencyRelativeBasePath)
     {
-        var sourceFolder = Path.Combine(_repoRootDir.Value, path);
+        var sourceFolder = Path.Combine(_repoRootDir.Value, dependencyRelativeBasePath ?? string.Empty, path);
         var files = Directory.GetFiles(sourceFolder, "*.*", SearchOption.AllDirectories);
+
         return files
-            .Select(file => new GitFile(
-                file.Remove(0, _repoRootDir.Value.Length + 1).Replace("\\", "/"),
-                File.ReadAllText(file)))
+            .Select(file =>
+            {
+                var relativePath = file.Remove(0, _repoRootDir.Value.Length + 1).Replace("\\", "/");
+                if (relativePath.StartsWith("./"))
+                {
+                    relativePath = relativePath.Substring(2);
+                }
+                return new GitFile(relativePath, File.ReadAllText(file));
+            })
             .ToList();
     }
+
+    public string GetRepoRoot() => _repoRootDir.Value;
 }
