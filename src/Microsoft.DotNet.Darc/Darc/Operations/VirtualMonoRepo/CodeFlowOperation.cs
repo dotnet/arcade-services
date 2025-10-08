@@ -45,7 +45,7 @@ internal abstract class CodeFlowOperation(
     protected abstract IEnumerable<string> GetIgnoredFiles(string mappingName);
 
     /// <summary>
-    /// Once code is flow, updates toolset and dependencies (even after a failed patch left behind conflicts).
+    /// Once code is flowed, updates toolset and dependencies (even if a failed patch left behind conflicts).
     /// </summary>
     protected abstract Task UpdateToolsetAndDependenciesAsync(
         SourceMapping mapping,
