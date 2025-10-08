@@ -2745,7 +2745,10 @@ Local dependencies updated from channel '.NET 5 Dev'.
 Update an existing subscription. Opens an editor so that some properties of a
 subscription may be altered. Because of the way that Maestro++ tracks pull
 requests, the *target* parameters of a subscription (target repository and
-target branch) may not be edited.
+target branch) may not be edited. Additionally, the subscription ID and Source
+Enabled flag cannot be modified. If any of these immutable fields are changed,
+the update will fail with an error listing all the fields that cannot be
+modified.
 
 **Sample**:
 ```
