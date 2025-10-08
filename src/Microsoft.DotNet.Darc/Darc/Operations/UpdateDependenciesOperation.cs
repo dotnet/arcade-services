@@ -56,6 +56,12 @@ internal class UpdateDependenciesOperation : Operation
     {
         try
         {
+            // If subscription ID is provided, fetch subscription metadata and populate options
+            if (!string.IsNullOrEmpty(_options.SubscriptionId))
+            {
+                await PopulateOptionsFromSubscriptionAsync();
+            }
+
             var local = new Local(_options.GetRemoteTokenProvider(), _logger);
             var excludedAssetsMatcher = _options.ExcludedAssets?.Split(';').GetAssetMatcher()
                 ?? new AssetMatcher(null);
@@ -465,5 +471,112 @@ internal class UpdateDependenciesOperation : Operation
         }
 
         return updatedDependencies;
+    }
+
+    /// <summary>
+    /// Fetch subscription metadata and populate command options based on subscription settings.
+    /// This allows the subscription to be simulated using the existing update logic.
+    /// </summary>
+    private async Task PopulateOptionsFromSubscriptionAsync()
+    {
+        // Validate that subscription is not used with conflicting options
+        if (!string.IsNullOrEmpty(_options.Channel))
+        {
+            throw new DarcException("The --subscription parameter cannot be used with --channel. The subscription already specifies a channel.");
+        }
+
+        if (!string.IsNullOrEmpty(_options.PackagesFolder))
+        {
+            throw new DarcException("The --subscription parameter cannot be used with --packages-folder.");
+        }
+
+        if (!string.IsNullOrEmpty(_options.Name) && !string.IsNullOrEmpty(_options.Version))
+        {
+            throw new DarcException("The --subscription parameter cannot be used with --name and --version. The subscription determines which dependencies to update.");
+        }
+
+        if (!string.IsNullOrEmpty(_options.SourceRepository))
+        {
+            throw new DarcException("The --subscription parameter cannot be used with --source-repo. The subscription already specifies a source repository.");
+        }
+
+        if (_options.CoherencyOnly)
+        {
+            throw new DarcException("The --subscription parameter cannot be used with --coherency-only.");
+        }
+
+        if (!string.IsNullOrEmpty(_options.TargetDirectory))
+        {
+            throw new DarcException("The --subscription parameter cannot be used with --target-directory. The subscription already specifies a target directory.");
+        }
+
+        // Parse and validate subscription ID
+        if (!Guid.TryParse(_options.SubscriptionId, out Guid subscriptionId))
+        {
+            throw new DarcException($"Invalid subscription ID '{_options.SubscriptionId}'. Please provide a valid GUID.");
+        }
+
+        // Fetch subscription metadata
+        Subscription subscription;
+        try
+        {
+            subscription = await _barClient.GetSubscriptionAsync(subscriptionId)
+                ?? throw new DarcException($"Subscription with ID '{subscriptionId}' not found.");
+        }
+        catch (RestApiException e) when (e.Response.Status == 404)
+        {
+            throw new DarcException($"Subscription with ID '{subscriptionId}' not found.", e);
+        }
+
+        // Check if subscription is source-enabled (VMR code flow)
+        if (subscription.SourceEnabled)
+        {
+            throw new DarcException("Source-enabled subscriptions (VMR code flow) are not supported with --subscription. This parameter is only for dependency flow subscriptions.");
+        }
+
+        Console.WriteLine($"Simulating subscription '{subscription.Id}':");
+        Console.WriteLine($"  Source: {subscription.SourceRepository} (channel: {subscription.Channel.Name})");
+        Console.WriteLine($"  Target: {subscription.TargetRepository}#{subscription.TargetBranch}");
+
+        if (!string.IsNullOrEmpty(subscription.TargetDirectory))
+        {
+            Console.WriteLine($"  Target directory: {subscription.TargetDirectory}");
+        }
+
+        if (subscription.ExcludedAssets?.Any() == true)
+        {
+            Console.WriteLine($"  Excluded assets: {string.Join(", ", subscription.ExcludedAssets)}");
+        }
+
+        // Find the latest build from the source repository on the channel (unless build ID is provided)
+        if (_options.BARBuildId == 0)
+        {
+            Build latestBuild = await _barClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
+            if (latestBuild == null)
+            {
+                throw new DarcException($"No builds found for repository '{subscription.SourceRepository}' on channel '{subscription.Channel.Name}'.");
+            }
+
+            Console.WriteLine($"  Latest build: {latestBuild.AzureDevOpsBuildNumber} (BAR ID: {latestBuild.Id})");
+            Console.WriteLine($"  Build commit: {latestBuild.Commit}");
+            _options.BARBuildId = latestBuild.Id;
+        }
+        else
+        {
+            Console.WriteLine($"  Using provided build ID: {_options.BARBuildId}");
+        }
+
+        Console.WriteLine();
+
+        // Populate options from subscription settings
+        _options.Channel = subscription.Channel.Name;
+        _options.SourceRepository = subscription.SourceRepository;
+        _options.TargetDirectory = subscription.TargetDirectory;
+
+        // Use subscription's excluded assets only if not provided via command line
+        if (string.IsNullOrEmpty(_options.ExcludedAssets) && subscription.ExcludedAssets?.Any() == true)
+        {
+            _options.ExcludedAssets = string.Join(";", subscription.ExcludedAssets);
+        }
     }
 }
