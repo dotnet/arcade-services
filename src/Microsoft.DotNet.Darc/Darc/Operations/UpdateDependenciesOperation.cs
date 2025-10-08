@@ -57,7 +57,8 @@ internal class UpdateDependenciesOperation : Operation
         try
         {
             var local = new Local(_options.GetRemoteTokenProvider(), _logger);
-            var excludedAssetsMatcher = _options.ExcludedAssets?.Split(';').GetAssetMatcher();
+            var excludedAssetsMatcher = _options.ExcludedAssets?.Split(';').GetAssetMatcher()
+                ?? new AssetMatcher(null);
             List<UnixPath> targetDirectories = ResolveTargetDirectories(local);
 
             ConcurrentDictionary<string, Task<Build>> latestBuildTaskDictionary = new();
