@@ -119,8 +119,11 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
         ISourceComponent repoInfo = _sourceManifest.GetRepoVersion(mapping.Name);
+
         await sourceRepo.FetchAllAsync([mapping.DefaultRemote, repoInfo.RemoteUri], cancellationToken);
-        await sourceRepo.CheckoutAsync(build.Commit);
+
+        // TODO: Not needed?
+        // await sourceRepo.CheckoutAsync(build.Commit);
 
         ForwardFlow currentFlow = new(build.Commit, lastFlows.LastFlow.VmrSha);
 
@@ -243,33 +246,36 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     {
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         IWorkBranch? workBranch = null;
-        if (rebase && headBranchExisted)
+        if (rebase || headBranchExisted)
         {
             await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
 
-            workBranch = await _workBranchFactory.CreateWorkBranchAsync(
-                _localGitRepoFactory.Create(_vmrInfo.VmrPath),
-                currentFlow.GetBranchName(),
-                headBranch);
+            workBranch = await _workBranchFactory.CreateWorkBranchAsync(vmr, currentFlow.GetBranchName(), headBranch);
         }
 
         bool hadChanges;
 
-        try
+        async Task<bool> ReapplyLatestChanges()
         {
             hadChanges = await _vmrUpdater.UpdateRepository(
                 mapping,
                 build,
                 additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
                 resetToRemoteWhenCloningRepo: ShouldResetClones,
-                keepConflicts: false,
                 cancellationToken: cancellationToken);
+
+            return hadChanges;
+        }
+
+        try
+        {
+            hadChanges = await ReapplyLatestChanges();
         }
         catch (PatchApplicationFailedException e)
         {
             hadChanges = false;
 
-            if (rebase && headBranchExisted)
+            if (rebase)
             {
                 // We need to recreate a previous flow so that we have something to rebase later
                 await RecreatePreviousFlowsAndApplyChanges(
@@ -282,15 +288,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                     workBranch!.WorkBranchName,
                     excludedAssets,
                     forceUpdate,
-                    reapplyChanges: async () =>
-                    {
-                        hadChanges = await _vmrUpdater.UpdateRepository(
-                            mapping,
-                            build,
-                            additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
-                            resetToRemoteWhenCloningRepo: ShouldResetClones,
-                            cancellationToken: cancellationToken);
-                    },
+                    ReapplyLatestChanges,
                     cancellationToken);
 
                 // Workaround for files that can be left behind after HandleRevertedFiles()
@@ -318,15 +316,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                     targetBranch,
                     excludedAssets,
                     forceUpdate,
-                    reapplyChanges: async () =>
-                    {
-                        hadChanges = await _vmrUpdater.UpdateRepository(
-                            mapping,
-                            build,
-                            additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
-                            resetToRemoteWhenCloningRepo: ShouldResetClones,
-                            cancellationToken: cancellationToken);
-                    },
+                    ReapplyLatestChanges,
                     cancellationToken);
 
                 if (hadChanges)
@@ -337,12 +327,26 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             }
         }
 
-        if (workBranch != null)
+        if (!hadChanges || workBranch == null)
         {
-            await workBranch.RebaseAsync(cancellationToken);
+            return hadChanges;
         }
 
-        return hadChanges;
+        var commitMessage = (await vmr.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
+
+        await MergeWorkBranchAsync(
+            mapping,
+            build,
+            currentFlow,
+            vmr,
+            targetBranch,
+            headBranch,
+            workBranch,
+            rebase,
+            commitMessage,
+            cancellationToken);
+
+        return true;
     }
 
     protected override async Task<bool> OppositeDirectionFlowAsync(
@@ -407,30 +411,26 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             resetToRemoteWhenCloningRepo: ShouldResetClones,
             cancellationToken: cancellationToken);
 
-        if (hadChanges && (headBranchExisted || rebase))
+        if (!hadChanges)
         {
-            if (rebase)
-            {
-                await workBranch!.RebaseAsync(cancellationToken);
-                return true;
-            }
-
-            try
-            {
-                // Re-use the previous commit message
-                var commitMessage = (await vmr.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
-                await workBranch!.MergeBackAsync(commitMessage);
-            }
-            catch (WorkBranchInConflictException e)
-            {
-                _logger.LogInformation("Failed to merge back the work branch into {headBranch}: {error}",
-                    headBranch,
-                    e.Message);
-                throw new ConflictInPrBranchException(e.ExecutionResult.StandardError, targetBranch, mapping.Name, isForwardFlow: true);
-            }
+            return hadChanges;
         }
 
-        return hadChanges;
+        var commitMessage = (await vmr.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
+
+        await MergeWorkBranchAsync(
+            mapping,
+            build,
+            currentFlow,
+            vmr,
+            targetBranch,
+            headBranch,
+            workBranch,
+            rebase,
+            commitMessage,
+            cancellationToken);
+
+        return true;
     }
 
     protected override async Task<Codeflow?> DetectCrossingFlow(

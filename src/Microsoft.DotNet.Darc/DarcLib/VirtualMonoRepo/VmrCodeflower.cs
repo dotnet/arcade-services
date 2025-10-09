@@ -640,6 +640,42 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         }
     }
 
+    protected async Task MergeWorkBranchAsync(
+        SourceMapping mapping,
+        Build build,
+        Codeflow currentFlow,
+        ILocalGitRepo targetRepo,
+        string targetBranch,
+        string headBranch,
+        IWorkBranch workBranch,
+        bool rebase,
+        string commitMessage,
+        CancellationToken cancellationToken)
+    {
+        if (rebase)
+        {
+            await workBranch.RebaseAsync(cancellationToken);
+        }
+        else
+        {
+            try
+            {
+                await workBranch.MergeBackAsync(commitMessage);
+            }
+            catch (WorkBranchInConflictException e)
+            {
+                _logger.LogInformation(e.Message);
+                throw new ConflictInPrBranchException(
+                    e.ExecutionResult.StandardError,
+                    targetBranch,
+                    mapping.Name,
+                    isForwardFlow: currentFlow.IsForward);
+            }
+        }
+
+        _logger.LogInformation("Branch {branch} with code changes is ready in {repoDir}", headBranch, targetRepo);
+    }
+
     protected abstract NativePath GetEngCommonPath(NativePath sourceRepo);
     protected abstract bool TargetRepoIsVmr();
 }

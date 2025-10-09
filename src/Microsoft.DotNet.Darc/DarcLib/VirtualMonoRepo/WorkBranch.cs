@@ -61,10 +61,23 @@ public class WorkBranch(
 
         var result = await _repo.ExecuteGitCommand(mergeArgs);
 
+        async Task CheckConflicts()
+        {
+            var conflictedFiles = await _repo.GetConflictedFilesAsync(CancellationToken.None);
+            if (conflictedFiles.Count > 0)
+            {
+                await _repo.ExecuteGitCommand(["reset", "--hard"]);
+                throw new WorkBranchInConflictException(WorkBranchName, OriginalBranchName, result);
+            }
+        }
+
         // If we failed, it might be because the working tree is dirty because of EOL changes
         // These are uninteresting because the index will have the correct EOLs
         if (!result.Succeeded)
         {
+            // If we failed, it might be because of a merge conflict
+            await CheckConflicts();
+
             // Let's see if that is the case
             var diffResult = await _repo.ExecuteGitCommand(["diff", "-w"]);
             if (diffResult.Succeeded)
@@ -78,10 +91,9 @@ public class WorkBranch(
             }
         }
 
-        if (!result.Succeeded && result.StandardError.Contains("CONFLICT (content): Merge conflict"))
+        if (!result.Succeeded)
         {
-            // If we failed, it might be because of a merge conflict
-            throw new WorkBranchInConflictException(WorkBranchName, OriginalBranchName, result);
+            await CheckConflicts();
         }
 
         await _repo.CommitAsync(commitMessage, allowEmpty: true);

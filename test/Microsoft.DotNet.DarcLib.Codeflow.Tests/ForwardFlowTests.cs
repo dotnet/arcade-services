@@ -89,7 +89,6 @@ internal class ForwardFlowTests : CodeFlowTests
         // Now we make several changes in the repo and try to locally flow them via darc
         await File.WriteAllTextAsync(_productRepoFilePath, "New content in the individual repo again");
         await File.WriteAllTextAsync(_productRepoFilePath + "-added-in-repo", "New file from the repo");
-
         // Change an eng/common file
         File.Move(
             ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "build.ps1",

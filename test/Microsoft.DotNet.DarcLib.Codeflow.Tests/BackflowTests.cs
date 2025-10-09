@@ -462,40 +462,58 @@ internal class BackflowTests : CodeFlowTests
 
         const string branchName = nameof(DarcVmrBackflowCommandTest);
 
+        await File.WriteAllTextAsync(_productRepoVmrFilePath + "-removed-in-repo", "This file will be removed in the repo");
+        await GitOperations.CommitAll(VmrPath, "Add a file that will be removed in the repo");
+
         // We flow the repo to make sure they are in sync
         var codeFlowResult = await ChangeVmrFileAndFlowIt("New content in the VMR", branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, branchName);
-        await GitOperations.Checkout(ProductRepoPath, "main");
-        await GitOperations.Checkout(VmrPath, "main");
 
         await AddDependencies(ProductRepoPath);
 
+        await GitOperations.Checkout(VmrPath, "main");
         codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await GitOperations.Checkout(VmrPath, "main");
+
+        File.Delete(_productRepoFilePath + "-removed-in-repo");
+        await GitOperations.CommitAll(ProductRepoPath, "Remove a file that came from the VMR");
 
         // Now we make several changes in the VMR and try to locally flow them via darc
         await File.WriteAllTextAsync(_productRepoVmrFilePath, "New content in the VMR again");
-        await File.WriteAllTextAsync(_productRepoVmrFilePath + "_2", "New file from the VMR");
+        await File.WriteAllTextAsync(_productRepoVmrFilePath + "-added-in-repo", "New file from the VMR");
+        // Change an eng/common file
+        File.Move(
+            _productRepoVmrPath / DarcLib.Constants.CommonScriptFilesPath / "build.ps1",
+            _productRepoVmrPath / DarcLib.Constants.CommonScriptFilesPath / "build.ps2");
         await GitOperations.CommitAll(VmrPath, "New content in the VMR again");
+
+        string[] stagedFiles = await CallDarcBackflow();
 
         // Verify that expected files are staged
         string[] expectedFiles =
         [
             _productRepoFileName,
-            _productRepoFileName + "_2",
+            _productRepoFileName + "-added-in-repo",
+            ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "build.ps2",
             VersionFiles.VersionDetailsXml,
         ];
 
         // We check if everything got staged properly
-        string[] stagedFiles = await CallDarcBackflow();
-        stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
+        stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after backflow");
         CheckFileContents(_productRepoFilePath, "New content in the VMR again");
         CheckFileContents(ProductRepoPath / expectedFiles[1], "New file from the VMR");
+        File.Exists(ProductRepoPath / expectedFiles[0] + "-removed-in-repo").Should().BeFalse();
+        File.Exists(ProductRepoPath / expectedFiles[2]).Should().BeTrue();
+        File.Exists(ProductRepoPath / expectedFiles[2].Replace("ps2", "ps1")).Should().BeFalse();
 
-        // Now we reset and try to flow the same change but with a build
+        // Now we reset, make a conflicting change and see if darc can handle it and the conflict appears
         await GitOperations.ExecuteGitCommand(ProductRepoPath, "reset", "--hard");
+        await File.WriteAllTextAsync(_productRepoFilePath, "A conflicting change in the repo");
+        await GitOperations.CommitAll(ProductRepoPath, "A conflicting change in the repo");
 
         Build build = await CreateNewVmrBuild(
         [
@@ -505,34 +523,44 @@ internal class BackflowTests : CodeFlowTests
             ("Package.D3", "1.0.1"),
         ]);
 
-        stagedFiles = await CallDarcBackflow(build.Id);
-
-        // Versions files will be changed too
+        stagedFiles = await CallDarcBackflow(build.Id, [expectedFiles[0]]);
         expectedFiles = [.. expectedFiles, VersionFiles.VersionDetailsProps];
-        stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
-        CheckFileContents(_productRepoFilePath, "New content in the VMR again");
+        stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after backflow");
         CheckFileContents(ProductRepoPath / expectedFiles[1], "New file from the VMR");
-        (await File.ReadAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml)).Should().Contain("1.0.1");
-        (await File.ReadAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsProps)).Should().Contain("1.0.1");
 
-        // Now we reset, make a conflicting change and see if darc can handle it and the conflict appears
-        await GitOperations.ExecuteGitCommand(ProductRepoPath, "reset", "--hard");
-        await File.WriteAllTextAsync(_productRepoFilePath, "A conflicting change in the repo");
-        await GitOperations.CommitAll(ProductRepoPath, "A conflicting change in the repo");
+        // Now we commit this flow and verify all files are staged
+        await GitOperations.ExecuteGitCommand(ProductRepoPath, ["checkout", "--theirs", "--", _productRepoFilePath]);
+        await GitOperations.ExecuteGitCommand(ProductRepoPath, ["add", _productRepoFilePath]);
+        await GitOperations.ExecuteGitCommand(ProductRepoPath, ["commit", "-m", "Committing the backflow"]);
+        await GitOperations.CheckAllIsCommitted(ProductRepoPath);
+
+        // Now we make another set of changes in the VMR and try again
+        // This time it will be same direction flow as the previous one (before it was opposite)
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await GitOperations.Checkout(VmrPath, "main");
+
+        File.Delete(_productRepoVmrFilePath + "_2");
+        await GitOperations.CommitAll(VmrPath, "Remove a file that was in the repo");
+
+        // Now we make several changes in the VMR and try to locally flow them via darc
+        await File.WriteAllTextAsync(_productRepoVmrFilePath, "New content in the VMR AGAIN");
+        await File.WriteAllTextAsync(_productRepoVmrFilePath + "_2", "New file from the VMR AGAIN");
+        await GitOperations.CommitAll(VmrPath, "New content in the VMR again");
 
         build = await CreateNewVmrBuild(
         [
             ("Package.A1", "1.0.2"),
             ("Package.B1", "1.0.2"),
-            ("Package.C2", "1.0.2"),
+            ("Package.C2", "2.0.2"),
             ("Package.D3", "1.0.2"),
         ]);
 
-        stagedFiles = await CallDarcBackflow(build.Id, [expectedFiles[0]]);
-        stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
+        // File _2 is deleted in the repo and changed in the VMR so it will conflict
+        stagedFiles = await CallDarcBackflow(build.Id, [expectedFiles[1]]);
+        stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after backflow");
+        CheckFileContents(ProductRepoPath / expectedFiles[1], "New file from the VMR AGAIN");
         (await File.ReadAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml)).Should().Contain("1.0.2");
         (await File.ReadAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsProps)).Should().Contain("1.0.2");
-        CheckFileContents(ProductRepoPath / expectedFiles[1], "New file from the VMR");
     }
 
     // Tests a scenario where we misconfigure subscriptions and let two different VMR branches backflow into the same repo branch.
