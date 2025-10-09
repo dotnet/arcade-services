@@ -33,8 +33,8 @@ internal class ForwardFlowOperation(
     private readonly ForwardFlowCommandLineOptions _options = options;
     private readonly IVmrForwardFlower _forwardFlower = forwardFlower;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
-    private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
     private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
+    private readonly IFileSystem _fileSystem = fileSystem;
     private readonly IProcessManager _processManager = processManager;
 
     protected override async Task ExecuteInternalAsync(
@@ -83,19 +83,12 @@ internal class ForwardFlowOperation(
         }
         finally
         {
-            // Update source manifest
-            var sourceManifest = SourceManifest.FromFile(_vmrInfo.SourceManifestPath);
-            var version = (IVersionedSourceComponent)sourceManifest.GetRepoVersion(mapping.Name);
-
-            _dependencyTracker.UpdateDependencyVersion(new(
-                mapping,
-                version.RemoteUri,
-                currentFlow.SourceSha,
-                Parent: null,
-                OfficialBuildId: null,
-                BarId: version.BarId));
-
+            // Update target branch's source manifest with the new commit
             var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+            var sourceManifestContent = await vmr.GetFileFromGitAsync(VmrInfo.DefaultRelativeSourceManifestPath, headBranch);
+            var sourceManifest = SourceManifest.FromJson(sourceManifestContent!);
+            sourceManifest.UpdateVersion(mapping.Name, build.GetRepository(), build.Commit, build.Id);
+            _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, sourceManifest.ToJson());
             await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
         }
     }

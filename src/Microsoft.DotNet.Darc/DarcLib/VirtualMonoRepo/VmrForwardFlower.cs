@@ -340,10 +340,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         if (workBranch != null)
         {
             await workBranch.RebaseAsync(cancellationToken);
-
-            // Make sure source-manifest.json is not in a conflicted state so that we can read/write to it the new content
-            await vmr.ExecuteGitCommand(["checkout", "--ours", "--", VmrInfo.DefaultRelativeSourceManifestPath], cancellationToken);
-            await vmr.StageAsync([VmrInfo.DefaultRelativeSourceManifestPath], cancellationToken);
         }
 
         return hadChanges;
