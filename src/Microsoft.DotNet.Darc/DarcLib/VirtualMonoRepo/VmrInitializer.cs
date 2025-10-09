@@ -133,8 +133,8 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         {
             _logger.LogWarning(
                 InterruptedSyncExceptionMessage,
-                workBranch.OriginalBranch.StartsWith("sync") || workBranch.OriginalBranch.StartsWith("init") ?
-                "the original" : workBranch.OriginalBranch);
+                workBranch.OriginalBranchName.StartsWith("sync") || workBranch.OriginalBranchName.StartsWith("init") ?
+                "the original" : workBranch.OriginalBranchName);
             throw;
         }
 

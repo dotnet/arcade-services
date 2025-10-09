@@ -26,7 +26,12 @@ public interface IWorkBranch
     /// <summary>
     /// Name of the original branch where the work branch was created from.
     /// </summary>
-    string OriginalBranch { get; }
+    string OriginalBranchName { get; }
+
+    /// <summary>
+    /// Name of the work branch.
+    /// </summary>
+    string WorkBranchName { get; }
 }
 
 /// <summary>
@@ -41,17 +46,18 @@ public class WorkBranch(
 {
     private readonly ILogger _logger = logger;
     private readonly ILocalGitRepo _repo = repo;
-    private readonly string _workBranch = workBranch;
 
-    public string OriginalBranch { get; } = originalBranch;
+    public string OriginalBranchName { get; } = originalBranch;
+
+    public string WorkBranchName { get; } = workBranch;
 
     public async Task MergeBackAsync(string commitMessage)
     {
-        _logger.LogInformation("Merging {branchName} into {mainBranch}", _workBranch, OriginalBranch);
+        _logger.LogInformation("Merging {branchName} into {mainBranch}", WorkBranchName, OriginalBranchName);
 
-        await _repo.CheckoutAsync(OriginalBranch);
+        await _repo.CheckoutAsync(OriginalBranchName);
 
-        var mergeArgs = new[] { "merge", _workBranch, "--no-commit", "--no-edit", "--squash", "-q" };
+        var mergeArgs = new[] { "merge", WorkBranchName, "--no-commit", "--no-edit", "--squash", "-q" };
 
         var result = await _repo.ExecuteGitCommand(mergeArgs);
 
@@ -67,7 +73,7 @@ public class WorkBranch(
 
                 // We stage those changes, they will get absorbed with upcoming merge
                 result = await _repo.ExecuteGitCommand(["add", "-A"]);
-                result.ThrowIfFailed($"Failed to stage whitespace-only EOL changes while merging work branch {_workBranch} into {OriginalBranch}");
+                result.ThrowIfFailed($"Failed to stage whitespace-only EOL changes while merging work branch {WorkBranchName} into {OriginalBranchName}");
                 result = await _repo.ExecuteGitCommand(mergeArgs);
             }
         }
@@ -75,23 +81,23 @@ public class WorkBranch(
         if (!result.Succeeded && result.StandardError.Contains("CONFLICT (content): Merge conflict"))
         {
             // If we failed, it might be because of a merge conflict
-            throw new WorkBranchInConflictException(_workBranch, OriginalBranch, result);
+            throw new WorkBranchInConflictException(WorkBranchName, OriginalBranchName, result);
         }
 
         await _repo.CommitAsync(commitMessage, allowEmpty: true);
-        await _repo.DeleteBranchAsync(_workBranch);
+        await _repo.DeleteBranchAsync(WorkBranchName);
     }
 
     public async Task RebaseAsync(CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Rebasing {branchName} onto {mainBranch}...", _workBranch, OriginalBranch);
+        _logger.LogInformation("Rebasing {branchName} onto {mainBranch}...", WorkBranchName, OriginalBranchName);
 
         cancellationToken.ThrowIfCancellationRequested();
-        await _repo.CheckoutAsync(OriginalBranch);
+        await _repo.CheckoutAsync(OriginalBranchName);
 
         try
         {
-            var result = await _repo.ExecuteGitCommand(["merge", "--squash", _workBranch], cancellationToken);
+            var result = await _repo.ExecuteGitCommand(["merge", "--squash", WorkBranchName], cancellationToken);
             if (!result.Succeeded)
             {
                 IReadOnlyCollection<UnixPath> conflictedFiles = await _repo.GetConflictedFilesAsync(CancellationToken.None);
@@ -100,7 +106,7 @@ public class WorkBranch(
         }
         finally
         {
-            await _repo.DeleteBranchAsync(_workBranch);
+            await _repo.DeleteBranchAsync(WorkBranchName);
         }
     }
 }

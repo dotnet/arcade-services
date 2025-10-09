@@ -241,9 +241,12 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         bool forceUpdate,
         CancellationToken cancellationToken)
     {
+        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         IWorkBranch? workBranch = null;
-        if (rebase)
+        if (rebase && headBranchExisted)
         {
+            await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
+
             workBranch = await _workBranchFactory.CreateWorkBranchAsync(
                 _localGitRepoFactory.Create(_vmrInfo.VmrPath),
                 currentFlow.GetBranchName(),
@@ -264,48 +267,83 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         }
         catch (PatchApplicationFailedException e)
         {
-            // When we are updating an already existing PR branch, there can be conflicting changes in the PR from devs.
-            if (headBranchExisted)
-            {
-                _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
-                throw new ConflictInPrBranchException(e.Result.StandardError, targetBranch, mapping.Name, isForwardFlow: true);
-            }
-
             hadChanges = false;
 
-            // This happens when a conflicting change was made in the last backflow PR (before merging)
-            // The scenario is described here: https://github.com/dotnet/dotnet/tree/main/docs/VMR-Full-Code-Flow.md#conflicts
-            await RecreatePreviousFlowsAndApplyChanges(
-                mapping,
-                build,
-                sourceRepo,
-                currentFlow,
-                lastFlows,
-                headBranch,
-                targetBranch,
-                excludedAssets,
-                forceUpdate,
-                reapplyChanges: async () =>
-                {
-                    hadChanges = await _vmrUpdater.UpdateRepository(
-                        mapping,
-                        build,
-                        additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
-                        resetToRemoteWhenCloningRepo: ShouldResetClones,
-                        cancellationToken: cancellationToken);
-                },
-                cancellationToken);
-
-            if (hadChanges)
+            if (rebase && headBranchExisted)
             {
-                // Commit anything staged only (e.g. reset reverted files)
-                await _localGitClient.CommitAmendAsync(_vmrInfo.VmrPath, cancellationToken);
+                // We need to recreate a previous flow so that we have something to rebase later
+                await RecreatePreviousFlowsAndApplyChanges(
+                    mapping,
+                    build,
+                    sourceRepo,
+                    currentFlow,
+                    lastFlows,
+                    workBranch!.WorkBranchName,
+                    workBranch!.WorkBranchName,
+                    excludedAssets,
+                    forceUpdate,
+                    reapplyChanges: async () =>
+                    {
+                        hadChanges = await _vmrUpdater.UpdateRepository(
+                            mapping,
+                            build,
+                            additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
+                            resetToRemoteWhenCloningRepo: ShouldResetClones,
+                            cancellationToken: cancellationToken);
+                    },
+                    cancellationToken);
+
+                // Workaround for files that can be left behind after HandleRevertedFiles()
+                // It can be removed after we remove HandleRevertedFiles() and switch to rebase-only
+                await vmr.ResetWorkingTree();
+            }
+            else
+            {
+                // When we are updating an already existing PR branch, there can be conflicting changes in the PR from devs.
+                if (headBranchExisted)
+                {
+                    _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
+                    throw new ConflictInPrBranchException(e.Result.StandardError, targetBranch, mapping.Name, isForwardFlow: true);
+                }
+
+                // This happens when a conflicting change was made in the last backflow PR (before merging)
+                // The scenario is described here: https://github.com/dotnet/dotnet/tree/main/docs/VMR-Full-Code-Flow.md#conflicts
+                await RecreatePreviousFlowsAndApplyChanges(
+                    mapping,
+                    build,
+                    sourceRepo,
+                    currentFlow,
+                    lastFlows,
+                    headBranch,
+                    targetBranch,
+                    excludedAssets,
+                    forceUpdate,
+                    reapplyChanges: async () =>
+                    {
+                        hadChanges = await _vmrUpdater.UpdateRepository(
+                            mapping,
+                            build,
+                            additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
+                            resetToRemoteWhenCloningRepo: ShouldResetClones,
+                            cancellationToken: cancellationToken);
+                    },
+                    cancellationToken);
+
+                if (hadChanges)
+                {
+                    // Commit anything staged only (e.g. reset reverted files)
+                    await _localGitClient.CommitAmendAsync(_vmrInfo.VmrPath, cancellationToken);
+                }
             }
         }
 
-        if (hadChanges && rebase)
+        if (workBranch != null)
         {
-            await workBranch!.RebaseAsync(cancellationToken);
+            await workBranch.RebaseAsync(cancellationToken);
+
+            // Make sure source-manifest.json is not in a conflicted state so that we can read/write to it the new content
+            await vmr.ExecuteGitCommand(["checkout", "--ours", "--", VmrInfo.DefaultRelativeSourceManifestPath], cancellationToken);
+            await vmr.StageAsync([VmrInfo.DefaultRelativeSourceManifestPath], cancellationToken);
         }
 
         return hadChanges;

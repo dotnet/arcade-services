@@ -104,14 +104,13 @@ internal class ForwardFlowTests : CodeFlowTests
             VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName,
             VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName + "-added-in-repo",
             VmrInfo.SourcesDir / Constants.ProductRepoName / DarcLib.Constants.CommonScriptFilesPath / "build.ps2",
-            VmrInfo.SourcesDir / Constants.ProductRepoName / VersionFiles.VersionDetailsXml,
             VmrInfo.DefaultRelativeSourceManifestPath,
         ];
 
-        stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
+        stagedFiles.Should().BeEquivalentTo([..expectedFiles, VmrInfo.SourcesDir / Constants.ProductRepoName / VersionFiles.VersionDetailsXml]);
         CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo again");
         CheckFileContents(VmrPath / expectedFiles[1], "New file from the repo");
-        File.Exists(VmrPath / expectedFiles[0] + "-removed-in-vmr").Should().BeFalse("The removed file from the VMR should not exist");
+        File.Exists(VmrPath / expectedFiles[0] + "-removed-in-vmr").Should().BeFalse();
         File.Exists(VmrPath / expectedFiles[2]).Should().BeTrue();
         File.Exists(VmrPath / expectedFiles[2].Replace("ps2", "ps1")).Should().BeFalse();
 
