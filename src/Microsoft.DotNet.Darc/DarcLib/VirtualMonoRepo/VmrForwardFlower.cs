@@ -166,7 +166,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         if (hasChanges)
         {
-            await CommentIncludedPRs(sourceRepo, lastFlows.LastForwardFlow.RepoSha, build.Commit, mapping.DefaultRef, cancellationToken);
+            await CommentIncludedPRs(sourceRepo, lastFlows.LastForwardFlow.RepoSha, build.Commit, mapping.DefaultRemote, cancellationToken);
         }
 
         return new CodeFlowResult(
@@ -391,13 +391,19 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string repoUri,
         CancellationToken cancellationToken)
     {
+        var gitRepoType = GitRepoUrlUtils.ParseTypeFromUri(repoUri);
+        if (gitRepoType == GitRepoType.Local)
+        {
+            return;
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
         var result = await sourceRepo.ExecuteGitCommand(["log", "--pretty=%s", $"{lastCommit}..{currentCommit}"], cancellationToken);
         result.ThrowIfFailed($"Failed to get the list of commits between {lastCommit} and {currentCommit} in {sourceRepo.Path}");
 
         var commitMessages = result.GetOutputLines();
-        StringBuilder str = new("PRs included in this update:");
-        if (GitRepoUrlUtils.ParseTypeFromUri(repoUri) == GitRepoType.GitHub)
+        StringBuilder str = new("Changes source PRs:");
+        if (gitRepoType == GitRepoType.GitHub)
         {
             var pullRequestLinkFormat = $"- {repoUri}/pull/{{0}}";
             foreach (var message in commitMessages)
@@ -405,11 +411,12 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 var match = GitHubPullRequestNumberExtractionRegex.Match(message);
                 if (match.Success && match.Groups.Count > 1)
                 {
+                    str.AppendLine();
                     str.AppendFormat(pullRequestLinkFormat, match.Groups[1].Value);
                 }
             }
         }
-        else if (GitRepoUrlUtils.ParseTypeFromUri(repoUri) == GitRepoType.AzureDevOps)
+        else if (gitRepoType == GitRepoType.AzureDevOps)
         {
             var pullRequestLinkFormat = $"- {repoUri}/pullrequest/{{0}}";
             foreach (var message in commitMessages)
@@ -417,6 +424,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 var match = AzDoPullRequestNumberExtractionRegex.Match(message);
                 if (match.Success && match.Groups.Count > 1)
                 {
+                    str.AppendLine();
                     str.AppendFormat(pullRequestLinkFormat, match.Groups[1].Value);
                 }
             }

@@ -14,7 +14,7 @@ namespace ProductConstructionService.ScenarioTests;
 
 internal class CodeFlowScenarioTestBase : ScenarioTestBase
 {
-    protected async Task CheckForwardFlowGitHubPullRequest(
+    protected async Task<PullRequest> CheckForwardFlowGitHubPullRequest(
         (string Repo, string Commit)[] repoUpdates,
         string targetRepoName,
         string targetBranch,
@@ -62,6 +62,8 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 manifestRecord.CommitSha.Should().Be(update.Commit);
             }
         }
+
+        return pullRequest;
     }
 
     protected async Task CheckBackwardFlowGitHubPullRequest(
@@ -222,11 +224,10 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string[] stringsExpectedInComment)
     {
         IReadOnlyList<IssueComment> comments = await GitHubApi.Issue.Comment.GetAllForIssue(TestParameters.GitHubTestOrg, targetRepo, pullRequest.Number);
-        var conflictComment = comments.First(comment => comment.Body.Contains("conflict"));
 
         foreach (var s in stringsExpectedInComment)
         {
-            conflictComment.Body.Should().Contain(s);
+            comments.Any(c => c.Body.Contains(s)).Should().BeTrue();
         }
     }
 }
