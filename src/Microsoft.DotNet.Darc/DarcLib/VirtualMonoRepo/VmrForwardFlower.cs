@@ -402,7 +402,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         result.ThrowIfFailed($"Failed to get the list of commits between {lastCommit} and {currentCommit} in {sourceRepo.Path}");
 
         var commitMessages = result.GetOutputLines();
-        StringBuilder str = new("Changes source PRs:");
+        StringBuilder str = new("PRs from original repository included in this codeflow update:");
         if (gitRepoType == GitRepoType.GitHub)
         {
             var pullRequestLinkFormat = $"- {repoUri}/pull/{{0}}";
