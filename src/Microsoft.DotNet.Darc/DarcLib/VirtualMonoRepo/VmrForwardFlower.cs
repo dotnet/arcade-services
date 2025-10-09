@@ -122,9 +122,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         await sourceRepo.FetchAllAsync([mapping.DefaultRemote, repoInfo.RemoteUri], cancellationToken);
 
-        // TODO: Not needed?
-        // await sourceRepo.CheckoutAsync(build.Commit);
-
         ForwardFlow currentFlow = new(build.Commit, lastFlows.LastFlow.VmrSha);
 
         bool hasChanges = await FlowCodeAsync(
@@ -342,6 +339,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             targetBranch,
             headBranch,
             workBranch,
+            headBranchExisted,
             rebase,
             commitMessage,
             cancellationToken);
@@ -426,6 +424,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             targetBranch,
             headBranch,
             workBranch,
+            headBranchExisted,
             rebase,
             commitMessage,
             cancellationToken);

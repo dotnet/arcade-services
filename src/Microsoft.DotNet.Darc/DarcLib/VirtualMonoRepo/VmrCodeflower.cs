@@ -648,6 +648,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         string targetBranch,
         string headBranch,
         IWorkBranch workBranch,
+        bool headBranchExisted,
         bool rebase,
         string commitMessage,
         CancellationToken cancellationToken)
@@ -662,7 +663,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             {
                 await workBranch.MergeBackAsync(commitMessage);
             }
-            catch (WorkBranchInConflictException e)
+            catch (WorkBranchInConflictException e) when (headBranchExisted)
             {
                 _logger.LogInformation(e.Message);
                 throw new ConflictInPrBranchException(

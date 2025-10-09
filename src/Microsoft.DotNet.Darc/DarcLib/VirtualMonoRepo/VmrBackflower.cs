@@ -316,6 +316,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             headBranch,
             workBranch,
+            headBranchExisted,
             rebase,
             commitMessage,
             cancellationToken);
@@ -410,6 +411,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             headBranch,
             workBranch,
+            headBranchExisted,
             rebase,
             commitMessage,
             cancellationToken);
