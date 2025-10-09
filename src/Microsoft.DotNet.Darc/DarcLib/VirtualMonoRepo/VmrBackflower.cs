@@ -336,7 +336,11 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool rebase,
         CancellationToken cancellationToken)
     {
-        await targetRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
+        // If the target branch did not exist, checkout the last synchronization point
+        // Otherwise, check out the last flow's commit in the PR branch
+        await targetRepo.CheckoutAsync(headBranchExisted && !rebase
+            ? lastFlows.LastBackFlow!.RepoSha
+            : lastFlows.LastFlow.RepoSha);
 
         IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(
             targetRepo,

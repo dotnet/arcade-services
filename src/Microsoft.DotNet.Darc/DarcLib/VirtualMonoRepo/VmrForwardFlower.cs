@@ -359,8 +359,12 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         bool rebase,
         CancellationToken cancellationToken)
     {
+        // If the target branch did not exist, checkout the last synchronization point
+        // Otherwise, check out the last flow's commit in the PR branch
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
+        await vmr.CheckoutAsync(headBranchExisted && !rebase
+            ? lastFlows.LastForwardFlow.VmrSha
+            : lastFlows.LastFlow.VmrSha);
 
         IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(
             vmr,
