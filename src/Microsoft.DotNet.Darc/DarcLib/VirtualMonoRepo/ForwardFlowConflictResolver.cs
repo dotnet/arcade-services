@@ -405,11 +405,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             _logger.LogInformation("No changes to dependencies in this forward flow update");
         }
 
-        await vmr.StageAsync(
-            [
-                relativeSourceMappingPath / VersionFiles.VersionDetailsXml,
-                relativeSourceMappingPath / VersionFiles.VersionDetailsProps,
-            ],
-            cancellationToken);
+        await vmr.StageAsync([relativeSourceMappingPath / "eng"], cancellationToken);
     }
 }
