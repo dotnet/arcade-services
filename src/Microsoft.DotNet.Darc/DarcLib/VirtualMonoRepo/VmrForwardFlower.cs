@@ -4,9 +4,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
+using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -59,7 +62,16 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly IForwardFlowConflictResolver _conflictResolver;
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IProcessManager _processManager;
+    private readonly ICommentCollector _commentCollector;
     private readonly ILogger<VmrCodeFlower> _logger;
+
+    // Regex to extract PR number from a github merge commit message
+    // e.g.: "Update dependencies from source-repo (#12345)" extracts "12345"
+    private readonly static Regex GitHubPullRequestNumberExtractionRegex = new Regex(".+\\(#(\\d+)\\)$");
+
+    // Regex to extract PR number from an AzDO merge commit message
+    // e.g.: "Merged PR 12345: Update dependencies from source-repo" extracts "12345"
+    private readonly static Regex AzDoPullRequestNumberExtractionRegex = new Regex("^Merged PR (\\d+):");
 
     public VmrForwardFlower(
             IVmrInfo vmrInfo,
@@ -91,6 +103,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         _conflictResolver = conflictResolver;
         _workBranchFactory = workBranchFactory;
         _processManager = processManager;
+        _commentCollector = commentCollector;
         _logger = logger;
     }
 
@@ -149,6 +162,11 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         if (conflictedFiles != null && !forceUpdate && hasChanges && !headBranchExisted)
         {
             hasChanges &= await _codeflowChangeAnalyzer.ForwardFlowHasMeaningfulChangesAsync(mapping.Name, headBranch, targetBranch);
+        }
+
+        if (hasChanges)
+        {
+            await CommentIncludedPRs(sourceRepo, lastFlows.LastForwardFlow.RepoSha, build.Commit, mapping.DefaultRef, cancellationToken);
         }
 
         return new CodeFlowResult(
@@ -364,6 +382,51 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         }
 
         return hadChanges;
+    }
+
+    private async Task CommentIncludedPRs(
+        ILocalGitRepo sourceRepo,
+        string lastCommit,
+        string currentCommit,
+        string repoUri,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var result = await sourceRepo.ExecuteGitCommand(["log", "--pretty=%s", $"{lastCommit}..{currentCommit}"], cancellationToken);
+        result.ThrowIfFailed($"Failed to get the list of commits between {lastCommit} and {currentCommit} in {sourceRepo.Path}");
+
+        var commitMessages = result.GetOutputLines();
+        StringBuilder str = new("PRs included in this update:");
+        if (GitRepoUrlUtils.ParseTypeFromUri(repoUri) == GitRepoType.GitHub)
+        {
+            var pullRequestLinkFormat = $"- {repoUri}/pull/{{0}}";
+            foreach (var message in commitMessages)
+            {
+                var match = GitHubPullRequestNumberExtractionRegex.Match(message);
+                if (match.Success && match.Groups.Count > 1)
+                {
+                    str.AppendFormat(pullRequestLinkFormat, match.Groups[1].Value);
+                }
+            }
+        }
+        else if (GitRepoUrlUtils.ParseTypeFromUri(repoUri) == GitRepoType.AzureDevOps)
+        {
+            var pullRequestLinkFormat = $"- {repoUri}/pullrequest/{{0}}";
+            foreach (var message in commitMessages)
+            {
+                var match = AzDoPullRequestNumberExtractionRegex.Match(message);
+                if (match.Success && match.Groups.Count > 1)
+                {
+                    str.AppendFormat(pullRequestLinkFormat, match.Groups[1].Value);
+                }
+            }
+        }
+        else
+        {
+            throw new NotSupportedException($"Repository type for URI '{repoUri}' is not supported for PR link extraction.");
+        }
+
+        _commentCollector.AddComment(str.ToString(), CommentType.Information);
     }
 
     protected override async Task<Codeflow?> DetectCrossingFlow(
