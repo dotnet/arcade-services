@@ -2837,18 +2837,6 @@ subscription may be altered. Because of the way that Maestro++ tracks pull
 requests, the *target* parameters of a subscription (target repository and
 target branch) may not be edited.
 
-You can use the `-q` flag to update specific properties via command line without 
-opening an editor. Properties that can be updated include update frequency, merge 
-policies, enabled status, batchable status, target directories, and excluded assets.
-
-**Target Directories**: For dependency flow subscriptions, you can specify multiple 
-target directories (comma-separated) where dependency updates should be applied. 
-Use '.' for the repository root. Paths can include a wildcard (`*`) at the end to match 
-multiple directories (e.g., `src/*`).
-
-When using target directories with `--excluded-assets`, you can exclude specific 
-assets in specific directories (e.g., `src/sdk/System.Text.Json` or `src/*/System.Text.*`).
-
 **Sample**:
 ```
 PS D:\enlistments\websdk> darc get-subscriptions --source-repo aspnetcore --target-repo websdk --channel Dev
@@ -2872,20 +2860,6 @@ https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet
   - Batchable: False
   - Merge Policies:
     Standard
-```
-
-**Updating target directories via command line**:
-```
-# Update subscription to target specific directories
-PS D:\enlistments\websdk> darc update-subscription --id 1abbb4c1-19d8-4912-fab8-08d6a19aff91
-                          --target-directory "src/sdk,src/runtime" -q
-Successfully updated subscription with id '1abbb4c1-19d8-4912-fab8-08d6a19aff91'.
-
-# Update subscription with directory-specific asset exclusions
-PS D:\enlistments\websdk> darc update-subscription --id 1abbb4c1-19d8-4912-fab8-08d6a19aff91
-                          --target-directory "src/*"
-                          --excluded-assets "src/sdk/System.Text.Json;src/*/System.Text.*" -q
-Successfully updated subscription with id '1abbb4c1-19d8-4912-fab8-08d6a19aff91'.
 ```
 
 **See also**:
