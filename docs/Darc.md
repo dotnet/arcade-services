@@ -1314,11 +1314,7 @@ Key features:
 (VMR code flow) subscriptions, use `--source-directory` or `--target-directory` to specify 
 a single VMR directory under `src/`.
 
-**Using Target Directories**:
-
-The `--target-directory` parameter allows you to specify where dependency updates should 
-be applied within the target repository. This is useful for repositories that contain 
-other repositories within them, such as the Virtual Mono Repo (VMR).
+**Examples**:
 
 ```
 # Update dependencies only in specific directories
