@@ -2837,6 +2837,14 @@ subscription may be altered. Because of the way that Maestro++ tracks pull
 requests, the *target* parameters of a subscription (target repository and
 target branch) may not be edited.
 
+**Target Directories**: For dependency flow subscriptions, you can specify multiple 
+target directories (comma-separated) where dependency updates should be applied. 
+Use '.' for the repository root. Paths can include a wildcard (`*`) at the end to match 
+multiple directories (e.g., `src/*`).
+
+When using target directories with `--excluded-assets`, you can exclude specific 
+assets in specific directories (e.g., `src/sdk/System.Text.Json` or `src/*/System.Text.*`).
+
 **Sample**:
 ```
 PS D:\enlistments\websdk> darc get-subscriptions --source-repo aspnetcore --target-repo websdk --channel Dev
