@@ -1275,10 +1275,6 @@ A subscription has a few parts:
   merge policies are set on a repository level rather than a per-subscription
   level, as they end up shared between several subscriptions. *Note: repository
   merge policies are currently unsupported in darc*
-- (Optional) Target directories - A comma-separated list of paths where dependency 
-  updates are applied. This allows updates to be scoped to specific directories 
-  within the repository. Use '.' for the repository root. Paths can include a wildcard 
-  (`*`) at the end to match multiple directories (e.g., `src/*`)
 
 `add-subscription` has two modes of operation:
 - Interactive mode (default) - Interactive mode will take whatever input parameters were
@@ -1300,6 +1296,23 @@ PS D:\enlistments\arcade-services> darc add-subscription --channel ".NET Tools -
 
 Successfully created new subscription with id '4f300f68-8800-4b14-328e-08d68308fe30'.
 ```
+
+**Target Directories for Dependency Flow Subscriptions**:
+
+Dependency flow subscriptions can use the `--target-directory` parameter to target specific 
+subpaths within the repository. This allows you to scope dependency updates to particular 
+directories, which is useful for repositories with multiple projects or configurations that 
+require different dependency update behaviors.
+
+Key features:
+- Specify multiple directories using a comma-separated list (e.g., `"src/sdk,src/runtime"`)
+- Use '.' to target the repository root
+- Include a wildcard (`*`) at the end of a path to match multiple directories (e.g., `"src/*"`)
+- Combine with `--excluded-assets` to exclude specific assets in specific directories
+
+**Note**: This feature is only available for dependency flow subscriptions. For source-enabled 
+(VMR code flow) subscriptions, use `--source-directory` or `--target-directory` to specify 
+a single VMR directory under `src/`.
 
 **Using Target Directories**:
 
@@ -1342,10 +1355,6 @@ PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9 Dev"
                        --target-directory "src/sdk,src/runtime"
                        --excluded-assets "src/sdk/System.Text.Json;src/*/System.Text.*" -q
 ```
-
-**Note**: Target directories are only supported for dependency flow subscriptions, not 
-source-enabled (VMR code flow) subscriptions. For VMR subscriptions, use `--source-directory` 
-or `--target-directory` to specify a single VMR directory under `src/`.
 
 **Available merge policies**
 
