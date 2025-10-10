@@ -32,7 +32,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
     /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="targetVmrUri">URI of the VMR to update</param>
-    /// <param name="rebase">Rebases changes (and leaves conflict markers in place) instead of recreating the previous flows recursively</param>
+    /// <param name="enableRebase">Rebases changes (and leaves conflict markers in place) instead of recreating the previous flows recursively</param>
     /// <param name="forceUpdate">Force the update to be performed</param>
     /// <returns>CodeFlowResult containing information about the codeflow calculation</returns>
     Task<CodeFlowResult> FlowForwardAsync(
@@ -43,7 +43,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
         string targetBranch,
         string headBranch,
         string targetVmrUri,
-        bool rebase,
+        bool enableRebase,
         bool forceUpdate,
         CancellationToken cancellationToken = default);
 }
@@ -104,7 +104,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string targetBranch,
         string headBranch,
         string targetVmrUri,
-        bool rebase,
+        bool enableRebase,
         bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
@@ -134,7 +134,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             targetBranch,
             headBranch,
             headBranchExisted,
-            rebase,
+            enableRebase,
             forceUpdate,
             cancellationToken);
 
@@ -152,7 +152,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 targetBranch,
                 currentFlow,
                 lastFlows,
-                rebase,
+                enableRebase,
                 cancellationToken);
         }
 
@@ -237,13 +237,13 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
-        bool rebase,
+        bool enableRebase,
         bool forceUpdate,
         CancellationToken cancellationToken)
     {
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         IWorkBranch? workBranch = null;
-        if (rebase || headBranchExisted)
+        if (enableRebase || headBranchExisted)
         {
             await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
 
@@ -272,7 +272,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         {
             hadChanges = false;
 
-            if (rebase)
+            if (enableRebase)
             {
                 // We need to recreate a previous flow so that we have something to rebase later
                 await RecreatePreviousFlowsAndApplyChanges(
@@ -340,7 +340,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             headBranch,
             workBranch,
             headBranchExisted,
-            rebase,
+            enableRebase,
             commitMessage,
             cancellationToken);
 
@@ -356,13 +356,13 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
-        bool rebase,
+        bool enableRebase,
         CancellationToken cancellationToken)
     {
         // If the target branch did not exist, checkout the last synchronization point
         // Otherwise, check out the last flow's commit in the PR branch
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        await vmr.CheckoutAsync(headBranchExisted && !rebase
+        await vmr.CheckoutAsync(headBranchExisted && !enableRebase
             ? lastFlows.LastForwardFlow.VmrSha
             : lastFlows.LastFlow.VmrSha);
 
@@ -429,7 +429,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             headBranch,
             workBranch,
             headBranchExisted,
-            rebase,
+            enableRebase,
             commitMessage,
             cancellationToken);
 

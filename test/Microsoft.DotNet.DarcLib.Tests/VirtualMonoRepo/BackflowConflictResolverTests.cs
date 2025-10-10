@@ -423,7 +423,7 @@ public class BackflowConflictResolverTests
             TargetBranch,
             excludedAssets: excludedAssets,
             headBranchExisted: headBranchExisted,
-            rebase: false,
+            enableRebase: false,
             cancellationToken);
 
         mergeResult.ConflictedFiles.Should().BeEmpty();

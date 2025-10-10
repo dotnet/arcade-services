@@ -80,7 +80,7 @@ internal class BackflowOperation(
                 excludedAssets: [], // TODO: Fill from subscription
                 headBranch,
                 headBranch,
-                rebase: true,
+                enableRebase: true,
                 forceUpdate: true,
                 cancellationToken);
 
@@ -98,7 +98,7 @@ internal class BackflowOperation(
                 headBranch,
                 [],
                 headBranchExisted: true,
-                rebase: true,
+                enableRebase: true,
                 cancellationToken);
         }
     }

@@ -75,7 +75,7 @@ internal class ForwardFlowOperation(
                 headBranch,
                 headBranch,
                 _vmrInfo.VmrPath,
-                rebase: true,
+                enableRebase: true,
                 forceUpdate: true,
                 cancellationToken);
 

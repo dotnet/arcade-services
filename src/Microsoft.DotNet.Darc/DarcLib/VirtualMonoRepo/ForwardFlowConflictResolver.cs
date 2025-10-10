@@ -54,7 +54,7 @@ public interface IForwardFlowConflictResolver
         string branchToMerge,
         ForwardFlow currentFlow,
         LastFlows lastFlows,
-        bool rebase,
+        bool enableRebase,
         CancellationToken cancellationToken);
 
     Task MergeDependenciesAsync(
@@ -110,10 +110,10 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         string branchToMerge,
         ForwardFlow currentFlow,
         LastFlows lastFlows,
-        bool rebase,
+        bool enableRebase,
         CancellationToken cancellationToken)
     {
-        var conflictedFiles = rebase
+        var conflictedFiles = enableRebase
             ? []
             : await TryMergingBranch(vmr, headBranch, branchToMerge, cancellationToken);
 
@@ -153,7 +153,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                 currentFlow,
                 cancellationToken);
 
-            if (!rebase)
+            if (!enableRebase)
             {
                 await vmr.CommitAsync(
                     $"Update dependencies after merging {branchToMerge} into {headBranch}",

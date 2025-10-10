@@ -35,7 +35,7 @@ public interface IBackflowConflictResolver
         string branchToMerge,
         IReadOnlyCollection<string>? excludedAssets,
         bool headBranchExisted,
-        bool rebase,
+        bool enableRebase,
         CancellationToken cancellationToken);
 }
 
@@ -91,11 +91,11 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         string branchToMerge,
         IReadOnlyCollection<string>? excludedAssets,
         bool headBranchExisted,
-        bool rebase,
+        bool enableRebase,
         CancellationToken cancellationToken)
     {
         // If we are rebasing, we are already on top of the branch and we don't need to merge it
-        IReadOnlyCollection<UnixPath> conflictedFiles = rebase
+        IReadOnlyCollection<UnixPath> conflictedFiles = enableRebase
             ? []
             : await TryMergingBranchAndResolveConflicts(
                 mapping,
@@ -124,7 +124,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 excludedAssets,
                 comparisonFlow,
                 currentFlow,
-                rebase,
+                enableRebase,
                 cancellationToken);
 
             return new VersionFileUpdateResult(conflictedFiles, updates);
@@ -285,7 +285,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         IReadOnlyCollection<string>? excludedAssets,
         Codeflow comparisonFlow,
         Backflow currentFlow,
-        bool rebase,
+        bool enableRebase,
         CancellationToken cancellationToken)
     {
         var headBranchDependencies = await GetRepoDependencies(targetRepo, commit: null /* working tree */);
@@ -478,7 +478,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             BuildDependencyUpdateCommitMessage(dependencyUpdates));
 
         // When rebasing, we only want to stage the changes, not commit them
-        if (!rebase)
+        if (!enableRebase)
         {
             await targetRepo.CommitAsync(
                 commitMessage,

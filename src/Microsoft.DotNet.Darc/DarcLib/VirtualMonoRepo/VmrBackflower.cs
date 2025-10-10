@@ -28,7 +28,7 @@ public interface IVmrBackFlower : IVmrCodeFlower
     /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
     /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
     /// <param name="headBranch">New/existing branch to make the changes on</param>
-    /// <param name="rebase">Rebases changes (and leaves conflict markers in place) instead of recreating the previous flows recursively</param>
+    /// <param name="enableRebase">Rebases changes (and leaves conflict markers in place) instead of recreating the previous flows recursively</param>
     /// <param name="forceUpdate">Apply updates always, even when no or non-meaningful changes only are flown</param>
     Task<CodeFlowResult> FlowBackAsync(
         string mapping,
@@ -37,7 +37,7 @@ public interface IVmrBackFlower : IVmrCodeFlower
         IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
         string headBranch,
-        bool rebase,
+        bool enableRebase,
         bool forceUpdate,
         CancellationToken cancellationToken = default);
 }
@@ -96,7 +96,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         IReadOnlyCollection<string>? excludedAssets,
         string targetBranch,
         string headBranch,
-        bool rebase,
+        bool enableRebase,
         bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
@@ -106,7 +106,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             headBranch,
             targetRepoPath,
-            rebase,
+            enableRebase,
             cancellationToken);
 
         return await FlowBackAsync(
@@ -118,7 +118,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             headBranch,
             headBranchExisted,
-            rebase,
+            enableRebase,
             forceUpdate,
             cancellationToken);
     }
@@ -132,7 +132,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
-        bool rebase,
+        bool enableRebase,
         bool forceUpdate,
         CancellationToken cancellationToken)
     {
@@ -147,7 +147,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             headBranch,
             headBranchExisted,
-            rebase,
+            enableRebase,
             forceUpdate,
             cancellationToken);
 
@@ -162,7 +162,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             targetBranch,
             excludedAssets,
             headBranchExisted,
-            rebase,
+            enableRebase,
             cancellationToken);
 
         return new CodeFlowResult(
@@ -182,7 +182,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
-        bool rebase,
+        bool enableRebase,
         bool forceUpdate,
         CancellationToken cancellationToken)
     {
@@ -226,7 +226,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _logger.LogDebug("Created {count} patch(es)", patches.Count);
 
         IWorkBranch? workBranch = null;
-        if (rebase || headBranchExisted)
+        if (enableRebase || headBranchExisted)
         {
             await targetRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
 
@@ -254,7 +254,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             _logger.LogInformation(e.Message);
 
-            if (rebase)
+            if (enableRebase)
             {
                 // We need to recreate a previous flow so that we have something to rebase later
                 await RecreatePreviousFlowsAndApplyChanges(
@@ -317,7 +317,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             headBranch,
             workBranch,
             headBranchExisted,
-            rebase,
+            enableRebase,
             commitMessage,
             cancellationToken);
 
@@ -333,12 +333,12 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         string headBranch,
         bool headBranchExisted,
-        bool rebase,
+        bool enableRebase,
         CancellationToken cancellationToken)
     {
         // If the target branch did not exist, checkout the last synchronization point
         // Otherwise, check out the last flow's commit in the PR branch
-        await targetRepo.CheckoutAsync(headBranchExisted && !rebase
+        await targetRepo.CheckoutAsync(headBranchExisted && !enableRebase
             ? lastFlows.LastBackFlow!.RepoSha
             : lastFlows.LastFlow.RepoSha);
 
@@ -416,7 +416,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             headBranch,
             workBranch,
             headBranchExisted,
-            rebase,
+            enableRebase,
             commitMessage,
             cancellationToken);
 
@@ -445,7 +445,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string targetBranch,
         string headBranch,
         NativePath? targetRepoPath,
-        bool rebase,
+        bool enableRebase,
         CancellationToken cancellationToken)
     {
         await _vmrCloneManager.PrepareVmrAsync([build.GetRepository()], [build.Commit], build.Commit, ShouldResetClones, cancellationToken);
@@ -522,7 +522,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true);
 
             // Rebase strategy works on top of the target branch, non-rebase starts from the last point of synchronization
-            if (!rebase)
+            if (!enableRebase)
             {
                 await targetRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
             }
