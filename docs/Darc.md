@@ -1301,8 +1301,8 @@ Successfully created new subscription with id '4f300f68-8800-4b14-328e-08d68308f
 
 Dependency flow subscriptions can use the `--target-directory` parameter to target specific 
 subpaths within the repository. This allows you to scope dependency updates to particular 
-directories, which is useful for repositories with multiple projects or configurations that 
-require different dependency update behaviors.
+directories, which is useful for repositories that contain other repositories within them, 
+such as the Virtual Mono Repo (VMR).
 
 Key features:
 - Specify multiple directories using a comma-separated list (e.g., `"src/sdk,src/runtime"`)
@@ -1317,8 +1317,8 @@ a single VMR directory under `src/`.
 **Using Target Directories**:
 
 The `--target-directory` parameter allows you to specify where dependency updates should 
-be applied within the target repository. This is useful for repositories with multiple 
-projects or configurations that need different dependency update behaviors.
+be applied within the target repository. This is useful for repositories that contain 
+other repositories within them, such as the Virtual Mono Repo (VMR).
 
 ```
 # Update dependencies only in specific directories
