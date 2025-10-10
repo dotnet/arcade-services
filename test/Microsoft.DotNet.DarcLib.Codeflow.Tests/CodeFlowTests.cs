@@ -271,6 +271,17 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
         gitResult.Succeeded.Should().BeTrue("Git diff should succeed");
         return gitResult.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
     }
+
+    protected static async Task VerifyNoConflictMarkers(NativePath productRepoPath, IEnumerable<string> stagedFiles)
+    {
+        foreach (var file in stagedFiles)
+        {
+            var filePath = productRepoPath / file;
+            var content = await File.ReadAllTextAsync(filePath);
+
+            content.Should().NotContain("<<<<<<<", $"File {filePath} contains conflict markers");
+        }
+    }
 }
 
 internal static class BackFlowTestExtensions

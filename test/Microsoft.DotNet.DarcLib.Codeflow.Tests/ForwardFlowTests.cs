@@ -3,6 +3,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -107,6 +108,7 @@ internal class ForwardFlowTests : CodeFlowTests
         ];
 
         stagedFiles.Should().BeEquivalentTo([..expectedFiles, VmrInfo.SourcesDir / Constants.ProductRepoName / VersionFiles.VersionDetailsXml]);
+        await VerifyNoConflictMarkers(VmrPath, stagedFiles);
         CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo again");
         CheckFileContents(VmrPath / expectedFiles[1], "New file from the repo");
         File.Exists(VmrPath / expectedFiles[0] + "-removed-in-vmr").Should().BeFalse();
@@ -128,6 +130,7 @@ internal class ForwardFlowTests : CodeFlowTests
 
         stagedFiles = await CallDarcForwardflow(build.Id, [expectedFiles[0]]);
         stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
+        await VerifyNoConflictMarkers(VmrPath, stagedFiles.Except([expectedFiles[0]]));
         CheckFileContents(VmrPath / expectedFiles[1], "New file from the repo");
 
         // Now we commit this flow and verify all files are staged
@@ -161,6 +164,7 @@ internal class ForwardFlowTests : CodeFlowTests
         // File -added-in-repo is deleted in the VMR and changed in the repo so it will conflict
         stagedFiles = await CallDarcForwardflow(build.Id, [expectedFiles[1]]);
         stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
+        await VerifyNoConflictMarkers(VmrPath, stagedFiles.Except([expectedFiles[1]]));
         CheckFileContents(VmrPath / expectedFiles[1], "New file from the repo AGAIN");
         CheckFileContents(VmrPath / expectedFiles[2], "New stuff");
     }

@@ -494,6 +494,7 @@ internal class BackflowTests : CodeFlowTests
 
         // We check if everything got staged properly
         stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after backflow");
+        await VerifyNoConflictMarkers(ProductRepoPath, stagedFiles);
         CheckFileContents(_productRepoFilePath, "New content in the VMR again");
         CheckFileContents(ProductRepoPath / expectedFiles[1], "New file from the VMR");
         File.Exists(ProductRepoPath / expectedFiles[0] + "-removed-in-repo").Should().BeFalse();
@@ -530,6 +531,7 @@ internal class BackflowTests : CodeFlowTests
 
         stagedFiles = await CallDarcBackflow(build.Id, [expectedFiles[0]]);
         stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after backflow");
+        await VerifyNoConflictMarkers(ProductRepoPath, stagedFiles.Except([expectedFiles[0]]));
         CheckFileContents(ProductRepoPath / expectedFiles[1], "New file from the VMR");
         File.Exists(ProductRepoPath / expectedFiles.Last().Replace("ps2", "ps1")).Should().BeFalse();
 
@@ -569,6 +571,7 @@ internal class BackflowTests : CodeFlowTests
             VersionFiles.VersionDetailsXml,
             VersionFiles.VersionDetailsProps,
         ]);
+        await VerifyNoConflictMarkers(ProductRepoPath, stagedFiles.Except([expectedFiles[1]]));
         CheckFileContents(ProductRepoPath / expectedFiles[1], "New file from the VMR AGAIN");
         (await File.ReadAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml)).Should().Contain("1.0.2");
         (await File.ReadAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsProps)).Should().Contain("1.0.2");
