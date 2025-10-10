@@ -2735,7 +2735,7 @@ the latest build of each dependency's repository that has been applied to the
 channel. It then updates the Version.Details.xml and other version files (e.g.
 Versions.props) based on the newest information.
 
-This command has two additional non-default modes:
+This command has three additional non-default modes:
 - Use a local package folder as input, avoiding a remote call to the
 build asset registry (--packages-folder)
 - Update a specific dependency to a new version (--name and --version)
