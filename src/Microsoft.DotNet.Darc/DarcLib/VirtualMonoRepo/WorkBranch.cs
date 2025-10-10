@@ -67,7 +67,7 @@ public class WorkBranch(
             if (conflictedFiles.Count > 0)
             {
                 await _repo.ExecuteGitCommand(["reset", "--hard"]);
-                throw new WorkBranchInConflictException(WorkBranchName, OriginalBranchName, result);
+                throw new WorkBranchInConflictException(WorkBranchName, OriginalBranchName, result, conflictedFiles);
             }
         }
 
@@ -123,7 +123,8 @@ public class WorkBranch(
     }
 }
 
-public class WorkBranchInConflictException(string workBranch, string targetBranch, ProcessExecutionResult executionResult)
+public class WorkBranchInConflictException(string workBranch, string targetBranch, ProcessExecutionResult executionResult, IReadOnlyCollection<UnixPath> conflictedFiles)
     : ProcessFailedException(executionResult, $"Failed to merge back the work branch {workBranch} into {targetBranch}")
 {
+    public IReadOnlyCollection<UnixPath> ConflictedFiles { get; } = conflictedFiles;
 }

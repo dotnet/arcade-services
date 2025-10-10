@@ -667,10 +667,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             {
                 _logger.LogInformation(e.Message);
                 throw new ConflictInPrBranchException(
-                    e.ExecutionResult.StandardError,
-                    targetBranch,
-                    mapping.Name,
-                    isForwardFlow: currentFlow.IsForward);
+                    [..e.ConflictedFiles.Select(f => f.Path)],
+                    targetBranch);
             }
         }
 

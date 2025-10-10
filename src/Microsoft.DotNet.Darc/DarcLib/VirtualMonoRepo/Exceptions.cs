@@ -41,10 +41,11 @@ public class PatchApplicationLeftConflictsException(IReadOnlyCollection<UnixPath
 public class ConflictInPrBranchException : DarcException
 {
     private static readonly Regex AlreadyExistsRegex = new("patch failed: (.+): already exist in index");
-    private static readonly Regex PatchFailedRegex = new("error: patch failed: (.*):");
-    private static readonly Regex PatchDoesNotApplyRegex = new("error: (.+): patch does not apply");
-    private static readonly Regex FileDoesNotExistRegex = new("error: (.+): does not exist in index");
-    private static readonly Regex FailedMergeRegex = new("CONFLICT (content): Merge conflict in (.+)");
+    private static readonly Regex PatchFailedRegex = new("error: patch failed: (.+):");
+    private static readonly Regex PatchDoesNotApplyRegex = new(@"error: \(.+\): patch does not apply");
+    private static readonly Regex FileDoesNotExistRegex = new(@"error: \(.+\): does not exist in index");
+    private static readonly Regex FailedMergeRegex1 = new(@"CONFLICT \(content\): Merge conflict in (.+)");
+    private static readonly Regex FailedMergeRegex2 = new(@"CONFLICT \(.+\): ([\S]+) (deleted|added|modified)");
 
     private static readonly Regex[] ConflictRegex =
     [
@@ -52,10 +53,11 @@ public class ConflictInPrBranchException : DarcException
         PatchFailedRegex,
         PatchDoesNotApplyRegex,
         FileDoesNotExistRegex,
-        FailedMergeRegex,
+        FailedMergeRegex1,
+        FailedMergeRegex2,
     ];
 
-    public List<string> ConflictedFiles { get; }
+    public IReadOnlyCollection<string> ConflictedFiles { get; }
 
     public ConflictInPrBranchException(
             string failedMergeMessage,
@@ -66,7 +68,7 @@ public class ConflictInPrBranchException : DarcException
     {
     }
 
-    private ConflictInPrBranchException(List<string> conflictedFiles, string targetBranch)
+    public ConflictInPrBranchException(IReadOnlyCollection<string> conflictedFiles, string targetBranch)
         : base($"Failed to flow changes due to conflicts in the target branch ({targetBranch})")
     {
         ConflictedFiles = conflictedFiles;
