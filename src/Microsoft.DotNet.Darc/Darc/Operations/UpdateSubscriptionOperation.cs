@@ -385,6 +385,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
            || _options.SourceEnabled != null
            || _options.SourceDirectory != null
            || _options.ExcludedAssets != null
+           || _options.TargetDirectory != null
            || UpdatingMergePoliciesViaCommandLine();
 
     private bool UpdatingMergePoliciesViaCommandLine()
