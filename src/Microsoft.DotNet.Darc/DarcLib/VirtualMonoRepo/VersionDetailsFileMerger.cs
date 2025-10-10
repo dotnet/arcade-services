@@ -79,11 +79,11 @@ public class VersionDetailsFileMerger : VmrVersionFileMerger, IVersionDetailsFil
         var previousSourceRepoChanges = await GetDependencies(sourceRepo, sourceRepoPreviousRef, sourceRepoVersionDetailsRelativePath);
         var currentSourceRepoChanges = await GetDependencies(sourceRepo, sourceRepoCurrentRef, sourceRepoVersionDetailsRelativePath);
 
-        List<DependencyUpdate> targetChanges = ComputeChanges(
+        List<DependencyUpdate> targetChanges = ComputeDependencyDiffs(
             previousTargetRepoChanges,
             currentTargetRepoChanges);
 
-        List<DependencyUpdate> sourceChanges = ComputeChanges(
+        List<DependencyUpdate> sourceChanges = ComputeDependencyDiffs(
             previousSourceRepoChanges,
             currentSourceRepoChanges);
 
@@ -105,7 +105,7 @@ public class VersionDetailsFileMerger : VmrVersionFileMerger, IVersionDetailsFil
             : _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: false);
     }
 
-    private static List<DependencyUpdate> ComputeChanges(VersionDetails before, VersionDetails after)
+    private static List<DependencyUpdate> ComputeDependencyDiffs(VersionDetails before, VersionDetails after)
     {
         var dependencyChanges = before.Dependencies
             .Select(dep => new DependencyUpdate()
@@ -132,12 +132,7 @@ public class VersionDetailsFileMerger : VmrVersionFileMerger, IVersionDetailsFil
             }
         }
 
-        // Check if there are any actual changes
-        return dependencyChanges
-            .Where(change => change.From?.Version != change.To?.Version
-                || change.From?.Commit != change.To?.Commit
-                || change.From?.RepoUri != change.To?.RepoUri)
-            .ToList();
+        return dependencyChanges;
     }
 
     private async Task<VersionFileChanges<DependencyUpdate>> ApplyVersionDetailsChangesAsync(ILocalGitRepo repo, VersionFileChanges<DependencyUpdate> changes, string? mapping = null)
