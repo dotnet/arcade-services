@@ -77,7 +77,7 @@ internal class BackflowOperation(
                 mapping.Name,
                 productRepo.Path,
                 build,
-                excludedAssets: [], // TODO: Fill from subscription
+                excludedAssets: [], // TODO (https://github.com/dotnet/arcade-services/issues/5313): Fill from subscription
                 headBranch,
                 headBranch,
                 enableRebase: true,
@@ -96,7 +96,7 @@ internal class BackflowOperation(
                 build,
                 headBranch,
                 headBranch,
-                [],
+                excludedAssets: [], // TODO (https://github.com/dotnet/arcade-services/issues/5313): Fill from subscription
                 headBranchExisted: true,
                 enableRebase: true,
                 cancellationToken);
