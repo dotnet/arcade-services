@@ -550,7 +550,7 @@ public class DependencyFileManager : IDependencyFileManager
         // At this point we only care about the Maestro managed locations for the assets.
         // Flatten the dictionary into a set that has all the managed feeds
         Dictionary<string, HashSet<string>> managedFeeds = FlattenLocationsAndSplitIntoGroups(itemsToUpdateLocations);
-        nugetConfig = UpdatePackageSources(nugetConfig, managedFeeds);
+        nugetConfig = UpdatePackageSources(nugetConfig, managedFeeds, itemsToUpdateLocations);
 
         // Update the dotnet sdk if necessary
         Dictionary<GitFileMetadataName, string> globalJsonMetadata = null;
@@ -666,7 +666,7 @@ public class DependencyFileManager : IDependencyFileManager
                FeedConstants.AzureStorageProxyFeedPattern.IsMatch(feed);
     }
 
-    public XmlDocument UpdatePackageSources(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo)
+    public XmlDocument UpdatePackageSources(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo, Dictionary<string, HashSet<string>> packageToFeedMapping = null)
     {
         // Reconstruct the PackageSources section with the feeds
         XmlNode packageSourcesNode = nugetConfig.SelectSingleNode("//configuration/packageSources");
@@ -733,6 +733,8 @@ public class DependencyFileManager : IDependencyFileManager
         InsertManagedPackagesBlock(nugetConfig, packageSourcesNode, maestroManagedFeedsByRepo);
 
         CreateOrUpdateDisabledSourcesBlock(nugetConfig, maestroManagedFeedsByRepo, FeedConstants.MaestroManagedInternalFeedPrefix);
+
+        CreateOrUpdatePackageSourceMappingBlock(nugetConfig, maestroManagedFeedsByRepo, packageToFeedMapping);
 
         return nugetConfig;
     }
@@ -950,6 +952,151 @@ public class DependencyFileManager : IDependencyFileManager
         if (GetFirstMatchingComment(packageSourcesNode, MaestroEndComment) == null)
         {
             packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroEndComment), currentNode);
+        }
+    }
+
+    /// <summary>
+    /// Create or update the packageSourceMapping section to map packages to their corresponding darc feeds
+    /// </summary>
+    /// <param name="nugetConfig">The NuGet.config XML document</param>
+    /// <param name="maestroManagedFeedsByRepo">Managed feeds organized by repository</param>
+    /// <param name="packageToFeedMapping">Mapping of package names to their feed locations</param>
+    private void CreateOrUpdatePackageSourceMappingBlock(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo, Dictionary<string, HashSet<string>> packageToFeedMapping)
+    {
+        if (packageToFeedMapping == null || packageToFeedMapping.Count == 0)
+        {
+            return;
+        }
+
+        // Get or create the packageSourceMapping node
+        XmlNode packageSourceMappingNode = nugetConfig.SelectSingleNode("//configuration/packageSourceMapping");
+        if (packageSourceMappingNode == null)
+        {
+            XmlNode configNode = nugetConfig.SelectSingleNode("//configuration");
+            if (configNode == null)
+            {
+                return;
+            }
+            
+            packageSourceMappingNode = nugetConfig.CreateElement("packageSourceMapping");
+            configNode.AppendChild(packageSourceMappingNode);
+        }
+
+        // Create a reverse mapping from feed URL to darc key name
+        var feedUrlToKeyMapping = new Dictionary<string, string>();
+        foreach (var repoFeeds in maestroManagedFeedsByRepo.Values)
+        {
+            var managedSources = GetManagedPackageSources(repoFeeds);
+            foreach (var (key, feed) in managedSources)
+            {
+                feedUrlToKeyMapping[feed] = key;
+            }
+        }
+
+        // Remove existing managed packageSource mappings (those managed by Maestro)
+        var nodesToRemove = new List<XmlNode>();
+        XmlNode currentNode = packageSourceMappingNode.FirstChild;
+        bool withinMaestroComments = false;
+
+        while (currentNode != null)
+        {
+            if (currentNode.NodeType == XmlNodeType.Comment)
+            {
+                if (currentNode.Value.Equals(MaestroBeginComment, StringComparison.OrdinalIgnoreCase))
+                {
+                    withinMaestroComments = true;
+                    nodesToRemove.Add(currentNode);
+                }
+                else if (currentNode.Value.Equals(MaestroEndComment, StringComparison.OrdinalIgnoreCase))
+                {
+                    withinMaestroComments = false;
+                    nodesToRemove.Add(currentNode);
+                }
+                else if (withinMaestroComments)
+                {
+                    nodesToRemove.Add(currentNode);
+                }
+            }
+            else if (currentNode.NodeType == XmlNodeType.Element && withinMaestroComments)
+            {
+                if (currentNode.Name.Equals("packageSource", StringComparison.OrdinalIgnoreCase))
+                {
+                    var keyAttr = currentNode.Attributes?["key"]?.Value;
+                    if (!string.IsNullOrEmpty(keyAttr) && keyAttr.StartsWith("darc-", StringComparison.OrdinalIgnoreCase))
+                    {
+                        nodesToRemove.Add(currentNode);
+                    }
+                }
+            }
+
+            currentNode = currentNode.NextSibling;
+        }
+
+        // Remove the collected nodes
+        foreach (var node in nodesToRemove)
+        {
+            node.ParentNode?.RemoveChild(node);
+        }
+
+        // Build mapping from darc feed keys to packages that should use them
+        var feedKeyToPackages = new Dictionary<string, HashSet<string>>();
+        foreach (var (packageName, feedUrls) in packageToFeedMapping)
+        {
+            // Only process packages that are in Maestro-managed feeds
+            var maestroManagedFeeds = feedUrls.Where(feedUrl => IsMaestroManagedFeed(feedUrl)).ToList();
+            
+            foreach (var feedUrl in maestroManagedFeeds)
+            {
+                if (feedUrlToKeyMapping.TryGetValue(feedUrl, out string feedKey))
+                {
+                    if (!feedKeyToPackages.ContainsKey(feedKey))
+                    {
+                        feedKeyToPackages[feedKey] = [];
+                    }
+                    feedKeyToPackages[feedKey].Add(packageName);
+                }
+            }
+        }
+
+        // Only add mappings if we have darc feeds with packages
+        if (feedKeyToPackages.Count > 0)
+        {
+            // Find insertion point (after any existing clear element)
+            XmlNode insertAfterNode = null;
+            currentNode = packageSourceMappingNode.FirstChild;
+            while (currentNode != null)
+            {
+                if (currentNode.Name.Equals("clear", StringComparison.OrdinalIgnoreCase))
+                {
+                    insertAfterNode = currentNode;
+                    break;
+                }
+                currentNode = currentNode.NextSibling;
+            }
+
+            // Add begin comment
+            var beginComment = nugetConfig.CreateComment(MaestroBeginComment);
+            insertAfterNode = packageSourceMappingNode.InsertAfter(beginComment, insertAfterNode);
+
+            // Add packageSource entries for each darc feed with its packages
+            foreach (var (feedKey, packages) in feedKeyToPackages.OrderBy(kvp => kvp.Key))
+            {
+                var packageSourceElement = nugetConfig.CreateElement("packageSource");
+                packageSourceElement.SetAttribute("key", feedKey);
+
+                foreach (var packageName in packages.OrderBy(p => p))
+                {
+                    var packageElement = nugetConfig.CreateElement("package");
+                    packageElement.SetAttribute("pattern", packageName);
+                    packageSourceElement.AppendChild(packageElement);
+                }
+
+                insertAfterNode = packageSourceMappingNode.InsertAfter(packageSourceElement, insertAfterNode);
+            }
+
+            // Add end comment
+            var endComment = nugetConfig.CreateComment(MaestroEndComment);
+            packageSourceMappingNode.InsertAfter(endComment, insertAfterNode);
         }
     }
 
