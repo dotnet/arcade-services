@@ -2746,15 +2746,19 @@ See [Updating dependencies in your local
 repository](#updating-dependencies-in-your-local-repository) for more
 information.
 
-**Target Directories**: You can use the `--target-directory` parameter to specify 
-one or more directories (comma-separated) where dependency updates should be applied. 
-This is useful when a repository has multiple Version.Details.xml files in different 
-locations. Use '.' for the repository root. Paths can include a wildcard (`*`) at the 
-end to match multiple directories (e.g., `src/*`).
+**Target Directories for Update Dependencies**:
 
-When using `--target-directory`, you can also use `--excluded-assets` to exclude 
-specific assets in specific directories (e.g., `src/sdk/System.Text.Json` or 
-`src/*/System.Text.*`).
+The `--target-directory` parameter allows you to specify where dependency updates should 
+be applied within the repository. This allows you to scope dependency updates to particular 
+directories, which is useful for repositories that contain other repositories within them, 
+such as the Virtual Mono Repo (VMR), or when a repository has multiple Version.Details.xml 
+files in different locations.
+
+Key features:
+- Specify multiple directories using a comma-separated list (e.g., `"src/sdk,src/runtime"`)
+- Use '.' to target the repository root
+- Include a wildcard (`*`) at the end of a path to match multiple directories (e.g., `"src/*"`)
+- Combine with `--excluded-assets` to exclude specific assets in specific directories
 
 **Sample**
 ```
@@ -2800,7 +2804,8 @@ Updating 'Microsoft.DotNet.Wpf.GitHub': '5.0.0-alpha1.19462.16' => '5.0.0-alpha1
 Local dependencies updated from channel '.NET 5 Dev'.
 ```
 
-**Using target directories**:
+**Examples**:
+
 ```
 # Update dependencies in specific directories only
 PS C:\enlistments\sdk> darc update-dependencies --channel ".NET 9 Dev" --target-directory "src/sdk,src/runtime"
