@@ -31,7 +31,7 @@ internal class FlowCommitOptions : Options
     [Option("packages", HelpText = "Name(s) of package(s) to include in the flown build", Required = false)]
     public IEnumerable<string> Packages { get; init; } = [];
 
-    [Option("realBuildId", HelpText = "Build to take assets from. Shouldn't be combined with packages", Required = false)]
+    [Option("assets-from-build", HelpText = "A real build id from which to take assets. Shouldn't be provided if using the --packages option", Required = false)]
     public int RealBuildId { get; init; }
 
     internal override Operation GetOperation(IServiceProvider sp)
