@@ -11,6 +11,8 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 internal interface ICodeFlowCommandLineOptions : IBaseVmrCommandLineOptions
 {
     string Ref { get; set; }
+
+    public int Build { get; }
 }
 
 internal abstract class CodeFlowCommandLineOptions<T>
@@ -24,8 +26,13 @@ internal abstract class CodeFlowCommandLineOptions<T>
     public IEnumerable<string> AdditionalRemotes { get; set; }
 
     [Option("ref", Required = false, HelpText = "Git reference (commit, branch, tag) to flow. " +
-        "Defaults to HEAD of the repository in the current working directory.")]
+        "Defaults to HEAD of the repository in the current working directory. " +
+        "Cannot be used together with --build.")]
     public string Ref { get; set; }
+
+    [Option("build", Required = false, HelpText = "ID of the build to flow. " +
+        "Cannot be used together with --ref.")]
+    public int Build { get; set; }
 
     public abstract IEnumerable<string> Repositories { get; }
 

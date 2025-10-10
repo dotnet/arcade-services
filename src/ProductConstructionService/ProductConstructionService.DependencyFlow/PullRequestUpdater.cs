@@ -1416,6 +1416,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     subscription,
                     build,
                     prHeadBranch,
+                    enableRebase: false,
                     forceUpdate,
                     cancellationToken: default);
             }
@@ -1425,6 +1426,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     subscription,
                     build,
                     prHeadBranch,
+                    enableRebase: false,
                     forceUpdate,
                     cancellationToken: default);
             }
@@ -1494,7 +1496,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// In this case, we post a comment on the PR with the list of files that are in conflict,
     /// </summary>
     private async Task HandlePrUpdateConflictAsync(
-        List<string> filesInConflict,
+        IReadOnlyCollection<string> filesInConflict,
         SubscriptionUpdateWorkItem update,
         SubscriptionDTO subscription,
         InProgressPullRequest pr,

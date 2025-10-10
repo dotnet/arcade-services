@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -32,6 +33,9 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
 
     public async Task<string> AddRemoteIfMissingAsync(string repoUrl, CancellationToken cancellationToken = default)
         => await _localGitClient.AddRemoteIfMissingAsync(Path, repoUrl, cancellationToken);
+
+    public async Task<List<(string Name, string Uri)>> GetRemotesAsync()
+        => await _localGitClient.GetRemotesAsync(Path);
 
     public async Task<string> BlameLineAsync(string relativeFilePath, int line, string? blameFromCommit = null)
         => await _localGitClient.BlameLineAsync(Path, relativeFilePath, line, blameFromCommit);
@@ -64,7 +68,7 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
     public async Task DeleteBranchAsync(string branchName)
         => await _localGitClient.DeleteBranchAsync(Path, branchName);
 
-    public async Task<string?> GetFileFromGitAsync(string relativeFilePath, string revision = "HEAD", string? outputPath = null)
+    public async Task<string?> GetFileFromGitAsync(string relativeFilePath, string? revision = "HEAD", string? outputPath = null)
         => await _localGitClient.GetFileFromGitAsync(Path, relativeFilePath, revision, outputPath);
 
     public async Task<string> GetGitCommitAsync(CancellationToken cancellationToken = default)
@@ -128,6 +132,18 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
         string targetCommitOrBranch)
         => await _localGitClient.GetChangedFilesAsync(Path, baseCommitOrBranch, targetCommitOrBranch);
 
+    /// <summary>
+    /// Gets a collection of file paths that are currently in a conflicted state.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>A read-only collection of UnixPath representing the relative paths of files that are in conflict</returns>
+    public async Task<IReadOnlyCollection<UnixPath>> GetConflictedFilesAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await ExecuteGitCommand(["diff", "--name-only", "--diff-filter=U"], cancellationToken);
+        result.ThrowIfFailed("Failed to get a list of conflicted files");
+
+        return [.. result.GetOutputLines().Select(f => new UnixPath(f))];
+    }
 
     public override string ToString() => Path;
 }

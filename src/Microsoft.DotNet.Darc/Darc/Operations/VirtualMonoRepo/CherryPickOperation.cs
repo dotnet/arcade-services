@@ -117,24 +117,25 @@ internal class CherryPickOperation : Operation
 
         try
         {
+            await _patchHandler.ApplyPatches(patches, gitRoot, removePatchAfter: true, keepConflicts: true);
+        }
+        catch (PatchApplicationLeftConflictsException)
+        {
+            _logger.LogError("Conflicts were detected and changes (including conflicts) staged");
+            return Constants.ErrorCode;
+        }
+        finally
+        {
             foreach (var patch in patches)
             {
-                await _patchHandler.ApplyPatch(patch, gitRoot, removePatchAfter: true);
-            }
-        }
-        catch
-        {
-            try
-            {
-                foreach (var patch in patches)
+                try
                 {
                     _fileSystem.DeleteFile(patch.Path);
                 }
+                catch
+                {
+                }
             }
-            catch
-            {
-            }
-            throw;
         }
 
         _logger.LogInformation("Successfully cherry-picked commit {commit} to repository", _options.Commit);

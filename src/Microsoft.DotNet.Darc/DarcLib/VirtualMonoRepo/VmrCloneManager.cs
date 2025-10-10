@@ -29,12 +29,18 @@ public interface IVmrCloneManager
         string checkoutRef,
         bool resetToRemote = false,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Registers a known local location that contains a VMR clone.
+    /// </summary>
+    Task RegisterVmrAsync(NativePath localPath);
 }
 
 public class VmrCloneManager : CloneManager, IVmrCloneManager
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
+    private readonly ILocalGitClient _localGitRepo;
 
     public VmrCloneManager(
         IVmrInfo vmrInfo,
@@ -50,6 +56,7 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
     {
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
+        _localGitRepo = localGitRepo;
     }
 
     public async Task<ILocalGitRepo> PrepareVmrAsync(
@@ -79,6 +86,19 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
         await _dependencyTracker.RefreshMetadataAsync();
 
         return vmr;
+    }
+
+    public async Task RegisterVmrAsync(NativePath localPath)
+    {
+        var remotes = await _localGitRepo.GetRemotesAsync(localPath);
+        var branch = await _localGitRepo.GetCheckedOutBranchAsync(localPath);
+
+        if (remotes.Count == 0 || string.IsNullOrEmpty(branch))
+        {
+            throw new DarcException($"The provided path '{localPath}' does not appear to be a git repository.");
+        }
+
+        await PrepareCloneInternalAsync(localPath, [remotes[0].Uri], [branch], branch, false);
     }
 
     // When we initialize with a single static VMR,

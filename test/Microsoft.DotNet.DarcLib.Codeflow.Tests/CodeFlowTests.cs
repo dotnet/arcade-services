@@ -1,11 +1,15 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
+using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
@@ -123,7 +127,7 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
         await File.WriteAllTextAsync(_productRepoFilePath, newContent);
         await GitOperations.CommitAll(ProductRepoPath, $"Changing a repo file to '{newContent}'");
 
-        var codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         CheckFileContents(_productRepoVmrFilePath, newContent);
         await GitOperations.CheckAllIsCommitted(VmrPath);
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
@@ -137,7 +141,7 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
         await File.WriteAllTextAsync(_productRepoVmrPath / _productRepoFileName, newContent);
         await GitOperations.CommitAll(VmrPath, $"Changing a VMR file to '{newContent}'");
 
-        var codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        var codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         CheckFileContents(_productRepoFilePath, newContent);
         return codeFlowResult;
     }
@@ -200,6 +204,83 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
 
         await File.WriteAllTextAsync(VmrPath / VersionFiles.GlobalJson, Constants.VmrBaseGlobalJsonTemplate);
         await GitOperations.CommitAll(VmrPath, "Create global json in vmr`s base");
+    }
+
+    protected async Task<string[]> CallDarcForwardflow(int buildId = 0, string[]? expectedConflicts = null)
+        => await CallDarcCodeFlowOperation<ForwardFlowOperation>(
+            new ForwardFlowCommandLineOptions
+            {
+                VmrPath = VmrPath,
+                TmpPath = TmpPath,
+                Build = buildId,
+            },
+            ProductRepoPath,
+            VmrPath,
+            expectedConflicts);
+
+    protected async Task<string[]> CallDarcBackflow(int buildId = 0, string[]? expectedConflicts = null)
+        => await CallDarcCodeFlowOperation<BackflowOperation>(
+            new BackflowCommandLineOptions
+            {
+                VmrPath = VmrPath,
+                TmpPath = TmpPath,
+                Repository = ProductRepoPath,
+                Build = buildId,
+            },
+            VmrPath,
+            ProductRepoPath,
+            expectedConflicts);
+
+    private async Task<string[]> CallDarcCodeFlowOperation<T>(
+            ICodeFlowCommandLineOptions options,
+            NativePath sourceRepo,
+            NativePath targetRepo,
+            string[]? expectedConflicts)
+        where T : CodeFlowOperation
+    {
+
+        var operation = ActivatorUtilities.CreateInstance<T>(ServiceProvider, options);
+        var currentDirectory = Directory.GetCurrentDirectory();
+        Directory.SetCurrentDirectory(sourceRepo);
+        try
+        {
+            var result = await operation.ExecuteAsync();
+
+            if (expectedConflicts == null || expectedConflicts.Length == 0)
+            {
+                result.Should().Be(0);
+            }
+            else
+            {
+                result.Should().Be(42);
+
+                var diff = await GitOperations.ExecuteGitCommand(targetRepo, ["diff", "--name-status"]);
+
+                foreach (var expectedFile in expectedConflicts)
+                {
+                    diff.StandardOutput.Should().MatchRegex(new Regex(@$"^U\s+{Regex.Escape(expectedFile)}[\n\r]+", RegexOptions.Multiline));
+                }
+            }
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(currentDirectory);
+        }
+
+        var gitResult = await GitOperations.ExecuteGitCommand(targetRepo, "diff", "--name-only", "--cached");
+        gitResult.Succeeded.Should().BeTrue("Git diff should succeed");
+        return gitResult.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+    }
+
+    protected static async Task VerifyNoConflictMarkers(NativePath productRepoPath, IEnumerable<string> stagedFiles)
+    {
+        foreach (var file in stagedFiles)
+        {
+            var filePath = productRepoPath / file;
+            var content = await File.ReadAllTextAsync(filePath);
+
+            content.Should().NotContain("<<<<<<<", $"File {filePath} contains conflict markers");
+        }
     }
 }
 

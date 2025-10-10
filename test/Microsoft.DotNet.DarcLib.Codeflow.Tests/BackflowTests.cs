@@ -1,18 +1,15 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
-using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
@@ -35,7 +32,7 @@ internal class BackflowTests : CodeFlowTests
         CheckFileContents(_productRepoFilePath, "New content from the VMR");
         // Backflow again - should be a no-op
         // We want to flow the same build again, so the BarId doesn't change
-        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName, useLatestBuild: true);
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName, useLatestBuild: true);
         await GitOperations.Checkout(ProductRepoPath, "main");
         await GitOperations.DeleteBranch(ProductRepoPath, branchName);
         CheckFileContents(_productRepoFilePath, "New content from the VMR");
@@ -60,7 +57,7 @@ internal class BackflowTests : CodeFlowTests
             expectedConflictingFile: _productRepoFileName);
 
         // We used the changes from the VMR - let's verify flowing to the VMR
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
@@ -73,47 +70,7 @@ internal class BackflowTests : CodeFlowTests
 
         await EnsureTestRepoIsInitialized();
 
-        var repo = GetLocal(ProductRepoPath);
-
-        await repo.RemoveDependencyAsync(FakePackageName);
-
-        await repo.AddDependencyAsync(new DependencyDetail
-        {
-            Name = "Package.A1",
-            Version = "1.0.0",
-            RepoUri = "https://github.com/dotnet/repo1",
-            Commit = "a01",
-            Type = DependencyType.Product,
-        });
-
-        await repo.AddDependencyAsync(new DependencyDetail
-        {
-            Name = "Package.B1",
-            Version = "1.0.0",
-            RepoUri = "https://github.com/dotnet/repo1",
-            Commit = "b02",
-            Type = DependencyType.Product,
-        });
-
-        await repo.AddDependencyAsync(new DependencyDetail
-        {
-            Name = "Package.C2",
-            Version = "1.0.0",
-            RepoUri = "https://github.com/dotnet/repo2",
-            Commit = "c03",
-            Type = DependencyType.Product,
-        });
-
-        await repo.AddDependencyAsync(new DependencyDetail
-        {
-            Name = "Package.D3",
-            Version = "1.0.0",
-            RepoUri = "https://github.com/dotnet/repo3",
-            Commit = "d04",
-            Type = DependencyType.Product,
-        });
-
-        await GitOperations.CommitAll(ProductRepoPath, "Set up version files");
+        await AddDependencies(ProductRepoPath);
 
         // Create global.json in src/arcade/ and in VMRs base
         Directory.CreateDirectory(ArcadeInVmrPath);
@@ -125,7 +82,7 @@ internal class BackflowTests : CodeFlowTests
             Constants.VmrBaseGlobalJsonTemplate);
         await GitOperations.CommitAll(VmrPath, "Creating global.json in vmrs base and in src/arcade ");
 
-        var codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
@@ -149,7 +106,7 @@ internal class BackflowTests : CodeFlowTests
         ]);
 
         // Flow changes back from the VMR
-        codeFlowResult = await CallDarcBackflow(
+        codeFlowResult = await CallBackflow(
             Constants.ProductRepoName,
             ProductRepoPath,
             branchName + "-backflow",
@@ -187,7 +144,7 @@ internal class BackflowTests : CodeFlowTests
         dependencies.Should().BeEquivalentTo(expectedDependencies);
 
         // Flow the changes (updated versions files only) to the VMR - both repos should have equal content at that point
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-forwardflow");
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-forwardflow");
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName + "-forwardflow");
 
@@ -205,7 +162,7 @@ internal class BackflowTests : CodeFlowTests
             (DependencyFileManager.ArcadeSdkPackageName, "1.0.2"),
         ]);
 
-        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr", buildToFlow: build2);
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr", buildToFlow: build2);
         codeFlowResult.ShouldHaveUpdates();
         dependencies = await productRepo.GetDependenciesAsync();
         dependencies.Should().BeEquivalentTo(GetDependencies(build2));
@@ -254,7 +211,7 @@ internal class BackflowTests : CodeFlowTests
         ];
 
         // We flow this latest build back into the PR that is waiting in the product repo
-        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr", buildToFlow: build3);
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr", buildToFlow: build3);
         codeFlowResult.ShouldHaveUpdates();
         dependencies = await productRepo.GetDependenciesAsync();
         dependencies.Should().BeEquivalentTo(expectedDependencies);
@@ -279,7 +236,7 @@ internal class BackflowTests : CodeFlowTests
         CheckDirectoryContents(ProductRepoPath, expectedFiles);
 
         // Now we flow repo back to VMR to level the repos
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-ff");
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-ff");
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName + "-ff");
 
@@ -309,7 +266,7 @@ internal class BackflowTests : CodeFlowTests
         ]);
 
         // Flow the first build
-        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr2", buildToFlow: build4);
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr2", buildToFlow: build4);
         codeFlowResult.ShouldHaveUpdates();
 
         expectedDependencies =
@@ -334,7 +291,7 @@ internal class BackflowTests : CodeFlowTests
         await GitOperations.CommitAll(ProductRepoPath, "Changing a repo file in the PR");
 
         // Flow the second build - this should throw as there's a conflict in the PR branch
-        await this.Awaiting(_ => CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr2", buildToFlow: build5))
+        await this.Awaiting(_ => CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "-pr2", buildToFlow: build5))
             .Should().ThrowAsync<ConflictInPrBranchException>();
 
         // The state of the branch should be the same as before
@@ -394,7 +351,7 @@ internal class BackflowTests : CodeFlowTests
 
         // 2. The commit is forward-flown into the VMR
         await GitOperations.Checkout(ProductRepoPath, "main");
-        var codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
@@ -404,7 +361,7 @@ internal class BackflowTests : CodeFlowTests
 
         // 4. A backflow PR is created in the repo updating Arcade.Sdk from 1.0.0 to 1.0.1
         await GitOperations.Checkout(VmrPath, "main");
-        codeFlowResult = await CallDarcBackflow(
+        codeFlowResult = await CallBackflow(
             Constants.ProductRepoName,
             ProductRepoPath,
             backflowBranch,
@@ -430,7 +387,7 @@ internal class BackflowTests : CodeFlowTests
 
         // 8. A backflow PR opened in 4. is now getting updated with changes from 7
         await GitOperations.Checkout(VmrPath, "main");
-        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch, buildToFlow: build2);
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch, buildToFlow: build2);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, backflowBranch);
 
@@ -458,7 +415,7 @@ internal class BackflowTests : CodeFlowTests
 
         await GitOperations.CommitAll(ProductRepoPath, "Changing version files");
 
-        var codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
@@ -471,7 +428,7 @@ internal class BackflowTests : CodeFlowTests
         Directory.CreateDirectory(ArcadeInVmrPath / DarcLib.Constants.CommonScriptFilesPath);
         await File.WriteAllTextAsync(ArcadeInVmrPath / VersionFiles.GlobalJson, Constants.GlobalJsonTemplate);
         await File.WriteAllTextAsync(ArcadeInVmrPath / DarcLib.Constants.CommonScriptFilesPath / vmrEngCommonFile, "Some content");
-        
+
         await GitOperations.CommitAll(VmrPath, "Creating test eng/commons");
 
         var build1 = await CreateNewVmrBuild(
@@ -480,7 +437,7 @@ internal class BackflowTests : CodeFlowTests
         ]);
 
         // Flow changes back from the VMR
-        codeFlowResult = await CallDarcBackflow(
+        codeFlowResult = await CallBackflow(
             Constants.ProductRepoName,
             ProductRepoPath,
             branchName + "-backflow",
@@ -500,52 +457,124 @@ internal class BackflowTests : CodeFlowTests
 
         const string branchName = nameof(DarcVmrBackflowCommandTest);
 
+        await File.WriteAllTextAsync(_productRepoVmrFilePath + "-removed-in-repo", "This file will be removed in the repo");
+        await GitOperations.CommitAll(VmrPath, "Add a file that will be removed in the repo");
+
         // We flow the repo to make sure they are in sync
         var codeFlowResult = await ChangeVmrFileAndFlowIt("New content in the VMR", branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, branchName);
-        await GitOperations.Checkout(ProductRepoPath, "main");
-        await GitOperations.Checkout(VmrPath, "main");
 
+        await AddDependencies(ProductRepoPath);
+
+        await GitOperations.Checkout(VmrPath, "main");
         codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await GitOperations.Checkout(VmrPath, "main");
+
+        File.Delete(_productRepoFilePath + "-removed-in-repo");
+        await GitOperations.CommitAll(ProductRepoPath, "Remove a file that came from the VMR");
 
         // Now we make several changes in the VMR and try to locally flow them via darc
         await File.WriteAllTextAsync(_productRepoVmrFilePath, "New content in the VMR again");
+        await File.WriteAllTextAsync(_productRepoVmrFilePath + "-added-in-repo", "New file from the VMR");
         await GitOperations.CommitAll(VmrPath, "New content in the VMR again");
 
-        var options = new BackflowCommandLineOptions()
-        {
-            VmrPath = VmrPath,
-            TmpPath = TmpPath,
-            Repository = ProductRepoPath,
-        };
-
-        var operation = ActivatorUtilities.CreateInstance<BackflowOperation>(ServiceProvider, options);
-        var currentDirectory = Directory.GetCurrentDirectory();
-        Directory.SetCurrentDirectory(VmrPath);
-        try
-        {
-            var result = await operation.ExecuteAsync();
-            result.Should().Be(0);
-        }
-        finally
-        {
-            Directory.SetCurrentDirectory(currentDirectory);
-        }
+        string[] stagedFiles = await CallDarcBackflow();
 
         // Verify that expected files are staged
+        string[] expectedFiles =
+        [
+            _productRepoFileName,
+            _productRepoFileName + "-added-in-repo",
+            VersionFiles.VersionDetailsXml,
+        ];
+
+        // We check if everything got staged properly
+        stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after backflow");
+        await VerifyNoConflictMarkers(ProductRepoPath, stagedFiles);
         CheckFileContents(_productRepoFilePath, "New content in the VMR again");
-        var processManager = ServiceProvider.GetRequiredService<IProcessManager>();
+        CheckFileContents(ProductRepoPath / expectedFiles[1], "New file from the VMR");
+        File.Exists(ProductRepoPath / expectedFiles[0] + "-removed-in-repo").Should().BeFalse();
+        File.Exists(ProductRepoPath / expectedFiles[2]).Should().BeTrue();
 
-        var gitResult = await processManager.ExecuteGit(ProductRepoPath, "diff", "--name-only", "--cached");
-        gitResult.Succeeded.Should().BeTrue("Git diff should succeed");
-        var stagedFiles = gitResult.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-        stagedFiles.Should().BeEquivalentTo([_productRepoFileName], "There should be staged files after backflow");
+        // Now we reset, make a conflicting change and see if darc can handle it and the conflict appears
+        await GitOperations.ExecuteGitCommand(ProductRepoPath, "reset", "--hard");
+        await File.WriteAllTextAsync(_productRepoFilePath, "A conflicting change in the repo");
+        await GitOperations.CommitAll(ProductRepoPath, "A conflicting change in the repo");
 
-        gitResult = await processManager.ExecuteGit(ProductRepoPath, "commit", "-m", "Commit staged files");
+        // We change VMR's eng/common because that is what normally flows with the repo content in regular subscriptions
+        await GitOperations.Checkout(VmrPath, "main");
+        Directory.CreateDirectory(VmrPath / VmrInfo.GetRelativeRepoSourcesPath("arcade") / DarcLib.Constants.CommonScriptFilesPath);
+        File.Copy(
+            ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "build.ps1",
+            VmrPath / VmrInfo.GetRelativeRepoSourcesPath("arcade") / DarcLib.Constants.CommonScriptFilesPath / "build.ps2");
+        await GitOperations.CommitAll(VmrPath, "Changing VMR's eng/common");
+
+        Build build = await CreateNewVmrBuild(
+        [
+            ("Package.A1", "1.0.1"),
+            ("Package.B1", "1.0.1"),
+            ("Package.C2", "1.0.1"),
+            ("Package.D3", "1.0.1"),
+            (DependencyFileManager.ArcadeSdkPackageName, "1.0.1"),
+        ]);
+
+        expectedFiles = [
+            ..expectedFiles,
+            VersionFiles.VersionDetailsProps,
+            VersionFiles.GlobalJson,
+            DarcLib.Constants.CommonScriptFilesPath + "/build.ps2",
+        ];
+
+        stagedFiles = await CallDarcBackflow(build.Id, [expectedFiles[0]]);
+        stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after backflow");
+        await VerifyNoConflictMarkers(ProductRepoPath, stagedFiles.Except([expectedFiles[0]]));
+        CheckFileContents(ProductRepoPath / expectedFiles[1], "New file from the VMR");
+        File.Exists(ProductRepoPath / expectedFiles.Last().Replace("ps2", "ps1")).Should().BeFalse();
+
+        // Now we commit this flow and verify all files are staged
+        await GitOperations.ExecuteGitCommand(ProductRepoPath, ["checkout", "--theirs", "--", _productRepoFilePath]);
+        await GitOperations.ExecuteGitCommand(ProductRepoPath, ["add", _productRepoFilePath]);
+        await GitOperations.ExecuteGitCommand(ProductRepoPath, ["commit", "-m", "Committing the backflow"]);
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
+
+        // Now we make another set of changes in the VMR and try again
+        // This time it will be same direction flow as the previous one (before it was opposite)
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await GitOperations.Checkout(VmrPath, "main");
+
+        File.Delete(_productRepoFilePath + "-added-in-repo");
+        await GitOperations.CommitAll(ProductRepoPath, "Remove a file that was in the VMR");
+
+        // Now we make several changes in the VMR and try to locally flow them via darc
+        await File.WriteAllTextAsync(_productRepoVmrFilePath, "New content in the VMR AGAIN");
+        await File.WriteAllTextAsync(_productRepoVmrFilePath + "-added-in-repo", "New file from the VMR AGAIN");
+        await GitOperations.CommitAll(VmrPath, "New content in the VMR again");
+
+        build = await CreateNewVmrBuild(
+        [
+            ("Package.A1", "1.0.2"),
+            ("Package.B1", "1.0.2"),
+            ("Package.C2", "2.0.2"),
+            ("Package.D3", "1.0.2"),
+        ]);
+
+        // File "-added-in-repo" is deleted in the repo and changed in the VMR so it will conflict
+        stagedFiles = await CallDarcBackflow(build.Id, [expectedFiles[1]]);
+        stagedFiles.Should().BeEquivalentTo(
+        [
+            expectedFiles[0],
+            expectedFiles[1],
+            VersionFiles.VersionDetailsXml,
+            VersionFiles.VersionDetailsProps,
+        ]);
+        await VerifyNoConflictMarkers(ProductRepoPath, stagedFiles.Except([expectedFiles[1]]));
+        CheckFileContents(ProductRepoPath / expectedFiles[1], "New file from the VMR AGAIN");
+        (await File.ReadAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml)).Should().Contain("1.0.2");
+        (await File.ReadAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsProps)).Should().Contain("1.0.2");
     }
 
     // Tests a scenario where we misconfigure subscriptions and let two different VMR branches backflow into the same repo branch.
@@ -574,13 +603,58 @@ internal class BackflowTests : CodeFlowTests
 
         // Now we try to backflow both branches into the same branch in the repo
         var backflowBranch = branch1Name + "-backflow";
-        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch);
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, backflowBranch);
 
         await GitOperations.Checkout(VmrPath, branch2Name);
-        var act = () => CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch);
+        var act = () => CallBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch);
         await act.Should().ThrowAsync<NonLinearCodeflowException>("The backflow should fail as the target branch already has changes from another VMR branch");
+    }
+
+    private async Task AddDependencies(NativePath repoPath)
+    {
+        var repo = GetLocal(repoPath);
+
+        await repo.RemoveDependencyAsync(FakePackageName);
+
+        await repo.AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.A1",
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "a01",
+            Type = DependencyType.Product,
+        });
+
+        await repo.AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.B1",
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "b02",
+            Type = DependencyType.Product,
+        });
+
+        await repo.AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.C2",
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo2",
+            Commit = "c03",
+            Type = DependencyType.Product,
+        });
+
+        await repo.AddDependencyAsync(new DependencyDetail
+        {
+            Name = "Package.D3",
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo3",
+            Commit = "d04",
+            Type = DependencyType.Product,
+        });
+
+        await GitOperations.CommitAll(repoPath, "Set up version files");
     }
 }
 

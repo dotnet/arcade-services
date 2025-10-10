@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
@@ -59,6 +60,7 @@ public abstract class VmrManagerBase
         string fromRevision,
         string commitMessage,
         bool restoreVmrPatches,
+        bool keepConflicts,
         CodeFlowParameters codeFlowParameters,
         string[]? additionalFileExclusions = null,
         CancellationToken cancellationToken = default)
@@ -74,11 +76,12 @@ public abstract class VmrManagerBase
             cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        foreach (var patch in patches)
-        {
-            await _patchHandler.ApplyPatch(patch, _vmrInfo.VmrPath, removePatchAfter: true, reverseApply: false, cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-        }
+        await _patchHandler.ApplyPatches(
+            patches,
+            _vmrInfo.VmrPath,
+            removePatchAfter: true,
+            keepConflicts: keepConflicts,
+            cancellationToken: cancellationToken);
 
         _dependencyInfo.UpdateDependencyVersion(update);
 
@@ -104,6 +107,11 @@ public abstract class VmrManagerBase
         if (codeFlowParameters.GenerateCredScanSuppressions)
         {
             await _credScanSuppressionsGenerator.UpdateCredScanSuppressions(cancellationToken);
+        }
+
+        if (keepConflicts)
+        {
+            return;
         }
 
         // Commit without adding files as they were added to index directly

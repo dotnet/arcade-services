@@ -846,8 +846,8 @@ function Get-MaxVmrDepth {
         [string]$repoPath,
         [string]$vmrPath,
         [array]$repoCommits,
-        [int]$minDepth = 10,
-        [int]$maxDepth = 500,
+        [int]$minDepth = 1,
+        [int]$maxDepth = 600,
         [switch]$Verbose
     )
 
@@ -889,17 +889,12 @@ function Get-MaxVmrDepth {
                 }
                 
                 # Make sure the depth is within the acceptable range
-                if ($commitDepth -lt $minDepth) {
-                    Write-Host "  VMR depth ($commitDepth) is below minimum ($minDepth), using minimum depth" -ForegroundColor Yellow
-                    return $minDepth
-                }
-                elseif ($commitDepth -gt $maxDepth) {
+                if ($commitDepth -gt $maxDepth) {
                     Write-Host "  VMR depth ($commitDepth) exceeds maximum ($maxDepth), using maximum depth" -ForegroundColor Yellow
                     return $maxDepth
                 }
-                else {
-                    return $commitDepth + 1
-                }
+
+                return $commitDepth
             }
         }
     } catch {

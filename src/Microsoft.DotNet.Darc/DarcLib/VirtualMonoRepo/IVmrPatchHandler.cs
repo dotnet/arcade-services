@@ -16,6 +16,15 @@ public interface IVmrPatchHandler
         VmrIngestionPatch patch,
         NativePath targetDirectory,
         bool removePatchAfter,
+        bool keepConflicts,
+        bool reverseApply = false,
+        CancellationToken cancellationToken = default);
+
+    Task ApplyPatches(
+        IEnumerable<VmrIngestionPatch> patches,
+        NativePath targetDirectory,
+        bool removePatchAfter,
+        bool keepConflicts,
         bool reverseApply = false,
         CancellationToken cancellationToken = default);
 

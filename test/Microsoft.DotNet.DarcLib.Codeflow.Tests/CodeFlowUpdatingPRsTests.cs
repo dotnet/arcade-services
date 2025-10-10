@@ -36,12 +36,12 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
         await GitOperations.CommitAll(VmrPath, "New file in the VMR");
 
         // 1. Open a backflow PR
-        var result = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch);
+        var result = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch);
         result.ShouldHaveUpdates();
 
         // 2. Open a forward flow PR
         await GitOperations.Checkout(ProductRepoPath, "main");
-        result = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardFlowBranch);
+        result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardFlowBranch);
         result.ShouldHaveUpdates();
 
         // 3. Make some changes in the forward flow PR branch
@@ -53,7 +53,7 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
         await GitOperations.MergePrBranch(ProductRepoPath, backflowBranch);
 
         // 5. Flow the changes from the repo into the VMR PR
-        result = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardFlowBranch);
+        result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardFlowBranch);
         result.ShouldHaveUpdates();
 
         // Check that the changes in the PR branch are preserved
@@ -85,12 +85,12 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
         await GitOperations.CommitAll(VmrPath, "New file in the VMR");
 
         // 1. Open a forward flow PR
-        var result = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardFlowBranch);
+        var result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardFlowBranch);
         result.ShouldHaveUpdates();
 
         // 2. Open a backflow PR
         await GitOperations.Checkout(VmrPath, "main");
-        result = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch);
+        result = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch);
         result.ShouldHaveUpdates();
 
         // 3. Make some changes in the backflow PR branch
@@ -105,7 +105,7 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
         await GitOperations.MergePrBranch(VmrPath, forwardFlowBranch);
 
         // 5. Flow the changes from the VMR into the product repo PR
-        result = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch);
+        result = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch);
         result.ShouldHaveUpdates();
 
         // Check that the changes in the PR branch are preserved
@@ -154,7 +154,7 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
         await GitOperations.CommitAll(ProductRepoPath, "Foo is changed in the repo");
 
         // 4. Try to open a forward flow PR
-        var result = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardFlowBranch);
+        var result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardFlowBranch);
         result.ShouldHaveUpdates();
 
         // Verify that there is a conflict in Foo.txt
@@ -209,7 +209,7 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
         await GitOperations.CommitAll(VmrPath, "Foo is changed in the VMR");
 
         // 4. Try to open a backflow PR
-        var result = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch);
+        var result = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch);
         result.ShouldHaveUpdates();
 
         // Verify that there is a conflict in Foo.txt
