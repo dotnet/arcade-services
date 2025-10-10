@@ -190,8 +190,8 @@ internal class ReproOperation(
 
         var testBuild = await CreateBuildAsync(
             sourceRepoFork,
-            "branch",
-            "sha",
+            build.GetBranch(),
+            build.Commit,
             CreateAssetDataFromBuild(build));
 
         await using var testSubscription = await darcProcessManager.CreateSubscriptionAsync(
@@ -201,7 +201,8 @@ internal class ReproOperation(
             targetRepoTmpBranch.Value,
             sourceEnabled: false,
             sourceDirectory: null,
-            targetDirectory: null,
+            targetDirectory: subscription.TargetDirectory,
+            excludedAssets: subscription.ExcludedAssets,
             skipCleanup: options.SkipCleanup);
 
         await darcProcessManager.AddBuildToChannelAsync(testBuild.Id, channelName, options.SkipCleanup);
