@@ -42,6 +42,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         var branchName = GetTestBranchName();
         var productRepo = GetGitHubRepoUrl(TestRepository.TestRepo1Name);
         var targetBranchName = GetTestBranchName();
+        var testPrNumber = 23;
 
         await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(channelName);
 
@@ -69,7 +70,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                     await File.WriteAllTextAsync(newFilePath, TestFilesContent[TestFile1Name]);
 
                     await GitAddAllAsync();
-                    await GitCommitAsync("Add new file");
+                    await GitCommitAsync($"Change that would have been made in a pr (#{testPrNumber})");
 
                     // Push it to github
                     await using (await PushGitBranchAsync("origin", branchName))
@@ -92,12 +93,17 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         await TriggerSubscriptionAsync(subscriptionId.Value);
 
                         TestContext.WriteLine("Verifying subscription PR");
-                        await CheckForwardFlowGitHubPullRequest(
+                        var pr = await CheckForwardFlowGitHubPullRequest(
                             [(TestRepository.TestRepo1Name, repoSha)],
                             TestRepository.VmrTestRepoName,
                             targetBranchName,
                             [$"src/{TestRepository.TestRepo1Name}/{TestFile1Name}"],
                             TestFilePatches);
+
+                        await CheckIfPullRequestCommentExists(
+                            TestRepository.VmrTestRepoName,
+                            pr,
+                            [$"https://github.com/maestro-auth-test/maestro-test1/pull/{testPrNumber}"]);
                     }
                 }
             }
