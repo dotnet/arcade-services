@@ -621,7 +621,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         {
             if (shouldAddDirectory)
             {
-                subscriptionSection.AppendLine($"  - 📂 `{(UnixPath.IsEmptyPath(relativePath) ? "root" : relativePath)}`");
+                subscriptionSection.AppendLine($"  -  `{(UnixPath.IsEmptyPath(relativePath) ? "root" : relativePath)}`");
             }
             // Group dependencies by version range and commit range
             var dependencyGroups = updatedDependencies
@@ -727,7 +727,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         {
             if (shouldAddDirectory)
             {
-                coherencySection.AppendLine($"  - 📂 `{(UnixPath.IsEmptyPath(targetDirectory) ? "root" : targetDirectory)}`");
+                coherencySection.AppendLine($"  -  `{(UnixPath.IsEmptyPath(targetDirectory) ? "root" : targetDirectory)}`");
             }
             foreach (DependencyUpdate dep in dependencies)
             {
@@ -818,7 +818,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
                 }
                 else
                 {
-                    globalJsonSection.AppendLine($"- **📂 {relativeBasePath} updates to .NET SDKs:**");
+                    globalJsonSection.AppendLine($"- ** {relativeBasePath} updates to .NET SDKs:**");
                 }
 
                 if (hasSdkVersionUpdate)
