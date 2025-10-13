@@ -398,7 +398,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             return;
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
         var result = await sourceRepo.ExecuteGitCommand(["log", "--pretty=%s", $"{lastCommit}..{currentCommit}"], cancellationToken);
         result.ThrowIfFailed($"Failed to get the list of commits between {lastCommit} and {currentCommit} in {sourceRepo.Path}");
 
