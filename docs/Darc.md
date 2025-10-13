@@ -1306,7 +1306,7 @@ such as the Virtual Mono Repo (VMR).
 
 Key features:
 - Specify multiple directories using a comma-separated list (e.g., `"src/sdk,src/runtime"`)
-- Use '.' to target the repository root
+- Use `.` to target the repository root
 - Include a wildcard (`*`) at the end of a path to match multiple directories (e.g., `"src/*"`)
 - Combine with `--excluded-assets` to exclude specific assets in specific directories
 
