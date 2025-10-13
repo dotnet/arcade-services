@@ -248,4 +248,3 @@ internal class ForwardFlowTests : CodeFlowTests
         await act.Should().ThrowAsync<NonLinearCodeflowException>();
     }
 }
-
