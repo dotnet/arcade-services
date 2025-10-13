@@ -392,6 +392,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         CancellationToken cancellationToken)
     {
         var gitRepoType = GitRepoUrlUtils.ParseTypeFromUri(repoUri);
+        // codeflow tests set the defaultRemote to a local path, we have to skip those
         if (gitRepoType == GitRepoType.Local)
         {
             return;
@@ -401,37 +402,22 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         var result = await sourceRepo.ExecuteGitCommand(["log", "--pretty=%s", $"{lastCommit}..{currentCommit}"], cancellationToken);
         result.ThrowIfFailed($"Failed to get the list of commits between {lastCommit} and {currentCommit} in {sourceRepo.Path}");
 
+        (Regex regex, string prLinkFormat) = gitRepoType switch
+        {
+            GitRepoType.GitHub => (GitHubPullRequestNumberExtractionRegex, $"- {repoUri}/pull/{{0}}"),
+            GitRepoType.AzureDevOps => (AzDoPullRequestNumberExtractionRegex, $"- {repoUri}/pullrequest/{{0}}"),
+            _ => throw new NotSupportedException($"Repository type for URI '{repoUri}' is not supported for PR link extraction.")
+        };
         var commitMessages = result.GetOutputLines();
         StringBuilder str = new("PRs from original repository included in this codeflow update:");
-        if (gitRepoType == GitRepoType.GitHub)
+        foreach (var message in commitMessages)
         {
-            var pullRequestLinkFormat = $"- {repoUri}/pull/{{0}}";
-            foreach (var message in commitMessages)
+            var match = regex.Match(message);
+            if (match.Success && match.Groups.Count > 1)
             {
-                var match = GitHubPullRequestNumberExtractionRegex.Match(message);
-                if (match.Success && match.Groups.Count > 1)
-                {
-                    str.AppendLine();
-                    str.AppendFormat(pullRequestLinkFormat, match.Groups[1].Value);
-                }
+                str.AppendLine();
+                str.AppendFormat(prLinkFormat, match.Groups[1].Value);
             }
-        }
-        else if (gitRepoType == GitRepoType.AzureDevOps)
-        {
-            var pullRequestLinkFormat = $"- {repoUri}/pullrequest/{{0}}";
-            foreach (var message in commitMessages)
-            {
-                var match = AzDoPullRequestNumberExtractionRegex.Match(message);
-                if (match.Success && match.Groups.Count > 1)
-                {
-                    str.AppendLine();
-                    str.AppendFormat(pullRequestLinkFormat, match.Groups[1].Value);
-                }
-            }
-        }
-        else
-        {
-            throw new NotSupportedException($"Repository type for URI '{repoUri}' is not supported for PR link extraction.");
         }
 
         _commentCollector.AddComment(str.ToString(), CommentType.Information);
