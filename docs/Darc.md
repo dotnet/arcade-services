@@ -1309,6 +1309,7 @@ Key features:
 - Use `.` to target the repository root
 - Include a wildcard (`*`) at the end of a path to match multiple directories (e.g., `"src/*"`)
 - Combine with `--excluded-assets` to exclude specific assets in specific directories
+- Note: the path is specified without the trailing `eng/` directory (e.g. `src/arcade` will target `src/arcade/eng/Version.Details.xml`)
 
 **Note**: This feature is only available for dependency flow subscriptions. For source-enabled 
 (VMR code flow) subscriptions, use `--source-directory` or `--target-directory` to specify 
