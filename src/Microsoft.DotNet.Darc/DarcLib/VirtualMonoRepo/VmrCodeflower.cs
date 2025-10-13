@@ -348,7 +348,11 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             await DetectCrossingFlow(lastFlow, lastBackflow, lastForwardFlow, repoClone));
     }
 
-    protected async Task ApplyChangesRecursivelyAsync(
+    /// <summary>
+    /// Attempts to apply code flow patches to the target branch. When conflicting, rebases to an older commit,
+    /// recreates previous flows and applies the changes on top of that.
+    /// </summary>
+    protected async Task RecreatePreviousFlowsAndApplyPatchesAsync(
         SourceMapping mapping,
         LastFlows lastFlows,
         Codeflow currentFlow,
