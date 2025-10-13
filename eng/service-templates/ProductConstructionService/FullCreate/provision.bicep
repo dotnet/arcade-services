@@ -96,6 +96,9 @@ param replicaNumber int
 @description('Public IP address name')
 param publicIpAddressName string
 
+@description('Public IP address service tag')
+param publicIpAddressServiceTag
+
 // azure system role for setting up acr pull access
 var acrPullRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
 // azure system role for granting push access
@@ -361,5 +364,6 @@ module ipAddressModule 'public-ip-address.bicep' = {
     params: {
         location: location
         publicIpAddressName: publicIpAddressName
+        publicIpAddressServiceTag: publicIpAddressServiceTag
     }
 }
