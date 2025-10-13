@@ -348,12 +348,85 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             await DetectCrossingFlow(lastFlow, lastBackflow, lastForwardFlow, repoClone));
     }
 
+    protected async Task ApplyChangesRecursivelyAsync(
+        SourceMapping mapping,
+        LastFlows lastFlows,
+        Codeflow currentFlow,
+        ILocalGitRepo productRepo,
+        Build build,
+        IReadOnlyCollection<string>? excludedAssets,
+        string targetBranch,
+        string headBranch,
+        bool headBranchExisted,
+        bool enableRebase,
+        bool forceUpdate,
+        IWorkBranch? workBranch,
+        Func<bool, Task> applyLatestChanges,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await applyLatestChanges(false);
+        }
+        catch (PatchApplicationFailedException e)
+        {
+            _logger.LogInformation(e.Message);
+
+            if (enableRebase)
+            {
+                // We need to recreate a previous flow so that we have something to rebase later
+                await RecreatePreviousFlowsAndApplyChanges(
+                    mapping,
+                    build,
+                    productRepo,
+                    currentFlow,
+                    lastFlows,
+                    workBranch!.WorkBranchName,
+                    workBranch!.WorkBranchName,
+                    excludedAssets,
+                    forceUpdate,
+                    async () => await applyLatestChanges(true),
+                    cancellationToken);
+
+                // Workaround for files that can be left behind after HandleRevertedFiles()
+                // It can be removed after we remove HandleRevertedFiles() and switch to rebase-only
+                // TODO (https://github.com/dotnet/arcade-services/issues/5363): Remove after switching to rebase-only
+                await productRepo.ResetWorkingTree();
+            }
+            else
+            {
+                // When we are updating an already existing PR branch, there can be conflicting changes in the PR from devs.
+                // In that case we want to throw as that is a conflict we don't want to try to resolve.
+                if (headBranchExisted)
+                {
+                    _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
+                    throw new ConflictInPrBranchException(e.Result.StandardError, targetBranch, mapping.Name, isForwardFlow: false);
+                }
+
+                // Otherwise, we have a conflicting change in the last backflow PR (before merging)
+                // The scenario is described here: https://github.com/dotnet/dotnet/tree/main/docs/VMR-Full-Code-Flow.md#conflicts
+                await RecreatePreviousFlowsAndApplyChanges(
+                    mapping,
+                    build,
+                    productRepo,
+                    currentFlow,
+                    lastFlows,
+                    headBranch,
+                    targetBranch,
+                    excludedAssets,
+                    forceUpdate,
+                    async () => await applyLatestChanges(false),
+                    cancellationToken);
+            }
+        }
+    }
+
     /// <summary>
     /// Tries to find how many previous flows need to be recreated in order to apply the current changes.
     /// Iteratively rewinds through previous flows until it finds the one that introduced the conflict with the current changes.
     /// Then it creates a given branch there and applies the current changes on top of the recreated previous flows.
     /// </summary>
-    protected async Task RecreatePreviousFlowsAndApplyChanges(
+    private async Task RecreatePreviousFlowsAndApplyChanges(
         SourceMapping mapping,
         Build build,
         ILocalGitRepo repo,

@@ -250,79 +250,32 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             workBranch = await _workBranchFactory.CreateWorkBranchAsync(vmr, currentFlow.GetBranchName(), headBranch);
         }
 
-        bool hadChanges;
+        bool hadChanges = false;
 
-        async Task<bool> ReapplyLatestChanges()
-        {
-            hadChanges = await _vmrUpdater.UpdateRepository(
-                mapping,
-                build,
-                additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
-                resetToRemoteWhenCloningRepo: ShouldResetClones,
-                cancellationToken: cancellationToken);
-
-            return hadChanges;
-        }
-
-        try
-        {
-            hadChanges = await ReapplyLatestChanges();
-        }
-        catch (PatchApplicationFailedException e)
-        {
-            hadChanges = false;
-
-            if (enableRebase)
+        await ApplyChangesRecursivelyAsync(
+            mapping,
+            lastFlows,
+            currentFlow,
+            sourceRepo,
+            build,
+            excludedAssets,
+            targetBranch,
+            headBranch,
+            headBranchExisted,
+            enableRebase,
+            forceUpdate,
+            workBranch,
+            async keepConflicts =>
             {
-                // We need to recreate a previous flow so that we have something to rebase later
-                await RecreatePreviousFlowsAndApplyChanges(
+                hadChanges = await _vmrUpdater.UpdateRepository(
                     mapping,
                     build,
-                    sourceRepo,
-                    currentFlow,
-                    lastFlows,
-                    workBranch!.WorkBranchName,
-                    workBranch!.WorkBranchName,
-                    excludedAssets,
-                    forceUpdate,
-                    ReapplyLatestChanges,
-                    cancellationToken);
-
-                // Workaround for files that can be left behind after HandleRevertedFiles()
-                // It can be removed after we remove HandleRevertedFiles() and switch to rebase-only
-                await vmr.ResetWorkingTree();
-            }
-            else
-            {
-                // When we are updating an already existing PR branch, there can be conflicting changes in the PR from devs.
-                if (headBranchExisted)
-                {
-                    _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
-                    throw new ConflictInPrBranchException(e.Result.StandardError, targetBranch, mapping.Name, isForwardFlow: true);
-                }
-
-                // This happens when a conflicting change was made in the last backflow PR (before merging)
-                // The scenario is described here: https://github.com/dotnet/dotnet/tree/main/docs/VMR-Full-Code-Flow.md#conflicts
-                await RecreatePreviousFlowsAndApplyChanges(
-                    mapping,
-                    build,
-                    sourceRepo,
-                    currentFlow,
-                    lastFlows,
-                    headBranch,
-                    targetBranch,
-                    excludedAssets,
-                    forceUpdate,
-                    ReapplyLatestChanges,
-                    cancellationToken);
-
-                if (hadChanges)
-                {
-                    // Commit anything staged only (e.g. reset reverted files)
-                    await _localGitClient.CommitAmendAsync(_vmrInfo.VmrPath, cancellationToken);
-                }
-            }
-        }
+                    additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
+                    resetToRemoteWhenCloningRepo: ShouldResetClones,
+                    keepConflicts: keepConflicts,
+                    cancellationToken: cancellationToken);
+            },
+            cancellationToken);
 
         if (!hadChanges || workBranch == null)
         {

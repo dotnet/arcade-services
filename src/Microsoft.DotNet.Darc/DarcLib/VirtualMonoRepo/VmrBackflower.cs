@@ -236,70 +236,29 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 headBranch);
         }
 
-        async Task ApplyLatestChanges()
-        {
-            await _vmrPatchHandler.ApplyPatches(
-                patches,
-                targetRepo.Path,
-                removePatchAfter: true,
-                keepConflicts: false,
-                cancellationToken: cancellationToken);
-        }
-
-        try
-        {
-            await ApplyLatestChanges();
-        }
-        catch (PatchApplicationFailedException e)
-        {
-            _logger.LogInformation(e.Message);
-
-            if (enableRebase)
+        await ApplyChangesRecursivelyAsync(
+            mapping,
+            lastFlows,
+            currentFlow,
+            targetRepo,
+            build,
+            excludedAssets,
+            targetBranch,
+            headBranch,
+            headBranchExisted,
+            enableRebase,
+            forceUpdate,
+            workBranch,
+            async keepConflicts =>
             {
-                // We need to recreate a previous flow so that we have something to rebase later
-                await RecreatePreviousFlowsAndApplyChanges(
-                    mapping,
-                    build,
-                    targetRepo,
-                    currentFlow,
-                    lastFlows,
-                    workBranch!.WorkBranchName,
-                    workBranch!.WorkBranchName,
-                    excludedAssets,
-                    forceUpdate,
-                    ApplyLatestChanges,
-                    cancellationToken);
-
-                // Workaround for files that can be left behind after HandleRevertedFiles()
-                // It can be removed after we remove HandleRevertedFiles() and switch to rebase-only
-                await targetRepo.ResetWorkingTree();
-            }
-            else
-            {
-                // When we are updating an already existing PR branch, there can be conflicting changes in the PR from devs.
-                // In that case we want to throw as that is a conflict we don't want to try to resolve.
-                if (headBranchExisted)
-                {
-                    _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
-                    throw new ConflictInPrBranchException(e.Result.StandardError, targetBranch, mapping.Name, isForwardFlow: false);
-                }
-
-                // Otherwise, we have a conflicting change in the last backflow PR (before merging)
-                // The scenario is described here: https://github.com/dotnet/dotnet/tree/main/docs/VMR-Full-Code-Flow.md#conflicts
-                await RecreatePreviousFlowsAndApplyChanges(
-                    mapping,
-                    build,
-                    targetRepo,
-                    currentFlow,
-                    lastFlows,
-                    headBranch,
-                    targetBranch,
-                    excludedAssets,
-                    forceUpdate,
-                    ApplyLatestChanges,
-                    cancellationToken);
-            }
-        }
+                await _vmrPatchHandler.ApplyPatches(
+                    patches,
+                    targetRepo.Path,
+                    removePatchAfter: true,
+                    keepConflicts: keepConflicts,
+                    cancellationToken: cancellationToken);
+            },
+            cancellationToken);
 
         if (workBranch == null)
         {
