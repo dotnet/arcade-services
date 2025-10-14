@@ -1313,7 +1313,7 @@ Key features:
 
 **Note**: This feature is only available for dependency flow subscriptions. For source-enabled 
 (VMR code flow) subscriptions, `--source-directory` or `--target-directory` specify 
-a single VMR source mapping under `src/`.
+a single VMR source mapping.
 
 **Examples**:
 
