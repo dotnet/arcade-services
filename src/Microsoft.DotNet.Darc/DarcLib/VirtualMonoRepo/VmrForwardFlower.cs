@@ -115,6 +115,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             sourceRepo,
             targetBranch,
             headBranch,
+            enableRebase,
             cancellationToken);
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
@@ -181,6 +182,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         ILocalGitRepo sourceRepo,
         string baseBranch,
         string headBranch,
+        bool enableRebase,
         CancellationToken cancellationToken)
     {
         _vmrInfo.VmrUri = vmrUri;
@@ -219,8 +221,12 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             LastFlows lastFlows = await GetLastFlowsAsync(mappingName, sourceRepo, currentIsBackflow: false);
 
             // Rebase strategy works on top of the target branch, non-rebase starts from the last point of synchronization
-            await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
-            await _dependencyTracker.RefreshMetadataAsync();
+            if (!enableRebase)
+            {
+                await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
+                await _dependencyTracker.RefreshMetadataAsync();
+            }
+
             await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
             return (false, lastFlows);
