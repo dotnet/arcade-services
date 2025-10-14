@@ -236,7 +236,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 headBranch);
         }
 
-        await RecreatePreviousFlowsAndApplyPatchesAsync(
+        await ApplyChangesWithRecreationFallbackAsync(
             mapping,
             lastFlows,
             currentFlow,

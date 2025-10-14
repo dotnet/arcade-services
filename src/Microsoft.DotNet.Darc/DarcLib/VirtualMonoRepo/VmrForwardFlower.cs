@@ -252,7 +252,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         bool hadChanges = false;
 
-        await RecreatePreviousFlowsAndApplyPatchesAsync(
+        await ApplyChangesWithRecreationFallbackAsync(
             mapping,
             lastFlows,
             currentFlow,
