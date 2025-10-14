@@ -46,7 +46,6 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     private readonly IVmrInfo _vmrInfo;
     private readonly IFileSystem _fileSystem;
     private readonly ISourceMappingParser _sourceMappingParser;
-    private readonly ILogger<VmrDependencyTracker> _logger;
     private IReadOnlyCollection<SourceMapping>? _mappings;
 
     public IReadOnlyCollection<SourceMapping> Mappings
@@ -58,14 +57,12 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         IVmrInfo vmrInfo,
         IFileSystem fileSystem,
         ISourceMappingParser sourceMappingParser,
-        ISourceManifest sourceManifest,
-        ILogger<VmrDependencyTracker> logger)
+        ISourceManifest sourceManifest)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
         _fileSystem = fileSystem;
         _sourceMappingParser = sourceMappingParser;
-        _logger = logger;
         _mappings = null;
     }
 

@@ -8,7 +8,9 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -18,17 +20,21 @@ internal class BackflowOperation(
     BackflowCommandLineOptions options,
     IVmrInfo vmrInfo,
     IVmrBackFlower backFlower,
+    IBackflowConflictResolver backflowConflictResolver,
+    IVmrCloneManager vmrCloneManager,
     IVmrDependencyTracker dependencyTracker,
-    IVmrPatchHandler patchHandler,
     ILocalGitRepoFactory localGitRepoFactory,
     IDependencyFileManager dependencyFileManager,
+    IBasicBarClient barApiClient,
     IProcessManager processManager,
     IFileSystem fileSystem,
     ILogger<BackflowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, backFlower, dependencyTracker, patchHandler, dependencyFileManager, localGitRepoFactory, fileSystem, logger)
+    : CodeFlowOperation(options, vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
 {
     private readonly BackflowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
+    private readonly IVmrBackFlower _backFlower = backFlower;
+    private readonly IBackflowConflictResolver _backflowConflictResolver = backflowConflictResolver;
     private readonly IProcessManager _processManager = processManager;
 
     protected override async Task ExecuteInternalAsync(
@@ -52,5 +58,48 @@ internal class BackflowOperation(
             cancellationToken);
     }
 
-    protected override IEnumerable<string> GetIgnoredFiles(string mapping) => DependencyFileManager.CodeflowDependencyFiles;
+    protected override async Task<bool> FlowCodeAsync(
+        ILocalGitRepo productRepo,
+        Build build,
+        Codeflow currentFlow,
+        SourceMapping mapping,
+        string headBranch,
+        CancellationToken cancellationToken)
+    {
+        LastFlows lastFlows = await _backFlower.GetLastFlowsAsync(
+            mapping.Name,
+            productRepo,
+            currentIsBackflow: true);
+
+        try
+        {
+            var result = await _backFlower.FlowBackAsync(
+                mapping.Name,
+                productRepo.Path,
+                build,
+                excludedAssets: [], // TODO (https://github.com/dotnet/arcade-services/issues/5313): Fill from subscription
+                headBranch,
+                headBranch,
+                enableRebase: true,
+                forceUpdate: true,
+                cancellationToken);
+
+            return result.HadUpdates;
+        }
+        finally
+        {
+            await _backflowConflictResolver.TryMergingBranchAndUpdateDependencies(
+                mapping,
+                lastFlows,
+                (Backflow)currentFlow,
+                productRepo,
+                build,
+                headBranch,
+                headBranch,
+                excludedAssets: [], // TODO (https://github.com/dotnet/arcade-services/issues/5313): Fill from subscription
+                headBranchExisted: true,
+                enableRebase: true,
+                cancellationToken);
+        }
+    }
 }

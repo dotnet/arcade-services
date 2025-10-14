@@ -24,6 +24,11 @@ public interface ILocalGitClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    ///    Retrieves a list of remotes in the repository.
+    /// </summary>
+    Task<List<(string Name, string Uri)>> GetRemotesAsync(string repoPath);
+
+    /// <summary>
     ///     Retrieves SHA of the commit that last changed the given line in the given file.
     /// </summary>
     /// <param name="repoPath">Path to the repository</param>
@@ -135,7 +140,7 @@ public interface ILocalGitClient
     Task<string?> GetFileFromGitAsync(
         string repoPath,
         string relativeFilePath,
-        string revision = "HEAD",
+        string? revision = "HEAD",
         string? outputPath = null);
 
     /// <summary>
@@ -286,4 +291,13 @@ public interface ILocalGitClient
         string repoPath,
         string baseCommitOrBranch,
         string targetCommitOrBranch);
+
+    /// <summary>
+    /// Gets a collection of file paths that are currently in a conflicted state.
+    /// </summary>
+    /// <returns>A read-only collection of UnixPath representing the relative paths of files that are in conflict.
+    /// The collection is empty if there are no conflicted files.</returns>
+    Task<IReadOnlyCollection<UnixPath>> GetConflictedFilesAsync(
+        string repoPath,
+        CancellationToken cancellationToken = default);
 }

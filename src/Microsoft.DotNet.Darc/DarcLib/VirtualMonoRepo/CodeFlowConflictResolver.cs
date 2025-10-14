@@ -154,8 +154,8 @@ public abstract class CodeFlowConflictResolver
                 patches[0],
                 isForwardFlow ? vmr.Path : repo.Path,
                 removePatchAfter: true,
-                reverseApply: false,
-                cancellationToken);
+                keepConflicts: false,
+                cancellationToken: cancellationToken);
             _logger.LogInformation("Successfully auto-resolved a conflict in {filePath} based on a crossing flow", conflictedFile);
             return true;
         }

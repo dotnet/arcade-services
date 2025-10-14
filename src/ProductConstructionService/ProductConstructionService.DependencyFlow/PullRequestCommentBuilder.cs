@@ -38,21 +38,31 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
     }
 
     public static string BuildNotifyAboutConflictingUpdateComment(
-        List<string> filesInConflict,
+        IReadOnlyCollection<string> filesInConflict,
         SubscriptionUpdateWorkItem update,
         Subscription subscription,
         InProgressPullRequest pr,
         string prHeadBranch)
     {
+        string srcDir = VmrInfo.GetRelativeRepoSourcesPath(subscription.IsForwardFlow()
+            ? subscription.TargetDirectory
+            : subscription.SourceDirectory);
+
         StringBuilder sb = new();
         sb.AppendLine($"There was a conflict in the PR branch when flowing source from {GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha)}");
         sb.AppendLine("Files conflicting with the head branch:");
         foreach (var filePath in filesInConflict)
         {
-            var (fileUrlInVmr, fileUrlInRepo) = GetFileUrls(update, subscription, filePath, prHeadBranch);
+            string repoPath = filePath;
+            if (repoPath.StartsWith(srcDir))
+            {
+                repoPath = repoPath.Substring(srcDir.Length + 1);
+            }
+
+            var (fileUrlInVmr, fileUrlInRepo) = GetFileUrls(update, subscription, repoPath, prHeadBranch);
             string vmrString = $"[🔍 View in VMR]({fileUrlInVmr})";
             string repoString = $"[🔍 View in {GitRepoUrlUtils.GetRepoNameWithOrg(subscription.IsBackflow() ? subscription.TargetRepository : subscription.SourceRepository)}]({fileUrlInRepo})";
-            sb.AppendLine($" - `{filePath}` - {repoString} / {vmrString}");
+            sb.AppendLine($" - `{repoPath}` - {repoString} / {vmrString}");
         }
         sb.AppendLine();
         sb.AppendLine("Updates from this subscription will be blocked until the conflict is resolved, or the PR is merged");

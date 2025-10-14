@@ -183,12 +183,6 @@ public class ForwardFlowConflictResolverTests
             Times.Once);
         vmrRepo.Verify(r => r.HasWorkingTreeChangesAsync(),
             Times.Once);
-        vmrRepo.Verify(r => r.CommitAsync(
-                It.IsAny<string>(),
-                It.IsAny<bool>(),
-                It.IsAny<(string, string)?>(),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
         dependencyFileManagerMock.Verify(m => m.UpdateVersionDetailsXmlSourceTag(
                 It.IsAny<XmlDocument>(),
                 newSourceDependency),

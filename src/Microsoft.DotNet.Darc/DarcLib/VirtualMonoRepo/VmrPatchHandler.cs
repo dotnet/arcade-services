@@ -37,6 +37,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly ILocalGitClient _localGitClient;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IRepositoryCloneManager _cloneManager;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
@@ -46,6 +47,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         IVmrInfo vmrInfo,
         IVmrDependencyTracker dependencyTracker,
         ILocalGitClient localGitClient,
+        ILocalGitRepoFactory localGitRepoFactory,
         IRepositoryCloneManager cloneManager,
         IProcessManager processManager,
         IFileSystem fileSystem,
@@ -54,6 +56,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
         _localGitClient = localGitClient;
+        _localGitRepoFactory = localGitRepoFactory;
         _cloneManager = cloneManager;
         _processManager = processManager;
         _fileSystem = fileSystem;
@@ -206,12 +209,53 @@ public class VmrPatchHandler : IVmrPatchHandler
     }
 
     /// <summary>
+    /// Applies a set of patches by applying all patches, preserving conflicts in the index.
+    /// In case of failures, collects all conflicted files into a single exception.
+    /// </summary>
+    public async Task ApplyPatches(
+        IEnumerable<VmrIngestionPatch> patches,
+        NativePath targetDirectory,
+        bool removePatchAfter,
+        bool keepConflicts,
+        bool reverseApply = false,
+        CancellationToken cancellationToken = default)
+    {
+        List<UnixPath> conflicts = [];
+
+        foreach (var patch in patches)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                await ApplyPatch(
+                    patch,
+                    targetDirectory,
+                    removePatchAfter: removePatchAfter,
+                    keepConflicts: keepConflicts,
+                    reverseApply: reverseApply,
+                    cancellationToken);
+            }
+            catch (PatchApplicationLeftConflictsException e)
+            {
+                conflicts.AddRange(e.ConflictedFiles);
+            }
+        }
+
+        if (conflicts.Count > 0)
+        {
+            throw new PatchApplicationLeftConflictsException([..conflicts.Distinct()], targetDirectory);
+        }
+    }
+
+    /// <summary>
     /// Applies a given patch file onto given mapping's subrepository.
     /// </summary>
     public async Task ApplyPatch(
         VmrIngestionPatch patch,
         NativePath targetDirectory,
         bool removePatchAfter,
+        bool keepConflicts,
         bool reverseApply = false,
         CancellationToken cancellationToken = default)
     {
@@ -230,8 +274,10 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         _logger.LogInformation((reverseApply ? "Reverse-applying" : "Applying") + " patch {patchPath} to {path}...", patch.Path, patch.ApplicationPath ?? "root of the VMR");
 
+        ILocalGitRepo repo = _localGitRepoFactory.Create(targetDirectory);
+
         // This will help ignore some CR/LF issues (e.g. files with both endings)
-        (await _processManager.ExecuteGit(targetDirectory, ["config", "apply.ignoreWhitespace", "change"], cancellationToken: cancellationToken))
+        (await repo.ExecuteGitCommand(["config", "apply.ignoreWhitespace", "change"], cancellationToken))
             .ThrowIfFailed("Failed to set git config whitespace settings");
 
         var args = new List<string>
@@ -254,6 +300,11 @@ public class VmrPatchHandler : IVmrPatchHandler
             args.Add("--reverse");
         }
 
+        if (keepConflicts)
+        {
+            args.Add("--3way");
+        }
+
         // Where to apply the patch into (usualy src/[repo name] but can be root for VMR's non-src/ content)
         if (patch.ApplicationPath != null)
         {
@@ -268,11 +319,34 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         args.Add(patch.Path);
 
-        var result = await _processManager.ExecuteGit(targetDirectory, args, cancellationToken: CancellationToken.None);
-
+        var result = await repo.ExecuteGitCommand([..args], cancellationToken);
         if (!result.Succeeded)
         {
-            throw new PatchApplicationFailedException(patch, result, reverseApply);
+            if (!keepConflicts)
+            {
+                throw new PatchApplicationFailedException(patch, result, reverseApply);
+            }
+
+            // When we are applying and wish to keep conflicts in the working tree, we need to clean up a bit
+            cancellationToken.ThrowIfCancellationRequested();
+            var conflictedFiles = await repo.GetConflictedFilesAsync(cancellationToken);
+            
+            if (conflictedFiles.Count == 0)
+            {
+                _logger.LogWarning("Patch application failed, but no conflicted files were found");
+                throw new PatchApplicationFailedException(patch, result, reverseApply);
+            }
+
+            // Put them in the conflicted state with conflict markers (by default they are resolved using --ours strategy):
+            cancellationToken.ThrowIfCancellationRequested();
+
+            foreach (var file in conflictedFiles)
+            {
+                var checkoutResult = await repo.ExecuteGitCommand(["checkout", "--merge", "--", file], CancellationToken.None);
+                checkoutResult.ThrowIfFailed($"Failed to set the conflicted state for {file} after patch application failed");
+            }
+
+            throw new PatchApplicationLeftConflictsException(conflictedFiles, targetDirectory);
         }
 
         _logger.LogDebug("{output}", result.ToString());
