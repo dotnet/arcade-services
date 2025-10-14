@@ -31,7 +31,7 @@ internal class PullRequestCommenter : IPullRequestCommenter
     private readonly ICommentCollector _commentService;
     private readonly ILogger<PullRequestCommenter> _logger;
 
-    private const string HelpLine = $"> In case of unclarities, consult the [FAQ]({PullRequestBuilder.CodeFlowPrFaqUri}) or tag **\\@dotnet/product-construction** for assistance.";
+    private const string HelpLine = $"> In case of unclarities, consult the [FAQ]({PullRequestBuilder.CodeFlowPrFaqUri}) or tag **<b>@</b>dotnet/product-construction** for assistance.";
 
     public PullRequestCommenter(
         IRemoteFactory remoteFactory,
