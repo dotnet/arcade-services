@@ -100,7 +100,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             return false;
         }
 
-        if (lastFlow.IsBack != currentFlow.IsBack && headBranchExisted && !forceUpdate)
+        if (lastFlow.IsBackflow != currentFlow.IsBackflow && headBranchExisted && !forceUpdate)
         {
             _commentCollector.AddComment(CannotFlowAdditionalFlowsInPrMsg, CommentType.Warning);
             throw new BlockingCodeflowException("Cannot apply codeflow on PR head branch because an opposite direction flow has been merged.");
@@ -114,7 +114,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             lastFlow.TargetSha);
 
         bool hasChanges;
-        if (lastFlow.IsBack == currentFlow.IsBack)
+        if (lastFlow.IsBackflow == currentFlow.IsBackflow)
         {
             _logger.LogInformation("Current flow is in the same direction");
             hasChanges = await SameDirectionFlowAsync(
@@ -365,12 +365,12 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         bool enableRebase,
         bool forceUpdate,
         IWorkBranch? workBranch,
-        Func<bool, Task> applyLatestChanges,
+        ApplyLatestChangesDelegate applyLatestChanges,
         CancellationToken cancellationToken)
     {
         try
         {
-            await applyLatestChanges(false);
+            await applyLatestChanges(enableRebase: false);
         }
         catch (PatchApplicationFailedException e)
         {
@@ -389,7 +389,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     workBranch!.WorkBranchName,
                     excludedAssets,
                     forceUpdate,
-                    async () => await applyLatestChanges(true),
+                    async () => await applyLatestChanges(enableRebase: true),
                     cancellationToken);
 
                 // Workaround for files that can be left behind after HandleRevertedFiles()
@@ -419,7 +419,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     targetBranch,
                     excludedAssets,
                     forceUpdate,
-                    async () => await applyLatestChanges(false),
+                    async () => await applyLatestChanges(enableRebase: false),
                     cancellationToken);
             }
         }
@@ -768,3 +768,9 @@ public record LastFlows(
     Backflow? LastBackFlow,
     ForwardFlow LastForwardFlow,
     Codeflow? CrossingFlow);
+
+/// <summary>
+/// Delegate for applying latest changes with an option to enable rebase mode.
+/// </summary>
+/// <param name="enableRebase">When true, enables rebase mode for applying changes</param>
+public delegate Task ApplyLatestChangesDelegate(bool enableRebase);

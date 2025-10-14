@@ -17,25 +17,25 @@ public abstract record Codeflow(string SourceSha, string TargetSha)
 
     public abstract string Name { get; }
 
-    public abstract bool IsForward { get; }
+    public abstract bool IsForwardFlow { get; }
 
-    public abstract bool IsBack { get; }
+    public abstract bool IsBackflow { get; }
 }
 
 public record ForwardFlow(string RepoSha, string VmrSha) : Codeflow(RepoSha, VmrSha)
 {
     public override string Name { get; } = "forward";
 
-    public override bool IsForward => true;
+    public override bool IsForwardFlow => true;
 
-    public override bool IsBack => false;
+    public override bool IsBackflow => false;
 }
 
 public record Backflow(string VmrSha, string RepoSha) : Codeflow(VmrSha, RepoSha)
 {
     public override string Name { get; } = "back";
 
-    public override bool IsForward => false;
+    public override bool IsForwardFlow => false;
 
-    public override bool IsBack => true;
+    public override bool IsBackflow => true;
 }
