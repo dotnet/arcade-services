@@ -414,16 +414,19 @@ public class BackflowConflictResolverTests
 
         var cancellationToken = new CancellationToken();
         VersionFileUpdateResult mergeResult = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
-            new SourceMapping(MappingName, "https://github/repo1", "main", [], [], false),
+            new CodeflowOptions(
+                new SourceMapping(MappingName, "https://github/repo1", "main", [], [], false),
+                TargetBranch,
+                PrBranch,
+                build,
+                excludedAssets,
+                EnableRebase: false,
+                ForceUpdate: false),
             lastFlows,
             currentFlow,
             _localRepo.Object,
-            build,
-            PrBranch,
             TargetBranch,
-            excludedAssets: excludedAssets,
-            headBranchExisted: headBranchExisted,
-            enableRebase: false,
+            headBranchExisted,
             cancellationToken);
 
         mergeResult.ConflictedFiles.Should().BeEmpty();

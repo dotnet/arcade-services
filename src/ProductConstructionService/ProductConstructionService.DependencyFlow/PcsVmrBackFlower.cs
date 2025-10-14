@@ -74,16 +74,10 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             cancellationToken);
 
         var result = await FlowBackAsync(
-            mapping,
+            new CodeflowOptions(mapping, subscription.TargetBranch, headBranch, build, subscription.ExcludedAssets, enableRebase, forceUpdate),
             targetRepo,
             lastFlows,
-            build,
-            subscription.ExcludedAssets,
-            subscription.TargetBranch,
-            headBranch,
             headBranchExisted,
-            enableRebase,
-            forceUpdate,
             cancellationToken);
 
         return result with
