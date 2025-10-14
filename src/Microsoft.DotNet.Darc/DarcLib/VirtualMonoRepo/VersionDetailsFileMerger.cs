@@ -194,6 +194,10 @@ public class VersionDetailsFileMerger : VmrVersionFileMerger, IVersionDetailsFil
             {
                 await repo.StageAsync([versionFilesBasePath / VersionFiles.VersionDetailsProps]);
             }
+            else
+            {
+                await repo.StageAsync([versionFilesBasePath / VersionFiles.VersionsProps]);
+            }
         }
 
         return appliedChanges;

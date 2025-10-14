@@ -187,7 +187,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         CancellationToken cancellationToken)
     {
         var lastFlownSha = lastFlows.LastFlow.VmrSha;
-        var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-{Commit.GetShortSha(lastFlownSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}.patch";
+        var patchName = GetPatchName(mapping, lastFlows, currentFlow);
 
         // When flowing from the VMR, ignore all submodules
         List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
@@ -260,25 +260,23 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             },
             cancellationToken);
 
-        if (workBranch == null)
+        if (workBranch != null)
         {
-            return true;
+            var commitMessage = await CommitBackflow(currentFlow, targetRepo, build, cancellationToken);
+
+            await MergeWorkBranchAsync(
+                mapping,
+                build,
+                currentFlow,
+                targetRepo,
+                targetBranch,
+                headBranch,
+                workBranch,
+                headBranchExisted,
+                enableRebase,
+                commitMessage,
+                cancellationToken);
         }
-
-        var commitMessage = await CommitBackflow(currentFlow, targetRepo, build, cancellationToken);
-
-        await MergeWorkBranchAsync(
-            mapping,
-            build,
-            currentFlow,
-            targetRepo,
-            targetBranch,
-            headBranch,
-            workBranch,
-            headBranchExisted,
-            enableRebase,
-            commitMessage,
-            cancellationToken);
 
         return true;
     }
@@ -308,7 +306,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         // We leave the inlined submodules in the VMR
         var exclusions = GetPatchExclusions(mapping);
-        var patchName = _vmrInfo.TmpPath / $"{mapping.Name}-{Commit.GetShortSha(lastFlows.LastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}.patch";
+        var patchName = GetPatchName(mapping, lastFlows, currentFlow);
 
         List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
             patchName,
@@ -512,6 +510,9 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         return [.. exclusions.Select(VmrPatchHandler.GetExclusionRule)];
     }
+
+    private NativePath GetPatchName(SourceMapping mapping, LastFlows lastFlows, Codeflow currentFlow)
+        => _vmrInfo.TmpPath / $"{mapping.Name}-{Commit.GetShortSha(lastFlows.LastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}.patch";
 
     /// <summary>
     /// Traverses the current branch's history to find {depth}-th last backflow and creates a branch there.
