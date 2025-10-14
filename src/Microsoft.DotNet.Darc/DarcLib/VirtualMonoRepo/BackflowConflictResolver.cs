@@ -344,7 +344,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             })
             .ToList();
 
-        var currentRepoDependencies = await GetRepoDependencies(targetRepo, null /* working tree */);
+        var currentRepoDependencies = await GetRepoDependencies(targetRepo, commit: null /* working tree */);
 
         List<DependencyDetail> buildUpdates = _coherencyUpdateResolver
             .GetRequiredNonCoherencyUpdates(
@@ -379,7 +379,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
         // This actually does not commit but stages only
         var filesToCommit = updatedFiles.GetFilesToCommit();
-        await _libGit2Client.CommitFilesAsync(filesToCommit, targetRepo.Path, null, null);
+        await _libGit2Client.CommitFilesAsync(filesToCommit, targetRepo.Path, branch: null, commitMessage: null);
 
         // Update eng/common files
         if (arcadeItem != null)
