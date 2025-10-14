@@ -277,7 +277,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         ILocalGitRepo repo = _localGitRepoFactory.Create(targetDirectory);
 
         // This will help ignore some CR/LF issues (e.g. files with both endings)
-        (await repo.ExecuteGitCommand(["config", "apply.ignoreWhitespace", "change"], cancellationToken: cancellationToken))
+        (await repo.ExecuteGitCommand(["config", "apply.ignoreWhitespace", "change"], cancellationToken))
             .ThrowIfFailed("Failed to set git config whitespace settings");
 
         var args = new List<string>
@@ -319,7 +319,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         args.Add(patch.Path);
 
-        var result = await repo.ExecuteGitCommand([..args], cancellationToken: CancellationToken.None);
+        var result = await repo.ExecuteGitCommand([..args], cancellationToken);
         if (!result.Succeeded)
         {
             if (!keepConflicts)

@@ -281,23 +281,25 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         {
             return hadChanges;
         }
+        else
+        {
+            var commitMessage = (await vmr.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
 
-        var commitMessage = (await vmr.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
+            await MergeWorkBranchAsync(
+                mapping,
+                build,
+                currentFlow,
+                vmr,
+                targetBranch,
+                headBranch,
+                workBranch,
+                headBranchExisted,
+                enableRebase,
+                commitMessage,
+                cancellationToken);
 
-        await MergeWorkBranchAsync(
-            mapping,
-            build,
-            currentFlow,
-            vmr,
-            targetBranch,
-            headBranch,
-            workBranch,
-            headBranchExisted,
-            enableRebase,
-            commitMessage,
-            cancellationToken);
-
-        return true;
+            return true;
+        }
     }
 
     protected override async Task<bool> OppositeDirectionFlowAsync(
@@ -366,27 +368,25 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             resetToRemoteWhenCloningRepo: ShouldResetClones,
             cancellationToken: cancellationToken);
 
-        if (!hadChanges)
+        if (hadChanges)
         {
-            return hadChanges;
+            var commitMessage = (await vmr.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
+
+            await MergeWorkBranchAsync(
+                mapping,
+                build,
+                currentFlow,
+                vmr,
+                targetBranch,
+                headBranch,
+                workBranch,
+                headBranchExisted,
+                enableRebase,
+                commitMessage,
+                cancellationToken);
         }
 
-        var commitMessage = (await vmr.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
-
-        await MergeWorkBranchAsync(
-            mapping,
-            build,
-            currentFlow,
-            vmr,
-            targetBranch,
-            headBranch,
-            workBranch,
-            headBranchExisted,
-            enableRebase,
-            commitMessage,
-            cancellationToken);
-
-        return true;
+        return hadChanges;
     }
 
     protected override async Task<Codeflow?> DetectCrossingFlow(
