@@ -42,7 +42,7 @@ public interface IFeatureFlagService
     /// <param name="subscriptionId">The subscription ID.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>All feature flags for the subscription.</returns>
-    Task<IReadOnlyList<FeatureFlagValue>> GetFlagsForSubscriptionAsync(
+    Task<IReadOnlyList<FeatureFlagValue>> GetFlagsAsync(
         Guid subscriptionId,
         CancellationToken cancellationToken = default);
 

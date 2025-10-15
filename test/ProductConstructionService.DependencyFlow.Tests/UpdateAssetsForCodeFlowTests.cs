@@ -1,8 +1,10 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Kusto.Cloud.Platform.Utils;
 using Maestro.Data.Models;
 using Maestro.MergePolicies;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using NUnit.Framework;
@@ -139,6 +141,63 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             AndCodeShouldHaveBeenFlownForward(newBuild);
             AndShouldHavePullRequestCheckReminder();
         }
+    }
+
+    [Test]
+    public async Task UpdateCodeFlowWithNoPrWithConflictAndRebaseStrategy()
+    {
+        GivenATestChannel();
+        GivenACodeFlowSubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = false,
+                UpdateFrequency = UpdateFrequency.EveryBuild,
+            },
+            rebaseStrategy: true);
+
+        Build build = GivenANewBuild(true);
+
+        GivenPendingUpdates(build);
+        CreatePullRequestShouldReturnAValidValue();
+
+        WithForwardFlowConflict(
+            DarcRemotes[Subscription.TargetRepository],
+            [new UnixPath($"src/{Subscription.TargetDirectory}/conflict.txt")],
+            rebaseStrategy: true);
+
+        await WhenUpdateAssetsAsyncIsCalled(build);
+
+        // TODO (https://github.com/dotnet/arcade-services/issues/3866): We need to populate InProgressPullRequest fully
+        // with assets and other info just like we do in UpdatePullRequestAsync.
+        // Right now, we are not flowing packages in codeflow subscriptions yet, so this functionality is no there
+        // For now, we manually update the info the unit tests expect.
+        var expectedState = new InProgressPullRequest()
+        {
+            UpdaterId = GetPullRequestUpdaterId(Subscription).Id,
+            Url = VmrPullRequestUrl,
+            HeadBranch = InProgressPrHeadBranch,
+            HeadBranchSha = InProgressPrHeadBranchSha,
+            SourceSha = build.Commit,
+            ContainedSubscriptions =
+            [
+                new()
+                {
+                    SubscriptionId = Subscription.Id,
+                    BuildId = build.Id,
+                    SourceRepo = build.GetRepository(),
+                    CommitSha = build.Commit
+                }
+            ],
+            RequiredUpdates = [],
+            CodeFlowDirection = CodeFlowDirection.ForwardFlow,
+        };
+
+        ThenUpdateReminderIsRemoved();
+        AndCodeFlowPullRequestShouldHaveBeenCreated();
+        AndCodeShouldHaveBeenFlownForward(build);
+        AndShouldHavePullRequestCheckReminder();
+        AndShouldHaveInProgressPullRequestState(build, expectedState: expectedState);
+        AndPendingUpdateIsRemoved();
     }
 
     [Test]

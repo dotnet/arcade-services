@@ -1473,7 +1473,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     cancellationToken: default);
             }
         }
-        catch (PatchApplicationLeftConflictsException e) // only thrown when keepConflicts is true
+        catch (PatchApplicationLeftConflictsException e) // only thrown when enableRebase is true
         {
             // We were unable to flow changes and user intervention will be required
             _logger.LogInformation("Unable to flow changes due to conflicts in {files}", string.Concat(", ", e.ConflictedFiles));

@@ -85,7 +85,7 @@ public class FeatureFlagService : IFeatureFlagService
         }
     }
 
-    public async Task<IReadOnlyList<FeatureFlagValue>> GetFlagsForSubscriptionAsync(
+    public async Task<IReadOnlyList<FeatureFlagValue>> GetFlagsAsync(
         Guid subscriptionId,
         CancellationToken cancellationToken = default)
     {
