@@ -566,11 +566,14 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             .Returns(Task.CompletedTask);
 
         // We re-evaulate checks after we push changes
-        remote
-            .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(
-                It.Is<string>(uri => uri.StartsWith(Subscription.TargetDirectory != null ? VmrUri + "/pulls/" : InProgressPrUrl)),
-                It.IsAny<IReadOnlyCollection<MergePolicyEvaluationResult>>()))
-            .Returns(Task.CompletedTask);
+        if (rebaseStrategy)
+        {
+            remote
+                .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(
+                    It.Is<string>(uri => uri.StartsWith(Subscription.TargetDirectory != null ? VmrUri + "/pulls/" : InProgressPrUrl)),
+                    It.IsAny<IReadOnlyCollection<MergePolicyEvaluationResult>>()))
+                .Returns(Task.CompletedTask);
+        }
 
         _forwardFlower.Setup(x => x.FlowForwardAsync(
                 It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(),
