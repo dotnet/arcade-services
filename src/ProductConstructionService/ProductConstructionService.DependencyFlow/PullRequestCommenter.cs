@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text;
@@ -31,7 +31,7 @@ internal class PullRequestCommenter : IPullRequestCommenter
     private readonly ICommentCollector _commentService;
     private readonly ILogger<PullRequestCommenter> _logger;
 
-    private const string HelpLine = $"> In case of unclarities, consult the [FAQ]({PullRequestBuilder.CodeFlowPrFaqUri}) or tag **<b>@</b>dotnet/product-construction** for assistance.";
+    private const string HelpLine = $"> 💡 In case of unclarities, consult the [FAQ]({PullRequestBuilder.CodeFlowPrFaqUri}) or tag **\\@dotnet/product-construction** for assistance.";
 
     public PullRequestCommenter(
         IRemoteFactory remoteFactory,
@@ -75,7 +75,7 @@ internal class PullRequestCommenter : IPullRequestCommenter
             
             StringBuilder sb = new();
             sb.AppendLine(header);
-            foreach (var textLine in commentText.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries))
+            foreach (var textLine in commentText.Split(Environment.NewLine))
             {
                 sb.AppendLine($"> {textLine}");
             }

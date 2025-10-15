@@ -36,7 +36,8 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
         ITelemetryRecorder telemetryRecorder,
         ILogger<BatchedPullRequestUpdater> logger,
         ICommentCollector commentCollector,
-        IPullRequestCommenter pullRequestCommenter)
+        IPullRequestCommenter pullRequestCommenter,
+        IFeatureFlagService featureFlagService)
         : base(
             id,
             mergePolicyEvaluator,
@@ -54,7 +55,8 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
             telemetryRecorder,
             logger,
             commentCollector,
-            pullRequestCommenter)
+            pullRequestCommenter,
+            featureFlagService)
     {
         _id = id;
         _context = context;
