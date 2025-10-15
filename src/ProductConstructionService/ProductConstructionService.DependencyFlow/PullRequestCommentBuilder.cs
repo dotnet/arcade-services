@@ -144,10 +144,11 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
             2. `cd` to the cloned repository
             3. Make sure your `darc` is [up-to-date](https://github.com/dotnet/arcade-services/blob/main/docs/Darc.md#setting-up-your-darc-client) and run
                 ```bash
-                darc vmr resolve-conflict --subscription {subscription.Id} --build {update.BuildId}
+                darc vmr resolve-conflict --subscription {subscription.Id}
                 ```
             4. Follow the instructions provided by the command to resolve the conflict and push the update
-            5. Once the changes are pushed, the `Codeflow verification` check will turn green
+            5. This should apply the build `{update.BuildId}` with sources from `{update.SourceSha}`
+            6. Once the changes are pushed, the `Codeflow verification` check will turn green
             """);
 
         return comment.ToString();
