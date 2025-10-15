@@ -191,7 +191,7 @@ public static class GitRepoUrlUtils
         }
         catch (ArgumentException)
         {
-            return string.Join("/", uri.Split(['/'], StringSplitOptions.RemoveEmptyEntries).Reverse().Take(2).Reverse());
+            return string.Join("/", uri.Split(['/'], StringSplitOptions.RemoveEmptyEntries).TakeLast(2));
         }
     }
 }
