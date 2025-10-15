@@ -291,14 +291,14 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         {
             var commitMessage = (await vmr.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
 
-	        await MergeWorkBranchAsync(
-	            codeflow,
-	            currentFlow,
-	            vmr,
-	            workBranch,
-	            headBranchExisted,
-	            commitMessage,
-	            cancellationToken);
+            await MergeWorkBranchAsync(
+                codeflow,
+                currentFlow,
+                vmr,
+                workBranch,
+                headBranchExisted,
+                commitMessage,
+                cancellationToken);
 
             return true;
         }
@@ -370,14 +370,14 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         {
             var commitMessage = (await vmr.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
 
-	        await MergeWorkBranchAsync(
-	            codeflow,
-	            currentFlow,
-	            vmr,
-	            workBranch,
-	            headBranchExisted,
-	            commitMessage,
-	            cancellationToken);
+            await MergeWorkBranchAsync(
+                codeflow,
+                currentFlow,
+                vmr,
+                workBranch,
+                headBranchExisted,
+                commitMessage,
+                cancellationToken);
         }
 
         return hadChanges;
