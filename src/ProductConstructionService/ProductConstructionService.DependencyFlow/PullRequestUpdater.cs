@@ -1527,7 +1527,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             // We store it the new head branch SHA in Redis (without having to have to query the remote repo)
             if (prInfo != null)
             {
-                prInfo.HeadBranchSha = await _gitClient.GetShaForRefAsync(codeFlowRes.RepoPath, prHeadBranch);
+                prInfo.HeadBranchSha = await _gitClient.GetShaForRefAsync(subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath, prHeadBranch);
             }
 
             await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
