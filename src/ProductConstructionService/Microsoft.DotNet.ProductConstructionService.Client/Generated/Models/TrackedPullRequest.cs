@@ -42,5 +42,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 
         [JsonProperty("updates")]
         public List<PullRequestUpdate> Updates { get; set; }
+
+        [JsonProperty("mergeState")]
+        public ProductConstructionService.DependencyFlow.Model.InProgressPullRequestState MergeState { get; set; }
     }
 }

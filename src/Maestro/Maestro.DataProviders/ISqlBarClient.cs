@@ -23,4 +23,12 @@ public interface ISqlBarClient : IBasicBarClient
         IEnumerable<Guid> subscriptionIds,
         bool withExcludedAssets = true,
         bool withChannel = false);
+
+    /// <summary>
+    /// Retrieve a subscription by ID
+    /// </summary>
+    Task<Data.Models.Subscription> GetSubscriptionDAOAsync(
+        Guid subscriptionId,
+        bool withExcludedAssets = true,
+        bool withChannel = false);
 }

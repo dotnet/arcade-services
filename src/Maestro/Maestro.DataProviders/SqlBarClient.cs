@@ -57,6 +57,19 @@ public class SqlBarClient : ISqlBarClient
         return subs;
     }
 
+    public async Task<Data.Models.Subscription> GetSubscriptionDAOAsync(
+        Guid subscriptionId,
+        bool withExcludedAssets = true,
+        bool withChannel = false)
+    {
+        var subscriptions = await GetSubscriptionDAOsAsync(
+            [subscriptionId],
+            withExcludedAssets,
+            withChannel);
+
+        return subscriptions.FirstOrDefault();
+    }
+
     public async Task<Subscription> GetSubscriptionAsync(
         Guid subscriptionId,
         bool withExcludedAssets = true,
@@ -85,12 +98,12 @@ public class SqlBarClient : ISqlBarClient
 
     public async Task<Subscription> GetSubscriptionAsync(string subscriptionId)
     {
-        if (string.IsNullOrEmpty(subscriptionId))
+        if (!Guid.TryParse(subscriptionId, out subscriptionGuid))
         {
             return null;
         }
 
-        return await GetSubscriptionAsync(Guid.Parse(subscriptionId));
+return await GetSubscriptionAsync(subscriptionGuid);
     }
 
     public async Task<Build> GetLatestBuildAsync(string repoUri, int channelId)

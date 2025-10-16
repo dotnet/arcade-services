@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Api.v2020_02_20.Models;
 using ProductConstructionService.Common;
@@ -120,10 +119,65 @@ public partial class PullRequestController : ControllerBase
                 pr.LastUpdate,
                 pr.LastCheck,
                 pr.NextCheck,
-                updates));
+                updates,
+                pr.MergeState));
         }
 
         return Ok(prs.AsQueryable());
+    }
+
+    /// <summary>
+    /// Retrieves the tracked codeflow pull request associated with the specified subscription identifier.
+    /// </summary>
+    /// <param name="subscriptionId">The id of the subscription for which to retrieve the tracked pull request.</param>
+    /// <returns>An <see cref="IActionResult"/> containing the tracked pull request details if found; otherwise, a <see
+    /// cref="NotFoundResult"/> if no pull request is associated with the specified subscription.</returns>
+    [HttpGet("tracked/subscription/{subscriptionId}")]
+    [SwaggerApiResponse(HttpStatusCode.OK,
+        Type = typeof(TrackedPullRequest),
+        Description = "Get a PR that is tracked by the service, by its subscription id")]
+    [ValidateModelState]
+    public async Task<IActionResult> GetTrackedPullRequestBySubscriptionId(string subscriptionId)
+    {
+        if (!Guid.TryParse(subscriptionId, out var subscriptionGuid))
+        {
+            return BadRequest("A valid subscription GUID must be provided.");
+        }
+
+        var subscription = await _sqlClient.GetSubscriptionDAOAsync(subscriptionGuid);
+
+        if (subscription == null)
+        {
+            return NotFound();
+        }
+
+        string prRedisKey = PullRequestUpdaterId.CreateUpdaterId(subscription).Id;
+
+        var cache = _cacheFactory.Create<InProgressPullRequest>(prRedisKey);
+        var pr = await cache.TryGetStateAsync();
+
+        if (pr == null)
+        {
+            return NotFound();
+        }
+
+        var trackedPullRequest = new TrackedPullRequest(
+            subscription.Id.ToString(),
+            pr.Url,
+            subscription?.Channel != null ? new Channel(subscription.Channel) : null,
+            subscription?.TargetBranch,
+            subscription?.SourceEnabled ?? false,
+            pr.LastUpdate,
+            pr.LastCheck,
+            pr.NextCheck,
+            [.. pr.ContainedSubscriptions
+            .Select(csu => new PullRequestUpdate(
+                csu.SourceRepo,
+                csu.SubscriptionId,
+                csu.BuildId))],
+            pr.MergeState);
+
+        return Ok(trackedPullRequest);
     }
 
     [HttpDelete("tracked/{id}")]
@@ -172,7 +226,8 @@ public partial class PullRequestController : ControllerBase
         DateTime LastUpdate,
         DateTime LastCheck,
         DateTime? NextCheck,
-        List<PullRequestUpdate> Updates);
+        List<PullRequestUpdate> Updates,
+        InProgressPullRequestState MergeState);
 
     private record PullRequestUpdate(
         string SourceRepository,
