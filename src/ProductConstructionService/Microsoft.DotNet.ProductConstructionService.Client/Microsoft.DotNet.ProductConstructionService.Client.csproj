@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Maestro\Maestro.Common\Maestro.Common.csproj" />
+    <ProjectReference Include="..\ProductConstructionService.DependencyFlow.csproj" />
   </ItemGroup>
 
 </Project>
