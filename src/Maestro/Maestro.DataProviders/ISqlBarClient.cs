@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
 
@@ -14,4 +15,12 @@ public interface ISqlBarClient : IBasicBarClient
     Task RegisterSubscriptionUpdate(
         Guid subscriptionId,
         string updateMessage);
+
+    /// <summary>
+    /// Retrieve subscriptions by a list of IDs
+    /// </summary>
+    Task<List<Data.Models.Subscription>> GetSubscriptionDAOsAsync(
+        IEnumerable<Guid> subscriptionIds,
+        bool withExcludedAssets = true,
+        bool withChannel = false);
 }

@@ -22,7 +22,10 @@ public interface IBasicBarClient
     /// </summary>
     /// <param name="subscriptionId">Id of subscription</param>
     /// <returns>Subscription information</returns>
-    Task<Subscription> GetSubscriptionAsync(Guid subscriptionId);
+    Task<Subscription> GetSubscriptionAsync(
+        Guid subscriptionId,
+        bool withExcludedAssets = true,
+        bool withChannel = false);
 
     /// <summary>
     ///     Retrieve a subscription by ID

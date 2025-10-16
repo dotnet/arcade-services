@@ -4,12 +4,11 @@
 using System.Net;
 using System.Text.RegularExpressions;
 using Maestro.Common;
-using Maestro.Data;
+using Maestro.DataProviders;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Api.v2020_02_20.Models;
@@ -46,14 +45,14 @@ public partial class PullRequestController : ControllerBase
     }
 
     private readonly IRedisCacheFactory _cacheFactory;
-    private readonly BuildAssetRegistryContext _context;
+    private readonly SqlBarClient _sqlClient;
 
     public PullRequestController(
         IRedisCacheFactory cacheFactory,
-        BuildAssetRegistryContext context)
+        SqlBarClient sqlClient)
     {
         _cacheFactory = cacheFactory;
-        _context = context;
+        _sqlClient = sqlClient;
     }
 
     [HttpGet("tracked")]
@@ -76,11 +75,13 @@ public partial class PullRequestController : ControllerBase
                 continue;
             }
 
-            var subscriptionIds = pr.ContainedSubscriptions.Select(s => s.SubscriptionId).ToList();
-            var subscriptions = await _context.Subscriptions
-                .Where(s => subscriptionIds.Contains(s.Id))
-                .Include(s => s.Channel)
-                .ToListAsync();
+            var subscriptionIds = pr.ContainedSubscriptions
+                .Select(s => s.SubscriptionId)
+                .ToList();
+
+            var subscriptions = await _sqlClient.GetSubscriptionDAOsAsync(subscriptionIds,
+                withExcludedAssets: false,
+                withChannel: true);
 
             var sampleSub = subscriptions.FirstOrDefault();
 

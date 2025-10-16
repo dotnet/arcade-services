@@ -32,11 +32,38 @@ public class SqlBarClient : ISqlBarClient
         _kustoClientProvider = kustoClientProvider;
     }
 
-    public async Task<Subscription> GetSubscriptionAsync(Guid subscriptionId)
+
+    public async Task<List<Data.Models.Subscription>> GetSubscriptionDAOsAsync(
+        IEnumerable<Guid> subscriptionIds,
+        bool withExcludedAssets = true,
+        bool withChannel = false)
     {
-        var sub = await _context.Subscriptions
-            .Include(s => s.ExcludedAssets)
-            .FirstOrDefaultAsync(s => s.Id.Equals(subscriptionId));
+        var query = _context.Subscriptions.AsQueryable();
+
+        if (withChannel)
+        {
+            query = query.Include(s => s.Channel);
+        }
+
+        if (withExcludedAssets)
+        {
+            query = query.Include(s => s.ExcludedAssets);
+        }
+
+        var subs = await query
+            .Where(s => subscriptionIds.Contains(s.Id))
+            .ToListAsync();
+
+        return subs;
+    }
+
+    public async Task<Subscription> GetSubscriptionAsync(
+        Guid subscriptionId,
+        bool withExcludedAssets = true,
+        bool withChannel = false)
+    {
+        var sub = (await GetSubscriptionDAOsAsync([subscriptionId], withExcludedAssets, withChannel))
+            .FirstOrDefault();
 
         if (sub == null)
         {
@@ -58,6 +85,11 @@ public class SqlBarClient : ISqlBarClient
 
     public async Task<Subscription> GetSubscriptionAsync(string subscriptionId)
     {
+        if (string.IsNullOrEmpty(subscriptionId))
+        {
+            return null;
+        }
+
         return await GetSubscriptionAsync(Guid.Parse(subscriptionId));
     }
 
