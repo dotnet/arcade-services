@@ -90,9 +90,8 @@ internal class BackflowOperation(
         {
             await _backflowConflictResolver.TryMergingBranchAndUpdateDependencies(
                 // TODO (https://github.com/dotnet/arcade-services/issues/5313): Fill excludedAssets from subscription
-                new CodeflowOptions(mapping, headBranch, headBranch, build, [], true, false),
+                new CodeflowOptions(mapping, currentFlow, headBranch, headBranch, build, [], true, false),
                 lastFlows,
-                (Backflow)currentFlow,
                 productRepo,
                 headBranch,
                 headBranchExisted: true,

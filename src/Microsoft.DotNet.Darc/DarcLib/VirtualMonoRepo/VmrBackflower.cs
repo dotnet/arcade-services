@@ -110,7 +110,15 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             cancellationToken);
 
         return await FlowBackAsync(
-            new CodeflowOptions(mapping, targetBranch, headBranch, build, excludedAssets, enableRebase, forceUpdate),
+            new CodeflowOptions(
+                mapping,
+                new Backflow(build.Commit, lastFlows.LastFlow.RepoSha),
+                targetBranch,
+                headBranch,
+                build,
+                excludedAssets,
+                enableRebase,
+                forceUpdate),
             targetRepo,
             lastFlows,
             headBranchExisted,
@@ -118,28 +126,25 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     }
 
     protected async Task<CodeFlowResult> FlowBackAsync(
-        CodeflowOptions codeflow,
+        CodeflowOptions codeflowOptions,
         ILocalGitRepo targetRepo,
         LastFlows lastFlows,
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        var currentFlow = new Backflow(codeflow.Build.Commit, lastFlows.LastFlow.RepoSha);
         var hasChanges = await FlowCodeAsync(
-            codeflow,
+            codeflowOptions,
             lastFlows,
-            currentFlow,
             targetRepo,
             headBranchExisted,
             cancellationToken);
 
         // We try to merge the target branch and we apply dependency updates
         VersionFileUpdateResult mergeResult = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
-            codeflow,
+            codeflowOptions,
             lastFlows,
-            currentFlow,
             targetRepo,
-            codeflow.TargetBranch,
+            codeflowOptions.TargetBranch,
             headBranchExisted,
             cancellationToken);
 
@@ -151,25 +156,24 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     }
 
     protected override async Task<bool> SameDirectionFlowAsync(
-        CodeflowOptions codeflow,
+        CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
-        Codeflow currentFlow,
         ILocalGitRepo targetRepo,
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
         var lastFlownSha = lastFlows.LastFlow.VmrSha;
-        var patchName = GetPatchName(codeflow.Mapping, lastFlows, currentFlow);
+        var patchName = GetPatchName(codeflowOptions.Mapping, lastFlows, codeflowOptions.CurrentFlow);
 
         // When flowing from the VMR, ignore all submodules
         List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
             patchName,
             lastFlownSha,
-            currentFlow.VmrSha,
+            codeflowOptions.CurrentFlow.VmrSha,
             path: null,
-            filters: GetPatchExclusions(codeflow.Mapping),
+            filters: GetPatchExclusions(codeflowOptions.Mapping),
             relativePaths: true,
-            workingDir: _vmrInfo.GetRepoSourcesPath(codeflow.Mapping),
+            workingDir: _vmrInfo.GetRepoSourcesPath(codeflowOptions.Mapping),
             applicationPath: null,
             ignoreLineEndings: false,
             cancellationToken);
@@ -178,7 +182,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             _logger.LogInformation("There are no new changes for VMR between {sha1} and {sha2}",
                 lastFlownSha,
-                currentFlow.VmrSha);
+                codeflowOptions.CurrentFlow.VmrSha);
 
             foreach (VmrIngestionPatch patch in patches)
             {
@@ -198,20 +202,19 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         _logger.LogDebug("Created {count} patch(es)", patches.Count);
 
         IWorkBranch? workBranch = null;
-        if (codeflow.EnableRebase || headBranchExisted)
+        if (codeflowOptions.EnableRebase || headBranchExisted)
         {
             await targetRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
 
             workBranch = await _workBranchFactory.CreateWorkBranchAsync(
                 targetRepo,
-                currentFlow.GetBranchName(),
-                codeflow.HeadBranch);
+                codeflowOptions.CurrentFlow.GetBranchName(),
+                codeflowOptions.HeadBranch);
         }
 
         await ApplyChangesWithRecreationFallbackAsync(
-            codeflow,
+            codeflowOptions,
             lastFlows,
-            currentFlow,
             targetRepo,
             headBranchExisted,
             workBranch,
@@ -228,11 +231,10 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         if (workBranch != null)
         {
-            var commitMessage = await CommitBackflow(currentFlow, targetRepo, codeflow.Build, cancellationToken);
+            var commitMessage = await CommitBackflow(codeflowOptions.CurrentFlow, targetRepo, codeflowOptions.Build, cancellationToken);
 
 	        await MergeWorkBranchAsync(
-	            codeflow,
-	            currentFlow,
+	            codeflowOptions,
 	            targetRepo,
 	            workBranch,
 	            headBranchExisted,
@@ -244,36 +246,35 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     }
 
     protected override async Task<bool> OppositeDirectionFlowAsync(
-        CodeflowOptions codeflow,
+        CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
-        Codeflow currentFlow,
         ILocalGitRepo targetRepo,
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
         // If the target branch did not exist, checkout the last synchronization point
         // Otherwise, check out the last flow's commit in the PR branch
-        await targetRepo.CheckoutAsync(headBranchExisted && !codeflow.EnableRebase
+        await targetRepo.CheckoutAsync(headBranchExisted && !codeflowOptions.EnableRebase
             ? lastFlows.LastBackFlow!.RepoSha
             : lastFlows.LastFlow.RepoSha);
 
         IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(
             targetRepo,
-            currentFlow.GetBranchName(),
-            codeflow.HeadBranch);
+            codeflowOptions.CurrentFlow.GetBranchName(),
+            codeflowOptions.HeadBranch);
 
         // We leave the inlined submodules in the VMR
-        var exclusions = GetPatchExclusions(codeflow.Mapping);
-        var patchName = GetPatchName(codeflow.Mapping, lastFlows, currentFlow);
+        var exclusions = GetPatchExclusions(codeflowOptions.Mapping);
+        var patchName = GetPatchName(codeflowOptions.Mapping, lastFlows, codeflowOptions.CurrentFlow);
 
         List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
             patchName,
             Constants.EmptyGitObject,
-            currentFlow.VmrSha,
+            codeflowOptions.CurrentFlow.VmrSha,
             path: null,
             filters: exclusions,
             relativePaths: true,
-            workingDir: _vmrInfo.GetRepoSourcesPath(codeflow.Mapping),
+            workingDir: _vmrInfo.GetRepoSourcesPath(codeflowOptions.Mapping),
             applicationPath: null,
             ignoreLineEndings: false,
             cancellationToken);
@@ -284,8 +285,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         // When flowing to a repo, we remove all repo files but submodules and cloaked files
         List<string> removalFilters =
         [
-            .. codeflow.Mapping.Include.Select(VmrPatchHandler.GetInclusionRule),
-            .. codeflow.Mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule),
+            .. codeflowOptions.Mapping.Include.Select(VmrPatchHandler.GetInclusionRule),
+            .. codeflowOptions.Mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule),
             .. exclusions,
         ];
 
@@ -316,15 +317,14 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         if (result.ExitCode == 0)
         {
             // When no changes happened, we disregard the work branch and return back to the target branch
-            await targetRepo.CheckoutAsync(codeflow.HeadBranch);
+            await targetRepo.CheckoutAsync(codeflowOptions.HeadBranch);
             return false;
         }
 
-        var commitMessage = await CommitBackflow(currentFlow, targetRepo, codeflow.Build, cancellationToken);
+        var commitMessage = await CommitBackflow(codeflowOptions.CurrentFlow, targetRepo, codeflowOptions.Build, cancellationToken);
 
         await MergeWorkBranchAsync(
-            codeflow,
-            currentFlow,
+            codeflowOptions,
             targetRepo,
             workBranch,
             headBranchExisted,

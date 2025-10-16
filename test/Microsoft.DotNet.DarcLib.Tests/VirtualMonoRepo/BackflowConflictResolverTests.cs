@@ -416,6 +416,7 @@ public class BackflowConflictResolverTests
         VersionFileUpdateResult mergeResult = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
             new CodeflowOptions(
                 new SourceMapping(MappingName, "https://github/repo1", "main", [], [], false),
+                currentFlow,
                 TargetBranch,
                 PrBranch,
                 build,
@@ -423,7 +424,6 @@ public class BackflowConflictResolverTests
                 EnableRebase: false,
                 ForceUpdate: false),
             lastFlows,
-            currentFlow,
             _localRepo.Object,
             TargetBranch,
             headBranchExisted,
