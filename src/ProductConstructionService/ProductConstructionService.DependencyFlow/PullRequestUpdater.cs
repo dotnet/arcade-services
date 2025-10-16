@@ -1176,8 +1176,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs;
         string? previousSourceSha; // is null in some edge cases like onboarding a new repository
 
-        FeatureFlagValue? featureFlag = await _featureFlagService.GetFlagAsync(subscription.Id, FeatureFlag.EnableRebaseStrategy);
-        bool enableRebase = featureFlag != null && featureFlag.Value.Equals("true", StringComparison.OrdinalIgnoreCase);
+        bool enableRebase = await _featureFlagService.IsFeatureOnAsync(subscription.Id, FeatureFlag.EnableRebaseStrategy);
 
         var codeFlowRes = await ExecuteCodeFlowAsync(
             pr,

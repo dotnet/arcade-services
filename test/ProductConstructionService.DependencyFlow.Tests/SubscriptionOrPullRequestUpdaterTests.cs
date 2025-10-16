@@ -125,8 +125,8 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
         if (rebaseStrategy)
         {
             FeatureFlagService
-                .Setup(x => x.GetFlagAsync(Subscription.Id, FeatureFlag.EnableRebaseStrategy, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new FeatureFlagValue(Subscription.Id, FeatureFlag.EnableRebaseStrategy.Name, "true"));
+                .Setup(x => x.IsFeatureOnAsync(Subscription.Id, FeatureFlag.EnableRebaseStrategy, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
         }
     }
 
