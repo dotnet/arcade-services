@@ -23,6 +23,16 @@ public interface IVmrCodeFlower
         bool currentIsBackflow);
 }
 
+public record CodeflowOptions(
+    SourceMapping Mapping,
+    Codeflow CurrentFlow,
+    string TargetBranch,
+    string HeadBranch,
+    Build Build,
+    IReadOnlyCollection<string>? ExcludedAssets,
+    bool EnableRebase,
+    bool ForceUpdate);
+
 /// <summary>
 /// This class is responsible for taking changes done to a repo in the VMR and backflowing them into the repo.
 /// It only makes patches/changes locally, no other effects are done.
@@ -80,33 +90,26 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// </summary>
     /// <returns>True if there were changes to flow</returns>
     public async Task<bool> FlowCodeAsync(
+        CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
-        Codeflow currentFlow,
         ILocalGitRepo repo,
-        SourceMapping mapping,
-        Build build,
-        IReadOnlyCollection<string>? excludedAssets,
-        string targetBranch,
-        string headBranch,
         bool headBranchExisted,
-        bool enableRebase,
-        bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
         var lastFlow = lastFlows.LastFlow;
-        if (lastFlow.SourceSha == currentFlow.SourceSha)
+        if (lastFlow.SourceSha == codeflowOptions.CurrentFlow.SourceSha)
         {
-            _logger.LogInformation("No new commits to flow from {sourceRepo}", currentFlow is Backflow ? "VMR" : mapping.Name);
+            _logger.LogInformation("No new commits to flow from {sourceRepo}", codeflowOptions.CurrentFlow is Backflow ? "VMR" : codeflowOptions.Mapping.Name);
             return false;
         }
 
-        if (lastFlow.IsBackflow != currentFlow.IsBackflow && headBranchExisted && !forceUpdate)
+        if (lastFlow.IsBackflow != codeflowOptions.CurrentFlow.IsBackflow && headBranchExisted && !codeflowOptions.ForceUpdate)
         {
             _commentCollector.AddComment(CannotFlowAdditionalFlowsInPrMsg, CommentType.Warning);
             throw new BlockingCodeflowException("Cannot apply codeflow on PR head branch because an opposite direction flow has been merged.");
         }
 
-        await EnsureCodeflowLinearityAsync(repo, currentFlow, lastFlows);
+        await EnsureCodeflowLinearityAsync(repo, codeflowOptions.CurrentFlow, lastFlows);
 
         _logger.LogInformation("Last flow was {type} flow: {sourceSha} -> {targetSha}",
             lastFlow.Name,
@@ -114,42 +117,30 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             lastFlow.TargetSha);
 
         bool hasChanges;
-        if (lastFlow.IsBackflow == currentFlow.IsBackflow)
+        if (lastFlow.IsBackflow == codeflowOptions.CurrentFlow.IsBackflow)
         {
             _logger.LogInformation("Current flow is in the same direction");
             hasChanges = await SameDirectionFlowAsync(
-                mapping,
+                codeflowOptions,
                 lastFlows,
-                currentFlow,
                 repo,
-                build,
-                excludedAssets,
-                targetBranch,
-                headBranch,
                 headBranchExisted,
-                enableRebase,
-                forceUpdate,
                 cancellationToken);
         }
         else
         {
             _logger.LogInformation("Current flow is in the opposite direction");
             hasChanges = await OppositeDirectionFlowAsync(
-                mapping,
+                codeflowOptions,
                 lastFlows,
-                currentFlow,
                 repo,
-                build,
-                targetBranch,
-                headBranch,
                 headBranchExisted,
-                enableRebase,
                 cancellationToken);
         }
 
         if (!hasChanges)
         {
-            _logger.LogInformation("Nothing to flow from {sourceRepo}", currentFlow is Backflow ? "VMR" : mapping.Name);
+            _logger.LogInformation("Nothing to flow from {sourceRepo}", codeflowOptions.CurrentFlow is Backflow ? "VMR" : codeflowOptions.Mapping.Name);
         }
 
         return hasChanges;
@@ -159,55 +150,29 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// Handles flowing changes that succeed a flow that was in the same direction (outgoing from the source repo).
     /// The changes that are flown are taken from a simple patch of changes that occurred since the last flow.
     /// </summary>
-    /// <param name="mapping">Mapping to flow</param>
     /// <param name="lastFlows">Last flows that happened for the given mapping</param>
-    /// <param name="currentFlow">Current flow that is being flown</param>
     /// <param name="repo">Local git repo clone of the source repo</param>
-    /// <param name="build">Build with assets (dependencies) that is being flown</param>
-    /// <param name="excludedAssets">Assets to exclude from the dependency flow</param>
-    /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
-    /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="headBranchExisted">Did we just create the headbranch or are we updating an existing one?</param>
-    /// <param name="enableRebase">Rebases changes (and leaves conflict markers in place) instead of recreating the previous flows recursively</param>
     /// <returns>True if there were changes to flow</returns>
     protected abstract Task<bool> SameDirectionFlowAsync(
-        SourceMapping mapping,
+        CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
-        Codeflow currentFlow,
         ILocalGitRepo repo,
-        Build build,
-        IReadOnlyCollection<string>? excludedAssets,
-        string targetBranch,
-        string headBranch,
         bool headBranchExisted,
-        bool enableRebase,
-        bool forceUpdate,
         CancellationToken cancellationToken);
 
     /// <summary>
     /// Handles flowing changes that succeed a flow that was in the opposite direction (incoming in the source repo).
     /// The changes that are flown are taken from a diff of repo contents and the last sync point from the last flow.
     /// </summary>
-    /// <param name="mapping">Mapping to flow</param>
     /// <param name="lastFlows">Last flows that happened for the given mapping</param>
-    /// <param name="currentFlow">Current flow that is being flown</param>
-    /// <param name="repo">Local git repo clone of the source repo</param>
-    /// <param name="build">Build with assets (dependencies) that is being flown</param>
-    /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
-    /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="headBranchExisted">Did we just create the headbranch or are we updating an existing one?</param>
-    /// <param name="enableRebase">Rebases changes (and leaves conflict markers in place) instead of recreating the previous flows recursively</param>
     /// <returns>True if there were changes to flow</returns>
     protected abstract Task<bool> OppositeDirectionFlowAsync(
-        SourceMapping mapping,
+        CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
-        Codeflow currentFlow,
-        ILocalGitRepo repo,
-        Build build,
-        string targetBranch,
-        string headBranch,
+        ILocalGitRepo sourceRepo,
         bool headBranchExisted,
-        bool enableRebase,
         CancellationToken cancellationToken);
 
     /// <summary>
@@ -353,17 +318,10 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// recreates previous flows and applies the changes on top of that.
     /// </summary>
     protected async Task ApplyChangesWithRecreationFallbackAsync(
-        SourceMapping mapping,
+        CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
-        Codeflow currentFlow,
         ILocalGitRepo productRepo,
-        Build build,
-        IReadOnlyCollection<string>? excludedAssets,
-        string targetBranch,
-        string headBranch,
         bool headBranchExisted,
-        bool enableRebase,
-        bool forceUpdate,
         IWorkBranch? workBranch,
         ApplyLatestChangesDelegate applyLatestChanges,
         CancellationToken cancellationToken)
@@ -376,19 +334,17 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         {
             _logger.LogInformation(e.Message);
 
-            if (enableRebase)
+            if (codeflowOptions.EnableRebase)
             {
                 // We need to recreate a previous flow so that we have something to rebase later
                 await RecreatePreviousFlowsAndApplyChanges(
-                    mapping,
-                    build,
+                    codeflowOptions with
+                    {
+                        HeadBranch = workBranch!.WorkBranchName,
+                        TargetBranch = workBranch!.WorkBranchName,
+                    },
                     productRepo,
-                    currentFlow,
                     lastFlows,
-                    workBranch!.WorkBranchName,
-                    workBranch!.WorkBranchName,
-                    excludedAssets,
-                    forceUpdate,
                     async () => await applyLatestChanges(enableRebase: true),
                     cancellationToken);
 
@@ -404,21 +360,15 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 if (headBranchExisted)
                 {
                     _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
-                    throw new ConflictInPrBranchException(e.Result.StandardError, targetBranch, mapping.Name, isForwardFlow: false);
+                    throw new ConflictInPrBranchException(e.Result.StandardError, codeflowOptions.TargetBranch, codeflowOptions.Mapping.Name, isForwardFlow: false);
                 }
 
                 // Otherwise, we have a conflicting change in the last backflow PR (before merging)
                 // The scenario is described here: https://github.com/dotnet/dotnet/tree/main/docs/VMR-Full-Code-Flow.md#conflicts
                 await RecreatePreviousFlowsAndApplyChanges(
-                    mapping,
-                    build,
+                    codeflowOptions,
                     productRepo,
-                    currentFlow,
                     lastFlows,
-                    headBranch,
-                    targetBranch,
-                    excludedAssets,
-                    forceUpdate,
                     async () => await applyLatestChanges(enableRebase: false),
                     cancellationToken);
             }
@@ -431,15 +381,9 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// Then it creates a given branch there and applies the current changes on top of the recreated previous flows.
     /// </summary>
     private async Task RecreatePreviousFlowsAndApplyChanges(
-        SourceMapping mapping,
-        Build build,
+        CodeflowOptions codeflowOptions,
         ILocalGitRepo repo,
-        Codeflow currentFlow,
         LastFlows lastFlows,
-        string headBranch,
-        string targetBranch,
-        IReadOnlyCollection<string>? excludedAssets,
-        bool forceUpdate,
         Func<Task> reapplyChanges,
         CancellationToken cancellationToken)
     {
@@ -447,12 +391,12 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         // Create a fake previously applied build that we will use when reapplying the previous flow.
         // We only care about the sha here, because it will get overwritten anyway with the current build which will be applied on top.
-        bool currentIsBackflow = currentFlow is Backflow;
+        bool currentIsBackflow = codeflowOptions.CurrentFlow is Backflow;
         var lastFlownSha = currentIsBackflow ? lastFlows.LastBackFlow!.VmrSha : lastFlows.LastForwardFlow.RepoSha;
         Build previouslyAppliedBuild = new(-1, DateTimeOffset.Now, 0, false, false, lastFlownSha, [], [], [], [])
         {
-            GitHubRepository = build.GitHubRepository,
-            AzureDevOpsRepository = build.AzureDevOpsRepository
+            GitHubRepository = codeflowOptions.Build.GitHubRepository,
+            AzureDevOpsRepository = codeflowOptions.Build.AzureDevOpsRepository
         };
 
         // We recursively try to re-create previous flows until we find the one that introduced the conflict with the current flown
@@ -463,12 +407,12 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
             // We rewing to the previous flow and create a branch there
             (Codeflow previousFlow, LastFlows previousFlows) = await RewindToPreviousFlowAsync(
-                mapping,
+                codeflowOptions.Mapping,
                 repo,
                 flowsToRecreate,
                 lastFlows,
-                headBranch,
-                targetBranch,
+                codeflowOptions.HeadBranch,
+                codeflowOptions.TargetBranch,
                 cancellationToken);
 
             // We store the SHA where the head branch originates from so that later we can diff it
@@ -478,23 +422,20 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
             // We replay the previous flows, excluding manual changes that might have caused the conflict
             await FlowCodeAsync(
+                codeflowOptions with
+                {
+                    Build = previouslyAppliedBuild,
+                    CurrentFlow = currentIsBackflow
+                        ? new Backflow(previouslyAppliedBuild.Commit, previousFlow.RepoSha)
+                        : new ForwardFlow(previouslyAppliedBuild.Commit, previousFlow.VmrSha),
+                },
                 previousFlows,
-                currentIsBackflow
-                    ? new Backflow(previouslyAppliedBuild.Commit, previousFlow.RepoSha)
-                    : new ForwardFlow(previouslyAppliedBuild.Commit, previousFlow.VmrSha),
                 repo,
-                mapping,
-                previouslyAppliedBuild,
-                excludedAssets,
-                targetBranch,
-                headBranch,
                 headBranchExisted: true, // Head branch was created when we rewound to the previous flow
-                enableRebase: false,
-                forceUpdate,
                 cancellationToken);
 
             var changedFilesAfterRecreation = await GetChangesInHeadBranch(
-                mapping,
+                codeflowOptions.Mapping,
                 repo,
                 currentIsBackflow,
                 shaBeforeRecreation,
@@ -505,16 +446,16 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             {
                 await reapplyChanges();
                 await HandleRevertedFiles(
-                    mapping,
+                    codeflowOptions.Mapping,
                     repo,
-                    currentFlow,
+                    codeflowOptions.CurrentFlow,
                     shaBeforeRecreation,
                     changedFilesAfterRecreation,
                     cancellationToken);
 
                 _logger.LogInformation("Successfully recreated {count} flows and applied new changes from {sha}",
                     flowsToRecreate,
-                    build.Commit);
+                    codeflowOptions.Build.Commit);
 
                 return;
             }
@@ -718,19 +659,14 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     }
 
     protected async Task MergeWorkBranchAsync(
-        SourceMapping mapping,
-        Build build,
-        Codeflow currentFlow,
+        CodeflowOptions codeflowOptions,
         ILocalGitRepo targetRepo,
-        string targetBranch,
-        string headBranch,
         IWorkBranch workBranch,
         bool headBranchExisted,
-        bool enableRebase,
         string commitMessage,
         CancellationToken cancellationToken)
     {
-        if (enableRebase)
+        if (codeflowOptions.EnableRebase)
         {
             await workBranch.RebaseAsync(cancellationToken);
         }
@@ -745,11 +681,11 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 _logger.LogInformation(e.Message);
                 throw new ConflictInPrBranchException(
                     [..e.ConflictedFiles.Select(f => f.Path)],
-                    targetBranch);
+                    codeflowOptions.TargetBranch);
             }
         }
 
-        _logger.LogInformation("Branch {branch} with code changes is ready in {repoDir}", headBranch, targetRepo);
+        _logger.LogInformation("Branch {branch} with code changes is ready in {repoDir}", codeflowOptions.HeadBranch, targetRepo);
     }
 
     protected abstract NativePath GetEngCommonPath(NativePath sourceRepo);

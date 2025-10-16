@@ -139,17 +139,10 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         ForwardFlow currentFlow = new(build.Commit, lastFlows.LastFlow.VmrSha);
 
         bool hasChanges = await FlowCodeAsync(
+            new CodeflowOptions(mapping, currentFlow, targetBranch, headBranch, build, excludedAssets, enableRebase, forceUpdate),
             lastFlows,
-            currentFlow,
             sourceRepo,
-            mapping,
-            build,
-            excludedAssets,
-            targetBranch,
-            headBranch,
             headBranchExisted,
-            enableRebase,
-            forceUpdate,
             cancellationToken);
 
         IReadOnlyCollection<UnixPath>? conflictedFiles = null;
@@ -252,48 +245,34 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     }
 
     protected override async Task<bool> SameDirectionFlowAsync(
-        SourceMapping mapping,
+        CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
-        Codeflow currentFlow,
         ILocalGitRepo sourceRepo,
-        Build build,
-        IReadOnlyCollection<string>? excludedAssets,
-        string targetBranch,
-        string headBranch,
         bool headBranchExisted,
-        bool enableRebase,
-        bool forceUpdate,
         CancellationToken cancellationToken)
     {
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         IWorkBranch? workBranch = null;
-        if (enableRebase || headBranchExisted)
+        if (codeflowOptions.EnableRebase || headBranchExisted)
         {
             await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
 
-            workBranch = await _workBranchFactory.CreateWorkBranchAsync(vmr, currentFlow.GetBranchName(), headBranch);
+            workBranch = await _workBranchFactory.CreateWorkBranchAsync(vmr, codeflowOptions.CurrentFlow.GetBranchName(), codeflowOptions.HeadBranch);
         }
 
         bool hadChanges = false;
 
         await ApplyChangesWithRecreationFallbackAsync(
-            mapping,
+            codeflowOptions,
             lastFlows,
-            currentFlow,
             sourceRepo,
-            build,
-            excludedAssets,
-            targetBranch,
-            headBranch,
             headBranchExisted,
-            enableRebase,
-            forceUpdate,
             workBranch,
             async keepConflicts =>
             {
                 hadChanges = await _vmrUpdater.UpdateRepository(
-                    mapping,
-                    build,
+                    codeflowOptions.Mapping,
+                    codeflowOptions.Build,
                     additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
                     resetToRemoteWhenCloningRepo: ShouldResetClones,
                     keepConflicts: keepConflicts,
@@ -310,15 +289,10 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             var commitMessage = (await vmr.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
 
             await MergeWorkBranchAsync(
-                mapping,
-                build,
-                currentFlow,
+                codeflowOptions,
                 vmr,
-                targetBranch,
-                headBranch,
                 workBranch,
                 headBranchExisted,
-                enableRebase,
                 commitMessage,
                 cancellationToken);
 
@@ -327,66 +301,61 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     }
 
     protected override async Task<bool> OppositeDirectionFlowAsync(
-        SourceMapping mapping,
+        CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
-        Codeflow currentFlow,
         ILocalGitRepo sourceRepo,
-        Build build,
-        string targetBranch,
-        string headBranch,
         bool headBranchExisted,
-        bool enableRebase,
         CancellationToken cancellationToken)
     {
         // If the target branch did not exist, checkout the last synchronization point
         // Otherwise, check out the last flow's commit in the PR branch
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        await vmr.CheckoutAsync(headBranchExisted && !enableRebase
+        await vmr.CheckoutAsync(headBranchExisted && !codeflowOptions.EnableRebase
             ? lastFlows.LastForwardFlow.VmrSha
             : lastFlows.LastFlow.VmrSha);
 
         IWorkBranch workBranch = await _workBranchFactory.CreateWorkBranchAsync(
             vmr,
-            currentFlow.GetBranchName(),
-            headBranch);
+            codeflowOptions.CurrentFlow.GetBranchName(),
+            codeflowOptions.HeadBranch);
 
         await sourceRepo.CheckoutAsync(lastFlows.LastFlow.RepoSha);
 
-        var patchName = _vmrInfo.TmpPath / $"{headBranch.Replace('/', '-')}.patch";
+        var patchName = _vmrInfo.TmpPath / $"{codeflowOptions.HeadBranch.Replace('/', '-')}.patch";
 
         // We will remove everything not-cloaked and replace it with current contents of the source repo
         // When flowing to the VMR, we remove all files but the cloaked files
         List<string> removalFilters =
         [
-            .. mapping.Include.Select(VmrPatchHandler.GetInclusionRule),
-            .. mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule),
+            .. codeflowOptions.Mapping.Include.Select(VmrPatchHandler.GetInclusionRule),
+            .. codeflowOptions.Mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule),
             .. DependencyFileManager.CodeflowDependencyFiles.Select(VmrPatchHandler.GetExclusionRule),
         ];
 
         var result = await _processManager.Execute(
             _processManager.GitExecutable,
             ["rm", "-r", "-q", "-f", "--", .. removalFilters],
-            workingDir: _vmrInfo.GetRepoSourcesPath(mapping),
+            workingDir: _vmrInfo.GetRepoSourcesPath(codeflowOptions.Mapping),
             cancellationToken: cancellationToken);
 
         result.ThrowIfFailed($"Failed to remove files from the VMR");
 
         // Save the current sha we're flowing from before changing it to the zero commit
-        var currentSha = _dependencyTracker.GetDependencyVersion(mapping)?.Sha
-            ?? throw new Exception($"Failed to find current sha for {mapping.Name}");
+        var currentSha = _dependencyTracker.GetDependencyVersion(codeflowOptions.Mapping)?.Sha
+            ?? throw new Exception($"Failed to find current sha for {codeflowOptions.Mapping.Name}");
 
         // We make the VMR believe it has the zero commit of the repo as it matches the dir/git state at the moment
         _dependencyTracker.UpdateDependencyVersion(new VmrDependencyUpdate(
-            mapping,
-            build.GetRepository(),
+            codeflowOptions.Mapping,
+            codeflowOptions.Build.GetRepository(),
             Constants.EmptyGitObject,
             Parent: null,
-            build.AzureDevOpsBuildNumber,
-            build.Id));
+            codeflowOptions.Build.AzureDevOpsBuildNumber,
+            codeflowOptions.Build.Id));
 
         bool hadChanges = await _vmrUpdater.UpdateRepository(
-            mapping,
-            build,
+            codeflowOptions.Mapping,
+            codeflowOptions.Build,
             additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
             fromSha: currentSha,
             resetToRemoteWhenCloningRepo: ShouldResetClones,
@@ -397,15 +366,10 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             var commitMessage = (await vmr.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
 
             await MergeWorkBranchAsync(
-                mapping,
-                build,
-                currentFlow,
+                codeflowOptions,
                 vmr,
-                targetBranch,
-                headBranch,
                 workBranch,
                 headBranchExisted,
-                enableRebase,
                 commitMessage,
                 cancellationToken);
         }
