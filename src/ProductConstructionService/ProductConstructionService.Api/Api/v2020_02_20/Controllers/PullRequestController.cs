@@ -56,7 +56,9 @@ public partial class PullRequestController : ControllerBase
     }
 
     [HttpGet("tracked")]
-    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<TrackedPullRequest>), Description = "The list of currently tracked pull requests by the service")]
+    [SwaggerApiResponse(HttpStatusCode.OK,
+        Type = typeof(List<TrackedPullRequest>),
+        Description = "The list of currently tracked pull requests by the service")]
     [ValidateModelState]
     public async Task<IActionResult> GetTrackedPullRequests()
     {
@@ -112,7 +114,7 @@ public partial class PullRequestController : ControllerBase
             prs.Add(new TrackedPullRequest(
                 key.Replace(keyPrefix, null, StringComparison.InvariantCultureIgnoreCase),
                 TurnApiUrlToWebsite(pr.Url, org, repoName),
-                sampleSub?.Channel != null ? new Channel(sampleSub?.Channel) : null,
+                sampleSub?.Channel != null ? new Channel(sampleSub.Channel) : null,
                 sampleSub?.TargetBranch,
                 sampleSub?.SourceEnabled ?? false,
                 pr.LastUpdate,
