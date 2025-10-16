@@ -23,6 +23,7 @@ param pcs80rule string
 param pcs443rule string
 param containerEnvironmentName string
 param hostName string
+param appGwCapacity int
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' existing = {
   name: kvName
@@ -104,7 +105,7 @@ resource applicationGateway 'Microsoft.Network/applicationGateways@2023-04-01' =
     sku: {
       name: 'Standard_v2'
       tier: 'Standard_v2'
-      capacity: 10
+      capacity: appGwCapacity
     }
     sslCertificates: [
       {
