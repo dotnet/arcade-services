@@ -120,7 +120,7 @@ public partial class PullRequestController : ControllerBase
                 pr.LastCheck,
                 pr.NextCheck,
                 updates,
-                pr.MergeState));
+                pr.MergeState.Equals(InProgressPullRequestState.Conflict)));
         }
 
         return Ok(prs.AsQueryable());
@@ -175,7 +175,7 @@ public partial class PullRequestController : ControllerBase
                 csu.SourceRepo,
                 csu.SubscriptionId,
                 csu.BuildId))],
-            pr.MergeState);
+            pr.MergeState.Equals(InProgressPullRequestState.Conflict));
 
         return Ok(trackedPullRequest);
     }
@@ -227,7 +227,7 @@ public partial class PullRequestController : ControllerBase
         DateTime LastCheck,
         DateTime? NextCheck,
         List<PullRequestUpdate> Updates,
-        InProgressPullRequestState MergeState);
+        bool isInconflict);
 
     private record PullRequestUpdate(
         string SourceRepository,
