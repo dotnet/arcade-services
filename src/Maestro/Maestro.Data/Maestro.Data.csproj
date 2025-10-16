@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
     <SignAssembly>false</SignAssembly>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
   </PropertyGroup>
@@ -15,10 +14,7 @@
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Microsoft.DotNet.GitHub.Authentication" />
     <PackageReference Include="Microsoft.DotNet.Services.Utility" />
-    <!-- This is needed to bump the package version past what Microsoft.EntityFrameworkCore.SqlServer requires. Can be removed once we update to .NET 8 -->
     <PackageReference Include="Microsoft.Data.SqlClient" />
-    <!-- Remove this pin once updated to net8.0 -->
-    <PackageReference Include="System.IO.Hashing" VersionOverride="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
