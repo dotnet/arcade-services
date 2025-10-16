@@ -3,6 +3,8 @@
   <PropertyGroup>
     <SignAssembly>false</SignAssembly>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <!--Warning about lower case class names for migrations-->
+    <NoWarn>CS8981</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

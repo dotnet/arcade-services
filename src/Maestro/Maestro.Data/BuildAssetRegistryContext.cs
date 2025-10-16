@@ -289,7 +289,7 @@ public class BuildAssetRegistryContext(DbContextOptions options)
 #pragma warning restore CS0618
         var edgeTable = dependencyEntity.GetTableName();
 
-        var edges = BuildDependencies.FromSqlRaw($@"
+        var edges = BuildDependencies.FromSql($@"
 WITH traverse AS (
         SELECT
             {buildIdColumnName},
@@ -298,7 +298,7 @@ WITH traverse AS (
             {timeToInclusionInMinutesColumnName},
             0 as Depth
         from {edgeTable}
-        WHERE {buildIdColumnName} = @id
+        WHERE {buildIdColumnName} = {buildId}
     UNION ALL
         SELECT
             {edgeTable}.{buildIdColumnName},
@@ -313,8 +313,7 @@ WITH traverse AS (
             AND traverse.Depth < 10 -- Don't load all the way back because of incorrect isProduct columns
 )
 SELECT DISTINCT {buildIdColumnName}, {dependencyIdColumnName}, {isProductColumnName}, {timeToInclusionInMinutesColumnName}
-FROM traverse;",
-            new SqlParameter("id", buildId));
+FROM traverse;");
 
         List<BuildDependency> things = await edges.ToListAsync();
         var buildIds = new HashSet<int>(things.SelectMany(t => new[] { t.BuildId, t.DependentBuildId }))
