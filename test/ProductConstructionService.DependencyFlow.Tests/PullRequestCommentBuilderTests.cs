@@ -30,7 +30,7 @@ public class PullRequestCommentBuilderTests
         _basicBarClientMock.Reset();
         _remoteMock.Reset();
 
-        _basicBarClientMock.Setup(b => b.GetSubscriptionAsync(It.IsAny<Guid>()))
+        _basicBarClientMock.Setup(b => b.GetSubscriptionAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<bool>()))
             .Returns((Guid subscriptionToFind) =>
             {
                 return Task.FromResult(
