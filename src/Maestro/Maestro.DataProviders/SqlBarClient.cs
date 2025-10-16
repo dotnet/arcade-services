@@ -98,12 +98,13 @@ public class SqlBarClient : ISqlBarClient
 
     public async Task<Subscription> GetSubscriptionAsync(string subscriptionId)
     {
+        Guid subscriptionGuid;
         if (!Guid.TryParse(subscriptionId, out subscriptionGuid))
         {
             return null;
         }
 
-return await GetSubscriptionAsync(subscriptionGuid);
+        return await GetSubscriptionAsync(subscriptionGuid);
     }
 
     public async Task<Build> GetLatestBuildAsync(string repoUri, int channelId)
