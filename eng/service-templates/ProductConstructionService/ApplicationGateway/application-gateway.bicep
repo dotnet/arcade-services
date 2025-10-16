@@ -50,19 +50,6 @@ resource appGatewaySubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01'
   }
 }
 
-// subnet for the private link
-resource privateLinkSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01' = {
-  name: 'privateLink'
-  parent: virtualNetwork
-  properties: {
-      addressPrefix: '10.0.3.0/24'
-      networkSecurityGroup: {
-          id: networkSecurityGroup.id
-      }
-      privateLinkServiceNetworkPolicies: 'Disabled'
-  }
-}
-
 resource publicIpAddress 'Microsoft.Network/publicIPAddresses@2022-09-01' existing = {
   name: publicIpAddressName
 }
@@ -144,25 +131,6 @@ resource applicationGateway 'Microsoft.Network/applicationGateways@2023-04-01' =
           publicIPAddress: {
             id: publicIpAddress.id
           }
-        }
-      }
-    ]
-    privateLinkConfigurations: [
-      {
-        name: 'privateLinkConfiguration'
-        properties: {
-          ipConfigurations: [
-            {
-              name: 'privateLinkIpConfiguration'
-              properties: {
-                subnet: {
-                  id: privateLinkSubnet.id
-                }
-                primary: true
-                privateIPAllocationMethod: 'Dynamic'
-              }
-            }
-          ]
         }
       }
     ]
