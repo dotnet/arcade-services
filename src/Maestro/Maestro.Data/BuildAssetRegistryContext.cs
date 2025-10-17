@@ -41,7 +41,7 @@ public class BuildAssetRegistryContextFactory : IDesignTimeDbContextFactory<Buil
 
     public static string GetConnectionString(string databaseName)
     {
-        return $@"Data Source=localhost\SQLEXPRESS;Initial Catalog={databaseName};Integrated Security=true"; // CodeQL [SM03452] This 'connection string' is only for the local SQLExpress instance and has no credentials, Encrypt=true is unnecessary
+        return $@"Data Source=localhost\SQLEXPRESS;Initial Catalog={databaseName};Integrated Security=true;Encrypt=false"; // CodeQL [SM03452] This 'connection string' is only for the local SQLExpress instance and has no credentials, Encrypt=false for .NET 8+ compatibility
     }
 }
 
