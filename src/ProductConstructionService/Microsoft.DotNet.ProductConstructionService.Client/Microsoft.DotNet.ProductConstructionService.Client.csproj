@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
     <IsPackable>true</IsPackable>
     <Description>This package provides access to the PCS API</Description>
     <LangVersion>8.0</LangVersion>

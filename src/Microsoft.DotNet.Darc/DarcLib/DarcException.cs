@@ -13,10 +13,6 @@ public class DarcException : Exception
     {
     }
 
-    protected DarcException(SerializationInfo info, StreamingContext context) : base(info, context)
-    {
-    }
-
     public DarcException(string message) : base(message)
     {
     }

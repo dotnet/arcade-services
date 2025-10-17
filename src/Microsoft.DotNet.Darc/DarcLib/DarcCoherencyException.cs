@@ -32,9 +32,4 @@ public class DarcCoherencyException : DarcException
         : this(new List<CoherencyError> { coherencyError })
     {
     }
-
-    protected DarcCoherencyException(SerializationInfo info, StreamingContext context)
-        : base(info, context)
-    {
-    }
 }

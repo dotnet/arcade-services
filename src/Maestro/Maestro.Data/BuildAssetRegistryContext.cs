@@ -4,13 +4,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using EntityFrameworkCore.Triggers;
 using Maestro.Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
@@ -41,7 +41,7 @@ public class BuildAssetRegistryContextFactory : IDesignTimeDbContextFactory<Buil
 
     public static string GetConnectionString(string databaseName)
     {
-        return $@"Data Source=localhost\SQLEXPRESS;Initial Catalog={databaseName};Integrated Security=true"; // CodeQL [SM03452] This 'connection string' is only for the local SQLExpress instance and has no credentials, Encrypt=true is unnecessary
+        return $@"Data Source=localhost\SQLEXPRESS;Initial Catalog={databaseName};Integrated Security=true;Encrypt=false"; // CodeQL [SM03452] This 'connection string' is only for the local SQLExpress instance and has no credentials, Encrypt=false for .NET 8+ compatibility
     }
 }
 
@@ -289,7 +289,7 @@ public class BuildAssetRegistryContext(DbContextOptions options)
 #pragma warning restore CS0618
         var edgeTable = dependencyEntity.GetTableName();
 
-        var edges = BuildDependencies.FromSqlRaw($@"
+        var sqlTemplate = $@"
 WITH traverse AS (
         SELECT
             {buildIdColumnName},
@@ -298,7 +298,7 @@ WITH traverse AS (
             {timeToInclusionInMinutesColumnName},
             0 as Depth
         from {edgeTable}
-        WHERE {buildIdColumnName} = @id
+        WHERE {buildIdColumnName} = {{0}}
     UNION ALL
         SELECT
             {edgeTable}.{buildIdColumnName},
@@ -313,8 +313,9 @@ WITH traverse AS (
             AND traverse.Depth < 10 -- Don't load all the way back because of incorrect isProduct columns
 )
 SELECT DISTINCT {buildIdColumnName}, {dependencyIdColumnName}, {isProductColumnName}, {timeToInclusionInMinutesColumnName}
-FROM traverse;",
-            new SqlParameter("id", buildId));
+FROM traverse;";
+
+        var edges = BuildDependencies.FromSql(FormattableStringFactory.Create(sqlTemplate, buildId));
 
         List<BuildDependency> things = await edges.ToListAsync();
         var buildIds = new HashSet<int>(things.SelectMany(t => new[] { t.BuildId, t.DependentBuildId }))

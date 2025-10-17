@@ -19,12 +19,6 @@ public class DependencyFileNotFoundException : DarcException
     {
     }
 
-    protected DependencyFileNotFoundException(SerializationInfo info, StreamingContext context) : base(
-        info,
-        context)
-    {
-    }
-
     public DependencyFileNotFoundException()
     {
     }
