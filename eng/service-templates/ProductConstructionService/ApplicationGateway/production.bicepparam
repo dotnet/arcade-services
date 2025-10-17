@@ -25,3 +25,4 @@ param pcs80rule = 'pcs-rule-80'
 param pcs443rule = 'pcs-rule-443'
 param containerEnvironmentName = 'product-construction-service-env-prod'
 param hostName = 'maestro.dot.net'
+param appGwCapacity = 2
