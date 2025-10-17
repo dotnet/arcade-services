@@ -44,6 +44,12 @@ internal abstract class CodeFlowOperation(
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
+        // Validate that --build and --ref are not used together
+        if (_options.Build != 0 && !string.IsNullOrEmpty(_options.Ref))
+        {
+            throw new ArgumentException("The --build and --ref options cannot be used together. Please specify only one.");
+        }
+
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         ILocalGitRepo productRepo = _localGitRepoFactory.Create(repoPath);
         ILocalGitRepo sourceRepo = isForwardFlow ? productRepo : vmr;
