@@ -160,7 +160,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         bool batchable = _options.Batchable;
         bool sourceEnabled = _options.SourceEnabled;
         string sourceDirectory = _options.SourceDirectory;
-        string targetDirectory = _options.TargetDirectory;
+        string targetDirectory = NormalizeTargetDirectory(_options.TargetDirectory);
         string failureNotificationTags = _options.FailureNotificationTags;
         List<string> excludedAssets = _options.ExcludedAssets != null ? [.._options.ExcludedAssets.Split(';', StringSplitOptions.RemoveEmptyEntries)] : [];
 
@@ -360,5 +360,13 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             _logger.LogError(e, $"Failed to create subscription.");
             return Constants.ErrorCode;
         }
+    }
+
+    /// <summary>
+    /// Normalize target directory by converting "/" to "." to treat it as repo root
+    /// </summary>
+    private static string NormalizeTargetDirectory(string targetDirectory)
+    {
+        return targetDirectory == "/" ? "." : targetDirectory;
     }
 }

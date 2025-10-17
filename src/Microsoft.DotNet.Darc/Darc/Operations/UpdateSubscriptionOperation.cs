@@ -113,7 +113,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
 
             if (_options.TargetDirectory != null)
             {
-                targetDirectory = _options.TargetDirectory;
+                targetDirectory = NormalizeTargetDirectory(_options.TargetDirectory);
             }
 
             if (_options.ExcludedAssets != null)
@@ -424,5 +424,13 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                     }
                 });
         }
+    }
+
+    /// <summary>
+    /// Normalize target directory by converting "/" to "." to treat it as repo root
+    /// </summary>
+    private static string NormalizeTargetDirectory(string targetDirectory)
+    {
+        return targetDirectory == "/" ? "." : targetDirectory;
     }
 }
