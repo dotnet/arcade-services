@@ -125,9 +125,9 @@ public class FeedCleanerJob
             return ([], []);
         }
 
-        // Filter out disabled feeds
+        // Filter out disabled feeds (IsEnabled == false)
         List<AzureDevOpsFeed> activeFeeds = allFeeds
-            .Where(f => !string.Equals(f.Status, "disabled", StringComparison.OrdinalIgnoreCase))
+            .Where(f => f.IsEnabled)
             .ToList();
 
         int disabledCount = allFeeds.Count - activeFeeds.Count;
