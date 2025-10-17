@@ -192,9 +192,9 @@ internal class BackflowTests : CodeFlowTests
             new DependencyDetail
             {
                 Name = "Package.D3",
-                Version = "1.0.2", // Not part of the last 2 builds
-                RepoUri = build2.GitHubRepository,
-                Commit = build2.Commit,
+                Version = "1.0.3", // Not part of the last 2 builds
+                RepoUri = build1.GitHubRepository,
+                Commit = build1.Commit,
                 Type = DependencyType.Product,
                 Pinned = false,
             },
@@ -202,9 +202,9 @@ internal class BackflowTests : CodeFlowTests
             new DependencyDetail
             {
                 Name = DependencyFileManager.ArcadeSdkPackageName,
-                Version = "1.0.2",
-                RepoUri = build2.GitHubRepository,
-                Commit = build2.Commit,
+                Version = "1.0.1",
+                RepoUri = build1.GitHubRepository,
+                Commit = build1.Commit,
                 Type = DependencyType.Toolset,
                 Pinned = false,
             },
@@ -220,7 +220,7 @@ internal class BackflowTests : CodeFlowTests
         DependencyFileManager dependencyFileManager = GetDependencyFileManager();
         JObject globalJson = await dependencyFileManager.ReadGlobalJsonAsync(ProductRepoPath, branchName + "-pr", relativeBasePath: null);
         JToken? arcadeVersion = globalJson.SelectToken($"msbuild-sdks.['{DependencyFileManager.ArcadeSdkPackageName}']", true);
-        arcadeVersion?.ToString().Should().Be("1.0.2");
+        arcadeVersion?.ToString().Should().Be("1.0.1");
 
         var dotnetVersion = await dependencyFileManager.ReadToolsDotnetVersionAsync(ProductRepoPath, branchName + "-pr", relativeBasePath: null);
         dotnetVersion.ToString().Should().Be(Constants.VmrBaseDotnetSdkVersion);
@@ -276,9 +276,9 @@ internal class BackflowTests : CodeFlowTests
             new DependencyDetail
             {
                 Name = DependencyFileManager.ArcadeSdkPackageName,
-                Version = "1.0.2",
-                RepoUri = build2.GitHubRepository,
-                Commit = build2.Commit,
+                Version = "1.0.1",
+                RepoUri = build1.GitHubRepository,
+                Commit = build1.Commit,
                 Type = DependencyType.Toolset,
                 Pinned = false,
             },
