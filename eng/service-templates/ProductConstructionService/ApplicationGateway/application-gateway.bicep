@@ -23,6 +23,7 @@ param pcs80rule string
 param pcs443rule string
 param containerEnvironmentName string
 param hostName string
+param appGwCapacity int
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' existing = {
   name: kvName
@@ -47,19 +48,6 @@ resource appGatewaySubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01'
       networkSecurityGroup: {
           id: networkSecurityGroup.id
       }
-  }
-}
-
-// subnet for the private link
-resource privateLinkSubnet 'Microsoft.Network/virtualNetworks/subnets@2023-04-01' = {
-  name: 'privateLink'
-  parent: virtualNetwork
-  properties: {
-      addressPrefix: '10.0.3.0/24'
-      networkSecurityGroup: {
-          id: networkSecurityGroup.id
-      }
-      privateLinkServiceNetworkPolicies: 'Disabled'
   }
 }
 
@@ -117,7 +105,7 @@ resource applicationGateway 'Microsoft.Network/applicationGateways@2023-04-01' =
     sku: {
       name: 'Standard_v2'
       tier: 'Standard_v2'
-      capacity: 10
+      capacity: appGwCapacity
     }
     sslCertificates: [
       {
@@ -144,25 +132,6 @@ resource applicationGateway 'Microsoft.Network/applicationGateways@2023-04-01' =
           publicIPAddress: {
             id: publicIpAddress.id
           }
-        }
-      }
-    ]
-    privateLinkConfigurations: [
-      {
-        name: 'privateLinkConfiguration'
-        properties: {
-          ipConfigurations: [
-            {
-              name: 'privateLinkIpConfiguration'
-              properties: {
-                subnet: {
-                  id: privateLinkSubnet.id
-                }
-                primary: true
-                privateIPAllocationMethod: 'Dynamic'
-              }
-            }
-          ]
         }
       }
     ]

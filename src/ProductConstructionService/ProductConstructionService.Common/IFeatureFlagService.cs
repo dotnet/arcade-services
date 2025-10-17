@@ -25,6 +25,16 @@ public interface IFeatureFlagService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Determines asynchronously whether the specified feature flag is enabled for a given subscription.
+    /// </summary>
+    /// <param name="subscriptionId">The subscription ID.</param>
+    /// <param name="flag">The feature flag.</param>
+    Task<bool> IsFeatureOnAsync(
+        Guid subscriptionId,
+        FeatureFlag flag,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets a specific feature flag for a subscription.
     /// </summary>
     /// <param name="subscriptionId">The subscription ID.</param>
@@ -42,7 +52,7 @@ public interface IFeatureFlagService
     /// <param name="subscriptionId">The subscription ID.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>All feature flags for the subscription.</returns>
-    Task<IReadOnlyList<FeatureFlagValue>> GetFlagsForSubscriptionAsync(
+    Task<IReadOnlyList<FeatureFlagValue>> GetFlagsAsync(
         Guid subscriptionId,
         CancellationToken cancellationToken = default);
 

@@ -1297,6 +1297,62 @@ PS D:\enlistments\arcade-services> darc add-subscription --channel ".NET Tools -
 Successfully created new subscription with id '4f300f68-8800-4b14-328e-08d68308fe30'.
 ```
 
+**Target Directories for Dependency Flow Subscriptions**:
+
+Dependency flow subscriptions can use the `--target-directory` parameter to target specific 
+subpaths within the repository. This allows you to scope dependency updates to particular 
+directories, which is useful for repositories that contain other repositories within them, 
+such as the Virtual Mono Repo (VMR).
+
+Key features:
+- Specify multiple directories using a comma-separated list (e.g., `"src/sdk,src/runtime"`)
+- Use `.` to target the repository root
+- Include a wildcard (`*`) at the end of a path to match all directories at that path (e.g., `"src/*"`)
+- Combine with `--excluded-assets` to exclude specific assets in specific directories
+- Note: the path is specified without the trailing `eng/` directory (e.g. `src/arcade` will target `src/arcade/eng/Version.Details.xml`)
+
+**Note**: This feature is only available for dependency flow subscriptions. For source-enabled 
+(VMR code flow) subscriptions, `--source-directory` or `--target-directory` specify 
+a single VMR source mapping.
+
+**Examples**:
+
+```
+# Update dependencies only in specific directories
+PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9 Dev"
+                       --source-repo https://github.com/dotnet/runtime
+                       --target-repo https://github.com/dotnet/sdk
+                       --target-branch main --update-frequency everyBuild
+                       --target-directory "src/sdk,src/runtime" --standard-automerge -q
+
+# Use wildcards to target multiple directories
+PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9 Dev"
+                       --source-repo https://github.com/dotnet/runtime
+                       --target-repo https://github.com/dotnet/sdk
+                       --target-branch main --update-frequency everyBuild
+                       --target-directory "src/*" --standard-automerge -q
+
+# Target repository root
+PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9 Dev"
+                       --source-repo https://github.com/dotnet/runtime
+                       --target-repo https://github.com/dotnet/sdk
+                       --target-branch main --update-frequency everyBuild
+                       --target-directory "." --standard-automerge -q
+```
+
+When using `--target-directory`, you can also use `--excluded-assets` to exclude specific 
+assets in specific directories. For example:
+
+```
+# Exclude specific assets in specific directories
+PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9 Dev"
+                       --source-repo https://github.com/dotnet/runtime
+                       --target-repo https://github.com/dotnet/sdk
+                       --target-branch main --update-frequency everyBuild
+                       --target-directory "src/sdk,src/runtime"
+                       --excluded-assets "src/sdk/System.Text.Json;src/*/System.Text.*" -q
+```
+
 **Available merge policies**
 
 - Standard - This is the recommended merge policy. It encompasses two existing
@@ -2680,7 +2736,7 @@ the latest build of each dependency's repository that has been applied to the
 channel. It then updates the Version.Details.xml and other version files (e.g.
 Versions.props) based on the newest information.
 
-This command has two additional non-default modes:
+This command has three additional non-default modes:
 - Use a local package folder as input, avoiding a remote call to the
 build asset registry (--packages-folder)
 - Update a specific dependency to a new version (--name and --version)
@@ -2690,6 +2746,20 @@ This command is especially useful after adding new dependencies to a repository.
 See [Updating dependencies in your local
 repository](#updating-dependencies-in-your-local-repository) for more
 information.
+
+**Target Directories for Update Dependencies**:
+
+The `--target-directory` parameter allows you to specify where dependency updates should 
+be applied within the repository. This allows you to scope dependency updates to particular 
+directories, which is useful for repositories that contain other repositories within them, 
+such as the Virtual Mono Repo (VMR), or when a repository has multiple Version.Details.xml 
+files in different locations.
+
+Key features:
+- Specify multiple directories using a comma-separated list (e.g., `"src/sdk,src/runtime"`)
+- Use `.` to target the repository root
+- Include a wildcard (`*`) at the end of a path to match all directories at that path (e.g., `"src/*"`)
+- Combine with `--excluded-assets` to exclude specific assets in specific directories
 
 **Sample**
 ```
@@ -2735,6 +2805,27 @@ Updating 'Microsoft.DotNet.Wpf.GitHub': '5.0.0-alpha1.19462.16' => '5.0.0-alpha1
 Local dependencies updated from channel '.NET 5 Dev'.
 ```
 
+**Examples**:
+
+```
+# Update dependencies in specific directories only
+PS C:\enlistments\sdk> darc update-dependencies --channel ".NET 9 Dev" --target-directory "src/sdk,src/runtime"
+
+Processing directory: src/sdk
+  Updating 'Microsoft.NETCore.App.Runtime.win-x64': '9.0.0-preview.1.23456.7' => '9.0.0-preview.1.23457.1'
+Processing directory: src/runtime
+  Updating 'Microsoft.NETCore.App.Runtime.linux-x64': '9.0.0-preview.1.23456.7' => '9.0.0-preview.1.23457.1'
+Local dependencies updated from channel '.NET 9 Dev'.
+
+# Use wildcards to update all subdirectories
+PS C:\enlistments\sdk> darc update-dependencies --channel ".NET 9 Dev" --target-directory "src/*"
+
+# Exclude specific assets in specific directories
+PS C:\enlistments\sdk> darc update-dependencies --channel ".NET 9 Dev" 
+                       --target-directory "src/sdk,src/runtime"
+                       --excluded-assets "src/sdk/System.Text.Json;src/*/System.Text.*"
+```
+
 **See Also**:
 - [add](#add)
 - [get-dependencies](#get-dependencies)
@@ -2749,6 +2840,14 @@ target branch) may not be edited. Additionally, the subscription ID and Source
 Enabled flag cannot be modified. If any of these immutable fields are changed,
 the update will fail with an error listing all the fields that cannot be
 modified.
+
+**Target Directories**: For dependency flow subscriptions, you can specify multiple 
+target directories (comma-separated) where dependency updates should be applied. 
+Use '.' for the repository root. Paths can include a wildcard (`*`) at the end to match 
+multiple directories (e.g., `src/*`).
+
+When using target directories with `--excluded-assets`, you can exclude specific 
+assets in specific directories (e.g., `src/sdk/System.Text.Json` or `src/*/System.Text.*`).
 
 **Sample**:
 ```
