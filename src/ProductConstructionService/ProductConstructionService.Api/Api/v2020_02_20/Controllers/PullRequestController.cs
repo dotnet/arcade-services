@@ -4,11 +4,13 @@
 using System.Net;
 using System.Text.RegularExpressions;
 using Maestro.Common;
+using Maestro.Data;
 using Maestro.DataProviders;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Api.v2020_02_20.Models;
 using ProductConstructionService.Common;
@@ -45,13 +47,16 @@ public partial class PullRequestController : ControllerBase
 
     private readonly IRedisCacheFactory _cacheFactory;
     private readonly SqlBarClient _sqlClient;
+    private readonly BuildAssetRegistryContext _context;
 
     public PullRequestController(
         IRedisCacheFactory cacheFactory,
-        SqlBarClient sqlClient)
+        SqlBarClient sqlClient,
+        BuildAssetRegistryContext context)
     {
         _cacheFactory = cacheFactory;
         _sqlClient = sqlClient;
+        _context = context;
     }
 
     [HttpGet("tracked")]
@@ -134,8 +139,10 @@ public partial class PullRequestController : ControllerBase
     /// cref="NotFoundResult"/> if no pull request is associated with the specified subscription.</returns>
     [HttpGet("tracked/subscription/{subscriptionId}")]
     [SwaggerApiResponse(HttpStatusCode.OK,
-        Type = typeof(TrackedPullRequest),
-        Description = "Get a PR that is tracked by the service, by its subscription id")]
+    Type = typeof(TrackedPullRequest),
+        Description = "Get a PR that is tracked by the service, by its corresponding subscription id")]
+    [SwaggerApiResponse(HttpStatusCode.BadRequest, Description = "Wrong attributes provided")]
+    [SwaggerApiResponse(HttpStatusCode.NotFound, Description = "The corresponding subscription or pull request cannot be found")]
     [ValidateModelState]
     public async Task<IActionResult> GetTrackedPullRequestBySubscriptionId(string subscriptionId)
     {
@@ -144,7 +151,9 @@ public partial class PullRequestController : ControllerBase
             return BadRequest("A valid subscription GUID must be provided.");
         }
 
-        var subscription = await _sqlClient.GetSubscriptionDAOAsync(subscriptionGuid);
+        var subscription = await _context.Subscriptions
+            .Include(s => s.Channel)
+            .SingleOrDefaultAsync(s => s.Id == subscriptionGuid);
 
         if (subscription == null)
         {
