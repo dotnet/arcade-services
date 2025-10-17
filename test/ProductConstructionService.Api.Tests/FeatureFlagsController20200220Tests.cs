@@ -130,7 +130,7 @@ public class FeatureFlagsController20200220Tests
         };
 
         _mockFeatureFlagService
-            .Setup(s => s.GetFlagsForSubscriptionAsync(_testSubscriptionId, default))
+            .Setup(s => s.GetFlagsAsync(_testSubscriptionId, default))
             .ReturnsAsync(expectedFlags);
 
         // Act

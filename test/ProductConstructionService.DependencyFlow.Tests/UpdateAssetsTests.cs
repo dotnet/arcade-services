@@ -255,4 +255,47 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
             AndShouldHaveInProgressPullRequestState(b, assetFilter: assetFilter);
         }
     }
+
+    [Test]
+    public async Task UpdateWithAssetsWithTargetDirectories()
+    {
+        GivenATestChannel();
+        GivenASubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = true,
+                UpdateFrequency = UpdateFrequency.EveryBuild
+            },
+            targetDirectory: ".,src/foo,src/bar");
+        Build b = GivenANewBuild(true);
+        UnixPath path1 = UnixPath.Empty;
+        UnixPath path2 = new UnixPath("src/foo");
+        UnixPath path3 = new UnixPath("src/bar");
+        UnixPath[] targetDirectories = [path1, path2, path3];
+
+        WithRequireNonCoherencyUpdates();
+        WithNoRequiredCoherencyUpdates();
+        CreatePullRequestShouldReturnAValidValue(TargetRepo);
+
+        await WhenUpdateAssetsAsyncIsCalled(b, shouldGetUpdates: true);
+
+        ThenGetRequiredUpdatesForMultipleDirectoriesShouldHaveBeenCalled(b, false, targetDirectories);
+        AndCreateNewBranchShouldHaveBeenCalled();
+        AndCommitUpdatesForMultipleDirectoriesShouldHaveBeenCalled(b, 3);
+        AndCreatePullRequestShouldHaveBeenCalled();
+        // create a list of dependency updates for every path and every asset in the build
+        List<DependencyUpdateSummary> dependencyUpdates = b.Assets
+            .SelectMany(a => targetDirectories.Select(dir => new DependencyUpdateSummary
+            {
+                DependencyName = a.Name,
+                FromVersion = a.Version,
+                ToVersion = a.Version,
+                FromCommitSha = NewCommit,
+                ToCommitSha = "sha3333",
+                RelativeBasePath = dir
+            }))
+            .ToList();
+        AndShouldHaveInProgressPullRequestState(b, url: VmrPullRequestUrl, dependencyUpdates: dependencyUpdates);
+        AndShouldHavePullRequestCheckReminder(VmrPullRequestUrl);
+    }
 }

@@ -44,6 +44,7 @@ internal abstract class UpdaterTests : TestsWithServices
     protected Dictionary<string, Mock<IRemote>> DarcRemotes { get; private set; } = null!;
     protected Mock<ICoherencyUpdateResolver> UpdateResolver { get; private set; } = null!;
     protected Mock<IMergePolicyEvaluator> MergePolicyEvaluator { get; private set; } = null!;
+    protected Mock<IFeatureFlagService> FeatureFlagService { get; private set; } = new();
 
     protected override void RegisterServices(IServiceCollection services)
     {
@@ -57,11 +58,14 @@ internal abstract class UpdaterTests : TestsWithServices
         services.AddSingleton(Mock.Of<IKustoClientProvider>());
         services.AddSingleton(RemoteFactory.Object);
         services.AddSingleton(UpdateResolver.Object);
+        services.AddSingleton(FeatureFlagService.Object);
         services.AddLogging();
 
         RemoteFactory
             .Setup(f => f.CreateRemoteAsync(It.IsAny<string>()))
             .ReturnsAsync((string repo) => DarcRemotes.GetOrAddValue(repo, () => CreateMock<IRemote>()).Object);
+
+        FeatureFlagService.SetReturnsDefault(Task.FromResult<FeatureFlagValue?>(null));
     }
 
     [SetUp]

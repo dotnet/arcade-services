@@ -226,10 +226,12 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                             TestRepository.VmrTestRepoName,
                             pr,
                             [
-                                $"`{TestFile1Name}` - [🔍 View in {TestRepository.TestOrg}/{TestRepository.TestRepo1Name}](https://github.com/{TestRepository.TestOrg}/{TestRepository.TestRepo1Name}/blob/{repoSha}/{TestFile1Name})" +
-                                $" / [🔍 View in VMR](https://github.com/{TestRepository.TestOrg}/{TestRepository.VmrTestRepoName}/blob/{pr.Head.Ref}/src/{TestRepository.TestRepo1Name}/{TestFile1Name}",
-                                $"`{TestFile2Name}` - [🔍 View in {TestRepository.TestOrg}/{TestRepository.TestRepo1Name}](https://github.com/{TestRepository.TestOrg}/{TestRepository.TestRepo1Name}/blob/{repoSha}/{TestFile2Name})" +
-                                $" / [🔍 View in VMR](https://github.com/{TestRepository.TestOrg}/{TestRepository.VmrTestRepoName}/blob/{pr.Head.Ref}/src/{TestRepository.TestRepo1Name}/{TestFile2Name}",
+                                TestFile1Name,
+                                TestFile2Name,
+                                $"{TestRepository.TestOrg}/{TestRepository.TestRepo1Name}](https://github.com/{TestRepository.TestOrg}/{TestRepository.TestRepo1Name}/blob/{repoSha}/{TestFile1Name})",
+                                $"VMR](https://github.com/{TestRepository.TestOrg}/{TestRepository.VmrTestRepoName}/blob/{pr.Head.Ref}/src/{TestRepository.TestRepo1Name}/{TestFile1Name}",
+                                $"{TestRepository.TestOrg}/{TestRepository.TestRepo1Name}](https://github.com/{TestRepository.TestOrg}/{TestRepository.TestRepo1Name}/blob/{repoSha}/{TestFile2Name})",
+                                $"VMR](https://github.com/{TestRepository.TestOrg}/{TestRepository.VmrTestRepoName}/blob/{pr.Head.Ref}/src/{TestRepository.TestRepo1Name}/{TestFile2Name}",
                             ]);
 
                         await test();

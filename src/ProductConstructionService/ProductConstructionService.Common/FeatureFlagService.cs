@@ -57,6 +57,15 @@ public class FeatureFlagService : IFeatureFlagService
         }
     }
 
+    public async Task<bool> IsFeatureOnAsync(
+        Guid subscriptionId,
+        FeatureFlag flag,
+        CancellationToken cancellationToken = default)
+    {
+        var flagValue = await GetFlagAsync(subscriptionId, flag, cancellationToken);
+        return flagValue?.Value.Equals("true", StringComparison.OrdinalIgnoreCase) ?? false;
+    }
+
     public async Task<FeatureFlagValue?> GetFlagAsync(
         Guid subscriptionId,
         FeatureFlag flag,
@@ -85,7 +94,7 @@ public class FeatureFlagService : IFeatureFlagService
         }
     }
 
-    public async Task<IReadOnlyList<FeatureFlagValue>> GetFlagsForSubscriptionAsync(
+    public async Task<IReadOnlyList<FeatureFlagValue>> GetFlagsAsync(
         Guid subscriptionId,
         CancellationToken cancellationToken = default)
     {
