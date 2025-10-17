@@ -15,6 +15,10 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 {
     public partial interface IPullRequest
     {
+        Task<Models.TrackedPullRequest> GetTrackedPullRequestAsync(
+            string subscriptionId,
+            CancellationToken cancellationToken = default
+        );
         Task<List<Models.TrackedPullRequest>> GetTrackedPullRequestsAsync(
             CancellationToken cancellationToken = default
         );
@@ -38,6 +42,14 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         partial void HandleFailedRequest(RestApiException ex);
 
         partial void HandleFailedGetTrackedPullRequestsRequest(RestApiException ex);
+
+        public Task<Models.TrackedPullRequest> GetTrackedPullRequestAsync(
+            string id,
+            CancellationToken cancellationToken = default
+        )
+        {
+            throw new NotImplementedException();
+        }
 
         public async Task<List<Models.TrackedPullRequest>> GetTrackedPullRequestsAsync(
             CancellationToken cancellationToken = default

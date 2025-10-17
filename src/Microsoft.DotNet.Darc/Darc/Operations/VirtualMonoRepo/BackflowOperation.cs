@@ -8,9 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -19,6 +17,7 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 internal class BackflowOperation(
     BackflowCommandLineOptions options,
     IVmrInfo vmrInfo,
+    IVmrForwardFlower forwardFlower,
     IVmrBackFlower backFlower,
     IBackflowConflictResolver backflowConflictResolver,
     IVmrCloneManager vmrCloneManager,
@@ -29,12 +28,10 @@ internal class BackflowOperation(
     IProcessManager processManager,
     IFileSystem fileSystem,
     ILogger<BackflowOperation> logger)
-    : CodeFlowOperation(options, vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
+    : CodeFlowOperation(options, forwardFlower, backFlower, backflowConflictResolver,  vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
 {
     private readonly BackflowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
-    private readonly IVmrBackFlower _backFlower = backFlower;
-    private readonly IBackflowConflictResolver _backflowConflictResolver = backflowConflictResolver;
     private readonly IProcessManager _processManager = processManager;
 
     protected override async Task ExecuteInternalAsync(
@@ -56,46 +53,5 @@ internal class BackflowOperation(
             isForwardFlow: false,
             additionalRemotes,
             cancellationToken);
-    }
-
-    protected override async Task<bool> FlowCodeAsync(
-        ILocalGitRepo productRepo,
-        Build build,
-        Codeflow currentFlow,
-        SourceMapping mapping,
-        string headBranch,
-        IReadOnlyList<string> excludedAssets,
-        CancellationToken cancellationToken)
-    {
-        LastFlows lastFlows = await _backFlower.GetLastFlowsAsync(
-            mapping.Name,
-            productRepo,
-            currentIsBackflow: true);
-
-        try
-        {
-            var result = await _backFlower.FlowBackAsync(
-                mapping.Name,
-                productRepo.Path,
-                build,
-                excludedAssets: excludedAssets,
-                headBranch,
-                headBranch,
-                enableRebase: true,
-                forceUpdate: true,
-                cancellationToken);
-
-            return result.HadUpdates;
-        }
-        finally
-        {
-            await _backflowConflictResolver.TryMergingBranchAndUpdateDependencies(
-                new CodeflowOptions(mapping, currentFlow, headBranch, headBranch, build, excludedAssets, true, false),
-                lastFlows,
-                productRepo,
-                headBranch,
-                headBranchExisted: true,
-                cancellationToken);
-        }
     }
 }
