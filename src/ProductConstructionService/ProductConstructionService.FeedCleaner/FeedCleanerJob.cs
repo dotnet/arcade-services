@@ -125,7 +125,6 @@ public class FeedCleanerJob
             return ([], []);
         }
 
-        // Filter out disabled feeds (IsEnabled == false)
         List<AzureDevOpsFeed> activeFeeds = allFeeds
             .Where(f => f.IsEnabled)
             .ToList();
