@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
@@ -47,7 +48,7 @@ internal abstract class CodeFlowCommandLineOptions<T>
         // Validate that --build and --ref are not used together
         if (Build != 0 && !string.IsNullOrEmpty(Ref))
         {
-            throw new System.ArgumentException("The --build and --ref options cannot be used together. Please specify only one.");
+            throw new ArgumentException("The --build and --ref options cannot be used together. Please specify only one.");
         }
 
         return base.RegisterServices(services);
