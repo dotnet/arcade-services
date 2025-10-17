@@ -5,11 +5,11 @@ using System.Net;
 using System.Text.RegularExpressions;
 using Maestro.Common;
 using Maestro.Data;
-using Maestro.DataProviders;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Api.v2020_02_20.Models;
@@ -46,16 +46,13 @@ public partial class PullRequestController : ControllerBase
     }
 
     private readonly IRedisCacheFactory _cacheFactory;
-    private readonly SqlBarClient _sqlClient;
     private readonly BuildAssetRegistryContext _context;
 
     public PullRequestController(
         IRedisCacheFactory cacheFactory,
-        SqlBarClient sqlClient,
         BuildAssetRegistryContext context)
     {
         _cacheFactory = cacheFactory;
-        _sqlClient = sqlClient;
         _context = context;
     }
 
@@ -81,13 +78,11 @@ public partial class PullRequestController : ControllerBase
                 continue;
             }
 
-            var subscriptionIds = pr.ContainedSubscriptions
-                .Select(s => s.SubscriptionId)
-                .ToList();
-
-            var subscriptions = await _sqlClient.GetSubscriptionDAOsAsync(subscriptionIds,
-                withExcludedAssets: false,
-                withChannel: true);
+            var subscriptionIds = pr.ContainedSubscriptions.Select(s => s.SubscriptionId).ToList();
+            var subscriptions = await _context.Subscriptions
+                .Where(s => subscriptionIds.Contains(s.Id))
+                .Include(s => s.Channel)
+                .ToListAsync();
 
             var sampleSub = subscriptions.FirstOrDefault();
 

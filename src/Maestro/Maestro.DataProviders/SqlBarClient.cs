@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.Services.Utility;
@@ -32,51 +31,11 @@ public class SqlBarClient : ISqlBarClient
         _kustoClientProvider = kustoClientProvider;
     }
 
-
-    public async Task<List<Data.Models.Subscription>> GetSubscriptionDAOsAsync(
-        IEnumerable<Guid> subscriptionIds,
-        bool withExcludedAssets = true,
-        bool withChannel = false)
+    public async Task<Subscription> GetSubscriptionAsync(Guid subscriptionId)
     {
-        var query = _context.Subscriptions.AsQueryable();
-
-        if (withChannel)
-        {
-            query = query.Include(s => s.Channel);
-        }
-
-        if (withExcludedAssets)
-        {
-            query = query.Include(s => s.ExcludedAssets);
-        }
-
-        var subs = await query
-            .Where(s => subscriptionIds.Contains(s.Id))
-            .ToListAsync();
-
-        return subs;
-    }
-
-    public async Task<Data.Models.Subscription> GetSubscriptionDAOAsync(
-        Guid subscriptionId,
-        bool withExcludedAssets = true,
-        bool withChannel = false)
-    {
-        var subscriptions = await GetSubscriptionDAOsAsync(
-            [subscriptionId],
-            withExcludedAssets,
-            withChannel);
-
-        return subscriptions.FirstOrDefault();
-    }
-
-    public async Task<Subscription> GetSubscriptionAsync(
-        Guid subscriptionId,
-        bool withExcludedAssets = true,
-        bool withChannel = false)
-    {
-        var sub = (await GetSubscriptionDAOsAsync([subscriptionId], withExcludedAssets, withChannel))
-            .FirstOrDefault();
+        var sub = await _context.Subscriptions
+            .Include(s => s.ExcludedAssets)
+            .FirstOrDefaultAsync(s => s.Id.Equals(subscriptionId));
 
         if (sub == null)
         {
@@ -98,13 +57,7 @@ public class SqlBarClient : ISqlBarClient
 
     public async Task<Subscription> GetSubscriptionAsync(string subscriptionId)
     {
-        Guid subscriptionGuid;
-        if (!Guid.TryParse(subscriptionId, out subscriptionGuid))
-        {
-            return null;
-        }
-
-        return await GetSubscriptionAsync(subscriptionGuid);
+        return await GetSubscriptionAsync(Guid.Parse(subscriptionId));
     }
 
     public async Task<Build> GetLatestBuildAsync(string repoUri, int channelId)
