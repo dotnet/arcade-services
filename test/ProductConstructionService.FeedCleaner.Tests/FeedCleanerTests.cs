@@ -171,6 +171,7 @@ public class FeedCleanerTests
     {
         string activeFeedName = "darc-int-active-repo-12345678";
         string disabledFeedName = "darc-int-disabled-repo-87654321";
+        string emptyStatusFeedName = "darc-int-emptystatus-repo-11111111";
         string releasedPackage = ReleasedPackagePrefix;
 
         int i = 1;
@@ -190,6 +191,7 @@ public class FeedCleanerTests
         {
             { activeFeedName, CreateFeed(activeFeedName, "active", releasedPackage) },
             { disabledFeedName, CreateFeed(disabledFeedName, "disabled", releasedPackage) },
+            { emptyStatusFeedName, CreateFeed(emptyStatusFeedName, "", releasedPackage) },
         };
 
         var feedCleaner = InitializeFeedCleaner(nameof(DisabledFeedsAreSkipped), feeds);
@@ -200,6 +202,9 @@ public class FeedCleanerTests
         
         // Disabled feed should have been skipped and packages not deleted
         feeds[disabledFeedName].Packages.All(p => p.Versions.All(v => !v.IsDeleted)).Should().BeTrue();
+
+        // Feed with empty status should have been processed (default behavior)
+        feeds[emptyStatusFeedName].Packages.All(p => p.Versions.All(v => v.IsDeleted)).Should().BeTrue();
     }
 
     private void SetupAssetsFromFeeds(BuildAssetRegistryContext context)
