@@ -142,6 +142,7 @@ public class FeedCleanerTests
         {
             return new AzureDevOpsFeed(SomeAccount, $"{i++}", name)
             {
+                IsEnabled = true,
                 Packages = [..packageNames.Select(p => new AzureDevOpsPackage(p, "nuget")
                 {
                     Versions = [new AzureDevOpsPackageVersion("1.0", isDeleted: false)]
@@ -164,6 +165,42 @@ public class FeedCleanerTests
 
         feeds[symbolFeedWithReleasedPackages].Packages.All(p => p.Versions.All(v => v.IsDeleted)).Should().BeTrue();
         feeds[symbolFeedWithoutReleasedPackages].Packages.All(p => p.Versions.All(v => !v.IsDeleted)).Should().BeTrue();
+    }
+
+    [Test]
+    public async Task DisabledFeedsAreSkipped()
+    {
+        string activeFeedName = "darc-int-active-repo-12345678";
+        string disabledFeedName = "darc-int-disabled-repo-87654321";
+        string releasedPackage = ReleasedPackagePrefix;
+
+        int i = 1;
+        AzureDevOpsFeed CreateFeed(string name, bool isEnabled, params string[] packageNames)
+        {
+            return new AzureDevOpsFeed(SomeAccount, $"{i++}", name)
+            {
+                IsEnabled = isEnabled,
+                Packages = [..packageNames.Select(p => new AzureDevOpsPackage(p, "nuget")
+                {
+                    Versions = [new AzureDevOpsPackageVersion("1.0", isDeleted: false)]
+                })]
+            };
+        }
+
+        var feeds = new Dictionary<string, AzureDevOpsFeed>()
+        {
+            { activeFeedName, CreateFeed(activeFeedName, true, releasedPackage) },
+            { disabledFeedName, CreateFeed(disabledFeedName, false, releasedPackage) },
+        };
+
+        var feedCleaner = InitializeFeedCleaner(nameof(DisabledFeedsAreSkipped), feeds);
+        await feedCleaner.CleanManagedFeedsAsync();
+
+        // Active feed should have been processed and packages deleted
+        feeds[activeFeedName].Packages.All(p => p.Versions.All(v => v.IsDeleted)).Should().BeTrue();
+        
+        // Disabled feed should have been skipped and packages not deleted
+        feeds[disabledFeedName].Packages.All(p => p.Versions.All(v => !v.IsDeleted)).Should().BeTrue();
     }
 
     private void SetupAssetsFromFeeds(BuildAssetRegistryContext context)
@@ -268,6 +305,7 @@ public class FeedCleanerTests
 
         var managedFeedWithUnreleasedPackages = new AzureDevOpsFeed(account, "1", FeedWithUnreleasedPackagesName, null)
         {
+            IsEnabled = true,
             Packages =
             [
                 new AzureDevOpsPackage("unreleasedPackage1", "nuget")
@@ -290,6 +328,7 @@ public class FeedCleanerTests
 
         var managedFeedWithEveryPackageReleased = new AzureDevOpsFeed(account, "2", FeedWithAllPackagesReleasedName, someProject)
         {
+            IsEnabled = true,
             Packages =
             [
                 new AzureDevOpsPackage($"{ReleasedPackagePrefix}2", "nuget")
@@ -314,6 +353,7 @@ public class FeedCleanerTests
         // add a feed with all released packages, but that doesn't match the name pattern. It shouldn't be touched by the cleaner.
         var nonManagedFeedWithEveryPackageReleased = new AzureDevOpsFeed(account, "3", UnmanagedFeedName, someProject)
         {
+            IsEnabled = true,
             Packages =
             [
                 new AzureDevOpsPackage("Newtonsoft.Json", "nuget")
