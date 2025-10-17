@@ -44,6 +44,12 @@ internal abstract class CodeFlowCommandLineOptions<T>
             Verbose = true;
         }
 
+        // Validate that --build and --ref are not used together
+        if (Build != 0 && !string.IsNullOrEmpty(Ref))
+        {
+            throw new System.ArgumentException("The --build and --ref options cannot be used together. Please specify only one.");
+        }
+
         return base.RegisterServices(services);
     }
 }
