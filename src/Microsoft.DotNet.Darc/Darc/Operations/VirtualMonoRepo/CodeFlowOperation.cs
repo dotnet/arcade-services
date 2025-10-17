@@ -20,6 +20,9 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal abstract class CodeFlowOperation(
         ICodeFlowCommandLineOptions options,
+        IVmrForwardFlower forwardFlower,
+        IVmrBackFlower backFlower,
+        IBackflowConflictResolver backflowConflictResolver,
         IVmrInfo vmrInfo,
         IVmrCloneManager vmrCloneManager,
         IVmrDependencyTracker dependencyTracker,
@@ -31,6 +34,9 @@ internal abstract class CodeFlowOperation(
     : VmrOperationBase(options, logger)
 {
     private readonly ICodeFlowCommandLineOptions _options = options;
+    private readonly IVmrForwardFlower _forwardFlower = forwardFlower;
+    private readonly IVmrBackFlower _backFlower = backFlower;
+    private readonly IBackflowConflictResolver _backflowConflictResolver = backflowConflictResolver;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly IVmrCloneManager _vmrCloneManager = vmrCloneManager;
     private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
@@ -44,7 +50,8 @@ internal abstract class CodeFlowOperation(
         NativePath repoPath,
         bool isForwardFlow,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        int buildId = 0)
     {
         // If subscription ID is provided, fetch subscription metadata and populate options
         if (!string.IsNullOrEmpty(_options.SubscriptionId))
@@ -57,7 +64,13 @@ internal abstract class CodeFlowOperation(
         ILocalGitRepo sourceRepo = isForwardFlow ? productRepo : vmr;
         ILocalGitRepo targetRepo = isForwardFlow ? vmr : productRepo;
 
-        Build build = await GetBuildAsync(sourceRepo.Path);
+        if (buildId == 0)
+        {
+            buildId = _options.Build;
+        }
+
+        var build = await GetBuildAsync(sourceRepo.Path, buildId);
+
         string mappingName = await GetSourceMappingNameAsync(productRepo.Path);
 
         await VerifyLocalRepositoriesAsync(productRepo);
@@ -94,22 +107,41 @@ internal abstract class CodeFlowOperation(
 
         try
         {
-            bool hasChanges = await FlowCodeAsync(
-                productRepo,
-                build,
-                currentFlow,
-                mapping,
-                currentTargetRepoBranch,
-                excludedAssets,
-                cancellationToken);
+            bool hasChanges;
+            if (currentFlow is ForwardFlow)
+            {
+                hasChanges = await FlowForwardAsync(
+                    productRepo,
+                    build,
+                    currentFlow,
+                    mapping,
+                    currentTargetRepoBranch,
+                    excludedAssets,
+                    cancellationToken);
+            }
+            else
+            {
+                hasChanges = await FlowBackAsync(
+                    productRepo,
+                    build,
+                    currentFlow,
+                    mapping,
+                    currentTargetRepoBranch,
+                    excludedAssets,
+                    cancellationToken);
+            }
 
             if (!hasChanges)
             {
-                _logger.LogInformation("No changes to flow between the VMR and {repo}.", mapping.Name);
-                return;
-            }
 
-            _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
+                if (!hasChanges)
+                {
+                    _logger.LogInformation("No changes to flow between the VMR and {repo}.", mapping.Name);
+                    return;
+                }
+
+                _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
+            }
         }
         finally
         {
@@ -143,21 +175,12 @@ internal abstract class CodeFlowOperation(
         }
     }
 
-    protected abstract Task<bool> FlowCodeAsync(
-        ILocalGitRepo productRepo,
-        Build build,
-        Codeflow currentFlow,
-        SourceMapping mapping,
-        string headBranch,
-        IReadOnlyList<string> excludedAssets,
-        CancellationToken cancellationToken);
-
-    private async Task<Build> GetBuildAsync(NativePath sourceRepoPath)
+    private async Task<Build> GetBuildAsync(NativePath sourceRepoPath, int buildId)
     {
         ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(sourceRepoPath);
 
         Build build;
-        if (_options.Build == 0)
+        if (buildId == 0)
         {
             _options.Ref = await sourceRepo.GetShaForRefAsync(_options.Ref);
             build = new(-1, DateTimeOffset.Now, 0, false, false, _options.Ref, [], [], [], [])
@@ -182,6 +205,84 @@ internal abstract class CodeFlowOperation(
         }
 
         return build;
+    }
+
+    protected async Task<bool> FlowForwardAsync(
+        ILocalGitRepo productRepo,
+        Build build,
+        Codeflow currentFlow,
+        SourceMapping mapping,
+        string headBranch,
+        IReadOnlyList<string> excludedAssets,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            CodeFlowResult result = await _forwardFlower.FlowForwardAsync(
+                mapping.Name,
+                productRepo.Path,
+                build,
+                excludedAssets: excludedAssets,
+                headBranch,
+                headBranch,
+                _vmrInfo.VmrPath,
+                enableRebase: true,
+                forceUpdate: true,
+                cancellationToken);
+
+            return result.HadUpdates;
+        }
+        finally
+        {
+            // Update target branch's source manifest with the new commit
+            var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+            var sourceManifestContent = await vmr.GetFileFromGitAsync(VmrInfo.DefaultRelativeSourceManifestPath, headBranch);
+            var sourceManifest = SourceManifest.FromJson(sourceManifestContent!);
+            sourceManifest.UpdateVersion(mapping.Name, build.GetRepository(), build.Commit, build.Id);
+            _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, sourceManifest.ToJson());
+            await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
+        }
+    }
+
+    protected async Task<bool> FlowBackAsync(
+        ILocalGitRepo productRepo,
+        Build build,
+        Codeflow currentFlow,
+        SourceMapping mapping,
+        string headBranch,
+        IReadOnlyList<string> excludedAssets,
+        CancellationToken cancellationToken)
+    {
+        LastFlows lastFlows = await _backFlower.GetLastFlowsAsync(
+            mapping.Name,
+            productRepo,
+            currentIsBackflow: true);
+
+        try
+        {
+            var result = await _backFlower.FlowBackAsync(
+                mapping.Name,
+                productRepo.Path,
+                build,
+                excludedAssets: excludedAssets,
+                headBranch,
+                headBranch,
+                enableRebase: true,
+                forceUpdate: true,
+                cancellationToken);
+
+            return result.HadUpdates;
+        }
+        finally
+        {
+            await _backflowConflictResolver.TryMergingBranchAndUpdateDependencies(
+                new CodeflowOptions(mapping, currentFlow, headBranch, headBranch, build, excludedAssets, true, false),
+                lastFlows,
+                productRepo,
+                headBranch,
+                headBranchExisted: true,
+                cancellationToken);
+        }
     }
 
     protected async Task VerifyLocalRepositoriesAsync(ILocalGitRepo repo)

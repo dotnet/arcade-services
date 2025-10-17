@@ -45,5 +45,11 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 
         [JsonProperty("isInConflict")]
         public bool IsInConflict { get; set; }
+
+        [JsonProperty("headBranch")]
+        public string HeadBranch { get; set; }
+
+        [JsonProperty("nextBuildsToApply")]
+        public Dictionary<Guid, int> NextBuildsToApply { get; set; }
     }
 }

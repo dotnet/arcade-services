@@ -11,6 +11,7 @@ using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
@@ -192,6 +193,35 @@ public class Local
         return versionDetails.Dependencies
             .Where(dependency => string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
             .ToList();
+    }
+
+    /// <summary>
+    ///     Gets the local source dependency
+    /// </summary>
+    public async Task<SourceDependency> GetSourceDependencyAsync(
+        bool includePinned = true,
+        UnixPath relativeBasePath = null)
+    {
+        VersionDetails versionDetails = await _fileManager.ParseVersionDetailsXmlAsync(
+            _repoRootDir.Value,
+            null,
+            includePinned,
+            relativeBasePath);
+
+        return versionDetails.Source;
+    }
+
+    /// <summary>
+    ///     Gets the local source manifest
+    /// </summary>
+    public async Task<SourceManifest> GetSourceManifestAsync(string repoPath)
+    {
+        var sourceManifestContent = await _gitClient.GetFileContentsAsync(
+            VmrInfo.DefaultRelativeSourceManifestPath,
+            repoPath,
+            null);
+
+        return SourceManifest.FromJson(sourceManifestContent);
     }
 
     /// <summary>

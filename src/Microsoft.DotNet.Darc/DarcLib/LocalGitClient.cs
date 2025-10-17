@@ -318,14 +318,14 @@ public class LocalGitClient : ILocalGitClient
         result.ThrowIfFailed($"No remote named {remoteName} in {repoPath}");
         var remoteUri = result.StandardOutput.Trim();
 
-        List<string> args = [ "remote", "update", remoteName ];
+        List<string> args = ["remote", "update", remoteName];
         var envVars = new Dictionary<string, string>();
         await AddGitAuthHeader(args, envVars, remoteUri);
 
         result = await _processManager.ExecuteGit(repoPath, args, envVars, cancellationToken: cancellationToken);
         result.ThrowIfFailed($"Failed to update {repoPath} from remote {remoteName}");
 
-        args = [ "fetch", "--tags", "--force", remoteName ];
+        args = ["fetch", "--tags", "--force", remoteName];
         envVars = [];
         await AddGitAuthHeader(args, envVars, remoteUri);
 
@@ -645,5 +645,55 @@ public class LocalGitClient : ILocalGitClient
         result.ThrowIfFailed("Failed to get a list of conflicted files");
 
         return [.. result.GetOutputLines().Select(f => new UnixPath(f))];
+    }
+    
+    /// <summary>
+    /// Validates that the working tree has no conflicts or uncommitted changes.
+    /// Throws InvalidOperationException if dirty.
+    /// </summary>
+    public async Task ValidateCleanWorkingDirectoryAsync(
+        string repoPath)
+    {
+        if (string.IsNullOrWhiteSpace(repoPath))
+            throw new ArgumentNullException(nameof(repoPath));
+        if (!Directory.Exists(repoPath))
+            throw new DirectoryNotFoundException(repoPath);
+
+        var result = await _processManager.ExecuteGit(
+            repoPath,
+            "status",
+            "--porcelain",
+            "-z");
+
+        result.ThrowIfFailed("Failed to run git status");
+
+        var entries = result
+            .StandardOutput
+            .Split('\0', StringSplitOptions.RemoveEmptyEntries);
+
+        bool hasConflicts = entries.Any(e =>
+            e.Length >= 2 && (e[0] == 'U' || e[1] == 'U'));
+
+        bool hasUncommitted = entries.Any(e =>
+        {
+            if (e.StartsWith("??")) return true;
+            if (e.Length >= 2 && e[0] != ' ' && e[1] != ' ') return true;
+            return false;
+        });
+
+        if (hasConflicts)
+        {
+            var conflicts = string.Join("\n", entries.Where(e => e.Contains('U')));
+            throw new InvalidOperationException(
+                "Repository has merge conflicts. Resolve before continuing.\n" + conflicts);
+        }
+
+        if (hasUncommitted)
+        {
+            var dirty = string.Join("\n", entries.Take(20));
+            throw new InvalidOperationException(
+                "Repository has uncommitted or untracked changes. " +
+                "Commit, stash, or clean before continuing.\n" + dirty);
+        }
     }
 }
