@@ -13,6 +13,8 @@ public class AzureDevOpsFeed : AzureDevOpsIdNamePair
 
     public string Account { get; set; }
 
+    public string Status { get; set; }
+
     public AzureDevOpsFeed(string account, string id, string name, AzureDevOpsProject project = null)
     {
         Account = account;

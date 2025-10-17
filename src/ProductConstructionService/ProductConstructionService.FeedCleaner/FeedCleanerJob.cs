@@ -125,19 +125,30 @@ public class FeedCleanerJob
             return ([], []);
         }
 
-        List<AzureDevOpsFeed> packageFeeds = allFeeds
+        // Filter out disabled feeds
+        List<AzureDevOpsFeed> activeFeeds = allFeeds
+            .Where(f => !string.Equals(f.Status, "disabled", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        int disabledCount = allFeeds.Count - activeFeeds.Count;
+        if (disabledCount > 0)
+        {
+            _logger.LogInformation("Skipping {disabledCount} disabled feed(s) for account {account}", disabledCount, azdoAccount);
+        }
+
+        List<AzureDevOpsFeed> packageFeeds = activeFeeds
             .Where(f => FeedConstants.MaestroManagedFeedNamePattern.IsMatch(f.Name)
                     && !FeedConstants.MaestroManagedSymbolFeedNamePattern.IsMatch(f.Name))
             .Shuffle()
             .ToList();
 
-        List<AzureDevOpsFeed> symbolFeeds = allFeeds
+        List<AzureDevOpsFeed> symbolFeeds = activeFeeds
             .Where(f => FeedConstants.MaestroManagedSymbolFeedNamePattern.IsMatch(f.Name))
             .Shuffle()
             .ToList();
 
         _logger.LogInformation("Found {totalCount} ({packageFeedCount} package and {symbolFeedCount} symbol) feeds for account {account}.",
-            allFeeds.Count,
+            activeFeeds.Count,
             packageFeeds.Count,
             symbolFeeds.Count,
             azdoAccount);
