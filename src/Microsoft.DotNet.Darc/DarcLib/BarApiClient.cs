@@ -351,10 +351,7 @@ public class BarApiClient : IBarApiClient
     /// </summary>
     /// <param name="subscriptionId">Id of subscription</param>
     /// <returns>Subscription information</returns>
-    public Task<Subscription> GetSubscriptionAsync(
-        Guid subscriptionId,
-        bool withExcludedAssets = true,
-        bool withChannel = false)
+    public Task<Subscription> GetSubscriptionAsync(Guid subscriptionId)
     {
         return _barClient.Subscriptions.GetSubscriptionAsync(subscriptionId);
     }
