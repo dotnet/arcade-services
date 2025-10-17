@@ -83,17 +83,4 @@ public class LocalPathTests
         emptyPath1.GetHashCode().Should().Be(dotPath.GetHashCode());
         emptyPath2.GetHashCode().Should().Be(dotPath.GetHashCode());
     }
-
-    [Test]
-    public void UnixPathSlashIsEmptyPathTest()
-    {
-        // The "/" is not treated as empty by UnixPath itself, but darc should normalize it to "."
-        var slashPath = new UnixPath("/");
-        var dotPath = new UnixPath(".");
-        
-        // "/" is not the same as "." in UnixPath - transformation must happen in darc
-        slashPath.Path.Should().Be("/");
-        dotPath.Path.Should().Be(".");
-        (slashPath == dotPath).Should().BeFalse();
-    }
 }

@@ -77,4 +77,12 @@ internal abstract class SubscriptionOperationBase : Operation
             }
         }
     }
+
+    /// <summary>
+    /// Normalize target directory by converting "/" to "." to treat it as repo root
+    /// </summary>
+    protected static string NormalizeTargetDirectory(string targetDirectory)
+    {
+        return targetDirectory == "/" ? "." : targetDirectory;
+    }
 }

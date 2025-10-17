@@ -425,12 +425,4 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                 });
         }
     }
-
-    /// <summary>
-    /// Normalize target directory by converting "/" to "." to treat it as repo root
-    /// </summary>
-    private static string NormalizeTargetDirectory(string targetDirectory)
-    {
-        return targetDirectory == "/" ? "." : targetDirectory;
-    }
 }
