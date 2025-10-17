@@ -113,7 +113,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
 
             if (_options.TargetDirectory != null)
             {
-                targetDirectory = _options.TargetDirectory;
+                targetDirectory = NormalizeTargetDirectory(_options.TargetDirectory);
             }
 
             if (_options.ExcludedAssets != null)
