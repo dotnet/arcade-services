@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text;
+using Maestro.Data.Models;
 
 namespace ProductConstructionService.DependencyFlow.Model;
 
@@ -82,5 +83,17 @@ public abstract class PullRequestUpdaterId : UpdaterId
     protected static string Decode(string value)
     {
         return Encoding.UTF8.GetString(Convert.FromBase64String(value));
+    }
+
+    public static PullRequestUpdaterId CreateUpdaterId(Subscription subscription)
+    {
+        if (subscription == null)
+        {
+            throw new ArgumentNullException(nameof(subscription));
+        }
+
+        return subscription.PolicyObject.Batchable
+            ? new BatchedPullRequestUpdaterId(subscription.TargetRepository, subscription.TargetBranch)
+            : new NonBatchedPullRequestUpdaterId(subscription.Id);
     }
 }

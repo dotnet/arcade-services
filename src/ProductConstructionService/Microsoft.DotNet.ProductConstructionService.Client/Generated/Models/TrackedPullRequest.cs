@@ -42,5 +42,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 
         [JsonProperty("updates")]
         public List<PullRequestUpdate> Updates { get; set; }
+
+        [JsonProperty("isInConflict")]
+        public bool IsInConflict { get; set; }
     }
 }
