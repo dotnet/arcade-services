@@ -225,9 +225,11 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
     {
         IReadOnlyList<IssueComment> comments = await GitHubApi.Issue.Comment.GetAllForIssue(TestParameters.GitHubTestOrg, targetRepo, pullRequest.Number);
 
-        foreach (var s in stringsExpectedInComment)
+        var allCommentBodies = string.Join(Environment.NewLine, comments.Select(c => c.Body));
+
+        foreach (var expected in stringsExpectedInComment)
         {
-            comments.Any(c => c.Body.Contains(s)).Should().BeTrue();
+            allCommentBodies.Should().Contain(expected);
         }
     }
 }
