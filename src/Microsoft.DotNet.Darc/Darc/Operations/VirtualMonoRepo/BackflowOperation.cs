@@ -64,6 +64,7 @@ internal class BackflowOperation(
         Codeflow currentFlow,
         SourceMapping mapping,
         string headBranch,
+        IReadOnlyList<string> excludedAssets,
         CancellationToken cancellationToken)
     {
         LastFlows lastFlows = await _backFlower.GetLastFlowsAsync(
@@ -77,7 +78,7 @@ internal class BackflowOperation(
                 mapping.Name,
                 productRepo.Path,
                 build,
-                excludedAssets: ExcludedAssets,
+                excludedAssets: excludedAssets,
                 headBranch,
                 headBranch,
                 enableRebase: true,
@@ -89,7 +90,7 @@ internal class BackflowOperation(
         finally
         {
             await _backflowConflictResolver.TryMergingBranchAndUpdateDependencies(
-                new CodeflowOptions(mapping, currentFlow, headBranch, headBranch, build, ExcludedAssets, true, false),
+                new CodeflowOptions(mapping, currentFlow, headBranch, headBranch, build, excludedAssets, true, false),
                 lastFlows,
                 productRepo,
                 headBranch,

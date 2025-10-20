@@ -63,6 +63,7 @@ internal class ForwardFlowOperation(
         Codeflow currentFlow,
         SourceMapping mapping,
         string headBranch,
+        IReadOnlyList<string> excludedAssets,
         CancellationToken cancellationToken)
     {
         try
@@ -71,7 +72,7 @@ internal class ForwardFlowOperation(
                 mapping.Name,
                 productRepo.Path,
                 build,
-                excludedAssets: ExcludedAssets,
+                excludedAssets: excludedAssets,
                 headBranch,
                 headBranch,
                 _vmrInfo.VmrPath,

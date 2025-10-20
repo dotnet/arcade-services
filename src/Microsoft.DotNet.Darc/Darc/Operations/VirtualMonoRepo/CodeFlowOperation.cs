@@ -40,8 +40,6 @@ internal abstract class CodeFlowOperation(
     private readonly IFileSystem _fileSystem = fileSystem;
     private readonly ILogger<CodeFlowOperation> _logger = logger;
 
-    protected IReadOnlyList<string> ExcludedAssets { get; private set; } = [];
-
     protected async Task FlowCodeLocallyAsync(
         NativePath repoPath,
         bool isForwardFlow,
@@ -49,9 +47,10 @@ internal abstract class CodeFlowOperation(
         CancellationToken cancellationToken)
     {
         // If subscription ID is provided, fetch subscription metadata and populate options
+        IReadOnlyList<string> excludedAssets = [];
         if (!string.IsNullOrEmpty(_options.SubscriptionId))
         {
-            await PopulateOptionsFromSubscriptionAsync();
+            excludedAssets = await PopulateOptionsFromSubscriptionAsync();
         }
 
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
@@ -90,6 +89,7 @@ internal abstract class CodeFlowOperation(
             currentFlow,
             mapping,
             currentTargetRepoBranch,
+            excludedAssets,
             cancellationToken);
 
         if (!hasChanges)
@@ -108,6 +108,7 @@ internal abstract class CodeFlowOperation(
         Codeflow currentFlow,
         SourceMapping mapping,
         string headBranch,
+        IReadOnlyList<string> excludedAssets,
         CancellationToken cancellationToken);
 
     private async Task<Build> GetBuildAsync(NativePath sourceRepoPath)
@@ -188,14 +189,9 @@ internal abstract class CodeFlowOperation(
     /// Fetch subscription metadata and populate command options based on subscription settings.
     /// This allows the subscription to be simulated using the existing codeflow logic.
     /// </summary>
-    private async Task PopulateOptionsFromSubscriptionAsync()
+    private async Task<IReadOnlyList<string>> PopulateOptionsFromSubscriptionAsync()
     {
         // Validate that subscription is not used with conflicting options
-        if (_options.Build != 0)
-        {
-            throw new DarcException("The --subscription parameter cannot be used with --build. The subscription determines which build to use.");
-        }
-
         if (!string.IsNullOrEmpty(_options.Ref))
         {
             throw new DarcException("The --subscription parameter cannot be used with --ref. The subscription determines which commit to flow.");
@@ -239,24 +235,35 @@ internal abstract class CodeFlowOperation(
             _logger.LogInformation("  Target directory: {targetDir}", subscription.TargetDirectory);
         }
 
+        IReadOnlyList<string> excludedAssets = [];
         if (subscription.ExcludedAssets?.Any() == true)
         {
             _logger.LogInformation("  Excluded assets: {excludedAssets}", string.Join(", ", subscription.ExcludedAssets));
-            ExcludedAssets = subscription.ExcludedAssets;
+            excludedAssets = subscription.ExcludedAssets;
         }
 
-        // Find the latest build from the source repository on the channel
-        Build latestBuild = await _barApiClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
-        if (latestBuild == null)
+        // If build ID is not provided, find the latest build from the source repository on the channel
+        if (_options.Build == 0)
         {
-            throw new DarcException($"No builds found for repository '{subscription.SourceRepository}' on channel '{subscription.Channel.Name}'.");
+            Build latestBuild = await _barApiClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
+            if (latestBuild == null)
+            {
+                throw new DarcException($"No builds found for repository '{subscription.SourceRepository}' on channel '{subscription.Channel.Name}'.");
+            }
+
+            _logger.LogInformation("  Latest build: {buildNumber} (BAR ID: {buildId})", latestBuild.AzureDevOpsBuildNumber, latestBuild.Id);
+            _logger.LogInformation("  Build commit: {commit}", latestBuild.Commit);
+            _logger.LogInformation("");
+
+            // Set the build to use for the codeflow operation
+            _options.Build = latestBuild.Id;
+        }
+        else
+        {
+            _logger.LogInformation("  Using provided build ID: {buildId}", _options.Build);
+            _logger.LogInformation("");
         }
 
-        _logger.LogInformation("  Latest build: {buildNumber} (BAR ID: {buildId})", latestBuild.AzureDevOpsBuildNumber, latestBuild.Id);
-        _logger.LogInformation("  Build commit: {commit}", latestBuild.Commit);
-        _logger.LogInformation("");
-
-        // Set the build to use for the codeflow operation
-        _options.Build = latestBuild.Id;
+        return excludedAssets;
     }
 }
