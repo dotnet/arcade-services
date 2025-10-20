@@ -335,8 +335,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
                     case MergePolicyCheckResult.NoPolicies:
                     case MergePolicyCheckResult.FailedToMerge:
-                        _logger.LogInformation("Pull request {url} still active (updatable) - keeping tracking it", pr.Url);
-
                         // Check if we think the PR has a conflict
                         // If we think so, check if the PR head branch still has the same commit as the one we remembered.
                         // If it doesn't, we should try to update the PR again, the conflicts might be resolved
