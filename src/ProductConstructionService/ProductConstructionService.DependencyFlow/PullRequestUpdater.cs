@@ -338,16 +338,22 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                         _logger.LogInformation("Pull request {url} still active (updatable) - keeping tracking it", pr.Url);
 
                         // Check if we think the PR has a conflict
-                        if (pr.MergeState == InProgressPullRequestState.Conflict)
+                        // If we think so, check if the PR head branch still has the same commit as the one we remembered.
+                        // If it doesn't, we should try to update the PR again, the conflicts might be resolved
+                        if (pr.MergeState == InProgressPullRequestState.Conflict && pr.HeadBranchSha == prInfo.HeadBranchSha && isCodeFlow)
                         {
-                            // If we think so, check if the PR head branch still has the same commit as the one we remembered.
-                            // If it doesn't, we should try to update the PR again, the conflicts might be resolved
-                            if (pr.HeadBranchSha == prInfo.HeadBranchSha)
+                            bool featureEnabled = await _featureFlagService.IsFeatureOnAsync(
+                                pr.ContainedSubscriptions.First().SubscriptionId,
+                                FeatureFlag.EnableRebaseStrategy);
+
+                            if (!featureEnabled)
                             {
+                                _logger.LogInformation("Pull request {url} is in conflict and cannot be updated at the moment", pr.Url);
                                 return (PullRequestStatus.InProgressCannotUpdate, prInfo);
                             }
                         }
 
+                        _logger.LogInformation("Pull request {url} can be updated", pr.Url);
                         await SetPullRequestCheckReminder(pr, prInfo, isCodeFlow, delay);
 
                         return (PullRequestStatus.InProgressCanUpdate, prInfo);
