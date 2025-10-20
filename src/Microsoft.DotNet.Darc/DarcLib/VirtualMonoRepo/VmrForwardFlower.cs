@@ -408,20 +408,14 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         List<string> prNumbers = [];
         foreach (var message in commitMessages)
         {
-            string prNumber = string.Empty;
             foreach (var regex in regexes)
             {
                 var match = regex.Match(message);
                 if (match.Success && match.Groups.Count > 1)
                 {
-                    prNumber = match.Groups[1].Value;
+                    prNumbers.Add(match.Groups[1].Value);
                     break;
                 }
-            }
-
-            if (!string.IsNullOrEmpty(prNumber))
-            {
-                prNumbers.Add(prNumber);
             }
         }
 
