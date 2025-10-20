@@ -71,6 +71,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     // e.g.: "Update dependencies from source-repo (#12345)" extracts "12345"
     private readonly static Regex GitHubPullRequestNumberExtractionRegex = new Regex(".+\\(#(\\d+)\\)$");
 
+    private readonly static Regex AlternativeGitHubPullRequestNumberExtractionRegex = new Regex("^Merge pull request #(d+)");
+
     // Regex to extract PR number from an AzDO merge commit message
     // e.g.: "Merged PR 12345: Update dependencies from source-repo" extracts "12345"
     private readonly static Regex AzDoPullRequestNumberExtractionRegex = new Regex("^Merged PR (\\d+):");
@@ -394,25 +396,55 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         var result = await sourceRepo.ExecuteGitCommand(["log", "--pretty=%s", $"{lastCommit}..{currentCommit}"], cancellationToken);
         result.ThrowIfFailed($"Failed to get the list of commits between {lastCommit} and {currentCommit} in {sourceRepo.Path}");
 
-        (Regex regex, string prLinkFormat) = gitRepoType switch
+        (Regex regex, Regex? alternativeRegex, string prLinkFormat) = gitRepoType switch
         {
-            GitRepoType.GitHub => (GitHubPullRequestNumberExtractionRegex, $"- {repoUri}/pull/{{0}}"),
-            GitRepoType.AzureDevOps => (AzDoPullRequestNumberExtractionRegex, $"- {repoUri}/pullrequest/{{0}}"),
+            GitRepoType.GitHub => (GitHubPullRequestNumberExtractionRegex, AlternativeGitHubPullRequestNumberExtractionRegex, $"- {repoUri}/pull/{{0}}"),
+            GitRepoType.AzureDevOps => (AzDoPullRequestNumberExtractionRegex, null, $"- {repoUri}/pullrequest/{{0}}"),
             _ => throw new NotSupportedException($"Repository type for URI '{repoUri}' is not supported for PR link extraction.")
         };
         var commitMessages = result.GetOutputLines();
-        StringBuilder str = new("PRs from original repository included in this codeflow update:");
+        List<string> prNumbers = [];
         foreach (var message in commitMessages)
         {
+            string prNumber = string.Empty;
+
             var match = regex.Match(message);
             if (match.Success && match.Groups.Count > 1)
             {
-                str.AppendLine();
-                str.AppendFormat(prLinkFormat, match.Groups[1].Value);
+                prNumber = match.Groups[1].Value;
+            }
+            else if (alternativeRegex != null)
+            {
+                match = alternativeRegex.Match(message);
+                if (match.Success && match.Groups.Count > 1)
+                {
+                    prNumber = match.Groups[1].Value;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(prNumber))
+            {
+                prNumbers.Add(prNumber);
             }
         }
 
-        _commentCollector.AddComment(str.ToString(), CommentType.Information);
+        if (prNumbers.Count == 0)
+        {
+            _logger.LogInformation("No PR numbers were found in the commit messages between {lastCommit} and {currentCommit}", lastCommit, currentCommit);
+            return;
+        }
+        else
+        {
+            StringBuilder str = new("PRs from original repository included in this codeflow update:");
+            foreach (var prUri in prNumbers.Distinct())
+            {
+                str.AppendLine();
+                str.AppendFormat(prLinkFormat, prUri);
+
+            }
+
+            _commentCollector.AddComment(str.ToString(), CommentType.Information);
+        }
     }
 
     protected override async Task<Codeflow?> DetectCrossingFlow(
