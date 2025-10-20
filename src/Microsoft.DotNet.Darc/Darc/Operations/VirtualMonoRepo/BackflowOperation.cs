@@ -77,7 +77,7 @@ internal class BackflowOperation(
                 mapping.Name,
                 productRepo.Path,
                 build,
-                excludedAssets: [], // TODO (https://github.com/dotnet/arcade-services/issues/5313): Fill from subscription
+                excludedAssets: ExcludedAssets,
                 headBranch,
                 headBranch,
                 enableRebase: true,
@@ -89,8 +89,7 @@ internal class BackflowOperation(
         finally
         {
             await _backflowConflictResolver.TryMergingBranchAndUpdateDependencies(
-                // TODO (https://github.com/dotnet/arcade-services/issues/5313): Fill excludedAssets from subscription
-                new CodeflowOptions(mapping, currentFlow, headBranch, headBranch, build, [], true, false),
+                new CodeflowOptions(mapping, currentFlow, headBranch, headBranch, build, ExcludedAssets, true, false),
                 lastFlows,
                 productRepo,
                 headBranch,

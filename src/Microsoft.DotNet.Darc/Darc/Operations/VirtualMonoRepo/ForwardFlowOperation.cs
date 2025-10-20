@@ -71,7 +71,7 @@ internal class ForwardFlowOperation(
                 mapping.Name,
                 productRepo.Path,
                 build,
-                excludedAssets: [], // TODO (https://github.com/dotnet/arcade-services/issues/5313): Fill from subscription
+                excludedAssets: ExcludedAssets,
                 headBranch,
                 headBranch,
                 _vmrInfo.VmrPath,
