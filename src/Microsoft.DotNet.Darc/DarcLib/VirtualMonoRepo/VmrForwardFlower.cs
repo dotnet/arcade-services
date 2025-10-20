@@ -398,10 +398,10 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         var result = await sourceRepo.ExecuteGitCommand(["log", "--pretty=%s", $"{lastCommit}..{currentCommit}"], cancellationToken);
         result.ThrowIfFailed($"Failed to get the list of commits between {lastCommit} and {currentCommit} in {sourceRepo.Path}");
 
-        (Regex regex, Regex? alternativeRegex, string prLinkFormat) = gitRepoType switch
+        (IReadOnlyList<Regex> regexes, string prLinkFormat) = gitRepoType switch
         {
-            GitRepoType.GitHub => (GitHubPullRequestNumberExtractionRegex, AlternativeGitHubPullRequestNumberExtractionRegex, $"- {repoUri}/pull/{{0}}"),
-            GitRepoType.AzureDevOps => (AzDoPullRequestNumberExtractionRegex, null, $"- {repoUri}/pullrequest/{{0}}"),
+            GitRepoType.GitHub => ((IReadOnlyList<Regex>)[GitHubPullRequestNumberExtractionRegex, AlternativeGitHubPullRequestNumberExtractionRegex], $"- {repoUri}/pull/{{0}}"),
+            GitRepoType.AzureDevOps => ([AzDoPullRequestNumberExtractionRegex], $"- {repoUri}/pullrequest/{{0}}"),
             _ => throw new NotSupportedException($"Repository type for URI '{repoUri}' is not supported for PR link extraction.")
         };
         var commitMessages = result.GetOutputLines();
@@ -409,18 +409,13 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         foreach (var message in commitMessages)
         {
             string prNumber = string.Empty;
-
-            var match = regex.Match(message);
-            if (match.Success && match.Groups.Count > 1)
+            foreach (var regex in regexes)
             {
-                prNumber = match.Groups[1].Value;
-            }
-            else if (alternativeRegex != null)
-            {
-                match = alternativeRegex.Match(message);
+                var match = regex.Match(message);
                 if (match.Success && match.Groups.Count > 1)
                 {
                     prNumber = match.Groups[1].Value;
+                    break;
                 }
             }
 
