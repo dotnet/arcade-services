@@ -51,7 +51,7 @@ internal abstract class CodeFlowOperation(
         // If subscription ID is provided, fetch subscription metadata and populate options
         if (!string.IsNullOrEmpty(_options.SubscriptionId))
         {
-            await PopulateOptionsFromSubscriptionAsync(isForwardFlow);
+            await PopulateOptionsFromSubscriptionAsync();
         }
 
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
@@ -188,7 +188,7 @@ internal abstract class CodeFlowOperation(
     /// Fetch subscription metadata and populate command options based on subscription settings.
     /// This allows the subscription to be simulated using the existing codeflow logic.
     /// </summary>
-    private async Task PopulateOptionsFromSubscriptionAsync(bool isForwardFlow)
+    private async Task PopulateOptionsFromSubscriptionAsync()
     {
         // Validate that subscription is not used with conflicting options
         if (_options.Build != 0)
