@@ -221,7 +221,7 @@ internal abstract class CodeFlowOperation(
             throw new DarcException("Only source-enabled subscriptions (VMR code flow) are supported with --subscription for codeflow operations.");
         }
 
-        _logger.LogInformation("Simulating subscription '{subscriptionId}':", subscription.Id);
+        _logger.LogInformation("Simulating subscription '{Id}':", subscription.Id);
         _logger.LogInformation("  Source: {sourceRepo} (channel: {channelName})", subscription.SourceRepository, subscription.Channel.Name);
         _logger.LogInformation("  Target: {targetRepo}#{targetBranch}", subscription.TargetRepository, subscription.TargetBranch);
 
