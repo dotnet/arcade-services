@@ -71,7 +71,9 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     // e.g.: "Update dependencies from source-repo (#12345)" extracts "12345"
     private readonly static Regex GitHubPullRequestNumberExtractionRegex = new Regex(".+\\(#(\\d+)\\)$");
 
-    private readonly static Regex AlternativeGitHubPullRequestNumberExtractionRegex = new Regex("^Merge pull request #(d+)");
+    // Alternative regex to extract PR number from a github merge commit message
+    // e.g.: "Merge pull request #12345 from source-repo/branch" extracts "12345"
+    private readonly static Regex AlternativeGitHubPullRequestNumberExtractionRegex = new Regex("^Merge pull request #(\\d+)");
 
     // Regex to extract PR number from an AzDO merge commit message
     // e.g.: "Merged PR 12345: Update dependencies from source-repo" extracts "12345"
