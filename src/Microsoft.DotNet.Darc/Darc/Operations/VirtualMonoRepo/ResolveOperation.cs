@@ -97,7 +97,7 @@ internal class ResolveOperation(
             isForwardFlow: false,
             additionalRemotes,
             cancellationToken,
-            buildId: 1);
+            buildId: buildId);
 
         Console.WriteLine("Codeflow has finished. Please resolve the conflicts and commit the changes. " +
             "Then run git vmr resolve --continue.");
