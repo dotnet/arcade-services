@@ -58,7 +58,9 @@ internal class ResolveOperation(
 
         var subscription = await FetchCodeflowSubscriptionAsync(_options.SubscriptionId);
 
-        var pr = await _pcsApiClient.PullRequest.GetTrackedPullRequestAsync(subscription.Id.ToString());
+        var pr = await _pcsApiClient.PullRequest.GetTrackedPullRequestBySubscriptionIdAsync(
+            subscription.Id.ToString(),
+            cancellationToken);
 
         ValidateConflictingPrAsync(pr);
 
