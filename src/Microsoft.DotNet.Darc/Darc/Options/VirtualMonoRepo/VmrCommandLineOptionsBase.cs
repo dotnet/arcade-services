@@ -45,7 +45,15 @@ internal abstract class VmrCommandLineOptionsBase<T> : CommandLineOptions<T> whe
             azureDevOpsToken ??= localDarcSettings?.AzureDevOpsToken;
         }
 
-        tmpPath = Path.GetFullPath(tmpPath ?? new NativePath(Path.GetTempPath()) / Constants.DefaultDarcClonesDirectoryName);
+        if (tmpPath == null)
+        {
+            tmpPath = new NativePath(Path.GetTempPath()) / Constants.DefaultDarcClonesDirectoryName;
+            Directory.CreateDirectory(tmpPath);
+        }
+        else
+        {
+            tmpPath = Path.GetFullPath(tmpPath);
+        }
 
         services.AddSingleVmrSupport(GitLocation, VmrPath, tmpPath, gitHubToken, azureDevOpsToken);
         services.TryAddTransient<IVmrScanner, VmrCloakedFileScanner>();
