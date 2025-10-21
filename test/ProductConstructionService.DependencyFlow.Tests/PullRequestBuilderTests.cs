@@ -1060,6 +1060,65 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         description.Should().Contain(expectedEnhancedBuildLine);
     }
 
+    [Test]
+    public async Task ShouldIncludeTargetRepoInAssociatedChanges()
+    {
+        // This test validates that in a backflow scenario, the target repository
+        // is included in the "Associated changes in source repos" section
+        string commitSha = "abc1234567";
+        Build build = GivenANewBuildId(101, commitSha);
+        build.GitHubRepository = "https://github.com/dotnet/runtime";
+        build.GitHubBranch = "main";
+        build.AzureDevOpsBuildNumber = "20230205.2";
+        build.AzureDevOpsAccount = "foo";
+        build.AzureDevOpsProject = "bar";
+        build.AzureDevOpsBuildId = 1234;
+        string subscriptionGuid = "11111111-1111-1111-1111-111111111111";
+        List<DependencyUpdateSummary> dependencyUpdates = GivenDependencyUpdateSummaries();
+        SubscriptionUpdateWorkItem update = new()
+        {
+            UpdaterId = subscriptionGuid,
+            IsCoherencyUpdate = false,
+            SourceRepo = build.GetRepository(),
+            SubscriptionId = new Guid(subscriptionGuid),
+            BuildId = build.Id,
+            SubscriptionType = SubscriptionType.DependenciesAndSources,
+        };
+
+        // In a backflow scenario, the target repository (runtime) should be included
+        // in the upstream repo diffs along with other repositories
+        List<UpstreamRepoDiff> upstreamRepoDiffs =
+        [
+            new UpstreamRepoDiff("https://github.com/dotnet/runtime", "oldRuntimeSha", "newRuntimeSha"),
+            new UpstreamRepoDiff("https://github.com/dotnet/aspnetcore", "oldAspNetSha", "newAspNetSha"),
+            new UpstreamRepoDiff("https://github.com/dotnet/sdk", "oldSdkSha", "newSdkSha")
+        ];
+
+        string mockPreviousCommitSha = "SHA1234567890";
+
+        string? description = null;
+        await Execute(
+            async context =>
+            {
+                var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
+                description = await builder.GenerateCodeFlowPRDescription(
+                    update,
+                    build,
+                    mockPreviousCommitSha,
+                    dependencyUpdates,
+                    upstreamRepoDiffs,
+                    currentDescription: null,
+                    isForwardFlow: false);
+            });
+
+        // Verify that all repositories, including the target repository (runtime), are in the description
+        description.Should().NotBeNull();
+        description!.Should().Contain("## Associated changes in source repos");
+        description.Should().Contain("https://github.com/dotnet/runtime/compare/oldRuntimeSha...newRuntimeSha");
+        description.Should().Contain("https://github.com/dotnet/aspnetcore/compare/oldAspNetSha...newAspNetSha");
+        description.Should().Contain("https://github.com/dotnet/sdk/compare/oldSdkSha...newSdkSha");
+    }
+
     private Build GivenANewBuildId(int id, string sha)
     {
         Build build = new(
