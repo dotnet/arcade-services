@@ -159,7 +159,7 @@ internal class ResolveOperation(
             throw new DarcException("The current working directory does not appear to be a repository managed by Darc.");
         }
 
-        if (sourceDependency?.Mapping == null || !sourceDependency.Mapping.Equals(subscription.SourceDirectory))
+        if (!sourceDependency.Mapping.Equals(subscription.SourceDirectory))
         {
             throw new DarcException("The current working directory does not match the subscription " +
                 $"source directory '{subscription.SourceDirectory}'.");
