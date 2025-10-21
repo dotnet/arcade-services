@@ -654,8 +654,8 @@ public class LocalGitClient : ILocalGitClient
     public async Task ValidateCleanWorkingDirectoryAsync(
         string repoPath)
     {
-        if (string.IsNullOrWhiteSpace(repoPath))
-            throw new ArgumentNullException(nameof(repoPath));
+if (string.IsNullOrWhiteSpace(repoPath))
+            throw new ArgumentException("Repository path cannot be empty or whitespace.", nameof(repoPath));
         if (!Directory.Exists(repoPath))
             throw new DirectoryNotFoundException(repoPath);
 
