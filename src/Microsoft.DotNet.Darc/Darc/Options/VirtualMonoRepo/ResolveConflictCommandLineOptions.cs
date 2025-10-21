@@ -8,8 +8,8 @@ using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
-[Verb("resolve", HelpText = "Allows the user to resolve codeflow conflicts encountered by Maestro.")]
-internal class ResolveCommandLineOptions : CodeFlowCommandLineOptions<ResolveOperation>
+[Verb("resolve-conflict", HelpText = "Allows the user to resolve codeflow conflicts encountered by Maestro.")]
+internal class ResolveConflictCommandLineOptions : CodeFlowCommandLineOptions<ResolveConflictOperation>
 {
     [Value(0, Required = true, HelpText = "Path to a local repository to flow the current VMR commit to")]
     public string Repository { get; set; }
