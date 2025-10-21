@@ -83,6 +83,11 @@ internal abstract class SubscriptionOperationBase : Operation
     /// </summary>
     protected static string NormalizeTargetDirectory(string targetDirectory)
     {
+        if (string.IsNullOrEmpty(targetDirectory))
+        {
+            return targetDirectory;
+        }
+
         // Normalize each segment in a comma-separated list: "/" -> "."
         return string.Join(
             ",",
