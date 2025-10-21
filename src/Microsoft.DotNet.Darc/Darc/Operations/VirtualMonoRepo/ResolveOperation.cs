@@ -134,7 +134,7 @@ internal class ResolveOperation(
         catch (DependencyFileNotFoundException)
         {
             throw new DarcException("Could not find file `src/source-manifest.json` at the following" +
-                $"git repository: `{_vmrInfo.VmrPath}. Please make sure it is a correct path to the VMR.");
+                $"git repository: `{_vmrInfo.VmrPath}`. Please make sure it is a correct path to the VMR.");
         }
 
         if (!sourceManifest.Repositories.Any(repo => repo.Path.Equals(mappingName)))
