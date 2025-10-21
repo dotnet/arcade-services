@@ -1217,9 +1217,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             previousSourceSha = sourceDependency?.Sha;
 
             upstreamRepoDiffs = await ComputeRepoUpdatesAsync(previousSourceSha, build.Commit);
-
-            // Do not display the diff for which we're flowing back as the diff does not make a whole lot of sense
-            upstreamRepoDiffs = [..upstreamRepoDiffs.Where(diff => diff.RepoUri != subscription.TargetRepository)];
         }
 
         // Conflicts + no rebase means we have to block the PR until a human resolves the conflicts manually
