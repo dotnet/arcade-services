@@ -19,8 +19,8 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal class ResolveOperation(
-        ResolveCommandLineOptions options,
+internal class ResolveConflictOperation(
+        ResolveConflictCommandLineOptions options,
         IVmrForwardFlower forwardFlower,
         IVmrBackFlower backFlower,
         IBackflowConflictResolver backflowConflictResolver,
@@ -33,16 +33,16 @@ internal class ResolveOperation(
         IFileSystem fileSystem,
         IProcessManager processManager,
         IProductConstructionServiceApi pcsApiClient,
-        ILogger<ResolveOperation> logger)
+        ILogger<ResolveConflictOperation> logger)
     : CodeFlowOperation(options, forwardFlower, backFlower, backflowConflictResolver, vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
 {
-    private readonly ResolveCommandLineOptions _options = options;
+    private readonly ResolveConflictCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly IProcessManager _processManager = processManager;
     private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
     private readonly IBasicBarClient _barClient = barApiClient;
     private readonly IProductConstructionServiceApi _pcsApiClient = pcsApiClient;
-    private readonly ILogger<ResolveOperation> _logger = logger;
+    private readonly ILogger<ResolveConflictOperation> _logger = logger;
 
     protected override async Task ExecuteInternalAsync(
         string repoName,
@@ -94,7 +94,7 @@ internal class ResolveOperation(
 
         await FlowCodeLocallyAsync(
             targetGitRepoPath,
-            isForwardFlow: false,
+            isForwardFlow: !string.IsNullOrEmpty(subscription.TargetDirectory),
             additionalRemotes,
             cancellationToken,
             buildId: buildId);
