@@ -207,7 +207,7 @@ internal class ResolveOperation(
         if (!prHead.Equals(currentSha, StringComparison.OrdinalIgnoreCase))
         {
             throw new DarcException($"The current local branch '{currentSha}' does not match the pull request" +
-                $" head branch '{prHead}'. Please checkout the correct and fetch the latest changes from the PR branch.");
+                $" head branch '{prHead}'. Please checkout the correct branch and fetch the latest changes from the PR branch.");
         }
     }
 
