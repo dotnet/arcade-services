@@ -69,14 +69,14 @@ internal class ResolveConflictOperation(
         var sourceGitRepoPath = new NativePath(_processManager.FindGitRoot(_options.SourceRepo));
         var targetGitRepoPath = new NativePath(_processManager.FindGitRoot(Directory.GetCurrentDirectory()));
 
+        _vmrInfo.VmrPath = string.IsNullOrEmpty(subscription.TargetDirectory)
+            ? targetGitRepoPath
+            : sourceGitRepoPath;
+
         await ValidateLocalVmr(subscription);
         await ValidateLocalRepo(subscription);
 
         await ValidateLocalBranchMatchesRemote(targetGitRepoPath, pr.HeadBranch);
-
-        _vmrInfo.VmrPath = string.IsNullOrEmpty(subscription.TargetDirectory)
-            ? targetGitRepoPath
-            : sourceGitRepoPath;
 
         Console.WriteLine("Ready to execute codeflow locally. Proceed? y/n");
 
@@ -92,17 +92,24 @@ internal class ResolveConflictOperation(
             Console.WriteLine("Proceeding with codeflow...");
         }
 
-        await FlowCodeLocallyAsync(
-            targetGitRepoPath,
-            isForwardFlow: !string.IsNullOrEmpty(subscription.TargetDirectory),
-            additionalRemotes,
-            cancellationToken,
-            buildId: buildId);
-
-        Console.WriteLine("Codeflow has finished. Please resolve the conflicts and commit the changes. " +
-            "Then run git vmr resolve --continue.");
-
-        return;
+        try
+        {
+            await FlowCodeLocallyAsync(
+                targetGitRepoPath,
+                isForwardFlow: !string.IsNullOrEmpty(subscription.TargetDirectory),
+                additionalRemotes,
+                cancellationToken,
+                buildId: buildId);
+        }
+        catch (PatchApplicationLeftConflictsException)
+        {
+            _logger.LogInformation("Codeflow has finished, and conflicting files have been left on the current branch.");
+            _logger.LogInformation("Please resolve the conflicts in your local environment and push your changes to "
+                + "the PR branch in order to unblock the codeflow PR.");
+            return;
+        }
+        _logger.LogInformation("Codeflow has finished and changes have been staged on the local branch. "
+            + "However, no conflicts were encountered.");
     }
 
     private static int GetBuildIdFromTrackedPr(TrackedPullRequest pr, Guid subscriptionId)
@@ -159,7 +166,7 @@ internal class ResolveConflictOperation(
             throw new DarcException("The current working directory does not appear to be a repository managed by Darc.");
         }
 
-        if (!sourceDependency.Mapping.Equals(subscription.SourceDirectory))
+        if (!sourceDependency.Mapping.Equals(mappingName))
         {
             throw new DarcException("The current working directory does not match the subscription " +
                 $"source directory '{subscription.SourceDirectory}'.");
