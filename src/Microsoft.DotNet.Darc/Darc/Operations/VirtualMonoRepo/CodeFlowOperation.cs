@@ -47,10 +47,9 @@ internal abstract class CodeFlowOperation(
         CancellationToken cancellationToken)
     {
         // If subscription ID is provided, fetch subscription metadata and populate options
-        IReadOnlyList<string> excludedAssets = [];
         if (!string.IsNullOrEmpty(_options.SubscriptionId))
         {
-            excludedAssets = await PopulateOptionsFromSubscriptionAsync();
+            await PopulateOptionsFromSubscriptionAsync();
         }
 
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
@@ -82,6 +81,11 @@ internal abstract class CodeFlowOperation(
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
 
         string currentTargetRepoBranch = await targetRepo.GetCheckedOutBranchAsync();
+
+        // Parse excluded assets from options
+        IReadOnlyList<string> excludedAssets = string.IsNullOrEmpty(_options.ExcludedAssets)
+            ? []
+            : _options.ExcludedAssets.Split(';').ToList();
 
         bool hasChanges = await FlowCodeAsync(
             productRepo,
@@ -189,7 +193,7 @@ internal abstract class CodeFlowOperation(
     /// Fetch subscription metadata and populate command options based on subscription settings.
     /// This allows the subscription to be simulated using the existing codeflow logic.
     /// </summary>
-    private async Task<IReadOnlyList<string>> PopulateOptionsFromSubscriptionAsync()
+    private async Task PopulateOptionsFromSubscriptionAsync()
     {
         // Validate that subscription is not used with conflicting options
         if (!string.IsNullOrEmpty(_options.Ref))
@@ -235,20 +239,25 @@ internal abstract class CodeFlowOperation(
             _logger.LogInformation("  Target directory: {targetDir}", subscription.TargetDirectory);
         }
 
-        IReadOnlyList<string> excludedAssets = [];
-        if (subscription.ExcludedAssets?.Any() == true)
+        // Set excluded assets from subscription if not already set via command line
+        if (string.IsNullOrEmpty(_options.ExcludedAssets) && subscription.ExcludedAssets?.Any() == true)
         {
-            _logger.LogInformation("  Excluded assets: {excludedAssets}", string.Join(", ", subscription.ExcludedAssets));
-            excludedAssets = subscription.ExcludedAssets;
+            _options.ExcludedAssets = string.Join(";", subscription.ExcludedAssets);
+            _logger.LogInformation("  Excluded assets: {excludedAssets}", _options.ExcludedAssets);
+        }
+        else if (!string.IsNullOrEmpty(_options.ExcludedAssets))
+        {
+            _logger.LogInformation("  Using command-line excluded assets: {excludedAssets}", _options.ExcludedAssets);
         }
 
         // If build ID is not provided, find the latest build from the source repository on the channel
         if (_options.Build == 0)
         {
             Build latestBuild = await _barApiClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
-            if (latestBuild == null)
+            if (latestBuild is null)
             {
-                throw new DarcException($"No builds found for repository '{subscription.SourceRepository}' on channel '{subscription.Channel.Name}'.");
+                string channelName = subscription.Channel?.Name ?? "(unknown channel)";
+                throw new DarcException($"No builds found for repository '{subscription.SourceRepository}' on channel '{channelName}'.");
             }
 
             _logger.LogInformation("  Latest build: {buildNumber} (BAR ID: {buildId})", latestBuild.AzureDevOpsBuildNumber, latestBuild.Id);
@@ -263,7 +272,5 @@ internal abstract class CodeFlowOperation(
             _logger.LogInformation("  Using provided build ID: {buildId}", _options.Build);
             _logger.LogInformation("");
         }
-
-        return excludedAssets;
     }
 }

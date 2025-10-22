@@ -15,6 +15,8 @@ internal interface ICodeFlowCommandLineOptions : IBaseVmrCommandLineOptions
     public int Build { get; set; }
 
     public string SubscriptionId { get; set; }
+
+    public string ExcludedAssets { get; set; }
 }
 
 internal abstract class CodeFlowCommandLineOptions<T>
@@ -38,6 +40,9 @@ internal abstract class CodeFlowCommandLineOptions<T>
 
     [Option("subscription", HelpText = "Subscription ID to simulate. When provided, flows code as the specified subscription would.")]
     public string SubscriptionId { get; set; }
+
+    [Option("excluded-assets", HelpText = "Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded during the flow.")]
+    public string ExcludedAssets { get; set; }
 
     public abstract IEnumerable<string> Repositories { get; }
 
