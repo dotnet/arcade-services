@@ -428,6 +428,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     CurrentFlow = currentIsBackflow
                         ? new Backflow(previouslyAppliedBuild.Commit, previousFlow.RepoSha)
                         : new ForwardFlow(previouslyAppliedBuild.Commit, previousFlow.VmrSha),
+                    EnableRebase = false,
                 },
                 previousFlows,
                 repo,
@@ -459,11 +460,16 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
                 return;
             }
-            catch (PatchApplicationFailedException)
+            catch (Exception e) when (e is PatchApplicationFailedException || e is ConflictInPrBranchException)
             {
                 _logger.LogInformation("Recreated {count} flows but conflict with a previous flow still exists. Recreating deeper...", flowsToRecreate);
                 flowsToRecreate++;
                 continue;
+            }
+            catch (PatchApplicationLeftConflictsException)
+            {
+                // Expected when we're rebasing
+                throw;
             }
             catch (Exception e)
             {
