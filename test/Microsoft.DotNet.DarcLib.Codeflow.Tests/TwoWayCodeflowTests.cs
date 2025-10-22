@@ -73,7 +73,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // Forward flow
         await File.WriteAllTextAsync(ProductRepoPath / "b.txt", bFileContent2);
         await GitOperations.CommitAll(ProductRepoPath, bFileContent2);
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
         CheckFileContents(_productRepoVmrPath / "a.txt", aFileContent);
@@ -85,7 +85,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
 
         // Backflow - should be a no-op
-        await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         await GitOperations.MergePrBranch(ProductRepoPath, branchName);
     }
 
@@ -106,7 +106,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         branch.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, branchName);
 
-        branch = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        branch = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         branch.ShouldHaveUpdates();
         await GitOperations.CheckAllIsCommitted(VmrPath);
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
@@ -117,7 +117,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // This will be forbidden in the future but we need to test this
         await File.WriteAllLinesAsync(_submoduleFileVmrPath, new[] { "Invalid change" });
         await GitOperations.CommitAll(VmrPath, "Invalid change in the VMR");
-        await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         await GitOperations.MergePrBranch(ProductRepoPath, branchName);
         await GitOperations.CheckAllIsCommitted(VmrPath);
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
@@ -154,13 +154,13 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.CommitAll(VmrPath, "1a.txt");
 
         // 2. Open a backflow PR
-        var codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName);
+        var codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName);
         codeFlowResult.ShouldHaveUpdates();
         // We make another commit in the vmr and add it to the PR branch (this is not in the diagram above)
         await GitOperations.Checkout(VmrPath, "main");
         await File.WriteAllTextAsync(_productRepoVmrPath / "1b.txt", "one again");
         await GitOperations.CommitAll(VmrPath, "1b.txt");
-        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName);
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName);
         codeFlowResult.ShouldHaveUpdates();
 
         // 3. Change file in the repo
@@ -169,13 +169,13 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.CommitAll(ProductRepoPath, "3a.txt");
 
         // 4. Open a forward flow PR
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardBranchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardBranchName);
         codeFlowResult.ShouldHaveUpdates();
         // We make another commit in the repo and add it to the PR branch (this is not in the diagram above)
         await GitOperations.Checkout(ProductRepoPath, "main");
         await File.WriteAllTextAsync(ProductRepoPath / "3b.txt", "three again");
         await GitOperations.CommitAll(ProductRepoPath, "3b.txt");
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardBranchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardBranchName);
         codeFlowResult.ShouldHaveUpdates();
 
         // 5. Merge the backflow PR
@@ -188,7 +188,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // While the VMR accepted the content from the repo but it will get overriden by the VMR content again
         await GitOperations.Checkout(ProductRepoPath, "main");
         await GitOperations.Checkout(VmrPath, "main");
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName);
         codeFlowResult.ShouldHaveUpdates();
         codeFlowResult.ConflictedFiles.Should().BeEmpty();
 
@@ -254,7 +254,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         // 2. Open a backflow PR
         await GitOperations.Checkout(ProductRepoPath, "main");
-        var codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName);
+        var codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName);
         codeFlowResult.ShouldHaveUpdates();
 
         // 3-4. Change the file in the repo again
@@ -330,7 +330,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         // 2. Open a forwardflow PR
         await GitOperations.Checkout(VmrPath, "main");
-        var codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardBranchName);
+        var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardBranchName);
         codeFlowResult.ShouldHaveUpdates();
 
         // 3-4. Change the file in the VMR again
@@ -403,7 +403,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         // 0. Backflow of a build to populate the version files in the repo with some values
         build = await CreateNewVmrBuild([(FakePackageName, FakePackageVersion)]);
-        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName, build);
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName, build);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, backBranchName);
 
@@ -412,13 +412,13 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.CommitAll(ProductRepoPath, "1a.txt");
 
         // 2. Open a forward flow PR
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardBranchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardBranchName);
         codeFlowResult.ShouldHaveUpdates();
         // We make another commit in the repo and add it to the PR branch (this is not in the diagram above)
         await GitOperations.Checkout(ProductRepoPath, "main");
         await File.WriteAllTextAsync(ProductRepoPath / "1b.txt", "one again");
         await GitOperations.CommitAll(ProductRepoPath, "1b.txt");
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardBranchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardBranchName);
         codeFlowResult.ShouldHaveUpdates();
 
         // 3. Change file in the VMR
@@ -428,14 +428,14 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         // 4. Open a backflow PR
         build = await CreateNewVmrBuild([(FakePackageName, "1.0.1")]);
-        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName, build);
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName, build);
         codeFlowResult.ShouldHaveUpdates();
         // We make another commit in the repo and add it to the PR branch (this is not in the diagram above)
         await GitOperations.Checkout(VmrPath, "main");
         await File.WriteAllTextAsync(_productRepoVmrPath / "3b.txt", "three again");
         await GitOperations.CommitAll(VmrPath, "3b.txt");
         build = await CreateNewVmrBuild([(FakePackageName, "1.0.2")]);
-        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName, build);
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName, build);
         codeFlowResult.ShouldHaveUpdates();
 
         // 5. Merge the forward flow PR
@@ -450,7 +450,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.Checkout(VmrPath, "main");
         build = await CreateNewVmrBuild([(FakePackageName, "1.0.3")]);
         backBranchName = GetTestBranchName(forwardFlow: false);
-        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName, build);
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName, build);
         codeFlowResult.ShouldHaveUpdates();
 
         var productRepo = GetLocal(ProductRepoPath);
@@ -472,7 +472,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         build = await CreateNewRepoBuild([], shaInStep6);
         forwardBranchName = GetTestBranchName();
         await GitOperations.Checkout(ProductRepoPath, "main");
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName, build);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName, build);
         codeFlowResult.ShouldHaveUpdates();
 
         // 10. We make another change on the target branch in the repo
@@ -494,7 +494,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // This means there might be a conflict between these and we need to override what is in the repo
         await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
         build = await CreateNewVmrBuild([(FakePackageName, "1.0.5")]);
-        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName, build);
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName, build);
         codeFlowResult.ShouldHaveUpdates();
 
         // 13. Merge the forward flow PR - any conflicts in version files are dealt with automatically
@@ -513,7 +513,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         // 14. Level the repos so that we can verify the contents
         forwardBranchName = GetTestBranchName();
-        await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName);
+        await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName);
         await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
 
         foreach (var (file, content) in expectedFiles)
@@ -610,7 +610,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // While the VMR accepted the content from the repo but it will get overriden by the VMR content again
         await GitOperations.Checkout(ProductRepoPath, "main");
         await GitOperations.Checkout(VmrPath, "main");
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.VerifyMergeConflict(VmrPath, forwardBranchName,
             mergeTheirs: true,
@@ -745,7 +745,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         // Level the repo and the VMR
         await GitOperations.CommitAll(ProductRepoPath, "Changing version files");
-        var codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
@@ -797,13 +797,13 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.CommitAll(VmrPath, "Update repo2 dependencies in the VMR");
 
         // Flow repo to the VMR
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "2");
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "2");
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName + "2");
 
         // Flow changes back from the VMR
         var build = await CreateNewVmrBuild([("Package.A1", "1.0.20")]);
-        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "3", build);
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "3", build);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "3");
 
@@ -851,7 +851,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await VerifyDependenciesInRepo(ProductRepoPath, expectedDependencies);
 
         // Flow repo to the VMR
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "4");
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "4");
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName + "4");
 
@@ -905,7 +905,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // 0. Repo gets a file partial-revert.txt and flows into the VMR
         await File.WriteAllTextAsync(ProductRepoPath / "partial-revert.txt", revertFileContent);
         await GitOperations.CommitAll(ProductRepoPath, "Add partial-revert.txt files");
-        var codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
@@ -917,7 +917,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.CommitAll(ProductRepoPath, "Add conflict.txt and full-revert.txt files, change partial-revert.txt");
 
         // 2. FF is opened and in the PR branch, we change conflict.txt to something
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
 
         // Modify conflict.txt in the PR branch (VMR)
@@ -949,7 +949,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // BUT the full-revert.txt won't be part of the changes because it was reverted
         // That means the PR branch won't remove it and it will stay in the VMR (even after we resolve the conflict)
         await GitOperations.Checkout(VmrPath, "main");
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
 
         // Verify we have a conflict and resolve it using theirs (repo content)
@@ -984,7 +984,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // 0. VMR gets a file partial-revert.txt and flows back to the repo
         await File.WriteAllTextAsync(_productRepoVmrPath / "partial-revert.txt", revertFileContent);
         await GitOperations.CommitAll(VmrPath, "Add partial-revert.txt files");
-        var codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        var codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, branchName);
 
@@ -996,7 +996,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.CommitAll(VmrPath, "Add conflict.txt and full-revert.txt files, change partial-revert.txt");
 
         // 2. Backflow PR is opened and in the PR branch, we change conflict.txt to something
-        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
 
         // Modify conflict.txt in the PR branch (repo)
@@ -1028,7 +1028,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // BUT the full-revert.txt won't be part of the changes because it was reverted
         // That means the PR branch won't have those changes and will stay unchanged in the repo after the PR
         await GitOperations.Checkout(ProductRepoPath, "main");
-        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
 
         // Verify we have a conflict and resolve it using theirs (VMR content)
@@ -1152,14 +1152,14 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // 0.VMR gets a file VMR.txt and flows it into the repo without merging
         await File.WriteAllTextAsync(_productRepoVmrPath / "A.txt", "1");
         await GitOperations.CommitAll(VmrPath, "1");
-        var codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        var codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
 
         // 1.Repo gets a file Repo.txt and flows it into the VMR, and merges it
         await GitOperations.Checkout(ProductRepoPath, "main");
         await File.WriteAllTextAsync(ProductRepoPath / "B.txt", "Hello world");
         await GitOperations.CommitAll(ProductRepoPath, "Hello world");
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, forceUpdate: true);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, forceUpdate: true);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
@@ -1168,7 +1168,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.CommitAll(VmrPath, "2");
 
         Assert.ThrowsAsync<BlockingCodeflowException>(async () =>
-            await CallDarcBackflow(
+            await CallBackflow(
                 Constants.ProductRepoName,
                 ProductRepoPath,
                 branchName,

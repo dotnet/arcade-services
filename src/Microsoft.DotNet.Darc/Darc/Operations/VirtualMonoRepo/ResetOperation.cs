@@ -140,6 +140,7 @@ internal class ResetOperation : Operation
                 targetSha,
                 codeFlowParameters,
                 resetToRemoteWhenCloningRepo: false,
+                keepConflicts: false,
                 CancellationToken.None);
 
             _logger.LogInformation("Successfully reset {mapping} to {sha}", mappingName, targetSha);

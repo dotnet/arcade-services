@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,14 +27,15 @@ public interface ICodeFlowVmrUpdater
     /// In some cases, we set the source-manifest json current sha to the git empty commit.
     /// When this happens, this parameter should be used to generate the correct commit message</param>
     /// <param name="additionalFileExclusions">List of files we don't want to update</param>
-    /// <param name="resetToRemoteWhenCloningRepo">Weather or not to reset the branch to remote during cloning.
-    /// Should be set to false when cloning a specific sha</param>
+    /// <param name="resetToRemoteWhenCloningRepo">Weather or not to reset the branch to remote during cloning. Should be set to false when cloning a specific sha</param>
+    /// <param name="keepConflicts">Preserve file changes with conflict markers when conflicts occur</param>
     Task<bool> UpdateRepository(
         SourceMapping mapping,
         Build build,
         string[]? additionalFileExclusions = null,
         string? fromSha = null,
         bool resetToRemoteWhenCloningRepo = false,
+        bool keepConflicts = false,
         CancellationToken cancellationToken = default);
 }
 
@@ -92,6 +92,7 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
         string[]? additionalFileExclusions = null,
         string? fromSha = null,
         bool resetToRemoteWhenCloningRepo = false,
+        bool keepConflicts = false,
         CancellationToken cancellationToken = default)
     {
         await _dependencyTracker.RefreshMetadataAsync();
@@ -163,6 +164,7 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
                 currentVersion.Sha,
                 commitMessage,
                 restoreVmrPatches: false,
+                keepConflicts,
                 new CodeFlowParameters(
                     AdditionalRemotes: [.. remotes.Select(r => new AdditionalRemote(mapping.Name, r))],
                     TpnTemplatePath: _vmrInfo.ThirdPartyNoticesTemplateFullPath,

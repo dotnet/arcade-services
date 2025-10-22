@@ -84,7 +84,7 @@ public static class GitRepoUrlUtils
 
             if (repoParts.Length != 2)
             {
-                throw new Exception($"Invalid URI in source manifest. Repo '{uri}' does not end with the expected <GH organization>-<GH repo> format.");
+                throw new ArgumentException($"Repo URI '{uri}' does not end with the expected <GH organization>-<GH repo> format.");
             }
 
             string org = repoParts[0];
@@ -106,13 +106,13 @@ public static class GitRepoUrlUtils
 
             if (repoParts.Length != 2)
             {
-                throw new Exception($"Invalid URI in source manifest. Repo '{uri}' does not end with the expected <GH organization>/<GH repo> format.");
+                throw new ArgumentException($"Repo URI '{uri}' does not end with the expected <GH organization>/<GH repo> format.");
             }
 
             return new(repoParts[1], repoParts[0]);
         }
 
-        throw new Exception("Unsupported format of repository url " + uri);
+        throw new ArgumentException("Unsupported format of repository url " + uri);
     }
 
     public static string ConvertInternalUriToPublic(string uri)
@@ -184,7 +184,14 @@ public static class GitRepoUrlUtils
 
     public static string GetRepoNameWithOrg(string uri)
     {
-        var (repo, org) = GetRepoNameAndOwner(uri);
-        return $"{org}/{repo}";
+        try
+        {
+            var (repo, org) = GetRepoNameAndOwner(uri);
+            return $"{org}/{repo}";
+        }
+        catch (ArgumentException)
+        {
+            return string.Join("/", uri.Split(['/'], StringSplitOptions.RemoveEmptyEntries).TakeLast(2));
+        }
     }
 }

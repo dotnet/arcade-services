@@ -90,7 +90,7 @@ public class FeatureFlagsController : ControllerBase
     {
         try
         {
-            var flags = await _featureFlagService.GetFlagsForSubscriptionAsync(subscriptionId);
+            var flags = await _featureFlagService.GetFlagsAsync(subscriptionId);
             return Ok(new FeatureFlagListResponse(flags, flags.Count));
         }
         catch (Exception ex)

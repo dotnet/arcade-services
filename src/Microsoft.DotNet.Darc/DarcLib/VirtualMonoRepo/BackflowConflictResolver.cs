@@ -26,14 +26,10 @@ public interface IBackflowConflictResolver
     /// </summary>
     /// <returns>List of dependency updates made to the version files</returns>
     Task<VersionFileUpdateResult> TryMergingBranchAndUpdateDependencies(
-        SourceMapping mapping,
+        CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
-        Backflow currentFlow,
         ILocalGitRepo targetRepo,
-        Build build,
-        string headBranch,
         string branchToMerge,
-        IReadOnlyCollection<string>? excludedAssets,
         bool headBranchExisted,
         CancellationToken cancellationToken);
 }
@@ -81,43 +77,23 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
     }
 
     public async Task<VersionFileUpdateResult> TryMergingBranchAndUpdateDependencies(
-        SourceMapping mapping,
+        CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
-        Backflow currentFlow,
         ILocalGitRepo targetRepo,
-        Build build,
-        string headBranch,
         string branchToMerge,
-        IReadOnlyCollection<string>? excludedAssets,
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        IReadOnlyCollection<UnixPath> conflictedFiles = await TryMergingBranch(
-            targetRepo,
-            headBranch,
-            branchToMerge,
-            cancellationToken);
-
-        if (conflictedFiles.Any() && await TryResolvingConflicts(
-                conflictedFiles,
-                mapping,
-                currentFlow,
-                lastFlows.CrossingFlow,
+        // If we are rebasing, we are already on top of the branch and we don't need to merge it
+        IReadOnlyCollection<UnixPath> conflictedFiles = codeflowOptions.EnableRebase
+            ? []
+            : await TryMergingBranchAndResolveConflicts(
+                codeflowOptions,
+                lastFlows,
                 targetRepo,
-                headBranch,
                 branchToMerge,
                 headBranchExisted,
-                cancellationToken))
-        {
-            await targetRepo.CommitAsync(
-                $"""
-                Merge {branchToMerge} into {headBranch}
-                Auto-resolved conflicts:
-                - {string.Join(Environment.NewLine + "- ", conflictedFiles.Select(f => f.Path))}
-                """,
-                allowEmpty: true,
-                cancellationToken: CancellationToken.None);
-        }
+                cancellationToken);
 
         try
         {
@@ -129,14 +105,12 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                     ?? new Backflow(Constants.EmptyGitObject, Constants.EmptyGitObject);
 
             var updates = await BackflowDependenciesAndToolset(
-                mapping.Name,
+                codeflowOptions,
                 targetRepo,
                 branchToMerge,
-                build,
-                excludedAssets,
                 comparisonFlow,
-                currentFlow,
                 cancellationToken);
+
             return new VersionFileUpdateResult(conflictedFiles, updates);
         }
         catch (Exception e)
@@ -144,10 +118,48 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             // We don't want to push this as there is some problem
             _logger.LogError(e, "Failed to update dependencies after merging {branchToMerge} into {headBranch} in {repoPath}",
                 branchToMerge,
-                headBranch,
+                codeflowOptions.HeadBranch,
                 targetRepo.Path);
             throw;
         }
+    }
+
+    private async Task<IReadOnlyCollection<UnixPath>> TryMergingBranchAndResolveConflicts(
+        CodeflowOptions codeflowOptions,
+        LastFlows lastFlows,
+        ILocalGitRepo targetRepo,
+        string branchToMerge,
+        bool headBranchExisted,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyCollection<UnixPath> conflictedFiles = await TryMergingBranch(
+            targetRepo,
+            codeflowOptions.HeadBranch,
+            branchToMerge,
+            cancellationToken);
+
+        if (conflictedFiles.Any() && await TryResolvingConflicts(
+                conflictedFiles,
+                codeflowOptions.Mapping,
+                codeflowOptions.CurrentFlow,
+                lastFlows.CrossingFlow,
+                targetRepo,
+                codeflowOptions.HeadBranch,
+                branchToMerge,
+                headBranchExisted,
+                cancellationToken))
+        {
+            await targetRepo.CommitAsync(
+                $"""
+                Merge {branchToMerge} into {codeflowOptions.HeadBranch}
+                Auto-resolved conflicts:
+                - {string.Join(Environment.NewLine + "- ", conflictedFiles.Select(f => f.Path))}
+                """,
+                allowEmpty: true,
+                cancellationToken: CancellationToken.None);
+        }
+
+        return conflictedFiles;
     }
 
     /// <summary>
@@ -248,16 +260,13 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
     /// </summary>
     /// <returns>List of dependency changes</returns>
     private async Task<List<DependencyUpdate>> BackflowDependenciesAndToolset(
-        string mappingName,
+        CodeflowOptions codeflowOptions,
         ILocalGitRepo targetRepo,
         string targetBranch,
-        Build build,
-        IReadOnlyCollection<string>? excludedAssets,
         Codeflow comparisonFlow,
-        Backflow currentFlow,
         CancellationToken cancellationToken)
     {
-        var headBranchDependencies = (await GetRepoDependencies(targetRepo, commit: null! /* working tree */));
+        var headBranchDependencies = await GetRepoDependencies(targetRepo, commit: null /* working tree */);
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
         // handle global.json
@@ -267,16 +276,16 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             comparisonFlow.RepoSha,
             targetBranch,
             vmr,
-            VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.GlobalJson,
+            VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name) / VersionFiles.GlobalJson,
             comparisonFlow.VmrSha,
-            currentFlow.VmrSha);
+            codeflowOptions.CurrentFlow.VmrSha);
 
         // and handle dotnet-tools.json if it exists
         bool dotnetToolsConfigExists =
             (await targetRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, comparisonFlow.RepoSha) != null) ||
-            (await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.DotnetToolsConfigJson, currentFlow.VmrSha) != null ||
+            (await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name) / VersionFiles.DotnetToolsConfigJson, codeflowOptions.CurrentFlow.VmrSha) != null ||
             (await targetRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, targetBranch) != null) ||
-            (await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.DotnetToolsConfigJson, comparisonFlow.VmrSha) != null));
+            (await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name) / VersionFiles.DotnetToolsConfigJson, comparisonFlow.VmrSha) != null));
         if (dotnetToolsConfigExists)
         {
             await _jsonFileMerger.MergeJsonsAsync(
@@ -285,9 +294,9 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                     comparisonFlow.RepoSha,
                     targetBranch,
                     vmr,
-                    VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.DotnetToolsConfigJson,
+                    VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name) / VersionFiles.DotnetToolsConfigJson,
                     comparisonFlow.VmrSha,
-                    currentFlow.VmrSha,
+                    codeflowOptions.CurrentFlow.VmrSha,
                     allowMissingFiles: true);
         }
 
@@ -297,14 +306,14 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             comparisonFlow.RepoSha,
             targetBranch,
             vmr,
-            VmrInfo.GetRelativeRepoSourcesPath(mappingName) / VersionFiles.VersionDetailsXml,
+            VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name) / VersionFiles.VersionDetailsXml,
             comparisonFlow.VmrSha,
-            currentFlow.VmrSha,
+            codeflowOptions.CurrentFlow.VmrSha,
             // we're applying the changes to a product repo, so no mapping
             mappingToApplyChanges: null);
 
-        var excludedAssetsMatcher = excludedAssets.GetAssetMatcher();
-        List<AssetData> buildAssets = build.Assets
+        var excludedAssetsMatcher = codeflowOptions.ExcludedAssets.GetAssetMatcher();
+        List<AssetData> buildAssets = codeflowOptions.Build.Assets
             .Where(a => !excludedAssetsMatcher.IsExcluded(a.Name))
             .Select(a => new AssetData(a.NonShipping)
             {
@@ -313,12 +322,12 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             })
             .ToList();
 
-        var currentRepoDependencies = await GetRepoDependencies(targetRepo, string.Empty);
+        var currentRepoDependencies = await GetRepoDependencies(targetRepo, commit: null /* working tree */);
 
         List<DependencyDetail> buildUpdates = _coherencyUpdateResolver
             .GetRequiredNonCoherencyUpdates(
-                build.GetRepository(),
-                build.Commit,
+                codeflowOptions.Build.GetRepository(),
+                codeflowOptions.Build.Commit,
                 buildAssets,
                 currentRepoDependencies.Dependencies)
             .Select(u => u.To)
@@ -332,22 +341,25 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         SemanticVersion? targetDotNetVersion = null;
 
         // The arcade backflow subscriptions has all assets excluded, but we want to update the global.json sdk version anyway
-        if (arcadeItem != null || mappingName == VmrInfo.ArcadeMappingName)
+        if (arcadeItem != null || codeflowOptions.Mapping.Name == VmrInfo.ArcadeMappingName)
         {
             // Even tho we are backflowing from the VMR, we want to get the sdk version from VMR`s global.json, not src/arcade's
-            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(build.GetRepository(), build.Commit);
+            targetDotNetVersion = await _dependencyFileManager.ReadToolsDotnetVersionAsync(
+                codeflowOptions.Build.GetRepository(),
+                codeflowOptions.Build.Commit);
         }
 
         GitFileContentContainer updatedFiles = await _dependencyFileManager.UpdateDependencyFiles(
             buildUpdates,
-            new SourceDependency(build, mappingName),
+            new SourceDependency(codeflowOptions.Build, codeflowOptions.Mapping.Name),
             targetRepo.Path,
             branch: null, // reads the working tree
             currentRepoDependencies.Dependencies,
             targetDotNetVersion);
 
         // This actually does not commit but stages only
-        await _libGit2Client.CommitFilesAsync(updatedFiles.GetFilesToCommit(), targetRepo.Path, null, null);
+        var filesToCommit = updatedFiles.GetFilesToCommit();
+        await _libGit2Client.CommitFilesAsync(filesToCommit, targetRepo.Path, branch: null, commitMessage: null);
 
         // Update eng/common files
         if (arcadeItem != null)
@@ -372,6 +384,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                     arcadeEngCommonDir,
                     targetRepo.Path / Constants.CommonScriptFilesPath,
                     true);
+
+                await targetRepo.StageAsync([Constants.CommonScriptFilesPath], cancellationToken);
             }
         }
 
@@ -381,9 +395,10 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             return [];
         }
 
-        await targetRepo.StageAsync(["."], cancellationToken);
+        await targetRepo.StageAsync([..filesToCommit.Select(f => f.FilePath)], cancellationToken);
 
-        Dictionary<string, DependencyDetail> allUpdates = buildUpdates.ToDictionary(u => u.Name, u => u);
+        Dictionary<string, DependencyDetail> allUpdates = buildUpdates.ToDictionary(u => u.Name);
+
         // if a repo was added during the merge and then updated, it's not an update, but an addition
         foreach ((var key, var addition) in versionDetailsChanges.Additions)
         {
@@ -438,14 +453,18 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         ];
 
         string commitMessage = string.Concat(
-            $"Update dependencies from {build.GetRepository()} build {build.Id}",
+            $"Update dependencies from {codeflowOptions.Build.GetRepository()} build {codeflowOptions.Build.Id}",
             Environment.NewLine,
             BuildDependencyUpdateCommitMessage(dependencyUpdates));
 
-        await targetRepo.CommitAsync(
-            commitMessage,
-            allowEmpty: false,
-            cancellationToken: cancellationToken);
+        // When rebasing, we only want to stage the changes, not commit them
+        if (!codeflowOptions.EnableRebase)
+        {
+            await targetRepo.CommitAsync(
+                commitMessage,
+                allowEmpty: false,
+                cancellationToken: cancellationToken);
+        }
 
         return dependencyUpdates;
     }
@@ -456,9 +475,9 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         {
             return "No dependency updates to commit";
         }
-        Dictionary<string, List<string>> removedDependencies = new();
-        Dictionary<string, List<string>> addedDependencies = new();
-        Dictionary<string, List<string>> updatedDependencies = new();
+        Dictionary<string, List<string>> removedDependencies = [];
+        Dictionary<string, List<string>> addedDependencies = [];
+        Dictionary<string, List<string>> updatedDependencies = [];
         foreach (DependencyUpdate dependencyUpdate in updates)
         {
             if (dependencyUpdate.To != null && dependencyUpdate.From == null)
@@ -520,11 +539,11 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         }
         else
         {
-            dictionary[versionBlurb] = new List<string> { dependencyName };
+            dictionary[versionBlurb] = [dependencyName];
         }
     }
 
-    private async Task<VersionDetails> GetRepoDependencies(ILocalGitRepo repo, string commit)
+    private async Task<VersionDetails> GetRepoDependencies(ILocalGitRepo repo, string? commit)
         => GetDependencies(await repo.GetFileFromGitAsync(VersionFiles.VersionDetailsXml, commit));
 
     private VersionDetails GetDependencies(string? content)

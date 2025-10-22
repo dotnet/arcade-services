@@ -12,7 +12,7 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 namespace Maestro.MergePolicies;
 internal class CodeFlowMergePolicy : MergePolicy
 {
-    public override string DisplayName => "Code flow verification";
+    public override string DisplayName => "Codeflow verification";
 
     public override string Name => "CodeFlow";
 

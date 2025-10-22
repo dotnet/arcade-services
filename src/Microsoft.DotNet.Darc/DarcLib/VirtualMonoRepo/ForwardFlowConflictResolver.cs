@@ -54,6 +54,7 @@ public interface IForwardFlowConflictResolver
         string branchToMerge,
         ForwardFlow currentFlow,
         LastFlows lastFlows,
+        bool enableRebase,
         CancellationToken cancellationToken);
 
     Task MergeDependenciesAsync(
@@ -109,9 +110,12 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         string branchToMerge,
         ForwardFlow currentFlow,
         LastFlows lastFlows,
+        bool enableRebase,
         CancellationToken cancellationToken)
     {
-        var conflictedFiles = await TryMergingBranch(vmr, headBranch, branchToMerge, cancellationToken);
+        var conflictedFiles = enableRebase
+            ? []
+            : await TryMergingBranch(vmr, headBranch, branchToMerge, cancellationToken);
 
         if (conflictedFiles.Any() && await TryResolvingConflicts(
             mappingName,
@@ -148,6 +152,14 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                 lastFlows.LastForwardFlow,
                 currentFlow,
                 cancellationToken);
+
+            if (!enableRebase)
+            {
+                await vmr.CommitAsync(
+                    $"Update dependencies after merging {branchToMerge} into {headBranch}",
+                    allowEmpty: true,
+                    cancellationToken: CancellationToken.None);
+            }
         }
         catch (Exception e)
         {
@@ -305,18 +317,19 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             (await sourceRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, targetBranch) != null) ||
             (await vmr.GetFileFromGitAsync(relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson, currentFlow.VmrSha) != null ||
             (await vmr.GetFileFromGitAsync(relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson, lastFlow.VmrSha) != null));
+
         if (dotnetToolsConfigExists)
         {
             await _jsonFileMerger.MergeJsonsAsync(
-            vmr,
-            relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson,
-            lastFlow.VmrSha,
-            targetBranch,
-            sourceRepo,
-            VersionFiles.DotnetToolsConfigJson,
-            lastFlow.RepoSha,
-            currentFlow.RepoSha,
-            allowMissingFiles: true);
+                vmr,
+                relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson,
+                lastFlow.VmrSha,
+                targetBranch,
+                sourceRepo,
+                VersionFiles.DotnetToolsConfigJson,
+                lastFlow.RepoSha,
+                currentFlow.RepoSha,
+                allowMissingFiles: true);
         }
 
         // If Version.Details.props exists in the source repo, but not in the VMR, we create it and fill it out later.
@@ -368,13 +381,9 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                 targetBranch,
                 "Update source tag");
         }
-            
 
         // If we didn't have any changes, and we just added Version.Details.props, we need to generate it
-        if (!versionDetailsChanges.Additions.Any() &&
-            !versionDetailsChanges.Removals.Any() &&
-            !versionDetailsChanges.Updates.Any() &&
-            versionDetailsPropsCreated)
+        if (!versionDetailsChanges.HasChanges && versionDetailsPropsCreated)
         {
             var vdp = new GitFile(
                 relativeSourceMappingPath / VersionFiles.VersionDetailsProps,
@@ -394,13 +403,8 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         if (!await vmr.HasWorkingTreeChangesAsync() && !await vmr.HasStagedChangesAsync())
         {
             _logger.LogInformation("No changes to dependencies in this forward flow update");
-            return;
         }
 
-        await vmr.StageAsync(["."], cancellationToken);
-        await vmr.CommitAsync(
-            "Update dependencies",
-            allowEmpty: false,
-            cancellationToken: cancellationToken);
+        await vmr.StageAsync([relativeSourceMappingPath / "eng"], cancellationToken);
     }
 }

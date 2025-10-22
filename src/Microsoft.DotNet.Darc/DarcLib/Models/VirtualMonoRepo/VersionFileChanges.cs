@@ -11,4 +11,5 @@ public record VersionFileChanges<T>(
     Dictionary<string, T> Updates) 
     where T : IVersionFileProperty
 {
+    public bool HasChanges => Removals.Count > 0 || Additions.Count > 0 || Updates.Count > 0;
 }

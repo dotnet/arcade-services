@@ -115,25 +115,16 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
             "PR",
             null);
 
-        IPullRequestUpdater pullRequestUpdater;
+        var pullRequestUpdaterId = PullRequestUpdaterId.CreateUpdaterId(subscription);
 
-        if (subscription.PolicyObject.Batchable)
-        {
-            _logger.LogInformation("Creating pull request updater for branch {branch} of {repository}",
-                subscription.TargetBranch,
-                subscription.TargetRepository);
+        var pullRequestUpdater = _updaterFactory.CreatePullRequestUpdater(pullRequestUpdaterId);
 
-            pullRequestUpdater = _updaterFactory.CreatePullRequestUpdater(
-                new BatchedPullRequestUpdaterId(subscription.TargetRepository, subscription.TargetBranch));
-        }
-        else
-        {
-            _logger.LogInformation("Creating pull request updater for subscription {subscriptionId}",
-                _subscriptionId);
-
-            pullRequestUpdater = _updaterFactory.CreatePullRequestUpdater(
-                new NonBatchedPullRequestUpdaterId(_subscriptionId));
-        }
+        _logger.LogInformation("Creating pull request updater for subscription {subscriptionId} for branch " +
+            "{branch} of {repository}. Is batchable: {batchable}",
+            _subscriptionId,
+            subscription.TargetBranch,
+            subscription.TargetRepository,
+            subscription.PolicyObject.Batchable);
 
         IAsyncDisposable? @lock;
         var mutexKey = pullRequestUpdater.Id.ToString();

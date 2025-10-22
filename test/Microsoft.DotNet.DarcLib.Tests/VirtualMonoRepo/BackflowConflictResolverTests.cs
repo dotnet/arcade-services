@@ -374,7 +374,14 @@ public class BackflowConflictResolverTests
         bool headBranchExisted,
         string[] excludedAssets)
     {
-        var gitFileChanges = new GitFileContentContainer();
+        var gitFileChanges = new GitFileContentContainer
+        {
+            VersionDetailsProps = new GitFile(VersionFiles.VersionDetailsProps, "<Project />"),
+            VersionDetailsXml = new GitFile(VersionFiles.VersionDetailsXml, "<Project />"),
+            NugetConfig = new GitFile(VersionFiles.NugetConfigNames.First(), "<configuration />"),
+            GlobalJson = new GitFile(VersionFiles.GlobalJson, "{}"),
+        };
+
         _dependencyFileManager
             .Setup(x => x.UpdateDependencyFiles(
                 It.IsAny<IEnumerable<DependencyDetail>>(),
@@ -407,15 +414,19 @@ public class BackflowConflictResolverTests
 
         var cancellationToken = new CancellationToken();
         VersionFileUpdateResult mergeResult = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
-            new SourceMapping(MappingName, "https://github/repo1", "main", [], [], false),
+            new CodeflowOptions(
+                new SourceMapping(MappingName, "https://github/repo1", "main", [], [], false),
+                currentFlow,
+                TargetBranch,
+                PrBranch,
+                build,
+                excludedAssets,
+                EnableRebase: false,
+                ForceUpdate: false),
             lastFlows,
-            currentFlow,
             _localRepo.Object,
-            build,
-            PrBranch,
             TargetBranch,
-            excludedAssets: excludedAssets,
-            headBranchExisted: headBranchExisted,
+            headBranchExisted,
             cancellationToken);
 
         mergeResult.ConflictedFiles.Should().BeEmpty();
@@ -432,7 +443,7 @@ public class BackflowConflictResolverTests
             .Should().BeEquivalentTo(expectedDependencies, options => options.WithoutStrictOrdering());
 
         _libGit2Client.Verify(x => x.CommitFilesAsync(It.IsAny<List<GitFile>>(), _repoPath.Path, null, null), Times.AtLeastOnce);
-        _localRepo.Verify(x => x.StageAsync(new[] { "." }, cancellationToken), Times.AtLeastOnce);
+        _localRepo.Verify(x => x.StageAsync(It.IsAny<IEnumerable<string>>(), cancellationToken), Times.AtLeastOnce);
         _localRepo.Verify(x => x.CommitAsync(It.IsAny<string>(), false, null, cancellationToken), Times.AtLeastOnce);
     }
 

@@ -155,6 +155,7 @@ public class VersionDetailsFileMerger : VmrVersionFileMerger, IVersionDetailsFil
                 appliedChanges.Removals.Add(removal);
             }
         }
+
         foreach ((var assetName, var addition) in changes.Additions)
         {
             if (await _dependencyFileManager.TryAddOrUpdateDependency(
@@ -168,6 +169,7 @@ public class VersionDetailsFileMerger : VmrVersionFileMerger, IVersionDetailsFil
                 appliedChanges.Additions[assetName] = addition;
             }
         }
+
         foreach ((var assetName, var update) in changes.Updates)
         {
             if (await _dependencyFileManager.TryAddOrUpdateDependency(
@@ -182,7 +184,21 @@ public class VersionDetailsFileMerger : VmrVersionFileMerger, IVersionDetailsFil
             }
         }
 
-        await repo.StageAsync(["."]);
+        if (changes.HasChanges)
+        {
+            versionFilesBasePath ??= new UnixPath(string.Empty);
+
+            await repo.StageAsync([versionFilesBasePath / VersionFiles.VersionDetailsXml]);
+
+            if (versionDetailsPropsExists)
+            {
+                await repo.StageAsync([versionFilesBasePath / VersionFiles.VersionDetailsProps]);
+            }
+            else
+            {
+                await repo.StageAsync([versionFilesBasePath / VersionFiles.VersionsProps]);
+            }
+        }
 
         return appliedChanges;
     }

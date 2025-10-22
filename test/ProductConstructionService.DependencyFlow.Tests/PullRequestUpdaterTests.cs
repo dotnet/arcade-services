@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
+using System.Security.Policy;
 using FluentAssertions;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -169,7 +170,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     new()
                     {
                         BaseBranch = TargetBranch,
-                        HeadBranch = InProgressPrHeadBranch
+                        HeadBranch = InProgressPrHeadBranch,
                     }
                 },
                 options => options.Excluding(pr => pr.Title).Excluding(pr => pr.Description));
@@ -206,6 +207,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
                 It.IsAny<string>(),
                 It.IsAny<bool>(),
+                It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
@@ -221,6 +223,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(s => s.Id == Subscription.Id),
                 It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
                 It.IsAny<string>(),
+                It.IsAny<bool>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -509,22 +512,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
 
         if (flowerWillHaveConflict)
         {
-            remote
-                .Setup(x => x.CommentPullRequestAsync(It.IsAny<string>(), It.IsAny<string>()))
-                .Returns(Task.CompletedTask);
-
-            ProcessExecutionResult gitMergeResult = new();
-            _forwardFlower.Setup(x => x.FlowForwardAsync(
-                    It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(),
-                    It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
-                    It.IsAny<string>(),
-                    It.IsAny<bool>(),
-                    It.IsAny<CancellationToken>()))
-                .Throws(() => new ConflictInPrBranchException(
-                    "error: patch failed: eng/common/build.ps1",
-                    "branch",
-                    "repo",
-                    isForwardFlow: true));
+            WithForwardFlowConflict(remote, [new UnixPath("src/conflict.txt")]);
         }
 
         if (mockMergePolicyEvaluator)
@@ -565,6 +553,42 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         }
 
         return Disposable.Create(remote.VerifyAll);
+    }
+
+    protected void WithForwardFlowConflict(Mock<IRemote> remote, IReadOnlyCollection<UnixPath> conflictedFiles, bool rebaseStrategy = false)
+    {
+        remote
+            .Setup(x => x.CommentPullRequestAsync(
+                It.Is<string>(uri => uri.StartsWith(Subscription.TargetDirectory != null ? VmrUri + "/pulls/" : InProgressPrUrl)),
+                It.Is<string>(content => content.Contains(rebaseStrategy
+                    ? "The conflicts in the following files need to be manually resolved"
+                    : "There was a conflict in the PR branch when flowing source"))))
+            .Returns(Task.CompletedTask);
+
+        // We re-evaulate checks after we push changes
+        if (rebaseStrategy)
+        {
+            remote
+                .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(
+                    It.Is<string>(uri => uri.StartsWith(Subscription.TargetDirectory != null ? VmrUri + "/pulls/" : InProgressPrUrl)),
+                    It.IsAny<IReadOnlyCollection<MergePolicyEvaluationResult>>()))
+                .Returns(Task.CompletedTask);
+        }
+
+        _forwardFlower.Setup(x => x.FlowForwardAsync(
+                It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(),
+                It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
+                It.IsAny<string>(),
+                It.IsAny<bool>(),
+                It.IsAny<bool>(),
+                It.IsAny<CancellationToken>()))
+            .Throws(rebaseStrategy
+                ? new PatchApplicationLeftConflictsException(conflictedFiles, new NativePath(VmrPath))
+                : new ConflictInPrBranchException(
+                    "error: patch failed: " + string.Join(Environment.NewLine + "error: patch failed: ", conflictedFiles),
+                    "branch",
+                    "repo",
+                    isForwardFlow: true));
     }
 
     protected void AndShouldHavePullRequestCheckReminder(string? url = null)

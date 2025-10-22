@@ -3,6 +3,8 @@
 
 using System;
 using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
@@ -10,7 +12,7 @@ using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
 
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
@@ -31,7 +33,7 @@ internal class ForwardFlowTests : CodeFlowTests
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
         // Flow again - should be a no-op
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldNotHaveUpdates();
         await GitOperations.Checkout(VmrPath, "main");
         await GitOperations.DeleteBranch(VmrPath, branchName);
@@ -57,7 +59,7 @@ internal class ForwardFlowTests : CodeFlowTests
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
 
         // We used the changes from the repo - let's verify flowing back won't change anything
-        codeFlowResult = await CallDarcBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
     }
 
@@ -67,6 +69,9 @@ internal class ForwardFlowTests : CodeFlowTests
         await EnsureTestRepoIsInitialized();
 
         const string branchName = nameof(DarcVmrForwardFlowCommandTest);
+
+        await File.WriteAllTextAsync(_productRepoFilePath + "-removed-in-vmr", "This file will be removed in VMR");
+        await GitOperations.CommitAll(ProductRepoPath, "Add a file that will be removed in VMR");
 
         // We flow the repo to make sure they are in sync
         var codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName);
@@ -79,41 +84,89 @@ internal class ForwardFlowTests : CodeFlowTests
         await GitOperations.Checkout(ProductRepoPath, "main");
         await GitOperations.Checkout(VmrPath, "main");
 
+        File.Delete(_productRepoVmrFilePath + "-removed-in-vmr");
+        await GitOperations.CommitAll(VmrPath, "Remove a file that was in the repo");
+
         // Now we make several changes in the repo and try to locally flow them via darc
         await File.WriteAllTextAsync(_productRepoFilePath, "New content in the individual repo again");
+        await File.WriteAllTextAsync(_productRepoFilePath + "-added-in-repo", "New file from the repo");
+        // Change an eng/common file
+        File.Move(
+            ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "build.ps1",
+            ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "build.ps2");
         await GitOperations.CommitAll(ProductRepoPath, "New content in the individual repo again");
 
-        var options = new ForwardFlowCommandLineOptions()
-        {
-            VmrPath = VmrPath,
-            TmpPath = TmpPath,
-        };
-
-        var operation = ActivatorUtilities.CreateInstance<ForwardFlowOperation>(ServiceProvider, options);
-        var currentDirectory = Directory.GetCurrentDirectory();
-        Directory.SetCurrentDirectory(ProductRepoPath);
-        try
-        {
-            var result = await operation.ExecuteAsync();
-            result.Should().Be(0);
-        }
-        finally
-        {
-            Directory.SetCurrentDirectory(currentDirectory);
-        }
+        string[] stagedFiles = await CallDarcForwardflow();
 
         // Verify that expected files are staged
+        string[] expectedFiles =
+        [
+            VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName,
+            VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName + "-added-in-repo",
+            VmrInfo.SourcesDir / Constants.ProductRepoName / DarcLib.Constants.CommonScriptFilesPath / "build.ps2",
+            VmrInfo.DefaultRelativeSourceManifestPath,
+        ];
+
+        stagedFiles.Should().BeEquivalentTo([..expectedFiles, VmrInfo.SourcesDir / Constants.ProductRepoName / VersionFiles.VersionDetailsXml]);
+        await VerifyNoConflictMarkers(VmrPath, stagedFiles);
         CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo again");
-        var processManager = ServiceProvider.GetRequiredService<IProcessManager>();
+        CheckFileContents(VmrPath / expectedFiles[1], "New file from the repo");
+        File.Exists(VmrPath / expectedFiles[0] + "-removed-in-vmr").Should().BeFalse();
+        File.Exists(VmrPath / expectedFiles[2]).Should().BeTrue();
+        File.Exists(VmrPath / expectedFiles[2].Replace("ps2", "ps1")).Should().BeFalse();
 
-        var gitResult = await processManager.ExecuteGit(VmrPath, "diff", "--name-only", "--cached");
-        gitResult.Succeeded.Should().BeTrue("Git diff should succeed");
-        var stagedFiles = gitResult.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-        var expectedFile = VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName;
-        stagedFiles.Should().BeEquivalentTo([expectedFile], "There should be staged files after forward flow");
+        // Now we reset, make a conflicting change and see if darc can handle it and the conflict appears
+        await GitOperations.ExecuteGitCommand(VmrPath, "reset", "--hard");
+        await File.WriteAllTextAsync(_productRepoVmrFilePath, "A conflicting change in the VMR");
+        await GitOperations.CommitAll(VmrPath, "A conflicting change in the VMR");
 
-        gitResult = await processManager.ExecuteGit(VmrPath, "commit", "-m", "Commit staged files");
+        Build build = await CreateNewRepoBuild(
+        [
+            ("Package.A1", "1.0.1"),
+            ("Package.B1", "1.0.1"),
+            ("Package.C2", "1.0.1"),
+            ("Package.D3", "1.0.1"),
+        ]);
+
+        stagedFiles = await CallDarcForwardflow(build.Id, [expectedFiles[0]]);
+        stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
+        await VerifyNoConflictMarkers(VmrPath, stagedFiles.Except([expectedFiles[0]]));
+        CheckFileContents(VmrPath / expectedFiles[1], "New file from the repo");
+
+        // Now we commit this flow and verify all files are staged
+        await GitOperations.ExecuteGitCommand(VmrPath, ["checkout", "--theirs", "--", _productRepoVmrFilePath]);
+        await GitOperations.ExecuteGitCommand(VmrPath, ["add", _productRepoVmrFilePath]);
+        await GitOperations.ExecuteGitCommand(VmrPath, ["commit", "-m", "Committing the forward flow"]);
         await GitOperations.CheckAllIsCommitted(VmrPath);
+
+        // Now we make another set of changes in the repo and try again
+        // This time it will be same direction flow as the previous one (before it was opposite)
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await GitOperations.Checkout(VmrPath, "main");
+
+        File.Delete(_productRepoVmrFilePath + "-added-in-repo");
+        await GitOperations.CommitAll(VmrPath, "Remove a file that was in the repo");
+
+        // Now we make several changes in the repo and try to locally flow them via darc
+        await File.WriteAllTextAsync(_productRepoFilePath, "New content in the individual repo AGAIN");
+        await File.WriteAllTextAsync(_productRepoFilePath + "-added-in-repo", "New file from the repo AGAIN");
+        await File.WriteAllTextAsync(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "build.ps2", "New stuff");
+        await GitOperations.CommitAll(ProductRepoPath, "New content in the individual repo again");
+
+        build = await CreateNewRepoBuild(
+        [
+            ("Package.A1", "1.0.2"),
+            ("Package.B1", "1.0.2"),
+            ("Package.C2", "1.0.2"),
+            ("Package.D3", "1.0.2"),
+        ]);
+
+        // File -added-in-repo is deleted in the VMR and changed in the repo so it will conflict
+        stagedFiles = await CallDarcForwardflow(build.Id, [expectedFiles[1]]);
+        stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
+        await VerifyNoConflictMarkers(VmrPath, stagedFiles.Except([expectedFiles[1]]));
+        CheckFileContents(VmrPath / expectedFiles[1], "New file from the repo AGAIN");
+        CheckFileContents(VmrPath / expectedFiles[2], "New stuff");
     }
 
     [Test]
@@ -146,7 +199,7 @@ internal class ForwardFlowTests : CodeFlowTests
 
         // Level the repo and the VMR
         const string branchName = nameof(MeaninglessChangesAreSkippedTest);
-        var codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
@@ -160,7 +213,7 @@ internal class ForwardFlowTests : CodeFlowTests
                 ("Package.D3", "2.0.0"),
             ]);
 
-        codeFlowResult = await CallDarcBackflow(
+        codeFlowResult = await CallBackflow(
             Constants.ProductRepoName,
             ProductRepoPath,
             branchName + "-backflow",
@@ -170,19 +223,19 @@ internal class ForwardFlowTests : CodeFlowTests
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
 
         // We flow to VMR again to level the content
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
         var secondBuild = await CreateNewVmrBuild(
-            [
-                ("Package.A1", "3.0.0"),
-                ("Package.B1", "3.0.0"),
-                ("Package.C2", "3.0.0"),
-                ("Package.D3", "3.0.0"),
-            ]);
+        [
+            ("Package.A1", "3.0.0"),
+            ("Package.B1", "3.0.0"),
+            ("Package.C2", "3.0.0"),
+            ("Package.D3", "3.0.0"),
+        ]);
 
-        codeFlowResult = await CallDarcBackflow(
+        codeFlowResult = await CallBackflow(
             Constants.ProductRepoName,
             ProductRepoPath,
             branchName + "-backflow",
@@ -192,7 +245,7 @@ internal class ForwardFlowTests : CodeFlowTests
         await GitOperations.MergePrBranch(ProductRepoPath, branchName + "-backflow");
 
         // Now we try to flow forward and expect no meaningful changes to be detected
-        codeFlowResult = await CallDarcForwardflow(
+        codeFlowResult = await CallForwardflow(
             Constants.ProductRepoName,
             ProductRepoPath,
             branchName,
@@ -217,7 +270,7 @@ internal class ForwardFlowTests : CodeFlowTests
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
         // Flow again - should be a no-op
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldNotHaveUpdates();
 
         await GitOperations.Checkout(ProductRepoPath, "main");
@@ -234,7 +287,7 @@ internal class ForwardFlowTests : CodeFlowTests
 
         // Commits #1 and #2 are not related
         // Now we flow the main commit into the VMR which is not forked yet
-        codeFlowResult = await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
@@ -244,7 +297,7 @@ internal class ForwardFlowTests : CodeFlowTests
 
         // Now we try to flow the release/10.0 commit from the repo into the VMR release/10.0 branch
         await GitOperations.Checkout(ProductRepoPath, "release/10.0");
-        Func<Task> act = async () => await CallDarcForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "2");
+        Func<Task> act = async () => await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "2");
         await act.Should().ThrowAsync<NonLinearCodeflowException>();
     }
 }
