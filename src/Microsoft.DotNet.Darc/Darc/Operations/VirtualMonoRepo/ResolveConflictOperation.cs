@@ -78,20 +78,6 @@ internal class ResolveConflictOperation(
 
         await ValidateLocalBranchMatchesRemote(targetGitRepoPath, pr.HeadBranch);
 
-        Console.WriteLine("Ready to execute codeflow locally. Proceed? y/n");
-
-        var confirmation = Console.ReadLine();
-
-        if (confirmation != "y")
-        {
-            Console.WriteLine("Aborting resolve operation...");
-            return;
-        }
-        else
-        {
-            Console.WriteLine("Proceeding with codeflow...");
-        }
-
         try
         {
             await FlowCodeLocallyAsync(
