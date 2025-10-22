@@ -69,7 +69,7 @@ internal class ResolveConflictOperation(
         var sourceGitRepoPath = new NativePath(_processManager.FindGitRoot(_options.SourceRepo));
         var targetGitRepoPath = new NativePath(_processManager.FindGitRoot(Directory.GetCurrentDirectory()));
 
-        _vmrInfo.VmrPath = string.IsNullOrEmpty(subscription.TargetDirectory)
+        _vmrInfo.VmrPath = subscription.IsForwardFlow()
             ? targetGitRepoPath
             : sourceGitRepoPath;
 
@@ -82,7 +82,7 @@ internal class ResolveConflictOperation(
         {
             await FlowCodeLocallyAsync(
                 targetGitRepoPath,
-                isForwardFlow: !string.IsNullOrEmpty(subscription.TargetDirectory),
+                isForwardFlow: subscription.IsForwardFlow(),
                 additionalRemotes,
                 cancellationToken,
                 buildId: buildId);
@@ -113,9 +113,9 @@ internal class ResolveConflictOperation(
 
     private async Task ValidateLocalVmr(Subscription subscription)
     {
-        var mappingName = string.IsNullOrEmpty(subscription.TargetDirectory)
-            ? subscription.SourceDirectory
-            : subscription.TargetDirectory;
+        var mappingName = subscription.IsForwardFlow()
+            ? subscription.TargetDirectory
+            : subscription.SourceDirectory;
 
         var local = new Local(_options.GetRemoteTokenProvider(), _logger);
 
@@ -140,9 +140,9 @@ internal class ResolveConflictOperation(
 
     private async Task ValidateLocalRepo(Subscription subscription)
     {
-        var mappingName = string.IsNullOrEmpty(subscription.TargetDirectory)
-            ? subscription.SourceDirectory
-            : subscription.TargetDirectory;
+        var mappingName = subscription.IsForwardFlow()
+            ? subscription.TargetDirectory
+            : subscription.SourceDirectory;
 
         var local = new Local(_options.GetRemoteTokenProvider(), _logger);
         var sourceDependency = await local.GetSourceDependencyAsync();
