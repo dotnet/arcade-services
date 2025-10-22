@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text;
@@ -789,9 +789,17 @@ internal class PullRequestBuilder : IPullRequestBuilder
         // The list of committedFiles can contain the `global.json` file (and others) 
         // even though no actual change was made to the file and therefore there is no 
         // metadata for it.
-        foreach (var globalJsonFile in globalJsonFiles)
+        var globalJsonFilesWithMetadata = globalJsonFiles
+            .Where(gf => gf.Metadata != null)
+            .ToList();
+
+        if (globalJsonFilesWithMetadata.Count == 0)
         {
-            if (globalJsonFile.Metadata != null)
+            return;
+        }
+        else
+        {
+            foreach (var globalJsonFile in globalJsonFilesWithMetadata)
             {
                 var hasSdkVersionUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.SdkVersionUpdate);
                 var hasToolsDotnetUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.ToolsDotNetUpdate);
@@ -801,7 +809,17 @@ internal class PullRequestBuilder : IPullRequestBuilder
                     relativeBasePath = "root";
                 }
 
-                globalJsonSection.AppendLine($"- **Updates to .NET SDKs in {relativeBasePath}:**");
+                // If there's only one file with metadata and it's in the root, use simplified format
+                bool useSimplifiedFormat = globalJsonFilesWithMetadata.Count == 1 && relativeBasePath == "root";
+                
+                if (useSimplifiedFormat)
+                {
+                    globalJsonSection.AppendLine($"- **Updates to .NET SDKs:**");
+                }
+                else
+                {
+                    globalJsonSection.AppendLine($"- **📂 {relativeBasePath.TrimEnd('/')} updates to .NET SDKs:**");
+                }
 
                 if (hasSdkVersionUpdate)
                 {
