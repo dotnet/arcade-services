@@ -195,7 +195,11 @@ internal class ResolveConflictOperation(
         string prHeadBranch)
     {
         var result = await _processManager.ExecuteGit(targetRepoPath, "ls-remote", repoUrl, prHeadBranch);
-        result.ThrowIfFailed($"An unexpected exception occurred while trying to fetch the latest PR branch SHA from {repoUrl}.");
+        result.ThrowIfFailed(
+            $"""
+            An unexpected error occurred while trying to fetch the latest PR branch SHA from {repoUrl}. 
+            {result.StandardError}
+        """);
 
         var remoteSha = result.StandardOutput.Split('\t')[0].Trim();
 
@@ -204,8 +208,8 @@ internal class ResolveConflictOperation(
 
         if (!currentSha.Equals(remoteSha))
         {
-            throw new DarcException($"The current local branch '{currentSha}' does not match the pull request" +
-                $" head branch '{prHeadBranch}'. Please checkout the correct branch and fetch the latest changes from the PR branch.");
+            throw new DarcException($"The current local branch '{currentSha}' does not match the PR head branch at remote " +
+                $"('{prHeadBranch}'). Please checkout the correct branch and fetch the latest changes.");
         }
     }
 
