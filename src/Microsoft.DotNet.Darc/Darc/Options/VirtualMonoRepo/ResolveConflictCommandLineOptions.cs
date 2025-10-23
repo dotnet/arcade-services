@@ -10,8 +10,8 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 [Verb("resolve-conflict", HelpText = "Allows the user to resolve codeflow conflicts encountered by Maestro.")]
 internal class ResolveConflictCommandLineOptions : CodeFlowCommandLineOptions<ResolveConflictOperation>
 {
-    [Value(0, Required = true, HelpText = "Subscription id")]
-    public string SubscriptionId { get; set; }
+    [Option('s', "subscriptionId", Required = true, HelpText = "Subscription id")]
+    public new string SubscriptionId { get; set; }
 
     public override IEnumerable<string> Repositories => []; // we only want to synchronize current HEAD
 }
