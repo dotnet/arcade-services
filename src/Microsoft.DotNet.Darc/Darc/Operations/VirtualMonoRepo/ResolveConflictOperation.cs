@@ -50,12 +50,6 @@ internal class ResolveConflictOperation(
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(_options.SourceRepo))
-        {
-            throw new ArgumentException("Please specify a local path on disk to the source git repo" +
-                " or VMR to flow from.");
-        }
-
         var subscription = await FetchCodeflowSubscriptionAsync(_options.SubscriptionId);
 
         var pr = await _pcsApiClient.PullRequest.GetTrackedPullRequestBySubscriptionIdAsync(
@@ -66,17 +60,22 @@ internal class ResolveConflictOperation(
 
         var buildId = GetBuildIdFromTrackedPr(pr, subscription.Id);
 
-        var sourceGitRepoPath = new NativePath(_processManager.FindGitRoot(_options.SourceRepo));
         var targetGitRepoPath = new NativePath(_processManager.FindGitRoot(Directory.GetCurrentDirectory()));
 
-        _vmrInfo.VmrPath = subscription.IsForwardFlow()
-            ? targetGitRepoPath
-            : sourceGitRepoPath;
+        if (subscription.IsForwardFlow())
+        {
+            _vmrInfo.VmrPath = targetGitRepoPath;
+            await ValidateLocalVmr(subscription);
+        }
+        else
+        {
+            await ValidateLocalRepo(subscription);
+        }
 
-        await ValidateLocalVmr(subscription);
-        await ValidateLocalRepo(subscription);
-
-        await ValidateLocalBranchMatchesRemote(targetGitRepoPath, pr.HeadBranch);
+        await ValidateLocalBranchMatchesRemote(
+            targetGitRepoPath,
+            subscription.TargetRepository,
+            pr.HeadBranch);
 
         try
         {
@@ -165,12 +164,9 @@ internal class ResolveConflictOperation(
         {
             throw new ArgumentException("Please specify a subscription id.");
         }
-        var subscription = await _barClient.GetSubscriptionAsync(subscriptionId);
 
-        if (subscription == null)
-        {
-            throw new DarcException($"No subscription found with id `{subscriptionId}`.");
-        }
+        var subscription = await _barClient.GetSubscriptionAsync(subscriptionId)
+            ?? throw new DarcException($"No subscription found with id `{subscriptionId}`.");
 
         if (!subscription.SourceEnabled)
         {
@@ -193,14 +189,23 @@ internal class ResolveConflictOperation(
         }
     }
 
-    private async Task ValidateLocalBranchMatchesRemote(NativePath targetRepoPath, string prHead)
+    private async Task ValidateLocalBranchMatchesRemote(
+        NativePath targetRepoPath,
+        string repoUrl,
+        string prHeadBranch)
     {
+        var result = await _processManager.ExecuteGit(targetRepoPath, "ls-remote", repoUrl, prHeadBranch);
+        result.ThrowIfFailed($"An unexpected exception occurred while trying to fetch the latest PR branch SHA from {repoUrl}.");
+
+        var remoteSha = result.StandardOutput.Split('\t')[0].Trim();
+
         var repo = _localGitRepoFactory.Create(targetRepoPath);
         var currentSha = await repo.GetShaForRefAsync(targetRepoPath);
-        if (!prHead.Equals(currentSha, StringComparison.OrdinalIgnoreCase))
+
+        if (!currentSha.Equals(remoteSha))
         {
             throw new DarcException($"The current local branch '{currentSha}' does not match the pull request" +
-                $" head branch '{prHead}'. Please checkout the correct branch and fetch the latest changes from the PR branch.");
+                $" head branch '{prHeadBranch}'. Please checkout the correct branch and fetch the latest changes from the PR branch.");
         }
     }
 
