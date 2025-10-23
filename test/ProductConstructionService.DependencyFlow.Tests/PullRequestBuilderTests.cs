@@ -14,6 +14,7 @@ using Moq;
 using NUnit.Framework;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
+
 using Asset = Microsoft.DotNet.ProductConstructionService.Client.Models.Asset;
 
 namespace ProductConstructionService.DependencyFlow.Tests;
@@ -45,7 +46,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     public async Task ShouldReturnCalculateCorrectPRDescriptionWhenCoherencyUpdate()
     {
         var build = GivenANewBuildId(101, "abc1234");
-        SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(true, build.Id, "11111111-1111-1111-1111-111111111111");
+        SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(true, build.Id, new Guid("11111111-1111-1111-1111-111111111111"));
         List<DependencyUpdate> deps = GivenDependencyUpdates('a', build.Id);
         TargetRepoDependencyUpdates requiredUpdates = GetTargetRepoDependencyUpdates(
             update,
@@ -62,8 +63,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     {
         var build1 = GivenANewBuildId(101, "abc1234");
         var build2 = GivenANewBuildId(102, "def2345");
-        SubscriptionUpdateWorkItem update1 = GivenSubscriptionUpdate(false, build1.Id, "11111111-1111-1111-1111-111111111111");
-        SubscriptionUpdateWorkItem update2 = GivenSubscriptionUpdate(false, build2.Id, "22222222-2222-2222-2222-222222222222");
+        SubscriptionUpdateWorkItem update1 = GivenSubscriptionUpdate(false, build1.Id, new Guid("11111111-1111-1111-1111-111111111111"));
+        SubscriptionUpdateWorkItem update2 = GivenSubscriptionUpdate(false, build2.Id, new Guid("22222222-2222-2222-2222-222222222222"));
         List<DependencyUpdate> deps1 = GivenDependencyUpdates('a', build1.Id);
         List<DependencyUpdate> deps2 = GivenDependencyUpdates('b', build2.Id);
         TargetRepoDependencyUpdates requiredUpdates1 = GetTargetRepoDependencyUpdates(
@@ -92,10 +93,10 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         var build2 = GivenANewBuildId(102, "def2345");
         var build3 = GivenANewBuildId(103, "gha3456");
         var build4 = GivenANewBuildId(104, "gha3777");
-        SubscriptionUpdateWorkItem update1 = GivenSubscriptionUpdate(false, build1.Id, "11111111-1111-1111-1111-111111111111");
-        SubscriptionUpdateWorkItem update2 = GivenSubscriptionUpdate(false, build2.Id, "22222222-2222-2222-2222-222222222222");
-        SubscriptionUpdateWorkItem update3 = GivenSubscriptionUpdate(false, build3.Id, "33333333-3333-3333-3333-333333333333");
-        SubscriptionUpdateWorkItem update4 = GivenSubscriptionUpdate(false, build4.Id, "22222222-2222-2222-2222-222222222222");
+        SubscriptionUpdateWorkItem update1 = GivenSubscriptionUpdate(false, build1.Id, new Guid("11111111-1111-1111-1111-111111111111"));
+        SubscriptionUpdateWorkItem update2 = GivenSubscriptionUpdate(false, build2.Id, new Guid("22222222-2222-2222-2222-222222222222"));
+        SubscriptionUpdateWorkItem update3 = GivenSubscriptionUpdate(false, build3.Id, new Guid("33333333-3333-3333-3333-333333333333"));
+        SubscriptionUpdateWorkItem update4 = GivenSubscriptionUpdate(false, build4.Id, new Guid("22222222-2222-2222-2222-222222222222"));
         List<DependencyUpdate> deps1 = GivenDependencyUpdates('a', build1.Id);
         List<DependencyUpdate> deps2 = GivenDependencyUpdates('b', build2.Id);
         List<DependencyUpdate> deps3 = GivenDependencyUpdates('c', build3.Id);
@@ -158,14 +159,17 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         build.AzureDevOpsAccount = "foo";
         build.AzureDevOpsProject = "bar";
         build.AzureDevOpsBuildId = 1234;
-        string subscriptionGuid = "11111111-1111-1111-1111-111111111111";
+
+        GivenACodeFlowSubscription(new());
+        Subscription.ChannelId = 1234;
+
         List<DependencyUpdateSummary> dependencyUpdates = GivenDependencyUpdateSummaries();
         SubscriptionUpdateWorkItem update = new()
         {
-            UpdaterId = subscriptionGuid,
+            UpdaterId = Subscription.Id.ToString(),
             IsCoherencyUpdate = false,
             SourceRepo = build.GetRepository(),
-            SubscriptionId = new Guid(subscriptionGuid),
+            SubscriptionId = Subscription.Id,
             BuildId = build.Id,
             SubscriptionType = SubscriptionType.DependenciesAndSources,
         };
@@ -187,6 +191,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
                 description = await builder.GenerateCodeFlowPRDescription(
                     update,
                     build,
+                    ToClientModelSubscription(Subscription),
+                    "pr-branch",
                     mockPreviousCommitSha,
                     dependencyUpdates,
                     upstreamRepoDiffs,
@@ -205,11 +211,11 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             
             This pull request brings the following source code changes
 
-            [marker]: <> (Begin:{subscriptionGuid})
+            [marker]: <> (Begin:{Subscription.Id})
 
             ## From {build.GitHubRepository}
-            - **Subscription**: [{subscriptionGuid}](https://maestro.dot.net/subscriptions?search={subscriptionGuid})
-            - **Build**: [{build.AzureDevOpsBuildNumber}](https://dev.azure.com/{build.AzureDevOpsAccount}/{build.AzureDevOpsProject}/_build/results?buildId={build.AzureDevOpsBuildId})
+            - **Subscription**: [{Subscription.Id}](https://maestro.dot.net/subscriptions?search={Subscription.Id})
+            - **Build**: [{build.AzureDevOpsBuildNumber}](https://dev.azure.com/{build.AzureDevOpsAccount}/{build.AzureDevOpsProject}/_build/results?buildId={build.AzureDevOpsBuildId}) ([101](https://maestro.dot.net/channel/1234/github:foo:foobar/build/101))
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Commit**: [{commitSha}]({build.GitHubRepository}/commit/{commitSha})
             - **Commit Diff**: [{shortPreviousCommitSha}...{shortCommitSha}]({build.GitHubRepository}/compare/{mockPreviousCommitSha}...{commitSha})
@@ -222,7 +228,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - From [1.0.0 to 2.0.0]({build.GitHubRepository}/compare/uvw789...xyz890)
               - Biz.Boz
 
-            [marker]: <> (End:{subscriptionGuid})
+            [marker]: <> (End:{Subscription.Id})
             [marker]: <> (Start:Footer:CodeFlow PR)
             
             ## Associated changes in source repos
@@ -230,6 +236,10 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - https://github.com/foo/boz/compare/oldSha234...newSha678
             - https://github.com/foo/baz/compare/oldSha345...newSha567
 
+            <!--
+                To diff the source repo and PR branch contents locally, run:
+                darc vmr diff --name-only https://github.com/foo/foobar:abc1234567..https://github.com/maestro-auth-test/dnceng-vmr:pr-branch
+            -->
             [marker]: <> (End:Footer:CodeFlow PR)
             """);
 
@@ -255,10 +265,10 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
 
         update = new()
         {
-            UpdaterId = subscriptionGuid,
+            UpdaterId = Subscription.Id.ToString(),
             IsCoherencyUpdate = false,
             SourceRepo = build.GetRepository(),
-            SubscriptionId = new Guid(subscriptionGuid),
+            SubscriptionId = Subscription.Id,
             BuildId = build.Id,
             SubscriptionType = SubscriptionType.DependenciesAndSources,
         };
@@ -270,6 +280,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
                 description = await builder.GenerateCodeFlowPRDescription(
                     update,
                     build,
+                    ToClientModelSubscription(Subscription),
+                    "pr-branch",
                     mockPreviousCommitSha,
                     dependencyUpdates,
                     upstreamRepoDiffs,
@@ -286,11 +298,11 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             This pull request brings the following source code changes
 
 
-            [marker]: <> (Begin:{subscriptionGuid})
+            [marker]: <> (Begin:{Subscription.Id})
 
             ## From {build.GitHubRepository}
-            - **Subscription**: [{subscriptionGuid}](https://maestro.dot.net/subscriptions?search={subscriptionGuid})
-            - **Build**: [{build.AzureDevOpsBuildNumber}](https://dev.azure.com/{build.AzureDevOpsAccount}/{build.AzureDevOpsProject}/_build/results?buildId={build.AzureDevOpsBuildId})
+            - **Subscription**: [{Subscription.Id}](https://maestro.dot.net/subscriptions?search={Subscription.Id})
+            - **Build**: [{build.AzureDevOpsBuildNumber}](https://dev.azure.com/{build.AzureDevOpsAccount}/{build.AzureDevOpsProject}/_build/results?buildId={build.AzureDevOpsBuildId}) ([101](https://maestro.dot.net/channel/1234/github:foo:foobar/build/101))
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Commit**: [{commitSha}]({build.GitHubRepository}/commit/{commitSha})
             - **Commit Diff**: [{shortPreviousCommitSha}...{shortCommitSha}]({build.GitHubRepository}/compare/{mockPreviousCommitSha}...{commitSha})
@@ -303,7 +315,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - From [1.0.0 to 3.0.0]({build.GitHubRepository}/compare/uvw789...def8889992)
               - Biz.Boz
 
-            [marker]: <> (End:{subscriptionGuid})
+            [marker]: <> (End:{Subscription.Id})
 
             [marker]: <> (Start:Footer:CodeFlow PR)
 
@@ -311,7 +323,11 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - https://github.com/foo/bar/compare/oldSha123...newSha789
             - https://github.com/foo/boz/compare/oldSha234...newSha678
             - https://github.com/foo/baz/compare/oldSha345...newSha567
-
+  
+            <!--
+                To diff the source repo and PR branch contents locally, run:
+                darc vmr diff --name-only https://github.com/foo/foobar:def888999222..https://github.com/maestro-auth-test/dnceng-vmr:pr-branch
+            -->
             [marker]: <> (End:Footer:CodeFlow PR)
             """);
     }
@@ -328,15 +344,18 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         build1.AzureDevOpsAccount = "foo";
         build1.AzureDevOpsProject = "bar";
         build1.AzureDevOpsBuildId = 1234;
-        string subscriptionGuid = "11111111-1111-1111-1111-111111111111";
-        SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, build1.Id, guid: subscriptionGuid, SubscriptionType.DependenciesAndSources);
+
+        GivenACodeFlowSubscription(new());
+        Subscription.ChannelId = 7890;
+
+        SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, build1.Id, Subscription.Id, SubscriptionType.DependenciesAndSources);
         string previousCommitSha = "SHA1234567890";
         string? description = null;
         await Execute(
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = await builder.GenerateCodeFlowPRDescription(update, build1, previousCommitSha, dependencyUpdates: [], currentDescription: null, isForwardFlow: true, upstreamRepoDiffs: []);
+                description = await builder.GenerateCodeFlowPRDescription(update, build1, ToClientModelSubscription(Subscription), "pr-branch", previousCommitSha, dependencyUpdates: [], currentDescription: null, isForwardFlow: true, upstreamRepoDiffs: []);
             });
         string shortCommitSha = commitSha.Substring(0, 7);
         string shortPreviousCommitSha = previousCommitSha.Substring(0, 7);
@@ -350,15 +369,27 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         build2.AzureDevOpsAccount = "zoo";
         build2.AzureDevOpsProject = "faz";
         build2.AzureDevOpsBuildId = 7890;
-        string subscriptionGuid2 = "22222222-2222-2222-2222-222222222222";
-        SubscriptionUpdateWorkItem update2 = GivenSubscriptionUpdate(false, build2.Id, guid: subscriptionGuid2, SubscriptionType.DependenciesAndSources);
+
+        var subscription2 = new Subscription(
+            Guid.NewGuid(),
+            true,
+            true,
+            build2.GitHubRepository,
+            build2.GitHubRepository + "-2",
+            "main",
+            null,
+            null,
+            null,
+            []);
+
+        SubscriptionUpdateWorkItem update2 = GivenSubscriptionUpdate(false, build2.Id, subscription2.Id, SubscriptionType.DependenciesAndSources);
         string previousCommitSha2 = "SHA0987654321";
         string? description2 = null;
         await Execute(
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description2 = await builder.GenerateCodeFlowPRDescription(update2, build2, previousCommitSha2, dependencyUpdates: [], upstreamRepoDiffs: [], description, isForwardFlow: true);
+                description2 = await builder.GenerateCodeFlowPRDescription(update2, build2, subscription2, "pr-branch", previousCommitSha2, dependencyUpdates: [], upstreamRepoDiffs: [], description, isForwardFlow: true);
             });
         string shortCommitSha2 = commitSha2.Substring(0, 7);
         string shortPreviousCommitSha2 = previousCommitSha2.Substring(0, 7);
@@ -372,29 +403,29 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             
             This pull request brings the following source code changes
             
-            [marker]: <> (Begin:{subscriptionGuid})
+            [marker]: <> (Begin:{Subscription.Id})
             
             ## From {build1.GitHubRepository}
-            - **Subscription**: [{subscriptionGuid}](https://maestro.dot.net/subscriptions?search={subscriptionGuid})
-            - **Build**: [{build1.AzureDevOpsBuildNumber}](https://dev.azure.com/{build1.AzureDevOpsAccount}/{build1.AzureDevOpsProject}/_build/results?buildId={build1.AzureDevOpsBuildId})
+            - **Subscription**: [{Subscription.Id}](https://maestro.dot.net/subscriptions?search={Subscription.Id})
+            - **Build**: [{build1.AzureDevOpsBuildNumber}](https://dev.azure.com/{build1.AzureDevOpsAccount}/{build1.AzureDevOpsProject}/_build/results?buildId={build1.AzureDevOpsBuildId}) ([101](https://maestro.dot.net/channel/7890/github:foo:foobar/build/101))
             - **Date Produced**: {build1.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Commit**: [{commitSha}]({build1.GitHubRepository}/commit/{commitSha})
             - **Commit Diff**: [{shortPreviousCommitSha}...{shortCommitSha}]({build1.GitHubRepository}/compare/{previousCommitSha}...{commitSha})
             - **Branch**: [main]({build1.GitHubRepository}/tree/main)
             
-            [marker]: <> (End:{subscriptionGuid})
+            [marker]: <> (End:{Subscription.Id})
             
-            [marker]: <> (Begin:{subscriptionGuid2})
+            [marker]: <> (Begin:{subscription2.Id})
 
             ## From {build2.GitHubRepository}
-            - **Subscription**: [{subscriptionGuid2}](https://maestro.dot.net/subscriptions?search={subscriptionGuid2})
+            - **Subscription**: [{subscription2.Id}](https://maestro.dot.net/subscriptions?search={subscription2.Id})
             - **Build**: [{build2.AzureDevOpsBuildNumber}](https://dev.azure.com/{build2.AzureDevOpsAccount}/{build2.AzureDevOpsProject}/_build/results?buildId={build2.AzureDevOpsBuildId})
             - **Date Produced**: {build2.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
             - **Commit**: [{commitSha2}]({build2.GitHubRepository}/commit/{commitSha2})
             - **Commit Diff**: [{shortPreviousCommitSha2}...{shortCommitSha2}]({build2.GitHubRepository}/compare/{previousCommitSha2}...{commitSha2})
             - **Branch**: [main]({build2.GitHubRepository}/tree/main)
 
-            [marker]: <> (End:{subscriptionGuid2})
+            [marker]: <> (End:{subscription2.Id})
 
             """);
     }
@@ -544,7 +575,8 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     public async Task ShouldGroupDependenciesInDependencyFlowPRs()
     {
         var build1 = GivenANewBuildId(101, "abc1234");
-        SubscriptionUpdateWorkItem update1 = GivenSubscriptionUpdate(false, build1.Id, "11111111-1111-1111-1111-111111111111");
+        GivenACodeFlowSubscription(new());
+        SubscriptionUpdateWorkItem update1 = GivenSubscriptionUpdate(false, build1.Id, Subscription.Id);
 
         // Create dependencies that should be grouped (same version range and commit range)
         List<DependencyUpdate> deps1 = [
@@ -733,13 +765,13 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     private static SubscriptionUpdateWorkItem GivenSubscriptionUpdate(
         bool isCoherencyUpdate,
         int buildId,
-        string guid,
+        Guid id,
         SubscriptionType type = SubscriptionType.Dependencies) => new()
         {
-            UpdaterId = guid,
+            UpdaterId = id.ToString(),
             IsCoherencyUpdate = isCoherencyUpdate,
             SourceRepo = "The best repo",
-            SubscriptionId = new Guid(guid),
+            SubscriptionId = id,
             BuildId = buildId,
             SubscriptionType = type,
         };
@@ -954,7 +986,9 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         string commitSha = "abc1234567";
         int buildId = 12345;
         int channelId = 789;
-        var subscriptionId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+
+        GivenACodeFlowSubscription(new());
+        Subscription.ChannelId = channelId;
 
         Build build = GivenANewBuildId(buildId, commitSha);
         build.AzureDevOpsAccount = "dnceng";
@@ -963,29 +997,18 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         build.AzureDevOpsBuildNumber = "20250828.10";
         build.GitHubRepository = "https://github.com/dotnet/roslyn";
 
-        SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, buildId, subscriptionId.ToString(), SubscriptionType.DependenciesAndSources);
+        SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, buildId, Subscription.Id, SubscriptionType.DependenciesAndSources);
 
         string? description = null;
         await Execute(
             async context =>
             {
-                // Add subscription to the in-memory database with a channel
-                var dbContext = context.GetRequiredService<BuildAssetRegistryContext>();
-                var subscription = new Maestro.Data.Models.Subscription
-                {
-                    Id = subscriptionId,
-                    ChannelId = channelId,
-                    SourceRepository = "https://github.com/dotnet/roslyn",
-                    TargetRepository = "https://github.com/dotnet/aspire",
-                    TargetBranch = "main"
-                };
-                dbContext.Subscriptions.Add(subscription);
-                await dbContext.SaveChangesAsync();
-
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
                 description = await builder.GenerateCodeFlowPRDescription(
                     update,
                     build,
+                    ToClientModelSubscription(Subscription),
+                    "pr-head",
                     "previoussha123",
                     dependencyUpdates: [],
                     upstreamRepoDiffs: [],
@@ -1010,7 +1033,9 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         string commitSha = "def7654321";
         int buildId = 54321;
         int channelId = 456;
-        var subscriptionId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+
+        GivenACodeFlowSubscription(new());
+        Subscription.ChannelId = channelId;
 
         Build build = GivenANewBuildId(buildId, commitSha);
         build.AzureDevOpsAccount = "dnceng";
@@ -1020,29 +1045,18 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         build.AzureDevOpsRepository = "https://dev.azure.com/dnceng/internal/_git/dotnet-runtime";
         build.GitHubRepository = null; // Clear GitHub repo to use Azure DevOps repo
 
-        SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, buildId, subscriptionId.ToString(), SubscriptionType.DependenciesAndSources);
+        SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, buildId, Subscription.Id, SubscriptionType.DependenciesAndSources);
 
         string? description = null;
         await Execute(
             async context =>
             {
-                // Add subscription to the in-memory database with a channel
-                var dbContext = context.GetRequiredService<BuildAssetRegistryContext>();
-                var subscription = new Maestro.Data.Models.Subscription
-                {
-                    Id = subscriptionId,
-                    ChannelId = channelId,
-                    SourceRepository = "https://dev.azure.com/dnceng/internal/_git/dotnet-runtime",
-                    TargetRepository = "https://github.com/dotnet/aspire",
-                    TargetBranch = "main"
-                };
-                dbContext.Subscriptions.Add(subscription);
-                await dbContext.SaveChangesAsync();
-
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
                 description = await builder.GenerateCodeFlowPRDescription(
                     update,
                     build,
+                    ToClientModelSubscription(Subscription),
+                    "pr-head",
                     "previoussha456",
                     dependencyUpdates: [],
                     upstreamRepoDiffs: [],
@@ -1084,7 +1098,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         return build;
     }
 
-    private TargetRepoDependencyUpdates GetTargetRepoDependencyUpdates(
+    private static TargetRepoDependencyUpdates GetTargetRepoDependencyUpdates(
         SubscriptionUpdateWorkItem update,
         List<DependencyUpdate> nonCoherencyUpdates,
         List<DependencyUpdate> coherencyUpdates,
@@ -1105,9 +1119,24 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             }
         };
 
-    private Dictionary<UnixPath, List<DependencyUpdate>> GetUpdatedDependenciesPerPath(UnixPath path, List<DependencyUpdate> nonCoherencyUpdates) =>
+    private static Dictionary<UnixPath, List<DependencyUpdate>> GetUpdatedDependenciesPerPath(UnixPath path, List<DependencyUpdate> nonCoherencyUpdates) =>
         new()
         {
             { path, nonCoherencyUpdates }
         };
+
+    private static Subscription ToClientModelSubscription(Maestro.Data.Models.Subscription other)
+    {
+        return new Subscription(
+            other.Id,
+            other.Enabled,
+            other.SourceEnabled,
+            other.SourceRepository,
+            other.TargetRepository,
+            other.TargetBranch,
+            other.PullRequestFailureNotificationTags,
+            other.SourceDirectory,
+            other.TargetDirectory,
+            other.ExcludedAssets?.Select(a => a.Filter).ToList());
+    }
 }

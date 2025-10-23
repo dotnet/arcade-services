@@ -1307,6 +1307,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var description = await _pullRequestBuilder.GenerateCodeFlowPRDescription(
             update,
             build,
+            subscription,
+            prInfo.HeadBranch,
             previousSourceSha,
             pullRequest.RequiredUpdates,
             upstreamRepoDiffs,
@@ -1366,6 +1368,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             var description = await _pullRequestBuilder.GenerateCodeFlowPRDescription(
                 update,
                 build,
+                subscription,
+                prBranch,
                 previousSourceSha,
                 requiredUpdates,
                 upstreamRepoDiffs,

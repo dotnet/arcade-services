@@ -9,6 +9,7 @@ using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.Model;
@@ -59,6 +60,8 @@ internal interface IPullRequestBuilder
     Task<string> GenerateCodeFlowPRDescription(
         SubscriptionUpdateWorkItem update,
         BuildDTO build,
+        Subscription subscription,
+        string headBranch,
         string? previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
         IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
@@ -241,6 +244,8 @@ internal class PullRequestBuilder : IPullRequestBuilder
     public async Task<string> GenerateCodeFlowPRDescription(
         SubscriptionUpdateWorkItem update,
         BuildDTO build,
+        Subscription subscription,
+        string headBranch,
         string? previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
         IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
@@ -257,7 +262,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
         description = CompressRepeatedLinksInDescription(description);
 
-        return AddOrUpdateFooterInDescription(description, upstreamRepoDiffs);
+        return AddOrUpdateFooterInDescription(build, subscription, headBranch, description, upstreamRepoDiffs);
     }
 
     private async Task<string> GenerateCodeFlowPRDescriptionInternal(
@@ -306,7 +311,12 @@ internal class PullRequestBuilder : IPullRequestBuilder
         }
     }
 
-    private static string AddOrUpdateFooterInDescription(string description, IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs)
+    private static string AddOrUpdateFooterInDescription(
+        BuildDTO build,
+        Subscription subscription,
+        string headBranch,
+        string description,
+        IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs)
     {
         int footerStartIndex = description.IndexOf(FooterStartMarker);
         int footerEndIndex = description.IndexOf(FooterEndMarker);
@@ -329,6 +339,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
                 ## Associated changes in source repos
                 {GenerateUpstreamRepoDiffs(upstreamRepoDiffs)}
+                {GenerateDarcDiffHelp(build, subscription.TargetRepository, headBranch)}
                 {FooterEndMarker}
                 """;
             return description;
@@ -350,6 +361,14 @@ internal class PullRequestBuilder : IPullRequestBuilder
         }
         return sb.ToString();
     }
+
+    private static string GenerateDarcDiffHelp(BuildDTO build, string targetRepository, string headBranch) =>
+        $"""
+        <!--
+            To diff the source repo and PR branch contents locally, run:
+            darc vmr diff --name-only {build.GetRepository()}:{build.Commit}..{targetRepository}:{headBranch}
+        -->
+        """;
 
     private async Task<string> GenerateCodeFlowDescriptionForSubscription(
         Guid subscriptionId,
@@ -496,7 +515,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             return CommitDiffNotAvailableMsg;
         }
 
-        string sourceDiffText = $"{Commit.GetShortSha(previousSourceCommit)}...{Commit.GetShortSha(build.Commit)}";
+        string sourceDiffText = $"{Microsoft.DotNet.DarcLib.Commit.GetShortSha(previousSourceCommit)}...{Microsoft.DotNet.DarcLib.Commit.GetShortSha(build.Commit)}";
 
         if (!string.IsNullOrEmpty(build.GitHubRepository))
         {
