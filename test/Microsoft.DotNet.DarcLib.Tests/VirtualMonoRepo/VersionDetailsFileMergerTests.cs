@@ -185,7 +185,7 @@ public class VersionDetailsFileMergerTests
         result.Additions.Should().HaveCount(2);
         // there should only be one removal because Package.That.Is.Already.Removed.In.Repo was already removed in the target repo
         result.Removals.Should().HaveCount(1);
-        result.Updates.Should().HaveCount(1);
+        result.Updates.Should().HaveCount(2);
         List<(string, string)> expectedAdditions = [
             ("Package.Added.In.Both", "2.2.2"),
             ("Package.Added.In.VMR", "2.0.0")];
@@ -195,7 +195,9 @@ public class VersionDetailsFileMergerTests
             .Should()
             .BeEquivalentTo(expectedAdditions, options => options.WithStrictOrdering());
         List<(string, string)> expectedUpdates = [
-            ("Package.Updated.In.Both", "3.0.0")];
+            ("Package.From.Build", "1.0.1"),
+            ("Package.Updated.In.Both", "3.0.0"),
+        ];
         result.Updates.Values
             .Select(u => (DependencyDetail)u.Value!)
             .Select(d => (d.Name, d.Version))
