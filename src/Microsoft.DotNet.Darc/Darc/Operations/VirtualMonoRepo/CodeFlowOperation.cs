@@ -190,7 +190,7 @@ internal abstract class CodeFlowOperation(
         }
         else
         {
-            build = await _barApiClient.GetBuildAsync(_options.Build);
+            build = await _barApiClient.GetBuildAsync(buildId);
 
             try
             {
