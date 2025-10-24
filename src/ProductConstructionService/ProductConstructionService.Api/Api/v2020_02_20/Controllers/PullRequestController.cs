@@ -110,17 +110,12 @@ public partial class PullRequestController : ControllerBase
                     pr.ContainedSubscriptions.First(s => s.SubscriptionId == update.Id).BuildId))
                 .ToList();
 
-            prs.Add(new TrackedPullRequest(
+            var trackedPr = ToTrackedPullRequest(
+                pr,
                 key.Replace(keyPrefix, null, StringComparison.InvariantCultureIgnoreCase),
-                TurnApiUrlToWebsite(pr.Url, org, repoName),
-                sampleSub?.Channel != null ? new Channel(sampleSub.Channel) : null,
-                sampleSub?.TargetBranch,
-                sampleSub?.SourceEnabled ?? false,
-                pr.LastUpdate,
-                pr.LastCheck,
-                pr.NextCheck,
-                updates,
-                pr.MergeState.Equals(InProgressPullRequestState.Conflict)));
+                sampleSub);
+
+            prs.Add(trackedPr);
         }
 
         return Ok(prs.AsQueryable());
@@ -165,21 +160,10 @@ public partial class PullRequestController : ControllerBase
             return NotFound();
         }
 
-        var trackedPullRequest = new TrackedPullRequest(
+        var trackedPullRequest = ToTrackedPullRequest(
+            pr,
             subscription.Id.ToString(),
-            pr.Url,
-            subscription?.Channel != null ? new Channel(subscription.Channel) : null,
-            subscription?.TargetBranch,
-            subscription?.SourceEnabled ?? false,
-            pr.LastUpdate,
-            pr.LastCheck,
-            pr.NextCheck,
-            [.. pr.ContainedSubscriptions
-            .Select(csu => new PullRequestUpdate(
-                csu.SourceRepo,
-                csu.SubscriptionId,
-                csu.BuildId))],
-            pr.MergeState.Equals(InProgressPullRequestState.Conflict));
+            subscription);
 
         return Ok(trackedPullRequest);
     }
@@ -221,6 +205,30 @@ public partial class PullRequestController : ControllerBase
         return url;
     }
 
+    private static TrackedPullRequest ToTrackedPullRequest(
+        InProgressPullRequest pr,
+        string subscriptionId,
+        Maestro.Data.Models.Subscription? subscription)
+    {
+        return new TrackedPullRequest(
+            subscriptionId,
+            pr.Url,
+            subscription?.Channel != null ? new Channel(subscription.Channel) : null,
+            subscription?.TargetBranch,
+            subscription?.SourceEnabled ?? false,
+            pr.LastUpdate,
+            pr.LastCheck,
+            pr.NextCheck,
+            [.. pr.ContainedSubscriptions
+            .Select(csu => new PullRequestUpdate(
+                csu.SourceRepo,
+                csu.SubscriptionId,
+                csu.BuildId))],
+            pr.MergeState == InProgressPullRequestState.Conflict,
+            pr.HeadBranch,
+            pr.NextBuildsToProcess);
+    }
+
     private record TrackedPullRequest(
         string Id,
         string Url,
@@ -231,7 +239,9 @@ public partial class PullRequestController : ControllerBase
         DateTime LastCheck,
         DateTime? NextCheck,
         List<PullRequestUpdate> Updates,
-        bool isInconflict);
+        bool IsInConflict,
+        string HeadBranch,
+        Dictionary<Guid, int> NextBuildsToApply);
 
     private record PullRequestUpdate(
         string SourceRepository,
