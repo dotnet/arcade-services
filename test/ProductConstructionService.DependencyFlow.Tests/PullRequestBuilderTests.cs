@@ -164,15 +164,6 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         Subscription.ChannelId = 1234;
 
         List<DependencyUpdateSummary> dependencyUpdates = GivenDependencyUpdateSummaries();
-        SubscriptionUpdateWorkItem update = new()
-        {
-            UpdaterId = Subscription.Id.ToString(),
-            IsCoherencyUpdate = false,
-            SourceRepo = build.GetRepository(),
-            SubscriptionId = Subscription.Id,
-            BuildId = build.Id,
-            SubscriptionType = SubscriptionType.DependenciesAndSources,
-        };
 
         List<UpstreamRepoDiff> upstreamRepoDiffs =
         [
@@ -189,15 +180,13 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
                 description = await builder.GenerateCodeFlowPRDescription(
-                    update,
                     build,
                     ToClientModelSubscription(Subscription),
                     "pr-branch",
                     mockPreviousCommitSha,
                     dependencyUpdates,
                     upstreamRepoDiffs,
-                    currentDescription: null,
-                    isForwardFlow: false);
+                    currentDescription: null);
             });
 
         string shortCommitSha = commitSha.Substring(0, 7);
@@ -207,7 +196,9 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             $"""
             
             > [!NOTE]
-            > This is a codeflow update. It may contain both source code changes from [the VMR]({update.SourceRepo}) as well as dependency updates. Learn more [here]({PullRequestBuilder.CodeFlowPrFaqUri}).
+            > This is a codeflow update. It may contain both source code changes from
+            > [the VMR]({build.GetRepository()})
+            > as well as dependency updates. Learn more [here]({PullRequestBuilder.CodeFlowPrFaqUri}).
             
             This pull request brings the following source code changes
 
@@ -263,37 +254,27 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             ToVersion = "3.0.0",
         })];
 
-        update = new()
-        {
-            UpdaterId = Subscription.Id.ToString(),
-            IsCoherencyUpdate = false,
-            SourceRepo = build.GetRepository(),
-            SubscriptionId = Subscription.Id,
-            BuildId = build.Id,
-            SubscriptionType = SubscriptionType.DependenciesAndSources,
-        };
-
         await Execute(
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
                 description = await builder.GenerateCodeFlowPRDescription(
-                    update,
                     build,
                     ToClientModelSubscription(Subscription),
                     "pr-branch",
                     mockPreviousCommitSha,
                     dependencyUpdates,
                     upstreamRepoDiffs,
-                    description,
-                    isForwardFlow: false);
+                    description);
             });
 
         description.Should().Be(
             $"""
             
             > [!NOTE]
-            > This is a codeflow update. It may contain both source code changes from [the VMR]({update.SourceRepo}) as well as dependency updates. Learn more [here]({PullRequestBuilder.CodeFlowPrFaqUri}).
+            > This is a codeflow update. It may contain both source code changes from
+            > [the VMR]({build.GetRepository()})
+            > as well as dependency updates. Learn more [here]({PullRequestBuilder.CodeFlowPrFaqUri}).
             
             This pull request brings the following source code changes
 
@@ -347,15 +328,16 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
 
         GivenACodeFlowSubscription(new());
         Subscription.ChannelId = 7890;
+        Subscription.SourceDirectory = Subscription.TargetDirectory;
+        Subscription.TargetDirectory = null;
 
-        SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, build1.Id, Subscription.Id, SubscriptionType.DependenciesAndSources);
         string previousCommitSha = "SHA1234567890";
         string? description = null;
         await Execute(
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description = await builder.GenerateCodeFlowPRDescription(update, build1, ToClientModelSubscription(Subscription), "pr-branch", previousCommitSha, dependencyUpdates: [], currentDescription: null, isForwardFlow: true, upstreamRepoDiffs: []);
+                description = await builder.GenerateCodeFlowPRDescription(build1, ToClientModelSubscription(Subscription), "pr-branch", previousCommitSha, dependencyUpdates: [], currentDescription: null, upstreamRepoDiffs: []);
             });
         string shortCommitSha = commitSha.Substring(0, 7);
         string shortPreviousCommitSha = previousCommitSha.Substring(0, 7);
@@ -382,14 +364,13 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             null,
             []);
 
-        SubscriptionUpdateWorkItem update2 = GivenSubscriptionUpdate(false, build2.Id, subscription2.Id, SubscriptionType.DependenciesAndSources);
         string previousCommitSha2 = "SHA0987654321";
         string? description2 = null;
         await Execute(
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
-                description2 = await builder.GenerateCodeFlowPRDescription(update2, build2, subscription2, "pr-branch", previousCommitSha2, dependencyUpdates: [], upstreamRepoDiffs: [], description, isForwardFlow: true);
+                description2 = await builder.GenerateCodeFlowPRDescription(build2, subscription2, "pr-branch", previousCommitSha2, dependencyUpdates: [], upstreamRepoDiffs: [], description);
             });
         string shortCommitSha2 = commitSha2.Substring(0, 7);
         string shortPreviousCommitSha2 = previousCommitSha2.Substring(0, 7);
@@ -399,7 +380,9 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             $"""
             
             > [!NOTE]
-            > This is a codeflow update. It may contain both source code changes from [the source repo]({update.SourceRepo}) as well as dependency updates. Learn more [here]({PullRequestBuilder.CodeFlowPrFaqUri}).
+            > This is a codeflow update. It may contain both source code changes from
+            > [the source repo]({build1.GetRepository()})
+            > as well as dependency updates. Learn more [here]({PullRequestBuilder.CodeFlowPrFaqUri}).
             
             This pull request brings the following source code changes
             
@@ -638,7 +621,9 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     private const string RegexTestString3 =
         """
         > [!NOTE]
-        > This is a codeflow update. It may contain both source code changes from [the VMR](https://github.com/foo/foobar) as well as dependency updates. Learn more [here](https://github.com/dotnet/dotnet/tree/main/docs/Codeflow-PRs.md).
+        > This is a codeflow update. It may contain both source code changes from
+        > [the VMR](https://github.com/foo/foobar)
+        > as well as dependency updates. Learn more [here](https://github.com/dotnet/dotnet/tree/main/docs/Codeflow-PRs.md).
 
         This pull request brings the following source code changes
 
@@ -997,23 +982,19 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         build.AzureDevOpsBuildNumber = "20250828.10";
         build.GitHubRepository = "https://github.com/dotnet/roslyn";
 
-        SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, buildId, Subscription.Id, SubscriptionType.DependenciesAndSources);
-
         string? description = null;
         await Execute(
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
                 description = await builder.GenerateCodeFlowPRDescription(
-                    update,
                     build,
                     ToClientModelSubscription(Subscription),
                     "pr-head",
                     "previoussha123",
                     dependencyUpdates: [],
                     upstreamRepoDiffs: [],
-                    currentDescription: null,
-                    isForwardFlow: false);
+                    currentDescription: null);
             });
 
         // Then - Should contain enhanced build link with BAR details
@@ -1045,23 +1026,19 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
         build.AzureDevOpsRepository = "https://dev.azure.com/dnceng/internal/_git/dotnet-runtime";
         build.GitHubRepository = null; // Clear GitHub repo to use Azure DevOps repo
 
-        SubscriptionUpdateWorkItem update = GivenSubscriptionUpdate(false, buildId, Subscription.Id, SubscriptionType.DependenciesAndSources);
-
         string? description = null;
         await Execute(
             async context =>
             {
                 var builder = ActivatorUtilities.CreateInstance<PullRequestBuilder>(context);
                 description = await builder.GenerateCodeFlowPRDescription(
-                    update,
                     build,
                     ToClientModelSubscription(Subscription),
                     "pr-head",
                     "previoussha456",
                     dependencyUpdates: [],
                     upstreamRepoDiffs: [],
-                    currentDescription: null,
-                    isForwardFlow: false);
+                    currentDescription: null);
             });
 
         // Then - Should contain enhanced build link with BAR details for Azure DevOps repo

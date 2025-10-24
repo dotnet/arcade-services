@@ -58,15 +58,13 @@ internal interface IPullRequestBuilder
     ///    Generate the description for a code flow PR.
     /// </summary>
     Task<string> GenerateCodeFlowPRDescription(
-        SubscriptionUpdateWorkItem update,
         BuildDTO build,
         Subscription subscription,
         string headBranch,
         string? previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
         IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
-        string? currentDescription,
-        bool isForwardFlow);
+        string? currentDescription);
 }
 
 internal class PullRequestBuilder : IPullRequestBuilder
@@ -242,23 +240,20 @@ internal class PullRequestBuilder : IPullRequestBuilder
     }
 
     public async Task<string> GenerateCodeFlowPRDescription(
-        SubscriptionUpdateWorkItem update,
         BuildDTO build,
         Subscription subscription,
         string headBranch,
         string? previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
         IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
-        string? currentDescription,
-        bool isForwardFlow)
+        string? currentDescription)
     {
         string description = await GenerateCodeFlowPRDescriptionInternal(
-            update,
+            subscription,
             build,
             previousSourceCommit,
             dependencyUpdates,
-            currentDescription,
-            isForwardFlow);
+            currentDescription);
 
         description = CompressRepeatedLinksInDescription(description);
 
@@ -266,12 +261,11 @@ internal class PullRequestBuilder : IPullRequestBuilder
     }
 
     private async Task<string> GenerateCodeFlowPRDescriptionInternal(
-        SubscriptionUpdateWorkItem update,
+        Subscription subscription,
         BuildDTO build,
         string? previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
-        string? currentDescription,
-        bool isForwardFlow)
+        string? currentDescription)
     {
         if (string.IsNullOrEmpty(currentDescription))
         {
@@ -279,32 +273,33 @@ internal class PullRequestBuilder : IPullRequestBuilder
             return $"""
                 
                 > [!NOTE]
-                > This is a codeflow update. It may contain both source code changes from [{(isForwardFlow ? "the source repo" : "the VMR")}]({update.SourceRepo}) as well as dependency updates. Learn more [here]({CodeFlowPrFaqUri}).
+                > This is a codeflow update. It may contain both source code changes from
+                > [{(subscription.IsForwardFlow() ? "the source repo" : "the VMR")}]({build.GetRepository()})
+                > as well as dependency updates. Learn more [here]({CodeFlowPrFaqUri}).
 
                 This pull request brings the following source code changes
-                {await GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates)}
+                {await GenerateCodeFlowDescriptionForSubscription(subscription.Id, previousSourceCommit, build, dependencyUpdates)}
                 """;
         }
         else
         {
             // if PR description already exists, update only the section relevant to the current subscription
-            int startIndex = currentDescription.IndexOf(GetStartMarker(update.SubscriptionId));
-            int endIndex = currentDescription.IndexOf(GetEndMarker(update.SubscriptionId));
+            int startIndex = currentDescription.IndexOf(GetStartMarker(subscription.Id));
+            int endIndex = currentDescription.IndexOf(GetEndMarker(subscription.Id));
 
             int startCutoff = startIndex == -1 ?
                 currentDescription.Length :
                 startIndex;
             int endCutoff = endIndex == -1 ?
                 currentDescription.Length :
-                endIndex + GetEndMarker(update.SubscriptionId).Length;
+                endIndex + GetEndMarker(subscription.Id).Length;
 
             var beforeSpan = currentDescription.Substring(0, startCutoff);
             var afterSpan = currentDescription.Substring(endCutoff, currentDescription.Length - endCutoff);
             var generatedDescription = await GenerateCodeFlowDescriptionForSubscription(
-                update.SubscriptionId,
+                subscription.Id,
                 previousSourceCommit,
                 build,
-                update.SourceRepo,
                 dependencyUpdates);
 
             return string.Concat(beforeSpan, generatedDescription, afterSpan);
@@ -374,23 +369,25 @@ internal class PullRequestBuilder : IPullRequestBuilder
         Guid subscriptionId,
         string? previousSourceCommit,
         BuildDTO build,
-        string repoUri,
         List<DependencyUpdateSummary> dependencyUpdates)
     {
+        var sourceRepoUri = build.GetRepository();
+        var sourceBranch = build.GetBranch();
+
         string sourceDiffText = CreateSourceDiffLink(build, previousSourceCommit);
-        string dependencyUpdateBlock = CreateDependencyUpdateBlock(dependencyUpdates, repoUri);
+        string dependencyUpdateBlock = CreateDependencyUpdateBlock(dependencyUpdates, sourceRepoUri);
         return
             $"""
 
             {GetStartMarker(subscriptionId)}
             
-            ## From {build.GetRepository()}
+            ## From {sourceRepoUri}
             - **Subscription**: {GetSubscriptionLink(subscriptionId)}
             - **Build**: {await GetBuildLinkAsync(build, subscriptionId)}
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
-            - **Commit**: [{build.Commit}]({GitRepoUrlUtils.GetCommitUri(build.GetRepository(), build.Commit)})
+            - **Commit**: [{build.Commit}]({GitRepoUrlUtils.GetCommitUri(sourceRepoUri, build.Commit)})
             - **Commit Diff**: {sourceDiffText}
-            - **Branch**: [{build.GetBranch()}]({GitRepoUrlUtils.GetRepoAtBranchUri(build.GetRepository(), build.GetBranch())})
+            - **Branch**: [{sourceBranch}]({GitRepoUrlUtils.GetRepoAtBranchUri(sourceRepoUri, sourceBranch)})
             {dependencyUpdateBlock}
             {GetEndMarker(subscriptionId)}
 
