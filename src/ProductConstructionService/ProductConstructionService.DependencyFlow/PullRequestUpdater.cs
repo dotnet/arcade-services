@@ -1252,8 +1252,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 previousSourceSha,
                 subscription,
                 codeFlowRes.DependencyUpdates,
-                upstreamRepoDiffs,
-                isForwardFlow);
+                upstreamRepoDiffs);
         }
 
         if (pr != null && codeFlowRes.ConflictedFiles.Count > 0 && !enableRebase)
@@ -1279,8 +1278,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         string? previousSourceSha,
         SubscriptionDTO subscription,
         List<DependencyUpdate> newDependencyUpdates,
-        IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
-        bool isForwardFlow)
+        IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs)
     {
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
         var build = await _sqlClient.GetBuildAsync(update.BuildId);
@@ -1305,13 +1303,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             pullRequest.ContainedSubscriptions.Select(s => s.SourceRepo).ToList());
 
         var description = await _pullRequestBuilder.GenerateCodeFlowPRDescription(
-            update,
             build,
+            subscription,
+            prInfo.HeadBranch,
             previousSourceSha,
             pullRequest.RequiredUpdates,
             upstreamRepoDiffs,
-            prInfo?.Description,
-            isForwardFlow: isForwardFlow);
+            prInfo?.Description);
 
         try
         {
@@ -1364,13 +1362,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(subscription.TargetBranch, [update.SourceRepo]);
             var description = await _pullRequestBuilder.GenerateCodeFlowPRDescription(
-                update,
                 build,
+                subscription,
+                prBranch,
                 previousSourceSha,
                 requiredUpdates,
                 upstreamRepoDiffs,
-                currentDescription: null,
-                isForwardFlow: subscription.IsForwardFlow());
+                currentDescription: null);
 
             PullRequest pr = await darcRemote.CreatePullRequestAsync(
                 subscription.TargetRepository,
@@ -1663,8 +1661,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 previousSourceSha,
                 subscription,
                 codeFlowResult.DependencyUpdates,
-                upstreamRepoDiffs,
-                subscription.IsForwardFlow());
+                upstreamRepoDiffs);
         }
 
         _commentCollector.AddComment(
