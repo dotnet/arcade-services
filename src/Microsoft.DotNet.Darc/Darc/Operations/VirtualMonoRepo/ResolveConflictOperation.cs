@@ -199,7 +199,7 @@ internal class ResolveConflictOperation(
             $"""
             An unexpected error occurred while trying to fetch the latest PR branch SHA from {repoUrl}. 
             {result.StandardError}
-        """);
+            """);
 
         var remoteSha = result.StandardOutput.Split('\t')[0].Trim();
 

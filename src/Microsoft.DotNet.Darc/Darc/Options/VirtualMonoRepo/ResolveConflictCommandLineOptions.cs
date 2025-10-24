@@ -7,7 +7,7 @@ using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
-[Verb("resolve-conflict", HelpText = "Allows the user to resolve codeflow conflicts encountered by Maestro.")]
+[Verb("resolve-conflict", HelpText = "Resolves a pending codeflow PR conflict locally.")]
 internal class ResolveConflictCommandLineOptions : CodeFlowCommandLineOptions<ResolveConflictOperation>
 {
     [Option('s', "subscriptionId", Required = true, HelpText = "Subscription id")]
