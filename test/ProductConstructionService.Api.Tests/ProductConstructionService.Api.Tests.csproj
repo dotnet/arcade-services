@@ -7,7 +7,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" VersionOverride="8.0.0" />
     <PackageReference Include="Microsoft.DotNet.Internal.DependencyInjection.Testing" />
     <PackageReference Include="Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
