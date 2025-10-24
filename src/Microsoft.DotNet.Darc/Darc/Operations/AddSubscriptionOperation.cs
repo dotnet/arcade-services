@@ -160,7 +160,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         bool batchable = _options.Batchable;
         bool sourceEnabled = _options.SourceEnabled;
         string sourceDirectory = _options.SourceDirectory;
-        string targetDirectory = _options.TargetDirectory;
+        string targetDirectory = NormalizeTargetDirectory(_options.TargetDirectory);
         string failureNotificationTags = _options.FailureNotificationTags;
         List<string> excludedAssets = _options.ExcludedAssets != null ? [.._options.ExcludedAssets.Split(';', StringSplitOptions.RemoveEmptyEntries)] : [];
 

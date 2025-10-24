@@ -335,19 +335,23 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
                     case MergePolicyCheckResult.NoPolicies:
                     case MergePolicyCheckResult.FailedToMerge:
-                        _logger.LogInformation("Pull request {url} still active (updatable) - keeping tracking it", pr.Url);
-
                         // Check if we think the PR has a conflict
-                        if (pr.MergeState == InProgressPullRequestState.Conflict)
+                        // If we think so, check if the PR head branch still has the same commit as the one we remembered.
+                        // If it doesn't, we should try to update the PR again, the conflicts might be resolved
+                        if (pr.MergeState == InProgressPullRequestState.Conflict && pr.HeadBranchSha == prInfo.HeadBranchSha && isCodeFlow)
                         {
-                            // If we think so, check if the PR head branch still has the same commit as the one we remembered.
-                            // If it doesn't, we should try to update the PR again, the conflicts might be resolved
-                            if (pr.HeadBranchSha == prInfo.HeadBranchSha)
+                            bool featureEnabled = await _featureFlagService.IsFeatureOnAsync(
+                                pr.ContainedSubscriptions.First().SubscriptionId,
+                                FeatureFlag.EnableRebaseStrategy);
+
+                            if (!featureEnabled)
                             {
+                                _logger.LogInformation("Pull request {url} is in conflict and cannot be updated at the moment", pr.Url);
                                 return (PullRequestStatus.InProgressCannotUpdate, prInfo);
                             }
                         }
 
+                        _logger.LogInformation("Pull request {url} can be updated", pr.Url);
                         await SetPullRequestCheckReminder(pr, prInfo, isCodeFlow, delay);
 
                         return (PullRequestStatus.InProgressCanUpdate, prInfo);
@@ -1213,9 +1217,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             previousSourceSha = sourceDependency?.Sha;
 
             upstreamRepoDiffs = await ComputeRepoUpdatesAsync(previousSourceSha, build.Commit);
-
-            // Do not display the diff for which we're flowing back as the diff does not make a whole lot of sense
-            upstreamRepoDiffs = [..upstreamRepoDiffs.Where(diff => diff.RepoUri != subscription.TargetRepository)];
         }
 
         // Conflicts + no rebase means we have to block the PR until a human resolves the conflicts manually

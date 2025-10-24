@@ -272,7 +272,7 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
             string relativeFilePath = filePath.ToString();
             if (subscription.IsForwardFlow())
             {
-                relativeFilePath = relativeFilePath.Length > srcDir.Length ? relativeFilePath.Substring(srcDir.Length) : relativeFilePath;
+                relativeFilePath = relativeFilePath.Length > srcDir.Length + 1 ? relativeFilePath.Substring(srcDir.Length + 1) : relativeFilePath;
             }
 
             var (fileUrlInVmr, fileUrlInRepo) = GetFileUrls(update, subscription, relativeFilePath, prHeadBranch);
