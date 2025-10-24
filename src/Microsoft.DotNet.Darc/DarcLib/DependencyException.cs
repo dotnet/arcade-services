@@ -13,10 +13,6 @@ public class DependencyException : DarcException
     {
     }
 
-    protected DependencyException(SerializationInfo info, StreamingContext context) : base(info, context)
-    {
-    }
-
     public DependencyException(string message) : base(message)
     {
     }

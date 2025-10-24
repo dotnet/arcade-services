@@ -1,8 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net6.0</TargetFrameworks>
-    <TargetFramework></TargetFramework>
     <SignAssembly>false</SignAssembly>
     <IsPackable>true</IsPackable>
   </PropertyGroup>
@@ -16,7 +14,5 @@
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\Maestro.Common\Maestro.Common.csproj" />
     <ProjectReference Include="..\Maestro.Data\Maestro.Data.csproj" />
-    <!-- Remove this pin once updated to net8.0 -->
-    <PackageReference Include="System.IO.Hashing" VersionOverride="8.0.0" />
   </ItemGroup>
 </Project>

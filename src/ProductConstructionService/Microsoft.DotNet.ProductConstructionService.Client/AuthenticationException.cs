@@ -13,10 +13,6 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         {
         }
 
-        protected AuthenticationException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
-
         public AuthenticationException(string message) : base(message)
         {
         }

@@ -18,10 +18,6 @@ public class DarcAuthenticationFailureException : DarcException
     {
     }
 
-    protected DarcAuthenticationFailureException(SerializationInfo info, StreamingContext context) : base(info, context)
-    {
-    }
-
     public DarcAuthenticationFailureException(string message) : base(message)
     {
     }
