@@ -31,6 +31,17 @@ public interface IVmrCloneManager
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Path to an already cloned VMR we want to use.
+    /// </summary>
+    Task<ILocalGitRepo> PrepareVmrAsync(
+        NativePath vmrPath,
+        IReadOnlyCollection<string> remoteUris,
+        IReadOnlyCollection<string> requestedRefs,
+        string checkoutRef,
+        bool resetToRemote = false,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Registers a known local location that contains a VMR clone.
     /// </summary>
     Task RegisterVmrAsync(NativePath localPath);
@@ -74,8 +85,25 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
         var folderName = StringUtils.GetXxHash64(
             string.Join(';', remoteUris.Distinct().OrderBy(u => u)));
 
+        return await PrepareVmrAsync(
+            _vmrInfo.TmpPath / Path.Combine("vmrs", folderName),
+            remoteUris,
+            requestedRefs,
+            checkoutRef,
+            resetToRemote,
+            cancellationToken);
+    }
+
+    public async Task<ILocalGitRepo> PrepareVmrAsync(
+        NativePath vmrPath,
+        IReadOnlyCollection<string> remoteUris,
+        IReadOnlyCollection<string> requestedRefs,
+        string checkoutRef,
+        bool resetToRemote = false,
+        CancellationToken cancellationToken = default)
+    {
         ILocalGitRepo vmr = await PrepareCloneInternalAsync(
-            Path.Combine("vmrs", folderName),
+            vmrPath,
             remoteUris,
             requestedRefs,
             checkoutRef,
