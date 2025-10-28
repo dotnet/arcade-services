@@ -145,11 +145,15 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
 
         try
         {
+            var comparisonFlow = lastFlows.CrossingFlow != null
+                ? new ForwardFlow(RepoSha: lastFlows.LastForwardFlow.RepoSha, VmrSha: lastFlows.CrossingFlow.VmrSha)
+                : lastFlows.LastForwardFlow;
+
             await MergeDependenciesAsync(
                 mappingName,
                 sourceRepo,
                 headBranch,
-                lastFlows.LastForwardFlow,
+                comparisonFlow,
                 currentFlow,
                 cancellationToken);
 
@@ -294,7 +298,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         string mappingName,
         ILocalGitRepo sourceRepo,
         string targetBranch,
-        Codeflow lastFlow,
+        Codeflow comparisonFlow,
         ForwardFlow currentFlow,
         CancellationToken cancellationToken)
     {
@@ -304,30 +308,30 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         await _jsonFileMerger.MergeJsonsAsync(
             vmr,
             relativeSourceMappingPath / VersionFiles.GlobalJson,
-            lastFlow.VmrSha,
+            comparisonFlow.VmrSha,
             targetBranch,
             sourceRepo,
             VersionFiles.GlobalJson,
-            lastFlow.RepoSha,
+            comparisonFlow.RepoSha,
             currentFlow.RepoSha);
 
         // and handle dotnet-tools.json if it exists
         bool dotnetToolsConfigExists =
-            (await sourceRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, lastFlow.RepoSha) != null) ||
+            (await sourceRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, comparisonFlow.RepoSha) != null) ||
             (await sourceRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, targetBranch) != null) ||
             (await vmr.GetFileFromGitAsync(relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson, currentFlow.VmrSha) != null ||
-            (await vmr.GetFileFromGitAsync(relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson, lastFlow.VmrSha) != null));
+            (await vmr.GetFileFromGitAsync(relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson, comparisonFlow.VmrSha) != null));
 
         if (dotnetToolsConfigExists)
         {
             await _jsonFileMerger.MergeJsonsAsync(
                 vmr,
                 relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson,
-                lastFlow.VmrSha,
+                comparisonFlow.VmrSha,
                 targetBranch,
                 sourceRepo,
                 VersionFiles.DotnetToolsConfigJson,
-                lastFlow.RepoSha,
+                comparisonFlow.RepoSha,
                 currentFlow.RepoSha,
                 allowMissingFiles: true);
         }
@@ -345,11 +349,11 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         var versionDetailsChanges = await _versionDetailsFileMerger.MergeVersionDetails(
             vmr,
             relativeSourceMappingPath / VersionFiles.VersionDetailsXml,
-            lastFlow.VmrSha,
+            comparisonFlow.VmrSha,
             targetBranch,
             sourceRepo,
             VersionFiles.VersionDetailsXml,
-            lastFlow.RepoSha,
+            comparisonFlow.RepoSha,
             currentFlow.RepoSha,
             mappingName);
 

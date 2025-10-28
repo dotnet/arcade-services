@@ -99,10 +99,12 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         {
             var comparisonFlow = headBranchExisted
                 ? lastFlows.LastFlow
-                : lastFlows.LastBackFlow
-                    // If there were no backflows, this means we only had forward flows.
-                    // We need to make sure that we capture all changes made in the forward flows by comparing the current dependencies against an empty commit
-                    ?? new Backflow(Constants.EmptyGitObject, Constants.EmptyGitObject);
+                : lastFlows.CrossingFlow != null
+                    ? new Backflow(VmrSha: lastFlows.LastBackFlow!.VmrSha, RepoSha: lastFlows.CrossingFlow.RepoSha)
+                    : lastFlows.LastBackFlow
+                        // If there were no backflows, this means we only had forward flows.
+                        // We need to make sure that we capture all changes made in the forward flows by comparing the current dependencies against an empty commit
+                        ?? new Backflow(Constants.EmptyGitObject, Constants.EmptyGitObject);
 
             var updates = await BackflowDependenciesAndToolset(
                 codeflowOptions,

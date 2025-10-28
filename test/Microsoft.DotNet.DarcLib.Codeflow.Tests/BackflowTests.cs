@@ -612,6 +612,64 @@ internal class BackflowTests : CodeFlowTests
         await act.Should().ThrowAsync<NonLinearCodeflowException>("The backflow should fail as the target branch already has changes from another VMR branch");
     }
 
+    [Test]
+    public async Task Test()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        const string ffBranchName = nameof(Test) + "-ff";
+        const string bfBranchName = nameof(Test) + "-bf";
+
+        var productRepo = GetLocal(ProductRepoPath);
+
+        // Add a dependency to the product repo and flow it to the VMR
+        await AddDependencies(ProductRepoPath);
+        var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, ffBranchName);
+
+        // Now update one of the dependencies, open a forward flow PR but don't merge it
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        var dep = new DependencyDetail
+        {
+            Name = "Package.A1",
+            Version = "1.0.1",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "a011",
+            Type = DependencyType.Product,
+        };
+        await productRepo.AddDependencyAsync(dep);
+        await GitOperations.CommitAll(ProductRepoPath, "Updating Package.A1 to 1.0.1");
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+
+        // Now update the same dependency again
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        dep = new DependencyDetail
+        {
+            Name = "Package.A1",
+            Version = "1.0.2",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "a012",
+            Type = DependencyType.Product,
+        };
+        await productRepo.AddDependencyAsync(dep);
+        await GitOperations.CommitAll(ProductRepoPath, "Updating Package.A1 to 1.0.2");
+
+        // Now open and merge a backflow
+        codeFlowResult = await ChangeVmrFileAndFlowIt("New content in the VMR", bfBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(ProductRepoPath, bfBranchName);
+
+        // merge the forward flow PR
+        await GitOperations.MergePrBranch(VmrPath, ffBranchName);
+
+        // Open a backflow again
+        codeFlowResult = await ChangeVmrFileAndFlowIt("New content in the VMR again", bfBranchName);
+        codeFlowResult.ShouldHaveUpdates();
+        codeFlowResult.DependencyUpdates.Should().BeEmpty();
+    }
+
     private async Task AddDependencies(NativePath repoPath)
     {
         var repo = GetLocal(repoPath);
