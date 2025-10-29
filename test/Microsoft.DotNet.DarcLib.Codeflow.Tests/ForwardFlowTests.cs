@@ -4,11 +4,8 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
-using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -301,13 +298,15 @@ internal class ForwardFlowTests : CodeFlowTests
         await act.Should().ThrowAsync<NonLinearCodeflowException>();
     }
 
+    // Test that the bug https://github.com/dotnet/arcade-services/issues/5331 doesn't happen
+
     [Test]
-    public async Task Test()
+    public async Task TestForwardFlowDependencyDowngradesAfterCrossingFlow()
     {
         await EnsureTestRepoIsInitialized();
 
-        var ffBranch = "ForwardFlowTests_Test";
-        var bfBranch = ffBranch + "_backflow";
+        var ffBranch = nameof(TestForwardFlowDependencyDowngradesAfterCrossingFlow) + "_ff";
+        var bfBranch = nameof(TestForwardFlowDependencyDowngradesAfterCrossingFlow) + "_backflow";
 
         // Add dependency to the repo, flow it to the VMR
         var repo = GetLocal(ProductRepoPath);

@@ -612,13 +612,14 @@ internal class BackflowTests : CodeFlowTests
         await act.Should().ThrowAsync<NonLinearCodeflowException>("The backflow should fail as the target branch already has changes from another VMR branch");
     }
 
+    // Test that the bug https://github.com/dotnet/arcade-services/issues/5331 doesn't happen
     [Test]
-    public async Task Test()
+    public async Task TestBackflowDependencyDowngradesAfterCrossingFlow()
     {
         await EnsureTestRepoIsInitialized();
 
-        const string ffBranchName = nameof(Test) + "-ff";
-        const string bfBranchName = nameof(Test) + "-bf";
+        const string ffBranchName = nameof(TestBackflowDependencyDowngradesAfterCrossingFlow) + "-ff";
+        const string bfBranchName = nameof(TestBackflowDependencyDowngradesAfterCrossingFlow) + "-bf";
 
         var productRepo = GetLocal(ProductRepoPath);
 
