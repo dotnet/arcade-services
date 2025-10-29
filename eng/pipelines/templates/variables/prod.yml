@@ -3,5 +3,5 @@ variables:
   value: productconstructionprod.azurecr.io
 - name: containerRegistryName
   value: productconstructionprod
-- name: serviceConnectionName
+- name: pcsDeploymentServiceConnection
   value: ProductConstructionServiceDeploymentProd

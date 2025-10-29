@@ -60,7 +60,7 @@ jobs:
   - task: AzureCLI@2
     displayName: Run E2E tests
     inputs:
-      azureSubscription: $(serviceConnectionName)
+      azureSubscription: $(pcsDeploymentServiceConnection)
       scriptType: ps
       scriptLocation: inlineScript
       inlineScript: >
