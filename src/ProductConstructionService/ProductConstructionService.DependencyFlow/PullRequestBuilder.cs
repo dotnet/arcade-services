@@ -852,7 +852,8 @@ internal class PullRequestBuilder : IPullRequestBuilder
             }
             else
             {
-                globalJsonSection.AppendLine("- **Dependency Updates**:");
+                globalJsonSection.AppendLine("- **Updates to .NET SDKs:**");
+
                 
                 foreach (var directoryGroup in changesByDirectory)
                 {
