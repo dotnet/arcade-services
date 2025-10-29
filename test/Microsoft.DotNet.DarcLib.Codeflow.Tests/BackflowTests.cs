@@ -664,7 +664,7 @@ internal class BackflowTests : CodeFlowTests
         // merge the forward flow PR
         await GitOperations.MergePrBranch(VmrPath, ffBranchName);
 
-        // Open a backflow again
+        // Open a backflow again, there shouldn't be any downgrades
         codeFlowResult = await ChangeVmrFileAndFlowIt("New content in the VMR again", bfBranchName);
         codeFlowResult.ShouldHaveUpdates();
         codeFlowResult.DependencyUpdates.Should().BeEmpty();
