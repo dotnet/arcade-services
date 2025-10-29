@@ -60,38 +60,29 @@ jobs:
       .\.dotnet\dotnet tool install Microsoft.DotNet.Darc --tool-path .\darc --add-source $(Pipeline.Workspace)\PackageArtifacts --version $darcVersion
     displayName: Install Darc
 
-  - task: AzureCLI@2
-    name: GetAuthInfo
-    displayName: Get auth information
-    inputs:
-      azureSubscription: ${{ variables.ScenarioTestSubscription }}
-      addSpnToEnvironment: true
-      scriptType: ps
-      scriptLocation: inlineScript
-      inlineScript: |
-        # Fetch token used for scenario tests
-        $token = (az account get-access-token --resource "$(MaestroAppId)" | ConvertFrom-Json).accessToken
-        echo "##vso[task.setvariable variable=Token;isOutput=true;isSecret=true]$token"
-
   - template: /eng/common/templates-official/steps/get-federated-access-token.yml
     parameters:
       federatedServiceConnection: ArcadeServicesInternal
       outputVariableName: AzdoToken
 
-  - powershell: >
-      .\.dotnet\dotnet test
-      $(Pipeline.Workspace)/ProductConstructionService.ScenarioTests/ProductConstructionService.ScenarioTests.dll
-      --filter "TestCategory=PostDeployment&${{ parameters.testFilter }}"
-      --no-build
-      --logger "trx;LogFilePrefix=TestResults-"
-      --parallel
-      --
-      "RunConfiguration.ResultsDirectory=$(Build.ArtifactStagingDirectory)\TestResults"
-      RunConfiguration.MapCpuCount=4
+  - task: AzureCLI@2
     displayName: Run E2E tests
+    inputs:
+      azureSubscription: $(serviceConnectionName)
+      scriptType: ps
+      scriptLocation: inlineScript
+      inlineScript: >
+        .\.dotnet\dotnet test
+        $(Pipeline.Workspace)/ProductConstructionService.ScenarioTests/ProductConstructionService.ScenarioTests.dll
+        --filter "TestCategory=PostDeployment&${{ parameters.testFilter }}"
+        --no-build
+        --logger "trx;LogFilePrefix=TestResults-"
+        --parallel
+        --
+        "RunConfiguration.ResultsDirectory=$(Build.ArtifactStagingDirectory)\TestResults"
+        RunConfiguration.MapCpuCount=4
     env:
       PCS_BASEURI: ${{ variables.PcsTestEndpoint }}
-      PCS_TOKEN: $(GetAuthInfo.Token)
       GITHUB_TOKEN: $(dotnet-bot-maestro-auth-test-content-rw-pr-rw)
       AZDO_TOKEN: $(AzdoToken)
       DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\PackageArtifacts

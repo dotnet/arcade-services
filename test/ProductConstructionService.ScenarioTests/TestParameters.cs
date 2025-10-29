@@ -20,7 +20,6 @@ namespace ProductConstructionService.ScenarioTests;
 public class TestParameters : IDisposable
 {
     private static TemporaryDirectory? _dir;
-    private static readonly string? pcsToken;
     private static readonly string darcPackageSource;
     private static readonly string? azDoToken;
     private static readonly string? darcDir;
@@ -59,8 +58,6 @@ public class TestParameters : IDisposable
         PcsBaseUri = Environment.GetEnvironmentVariable("PCS_BASEURI")
             ?? userSecrets["PCS_BASEURI"]
             ?? "https://maestro.int-dot.net/";
-        pcsToken = Environment.GetEnvironmentVariable("PCS_TOKEN")
-            ?? userSecrets["PCS_TOKEN"];
         IsCI = Environment.GetEnvironmentVariable("DARC_IS_CI")?.ToLower() == "true";
         GitHubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"]
             ?? throw new Exception("Please configure the GitHub token");
@@ -80,7 +77,7 @@ public class TestParameters : IDisposable
 
         _pcsApi = PcsBaseUri.Contains("localhost") || PcsBaseUri.Contains("127.0.0.1")
             ? PcsApiFactory.GetAnonymous(PcsBaseUri)
-            : PcsApiFactory.GetAuthenticated(PcsBaseUri, accessToken: pcsToken, managedIdentityId: null, disableInteractiveAuth: IsCI);
+            : PcsApiFactory.GetAuthenticated(PcsBaseUri, accessToken: null, managedIdentityId: null, disableInteractiveAuth: IsCI);
 
         var darcRootDir = darcDir;
         if (string.IsNullOrEmpty(darcRootDir))
