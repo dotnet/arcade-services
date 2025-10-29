@@ -3,7 +3,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using FluentAssertions;
+using AwesomeAssertions;
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using NUnit.Framework;

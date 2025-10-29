@@ -3,7 +3,7 @@
 
 #nullable enable
 
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
