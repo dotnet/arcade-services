@@ -73,31 +73,22 @@ jobs:
         $token = (az account get-access-token --resource "$(MaestroAppId)" | ConvertFrom-Json).accessToken
         echo "##vso[task.setvariable variable=Token;isOutput=true;isSecret=true]$token"
 
-        # Set variables with auth info for tests below
-        echo "##vso[task.setvariable variable=ServicePrincipalId;isOutput=true]$env:servicePrincipalId"
-        echo "##vso[task.setvariable variable=FederatedToken;isOutput=true;isSecret=true]$env:idToken"
-        echo "##vso[task.setvariable variable=TenantId;isOutput=true]$env:tenantId"
-
   - template: /eng/common/templates-official/steps/get-federated-access-token.yml
     parameters:
-      federatedServiceConnection: "ArcadeServicesInternal"
-      outputVariableName: "AzdoToken"
+      federatedServiceConnection: ArcadeServicesInternal
+      outputVariableName: AzdoToken
 
-  - task: DotNetCoreCLI@2
+  - powershell: >
+      .\.dotnet\dotnet test
+      $(Pipeline.Workspace)/ProductConstructionService.ScenarioTests/ProductConstructionService.ScenarioTests.dll
+      --filter "TestCategory=PostDeployment&${{ parameters.testFilter }}"
+      --no-build
+      --logger "trx;LogFilePrefix=TestResults-"
+      --parallel
+      --
+      "RunConfiguration.ResultsDirectory=$(Build.ArtifactStagingDirectory)\TestResults"
+      RunConfiguration.MapCpuCount=4
     displayName: Run E2E tests
-    inputs:
-      command: custom
-      projects: |
-        $(Pipeline.Workspace)/ProductConstructionService.ScenarioTests/ProductConstructionService.ScenarioTests.dll
-      custom: test
-      arguments: >
-        --filter "TestCategory=PostDeployment&${{ parameters.testFilter }}"
-        --no-build
-        --logger "trx;LogFilePrefix=TestResults-"
-        --parallel
-        --
-        "RunConfiguration.ResultsDirectory=$(Build.ArtifactStagingDirectory)\TestResults"
-        RunConfiguration.MapCpuCount=4
     env:
       PCS_BASEURI: ${{ variables.PcsTestEndpoint }}
       PCS_TOKEN: $(GetAuthInfo.Token)
