@@ -1131,13 +1131,13 @@ internal abstract partial class ScenarioTestBase
             $"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {waitTime.Minutes} minutes");
     }
 
-    protected async Task<bool> CheckGithubPullRequestChecks(string targetRepoName, string targetBranch)
+    protected async Task<bool> CheckGithubPullRequestChecks(string targetRepoName, string targetBranch, TimeSpan? waitTime = null)
     {
         TestContext.WriteLine($"Checking opened PR in {targetBranch} {targetRepoName}");
         Octokit.PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
         Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepoName);
 
-        await Task.Delay(TimeSpan.FromSeconds(5 * 60 + 30));
+        await Task.Delay(waitTime ?? TimeSpan.FromSeconds(5 * 60 + 30));
 
         List<Octokit.CheckRun> maestroChecks = await WaitForPullRequestMaestroChecksAsync(pullRequest.Url, pullRequest.Head.Sha, repo.Id);
 
