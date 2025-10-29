@@ -3,7 +3,7 @@
 
 using System.Collections.Immutable;
 using System.Security.Policy;
-using FluentAssertions;
+using AwesomeAssertions;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
