@@ -80,6 +80,11 @@ internal abstract class CodeFlowOperation(
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
 
+        // Remember the original state of the source repo so we can restore it later
+        // We capture both branch name and SHA to handle detached HEAD states
+        string originalSourceRepoBranch = await sourceRepo.GetCheckedOutBranchAsync();
+        string originalSourceRepoSha = await sourceRepo.GetShaForRefAsync();
+
         string currentTargetRepoBranch = await targetRepo.GetCheckedOutBranchAsync();
 
         // Parse excluded assets from options
@@ -87,23 +92,55 @@ internal abstract class CodeFlowOperation(
             ? []
             : _options.ExcludedAssets.Split(';').ToList();
 
-        bool hasChanges = await FlowCodeAsync(
-            productRepo,
-            build,
-            currentFlow,
-            mapping,
-            currentTargetRepoBranch,
-            excludedAssets,
-            cancellationToken);
-
-        if (!hasChanges)
+        try
         {
-            _logger.LogInformation("No changes to flow between the VMR and {repo}.", mapping.Name);
-            await targetRepo.CheckoutAsync(currentTargetRepoBranch);
-            return;
-        }
+            bool hasChanges = await FlowCodeAsync(
+                productRepo,
+                build,
+                currentFlow,
+                mapping,
+                currentTargetRepoBranch,
+                excludedAssets,
+                cancellationToken);
 
-        _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
+            if (!hasChanges)
+            {
+                _logger.LogInformation("No changes to flow between the VMR and {repo}.", mapping.Name);
+                return;
+            }
+
+            _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
+        }
+        finally
+        {
+            // Restore source repo to its original state, even when exceptions occur
+            await RestoreRepoToOriginalStateAsync(sourceRepo, originalSourceRepoBranch, originalSourceRepoSha);
+        }
+    }
+
+    private async Task RestoreRepoToOriginalStateAsync(ILocalGitRepo repo, string originalBranch, string originalSha)
+    {
+        try
+        {
+            string currentSha = await repo.GetShaForRefAsync();
+            
+            // Only checkout if we're not already at the original state
+            if (currentSha == originalSha)
+            {
+                return;
+            }
+
+            // If the original state was a detached HEAD, checkout the SHA
+            // Otherwise, checkout the branch name
+            string refToCheckout = originalBranch == DarcLib.Constants.HEAD ? originalSha : originalBranch;
+            _logger.LogInformation("Restoring {repo} to original state: {ref}", repo.Path, refToCheckout);
+            await repo.CheckoutAsync(refToCheckout);
+        }
+        catch (Exception ex)
+        {
+            // Log but don't throw - we don't want to mask the original exception
+            _logger.LogWarning(ex, "Failed to restore {repo} to original state", repo.Path);
+        }
     }
 
     protected abstract Task<bool> FlowCodeAsync(
