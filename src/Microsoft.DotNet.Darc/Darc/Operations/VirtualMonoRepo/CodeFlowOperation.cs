@@ -80,9 +80,12 @@ internal abstract class CodeFlowOperation(
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
 
-        // Remember the original branch/ref for both repos so we can restore them later
+        // Remember the original state for both repos so we can restore them later
+        // We capture both branch name and SHA to handle detached HEAD states
         string originalSourceRepoBranch = await sourceRepo.GetCheckedOutBranchAsync();
+        string originalSourceRepoSha = await sourceRepo.GetShaForRefAsync();
         string originalTargetRepoBranch = await targetRepo.GetCheckedOutBranchAsync();
+        string originalTargetRepoSha = await targetRepo.GetShaForRefAsync();
 
         // Parse excluded assets from options
         IReadOnlyList<string> excludedAssets = string.IsNullOrEmpty(_options.ExcludedAssets)
@@ -110,29 +113,35 @@ internal abstract class CodeFlowOperation(
         }
         finally
         {
-            // Restore both repos to their original branch/ref, even when exceptions occur
-            await RestoreRepoToOriginalStateAsync(sourceRepo, originalSourceRepoBranch);
-            await RestoreRepoToOriginalStateAsync(targetRepo, originalTargetRepoBranch);
+            // Restore both repos to their original state, even when exceptions occur
+            await RestoreRepoToOriginalStateAsync(sourceRepo, originalSourceRepoBranch, originalSourceRepoSha);
+            await RestoreRepoToOriginalStateAsync(targetRepo, originalTargetRepoBranch, originalTargetRepoSha);
         }
     }
 
-    private async Task RestoreRepoToOriginalStateAsync(ILocalGitRepo repo, string originalBranch)
+    private async Task RestoreRepoToOriginalStateAsync(ILocalGitRepo repo, string originalBranch, string originalSha)
     {
         try
         {
-            string currentBranch = await repo.GetCheckedOutBranchAsync();
+            string currentSha = await repo.GetShaForRefAsync();
             
-            // Only checkout if we're not already on the original branch
-            if (currentBranch != originalBranch)
+            // Only checkout if we're not already at the original state
+            if (currentSha == originalSha)
             {
-                _logger.LogInformation("Restoring {repo} to original state: {branch}", repo.Path, originalBranch);
-                await repo.CheckoutAsync(originalBranch);
+                return;
             }
+
+            // If the original state was a detached HEAD, checkout the SHA
+            // Otherwise, checkout the branch name
+            const string DetachedHeadName = "HEAD";
+            string refToCheckout = originalBranch == DetachedHeadName ? originalSha : originalBranch;
+            _logger.LogInformation("Restoring {repo} to original state: {ref}", repo.Path, refToCheckout);
+            await repo.CheckoutAsync(refToCheckout);
         }
         catch (Exception ex)
         {
             // Log but don't throw - we don't want to mask the original exception
-            _logger.LogWarning(ex, "Failed to restore {repo} to original branch {branch}", repo.Path, originalBranch);
+            _logger.LogWarning(ex, "Failed to restore {repo} to original state", repo.Path);
         }
     }
 
