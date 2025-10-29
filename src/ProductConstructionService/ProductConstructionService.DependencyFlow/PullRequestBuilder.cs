@@ -606,7 +606,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             .AppendLine()
             .AppendLine(DependencyUpdateBegin)
             .AppendLine()
-            .AppendLine($"- **Updates**:");
+            .AppendLine($"- **Dependency Updates**:");
 
         var shaRangeToLinkId = new Dictionary<(string from, string to), int>();
 
@@ -797,43 +797,81 @@ internal class PullRequestBuilder : IPullRequestBuilder
         {
             return;
         }
-        else
+
+        // Capture all changes first
+        var configFileChanges = new List<ConfigFileChange>();
+
+        foreach (var globalJsonFile in globalJsonFilesWithMetadata)
         {
-            foreach (var globalJsonFile in globalJsonFilesWithMetadata)
+            var hasSdkVersionUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.SdkVersionUpdate);
+            var hasToolsDotnetUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.ToolsDotNetUpdate);
+            var relativeBasePath = globalJsonFile.FilePath.Replace("global.json", string.Empty, StringComparison.OrdinalIgnoreCase);
+            if (string.IsNullOrEmpty(relativeBasePath))
             {
-                var hasSdkVersionUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.SdkVersionUpdate);
-                var hasToolsDotnetUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.ToolsDotNetUpdate);
-                var relativeBasePath = globalJsonFile.FilePath.Replace("global.json", string.Empty, StringComparison.OrdinalIgnoreCase);
-                if (string.IsNullOrEmpty(relativeBasePath))
-                {
-                    relativeBasePath = "root";
-                }
+                relativeBasePath = "root";
+            }
 
-                // If there's only one file with metadata and it's in the root, use simplified format
-                bool useSimplifiedFormat = globalJsonFilesWithMetadata.Count == 1 && relativeBasePath == "root";
+            if (hasSdkVersionUpdate)
+            {
+                configFileChanges.Add(new ConfigFileChange
+                {
+                    DirectoryPath = relativeBasePath,
+                    UpdateType = "sdk.version",
+                    ToValue = globalJsonFile.Metadata[GitFileMetadataName.SdkVersionUpdate]
+                });
+            }
+
+            if (hasToolsDotnetUpdate)
+            {
+                configFileChanges.Add(new ConfigFileChange
+                {
+                    DirectoryPath = relativeBasePath,
+                    UpdateType = "tools.dotnet",
+                    ToValue = globalJsonFile.Metadata[GitFileMetadataName.ToolsDotNetUpdate]
+                });
+            }
+        }
+
+        // If there are any changes, format them according to the requested structure
+        if (configFileChanges.Count > 0)
+        {
+            // Group changes by directory
+            var changesByDirectory = configFileChanges
+                .GroupBy(c => c.DirectoryPath)
+                .OrderBy(g => g.Key == "root" ? "" : g.Key); // Put root first
+
+            // Special case: if there are only updates in the root directory, use simplified format
+            if (changesByDirectory.Count() == 1 && changesByDirectory.First().Key == "root")
+            {
+                globalJsonSection.AppendLine("- **Updates to .NET SDKs:**");
                 
-                if (useSimplifiedFormat)
+                foreach (var change in changesByDirectory.First().OrderBy(c => c.UpdateType))
                 {
-                    globalJsonSection.AppendLine($"- **Updates to .NET SDKs:**");
+                    globalJsonSection.AppendLine($"  - Updates **{change.UpdateType}** to {change.ToValue}");
                 }
-                else
+            }
+            else
+            {
+                globalJsonSection.AppendLine("- **Dependency Updates**:");
+                
+                foreach (var directoryGroup in changesByDirectory)
                 {
-                    globalJsonSection.AppendLine($"- **📂 {relativeBasePath.TrimEnd('/')} updates to .NET SDKs:**");
-                }
+                    globalJsonSection.AppendLine($"  - 📂 `{directoryGroup.Key.TrimEnd('/')}`");
 
-                if (hasSdkVersionUpdate)
-                {
-                    globalJsonSection.AppendLine($"  - Updates sdk.version to " +
-                        $"{globalJsonFile.Metadata[GitFileMetadataName.SdkVersionUpdate]}");
-                }
-
-                if (hasToolsDotnetUpdate)
-                {
-                    globalJsonSection.AppendLine($"  - Updates tools.dotnet to " +
-                        $"{globalJsonFile.Metadata[GitFileMetadataName.ToolsDotNetUpdate]}");
+                    foreach (var change in directoryGroup.OrderBy(c => c.UpdateType))
+                    {
+                        globalJsonSection.AppendLine($"    - Updates **{change.UpdateType}** to {change.ToValue}");
+                    }
                 }
             }
         }
+    }
+    
+    private class ConfigFileChange
+    {
+        public string DirectoryPath { get; set; } = string.Empty;
+        public string UpdateType { get; set; } = string.Empty;
+        public string ToValue { get; set; } = string.Empty;
     }
 
     private static int RemovePRDescriptionSection(StringBuilder description, string sectionStartMarker, string sectionEndMarker)
