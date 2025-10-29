@@ -141,7 +141,8 @@ public class ForwardFlowConflictResolverTests
             mapping,
             productRepo.Object,
             targetBranch,
-            lastFlow,
+            lastFlow.RepoSha,
+            lastFlow.VmrSha,
             currentFlow,
             CancellationToken.None);
 

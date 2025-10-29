@@ -61,7 +61,8 @@ public interface IForwardFlowConflictResolver
         string mappingName,
         ILocalGitRepo sourceRepo,
         string targetBranch,
-        Codeflow lastFlow,
+        string repoComparisonSha,
+        string vmrComparisonSha,
         ForwardFlow currentFlow,
         CancellationToken cancellationToken);
 }
@@ -149,7 +150,11 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                 mappingName,
                 sourceRepo,
                 headBranch,
-                lastFlows.LastForwardFlow,
+                lastFlows.LastForwardFlow.RepoSha,
+                // if there's a crossing flow, we need to make sure it doesn't bring in any downgrades https://github.com/dotnet/arcade-services/issues/5331
+                lastFlows.CrossingFlow != null
+                    ? lastFlows.LastBackFlow!.VmrSha
+                    : lastFlows.LastForwardFlow.VmrSha,
                 currentFlow,
                 cancellationToken);
 
@@ -294,7 +299,8 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         string mappingName,
         ILocalGitRepo sourceRepo,
         string targetBranch,
-        Codeflow lastFlow,
+        string repoComparisonSha,
+        string vmrComparisonSha,
         ForwardFlow currentFlow,
         CancellationToken cancellationToken)
     {
@@ -304,30 +310,30 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         await _jsonFileMerger.MergeJsonsAsync(
             vmr,
             relativeSourceMappingPath / VersionFiles.GlobalJson,
-            lastFlow.VmrSha,
+            vmrComparisonSha,
             targetBranch,
             sourceRepo,
             VersionFiles.GlobalJson,
-            lastFlow.RepoSha,
+            repoComparisonSha,
             currentFlow.RepoSha);
 
         // and handle dotnet-tools.json if it exists
         bool dotnetToolsConfigExists =
-            (await sourceRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, lastFlow.RepoSha) != null) ||
+            (await sourceRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, repoComparisonSha) != null) ||
             (await sourceRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, targetBranch) != null) ||
             (await vmr.GetFileFromGitAsync(relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson, currentFlow.VmrSha) != null ||
-            (await vmr.GetFileFromGitAsync(relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson, lastFlow.VmrSha) != null));
+            (await vmr.GetFileFromGitAsync(relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson, vmrComparisonSha) != null));
 
         if (dotnetToolsConfigExists)
         {
             await _jsonFileMerger.MergeJsonsAsync(
                 vmr,
                 relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson,
-                lastFlow.VmrSha,
+                vmrComparisonSha,
                 targetBranch,
                 sourceRepo,
                 VersionFiles.DotnetToolsConfigJson,
-                lastFlow.RepoSha,
+                repoComparisonSha,
                 currentFlow.RepoSha,
                 allowMissingFiles: true);
         }
@@ -345,11 +351,11 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         var versionDetailsChanges = await _versionDetailsFileMerger.MergeVersionDetails(
             vmr,
             relativeSourceMappingPath / VersionFiles.VersionDetailsXml,
-            lastFlow.VmrSha,
+            vmrComparisonSha,
             targetBranch,
             sourceRepo,
             VersionFiles.VersionDetailsXml,
-            lastFlow.RepoSha,
+            repoComparisonSha,
             currentFlow.RepoSha,
             mappingName);
 
