@@ -23,17 +23,9 @@ jobs:
     - ${{ if not(or(startsWith(variables['Build.SourceBranch'], 'refs/heads/production'), startsWith(variables['Build.SourceBranch'], 'refs/heads/production-'), eq(variables['Build.SourceBranch'], 'refs/heads/production'))) }}:
       - name: PcsTestEndpoint
         value: https://maestro.int-dot.net
-      - name: ScenarioTestSubscription
-        value: "Darc: Maestro Staging"
-      - name: MaestroAppId
-        value: $(MaestroStagingAppClientId)
     - ${{ else }}:
       - name: PcsTestEndpoint
         value: https://maestro.dot.net
-      - name: ScenarioTestSubscription
-        value: "Darc: Maestro Production"
-      - name: MaestroAppId
-        value: $(MaestroAppClientId)
   steps:
   - download: current
     displayName: Download Darc
