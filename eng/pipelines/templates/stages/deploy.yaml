@@ -131,7 +131,7 @@ stages:
     # We'll need to give this service connection permission to get an auth token for PCS
     - task: AzureCLI@2
       inputs:
-        azureSubscription: $(serviceConnectionName)
+        azureSubscription: $(pcsDeploymentServiceConnection)
         scriptType: pscore
         scriptLocation: inlineScript
         inlineScript: >
