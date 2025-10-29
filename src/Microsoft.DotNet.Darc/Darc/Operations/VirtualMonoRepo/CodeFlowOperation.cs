@@ -80,30 +80,60 @@ internal abstract class CodeFlowOperation(
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
 
-        string currentTargetRepoBranch = await targetRepo.GetCheckedOutBranchAsync();
+        // Remember the original branch/ref for both repos so we can restore them later
+        string originalSourceRepoBranch = await sourceRepo.GetCheckedOutBranchAsync();
+        string originalTargetRepoBranch = await targetRepo.GetCheckedOutBranchAsync();
 
         // Parse excluded assets from options
         IReadOnlyList<string> excludedAssets = string.IsNullOrEmpty(_options.ExcludedAssets)
             ? []
             : _options.ExcludedAssets.Split(';').ToList();
 
-        bool hasChanges = await FlowCodeAsync(
-            productRepo,
-            build,
-            currentFlow,
-            mapping,
-            currentTargetRepoBranch,
-            excludedAssets,
-            cancellationToken);
-
-        if (!hasChanges)
+        try
         {
-            _logger.LogInformation("No changes to flow between the VMR and {repo}.", mapping.Name);
-            await targetRepo.CheckoutAsync(currentTargetRepoBranch);
-            return;
-        }
+            bool hasChanges = await FlowCodeAsync(
+                productRepo,
+                build,
+                currentFlow,
+                mapping,
+                originalTargetRepoBranch,
+                excludedAssets,
+                cancellationToken);
 
-        _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
+            if (!hasChanges)
+            {
+                _logger.LogInformation("No changes to flow between the VMR and {repo}.", mapping.Name);
+                return;
+            }
+
+            _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
+        }
+        finally
+        {
+            // Restore both repos to their original branch/ref, even when exceptions occur
+            await RestoreRepoToOriginalStateAsync(sourceRepo, originalSourceRepoBranch);
+            await RestoreRepoToOriginalStateAsync(targetRepo, originalTargetRepoBranch);
+        }
+    }
+
+    private async Task RestoreRepoToOriginalStateAsync(ILocalGitRepo repo, string originalBranch)
+    {
+        try
+        {
+            string currentBranch = await repo.GetCheckedOutBranchAsync();
+            
+            // Only checkout if we're not already on the original branch
+            if (currentBranch != originalBranch)
+            {
+                _logger.LogInformation("Restoring {repo} to original state: {branch}", repo.Path, originalBranch);
+                await repo.CheckoutAsync(originalBranch);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log but don't throw - we don't want to mask the original exception
+            _logger.LogWarning(ex, "Failed to restore {repo} to original branch {branch}", repo.Path, originalBranch);
+        }
     }
 
     protected abstract Task<bool> FlowCodeAsync(
