@@ -97,20 +97,37 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
         try
         {
-            var comparisonFlow = headBranchExisted
-                ? lastFlows.LastFlow
-                : lastFlows.CrossingFlow != null
-                    ? new Backflow(VmrSha: lastFlows.LastBackFlow!.VmrSha, RepoSha: lastFlows.CrossingFlow.RepoSha)
-                    : lastFlows.LastBackFlow
-                        // If there were no backflows, this means we only had forward flows.
-                        // We need to make sure that we capture all changes made in the forward flows by comparing the current dependencies against an empty commit
-                        ?? new Backflow(Constants.EmptyGitObject, Constants.EmptyGitObject);
+            string repoComparisonSha, vmrComparisonSha;
+            if (headBranchExisted)
+            {
+                repoComparisonSha = lastFlows.LastFlow.RepoSha;
+                vmrComparisonSha = lastFlows.LastFlow.VmrSha;
+            }
+            // if there's a crossing flow, we need to make sure it doesn't bring in any downgrades https://github.com/dotnet/arcade-services/issues/5331
+            else if (lastFlows.CrossingFlow != null)
+            {
+                repoComparisonSha = lastFlows.LastForwardFlow.RepoSha;
+                vmrComparisonSha = lastFlows.LastBackFlow!.VmrSha;
+            }
+            else if (lastFlows.LastBackFlow != null)
+            {
+                repoComparisonSha = lastFlows.LastBackFlow.RepoSha;
+                vmrComparisonSha = lastFlows.LastBackFlow.VmrSha;
+            }
+            else
+            {
+                // If there were no backflows, this means we only had forward flows.
+                // We need to make sure that we capture all changes made in the forward flows by comparing the current dependencies against an empty commit
+                repoComparisonSha = Constants.EmptyGitObject;
+                vmrComparisonSha = Constants.EmptyGitObject;
+            }
 
             var updates = await BackflowDependenciesAndToolset(
                 codeflowOptions,
                 targetRepo,
                 branchToMerge,
-                comparisonFlow,
+                repoComparisonSha,
+                vmrComparisonSha,
                 cancellationToken);
 
             return new VersionFileUpdateResult(conflictedFiles, updates);
@@ -265,7 +282,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         CodeflowOptions codeflowOptions,
         ILocalGitRepo targetRepo,
         string targetBranch,
-        Codeflow comparisonFlow,
+        string repoComparisonSha,
+        string vmrComparisonSha,
         CancellationToken cancellationToken)
     {
         var headBranchDependencies = await GetRepoDependencies(targetRepo, commit: null /* working tree */);
@@ -275,29 +293,29 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         await _jsonFileMerger.MergeJsonsAsync(
             targetRepo,
             VersionFiles.GlobalJson,
-            comparisonFlow.RepoSha,
+            repoComparisonSha,
             targetBranch,
             vmr,
             VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name) / VersionFiles.GlobalJson,
-            comparisonFlow.VmrSha,
+            vmrComparisonSha,
             codeflowOptions.CurrentFlow.VmrSha);
 
         // and handle dotnet-tools.json if it exists
         bool dotnetToolsConfigExists =
-            (await targetRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, comparisonFlow.RepoSha) != null) ||
+            (await targetRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, repoComparisonSha) != null) ||
             (await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name) / VersionFiles.DotnetToolsConfigJson, codeflowOptions.CurrentFlow.VmrSha) != null ||
             (await targetRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, targetBranch) != null) ||
-            (await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name) / VersionFiles.DotnetToolsConfigJson, comparisonFlow.VmrSha) != null));
+            (await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name) / VersionFiles.DotnetToolsConfigJson, vmrComparisonSha) != null));
         if (dotnetToolsConfigExists)
         {
             await _jsonFileMerger.MergeJsonsAsync(
                     targetRepo,
                     VersionFiles.DotnetToolsConfigJson,
-                    comparisonFlow.RepoSha,
+                    repoComparisonSha,
                     targetBranch,
                     vmr,
                     VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name) / VersionFiles.DotnetToolsConfigJson,
-                    comparisonFlow.VmrSha,
+                    vmrComparisonSha,
                     codeflowOptions.CurrentFlow.VmrSha,
                     allowMissingFiles: true);
         }
@@ -305,11 +323,11 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         var versionDetailsChanges = await _versionDetailsFileMerger.MergeVersionDetails(
             targetRepo,
             VersionFiles.VersionDetailsXml,
-            comparisonFlow.RepoSha,
+            repoComparisonSha,
             targetBranch,
             vmr,
             VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name) / VersionFiles.VersionDetailsXml,
-            comparisonFlow.VmrSha,
+            vmrComparisonSha,
             codeflowOptions.CurrentFlow.VmrSha,
             // we're applying the changes to a product repo, so no mapping
             mappingToApplyChanges: null);
