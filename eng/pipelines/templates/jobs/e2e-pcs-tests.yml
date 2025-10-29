@@ -75,8 +75,8 @@ jobs:
 
   - template: /eng/common/templates-official/steps/get-federated-access-token.yml
     parameters:
-      federatedServiceConnection: "ArcadeServicesInternal"
-      outputVariableName: "AzdoToken"
+      federatedServiceConnection: ArcadeServicesInternal
+      outputVariableName: AzdoToken
 
   - powershell: >
       .\.dotnet\dotnet test
