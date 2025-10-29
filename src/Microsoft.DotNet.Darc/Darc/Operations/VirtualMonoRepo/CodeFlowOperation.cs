@@ -80,12 +80,12 @@ internal abstract class CodeFlowOperation(
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
 
-        // Remember the original state for both repos so we can restore them later
+        // Remember the original state of the source repo so we can restore it later
         // We capture both branch name and SHA to handle detached HEAD states
         string originalSourceRepoBranch = await sourceRepo.GetCheckedOutBranchAsync();
         string originalSourceRepoSha = await sourceRepo.GetShaForRefAsync();
-        string originalTargetRepoBranch = await targetRepo.GetCheckedOutBranchAsync();
-        string originalTargetRepoSha = await targetRepo.GetShaForRefAsync();
+
+        string currentTargetRepoBranch = await targetRepo.GetCheckedOutBranchAsync();
 
         // Parse excluded assets from options
         IReadOnlyList<string> excludedAssets = string.IsNullOrEmpty(_options.ExcludedAssets)
@@ -99,7 +99,7 @@ internal abstract class CodeFlowOperation(
                 build,
                 currentFlow,
                 mapping,
-                originalTargetRepoBranch,
+                currentTargetRepoBranch,
                 excludedAssets,
                 cancellationToken);
 
@@ -113,9 +113,8 @@ internal abstract class CodeFlowOperation(
         }
         finally
         {
-            // Restore both repos to their original state, even when exceptions occur
+            // Restore source repo to its original state, even when exceptions occur
             await RestoreRepoToOriginalStateAsync(sourceRepo, originalSourceRepoBranch, originalSourceRepoSha);
-            await RestoreRepoToOriginalStateAsync(targetRepo, originalTargetRepoBranch, originalTargetRepoSha);
         }
     }
 
@@ -133,8 +132,7 @@ internal abstract class CodeFlowOperation(
 
             // If the original state was a detached HEAD, checkout the SHA
             // Otherwise, checkout the branch name
-            const string DetachedHeadName = "HEAD";
-            string refToCheckout = originalBranch == DetachedHeadName ? originalSha : originalBranch;
+            string refToCheckout = originalBranch == DarcLib.Constants.HEAD ? originalSha : originalBranch;
             _logger.LogInformation("Restoring {repo} to original state: {ref}", repo.Path, refToCheckout);
             await repo.CheckoutAsync(refToCheckout);
         }
