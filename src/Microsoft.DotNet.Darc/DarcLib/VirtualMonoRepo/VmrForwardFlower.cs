@@ -362,6 +362,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             codeflowOptions.Build,
             additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
             fromSha: currentSha,
+            keepConflicts: codeflowOptions.EnableRebase,
             resetToRemoteWhenCloningRepo: ShouldResetClones,
             cancellationToken: cancellationToken);
 
