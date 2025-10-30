@@ -66,16 +66,10 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
         bool resetToRemote = false,
         CancellationToken cancellationToken = default)
     {
-        // This makes sure we keep different VMRs separate
-        // We expect to have up to 3:
-        // 1. The GitHub VMR (dotnet/dotnet)
-        // 2. The AzDO mirror (dotnet-dotnet)
-        // 3. The E2E test VMR (maestro-auth-tests/maestro-test-vmr)
-        var folderName = StringUtils.GetXxHash64(
-            string.Join(';', remoteUris.Distinct().OrderBy(u => u)));
-
         ILocalGitRepo vmr = await PrepareCloneInternalAsync(
-            Path.Combine("vmrs", folderName),
+            _clones.TryGetValue(remoteUris.First(), out var clonePath)
+                ? clonePath
+                : _vmrInfo.TmpPath / Path.Combine("vmrs", StringUtils.GetXxHash64(string.Join(';', remoteUris.Distinct().OrderBy(u => u)))),
             remoteUris,
             requestedRefs,
             checkoutRef,
@@ -98,7 +92,10 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
             throw new DarcException($"The provided path '{localPath}' does not appear to be a git repository.");
         }
 
-        await PrepareCloneInternalAsync(localPath, [remotes[0].Uri], [branch], branch, false);
+        foreach (var remote in remotes)
+        {
+            _clones[remote.Uri] = localPath;
+        }
     }
 
     // When we initialize with a single static VMR,

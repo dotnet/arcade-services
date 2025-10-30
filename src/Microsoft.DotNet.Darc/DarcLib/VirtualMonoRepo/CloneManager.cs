@@ -16,7 +16,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 public abstract class CloneManager
 {
     // Map of URI => dir name
-    private readonly Dictionary<string, NativePath> _clones = [];
+    protected readonly Dictionary<string, NativePath> _clones = [];
 
     // Repos we have already pulled updates for during this run
     private readonly List<string> _upToDateRepos = [];
