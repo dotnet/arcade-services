@@ -17,15 +17,18 @@ internal class AddRepoOperation : VmrOperationBase
 {
     private readonly AddRepoCommandLineOptions _options;
     private readonly IVmrInitializer _vmrInitializer;
+    private readonly IVmrInfo _vmrInfo;
 
     public AddRepoOperation(
         AddRepoCommandLineOptions options,
         IVmrInitializer vmrInitializer,
+        IVmrInfo vmrInfo,
         ILogger<AddRepoOperation> logger)
         : base(options, logger)
     {
         _options = options;
         _vmrInitializer = vmrInitializer;
+        _vmrInfo = vmrInfo;
     }
 
     protected override async Task ExecuteInternalAsync(
@@ -34,15 +37,17 @@ internal class AddRepoOperation : VmrOperationBase
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
+        var sourceMappingsPath = _vmrInfo.VmrPath / VmrInfo.DefaultRelativeSourceMappingsPath;
+        
         await _vmrInitializer.InitializeRepository(
             repoName,
             targetRevision,
-            new NativePath(_options.SourceMappings),
+            sourceMappingsPath,
             new CodeFlowParameters(
                 additionalRemotes,
-                _options.TpnTemplate,
-                _options.GenerateCodeowners,
-                _options.GenerateCredScanSuppressions),
+                VmrInfo.ThirdPartyNoticesFileName,
+                GenerateCodeOwners: false,
+                GenerateCredScanSuppressions: true),
             cancellationToken);
     }
 }

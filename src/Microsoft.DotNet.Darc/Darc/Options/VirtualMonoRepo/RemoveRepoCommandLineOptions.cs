@@ -13,16 +13,6 @@ internal class RemoveRepoCommandLineOptions : VmrCommandLineOptions<RemoveRepoOp
     [Value(0, Required = true, HelpText = "Repository names to remove from the VMR.")]
     public IEnumerable<string> Repositories { get; set; }
 
-    [Option("additional-remotes", Required = false, Hidden = true)]
-    [RedactFromLogging]
-    public IEnumerable<string> AdditionalRemotes { get; set; }
-
-    [Option("tpn-template", Required = false, HelpText = "Path to a template for regenerating VMRs THIRD-PARTY-NOTICES file. Leave empty to skip generation.")]
-    public string TpnTemplate { get; set; }
-
-    [Option("generate-codeowners", Required = false, HelpText = "Regenerate the common CODEOWNERS file for all repositories.")]
-    public bool GenerateCodeowners { get; set; } = false;
-
-    [Option("generate-credscansuppressions", Required = false, HelpText = "Regenerate the common .config/CredScanSuppressions.json file for all repositories.")]
-    public bool GenerateCredScanSuppressions { get; set; } = false;
+    // Required by IBaseVmrCommandLineOptions but not used for this command
+    public IEnumerable<string> AdditionalRemotes { get; set; } = [];
 }

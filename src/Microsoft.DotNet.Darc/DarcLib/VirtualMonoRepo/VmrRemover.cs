@@ -111,23 +111,24 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Regenerate optional files
+            // Regenerate files
             if (codeFlowParameters.TpnTemplatePath != null)
             {
-                await RegenerateThirdPartyNoticesAsync(codeFlowParameters.TpnTemplatePath, cancellationToken);
+                await _thirdPartyNoticesGenerator.UpdateThirdPartyNotices(codeFlowParameters.TpnTemplatePath);
+                await _localGitClient.StageAsync(_vmrInfo.VmrPath, new[] { VmrInfo.ThirdPartyNoticesFileName }, cancellationToken);
             }
 
             if (codeFlowParameters.GenerateCodeOwners)
             {
-                await RegenerateCodeownersAsync(cancellationToken);
+                await _codeownersGenerator.UpdateCodeowners(cancellationToken);
             }
 
             if (codeFlowParameters.GenerateCredScanSuppressions)
             {
-                await RegenerateCredScanSuppressionsAsync(cancellationToken);
+                await _credScanSuppressionsGenerator.UpdateCredScanSuppressions(cancellationToken);
             }
 
-            var commitMessage = PrepareCommitMessage(RemovalCommitMessage, mapping.Name);
+            var commitMessage = RemovalCommitMessage.Replace("{name}", mapping.Name);
             await CommitAsync(commitMessage);
 
             await workBranch.MergeBackAsync(commitMessage);
@@ -142,29 +143,5 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
                 "the original" : workBranch.OriginalBranchName);
             throw;
         }
-    }
-
-    private string PrepareCommitMessage(string template, string repoName)
-    {
-        return template.Replace("{name}", repoName);
-    }
-
-    private async Task RegenerateThirdPartyNoticesAsync(string templatePath, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Regenerating third-party notices");
-        await _thirdPartyNoticesGenerator.UpdateThirdPartyNotices(templatePath);
-        await _localGitClient.StageAsync(_vmrInfo.VmrPath, new[] { VmrInfo.ThirdPartyNoticesFileName }, cancellationToken);
-    }
-
-    private async Task RegenerateCodeownersAsync(CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Regenerating CODEOWNERS");
-        await _codeownersGenerator.UpdateCodeowners(cancellationToken);
-    }
-
-    private async Task RegenerateCredScanSuppressionsAsync(CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Regenerating credential scan suppressions");
-        await _credScanSuppressionsGenerator.UpdateCredScanSuppressions(cancellationToken);
     }
 }

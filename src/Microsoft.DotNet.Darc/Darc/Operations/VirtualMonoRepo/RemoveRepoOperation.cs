@@ -37,9 +37,9 @@ internal class RemoveRepoOperation : VmrOperationBase
             repoName,
             new CodeFlowParameters(
                 additionalRemotes,
-                _options.TpnTemplate,
-                _options.GenerateCodeowners,
-                _options.GenerateCredScanSuppressions),
+                VmrInfo.ThirdPartyNoticesFileName,
+                GenerateCodeOwners: false,
+                GenerateCredScanSuppressions: true),
             cancellationToken);
     }
 }
