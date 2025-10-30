@@ -49,21 +49,25 @@ internal class ResolveConflictOperation(
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
+        _logger.LogInformation("Fetching subscription information ...");
         var subscription = await FetchCodeflowSubscriptionAsync(_options.SubscriptionId);
 
+        _logger.LogInformation("Fetching PR information ...");
         TrackedPullRequest pr = await _barClient.GetTrackedPullRequestBySubscriptionIdAsync(subscription.Id)
             ?? throw new DarcException($"No open PR found for this subscription");
 
-        NativePath targetGitRepoPath = new(_processManager.FindGitRoot(Directory.GetCurrentDirectory()));
+        _logger.LogInformation("Fetching build to apply ...");
 
         Build build = await _barClient.GetBuildAsync(pr.Updates.Last().BuildId);
 
-        NativePath repoPath;
+        NativePath targetGitRepoPath = new(_processManager.FindGitRoot(Directory.GetCurrentDirectory()));
 
+        NativePath repoPath;
+        ILocalGitRepo vmr;
         if (subscription.IsForwardFlow())
         {
             // Register/prepare VMR on the current directory
-            await _vmrCloneManager.PrepareVmrAsync(
+            vmr = await _vmrCloneManager.PrepareVmrAsync(
                 targetGitRepoPath,
                 [subscription.TargetRepository],
                 [pr.HeadBranch],
@@ -79,7 +83,7 @@ internal class ResolveConflictOperation(
         }
         else
         {
-            // Register/prepare source repo on the current directory
+            // Register/prepare target repo on the current directory
             repoPath = targetGitRepoPath;
             await _repositoryCloneManager.PrepareCloneAsync(
                 targetGitRepoPath,
@@ -90,13 +94,16 @@ internal class ResolveConflictOperation(
                 cancellationToken);
 
             // Clone VMR to a temp location
-            await _vmrCloneManager.PrepareVmrAsync(
+            vmr = await _vmrCloneManager.PrepareVmrAsync(
                 [build.GetRepository()],
-                [pr.HeadBranch],
-                pr.HeadBranch,
+                [build.Commit],
+                build.Commit,
                 resetToRemote: false,
                 cancellationToken);
+
         }
+
+        _vmrInfo.VmrPath = vmr.Path;
 
         await ValidateLocalRepo(subscription, repoPath);
 
@@ -111,6 +118,7 @@ internal class ResolveConflictOperation(
                 repoPath,
                 isForwardFlow: subscription.IsForwardFlow(),
                 additionalRemotes,
+                subscription,
                 cancellationToken,
                 buildId: build.Id); // TODO - Create an overload where we can pass the build
         }
@@ -124,8 +132,6 @@ internal class ResolveConflictOperation(
         _logger.LogInformation("Codeflow has finished and changes have been staged on the local branch. "
             + "However, no conflicts were encountered.");
     }
-
-    #region Validations
 
     private async Task ValidateLocalRepo(Subscription subscription, NativePath repoPath)
     {
@@ -189,6 +195,4 @@ internal class ResolveConflictOperation(
                 $"('{prHeadBranch}'). Please checkout the correct branch and fetch the latest changes.");
         }
     }
-
-#endregion
 }

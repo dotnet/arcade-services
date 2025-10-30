@@ -50,6 +50,7 @@ internal abstract class CodeFlowOperation(
         NativePath repoPath,
         bool isForwardFlow,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+        Subscription? subscription,
         CancellationToken cancellationToken,
         int buildId = 0)
     {
@@ -117,6 +118,7 @@ internal abstract class CodeFlowOperation(
                     mapping,
                     currentTargetRepoBranch,
                     excludedAssets,
+                    subscription?.TargetRepository,
                     cancellationToken);
             }
             else
@@ -214,6 +216,7 @@ internal abstract class CodeFlowOperation(
         SourceMapping mapping,
         string headBranch,
         IReadOnlyList<string> excludedAssets,
+        string? targetRepoUri,
         CancellationToken cancellationToken)
     {
         try
@@ -225,7 +228,7 @@ internal abstract class CodeFlowOperation(
                 excludedAssets: excludedAssets,
                 headBranch,
                 headBranch,
-                _vmrInfo.VmrPath,
+                targetRepoUri ?? _vmrInfo.VmrPath,
                 enableRebase: true,
                 forceUpdate: true,
                 cancellationToken);

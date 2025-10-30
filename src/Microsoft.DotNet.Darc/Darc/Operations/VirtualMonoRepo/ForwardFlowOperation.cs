@@ -50,6 +50,7 @@ internal class ForwardFlowOperation(
             sourceRepoPath,
             isForwardFlow: true,
             additionalRemotes,
+            null,
             cancellationToken);
     }
 }

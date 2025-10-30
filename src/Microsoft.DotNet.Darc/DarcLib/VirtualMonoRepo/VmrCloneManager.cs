@@ -82,11 +82,22 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
         // 1. The GitHub VMR (dotnet/dotnet)
         // 2. The AzDO mirror (dotnet-dotnet)
         // 3. The E2E test VMR (maestro-auth-tests/maestro-test-vmr)
-        var folderName = StringUtils.GetXxHash64(
-            string.Join(';', remoteUris.Distinct().OrderBy(u => u)));
+
+        NativePath vmrPath;
+        if (_clones.TryGetValue(remoteUris.First(), out var cachedVmrPath))
+        {
+            vmrPath = cachedVmrPath;
+        }
+        else
+        {
+            var folderName = StringUtils.GetXxHash64(
+                string.Join(';', remoteUris.Distinct().OrderBy(u => u)));
+
+            vmrPath = _vmrInfo.TmpPath / "vmrs" / folderName;
+        }
 
         return await PrepareVmrAsync(
-            _vmrInfo.TmpPath / Path.Combine("vmrs", folderName),
+            vmrPath,
             remoteUris,
             requestedRefs,
             checkoutRef,
