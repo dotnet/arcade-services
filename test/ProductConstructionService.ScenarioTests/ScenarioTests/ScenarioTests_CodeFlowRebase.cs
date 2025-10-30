@@ -59,11 +59,16 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             {
                 await using (await CheckoutBranchAsync(sourceBranchName))
                 {
-                    TestContext.WriteLine("Making code changes to the repo");
-                    await File.WriteAllTextAsync(newFilePath1, "content #1 from the repository");
-                    await File.WriteAllTextAsync(newFilePath2, "content #2 from the repository");
-                    await GitAddAllAsync();
-                    await GitCommitAsync("Add new files");
+                    await ChangeAndPushAFile(
+                        repoDirectory.Directory,
+                        newFilePath1,
+                        "content #1 from the repository",
+                        "Add new files");
+                    await ChangeAndPushAFile(
+                        repoDirectory.Directory,
+                        newFilePath2,
+                        "content #2 from the repository",
+                        "Add new files");
 
                     // Push it to github
                     await using (await PushGitBranchAsync("origin", sourceBranchName))
@@ -123,12 +128,12 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         // The codeflow verification checks should pass now
                         await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, true);
 
-                        // Make a change in a product repo again
                         TestContext.WriteLine("Making code changes to the repo that should cause a conflict in the PR");
-                        await File.WriteAllTextAsync(newFilePath2, "content #3 from the repository");
-                        await GitAddAllAsync();
-                        await GitCommitAsync("Add conflicting changes");
-                        await RunGitAsync("push");
+                        await ChangeAndPushAFile(
+                            repoDirectory.Directory,
+                            newFilePath2,
+                            "content #3 but from the repository",
+                            "Add conflicting changes");
 
                         repoSha = (await GitGetCurrentSha()).TrimEnd();
                         TestContext.WriteLine("Creating a build from the new commit");
@@ -144,26 +149,28 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
                         TestContext.WriteLine("Triggering the subscription");
                         await TriggerSubscriptionAsync(subscriptionId.Value);
-
-                        await WaitForUpdatedPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
+                        await Task.Delay(TimeSpan.FromSeconds(30));
+                        pr = await WaitForUpdatedPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
 
                         // We verify the file got there + make a conflicting change for future
                         using (ChangeDirectory(vmrDirectory.Directory))
                         {
                             await CheckoutRemoteRefAsync(pr.Head.Ref);
                             (await File.ReadAllTextAsync(newFileInVmrPath2)).Should().Be("content #3 from the repository");
-                            await File.WriteAllTextAsync(newFileInVmrPath1, "content #3 but from the VMR");
-                            await GitAddAllAsync();
-                            await GitCommitAsync("Add new files to VMR");
-                            await RunGitAsync("push", "origin", targetBranchName);
+
+                            await ChangeAndPushAFile(
+                                vmrDirectory.Directory,
+                                newFileInVmrPath1,
+                                "content #3 but from the VMR",
+                                "Add conflicting changes");
                         }
 
-                        // Make a conflicting change in a product repo again
                         TestContext.WriteLine("Making code changes to the repo that should cause a conflict in the PR");
-                        await File.WriteAllTextAsync(newFilePath2, "content #4 from the repository");
-                        await GitAddAllAsync();
-                        await GitCommitAsync("Add conflicting changes");
-                        await RunGitAsync("push");
+                        await ChangeAndPushAFile(
+                            repoDirectory.Directory,
+                            newFilePath2,
+                            "content #4 from the repository",
+                            "Add conflicting changes");
 
                         repoSha = (await GitGetCurrentSha()).TrimEnd();
                         TestContext.WriteLine("Creating a build from the new commit");
@@ -214,10 +221,10 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepoName);
         var checks = await WaitForPullRequestMaestroChecksAsync(pr.Url, pr.Head.Sha, repo.Id);
         var codeFlowCheck = checks.Single(c => c.Name.Contains("Codeflow verification"));
-        codeFlowCheck.Conclusion.Value.Value.Should().Be(Octokit.CheckConclusion.Failure);
+        codeFlowCheck.Conclusion.Value.Value.Should().Be(expectSucceeded ? Octokit.CheckConclusion.Success : Octokit.CheckConclusion.Failure);
     }
 
-    private async Task<IAsyncDisposable> EnableRebaseStrategy(string subscriptionId)
+    private static async Task<IAsyncDisposable> EnableRebaseStrategy(string subscriptionId)
     {
         await PcsApi.FeatureFlags.SetFeatureFlagAsync(new SetFeatureFlagRequest(Guid.Parse(subscriptionId))
         {
@@ -230,5 +237,16 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         {
             await PcsApi.FeatureFlags.RemoveFeatureFlagAsync(Common.FeatureFlag.EnableRebaseStrategy.Name, Guid.Parse(subscriptionId));
         });
+    }
+
+    private async Task ChangeAndPushAFile(string repoDir, string filePath, string content, string commitMessage)
+    {
+        using (ChangeDirectory(repoDir))
+        {
+            await File.WriteAllTextAsync(filePath, content);
+            await GitAddAllAsync();
+            await GitCommitAsync(commitMessage);
+            await RunGitAsync("push");
+        }
     }
 }
