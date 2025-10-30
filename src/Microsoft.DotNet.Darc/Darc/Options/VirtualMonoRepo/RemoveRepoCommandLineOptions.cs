@@ -13,8 +13,7 @@ internal class RemoveRepoCommandLineOptions : VmrCommandLineOptions<RemoveRepoOp
     [Value(0, Required = true, HelpText = "Repository names to remove from the VMR.")]
     public IEnumerable<string> Repositories { get; set; }
 
-    [Option("additional-remotes", Required = false, HelpText =
-        "List of additional remote URIs (not used for removal but required by interface).")]
+    [Option("additional-remotes", Required = false, Hidden = true)]
     [RedactFromLogging]
     public IEnumerable<string> AdditionalRemotes { get; set; }
 
