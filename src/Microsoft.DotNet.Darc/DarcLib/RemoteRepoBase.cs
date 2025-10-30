@@ -100,7 +100,7 @@ public class RemoteRepoBase : GitRepoCloner
                     File.Delete(filePath);
                 }
 
-                await _processManager.ExecuteGit(clonedRepo, ["add", filePath]);
+                await _processManager.ExecuteGit(clonedRepo, ["add", filePath, "-f"]);
             }
 
             var commitResult = await _processManager.ExecuteGit(clonedRepo, ["commit", "--allow-empty", "-m", commitMessage]);
