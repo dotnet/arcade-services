@@ -90,12 +90,18 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         await using IAsyncDisposable __ = AsyncDisposable.Create(async () =>
                         {
                             using (ChangeDirectory(vmrDirectory.Directory))
-                                await DeleteBranchAsync(pr.Head.Ref);
+                            {
+                                try
+                                {
+                                    await DeleteBranchAsync(pr.Head.Ref);
+                                }
+                                catch
+                                {
+                                }
+                            }
                         });
 
-                        // The codeflow verification checks should fail due to the conflict
-                        var checkResult = await CheckGithubPullRequestChecks(TestRepository.VmrTestRepoName, targetBranchName, waitTime: TimeSpan.Zero);
-                        checkResult.Should().BeFalse();
+                        await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, false);
 
                         // We resolve the conflict manually
                         using (ChangeDirectory(vmrDirectory.Directory))
@@ -113,9 +119,9 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         }
 
                         await TriggerSubscriptionAsync(subscriptionId.Value);
+
                         // The codeflow verification checks should pass now
-                        checkResult = await CheckGithubPullRequestChecks(TestRepository.VmrTestRepoName, targetBranchName, waitTime: TimeSpan.FromSeconds(60));
-                        checkResult.Should().BeTrue();
+                        await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, true);
 
                         // Make a change in a product repo again
                         TestContext.WriteLine("Making code changes to the repo that should cause a conflict in the PR");
@@ -177,6 +183,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         // This time we should get a conflict comment for the second file
                         TestContext.WriteLine("Waiting for conflict comment to show up on the PR");
                         pr = await WaitForPullRequestComment(TestRepository.VmrTestRepoName, targetBranchName, TestFile2Name);
+                        await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, false);
 
                         // We resolve the conflict manually
                         using (ChangeDirectory(vmrDirectory.Directory))
@@ -193,13 +200,21 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         }
 
                         await TriggerSubscriptionAsync(subscriptionId.Value);
+
                         // The codeflow verification checks should pass now
-                        checkResult = await CheckGithubPullRequestChecks(TestRepository.VmrTestRepoName, targetBranchName, waitTime: TimeSpan.FromSeconds(60));
-                        checkResult.Should().BeTrue();
+                        await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, true);
                     }
                 }
             }
         });
+    }
+
+    private static async Task VerifyCodeFlowCheck(Octokit.PullRequest pr, string targetRepoName, bool expectSucceeded)
+    {
+        Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepoName);
+        var checks = await WaitForPullRequestMaestroChecksAsync(pr.Url, pr.Head.Sha, repo.Id);
+        var codeFlowCheck = checks.Single(c => c.Name.Contains("Codeflow verification"));
+        codeFlowCheck.Conclusion.Value.Value.Should().Be(Octokit.CheckConclusion.Failure);
     }
 
     private async Task<IAsyncDisposable> EnableRebaseStrategy(string subscriptionId)
