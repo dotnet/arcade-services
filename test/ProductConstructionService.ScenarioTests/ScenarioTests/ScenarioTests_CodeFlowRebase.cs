@@ -95,20 +95,8 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
             await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, false);
 
-            // We resolve the conflict manually
-            using (ChangeDirectory(vmrDirectory.Directory))
-            {
-                await CheckoutRemoteRefAsync(pr.Head.Ref);
-
-                // TODO: Resolve conflicts
-                // await RunDarcAsync("vmr", "resolve-conflict", "--subscription", subscriptionId.Value);
-                // Verify the other file made it here too
-                //(await File.ReadAllTextAsync(newFileInVmrPath2)).Should().Be("content #2 from the repository");
-                //await RunGitAsync("checkout", "--ours", newFileInVmrPath1);
-                //await GitAddAllAsync();
-                //await GitCommitAsync("Resolve conflict");
-                //await RunGitAsync("push", "-u", "origin", pr.Head.Ref);
-            }
+            await ResolveConflict(vmrDirectory.Directory, pr.Head.Ref, [newFileInVmrPath1]);
+            // TODO: Verify the other file
 
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
@@ -180,24 +168,31 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, false);
 
             // We resolve the conflict manually
-            using (ChangeDirectory(vmrDirectory.Directory))
-            {
-                await CheckoutRemoteRefAsync(pr.Head.Ref);
-
-                // TODO: Resolve conflicts
-                // await RunDarcAsync("vmr", "resolve-conflict", "--subscription", subscriptionId.Value);
-                // Verify the other file made it here too
-                //await RunGitAsync("checkout", "--ours", newFileInVmrPath2);
-                //await GitAddAllAsync();
-                //await GitCommitAsync("Resolve conflict");
-                //await RunGitAsync("push", "-u", "origin", pr.Head.Ref);
-            }
+            await ResolveConflict(vmrDirectory.Directory, pr.Head.Ref, [newFileInVmrPath2]);
+            // TODO: Verify the other file
 
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
             // The codeflow verification checks should pass now
             await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, true);   
         });
+    }
+
+    private async Task ResolveConflict(string repoDir, string prBranch, IEnumerable<string> filesToResolve, bool useOurs = false)
+    {
+        using (ChangeDirectory(repoDir))
+        {
+            await CheckoutRemoteRefAsync(prBranch);
+
+            //await RunDarcAsync("vmr", "resolve-conflict", "--subscription", subscriptionId.Value);
+            //foreach (string file in filesToResolve)
+            //{
+            //    await RunGitAsync("checkout", useOurs ? "--ours" : "--theirs", file);
+            //}
+            //await GitAddAllAsync();
+            //await GitCommitAsync("Resolve conflict");
+            //await RunGitAsync("push", "-u", "origin", prBranch);
+        }
     }
 
     private static async Task VerifyCodeFlowCheck(Octokit.PullRequest pr, string targetRepoName, bool expectSucceeded)
