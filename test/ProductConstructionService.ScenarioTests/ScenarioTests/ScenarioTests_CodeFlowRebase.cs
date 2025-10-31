@@ -64,20 +64,15 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 "content #2 from the repository",
                 "Add new files");
 
-            var repoSha = (await GitGetCurrentSha()).TrimEnd();
-
             // Create a new build from the commit and add it to a channel
             Build build = await CreateBuildAsync(
                 GetGitHubRepoUrl(TestRepository.TestRepo1Name),
                 sourceBranchName,
-                repoSha,
+                (await GitGetCurrentSha()).TrimEnd(),
                 "1",
                 []);
 
-            TestContext.WriteLine("Adding build to channel");
             await AddBuildToChannelAsync(build.Id, channelName);
-
-            TestContext.WriteLine("Triggering the subscription");
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
             TestContext.WriteLine("Waiting for the PR to show up");
@@ -110,19 +105,15 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 "content #3 but from the repository",
                 "Add conflicting changes");
 
-            repoSha = (await GitGetCurrentSha()).TrimEnd();
-            TestContext.WriteLine("Creating a build from the new commit");
             build = await CreateBuildAsync(
                 GetGitHubRepoUrl(TestRepository.TestRepo1Name),
                 sourceBranchName,
-                repoSha,
+                (await GitGetCurrentSha()).TrimEnd(),
                 "2",
                 []);
 
-            TestContext.WriteLine("Adding build to channel");
             await AddBuildToChannelAsync(build.Id, channelName);
 
-            TestContext.WriteLine("Triggering the subscription");
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
             pr = await WaitForUpdatedPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
@@ -147,19 +138,15 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 "content #4 from the repository",
                 "Add conflicting changes");
 
-            repoSha = (await GitGetCurrentSha()).TrimEnd();
             TestContext.WriteLine("Creating a build from the new commit");
             build = await CreateBuildAsync(
                 GetGitHubRepoUrl(TestRepository.TestRepo1Name),
                 sourceBranchName,
-                repoSha,
+                (await GitGetCurrentSha()).TrimEnd(),
                 "2",
                 []);
 
-            TestContext.WriteLine("Adding build to channel");
             await AddBuildToChannelAsync(build.Id, channelName);
-
-            TestContext.WriteLine("Triggering the subscription");
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
             // This time we should get a conflict comment for the second file
@@ -178,21 +165,22 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         });
     }
 
-    private async Task ResolveConflict(string repoDir, string prBranch, IEnumerable<string> filesToResolve, bool useOurs = false)
+    private static async Task ResolveConflict(string repoDir, string prBranch, IEnumerable<string> filesToResolve, bool useOurs = false)
     {
-        using (ChangeDirectory(repoDir))
-        {
-            await CheckoutRemoteRefAsync(prBranch);
+        using var _ = ChangeDirectory(repoDir);
+        await CheckoutRemoteRefAsync(prBranch);
 
-            //await RunDarcAsync("vmr", "resolve-conflict", "--subscription", subscriptionId.Value);
-            //foreach (string file in filesToResolve)
-            //{
-            //    await RunGitAsync("checkout", useOurs ? "--ours" : "--theirs", file);
-            //}
-            //await GitAddAllAsync();
-            //await GitCommitAsync("Resolve conflict");
-            //await RunGitAsync("push", "-u", "origin", prBranch);
+        // TODO
+        // await RunDarcAsync("vmr", "resolve-conflict", "--subscription", subscriptionId.Value);
+
+        foreach (string file in filesToResolve)
+        {
+            await RunGitAsync("checkout", useOurs ? "--ours" : "--theirs", file);
         }
+
+        await GitAddAllAsync();
+        await GitCommitAsync("Resolve conflict");
+        await RunGitAsync("push");
     }
 
     private static async Task VerifyCodeFlowCheck(Octokit.PullRequest pr, string targetRepoName, bool expectSucceeded)
