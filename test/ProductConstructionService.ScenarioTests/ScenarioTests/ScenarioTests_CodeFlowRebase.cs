@@ -93,13 +93,12 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             });
 
             await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, false);
-
-            await ResolveConflict(vmrDir, pr.Head.Ref, [newFileInVmrPath1]);
+            await ResolveConflict(repoDir, subscriptionId.Value, vmrDir, pr.Head.Ref, [newFileInVmrPath1]);
             // TODO: Verify the other file
-
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
             // The codeflow verification checks should pass now
+            await Task.Delay(TimeSpan.FromSeconds(30));
             await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, true);
 
             TestContext.WriteLine("Making code changes to the repo that should cause a conflict in the PR");
@@ -117,7 +116,6 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 []);
 
             await AddBuildToChannelAsync(build.Id, channelName);
-
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
             pr = await WaitForUpdatedPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
@@ -159,23 +157,34 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, false);
 
             // We resolve the conflict manually
-            await ResolveConflict(vmrDir, pr.Head.Ref, [newFileInVmrPath2]);
+            await ResolveConflict(repoDir, subscriptionId.Value, vmrDir, pr.Head.Ref, [newFileInVmrPath2]);
             // TODO: Verify the other file
 
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
             // The codeflow verification checks should pass now
+            await Task.Delay(TimeSpan.FromSeconds(30));
             await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, true);   
         });
     }
 
-    private static async Task ResolveConflict(string repoDir, string prBranch, IEnumerable<string> filesToResolve, bool useOurs = false)
+    private static async Task ResolveConflict(string WILL_REMOVE_sourceDir, string WILL_REMOVE_subscriptionId, string repoDir, string prBranch, IEnumerable<string> filesToResolve, bool useOurs = false)
     {
         using var _ = ChangeDirectory(repoDir);
         await CheckoutRemoteRefAsync(prBranch);
 
-        // TODO
+        // TODO call resolve-conflict instead of forwardflow
         // await RunDarcAsync("vmr", "resolve-conflict", "--subscription", subscriptionId.Value);
+        using (ChangeDirectory(WILL_REMOVE_sourceDir))
+        {
+            try
+            {
+                await RunDarcAsync("vmr", "forwardflow", "--subscription", WILL_REMOVE_subscriptionId, repoDir);
+            }
+            catch
+            {
+            }
+        }
 
         foreach (string file in filesToResolve)
         {
