@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using AwesomeAssertions;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
@@ -18,7 +19,6 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
     {
         var channelName = GetTestChannelName();
         var sourceBranchName = GetTestBranchName();
-        var productRepo = GetGitHubRepoUrl(TestRepository.TestRepo1Name);
         var targetBranchName = GetTestBranchName();
 
         await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(channelName);
@@ -36,30 +36,34 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
         using TemporaryDirectory vmrDirectory = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
         using TemporaryDirectory repoDirectory = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
-        var newFilePath1 = Path.Combine(repoDirectory.Directory, TestFile1Name);
-        var newFileInVmrPath1 = Path.Combine(vmrDirectory.Directory, VmrInfo.SourceDirName, TestRepository.TestRepo1Name, TestFile1Name);
-        var newFilePath2 = Path.Combine(repoDirectory.Directory, TestFile2Name);
-        var newFileInVmrPath2 = Path.Combine(vmrDirectory.Directory, VmrInfo.SourceDirName, TestRepository.TestRepo1Name, TestFile2Name);
 
-        await CreateTargetBranchAndExecuteTest(targetBranchName, vmrDirectory.Directory, async () =>
+        var vmrDir = new NativePath(vmrDirectory.Directory);
+        var repoDir = new NativePath(repoDirectory.Directory);
+
+        var newFilePath1 = repoDir / TestFile1Name;
+        var newFileInVmrPath1 = vmrDir / VmrInfo.SourceDirName / TestRepository.TestRepo1Name / TestFile1Name;
+        var newFilePath2 = repoDir / TestFile2Name;
+        var newFileInVmrPath2 = vmrDir / VmrInfo.SourceDirName / TestRepository.TestRepo1Name / TestFile2Name;
+
+        await CreateTargetBranchAndExecuteTest(targetBranchName, vmrDir, async () =>
         {
             await ChangeAndPushAFile(
-                vmrDirectory.Directory,
+                vmrDir,
                 newFileInVmrPath1,
                 "content #1 from the VMR",
                 "Add new files to VMR");
 
-            using var _ = ChangeDirectory(repoDirectory.Directory);
+            using var _ = ChangeDirectory(repoDir);
             await using var __ = await CheckoutBranchAsync(sourceBranchName);
             await using var ___ = await PushGitBranchAsync("origin", sourceBranchName);
 
             await ChangeAndPushAFile(
-                repoDirectory.Directory,
+                repoDir,
                 newFilePath1,
                 "content #1 from the repository",
                 "Add new files");
             await ChangeAndPushAFile(
-                repoDirectory.Directory,
+                repoDir,
                 newFilePath2,
                 "content #2 from the repository",
                 "Add new files");
@@ -80,7 +84,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
             await using IAsyncDisposable ____ = AsyncDisposable.Create(async () =>
             {
-                using var _ = ChangeDirectory(vmrDirectory.Directory);
+                using var _ = ChangeDirectory(vmrDir);
                 try
                 {
                     await DeleteBranchAsync(pr.Head.Ref);
@@ -90,7 +94,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
             await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, false);
 
-            await ResolveConflict(vmrDirectory.Directory, pr.Head.Ref, [newFileInVmrPath1]);
+            await ResolveConflict(vmrDir, pr.Head.Ref, [newFileInVmrPath1]);
             // TODO: Verify the other file
 
             await TriggerSubscriptionAsync(subscriptionId.Value);
@@ -100,7 +104,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
             TestContext.WriteLine("Making code changes to the repo that should cause a conflict in the PR");
             await ChangeAndPushAFile(
-                repoDirectory.Directory,
+                repoDir,
                 newFilePath2,
                 "content #3 but from the repository",
                 "Add conflicting changes");
@@ -119,13 +123,13 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             pr = await WaitForUpdatedPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
 
             // We verify the file got there + make a conflicting change for future
-            using (ChangeDirectory(vmrDirectory.Directory))
+            using (ChangeDirectory(vmrDir))
             {
                 await CheckoutRemoteRefAsync(pr.Head.Ref);
                 (await File.ReadAllTextAsync(newFileInVmrPath2)).Should().Be("content #3 from the repository");
 
                 await ChangeAndPushAFile(
-                    vmrDirectory.Directory,
+                    vmrDir,
                     newFileInVmrPath1,
                     "content #3 but from the VMR",
                     "Add conflicting changes");
@@ -133,7 +137,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
             TestContext.WriteLine("Making code changes to the repo that should cause a conflict in the PR");
             await ChangeAndPushAFile(
-                repoDirectory.Directory,
+                repoDir,
                 newFilePath2,
                 "content #4 from the repository",
                 "Add conflicting changes");
@@ -155,7 +159,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, false);
 
             // We resolve the conflict manually
-            await ResolveConflict(vmrDirectory.Directory, pr.Head.Ref, [newFileInVmrPath2]);
+            await ResolveConflict(vmrDir, pr.Head.Ref, [newFileInVmrPath2]);
             // TODO: Verify the other file
 
             await TriggerSubscriptionAsync(subscriptionId.Value);
