@@ -32,6 +32,7 @@ internal class ForwardFlowOperation(
 {
     private readonly ForwardFlowCommandLineOptions _options = options;
     private readonly IProcessManager _processManager = processManager;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
 
     protected override async Task ExecuteInternalAsync(
         string repoName,
@@ -46,11 +47,16 @@ internal class ForwardFlowOperation(
             throw new DarcException("Please specify a path to a local clone of the VMR to flow the changed into.");
         }
 
+        var sourceRepo = _localGitRepoFactory.Create(sourceRepoPath);
+
+        var build = await GetOrCreateBuildAsync(sourceRepo, _options.Build);
+
         await FlowCodeLocallyAsync(
             sourceRepoPath,
             isForwardFlow: true,
             additionalRemotes,
-            null,
+            build,
+            subscription: null,
             cancellationToken);
     }
 }

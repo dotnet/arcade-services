@@ -118,9 +118,9 @@ internal class ResolveConflictOperation(
                 repoPath,
                 isForwardFlow: subscription.IsForwardFlow(),
                 additionalRemotes,
+                build,
                 subscription,
-                cancellationToken,
-                buildId: build.Id); // TODO - Create an overload where we can pass the build
+                cancellationToken);
         }
         catch (PatchApplicationLeftConflictsException)
         {

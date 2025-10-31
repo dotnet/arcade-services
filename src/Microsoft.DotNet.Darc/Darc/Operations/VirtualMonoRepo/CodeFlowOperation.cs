@@ -50,9 +50,9 @@ internal abstract class CodeFlowOperation(
         NativePath repoPath,
         bool isForwardFlow,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+        Build build,
         Subscription? subscription,
-        CancellationToken cancellationToken,
-        int buildId = 0)
+        CancellationToken cancellationToken)
     {
         // If subscription ID is provided, fetch subscription metadata and populate options
         if (!string.IsNullOrEmpty(_options.SubscriptionId))
@@ -64,13 +64,6 @@ internal abstract class CodeFlowOperation(
         ILocalGitRepo productRepo = _localGitRepoFactory.Create(repoPath);
         ILocalGitRepo sourceRepo = isForwardFlow ? productRepo : vmr;
         ILocalGitRepo targetRepo = isForwardFlow ? vmr : productRepo;
-
-        if (buildId == 0)
-        {
-            buildId = _options.Build;
-        }
-
-        var build = await GetBuildAsync(sourceRepo.Path, buildId);
 
         string mappingName = await GetSourceMappingNameAsync(productRepo.Path);
 
@@ -177,10 +170,8 @@ internal abstract class CodeFlowOperation(
         }
     }
 
-    private async Task<Build> GetBuildAsync(NativePath sourceRepoPath, int buildId)
+    protected async Task<Build> GetOrCreateBuildAsync(ILocalGitRepo sourceRepo, int buildId)
     {
-        ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(sourceRepoPath);
-
         Build build;
         if (buildId == 0)
         {
@@ -219,6 +210,13 @@ internal abstract class CodeFlowOperation(
         string? targetRepoUri,
         CancellationToken cancellationToken)
     {
+        if (targetRepoUri == null)
+        {
+            var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+            var remotes = await vmr.GetRemotesAsync();
+            targetRepoUri = remotes.First().Uri;
+        }
+
         try
         {
             CodeFlowResult result = await _forwardFlower.FlowForwardAsync(
@@ -228,7 +226,7 @@ internal abstract class CodeFlowOperation(
                 excludedAssets: excludedAssets,
                 headBranch,
                 headBranch,
-                targetRepoUri ?? _vmrInfo.VmrPath,
+                targetRepoUri,
                 enableRebase: true,
                 forceUpdate: true,
                 cancellationToken);

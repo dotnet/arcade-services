@@ -20,7 +20,7 @@ public interface IBarApiClient : IBasicBarClient
     /// <summary>
     ///     Create a new subscription.
     /// </summary>
-  /// <param name="channelName">Name of source channel.</param>
+    /// <param name="channelName">Name of source channel.</param>
     /// <param name="sourceRepo">Source repository URI.</param>
     /// <param name="targetRepo">Target repository URI.</param>
     /// <param name="targetBranch">Target branch in <paramref name="targetRepo"/></param>
@@ -33,7 +33,7 @@ public interface IBarApiClient : IBasicBarClient
     /// <param name="targetDirectory">Directory of the VMR to synchronize the sources to</param>
     /// <param name="excludedAssets">List of assets to exclude from the source-enabled code flow</param>
     /// <returns>Newly created subscription.</returns>
-  Task<Subscription> CreateSubscriptionAsync(
+    Task<Subscription> CreateSubscriptionAsync(
         string channelName,
         string sourceRepo,
         string targetRepo,
@@ -43,9 +43,9 @@ public interface IBarApiClient : IBasicBarClient
         List<MergePolicy> mergePolicies,
         string failureNotificationTags,
         bool sourceEnabled,
-    string sourceDirectory,
- string targetDirectory,
-    IReadOnlyCollection<string> excludedAssets);
+        string sourceDirectory,
+        string targetDirectory,
+        IReadOnlyCollection<string> excludedAssets);
 
     /// <summary>
     ///     Update an existing subscription
@@ -55,7 +55,7 @@ public interface IBarApiClient : IBasicBarClient
     /// <returns>Updated subscription</returns>
     Task<Subscription> UpdateSubscriptionAsync(Guid subscriptionId, SubscriptionUpdate subscription);
 
- /// <summary>
+    /// <summary>
     ///     Update an existing subscription
     /// </summary>
     /// <param name="subscriptionId">Id of subscription to update</param>
@@ -69,7 +69,7 @@ public interface IBarApiClient : IBasicBarClient
     /// <param name="repoUri">Repository uri</param>
     /// <param name="branch">Repository branch</param>
     /// <returns>List of merge policies</returns>
-  Task<IEnumerable<MergePolicy>> GetRepositoryMergePoliciesAsync(string repoUri, string branch);
+    Task<IEnumerable<MergePolicy>> GetRepositoryMergePoliciesAsync(string repoUri, string branch);
 
     /// <summary>
     ///     Get a list of repository+branch combos and their associated merge policies.
@@ -96,11 +96,11 @@ public interface IBarApiClient : IBasicBarClient
     /// <returns>Subscription just triggered.</returns>
     Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, bool force = false);
 
-  /// <summary>
+    /// <summary>
     /// Trigger a subscription by ID and source build id.
     /// </summary>
     /// <param name="subscriptionId">ID of subscription to trigger</param>
-  /// <param name="sourceBuildId">Source build ID</param>
+    /// <param name="sourceBuildId">Source build ID</param>
     /// <param name="force">Force update even for PRs with pending or successful checks</param>
     /// <returns>Subscription just triggered.</returns>
     Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, int sourceBuildId, bool force = false);
@@ -164,7 +164,7 @@ public interface IBarApiClient : IBasicBarClient
     /// <summary>
     ///     Create a new channel
     /// </summary>
-  /// <param name="name">Name of channel. Must be unique.</param>
+    /// <param name="name">Name of channel. Must be unique.</param>
     /// <param name="classification">Classification of channel.</param>
     /// <returns>Newly created channel</returns>
     Task<Channel> CreateChannelAsync(string name, string classification);
@@ -177,7 +177,7 @@ public interface IBarApiClient : IBasicBarClient
     Task<Channel> DeleteChannelAsync(int id);
 
     /// <summary>
-  ///     Update a channel with new metadata.
+    ///     Update a channel with new metadata.
     /// </summary>
     /// <param name="id">Id of channel to update</param>
     /// <param name="name">Optional new name of channel</param>

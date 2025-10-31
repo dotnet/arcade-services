@@ -33,6 +33,7 @@ internal class BackflowOperation(
     private readonly BackflowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly IProcessManager _processManager = processManager;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
 
     protected override async Task ExecuteInternalAsync(
         string repoName,
@@ -40,19 +41,27 @@ internal class BackflowOperation(
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
+        
         if (string.IsNullOrEmpty(targetDirectory))
         {
             throw new DarcException("Please specify path to a local repository to flow to");
         }
 
-        _vmrInfo.VmrPath = new NativePath(_options.VmrPath ?? _processManager.FindGitRoot(Environment.CurrentDirectory));
+        var vmrPath = new NativePath(_options.VmrPath ?? _processManager.FindGitRoot(Environment.CurrentDirectory));
         var targetRepoPath = new NativePath(_processManager.FindGitRoot(targetDirectory));
+
+        _vmrInfo.VmrPath = vmrPath;
+
+        var vmr = _localGitRepoFactory.Create(vmrPath);
+
+        var build = await GetOrCreateBuildAsync(vmr, _options.Build);
 
         await FlowCodeLocallyAsync(
             targetRepoPath,
             isForwardFlow: false,
             additionalRemotes,
-            null,
+            build,
+            subscription: null,
             cancellationToken);
     }
 }
