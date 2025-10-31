@@ -39,7 +39,6 @@ internal class ResolveConflictOperation(
     private readonly IVmrCloneManager _vmrCloneManager = vmrCloneManager;
     private readonly IRepositoryCloneManager _repositoryCloneManager = repositoryCloneManager;
     private readonly IProcessManager _processManager = processManager;
-    private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
     private readonly IBarApiClient _barClient = barApiClient;
     private readonly ILogger<ResolveConflictOperation> _logger = logger;
 
@@ -57,7 +56,6 @@ internal class ResolveConflictOperation(
             ?? throw new DarcException($"No open PR found for this subscription");
 
         _logger.LogInformation("Fetching build to apply ...");
-
         Build build = await _barClient.GetBuildAsync(pr.Updates.Last().BuildId);
 
         NativePath targetGitRepoPath = new(_processManager.FindGitRoot(Directory.GetCurrentDirectory()));
@@ -106,11 +104,6 @@ internal class ResolveConflictOperation(
         _vmrInfo.VmrPath = vmr.Path;
 
         await ValidateLocalRepo(subscription, repoPath);
-
-        await ValidateLocalBranchMatchesRemote(
-            targetGitRepoPath,
-            subscription.TargetRepository,
-            pr.HeadBranch);
 
         try
         {
@@ -170,29 +163,5 @@ internal class ResolveConflictOperation(
         }
 
         return subscription;
-    }
-
-    private async Task ValidateLocalBranchMatchesRemote(
-        NativePath targetRepoPath,
-        string repoUrl,
-        string prHeadBranch)
-    {
-        var result = await _processManager.ExecuteGit(targetRepoPath, "ls-remote", repoUrl, prHeadBranch);
-        result.ThrowIfFailed(
-            $"""
-            An unexpected error occurred while trying to fetch the latest PR branch SHA from {repoUrl}. 
-            {result.StandardError}
-            """);
-
-        var remoteSha = result.StandardOutput.Split('\t')[0].Trim();
-
-        var repo = _localGitRepoFactory.Create(targetRepoPath);
-        var currentSha = await repo.GetShaForRefAsync();
-
-        if (!currentSha.Equals(remoteSha))
-        {
-            throw new DarcException($"The current local branch '{currentSha}' does not match the PR head branch at remote " +
-                $"('{prHeadBranch}'). Please checkout the correct branch and fetch the latest changes.");
-        }
     }
 }
