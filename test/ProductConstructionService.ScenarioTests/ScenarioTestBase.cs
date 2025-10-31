@@ -1223,17 +1223,10 @@ internal abstract partial class ScenarioTestBase
     protected static async Task CreateTargetBranchAndExecuteTest(string targetBranchName, string targetDirectory, Func<Task> test)
     {
         // first create a new target branch
-        using (ChangeDirectory(targetDirectory))
-        {
-            await using (await CheckoutBranchAsync(targetBranchName))
-            {
-                // and push it to GH
-                await using (await PushGitBranchAsync("origin", targetBranchName))
-                {
-                    await test();
-                }
-            }
-        }
+        using var _ = ChangeDirectory(targetDirectory);
+        await using var __ = await CheckoutBranchAsync(targetBranchName);
+        await using var ___ = await PushGitBranchAsync("origin", targetBranchName);
+        await test();
     }
 
     protected static async Task WaitForNewCommitInPullRequest(string repo, Octokit.PullRequest pr, int numberOfCommits = 2)

@@ -43,183 +43,167 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
         await CreateTargetBranchAndExecuteTest(targetBranchName, vmrDirectory.Directory, async () =>
         {
-            // Change both repo and VMR but differently
+            await ChangeAndPushAFile(
+                vmrDirectory.Directory,
+                newFileInVmrPath1,
+                "content #1 from the VMR",
+                "Add new files to VMR");
+
+            using var _ = ChangeDirectory(repoDirectory.Directory);
+            await using var __ = await CheckoutBranchAsync(sourceBranchName);
+            await using var ___ = await PushGitBranchAsync("origin", sourceBranchName);
+
+            await ChangeAndPushAFile(
+                repoDirectory.Directory,
+                newFilePath1,
+                "content #1 from the repository",
+                "Add new files");
+            await ChangeAndPushAFile(
+                repoDirectory.Directory,
+                newFilePath2,
+                "content #2 from the repository",
+                "Add new files");
+
+            var repoSha = (await GitGetCurrentSha()).TrimEnd();
+
+            // Create a new build from the commit and add it to a channel
+            Build build = await CreateBuildAsync(
+                GetGitHubRepoUrl(TestRepository.TestRepo1Name),
+                sourceBranchName,
+                repoSha,
+                "1",
+                []);
+
+            TestContext.WriteLine("Adding build to channel");
+            await AddBuildToChannelAsync(build.Id, channelName);
+
+            TestContext.WriteLine("Triggering the subscription");
+            await TriggerSubscriptionAsync(subscriptionId.Value);
+
+            TestContext.WriteLine("Waiting for the PR to show up");
+            Octokit.PullRequest pr = await WaitForPullRequestComment(TestRepository.VmrTestRepoName, targetBranchName, "darc vmr resolve-conflict");
+
+            await using IAsyncDisposable ____ = AsyncDisposable.Create(async () =>
+            {
+                using var _ = ChangeDirectory(vmrDirectory.Directory);
+                try
+                {
+                    await DeleteBranchAsync(pr.Head.Ref);
+                }
+                catch {}
+            });
+
+            await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, false);
+
+            // We resolve the conflict manually
             using (ChangeDirectory(vmrDirectory.Directory))
             {
-                await CheckoutRemoteBranchAsync(targetBranchName);
+                await CheckoutRemoteRefAsync(pr.Head.Ref);
 
-                TestContext.WriteLine("Making code changes to the VMR");
-                await File.WriteAllTextAsync(newFileInVmrPath1, "content #1 from the VMR");
-                await GitAddAllAsync();
-                await GitCommitAsync("Add new files to VMR");
-                await RunGitAsync("push", "origin", targetBranchName);
+                // TODO: Resolve conflicts
+                // await RunDarcAsync("vmr", "resolve-conflict", "--subscription", subscriptionId.Value);
+                // Verify the other file made it here too
+                //(await File.ReadAllTextAsync(newFileInVmrPath2)).Should().Be("content #2 from the repository");
+                //await RunGitAsync("checkout", "--ours", newFileInVmrPath1);
+                //await GitAddAllAsync();
+                //await GitCommitAsync("Resolve conflict");
+                //await RunGitAsync("push", "-u", "origin", pr.Head.Ref);
             }
 
-            using (ChangeDirectory(repoDirectory.Directory))
+            await TriggerSubscriptionAsync(subscriptionId.Value);
+
+            // The codeflow verification checks should pass now
+            await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, true);
+
+            TestContext.WriteLine("Making code changes to the repo that should cause a conflict in the PR");
+            await ChangeAndPushAFile(
+                repoDirectory.Directory,
+                newFilePath2,
+                "content #3 but from the repository",
+                "Add conflicting changes");
+
+            repoSha = (await GitGetCurrentSha()).TrimEnd();
+            TestContext.WriteLine("Creating a build from the new commit");
+            build = await CreateBuildAsync(
+                GetGitHubRepoUrl(TestRepository.TestRepo1Name),
+                sourceBranchName,
+                repoSha,
+                "2",
+                []);
+
+            TestContext.WriteLine("Adding build to channel");
+            await AddBuildToChannelAsync(build.Id, channelName);
+
+            TestContext.WriteLine("Triggering the subscription");
+            await TriggerSubscriptionAsync(subscriptionId.Value);
+
+            pr = await WaitForUpdatedPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
+
+            // We verify the file got there + make a conflicting change for future
+            using (ChangeDirectory(vmrDirectory.Directory))
             {
-                await using (await CheckoutBranchAsync(sourceBranchName))
-                {
-                    await ChangeAndPushAFile(
-                        repoDirectory.Directory,
-                        newFilePath1,
-                        "content #1 from the repository",
-                        "Add new files");
-                    await ChangeAndPushAFile(
-                        repoDirectory.Directory,
-                        newFilePath2,
-                        "content #2 from the repository",
-                        "Add new files");
+                await CheckoutRemoteRefAsync(pr.Head.Ref);
+                (await File.ReadAllTextAsync(newFileInVmrPath2)).Should().Be("content #3 from the repository");
 
-                    // Push it to github
-                    await using (await PushGitBranchAsync("origin", sourceBranchName))
-                    {
-                        var repoSha = (await GitGetCurrentSha()).TrimEnd();
-
-                        // Create a new build from the commit and add it to a channel
-                        Build build = await CreateBuildAsync(
-                            GetGitHubRepoUrl(TestRepository.TestRepo1Name),
-                            sourceBranchName,
-                            repoSha,
-                            "1",
-                            []);
-
-                        TestContext.WriteLine("Adding build to channel");
-                        await AddBuildToChannelAsync(build.Id, channelName);
-
-                        TestContext.WriteLine("Triggering the subscription");
-                        await TriggerSubscriptionAsync(subscriptionId.Value);
-
-                        TestContext.WriteLine("Waiting for the PR to show up");
-                        Octokit.PullRequest pr = await WaitForPullRequestComment(TestRepository.VmrTestRepoName, targetBranchName, "darc vmr resolve-conflict");
-
-                        await using IAsyncDisposable __ = AsyncDisposable.Create(async () =>
-                        {
-                            using (ChangeDirectory(vmrDirectory.Directory))
-                            {
-                                try
-                                {
-                                    await DeleteBranchAsync(pr.Head.Ref);
-                                }
-                                catch
-                                {
-                                }
-                            }
-                        });
-
-                        await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, false);
-
-                        // We resolve the conflict manually
-                        using (ChangeDirectory(vmrDirectory.Directory))
-                        {
-                            await CheckoutRemoteRefAsync(pr.Head.Ref);
-
-                            // TODO: Resolve conflicts
-                            // await RunDarcAsync("vmr", "resolve-conflict", "--subscription", subscriptionId.Value);
-                            // Verify the other file made it here too
-                            //(await File.ReadAllTextAsync(newFileInVmrPath2)).Should().Be("content #2 from the repository");
-                            //await RunGitAsync("checkout", "--ours", newFileInVmrPath1);
-                            //await GitAddAllAsync();
-                            //await GitCommitAsync("Resolve conflict");
-                            //await RunGitAsync("push", "-u", "origin", pr.Head.Ref);
-                        }
-
-                        await TriggerSubscriptionAsync(subscriptionId.Value);
-
-                        // The codeflow verification checks should pass now
-                        await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, true);
-
-                        TestContext.WriteLine("Making code changes to the repo that should cause a conflict in the PR");
-                        await ChangeAndPushAFile(
-                            repoDirectory.Directory,
-                            newFilePath2,
-                            "content #3 but from the repository",
-                            "Add conflicting changes");
-
-                        repoSha = (await GitGetCurrentSha()).TrimEnd();
-                        TestContext.WriteLine("Creating a build from the new commit");
-                        build = await CreateBuildAsync(
-                            GetGitHubRepoUrl(TestRepository.TestRepo1Name),
-                            sourceBranchName,
-                            repoSha,
-                            "2",
-                            []);
-
-                        TestContext.WriteLine("Adding build to channel");
-                        await AddBuildToChannelAsync(build.Id, channelName);
-
-                        TestContext.WriteLine("Triggering the subscription");
-                        await TriggerSubscriptionAsync(subscriptionId.Value);
-                        await Task.Delay(TimeSpan.FromSeconds(30));
-                        pr = await WaitForUpdatedPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
-
-                        // We verify the file got there + make a conflicting change for future
-                        using (ChangeDirectory(vmrDirectory.Directory))
-                        {
-                            await CheckoutRemoteRefAsync(pr.Head.Ref);
-                            (await File.ReadAllTextAsync(newFileInVmrPath2)).Should().Be("content #3 from the repository");
-
-                            await ChangeAndPushAFile(
-                                vmrDirectory.Directory,
-                                newFileInVmrPath1,
-                                "content #3 but from the VMR",
-                                "Add conflicting changes");
-                        }
-
-                        TestContext.WriteLine("Making code changes to the repo that should cause a conflict in the PR");
-                        await ChangeAndPushAFile(
-                            repoDirectory.Directory,
-                            newFilePath2,
-                            "content #4 from the repository",
-                            "Add conflicting changes");
-
-                        repoSha = (await GitGetCurrentSha()).TrimEnd();
-                        TestContext.WriteLine("Creating a build from the new commit");
-                        build = await CreateBuildAsync(
-                            GetGitHubRepoUrl(TestRepository.TestRepo1Name),
-                            sourceBranchName,
-                            repoSha,
-                            "2",
-                            []);
-
-                        TestContext.WriteLine("Adding build to channel");
-                        await AddBuildToChannelAsync(build.Id, channelName);
-
-                        TestContext.WriteLine("Triggering the subscription");
-                        await TriggerSubscriptionAsync(subscriptionId.Value);
-
-                        // This time we should get a conflict comment for the second file
-                        TestContext.WriteLine("Waiting for conflict comment to show up on the PR");
-                        pr = await WaitForPullRequestComment(TestRepository.VmrTestRepoName, targetBranchName, TestFile2Name);
-                        await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, false);
-
-                        // We resolve the conflict manually
-                        using (ChangeDirectory(vmrDirectory.Directory))
-                        {
-                            await CheckoutRemoteRefAsync(pr.Head.Ref);
-
-                            // TODO: Resolve conflicts
-                            // await RunDarcAsync("vmr", "resolve-conflict", "--subscription", subscriptionId.Value);
-                            // Verify the other file made it here too
-                            //await RunGitAsync("checkout", "--ours", newFileInVmrPath2);
-                            //await GitAddAllAsync();
-                            //await GitCommitAsync("Resolve conflict");
-                            //await RunGitAsync("push", "-u", "origin", pr.Head.Ref);
-                        }
-
-                        await TriggerSubscriptionAsync(subscriptionId.Value);
-
-                        // The codeflow verification checks should pass now
-                        await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, true);
-                    }
-                }
+                await ChangeAndPushAFile(
+                    vmrDirectory.Directory,
+                    newFileInVmrPath1,
+                    "content #3 but from the VMR",
+                    "Add conflicting changes");
             }
+
+            TestContext.WriteLine("Making code changes to the repo that should cause a conflict in the PR");
+            await ChangeAndPushAFile(
+                repoDirectory.Directory,
+                newFilePath2,
+                "content #4 from the repository",
+                "Add conflicting changes");
+
+            repoSha = (await GitGetCurrentSha()).TrimEnd();
+            TestContext.WriteLine("Creating a build from the new commit");
+            build = await CreateBuildAsync(
+                GetGitHubRepoUrl(TestRepository.TestRepo1Name),
+                sourceBranchName,
+                repoSha,
+                "2",
+                []);
+
+            TestContext.WriteLine("Adding build to channel");
+            await AddBuildToChannelAsync(build.Id, channelName);
+
+            TestContext.WriteLine("Triggering the subscription");
+            await TriggerSubscriptionAsync(subscriptionId.Value);
+
+            // This time we should get a conflict comment for the second file
+            TestContext.WriteLine("Waiting for conflict comment to show up on the PR");
+            pr = await WaitForPullRequestComment(TestRepository.VmrTestRepoName, targetBranchName, TestFile2Name);
+            await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, false);
+
+            // We resolve the conflict manually
+            using (ChangeDirectory(vmrDirectory.Directory))
+            {
+                await CheckoutRemoteRefAsync(pr.Head.Ref);
+
+                // TODO: Resolve conflicts
+                // await RunDarcAsync("vmr", "resolve-conflict", "--subscription", subscriptionId.Value);
+                // Verify the other file made it here too
+                //await RunGitAsync("checkout", "--ours", newFileInVmrPath2);
+                //await GitAddAllAsync();
+                //await GitCommitAsync("Resolve conflict");
+                //await RunGitAsync("push", "-u", "origin", pr.Head.Ref);
+            }
+
+            await TriggerSubscriptionAsync(subscriptionId.Value);
+
+            // The codeflow verification checks should pass now
+            await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, true);   
         });
     }
 
     private static async Task VerifyCodeFlowCheck(Octokit.PullRequest pr, string targetRepoName, bool expectSucceeded)
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepoName);
-        var checks = await WaitForPullRequestMaestroChecksAsync(pr.Url, pr.Head.Sha, repo.Id);
+        var checks = await WaitForPullRequestMaestroChecksAsync(pr.Url, pr.Head.Ref, repo.Id);
         var codeFlowCheck = checks.Single(c => c.Name.Contains("Codeflow verification"));
         codeFlowCheck.Conclusion.Value.Value.Should().Be(expectSucceeded ? Octokit.CheckConclusion.Success : Octokit.CheckConclusion.Failure);
     }
@@ -239,14 +223,14 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         });
     }
 
-    private async Task ChangeAndPushAFile(string repoDir, string filePath, string content, string commitMessage)
+    private static async Task ChangeAndPushAFile(string repoDir, string filePath, string content, string commitMessage)
     {
         using (ChangeDirectory(repoDir))
         {
             await File.WriteAllTextAsync(filePath, content);
             await GitAddAllAsync();
             await GitCommitAsync(commitMessage);
-            await RunGitAsync("push");
+            await RunGitAsync("push", "origin");
         }
     }
 }
