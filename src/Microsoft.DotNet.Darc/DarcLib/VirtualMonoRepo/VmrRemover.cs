@@ -3,6 +3,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -106,6 +109,13 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
                 sourcesPath
             };
 
+            // Remove source mapping
+            var sourceMappingsPath = _vmrInfo.VmrPath / VmrInfo.DefaultRelativeSourceMappingsPath;
+            if (await RemoveSourceMappingAsync(mapping.Name, sourceMappingsPath, cancellationToken))
+            {
+                filesToStage.Add(sourceMappingsPath);
+            }
+
             await _localGitClient.StageAsync(_vmrInfo.VmrPath, filesToStage, cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -141,5 +151,45 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
                 workBranch.OriginalBranchName.StartsWith("remove") ? "the original" : workBranch.OriginalBranchName);
             throw;
         }
+    }
+
+    private async Task<bool> RemoveSourceMappingAsync(
+        string repoName,
+        LocalPath sourceMappingsPath,
+        CancellationToken cancellationToken)
+    {
+        // Read the existing source-mappings.json file
+        var json = await _fileSystem.ReadAllTextAsync(sourceMappingsPath);
+
+        var options = new JsonSerializerOptions
+        {
+            AllowTrailingCommas = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            WriteIndented = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault | JsonIgnoreCondition.WhenWritingNull,
+        };
+
+        var sourceMappingFile = JsonSerializer.Deserialize<SourceMappingFile>(json, options)
+            ?? throw new Exception($"Failed to deserialize {VmrInfo.SourceMappingsFileName}");
+
+        // Find and remove the mapping
+        var mappingToRemove = sourceMappingFile.Mappings.FirstOrDefault(m => m.Name == repoName);
+        if (mappingToRemove == null)
+        {
+            _logger.LogWarning("Source mapping for '{repoName}' not found in {file}", repoName, VmrInfo.SourceMappingsFileName);
+            return false;
+        }
+
+        sourceMappingFile.Mappings.Remove(mappingToRemove);
+
+        // Write the updated source-mappings.json file
+        var updatedJson = JsonSerializer.Serialize(sourceMappingFile, options);
+        _fileSystem.WriteToFile(sourceMappingsPath, updatedJson);
+
+        _logger.LogInformation("Removed source mapping for '{repoName}' from {file}",
+            repoName, VmrInfo.SourceMappingsFileName);
+
+        return true;
     }
 }
