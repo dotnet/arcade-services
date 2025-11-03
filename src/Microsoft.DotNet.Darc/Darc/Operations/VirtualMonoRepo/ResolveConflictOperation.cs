@@ -118,8 +118,7 @@ internal class ResolveConflictOperation(
         catch (PatchApplicationLeftConflictsException)
         {
             _logger.LogInformation("Codeflow has finished, and conflicting files have been left on the current branch.");
-            _logger.LogInformation("Please resolve the conflicts in your local environment and push your changes to "
-                + "the PR branch in order to unblock the codeflow PR.");
+            _logger.LogInformation("Please resolve the conflicts locally, commit and push your changes to unblock the codeflow PR.");
             return;
         }
         _logger.LogInformation("Codeflow has finished and changes have been staged on the local branch. "
