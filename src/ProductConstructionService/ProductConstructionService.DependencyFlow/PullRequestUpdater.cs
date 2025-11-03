@@ -1209,6 +1209,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         previousSourceSha = pr?.PreviousSourceSha != null
             ? pr.PreviousSourceSha
             : await GetPreviousSourceSha(remote, subscription);
+        if (pr != null && string.IsNullOrEmpty(pr.PreviousSourceSha))
+        {
+            pr.PreviousSourceSha = previousSourceSha;
+        }
+
         upstreamRepoDiffs = isForwardFlow
             ? []
             : await ComputeRepoUpdatesAsync(previousSourceSha, build.Commit);
@@ -1587,7 +1592,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private async Task TagForwardFlownPRs(string sourceRepo, string previousSourceRepoSha, string newSourceRepoSha)
     {
         var remote = await _remoteFactory.CreateRemoteAsync(sourceRepo);
-        var commitTitles = await remote.GetCommitTitlesBetween(
+        var commitTitles = await remote.GetCommitTitlesForRange(
             sourceRepo,
             previousSourceRepoSha,
             newSourceRepoSha);
@@ -1605,7 +1610,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         else
         {
-            StringBuilder str = new("The following pull requests were forward flown in this PR:");
+            StringBuilder str = new("The following pull requests are included in this PR:");
             foreach (var prUri in prTitlesAndUris)
             {
                 str.AppendLine();

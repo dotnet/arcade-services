@@ -398,6 +398,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         else
         {
             StringBuilder str = new("PRs from original repository included in this codeflow update:");
+            // We're using this format so we don't tag the original PR on every update.
+            // We do that after the PR has been merged
             string format = $"- `{{0}} ({{1}})`";
             foreach (var pr in prInfo.Distinct())
             {

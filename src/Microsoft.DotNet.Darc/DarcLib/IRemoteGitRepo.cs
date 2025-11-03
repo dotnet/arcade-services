@@ -180,7 +180,7 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// </summary>
     Task<IReadOnlyCollection<string>> GetGitTreeNames(string path, string repoUri, string branch);
 
-    Task<IReadOnlyList<string>> GetCommitTitlesBetween(string repoUri, string previousCommit, string currentCommit);
+    Task<IReadOnlyList<string>> GetCommitTitlesForRange(string repoUri, string fromSha, string toSha);
 }
 
 #nullable disable

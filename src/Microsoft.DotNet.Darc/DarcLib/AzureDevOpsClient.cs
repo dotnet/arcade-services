@@ -1853,7 +1853,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         }
     }
 
-    public async Task<IReadOnlyList<string>> GetCommitTitlesBetween(string repoUri, string previousCommit, string currentCommit)
+    public async Task<IReadOnlyList<string>> GetCommitTitlesForRange(string repoUri, string fromSha, string toSha)
     {
         (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
 
@@ -1872,12 +1872,12 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                     itemVersion = new
                     {
                         versionType = "commit",
-                        version = previousCommit
+                        version = fromSha
                     },
                     compareVersion = new
                     {
                         versionType = "commit", 
-                        version = currentCommit
+                        version = toSha
                     }
                 }));
 
@@ -1898,12 +1898,12 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         }
         catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
-            _logger.LogError($"Failed to find commits between {previousCommit} and {currentCommit} in {repoUri}");
+            _logger.LogError($"Failed to find commits between {fromSha} and {toSha} in {repoUri}");
             throw;
         }
         catch (Exception)
         {
-            _logger.LogError($"Failed to get commit titles between {previousCommit} and {currentCommit} in {repoUri}");
+            _logger.LogError($"Failed to get commit titles between {fromSha} and {toSha} in {repoUri}");
             throw;
         }
     }

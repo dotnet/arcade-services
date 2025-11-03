@@ -257,7 +257,7 @@ public interface IRemote
     /// <summary>
     /// Returns a list of commit titles between two commits in a given repo
     /// </summary>
-    Task<IReadOnlyList<string>> GetCommitTitlesBetween(string repoUri, string previousCommit, string currentCommit);
+    Task<IReadOnlyList<string>> GetCommitTitlesForRange(string repoUri, string fromSha, string toSha);
 
     #endregion
 }

@@ -1394,7 +1394,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         }
     }
 
-    public async Task<IReadOnlyList<string>> GetCommitTitlesBetween(string repoUri, string previousCommit, string currentCommit)
+    public async Task<IReadOnlyList<string>> GetCommitTitlesForRange(string repoUri, string fromSha, string toSha)
     {
         (string owner, string repo) = ParseRepoUri(repoUri);
         var client = GetClient(owner, repo);
@@ -1402,7 +1402,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         try
         {
             // Get the comparison between the two commits
-            var comparison = await client.Repository.Commit.Compare(owner, repo, previousCommit, currentCommit);
+            var comparison = await client.Repository.Commit.Compare(owner, repo, fromSha, toSha);
             
             // Extract commit titles from the comparison
             // The commits are ordered from oldest to newest (base to head)
@@ -1414,12 +1414,12 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         }
         catch (NotFoundException)
         {
-            _logger.LogError($"Failed to find commits between {previousCommit} and {currentCommit} in {repoUri}");
+            _logger.LogError($"Failed to find commits between {fromSha} and {toSha} in {repoUri}");
             throw;
         }
         catch (Exception)
         {
-            _logger.LogError($"Failed to get commit titles between {previousCommit} and {currentCommit} in {repoUri}");
+            _logger.LogError($"Failed to get commit titles between {fromSha} and {toSha} in {repoUri}");
             throw;
         }
     }
