@@ -254,5 +254,10 @@ public interface IRemote
     /// <returns></returns>
     Task<IReadOnlyCollection<string>> GetGitTreeNames(string path, string repoUri, string branch);
 
+    /// <summary>
+    /// Returns a list of commit titles between two commits in a given repo
+    /// </summary>
+    Task<IReadOnlyList<string>> GetCommitTitlesBetween(string repoUri, string previousCommit, string currentCommit);
+
     #endregion
 }

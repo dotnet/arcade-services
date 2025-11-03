@@ -491,7 +491,8 @@ public sealed class Remote : IRemote
     }
 
     public async Task<IReadOnlyCollection<string>> GetGitTreeNames(string path, string repoUri, string branch)
-    {
-        return await _remoteGitClient.GetGitTreeNames(path, repoUri, branch);
-    }
+        => await _remoteGitClient.GetGitTreeNames(path, repoUri, branch);
+
+    public async Task<IReadOnlyList<string>> GetCommitTitlesBetween(string repoUri, string previousCommit, string currentCommit)
+        => await _remoteGitClient.GetCommitTitlesBetween(repoUri, previousCommit, currentCommit);
 }
