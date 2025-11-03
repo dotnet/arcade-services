@@ -147,7 +147,6 @@ internal static class Program
     [
         typeof(AddRepoCommandLineOptions),
         typeof(RemoveRepoCommandLineOptions),
-        typeof(InitializeCommandLineOptions),
         typeof(BackflowCommandLineOptions),
         typeof(ForwardFlowCommandLineOptions),
         typeof(CherryPickCommandLineOptions),
