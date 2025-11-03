@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
@@ -44,7 +45,9 @@ public class SourceMappingSetting
     public string? DefaultRef { get; set; }
     public string[]? Include { get; set; }
     public string[]? Exclude { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool IgnoreDefaults { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool DisableSynchronization { get; set; }
 }
 
