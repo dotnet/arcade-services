@@ -26,7 +26,7 @@ internal class ResetOperation : Operation
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IProcessManager _processManager;
     private readonly IBarApiClient _barClient;
-    private readonly IRemote _remote;
+    private readonly IRemoteFactory _remoteFactory;
     private readonly ILogger<ResetOperation> _logger;
 
     public ResetOperation(
@@ -36,7 +36,7 @@ internal class ResetOperation : Operation
         IVmrDependencyTracker dependencyTracker,
         IProcessManager processManager,
         IBarApiClient barClient,
-        IRemote remote,
+        IRemoteFactory remoteFactory,
         ILogger<ResetOperation> logger)
     {
         _options = options;
@@ -45,7 +45,7 @@ internal class ResetOperation : Operation
         _dependencyTracker = dependencyTracker;
         _processManager = processManager;
         _barClient = barClient;
-        _remote = remote;
+        _remoteFactory = remoteFactory;
         _logger = logger;
     }
 
@@ -230,7 +230,8 @@ internal class ResetOperation : Operation
             // Validate that the build's repository matches the mapping by checking Version.Details.xml
             try
             {
-                var sourceDependency = await _remote.GetSourceDependencyAsync(build.GetRepository(), build.Commit);
+                IRemote remote = await _remoteFactory.CreateRemoteAsync(build.GetRepository());
+                var sourceDependency = await remote.GetSourceDependencyAsync(build.GetRepository(), build.Commit);
                 
                 if (sourceDependency == null || string.IsNullOrEmpty(sourceDependency.Mapping))
                 {
