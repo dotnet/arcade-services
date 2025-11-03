@@ -98,7 +98,6 @@ internal class ResolveConflictOperation(
                 build.Commit,
                 resetToRemote: false,
                 cancellationToken);
-
         }
 
         _vmrInfo.VmrPath = vmr.Path;
@@ -115,9 +114,10 @@ internal class ResolveConflictOperation(
                 subscription,
                 cancellationToken);
         }
-        catch (PatchApplicationLeftConflictsException)
+        catch (PatchApplicationLeftConflictsException e)
         {
-            _logger.LogInformation("Codeflow has finished, and conflicting files have been left on the current branch.");
+            _logger.LogInformation("Codeflow has finished, and {conflictedFiles} conflicting file(s) have been" +
+                " left on the current branch.", e.ConflictedFiles);
             _logger.LogInformation("Please resolve the conflicts locally, commit and push your changes to unblock the codeflow PR.");
             return;
         }
