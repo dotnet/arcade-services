@@ -78,7 +78,7 @@ internal class ResetOperation : Operation
         }
         else
         {
-            // Original behavior: Target is in the format [mapping]:[sha]
+            // Default behavior: Target is in the format [mapping]:[sha]
             var parts = _options.Target.Split(':', 2);
             if (parts.Length != 2)
             {
