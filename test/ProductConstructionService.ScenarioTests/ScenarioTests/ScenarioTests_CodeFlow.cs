@@ -98,12 +98,19 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                             TestRepository.VmrTestRepoName,
                             targetBranchName,
                             [$"src/{TestRepository.TestRepo1Name}/{TestFile1Name}"],
-                            TestFilePatches);
+                            TestFilePatches,
+                            PullRequestCleanupOperation.Merge);
 
                         await CheckIfPullRequestCommentExists(
                             TestRepository.VmrTestRepoName,
                             pr,
-                            [$"https://github.com/maestro-auth-test/maestro-test1/pull/{testPrNumber}"]);
+                            [$"(https://github.com/maestro-auth-test/maestro-test1/pull/{testPrNumber})"]);
+
+                        await WaitForPullRequestComment(
+                            TestRepository.VmrTestRepoName,
+                            targetBranchName,
+                            $"- https://github.com/maestro-auth-test/maestro-test1/pull/{testPrNumber}",
+                            Octokit.ItemStateFilter.Closed);
                     }
                 }
             }
