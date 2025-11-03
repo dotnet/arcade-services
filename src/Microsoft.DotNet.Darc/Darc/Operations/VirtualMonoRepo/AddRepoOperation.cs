@@ -99,7 +99,7 @@ internal class AddRepoOperation : Operation
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Failed to add repository from '{uri}'");
+                _logger.LogError(ex, "Failed to add repository from '{uri}'", uri);
                 return Constants.ErrorCode;
             }
         }
