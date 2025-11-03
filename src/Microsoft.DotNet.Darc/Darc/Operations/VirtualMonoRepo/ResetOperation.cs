@@ -59,7 +59,7 @@ internal class ResetOperation : Operation
         }
 
         string mappingName;
-        string? targetSha = null;
+        string targetSha;
         
         // Parse the Target parameter based on whether build/channel options are provided
         if (_options.Build.HasValue || !string.IsNullOrEmpty(_options.Channel))
@@ -72,6 +72,9 @@ internal class ResetOperation : Operation
                 _logger.LogError("When using --build or --channel, the target should only contain the mapping name, not [mapping]:[sha]. Got: {input}", _options.Target);
                 return Constants.ErrorCode;
             }
+            
+            // targetSha will be determined later from build or channel
+            targetSha = string.Empty; // Placeholder, will be set below
         }
         else
         {
@@ -85,6 +88,12 @@ internal class ResetOperation : Operation
 
             mappingName = parts[0];
             targetSha = parts[1];
+            
+            if (string.IsNullOrWhiteSpace(targetSha))
+            {
+                _logger.LogError("Target SHA cannot be empty. Got: '{sha}'", targetSha);
+                return Constants.ErrorCode;
+            }
         }
 
         if (string.IsNullOrWhiteSpace(mappingName))
@@ -114,25 +123,27 @@ internal class ResetOperation : Operation
         // Determine the target SHA based on the options provided
         if (_options.Build.HasValue)
         {
-            targetSha = await GetShaFromBuildAsync(_options.Build.Value, mappingName, mapping);
-            if (targetSha == null)
+            try
             {
+                targetSha = await GetShaFromBuildAsync(_options.Build.Value, mappingName, mapping);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get SHA from build {buildId}", _options.Build.Value);
                 return Constants.ErrorCode;
             }
         }
         else if (!string.IsNullOrEmpty(_options.Channel))
         {
-            targetSha = await GetShaFromChannelAsync(_options.Channel, mapping);
-            if (targetSha == null)
+            try
             {
+                targetSha = await GetShaFromChannelAsync(_options.Channel, mapping);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to get SHA from channel '{channel}'", _options.Channel);
                 return Constants.ErrorCode;
             }
-        }
-
-        if (string.IsNullOrWhiteSpace(targetSha))
-        {
-            _logger.LogError("Target SHA must be provided or determined from --build or --channel. Got SHA: '{sha}'", targetSha);
-            return Constants.ErrorCode;
         }
 
         _logger.LogInformation("Resetting VMR mapping '{mapping}' to SHA '{sha}'", mappingName, targetSha);
@@ -211,113 +222,95 @@ internal class ResetOperation : Operation
     /// <summary>
     /// Gets the commit SHA from a BAR build ID and validates that the build's repository matches the mapping.
     /// </summary>
-    private async Task<string?> GetShaFromBuildAsync(int buildId, string mappingName, SourceMapping mapping)
+    /// <exception cref="DarcException">Thrown when build is not found or validation fails.</exception>
+    private async Task<string> GetShaFromBuildAsync(int buildId, string mappingName, SourceMapping mapping)
     {
+        _logger.LogInformation("Fetching build {buildId} from BAR...", buildId);
+        var build = await _barClient.GetBuildAsync(buildId);
+        
+        if (build == null)
+        {
+            throw new DarcException($"Build with ID {buildId} not found in BAR.");
+        }
+
+        _logger.LogInformation("Found build {buildId}: {repo} @ {commit}", 
+            buildId, build.GetRepository(), build.Commit);
+
+        // Validate that the build's repository matches the mapping by checking Version.Details.xml
         try
         {
-            _logger.LogInformation("Fetching build {buildId} from BAR...", buildId);
-            var build = await _barClient.GetBuildAsync(buildId);
+            IRemote remote = await _remoteFactory.CreateRemoteAsync(build.GetRepository());
+            var sourceDependency = await remote.GetSourceDependencyAsync(build.GetRepository(), build.Commit);
             
-            if (build == null)
+            if (sourceDependency == null || string.IsNullOrEmpty(sourceDependency.Mapping))
             {
-                _logger.LogError("Build with ID {buildId} not found in BAR.", buildId);
-                return null;
+                _logger.LogWarning(
+                    "Build {buildId} from repository {repo} does not have a Source tag in Version.Details.xml. " +
+                    "Unable to verify that it matches mapping '{mapping}'. Proceeding with the reset.",
+                    buildId, build.GetRepository(), mappingName);
             }
-
-            _logger.LogInformation("Found build {buildId}: {repo} @ {commit}", 
-                buildId, build.GetRepository(), build.Commit);
-
-            // Validate that the build's repository matches the mapping by checking Version.Details.xml
-            try
+            else if (!sourceDependency.Mapping.Equals(mappingName, StringComparison.OrdinalIgnoreCase))
             {
-                IRemote remote = await _remoteFactory.CreateRemoteAsync(build.GetRepository());
-                var sourceDependency = await remote.GetSourceDependencyAsync(build.GetRepository(), build.Commit);
-                
-                if (sourceDependency == null || string.IsNullOrEmpty(sourceDependency.Mapping))
-                {
-                    _logger.LogWarning(
-                        "Build {buildId} from repository {repo} does not have a Source tag in Version.Details.xml. " +
-                        "Unable to verify that it matches mapping '{mapping}'. Proceeding with the reset.",
-                        buildId, build.GetRepository(), mappingName);
-                }
-                else if (!sourceDependency.Mapping.Equals(mappingName, StringComparison.OrdinalIgnoreCase))
-                {
-                    _logger.LogError(
-                        "Build {buildId} is from repository {repo} which has mapping '{buildMapping}' in Version.Details.xml, " +
-                        "but you specified mapping '{providedMapping}'. These must match.",
-                        buildId, build.GetRepository(), sourceDependency.Mapping, mappingName);
-                    return null;
-                }
-                else
-                {
-                    _logger.LogInformation(
-                        "Validated that build {buildId} matches mapping '{mapping}'.",
-                        buildId, mappingName);
-                }
+                throw new DarcException(
+                    $"Build {buildId} is from repository {build.GetRepository()} which has mapping '{sourceDependency.Mapping}' in Version.Details.xml, " +
+                    $"but you specified mapping '{mappingName}'. These must match.");
             }
-            catch (Exception ex)
+            else
             {
-                _logger.LogWarning(ex,
-                    "Could not read Version.Details.xml from build {buildId}'s repository to validate mapping. " +
-                    "This may be expected if the repository is not onboarded to VMR. Proceeding with the reset.",
-                    buildId);
+                _logger.LogInformation(
+                    "Validated that build {buildId} matches mapping '{mapping}'.",
+                    buildId, mappingName);
             }
-
-            return build.Commit;
+        }
+        catch (DarcException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to fetch build {buildId} from BAR.", buildId);
-            return null;
+            _logger.LogWarning(ex,
+                "Could not read Version.Details.xml from build {buildId}'s repository to validate mapping. " +
+                "This may be expected if the repository is not onboarded to VMR. Proceeding with the reset.",
+                buildId);
         }
+
+        return build.Commit;
     }
 
     /// <summary>
     /// Gets the commit SHA from the latest build on a channel for the mapping's default remote.
     /// </summary>
-    private async Task<string?> GetShaFromChannelAsync(string channelName, SourceMapping mapping)
+    /// <exception cref="DarcException">Thrown when channel is not found or no builds are found.</exception>
+    private async Task<string> GetShaFromChannelAsync(string channelName, SourceMapping mapping)
     {
-        try
+        _logger.LogInformation("Finding latest build for repository '{repo}' on channel '{channel}'...", 
+            mapping.DefaultRemote, channelName);
+
+        // Get all channels and find the one matching the provided name
+        var channels = await _barClient.GetChannelsAsync();
+        var channel = channels.FirstOrDefault(c => 
+            c.Name.Equals(channelName, StringComparison.OrdinalIgnoreCase));
+
+        if (channel == null)
         {
-            _logger.LogInformation("Finding latest build for repository '{repo}' on channel '{channel}'...", 
-                mapping.DefaultRemote, channelName);
-
-            // Get all channels and find the one matching the provided name
-            var channels = await _barClient.GetChannelsAsync();
-            var channel = channels.FirstOrDefault(c => 
-                c.Name.Equals(channelName, StringComparison.OrdinalIgnoreCase));
-
-            if (channel == null)
-            {
-                _logger.LogError("Channel '{channel}' not found.", channelName);
-                return null;
-            }
-
-            _logger.LogInformation("Found channel '{channel}' (ID: {channelId})", channel.Name, channel.Id);
-
-            // Get the latest build for the repository on this channel
-            var build = await _barClient.GetLatestBuildAsync(mapping.DefaultRemote, channel.Id);
-
-            if (build == null)
-            {
-                _logger.LogError(
-                    "No builds found for repository '{repo}' on channel '{channel}'.",
-                    mapping.DefaultRemote, channel.Name);
-                return null;
-            }
-
-            _logger.LogInformation(
-                "Found latest build on channel '{channel}': Build {buildId} @ {commit}",
-                channel.Name, build.Id, build.Commit);
-
-            return build.Commit;
+            throw new DarcException($"Channel '{channelName}' not found.");
         }
-        catch (Exception ex)
+
+        _logger.LogInformation("Found channel '{channel}' (ID: {channelId})", channel.Name, channel.Id);
+
+        // Get the latest build for the repository on this channel
+        var build = await _barClient.GetLatestBuildAsync(mapping.DefaultRemote, channel.Id);
+
+        if (build == null)
         {
-            _logger.LogError(ex, 
-                "Failed to fetch latest build for repository '{repo}' on channel '{channel}'.",
-                mapping.DefaultRemote, channelName);
-            return null;
+            throw new DarcException(
+                $"No builds found for repository '{mapping.DefaultRemote}' on channel '{channel.Name}'.");
         }
+
+        _logger.LogInformation(
+            "Found latest build on channel '{channel}': Build {buildId} @ {commit}",
+            channel.Name, build.Id, build.Commit);
+
+        return build.Commit;
     }
 }
