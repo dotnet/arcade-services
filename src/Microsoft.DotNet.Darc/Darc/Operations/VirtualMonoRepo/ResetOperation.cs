@@ -12,7 +12,6 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
@@ -51,16 +50,14 @@ internal class ResetOperation : Operation
 
     public override async Task<int> ExecuteAsync()
     {
-        // Validate option combinations
         if (_options.Build.HasValue && !string.IsNullOrEmpty(_options.Channel))
         {
             _logger.LogError("Cannot specify both --build and --channel options together.");
             return Constants.ErrorCode;
         }
 
-        string mappingName, targetSha = default!; // targetSha will be assigned below based on options
+        string mappingName, targetSha = default!;
         
-        // Parse the Target parameter based on whether build/channel options are provided
         if (_options.Build.HasValue || !string.IsNullOrEmpty(_options.Channel))
         {
             // When --build or --channel is provided, Target should only be the mapping name
@@ -94,7 +91,7 @@ internal class ResetOperation : Operation
 
         if (string.IsNullOrWhiteSpace(mappingName))
         {
-            _logger.LogError("Mapping name must be provided. Got mapping: '{mapping}'", mappingName);
+            _logger.LogError("Mapping name must be provided.");
             return Constants.ErrorCode;
         }
 
@@ -119,27 +116,11 @@ internal class ResetOperation : Operation
         // Determine the target SHA from build or channel option
         if (_options.Build.HasValue)
         {
-            try
-            {
-                targetSha = await GetShaFromBuildAsync(_options.Build.Value, mappingName, mapping);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to get SHA from build {buildId}", _options.Build.Value);
-                return Constants.ErrorCode;
-            }
+            targetSha = await GetShaFromBuildAsync(_options.Build.Value, mappingName, mapping);
         }
         else if (!string.IsNullOrEmpty(_options.Channel))
         {
-            try
-            {
-                targetSha = await GetShaFromChannelAsync(_options.Channel, mapping);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to get SHA from channel '{channel}'", _options.Channel);
-                return Constants.ErrorCode;
-            }
+            targetSha = await GetShaFromChannelAsync(_options.Channel, mapping);
         }
 
         _logger.LogInformation("Resetting VMR mapping '{mapping}' to SHA '{sha}'", mappingName, targetSha);
@@ -220,7 +201,6 @@ internal class ResetOperation : Operation
     /// </summary>
     private async Task<string> GetShaFromBuildAsync(int buildId, string mappingName, SourceMapping mapping)
     {
-        _logger.LogInformation("Fetching build {buildId} from BAR...", buildId);
         var build = await _barClient.GetBuildAsync(buildId);
         
         if (build == null)
@@ -228,39 +208,22 @@ internal class ResetOperation : Operation
             throw new DarcException($"Build with ID {buildId} not found in BAR.");
         }
 
-        _logger.LogInformation("Found build {buildId}: {repo} @ {commit}", 
-            buildId, build.GetRepository(), build.Commit);
-
         // Validate that the build's repository matches the mapping by checking Version.Details.xml
-        try
+        IRemote remote = await _remoteFactory.CreateRemoteAsync(build.GetRepository());
+        var sourceDependency = await remote.GetSourceDependencyAsync(build.GetRepository(), build.Commit);
+            
+        if (sourceDependency == null || string.IsNullOrEmpty(sourceDependency.Mapping))
         {
-            IRemote remote = await _remoteFactory.CreateRemoteAsync(build.GetRepository());
-            var sourceDependency = await remote.GetSourceDependencyAsync(build.GetRepository(), build.Commit);
-            
-            if (sourceDependency == null || string.IsNullOrEmpty(sourceDependency.Mapping))
-            {
-                _logger.LogWarning(
-                    "Build {buildId} from repository {repo} does not have a Source tag in Version.Details.xml. " +
-                    "Unable to verify that it matches mapping '{mapping}'. Proceeding with the reset.",
-                    buildId, build.GetRepository(), mappingName);
-            }
-            else if (!sourceDependency.Mapping.Equals(mappingName, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new DarcException(
-                    $"Build {buildId} is from repository {build.GetRepository()} which has mapping '{sourceDependency.Mapping}' in Version.Details.xml, " +
-                    $"but you specified mapping '{mappingName}'. These must match.");
-            }
-            
-            _logger.LogInformation(
-                "Validated that build {buildId} matches mapping '{mapping}'.",
-                buildId, mappingName);
+            _logger.LogWarning(
+                "Build {buildId} is from repository {repo} that does not have a Source tag in Version.Details.xml at commit {commit}. " +
+                "Unable to verify that it matches mapping '{mapping}'. Proceeding with the reset.",
+                buildId, build.GetRepository(), mappingName, build.Commit);
         }
-        catch (Exception ex)
+        else if (!sourceDependency.Mapping.Equals(mappingName, StringComparison.OrdinalIgnoreCase))
         {
-            _logger.LogWarning(ex,
-                "Could not read Version.Details.xml from build {buildId}'s repository to validate mapping. " +
-                "This may be expected if the repository is not onboarded to VMR. Proceeding with the reset.",
-                buildId);
+            throw new DarcException(
+                $"Build {buildId} is from repository {build.GetRepository()} which has mapping '{sourceDependency.Mapping}' in Version.Details.xml, " +
+                $"but you specified mapping '{mappingName}'. These must match.");
         }
 
         return build.Commit;
