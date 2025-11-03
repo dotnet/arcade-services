@@ -96,4 +96,28 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
     }
 
     protected override bool ShouldResetClones => true;
+
+    protected override async Task MergeWorkBranchAsync(
+        CodeflowOptions codeflowOptions,
+        ILocalGitRepo targetRepo,
+        IWorkBranch workBranch,
+        bool headBranchExisted,
+        string commitMessage,
+        CancellationToken cancellationToken)
+    {
+        await base.MergeWorkBranchAsync(
+            codeflowOptions,
+            targetRepo,
+            workBranch,
+            headBranchExisted,
+            commitMessage,
+            cancellationToken);
+
+        if (codeflowOptions.EnableRebase)
+        {
+            // When we do the rebase flow, we need only stage locally (in darc) after we rebase the work branch
+            // In the service, we need to commit too so that we push the update to the PR
+            await targetRepo.CommitAsync(commitMessage, allowEmpty: true, cancellationToken: cancellationToken);
+        }
+    }
 }
