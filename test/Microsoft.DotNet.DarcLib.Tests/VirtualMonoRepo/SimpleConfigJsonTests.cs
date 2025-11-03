@@ -3,7 +3,7 @@
 
 using System;
 using System.Collections.Generic;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 

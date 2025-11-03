@@ -79,7 +79,7 @@ stages:
         - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
           - task: AzureCLI@2
             inputs:
-              azureSubscription: $(serviceConnectionName)
+              azureSubscription: $(pcsDeploymentServiceConnection)
               scriptType: pscore
               scriptLocation: inlineScript
               inlineScript: |

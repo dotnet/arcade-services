@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
@@ -10,6 +11,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
@@ -44,6 +46,12 @@ internal abstract class CodeFlowOperation(
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
+        // If subscription ID is provided, fetch subscription metadata and populate options
+        if (!string.IsNullOrEmpty(_options.SubscriptionId))
+        {
+            await PopulateOptionsFromSubscriptionAsync();
+        }
+
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         ILocalGitRepo productRepo = _localGitRepoFactory.Create(repoPath);
         ILocalGitRepo sourceRepo = isForwardFlow ? productRepo : vmr;
@@ -72,24 +80,67 @@ internal abstract class CodeFlowOperation(
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
 
+        // Remember the original state of the source repo so we can restore it later
+        // We capture both branch name and SHA to handle detached HEAD states
+        string originalSourceRepoBranch = await sourceRepo.GetCheckedOutBranchAsync();
+        string originalSourceRepoSha = await sourceRepo.GetShaForRefAsync();
+
         string currentTargetRepoBranch = await targetRepo.GetCheckedOutBranchAsync();
 
-        bool hasChanges = await FlowCodeAsync(
-            productRepo,
-            build,
-            currentFlow,
-            mapping,
-            currentTargetRepoBranch,
-            cancellationToken);
+        // Parse excluded assets from options
+        IReadOnlyList<string> excludedAssets = string.IsNullOrEmpty(_options.ExcludedAssets)
+            ? []
+            : _options.ExcludedAssets.Split(';').ToList();
 
-        if (!hasChanges)
+        try
         {
-            _logger.LogInformation("No changes to flow between the VMR and {repo}.", mapping.Name);
-            await targetRepo.CheckoutAsync(currentTargetRepoBranch);
-            return;
-        }
+            bool hasChanges = await FlowCodeAsync(
+                productRepo,
+                build,
+                currentFlow,
+                mapping,
+                currentTargetRepoBranch,
+                excludedAssets,
+                cancellationToken);
 
-        _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
+            if (!hasChanges)
+            {
+                _logger.LogInformation("No changes to flow between the VMR and {repo}.", mapping.Name);
+                return;
+            }
+
+            _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
+        }
+        finally
+        {
+            // Restore source repo to its original state, even when exceptions occur
+            await RestoreRepoToOriginalStateAsync(sourceRepo, originalSourceRepoBranch, originalSourceRepoSha);
+        }
+    }
+
+    private async Task RestoreRepoToOriginalStateAsync(ILocalGitRepo repo, string originalBranch, string originalSha)
+    {
+        try
+        {
+            string currentSha = await repo.GetShaForRefAsync();
+            
+            // Only checkout if we're not already at the original state
+            if (currentSha == originalSha)
+            {
+                return;
+            }
+
+            // If the original state was a detached HEAD, checkout the SHA
+            // Otherwise, checkout the branch name
+            string refToCheckout = originalBranch == DarcLib.Constants.HEAD ? originalSha : originalBranch;
+            _logger.LogInformation("Restoring {repo} to original state: {ref}", repo.Path, refToCheckout);
+            await repo.CheckoutAsync(refToCheckout);
+        }
+        catch (Exception ex)
+        {
+            // Log but don't throw - we don't want to mask the original exception
+            _logger.LogWarning(ex, "Failed to restore {repo} to original state", repo.Path);
+        }
     }
 
     protected abstract Task<bool> FlowCodeAsync(
@@ -98,6 +149,7 @@ internal abstract class CodeFlowOperation(
         Codeflow currentFlow,
         SourceMapping mapping,
         string headBranch,
+        IReadOnlyList<string> excludedAssets,
         CancellationToken cancellationToken);
 
     private async Task<Build> GetBuildAsync(NativePath sourceRepoPath)
@@ -172,5 +224,90 @@ internal abstract class CodeFlowOperation(
         }
 
         return versionDetails.Source.Mapping;
+    }
+
+    /// <summary>
+    /// Fetch subscription metadata and populate command options based on subscription settings.
+    /// This allows the subscription to be simulated using the existing codeflow logic.
+    /// </summary>
+    private async Task PopulateOptionsFromSubscriptionAsync()
+    {
+        // Validate that subscription is not used with conflicting options
+        if (!string.IsNullOrEmpty(_options.Ref))
+        {
+            throw new DarcException("The --subscription parameter cannot be used with --ref. The subscription determines which commit to flow.");
+        }
+
+        // Parse and validate subscription ID
+        if (!Guid.TryParse(_options.SubscriptionId, out Guid subscriptionId))
+        {
+            throw new DarcException($"Invalid subscription ID '{_options.SubscriptionId}'. Please provide a valid GUID.");
+        }
+
+        // Fetch subscription metadata
+        Subscription subscription;
+        try
+        {
+            subscription = await _barApiClient.GetSubscriptionAsync(subscriptionId)
+                ?? throw new DarcException($"Subscription with ID '{subscriptionId}' not found.");
+        }
+        catch (RestApiException e) when (e.Response.Status == 404)
+        {
+            throw new DarcException($"Subscription with ID '{subscriptionId}' not found.", e);
+        }
+
+        // Check if subscription is source-enabled (VMR code flow)
+        if (!subscription.SourceEnabled)
+        {
+            throw new DarcException("Only source-enabled subscriptions (VMR code flow) are supported with --subscription for codeflow operations.");
+        }
+
+        _logger.LogInformation("Simulating subscription '{Id}':", subscription.Id);
+        _logger.LogInformation("  Source: {sourceRepo} (channel: {channelName})", subscription.SourceRepository, subscription.Channel.Name);
+        _logger.LogInformation("  Target: {targetRepo}#{targetBranch}", subscription.TargetRepository, subscription.TargetBranch);
+
+        if (!string.IsNullOrEmpty(subscription.SourceDirectory))
+        {
+            _logger.LogInformation("  Source directory: {sourceDir}", subscription.SourceDirectory);
+        }
+
+        if (!string.IsNullOrEmpty(subscription.TargetDirectory))
+        {
+            _logger.LogInformation("  Target directory: {targetDir}", subscription.TargetDirectory);
+        }
+
+        // Set excluded assets from subscription if not already set via command line
+        if (string.IsNullOrEmpty(_options.ExcludedAssets) && subscription.ExcludedAssets?.Any() == true)
+        {
+            _options.ExcludedAssets = string.Join(";", subscription.ExcludedAssets);
+            _logger.LogInformation("  Excluded assets: {excludedAssets}", _options.ExcludedAssets);
+        }
+        else if (!string.IsNullOrEmpty(_options.ExcludedAssets))
+        {
+            _logger.LogInformation("  Using command-line excluded assets: {excludedAssets}", _options.ExcludedAssets);
+        }
+
+        // If build ID is not provided, find the latest build from the source repository on the channel
+        if (_options.Build == 0)
+        {
+            Build latestBuild = await _barApiClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
+            if (latestBuild is null)
+            {
+                string channelName = subscription.Channel?.Name ?? "(unknown channel)";
+                throw new DarcException($"No builds found for repository '{subscription.SourceRepository}' on channel '{channelName}'.");
+            }
+
+            _logger.LogInformation("  Latest build: {buildNumber} (BAR ID: {buildId})", latestBuild.AzureDevOpsBuildNumber, latestBuild.Id);
+            _logger.LogInformation("  Build commit: {commit}", latestBuild.Commit);
+            _logger.LogInformation("");
+
+            // Set the build to use for the codeflow operation
+            _options.Build = latestBuild.Id;
+        }
+        else
+        {
+            _logger.LogInformation("  Using provided build ID: {buildId}", _options.Build);
+            _logger.LogInformation("");
+        }
     }
 }

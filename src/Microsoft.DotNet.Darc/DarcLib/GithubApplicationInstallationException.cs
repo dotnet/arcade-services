@@ -13,10 +13,6 @@ public class GithubApplicationInstallationException : DarcException
     {
     }
 
-    protected GithubApplicationInstallationException(SerializationInfo info, StreamingContext context) : base(info, context)
-    {
-    }
-
     public GithubApplicationInstallationException(string message) : base(message)
     {
     }

@@ -1,4 +1,4 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text;
@@ -9,6 +9,7 @@ using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.Model;
@@ -57,13 +58,13 @@ internal interface IPullRequestBuilder
     ///    Generate the description for a code flow PR.
     /// </summary>
     Task<string> GenerateCodeFlowPRDescription(
-        SubscriptionUpdateWorkItem update,
         BuildDTO build,
+        Subscription subscription,
+        string headBranch,
         string? previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
         IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
-        string? currentDescription,
-        bool isForwardFlow);
+        string? currentDescription);
 }
 
 internal class PullRequestBuilder : IPullRequestBuilder
@@ -239,34 +240,32 @@ internal class PullRequestBuilder : IPullRequestBuilder
     }
 
     public async Task<string> GenerateCodeFlowPRDescription(
-        SubscriptionUpdateWorkItem update,
         BuildDTO build,
+        Subscription subscription,
+        string headBranch,
         string? previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
         IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs,
-        string? currentDescription,
-        bool isForwardFlow)
+        string? currentDescription)
     {
         string description = await GenerateCodeFlowPRDescriptionInternal(
-            update,
+            subscription,
             build,
             previousSourceCommit,
             dependencyUpdates,
-            currentDescription,
-            isForwardFlow);
+            currentDescription);
 
         description = CompressRepeatedLinksInDescription(description);
 
-        return AddOrUpdateFooterInDescription(description, upstreamRepoDiffs);
+        return AddOrUpdateFooterInDescription(build, subscription, headBranch, description, upstreamRepoDiffs);
     }
 
     private async Task<string> GenerateCodeFlowPRDescriptionInternal(
-        SubscriptionUpdateWorkItem update,
+        Subscription subscription,
         BuildDTO build,
         string? previousSourceCommit,
         List<DependencyUpdateSummary> dependencyUpdates,
-        string? currentDescription,
-        bool isForwardFlow)
+        string? currentDescription)
     {
         if (string.IsNullOrEmpty(currentDescription))
         {
@@ -274,39 +273,45 @@ internal class PullRequestBuilder : IPullRequestBuilder
             return $"""
                 
                 > [!NOTE]
-                > This is a codeflow update. It may contain both source code changes from [{(isForwardFlow ? "the source repo" : "the VMR")}]({update.SourceRepo}) as well as dependency updates. Learn more [here]({CodeFlowPrFaqUri}).
+                > This is a codeflow update. It may contain both source code changes from
+                > [{(subscription.IsForwardFlow() ? "the source repo" : "the VMR")}]({build.GetRepository()})
+                > as well as dependency updates. Learn more [here]({CodeFlowPrFaqUri}).
 
                 This pull request brings the following source code changes
-                {await GenerateCodeFlowDescriptionForSubscription(update.SubscriptionId, previousSourceCommit, build, update.SourceRepo, dependencyUpdates)}
+                {await GenerateCodeFlowDescriptionForSubscription(subscription.Id, previousSourceCommit, build, dependencyUpdates)}
                 """;
         }
         else
         {
             // if PR description already exists, update only the section relevant to the current subscription
-            int startIndex = currentDescription.IndexOf(GetStartMarker(update.SubscriptionId));
-            int endIndex = currentDescription.IndexOf(GetEndMarker(update.SubscriptionId));
+            int startIndex = currentDescription.IndexOf(GetStartMarker(subscription.Id));
+            int endIndex = currentDescription.IndexOf(GetEndMarker(subscription.Id));
 
             int startCutoff = startIndex == -1 ?
                 currentDescription.Length :
                 startIndex;
             int endCutoff = endIndex == -1 ?
                 currentDescription.Length :
-                endIndex + GetEndMarker(update.SubscriptionId).Length;
+                endIndex + GetEndMarker(subscription.Id).Length;
 
             var beforeSpan = currentDescription.Substring(0, startCutoff);
             var afterSpan = currentDescription.Substring(endCutoff, currentDescription.Length - endCutoff);
             var generatedDescription = await GenerateCodeFlowDescriptionForSubscription(
-                update.SubscriptionId,
+                subscription.Id,
                 previousSourceCommit,
                 build,
-                update.SourceRepo,
                 dependencyUpdates);
 
             return string.Concat(beforeSpan, generatedDescription, afterSpan);
         }
     }
 
-    private static string AddOrUpdateFooterInDescription(string description, IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs)
+    private static string AddOrUpdateFooterInDescription(
+        BuildDTO build,
+        Subscription subscription,
+        string headBranch,
+        string description,
+        IReadOnlyCollection<UpstreamRepoDiff>? upstreamRepoDiffs)
     {
         int footerStartIndex = description.IndexOf(FooterStartMarker);
         int footerEndIndex = description.IndexOf(FooterEndMarker);
@@ -329,6 +334,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
                 ## Associated changes in source repos
                 {GenerateUpstreamRepoDiffs(upstreamRepoDiffs)}
+                {GenerateDarcDiffHelp(build, subscription.TargetRepository, headBranch)}
                 {FooterEndMarker}
                 """;
             return description;
@@ -351,27 +357,37 @@ internal class PullRequestBuilder : IPullRequestBuilder
         return sb.ToString();
     }
 
+    private static string GenerateDarcDiffHelp(BuildDTO build, string targetRepository, string headBranch) =>
+        $"""
+        <!--
+            To diff the source repo and PR branch contents locally, run:
+            darc vmr diff --name-only {build.GetRepository()}:{build.Commit}..{targetRepository}:{headBranch}
+        -->
+        """;
+
     private async Task<string> GenerateCodeFlowDescriptionForSubscription(
         Guid subscriptionId,
         string? previousSourceCommit,
         BuildDTO build,
-        string repoUri,
         List<DependencyUpdateSummary> dependencyUpdates)
     {
+        var sourceRepoUri = build.GetRepository();
+        var sourceBranch = build.GetBranch();
+
         string sourceDiffText = CreateSourceDiffLink(build, previousSourceCommit);
-        string dependencyUpdateBlock = CreateDependencyUpdateBlock(dependencyUpdates, repoUri);
+        string dependencyUpdateBlock = CreateDependencyUpdateBlock(dependencyUpdates, sourceRepoUri);
         return
             $"""
 
             {GetStartMarker(subscriptionId)}
             
-            ## From {build.GetRepository()}
+            ## From {sourceRepoUri}
             - **Subscription**: {GetSubscriptionLink(subscriptionId)}
             - **Build**: {await GetBuildLinkAsync(build, subscriptionId)}
             - **Date Produced**: {build.DateProduced.ToUniversalTime():MMMM d, yyyy h:mm:ss tt UTC}
-            - **Commit**: [{build.Commit}]({GitRepoUrlUtils.GetCommitUri(build.GetRepository(), build.Commit)})
+            - **Commit**: [{build.Commit}]({GitRepoUrlUtils.GetCommitUri(sourceRepoUri, build.Commit)})
             - **Commit Diff**: {sourceDiffText}
-            - **Branch**: [{build.GetBranch()}]({GitRepoUrlUtils.GetRepoAtBranchUri(build.GetRepository(), build.GetBranch())})
+            - **Branch**: [{sourceBranch}]({GitRepoUrlUtils.GetRepoAtBranchUri(sourceRepoUri, sourceBranch)})
             {dependencyUpdateBlock}
             {GetEndMarker(subscriptionId)}
 
@@ -496,7 +512,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             return CommitDiffNotAvailableMsg;
         }
 
-        string sourceDiffText = $"{Commit.GetShortSha(previousSourceCommit)}...{Commit.GetShortSha(build.Commit)}";
+        string sourceDiffText = $"{Microsoft.DotNet.DarcLib.Commit.GetShortSha(previousSourceCommit)}...{Microsoft.DotNet.DarcLib.Commit.GetShortSha(build.Commit)}";
 
         if (!string.IsNullOrEmpty(build.GitHubRepository))
         {
@@ -606,7 +622,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             .AppendLine()
             .AppendLine(DependencyUpdateBegin)
             .AppendLine()
-            .AppendLine($"- **Updates**:");
+            .AppendLine($"- **Dependency Updates**:");
 
         var shaRangeToLinkId = new Dictionary<(string from, string to), int>();
 
@@ -789,33 +805,90 @@ internal class PullRequestBuilder : IPullRequestBuilder
         // The list of committedFiles can contain the `global.json` file (and others) 
         // even though no actual change was made to the file and therefore there is no 
         // metadata for it.
-        foreach (var globalJsonFile in globalJsonFiles)
+        var globalJsonFilesWithMetadata = globalJsonFiles
+            .Where(gf => gf.Metadata != null)
+            .ToList();
+
+        if (globalJsonFilesWithMetadata.Count == 0)
         {
-            if (globalJsonFile.Metadata != null)
+            return;
+        }
+
+        // Capture all changes first
+        var configFileChanges = new List<ConfigFileChange>();
+
+        foreach (var globalJsonFile in globalJsonFilesWithMetadata)
+        {
+            var hasSdkVersionUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.SdkVersionUpdate);
+            var hasToolsDotnetUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.ToolsDotNetUpdate);
+            var relativeBasePath = globalJsonFile.FilePath.Replace("global.json", string.Empty, StringComparison.OrdinalIgnoreCase);
+            if (string.IsNullOrEmpty(relativeBasePath))
             {
-                var hasSdkVersionUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.SdkVersionUpdate);
-                var hasToolsDotnetUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.ToolsDotNetUpdate);
-                var relativeBasePath = globalJsonFile.FilePath.Replace("global.json", string.Empty, StringComparison.OrdinalIgnoreCase);
-                if (string.IsNullOrEmpty(relativeBasePath))
+                relativeBasePath = "root";
+            }
+
+            if (hasSdkVersionUpdate)
+            {
+                configFileChanges.Add(new ConfigFileChange
                 {
-                    relativeBasePath = "root";
+                    DirectoryPath = relativeBasePath,
+                    UpdateType = "sdk.version",
+                    ToValue = globalJsonFile.Metadata[GitFileMetadataName.SdkVersionUpdate]
+                });
+            }
+
+            if (hasToolsDotnetUpdate)
+            {
+                configFileChanges.Add(new ConfigFileChange
+                {
+                    DirectoryPath = relativeBasePath,
+                    UpdateType = "tools.dotnet",
+                    ToValue = globalJsonFile.Metadata[GitFileMetadataName.ToolsDotNetUpdate]
+                });
+            }
+        }
+
+        // If there are any changes, format them according to the requested structure
+        if (configFileChanges.Count > 0)
+        {
+            // Group changes by directory
+            var changesByDirectory = configFileChanges
+                .GroupBy(c => c.DirectoryPath)
+                .OrderBy(g => g.Key == "root" ? "" : g.Key); // Put root first
+
+            // Special case: if there are only updates in the root directory, use simplified format
+            if (changesByDirectory.Count() == 1 && changesByDirectory.First().Key == "root")
+            {
+                globalJsonSection.AppendLine("- **Updates to .NET SDKs:**");
+                
+                foreach (var change in changesByDirectory.First().OrderBy(c => c.UpdateType))
+                {
+                    globalJsonSection.AppendLine($"  - Updates **{change.UpdateType}** to {change.ToValue}");
                 }
+            }
+            else
+            {
+                globalJsonSection.AppendLine("- **Updates to .NET SDKs:**");
 
-                globalJsonSection.AppendLine($"- **Updates to .NET SDKs in {relativeBasePath}:**");
-
-                if (hasSdkVersionUpdate)
+                
+                foreach (var directoryGroup in changesByDirectory)
                 {
-                    globalJsonSection.AppendLine($"  - Updates sdk.version to " +
-                        $"{globalJsonFile.Metadata[GitFileMetadataName.SdkVersionUpdate]}");
-                }
+                    globalJsonSection.AppendLine($"  - 📂 `{directoryGroup.Key.TrimEnd('/')}`");
 
-                if (hasToolsDotnetUpdate)
-                {
-                    globalJsonSection.AppendLine($"  - Updates tools.dotnet to " +
-                        $"{globalJsonFile.Metadata[GitFileMetadataName.ToolsDotNetUpdate]}");
+                    foreach (var change in directoryGroup.OrderBy(c => c.UpdateType))
+                    {
+                        globalJsonSection.AppendLine($"    - Updates **{change.UpdateType}** to {change.ToValue}");
+                    }
                 }
             }
         }
+    }
+    
+    private class ConfigFileChange
+    {
+        public string DirectoryPath { get; set; } = string.Empty;
+        public string UpdateType { get; set; } = string.Empty;
+        public string ToValue { get; set; } = string.Empty;
     }
 
     private static int RemovePRDescriptionSection(StringBuilder description, string sectionStartMarker, string sectionEndMarker)

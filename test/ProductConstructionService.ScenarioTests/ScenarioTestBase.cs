@@ -4,7 +4,7 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
-using FluentAssertions;
+using AwesomeAssertions;
 using Maestro.MergePolicies;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;

@@ -10,7 +10,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
+using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.Codeflow.Tests.Helpers;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
@@ -179,6 +179,7 @@ internal abstract class CodeFlowTestsBase
         await vmrInitializer.InitializeRepository(
             mappingName: mapping,
             targetRevision: commit,
+            remoteUri: null,
             sourceMappingsPath: sourceMappingsPath,
             new CodeFlowParameters(
                 AdditionalRemotes: [],
@@ -186,6 +187,8 @@ internal abstract class CodeFlowTestsBase
                 GenerateCodeOwners: false,
                 GenerateCredScanSuppressions: false),
             cancellationToken: _cancellationToken.Token);
+
+        await GitOperations.CommitAll(VmrPath, $"Initialize {mapping} at {commit}");
     }
 
     protected async Task CallDarcUpdate(string mapping, string commit, bool generateCodeowners = false, bool generateCredScanSuppressions = false)

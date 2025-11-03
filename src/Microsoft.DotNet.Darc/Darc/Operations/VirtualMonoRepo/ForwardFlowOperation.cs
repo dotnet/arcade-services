@@ -63,6 +63,7 @@ internal class ForwardFlowOperation(
         Codeflow currentFlow,
         SourceMapping mapping,
         string headBranch,
+        IReadOnlyList<string> excludedAssets,
         CancellationToken cancellationToken)
     {
         try
@@ -71,7 +72,7 @@ internal class ForwardFlowOperation(
                 mapping.Name,
                 productRepo.Path,
                 build,
-                excludedAssets: [], // TODO (https://github.com/dotnet/arcade-services/issues/5313): Fill from subscription
+                excludedAssets: excludedAssets,
                 headBranch,
                 headBranch,
                 _vmrInfo.VmrPath,

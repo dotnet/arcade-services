@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Net;
-using FluentAssertions;
+using AwesomeAssertions;
 using ProductConstructionService.Api.v2018_07_16.Models;
 using Maestro.Data;
 using Microsoft.AspNetCore.Mvc;

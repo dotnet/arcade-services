@@ -4,11 +4,8 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using FluentAssertions;
-using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
-using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
+using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -299,5 +296,78 @@ internal class ForwardFlowTests : CodeFlowTests
         await GitOperations.Checkout(ProductRepoPath, "release/10.0");
         Func<Task> act = async () => await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "2");
         await act.Should().ThrowAsync<NonLinearCodeflowException>();
+    }
+
+    // Test that the bug https://github.com/dotnet/arcade-services/issues/5331 doesn't happen
+
+    [Test]
+    public async Task TestForwardFlowDependencyDowngradesAfterCrossingFlow()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        var ffBranch = nameof(TestForwardFlowDependencyDowngradesAfterCrossingFlow) + "_ff";
+        var bfBranch = nameof(TestForwardFlowDependencyDowngradesAfterCrossingFlow) + "_backflow";
+
+        // Add dependency to the repo, flow it to the VMR
+        var repo = GetLocal(ProductRepoPath);
+        var dep = new DependencyDetail
+        {
+            Name = "Package.A1",
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "a01",
+            Type = DependencyType.Product,
+        };
+
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await repo.AddDependencyAsync(dep);
+        await GitOperations.CommitAll(ProductRepoPath, "Add Package.A1 v1.0.0");
+        var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranch);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, ffBranch);
+
+        // update the dependency in the VMR, open a backflow but don't merge
+        dep = new DependencyDetail
+        {
+            Name = "Package.A1",
+            Version = "1.0.1",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "a011",
+            Type = DependencyType.Product,
+        };
+        await GitOperations.Checkout(VmrPath, "main");
+        var vmrRepo = GetLocal(VmrPath);
+        await vmrRepo.AddDependencyAsync(dep, VmrInfo.GetRelativeRepoSourcesPath(Constants.ProductRepoName));
+        await GitOperations.CommitAll(VmrPath, "Update Package.A1 to v1.0.1 in VMR");
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, bfBranch);
+        codeFlowResult.ShouldHaveUpdates();
+
+        // now update the same dependency again
+        dep = new DependencyDetail
+        {
+            Name = "Package.A1",
+            Version = "1.0.2",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "a012",
+            Type = DependencyType.Product,
+        };
+        await GitOperations.Checkout(VmrPath, "main");
+        await vmrRepo.AddDependencyAsync(dep, VmrInfo.GetRelativeRepoSourcesPath(Constants.ProductRepoName));
+        await GitOperations.CommitAll(VmrPath, "Update Package.A1 to v1.0.2 in VMR");
+
+        // now open and merge a forward flow
+        codeFlowResult = await ChangeRepoFileAndFlowIt("Some change in the repo", ffBranch);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, ffBranch);
+
+        // now merge the backflow
+        await GitOperations.MergePrBranch(ProductRepoPath, bfBranch);
+
+        // now open a new forward flow, the dependency shouldn't be downgraded to 1.0.1
+        codeFlowResult = await ChangeRepoFileAndFlowIt("Another change in the repo", ffBranch);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, ffBranch);
+        var deps = await vmrRepo.GetDependenciesAsync(relativeBasePath: VmrInfo.GetRelativeRepoSourcesPath(Constants.ProductRepoName));
+        deps.Should().ContainSingle(d => d.Name == "Package.A1" && d.Version == "1.0.2");
     }
 }

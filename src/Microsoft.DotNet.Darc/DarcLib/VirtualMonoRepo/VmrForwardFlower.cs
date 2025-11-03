@@ -67,18 +67,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly ICommentCollector _commentCollector;
     private readonly ILogger<VmrCodeFlower> _logger;
 
-    // Regex to extract PR number from a github merge commit message
-    // e.g.: "Update dependencies from source-repo (#12345)" extracts "12345"
-    private readonly static Regex GitHubPullRequestNumberExtractionRegex = new Regex(".+\\(#(\\d+)\\)$");
-
-    // Alternative regex to extract PR number from a github merge commit message
-    // e.g.: "Merge pull request #12345 from source-repo/branch" extracts "12345"
-    private readonly static Regex AlternativeGitHubPullRequestNumberExtractionRegex = new Regex("^Merge pull request #(\\d+)");
-
-    // Regex to extract PR number from an AzDO merge commit message
-    // e.g.: "Merged PR 12345: Update dependencies from source-repo" extracts "12345"
-    private readonly static Regex AzDoPullRequestNumberExtractionRegex = new Regex("^Merged PR (\\d+):");
-
     public VmrForwardFlower(
             IVmrInfo vmrInfo,
             ISourceManifest sourceManifest,
@@ -362,6 +350,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             codeflowOptions.Build,
             additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
             fromSha: currentSha,
+            keepConflicts: codeflowOptions.EnableRebase,
             resetToRemoteWhenCloningRepo: ShouldResetClones,
             cancellationToken: cancellationToken);
 
@@ -398,28 +387,10 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         var result = await sourceRepo.ExecuteGitCommand(["log", "--pretty=%s", $"{lastCommit}..{currentCommit}"], cancellationToken);
         result.ThrowIfFailed($"Failed to get the list of commits between {lastCommit} and {currentCommit} in {sourceRepo.Path}");
 
-        (IReadOnlyList<Regex> regexes, string prLinkFormat) = gitRepoType switch
-        {
-            GitRepoType.GitHub => ((IReadOnlyList<Regex>)[GitHubPullRequestNumberExtractionRegex, AlternativeGitHubPullRequestNumberExtractionRegex], $"- {repoUri}/pull/{{0}}"),
-            GitRepoType.AzureDevOps => ([AzDoPullRequestNumberExtractionRegex], $"- {repoUri}/pullrequest/{{0}}"),
-            _ => throw new NotSupportedException($"Repository type for URI '{repoUri}' is not supported for PR link extraction.")
-        };
         var commitMessages = result.GetOutputLines();
-        List<string> prNumbers = [];
-        foreach (var message in commitMessages)
-        {
-            foreach (var regex in regexes)
-            {
-                var match = regex.Match(message);
-                if (match.Success && match.Groups.Count > 1)
-                {
-                    prNumbers.Add(match.Groups[1].Value);
-                    break;
-                }
-            }
-        }
+        var prInfo = GitRepoUtils.ExtractPullRequestUrisFromCommitTitles(commitMessages, repoUri);
 
-        if (prNumbers.Count == 0)
+        if (prInfo.Count == 0)
         {
             _logger.LogInformation("No PR numbers were found in the commit messages between {lastCommit} and {currentCommit}", lastCommit, currentCommit);
             return;
@@ -427,10 +398,13 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         else
         {
             StringBuilder str = new("PRs from original repository included in this codeflow update:");
-            foreach (var prUri in prNumbers.Distinct())
+            // We're using this format so we don't tag the original PR on every update.
+            // We do that after the PR has been merged
+            string format = $"- `{{0}} ({{1}})`";
+            foreach (var pr in prInfo.Distinct())
             {
                 str.AppendLine();
-                str.AppendFormat(prLinkFormat, prUri);
+                str.AppendFormat(format, pr.title, pr.prUri);
 
             }
 
