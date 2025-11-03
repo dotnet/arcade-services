@@ -124,8 +124,6 @@ public abstract class VmrManagerBase
 
     protected virtual async Task CommitAsync(string commitMessage, (string Name, string Email)? author = null)
     {
-        _logger.LogDebug("Committing..");
-
         var watch = Stopwatch.StartNew();
 
         await _localGitClient.CommitAsync(_vmrInfo.VmrPath, commitMessage, allowEmpty: true, author);
