@@ -388,7 +388,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         result.ThrowIfFailed($"Failed to get the list of commits between {lastCommit} and {currentCommit} in {sourceRepo.Path}");
 
         var commitMessages = result.GetOutputLines();
-        IReadOnlyList<(string message, string prNumber)> prInfo = GitRepoUtils.ExtractPullRequestUrisFromCommitTitles(commitMessages, repoUri);
+        var prInfo = GitRepoUtils.ExtractPullRequestUrisFromCommitTitles(commitMessages, repoUri);
 
         if (prInfo.Count == 0)
         {
@@ -402,7 +402,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             foreach (var pr in prInfo.Distinct())
             {
                 str.AppendLine();
-                str.AppendFormat(format, pr.message, pr.prNumber);
+                str.AppendFormat(format, pr.title, pr.prUri);
 
             }
 

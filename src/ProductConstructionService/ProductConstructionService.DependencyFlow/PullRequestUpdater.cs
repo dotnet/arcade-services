@@ -1206,14 +1206,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             return;
         }
 
-        if (pr?.PreviousSourceSha != null)
-        {
-            previousSourceSha = pr.PreviousSourceSha;
-        }
-        else
-        {
-            previousSourceSha = await GetPreviousSourceSha(remote, subscription);
-        }
+        previousSourceSha = pr?.PreviousSourceSha != null
+            ? pr.PreviousSourceSha
+            : await GetPreviousSourceSha(remote, subscription);
         upstreamRepoDiffs = isForwardFlow
             ? []
             : await ComputeRepoUpdatesAsync(previousSourceSha, build.Commit);
