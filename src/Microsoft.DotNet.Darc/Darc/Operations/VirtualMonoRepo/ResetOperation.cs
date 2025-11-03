@@ -58,8 +58,8 @@ internal class ResetOperation : Operation
             return Constants.ErrorCode;
         }
 
-        string mappingName;
-        string targetSha = default!; // Will be assigned below based on options
+        string mappingName, targetSha = default!; // targetSha will be assigned below based on options
+        SourceMapping mapping;
         
         // Parse the Target parameter based on whether build/channel options are provided
         if (_options.Build.HasValue || !string.IsNullOrEmpty(_options.Channel))
@@ -71,6 +71,55 @@ internal class ResetOperation : Operation
             {
                 _logger.LogError("When using --build or --channel, the target should only contain the mapping name, not [mapping]:[sha]. Got: {input}", _options.Target);
                 return Constants.ErrorCode;
+            }
+            
+            if (string.IsNullOrWhiteSpace(mappingName))
+            {
+                _logger.LogError("Mapping name must be provided. Got mapping: '{mapping}'", mappingName);
+                return Constants.ErrorCode;
+            }
+
+            _vmrInfo.VmrPath = new NativePath(_options.VmrPath);
+
+            // Validate that the mapping exists
+            await _dependencyTracker.RefreshMetadataAsync();
+
+            try
+            {
+                mapping = _dependencyTracker.GetMapping(mappingName);
+                _logger.LogInformation("Found mapping '{mapping}' pointing to remote '{remote}'",
+                    mappingName, mapping.DefaultRemote);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Mapping '{mapping}' not found: {error}", mappingName, ex.Message);
+                return Constants.ErrorCode;
+            }
+
+            // Determine the target SHA from build or channel option
+            if (_options.Build.HasValue)
+            {
+                try
+                {
+                    targetSha = await GetShaFromBuildAsync(_options.Build.Value, mappingName, mapping);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to get SHA from build {buildId}", _options.Build.Value);
+                    return Constants.ErrorCode;
+                }
+            }
+            else if (!string.IsNullOrEmpty(_options.Channel))
+            {
+                try
+                {
+                    targetSha = await GetShaFromChannelAsync(_options.Channel, mapping);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to get SHA from channel '{channel}'", _options.Channel);
+                    return Constants.ErrorCode;
+                }
             }
         }
         else
@@ -91,54 +140,27 @@ internal class ResetOperation : Operation
                 _logger.LogError("Target SHA cannot be empty. Got: '{sha}'", targetSha);
                 return Constants.ErrorCode;
             }
-        }
-
-        if (string.IsNullOrWhiteSpace(mappingName))
-        {
-            _logger.LogError("Mapping name must be provided. Got mapping: '{mapping}'", mappingName);
-            return Constants.ErrorCode;
-        }
-
-        _vmrInfo.VmrPath = new NativePath(_options.VmrPath);
-
-        // Validate that the mapping exists
-        await _dependencyTracker.RefreshMetadataAsync();
-
-        SourceMapping mapping;
-        try
-        {
-            mapping = _dependencyTracker.GetMapping(mappingName);
-            _logger.LogInformation("Found mapping '{mapping}' pointing to remote '{remote}'",
-                mappingName, mapping.DefaultRemote);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Mapping '{mapping}' not found: {error}", mappingName, ex.Message);
-            return Constants.ErrorCode;
-        }
-
-        // Determine the target SHA from build or channel option
-        if (_options.Build.HasValue)
-        {
-            try
+            
+            if (string.IsNullOrWhiteSpace(mappingName))
             {
-                targetSha = await GetShaFromBuildAsync(_options.Build.Value, mappingName, mapping);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to get SHA from build {buildId}", _options.Build.Value);
+                _logger.LogError("Mapping name must be provided. Got mapping: '{mapping}'", mappingName);
                 return Constants.ErrorCode;
             }
-        }
-        else if (!string.IsNullOrEmpty(_options.Channel))
-        {
+
+            _vmrInfo.VmrPath = new NativePath(_options.VmrPath);
+
+            // Validate that the mapping exists
+            await _dependencyTracker.RefreshMetadataAsync();
+
             try
             {
-                targetSha = await GetShaFromChannelAsync(_options.Channel, mapping);
+                mapping = _dependencyTracker.GetMapping(mappingName);
+                _logger.LogInformation("Found mapping '{mapping}' pointing to remote '{remote}'",
+                    mappingName, mapping.DefaultRemote);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to get SHA from channel '{channel}'", _options.Channel);
+                _logger.LogError("Mapping '{mapping}' not found: {error}", mappingName, ex.Message);
                 return Constants.ErrorCode;
             }
         }
