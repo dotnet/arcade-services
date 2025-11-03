@@ -179,6 +179,7 @@ internal abstract class CodeFlowTestsBase
         await vmrInitializer.InitializeRepository(
             mappingName: mapping,
             targetRevision: commit,
+            remoteUri: null,
             sourceMappingsPath: sourceMappingsPath,
             new CodeFlowParameters(
                 AdditionalRemotes: [],

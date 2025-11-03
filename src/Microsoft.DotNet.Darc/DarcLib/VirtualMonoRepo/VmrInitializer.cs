@@ -143,12 +143,13 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     public async Task InitializeRepository(
         string mappingName,
         string? targetRevision,
+        string? remoteUri,
         LocalPath sourceMappingsPath,
         CodeFlowParameters codeFlowParameters,
         CancellationToken cancellationToken)
     {
         // Ensure source mapping exists before initializing
-        await EnsureSourceMappingExistsAsync(mappingName, defaultRemote: null, sourceMappingsPath, cancellationToken);
+        await EnsureSourceMappingExistsAsync(mappingName, remoteUri, sourceMappingsPath, cancellationToken);
 
         await _dependencyTracker.RefreshMetadataAsync(sourceMappingsPath);
         var mapping = _dependencyTracker.GetMapping(mappingName);
