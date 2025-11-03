@@ -115,9 +115,10 @@ internal class ResolveConflictOperation(
                 cancellationToken);
         }
         catch (PatchApplicationLeftConflictsException e)
+        when (e.ConflictedFiles != null && e.ConflictedFiles.Count != 0)
         {
             _logger.LogInformation("Codeflow has finished, and {conflictedFiles} conflicting file(s) have been" +
-                " left on the current branch.", e.ConflictedFiles);
+                " left on the current branch.", e.ConflictedFiles.Count);
             _logger.LogInformation("Please resolve the conflicts locally, commit and push your changes to unblock the codeflow PR.");
             return;
         }
