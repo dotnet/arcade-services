@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Maestro.Common;
@@ -49,6 +50,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
     private readonly IDependencyFileManager _dependencyFileManager;
     private readonly IWorkBranchFactory _workBranchFactory;
     private readonly IFileSystem _fileSystem;
+    private readonly ILocalGitClient _localGitClient;
     private readonly ILogger<VmrUpdater> _logger;
     private readonly ISourceManifest _sourceManifest;
 
@@ -77,8 +79,65 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         _dependencyFileManager = dependencyFileManager;
         _workBranchFactory = workBranchFactory;
         _fileSystem = fileSystem;
+        _localGitClient = localGitClient;
         _logger = logger;
         _sourceManifest = sourceManifest;
+    }
+
+    public async Task<bool> EnsureSourceMappingExistsAsync(
+        string repoName,
+        string? defaultRemote,
+        LocalPath sourceMappingsPath,
+        CancellationToken cancellationToken)
+    {
+        // Refresh metadata to load existing mappings
+        await _dependencyTracker.RefreshMetadataAsync(sourceMappingsPath);
+
+        // Check if mapping already exists
+        if (_dependencyTracker.TryGetMapping(repoName, out var existingMapping))
+        {
+            _logger.LogInformation("Source mapping for '{repoName}' already exists", repoName);
+            return false;
+        }
+
+        // Read the existing source-mappings.json file
+        var json = await _fileSystem.ReadAllTextAsync(sourceMappingsPath);
+        
+        var options = new JsonSerializerOptions
+        {
+            AllowTrailingCommas = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            WriteIndented = true,
+        };
+
+        var sourceMappingFile = JsonSerializer.Deserialize<SourceMappingFile>(json, options)
+            ?? throw new Exception($"Failed to deserialize {VmrInfo.SourceMappingsFileName}");
+
+        // Determine the default remote URL
+        // If not provided, use GitHub dotnet org
+        defaultRemote ??= $"https://github.com/dotnet/{repoName}";
+        
+        // Add the new mapping
+        var newMapping = new SourceMappingSetting
+        {
+            Name = repoName,
+            DefaultRemote = defaultRemote,
+        };
+
+        sourceMappingFile.Mappings.Add(newMapping);
+
+        // Write the updated source-mappings.json file
+        var updatedJson = JsonSerializer.Serialize(sourceMappingFile, options);
+        _fileSystem.WriteToFile(sourceMappingsPath, updatedJson);
+
+        // Stage the source-mappings.json file
+        await _localGitClient.StageAsync(_vmrInfo.VmrPath, new[] { sourceMappingsPath.ToString() }, cancellationToken);
+        
+        _logger.LogInformation("Added source mapping for '{repoName}' with remote '{defaultRemote}' and staged {file}", 
+            repoName, defaultRemote, VmrInfo.SourceMappingsFileName);
+
+        return true;
     }
 
     public async Task InitializeRepository(

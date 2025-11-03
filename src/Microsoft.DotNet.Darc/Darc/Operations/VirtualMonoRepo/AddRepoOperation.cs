@@ -19,20 +19,17 @@ internal class AddRepoOperation : VmrOperationBase
     private readonly AddRepoCommandLineOptions _options;
     private readonly IVmrInitializer _vmrInitializer;
     private readonly IVmrInfo _vmrInfo;
-    private readonly ISourceMappingManager _sourceMappingManager;
 
     public AddRepoOperation(
         AddRepoCommandLineOptions options,
         IVmrInitializer vmrInitializer,
         IVmrInfo vmrInfo,
-        ISourceMappingManager sourceMappingManager,
         ILogger<AddRepoOperation> logger)
         : base(options, logger)
     {
         _options = options;
         _vmrInitializer = vmrInitializer;
         _vmrInfo = vmrInfo;
-        _sourceMappingManager = sourceMappingManager;
     }
 
     protected override async Task ExecuteInternalAsync(
@@ -49,7 +46,7 @@ internal class AddRepoOperation : VmrOperationBase
         var sourceMappingsPath = _vmrInfo.VmrPath / VmrInfo.DefaultRelativeSourceMappingsPath;
         
         // Ensure source mapping exists (will add if not present and stage the file)
-        await _sourceMappingManager.EnsureSourceMappingExistsAsync(
+        await _vmrInitializer.EnsureSourceMappingExistsAsync(
             repoName,
             defaultRemote: null, // Will default to https://github.com/dotnet/{repoName}
             sourceMappingsPath,
