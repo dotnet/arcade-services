@@ -1597,11 +1597,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             previousSourceRepoSha,
             newSourceRepoSha);
 
-        var prUris = GitRepoUtils.ExtractPullRequestUrisFromCommitTitles(
+        var prTitlesAndUris = GitRepoUtils.ExtractPullRequestUrisFromCommitTitles(
             commitTitles,
             sourceRepo);
 
-        if (prUris.Count == 0)
+        if (prTitlesAndUris.Count == 0)
         {
             _logger.LogInformation("No PRs found to tag in {sourceRepo} between {previousSha} and {newSha}",
                 sourceRepo,
@@ -1611,7 +1611,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         else
         {
             StringBuilder str = new("The following pull requests were forward flown in this PR:");
-            foreach (var prUri in prUris)
+            foreach (var prUri in prTitlesAndUris)
             {
                 str.AppendLine();
                 str.Append($"- {prUri.prUri}");
