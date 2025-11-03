@@ -59,7 +59,7 @@ internal class ResetOperation : Operation
         }
 
         string mappingName;
-        string targetSha;
+        string targetSha = default!; // Will be assigned below based on options
         
         // Parse the Target parameter based on whether build/channel options are provided
         if (_options.Build.HasValue || !string.IsNullOrEmpty(_options.Channel))
@@ -72,9 +72,6 @@ internal class ResetOperation : Operation
                 _logger.LogError("When using --build or --channel, the target should only contain the mapping name, not [mapping]:[sha]. Got: {input}", _options.Target);
                 return Constants.ErrorCode;
             }
-            
-            // targetSha will be determined later from build or channel
-            targetSha = string.Empty; // Placeholder, will be set below
         }
         else
         {
@@ -120,7 +117,7 @@ internal class ResetOperation : Operation
             return Constants.ErrorCode;
         }
 
-        // Determine the target SHA based on the options provided
+        // Determine the target SHA from build or channel option
         if (_options.Build.HasValue)
         {
             try
