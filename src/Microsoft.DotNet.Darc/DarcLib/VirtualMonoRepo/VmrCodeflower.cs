@@ -664,7 +664,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         }
     }
 
-    protected async Task MergeWorkBranchAsync(
+    protected virtual async Task MergeWorkBranchAsync(
         CodeflowOptions codeflowOptions,
         ILocalGitRepo targetRepo,
         IWorkBranch workBranch,
