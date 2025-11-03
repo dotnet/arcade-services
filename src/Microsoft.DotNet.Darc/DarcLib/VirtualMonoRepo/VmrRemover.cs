@@ -135,11 +135,11 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
 
             _logger.LogInformation("Removal of {repo} finished", mapping.Name);
         }
-        catch (Exception)
+        catch
         {
             _logger.LogWarning(
                 InterruptedSyncExceptionMessage,
-                workBranch.OriginalBranchName.StartsWith("sync") || workBranch.OriginalBranchName.StartsWith("init") || workBranch.OriginalBranchName.StartsWith("remove") ?
+                workBranch.OriginalBranchName.StartsWith("remove") ?
                 "the original" : workBranch.OriginalBranchName);
             throw;
         }

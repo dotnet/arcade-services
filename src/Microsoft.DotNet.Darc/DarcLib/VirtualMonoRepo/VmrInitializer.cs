@@ -132,7 +132,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         _fileSystem.WriteToFile(sourceMappingsPath, updatedJson);
 
         // Stage the source-mappings.json file
-        await _localGitClient.StageAsync(_vmrInfo.VmrPath, new[] { sourceMappingsPath.ToString() }, cancellationToken);
+        await _localGitClient.StageAsync(_vmrInfo.VmrPath, [sourceMappingsPath.ToString()], cancellationToken);
         
         _logger.LogInformation("Added source mapping for '{repoName}' with remote '{defaultRemote}' and staged {file}", 
             repoName, defaultRemote, VmrInfo.SourceMappingsFileName);
