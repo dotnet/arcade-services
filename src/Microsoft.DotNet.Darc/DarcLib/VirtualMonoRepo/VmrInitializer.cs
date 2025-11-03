@@ -84,7 +84,7 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         _sourceManifest = sourceManifest;
     }
 
-    public async Task<bool> EnsureSourceMappingExistsAsync(
+    private async Task<bool> EnsureSourceMappingExistsAsync(
         string repoName,
         string? defaultRemote,
         LocalPath sourceMappingsPath,
@@ -147,6 +147,9 @@ public class VmrInitializer : VmrManagerBase, IVmrInitializer
         CodeFlowParameters codeFlowParameters,
         CancellationToken cancellationToken)
     {
+        // Ensure source mapping exists before initializing
+        await EnsureSourceMappingExistsAsync(mappingName, defaultRemote: null, sourceMappingsPath, cancellationToken);
+
         await _dependencyTracker.RefreshMetadataAsync(sourceMappingsPath);
         var mapping = _dependencyTracker.GetMapping(mappingName);
 
