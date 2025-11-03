@@ -11,8 +11,7 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 internal class AddRepoCommandLineOptions : VmrCommandLineOptions<AddRepoOperation>, IBaseVmrCommandLineOptions
 {
     [Value(0, Required = true, HelpText =
-        "Repository names in the form of NAME or NAME:REVISION where REVISION is a commit SHA or other git reference (branch, tag). " +
-        "Omitting REVISION will synchronize the repo to current HEAD.")]
+        "Repository names in the form of NAME:REVISION where REVISION is a commit SHA or other git reference (branch, tag).")]
     public IEnumerable<string> Repositories { get; set; }
 
     // Required by IBaseVmrCommandLineOptions but not used for this command

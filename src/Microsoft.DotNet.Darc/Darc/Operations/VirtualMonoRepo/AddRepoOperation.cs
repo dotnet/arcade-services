@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -37,6 +38,11 @@ internal class AddRepoOperation : VmrOperationBase
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrEmpty(targetRevision))
+        {
+            throw new ArgumentException($"Repository '{repoName}' must specify a revision in the format NAME:REVISION");
+        }
+
         var sourceMappingsPath = _vmrInfo.VmrPath / VmrInfo.DefaultRelativeSourceMappingsPath;
         
         await _vmrInitializer.InitializeRepository(
