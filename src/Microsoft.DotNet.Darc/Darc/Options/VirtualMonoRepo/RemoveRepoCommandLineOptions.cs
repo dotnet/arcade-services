@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
@@ -15,4 +16,15 @@ internal class RemoveRepoCommandLineOptions : VmrCommandLineOptions<RemoveRepoOp
 
     // Required by IBaseVmrCommandLineOptions but not used for this command
     public IEnumerable<string> AdditionalRemotes { get; set; } = [];
+
+    public override IServiceCollection RegisterServices(IServiceCollection services)
+    {
+        if (!Verbose && !Debug)
+        {
+            // Force verbose output for these commands
+            Verbose = true;
+        }
+
+        return base.RegisterServices(services);
+    }
 }

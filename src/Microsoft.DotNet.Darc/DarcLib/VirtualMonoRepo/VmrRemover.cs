@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
@@ -39,19 +38,19 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
     private readonly ICredScanSuppressionsGenerator _credScanSuppressionsGenerator;
 
     public VmrRemover(
-        IVmrDependencyTracker dependencyTracker,
-        IVmrPatchHandler patchHandler,
-        IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
-        ICodeownersGenerator codeownersGenerator,
-        ICredScanSuppressionsGenerator credScanSuppressionsGenerator,
-        ILocalGitClient localGitClient,
-        ILocalGitRepoFactory localGitRepoFactory,
-        IWorkBranchFactory workBranchFactory,
-        IFileSystem fileSystem,
-        ILogger<VmrRemover> logger,
-        ILogger<VmrUpdater> baseLogger,
-        ISourceManifest sourceManifest,
-        IVmrInfo vmrInfo)
+            IVmrDependencyTracker dependencyTracker,
+            IVmrPatchHandler patchHandler,
+            IThirdPartyNoticesGenerator thirdPartyNoticesGenerator,
+            ICodeownersGenerator codeownersGenerator,
+            ICredScanSuppressionsGenerator credScanSuppressionsGenerator,
+            ILocalGitClient localGitClient,
+            ILocalGitRepoFactory localGitRepoFactory,
+            IWorkBranchFactory workBranchFactory,
+            IFileSystem fileSystem,
+            ILogger<VmrRemover> logger,
+            ILogger<VmrUpdater> baseLogger,
+            ISourceManifest sourceManifest,
+            IVmrInfo vmrInfo)
         : base(vmrInfo, dependencyTracker, patchHandler, thirdPartyNoticesGenerator, codeownersGenerator, credScanSuppressionsGenerator, localGitClient, localGitRepoFactory, baseLogger)
     {
         _vmrInfo = vmrInfo;
@@ -115,7 +114,7 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
             if (codeFlowParameters.TpnTemplatePath != null)
             {
                 await _thirdPartyNoticesGenerator.UpdateThirdPartyNotices(codeFlowParameters.TpnTemplatePath);
-                await _localGitClient.StageAsync(_vmrInfo.VmrPath, new[] { VmrInfo.ThirdPartyNoticesFileName }, cancellationToken);
+                await _localGitClient.StageAsync(_vmrInfo.VmrPath, [ VmrInfo.ThirdPartyNoticesFileName ], cancellationToken);
             }
 
             if (codeFlowParameters.GenerateCodeOwners)
@@ -131,16 +130,15 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
             var commitMessage = RemovalCommitMessage.Replace("{name}", mapping.Name);
             await CommitAsync(commitMessage);
 
-            await workBranch.MergeBackAsync(commitMessage);
+            await workBranch.RebaseAsync(cancellationToken);
 
-            _logger.LogInformation("Removal of {repo} finished", mapping.Name);
+            _logger.LogInformation("Repo {repo} removed (staged)", mapping.Name);
         }
         catch
         {
             _logger.LogWarning(
                 InterruptedSyncExceptionMessage,
-                workBranch.OriginalBranchName.StartsWith("remove") ?
-                "the original" : workBranch.OriginalBranchName);
+                workBranch.OriginalBranchName.StartsWith("remove") ? "the original" : workBranch.OriginalBranchName);
             throw;
         }
     }
