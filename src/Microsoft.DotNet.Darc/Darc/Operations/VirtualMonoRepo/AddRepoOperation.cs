@@ -53,7 +53,7 @@ internal class AddRepoOperation : Operation
             var parts = repository.Split(':', 2);
             if (parts.Length != 2)
             {
-                _logger.LogError($"Repository '{repository}' must be in the format URI:REVISION");
+                _logger.LogError("Repository '{repository}' must be in the format URI:REVISION", repository);
                 return Constants.ErrorCode;
             }
 
@@ -68,7 +68,7 @@ internal class AddRepoOperation : Operation
                 int lastColonIndex = repository.LastIndexOf(':');
                 if (lastColonIndex <= uri.Length + 2) // +2 for "://"
                 {
-                    _logger.LogError($"Repository '{repository}' must be in the format URI:REVISION");
+                    _logger.LogError("Repository '{repository}' must be in the format URI:REVISION", repository);
                     return Constants.ErrorCode;
                 }
                 
@@ -95,7 +95,7 @@ internal class AddRepoOperation : Operation
                         GenerateCredScanSuppressions: true),
                     CancellationToken.None);
 
-                _logger.LogInformation($"Successfully added repository '{repoName}' from '{uri}' at revision '{revision}'");
+                _logger.LogInformation("Successfully added repository '{repoName}' from '{uri}' at revision '{revision}'", repoName, uri, revision);
             }
             catch (Exception ex)
             {

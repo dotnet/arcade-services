@@ -24,7 +24,7 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
 {
     private const string RemovalCommitMessage =
         $$"""
-        [{name}] Removal of the repository from VMR
+        [{0}] Removal of the repository from VMR
 
         {{Constants.AUTOMATION_COMMIT_TAG}}
         """;
@@ -103,7 +103,7 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
             _sourceManifest.RemoveRepository(mapping.Name);
             _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, _sourceManifest.ToJson());
 
-            var filesToStage = new List<string>
+            var pathsToStage = new List<string>
             {
                 _vmrInfo.SourceManifestPath,
                 sourcesPath
@@ -113,10 +113,10 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
             var sourceMappingsPath = _vmrInfo.VmrPath / VmrInfo.DefaultRelativeSourceMappingsPath;
             if (await RemoveSourceMappingAsync(mapping.Name, sourceMappingsPath, cancellationToken))
             {
-                filesToStage.Add(sourceMappingsPath);
+                pathsToStage.Add(sourceMappingsPath);
             }
 
-            await _localGitClient.StageAsync(_vmrInfo.VmrPath, filesToStage, cancellationToken);
+            await _localGitClient.StageAsync(_vmrInfo.VmrPath, pathsToStage, cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -137,7 +137,7 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
                 await _credScanSuppressionsGenerator.UpdateCredScanSuppressions(cancellationToken);
             }
 
-            var commitMessage = RemovalCommitMessage.Replace("{name}", mapping.Name);
+            var commitMessage = string.Format(RemovalCommitMessage, mapping.Name);
             await CommitAsync(commitMessage);
 
             await workBranch.RebaseAsync(cancellationToken);
