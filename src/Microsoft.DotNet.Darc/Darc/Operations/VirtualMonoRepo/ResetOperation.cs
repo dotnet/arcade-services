@@ -241,7 +241,6 @@ internal class ResetOperation : Operation
     /// <summary>
     /// Gets the commit SHA from a BAR build ID and validates that the build's repository matches the mapping.
     /// </summary>
-    /// <exception cref="DarcException">Thrown when build is not found or validation fails.</exception>
     private async Task<string> GetShaFromBuildAsync(int buildId, string mappingName, SourceMapping mapping)
     {
         _logger.LogInformation("Fetching build {buildId} from BAR...", buildId);
@@ -274,16 +273,10 @@ internal class ResetOperation : Operation
                     $"Build {buildId} is from repository {build.GetRepository()} which has mapping '{sourceDependency.Mapping}' in Version.Details.xml, " +
                     $"but you specified mapping '{mappingName}'. These must match.");
             }
-            else
-            {
-                _logger.LogInformation(
-                    "Validated that build {buildId} matches mapping '{mapping}'.",
-                    buildId, mappingName);
-            }
-        }
-        catch (DarcException)
-        {
-            throw;
+            
+            _logger.LogInformation(
+                "Validated that build {buildId} matches mapping '{mapping}'.",
+                buildId, mappingName);
         }
         catch (Exception ex)
         {
@@ -299,13 +292,11 @@ internal class ResetOperation : Operation
     /// <summary>
     /// Gets the commit SHA from the latest build on a channel for the mapping's default remote.
     /// </summary>
-    /// <exception cref="DarcException">Thrown when channel is not found or no builds are found.</exception>
     private async Task<string> GetShaFromChannelAsync(string channelName, SourceMapping mapping)
     {
         _logger.LogInformation("Finding latest build for repository '{repo}' on channel '{channel}'...", 
             mapping.DefaultRemote, channelName);
 
-        // Get all channels and find the one matching the provided name
         var channels = await _barClient.GetChannelsAsync();
         var channel = channels.FirstOrDefault(c => 
             c.Name.Equals(channelName, StringComparison.OrdinalIgnoreCase));
@@ -317,7 +308,6 @@ internal class ResetOperation : Operation
 
         _logger.LogInformation("Found channel '{channel}' (ID: {channelId})", channel.Name, channel.Id);
 
-        // Get the latest build for the repository on this channel
         var build = await _barClient.GetLatestBuildAsync(mapping.DefaultRemote, channel.Id);
 
         if (build == null)
