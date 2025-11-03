@@ -179,6 +179,8 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// Returns a list of tree names (directories) under a given path in a given branch
     /// </summary>
     Task<IReadOnlyCollection<string>> GetGitTreeNames(string path, string repoUri, string branch);
+
+    Task<IReadOnlyList<string>> GetCommitTitlesForRange(string repoUri, string fromSha, string toSha);
 }
 
 #nullable disable
