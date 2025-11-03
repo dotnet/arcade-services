@@ -24,7 +24,7 @@ public static class GitRepoUtils
     // e.g.: "Merged PR 12345: Update dependencies from source-repo" extracts "12345"
     private readonly static Regex AzDoPullRequestNumberExtractionRegex = new Regex("^Merged PR (\\d+):");
 
-    public static IReadOnlyList<(string title, string prUri)> ExtractPullRequestUrisFromCommitTitles    (
+    public static IReadOnlyList<(string title, string prUri)> ExtractPullRequestUrisFromCommitTitles(
         IReadOnlyCollection<string> commitTitles,
         string gitRepoUrl)
     {
