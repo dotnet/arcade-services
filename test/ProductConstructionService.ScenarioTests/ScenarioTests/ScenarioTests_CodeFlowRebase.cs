@@ -1,11 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics;
 using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
+using Octokit;
 
 namespace ProductConstructionService.ScenarioTests;
 
@@ -80,7 +82,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
             TestContext.WriteLine("Waiting for the PR to show up");
-            Octokit.PullRequest pr = await WaitForPullRequestComment(TestRepository.VmrTestRepoName, targetBranchName, "darc vmr resolve-conflict");
+            PullRequest pr = await WaitForPullRequestComment(TestRepository.VmrTestRepoName, targetBranchName, "darc vmr resolve-conflict");
 
             await using IAsyncDisposable ____ = AsyncDisposable.Create(async () =>
             {
@@ -98,7 +100,6 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
             // The codeflow verification checks should pass now
-            await Task.Delay(TimeSpan.FromSeconds(30));
             await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, true);
 
             TestContext.WriteLine("Making code changes to the repo that should cause a conflict in the PR");
@@ -163,7 +164,6 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
             // The codeflow verification checks should pass now
-            await Task.Delay(TimeSpan.FromSeconds(30));
             await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, true);   
         });
     }
@@ -196,12 +196,20 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         await RunGitAsync("push");
     }
 
-    private static async Task VerifyCodeFlowCheck(Octokit.PullRequest pr, string targetRepoName, bool expectSucceeded)
+    private static async Task VerifyCodeFlowCheck(PullRequest pr, string targetRepoName, bool expectSucceeded)
     {
-        Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepoName);
-        var checks = await WaitForPullRequestMaestroChecksAsync(pr.Url, pr.Head.Ref, repo.Id);
-        var codeFlowCheck = checks.Single(c => c.Name.Contains("Codeflow verification"));
-        codeFlowCheck.Conclusion.Value.Value.Should().Be(expectSucceeded ? Octokit.CheckConclusion.Success : Octokit.CheckConclusion.Failure);
+        Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepoName);
+        List<CheckRun> checks = await WaitForPullRequestMaestroChecksAsync(pr.Url, pr.Head.Ref, repo.Id);
+
+        var stopwatch = Stopwatch.StartNew();
+        while (!checks.Any(c => c.Name.Contains("Codeflow verification") && c.Conclusion != null) && stopwatch.Elapsed < TimeSpan.FromMinutes(1))
+        {
+            await Task.Delay(TimeSpan.FromSeconds(10));
+            checks = await WaitForPullRequestMaestroChecksAsync(pr.Url, pr.Head.Ref, repo.Id);
+        }
+
+        CheckRun codeFlowCheck = checks.Single(c => c.Name.Contains("Codeflow verification"));
+        codeFlowCheck.Conclusion.Value.Value.Should().Be(expectSucceeded ? CheckConclusion.Success : CheckConclusion.Failure);
     }
 
     private static async Task<IAsyncDisposable> EnableRebaseStrategy(string subscriptionId)
