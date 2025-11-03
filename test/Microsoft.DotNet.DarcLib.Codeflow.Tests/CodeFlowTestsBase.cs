@@ -187,6 +187,8 @@ internal abstract class CodeFlowTestsBase
                 GenerateCodeOwners: false,
                 GenerateCredScanSuppressions: false),
             cancellationToken: _cancellationToken.Token);
+
+        await GitOperations.CommitAll(VmrPath, $"Initialize {mapping} at {commit}");
     }
 
     protected async Task CallDarcUpdate(string mapping, string commit, bool generateCodeowners = false, bool generateCredScanSuppressions = false)
