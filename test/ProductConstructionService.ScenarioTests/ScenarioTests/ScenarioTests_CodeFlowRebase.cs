@@ -125,11 +125,11 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             using (ChangeDirectory(vmrDir))
             {
                 await CheckoutRemoteRefAsync(pr.Head.Ref);
-                (await File.ReadAllTextAsync(newFileInVmrPath2)).Should().Be("content #3 from the repository");
+                (await File.ReadAllTextAsync(newFileInVmrPath2)).Should().Be("content #3 but from the repository");
 
                 await ChangeAndPushAFile(
                     vmrDir,
-                    newFileInVmrPath1,
+                    newFileInVmrPath2,
                     "content #3 but from the VMR",
                     "Add conflicting changes");
             }
@@ -141,7 +141,6 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 "content #4 from the repository",
                 "Add conflicting changes");
 
-            TestContext.WriteLine("Creating a build from the new commit");
             build = await CreateBuildAsync(
                 GetGitHubRepoUrl(TestRepository.TestRepo1Name),
                 sourceBranchName,
