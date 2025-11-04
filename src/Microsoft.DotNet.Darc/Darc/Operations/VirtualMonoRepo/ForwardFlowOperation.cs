@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
@@ -31,8 +32,9 @@ internal class ForwardFlowOperation(
     : CodeFlowOperation(options, forwardFlower, backFlower, backflowConflictResolver, vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
 {
     private readonly ForwardFlowCommandLineOptions _options = options;
-    private readonly IProcessManager _processManager = processManager;
+    private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
+    private readonly IProcessManager _processManager = processManager;
 
     protected override async Task ExecuteInternalAsync(
         string repoName,
@@ -50,6 +52,7 @@ internal class ForwardFlowOperation(
         var sourceRepo = _localGitRepoFactory.Create(sourceRepoPath);
 
         var build = await GetOrCreateBuildAsync(sourceRepo, _options.Build);
+        _vmrInfo.VmrPath = new NativePath(_options.VmrPath);
 
         await FlowCodeLocallyAsync(
             sourceRepoPath,

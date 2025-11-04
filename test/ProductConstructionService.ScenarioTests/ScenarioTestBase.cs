@@ -12,12 +12,12 @@ using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.Internal.Testing.Utility;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NuGet.Configuration;
 using NUnit.Framework;
-using Microsoft.DotNet.ProductConstructionService.Client;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using ProductConstructionService.ScenarioTests.ObjectHelpers;
 
 [assembly: Parallelizable(ParallelScope.Fixtures)]
@@ -46,7 +46,7 @@ internal abstract partial class ScenarioTestBase
         _packageNameSalt = Guid.NewGuid().ToString().Substring(0, 8);
     }
 
-    protected async Task<Octokit.PullRequest> WaitForPullRequestAsync(string targetRepo, string targetBranch)
+    protected async Task<Octokit.PullRequest> WaitForPullRequestAsync(string targetRepo, string targetBranch, Octokit.ItemStateFilter prState = Octokit.ItemStateFilter.Open)
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepo);
 
@@ -56,6 +56,7 @@ internal abstract partial class ScenarioTestBase
             IReadOnlyList<Octokit.PullRequest> prs = await GitHubApi.PullRequest.GetAllForRepository(repo.Id, new Octokit.PullRequestRequest
             {
                 Base = targetBranch,
+                State = prState
             });
 
             if (prs.Count == 1)
@@ -884,11 +885,13 @@ internal abstract partial class ScenarioTestBase
 
     protected static async Task TriggerSubscriptionAsync(string subscriptionId)
     {
+        TestContext.WriteLine("Triggering the subscription " + subscriptionId);
         await PcsApi.Subscriptions.TriggerSubscriptionAsync(0, force: false, Guid.Parse(subscriptionId));
     }
 
     protected static async Task<IAsyncDisposable> AddBuildToChannelAsync(int buildId, string channelName)
     {
+        TestContext.WriteLine($"Adding build {buildId} to channel");
         await RunDarcAsync("add-build-to-channel", "--id", buildId.ToString(), "--channel", channelName, "--skip-assets-publishing");
         return AsyncDisposable.Create(async () =>
         {
@@ -980,14 +983,8 @@ internal abstract partial class ScenarioTestBase
 
     protected static async Task CheckoutRemoteRefAsync(string commit)
     {
-        await RunGitAsync("fetch", "origin", commit);
+        await RunGitAsync("pull", "origin");
         await RunGitAsync("checkout", commit);
-    }
-
-    protected static async Task FastForwardAsync()
-    {
-        await RunGitAsync("fetch", "origin");
-        await RunGitAsync("pull");
     }
 
     protected static async Task CheckoutRemoteBranchAsync(string branchName)
@@ -1080,25 +1077,6 @@ internal abstract partial class ScenarioTestBase
         return asset;
     }
 
-    protected static List<AssetData> GetSingleAssetData(string assetName, string assetVersion)
-    {
-        return
-        [
-            new AssetData(false)
-            {
-                Name = assetName,
-                Version = assetVersion,
-                Locations =
-                [
-                    new AssetLocationData(LocationType.NugetFeed)
-                    {
-                        Location = @"https://pkgs.dev.azure.com/dnceng/public/_packaging/NotARealFeed/nuget/v3/index.json"
-                    }
-                ]
-            }
-        ];
-    }
-
     protected static async Task SetRepositoryPolicies(string repoUri, string branchName, string[]? policyParams = null)
     {
         string[] commandParams = ["set-repository-policies", "-q", "--repo", repoUri, "--branch", branchName, .. policyParams ?? []];
@@ -1131,13 +1109,13 @@ internal abstract partial class ScenarioTestBase
             $"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {waitTime.Minutes} minutes");
     }
 
-    protected async Task<bool> CheckGithubPullRequestChecks(string targetRepoName, string targetBranch)
+    protected async Task<bool> CheckGithubPullRequestChecks(string targetRepoName, string targetBranch, TimeSpan? waitTime = null)
     {
         TestContext.WriteLine($"Checking opened PR in {targetBranch} {targetRepoName}");
         Octokit.PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
         Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepoName);
 
-        await Task.Delay(TimeSpan.FromSeconds(5 * 60 + 30));
+        await Task.Delay(waitTime ?? TimeSpan.FromSeconds(5 * 60 + 30));
 
         List<Octokit.CheckRun> maestroChecks = await WaitForPullRequestMaestroChecksAsync(pullRequest.Url, pullRequest.Head.Sha, repo.Id);
 
@@ -1189,10 +1167,21 @@ internal abstract partial class ScenarioTestBase
         return $"{packageName}.{_packageNameSalt}";
     }
 
-    protected static IAsyncDisposable CleanUpPullRequestAfter(string owner, string repo, Octokit.PullRequest pullRequest)
+    protected static IAsyncDisposable CleanUpPullRequestAfter(
+        string owner,
+        string repo,
+        Octokit.PullRequest pullRequest,
+        PullRequestCleanupOperation cleanupOperation = PullRequestCleanupOperation.Close)
         => AsyncDisposable.Create(async () =>
         {
-            await ClosePullRequest(owner, repo, pullRequest);
+            if (cleanupOperation == PullRequestCleanupOperation.Merge)
+            {
+                await MergePullRequest(owner, repo, pullRequest);
+            }
+            else
+            {
+                await ClosePullRequest(owner, repo, pullRequest);
+            }
         });
 
     protected static async Task ClosePullRequest(string owner, string repo, Octokit.PullRequest pullRequest)
@@ -1220,20 +1209,41 @@ internal abstract partial class ScenarioTestBase
         }
     }
 
+    protected static async Task MergePullRequest(string owner, string repo, Octokit.PullRequest pullRequest)
+    {
+        try
+        {
+            await GitHubApi.PullRequest.Merge(
+                owner,
+                repo,
+                pullRequest.Number,
+                new Octokit.MergePullRequest
+                {
+                    CommitMessage = "Merge pull request",
+                    MergeMethod = Octokit.PullRequestMergeMethod.Merge
+                });
+        }
+        catch
+        {
+            // Closed already
+        }
+        try
+        {
+            await GitHubApi.Git.Reference.Delete(owner, repo, $"heads/{pullRequest.Head.Ref}");
+        }
+        catch
+        {
+            // branch already deleted
+        }
+    }
+
     protected static async Task CreateTargetBranchAndExecuteTest(string targetBranchName, string targetDirectory, Func<Task> test)
     {
         // first create a new target branch
-        using (ChangeDirectory(targetDirectory))
-        {
-            await using (await CheckoutBranchAsync(targetBranchName))
-            {
-                // and push it to GH
-                await using (await PushGitBranchAsync("origin", targetBranchName))
-                {
-                    await test();
-                }
-            }
-        }
+        using var _ = ChangeDirectory(targetDirectory);
+        await using var __ = await CheckoutBranchAsync(targetBranchName);
+        await using var ___ = await PushGitBranchAsync("origin", targetBranchName);
+        await test();
     }
 
     protected static async Task WaitForNewCommitInPullRequest(string repo, Octokit.PullRequest pr, int numberOfCommits = 2)
@@ -1284,4 +1294,10 @@ internal abstract partial class ScenarioTestBase
         pr.MergeableState.ToString().Should().Be("dirty", "PR " + pr.HtmlUrl + " should be dirty");
         return pr;
     }
+}
+
+internal enum PullRequestCleanupOperation
+{
+    Close,
+    Merge
 }

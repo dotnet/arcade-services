@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -132,12 +131,17 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
         var remotes = await _localGitRepo.GetRemotesAsync(localPath);
         var branch = await _localGitRepo.GetCheckedOutBranchAsync(localPath);
 
-        if (remotes.Count == 0 || string.IsNullOrEmpty(branch))
+        if (string.IsNullOrEmpty(branch))
         {
             throw new DarcException($"The provided path '{localPath}' does not appear to be a git repository.");
         }
 
-        await PrepareCloneInternalAsync(localPath, [remotes[0].Uri], [branch], branch, false);
+        _clones[localPath] = localPath; 
+
+        foreach (var remote in remotes)
+        {
+            _clones[remote.Uri] = localPath;
+        }
     }
 
     // When we initialize with a single static VMR,

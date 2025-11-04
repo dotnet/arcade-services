@@ -19,7 +19,8 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string targetRepoName,
         string targetBranch,
         string[] testFiles,
-        Dictionary<string, string> testFilePatches)
+        Dictionary<string, string> testFilePatches,
+        PullRequestCleanupOperation cleanupOperation = PullRequestCleanupOperation.Close)
     {
         // When we expect updates from multiple repos (batchable subscriptions), we need to wait until the PR gets updated with the second repository after it is created
         // Otherwise it might try to validate the contents before all updates are in place
@@ -27,7 +28,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
             ? await WaitForUpdatedPullRequestAsync(targetRepoName, targetBranch)
             : await WaitForPullRequestAsync(targetRepoName, targetBranch);
 
-        await using (CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, targetRepoName, pullRequest))
+        await using (CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, targetRepoName, pullRequest, cleanupOperation))
         {
             IReadOnlyList<PullRequestFile> files = await GitHubApi.PullRequest.Files(
                 TestParameters.GitHubTestOrg,
@@ -116,8 +117,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string targetBranch,
         string updateFrequency,
         string sourceOrg,
-        string targetDirectory,
-        bool batchable = false)
+        string targetDirectory)
             => await CreateSourceEnabledSubscriptionAsync(
                 sourceChannelName,
                 sourceRepo,
@@ -125,8 +125,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 targetBranch,
                 updateFrequency,
                 sourceOrg,
-                targetDirectory: targetDirectory,
-                batchable: batchable);
+                targetDirectory: targetDirectory);
 
     protected static async Task<AsyncDisposableValue<string>> CreateBackwardFlowSubscriptionAsync(
         string sourceChannelName,
@@ -156,8 +155,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         bool targetIsAzDo = false,
         bool trigger = false,
         string? sourceDirectory = null,
-        string? targetDirectory = null,
-        bool batchable = false)
+        string? targetDirectory = null)
     {
         string directoryType;
         string directoryName;
@@ -175,13 +173,9 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         List<string> additionalOptions =
         [
             "--source-enabled", "true",
+            "--standard-automerge",
             directoryType, directoryName,
         ];
-
-        if (batchable)
-        {
-            additionalOptions.Add("--batchable");
-        }
 
         return await CreateSubscriptionAsync(
                 sourceChannelName,
@@ -200,9 +194,10 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string targetRepo,
         string targetBranch,
         string partialComment,
+        ItemStateFilter prState = ItemStateFilter.Open,
         int attempts = 40)
     {
-        PullRequest pullRequest = await WaitForPullRequestAsync(targetRepo, targetBranch);
+        PullRequest pullRequest = await WaitForPullRequestAsync(targetRepo, targetBranch, prState);
 
         while (attempts-- > 0)
         {

@@ -97,7 +97,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             patchFileExclusionFilters,
             cancellationToken);
 
-        _logger.LogInformation("{count} patch{s} created", patches.Count, patches.Count == 1 ? string.Empty : "es");
+        _logger.LogDebug("{count} patch{s} created", patches.Count, patches.Count == 1 ? string.Empty : "es");
 
         return patches;
     }

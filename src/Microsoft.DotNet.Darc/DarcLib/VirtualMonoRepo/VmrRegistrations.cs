@@ -111,6 +111,7 @@ public static class VmrRegistrations
         services.TryAddTransient<IVmrPatchHandler, VmrPatchHandler>();
         services.TryAddTransient<IVmrUpdater, VmrUpdater>();
         services.TryAddTransient<IVmrInitializer, VmrInitializer>();
+        services.TryAddTransient<IVmrRemover, VmrRemover>();
         services.TryAddTransient<IVmrBackFlower, VmrBackFlower>();
         services.TryAddTransient<IVmrForwardFlower, VmrForwardFlower>();
         services.TryAddTransient<ICodeFlowVmrUpdater, CodeFlowVmrUpdater>();
