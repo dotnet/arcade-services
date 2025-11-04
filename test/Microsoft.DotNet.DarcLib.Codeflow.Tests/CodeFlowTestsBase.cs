@@ -257,7 +257,8 @@ internal abstract class CodeFlowTestsBase
     {
         using var scope = ServiceProvider.CreateScope();
         var codeflower = scope.ServiceProvider.GetRequiredService<IVmrForwardFlower>();
-        var gitRepo = scope.ServiceProvider.GetRequiredService<ILocalGitClient>();
+        var cloneManager = scope.ServiceProvider.GetRequiredService<IVmrCloneManager>();
+        await cloneManager.RegisterVmrAsync(VmrPath);
 
         var codeFlowResult = await codeflower.FlowForwardAsync(
             mappingName,
@@ -266,7 +267,7 @@ internal abstract class CodeFlowTestsBase
             excludedAssets,
             "main",
             branch,
-            (await gitRepo.GetRemotesAsync(VmrPath)).First().Uri,
+            VmrPath,
             enableRebase: false,
             forceUpdate,
             cancellationToken: _cancellationToken.Token);
