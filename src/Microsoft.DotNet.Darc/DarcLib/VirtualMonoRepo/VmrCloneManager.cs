@@ -69,7 +69,7 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
         ILocalGitRepo vmr = await PrepareCloneInternalAsync(
             _clones.TryGetValue(remoteUris.First(), out var clonePath)
                 ? clonePath
-                : _vmrInfo.TmpPath / Path.Combine("vmrs", StringUtils.GetXxHash64(string.Join(';', remoteUris.Distinct().OrderBy(u => u)))),
+                : _vmrInfo.TmpPath / "vmrs" / StringUtils.GetXxHash64(string.Join(';', remoteUris.Distinct().OrderBy(u => u))),
             remoteUris,
             requestedRefs,
             checkoutRef,
