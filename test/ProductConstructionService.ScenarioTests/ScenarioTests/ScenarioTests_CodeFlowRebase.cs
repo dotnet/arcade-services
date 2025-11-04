@@ -96,7 +96,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
             await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, false);
             await ResolveConflict(repoDir, subscriptionId.Value, false, vmrDir, pr.Head.Ref, [newFileInVmrPath1]);
-            // TODO: Verify the other file
+            (await File.ReadAllTextAsync(newFileInVmrPath2)).Should().Be("content #2 from the repository");
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
             // The codeflow verification checks should pass now
@@ -159,7 +159,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
             // We resolve the conflict manually
             await ResolveConflict(repoDir, subscriptionId.Value, false, vmrDir, pr.Head.Ref, [newFileInVmrPath2]);
-            // TODO: Verify the other file
+            (await File.ReadAllTextAsync(newFileInVmrPath2)).Should().Be("content #4 from the repository");
 
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
@@ -248,7 +248,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
             await VerifyCodeFlowCheck(pr, TestRepository.TestRepo1Name, false);
             await ResolveConflict(vmrDir, subscriptionId.Value, true, repoDir, pr.Head.Ref, [newFilePath1]);
-            // TODO: Verify the other file
+            (await File.ReadAllTextAsync(newFilePath2)).Should().Be("content #2 from the VMR");
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
             // The codeflow verification checks should pass now
@@ -311,7 +311,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
             // We resolve the conflict manually
             await ResolveConflict(vmrDir, subscriptionId.Value, true, repoDir, pr.Head.Ref, [newFilePath2]);
-            // TODO: Verify the other file
+            (await File.ReadAllTextAsync(newFilePath2)).Should().Be("content #4 from the VMR");
 
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
