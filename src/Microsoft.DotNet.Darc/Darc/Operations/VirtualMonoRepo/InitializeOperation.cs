@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
@@ -12,19 +13,19 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
-internal class RemoveRepoOperation : VmrOperationBase
+internal class InitializeOperation : VmrOperationBase
 {
-    private readonly RemoveRepoCommandLineOptions _options;
-    private readonly IVmrRemover _vmrRemover;
+    private readonly InitializeCommandLineOptions _options;
+    private readonly IVmrInitializer _vmrInitializer;
 
-    public RemoveRepoOperation(
-        RemoveRepoCommandLineOptions options,
-        IVmrRemover vmrRemover,
-        ILogger<RemoveRepoOperation> logger)
+    public InitializeOperation(
+        InitializeCommandLineOptions options,
+        IVmrInitializer vmrInitializer,
+        ILogger<InitializeOperation> logger)
         : base(options, logger)
     {
         _options = options;
-        _vmrRemover = vmrRemover;
+        _vmrInitializer = vmrInitializer;
     }
 
     protected override async Task ExecuteInternalAsync(
@@ -33,13 +34,15 @@ internal class RemoveRepoOperation : VmrOperationBase
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        await _vmrRemover.RemoveRepository(
+        await _vmrInitializer.InitializeRepository(
             repoName,
+            targetRevision,
+            new NativePath(_options.SourceMappings),
             new CodeFlowParameters(
                 additionalRemotes,
-                VmrInfo.ThirdPartyNoticesFileName,
-                GenerateCodeOwners: false,
-                GenerateCredScanSuppressions: true),
+                _options.TpnTemplate,
+                _options.GenerateCodeowners,
+                _options.GenerateCredScanSuppressions),
             cancellationToken);
     }
 }

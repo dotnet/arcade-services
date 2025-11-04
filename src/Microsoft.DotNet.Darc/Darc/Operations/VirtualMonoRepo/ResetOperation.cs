@@ -24,8 +24,6 @@ internal class ResetOperation : Operation
     private readonly IVmrUpdater _vmrUpdater;
     private readonly IVmrDependencyTracker _dependencyTracker;
     private readonly IProcessManager _processManager;
-    private readonly IBarApiClient _barClient;
-    private readonly IRemoteFactory _remoteFactory;
     private readonly ILogger<ResetOperation> _logger;
 
     public ResetOperation(
@@ -34,8 +32,6 @@ internal class ResetOperation : Operation
         IVmrUpdater vmrUpdater,
         IVmrDependencyTracker dependencyTracker,
         IProcessManager processManager,
-        IBarApiClient barClient,
-        IRemoteFactory remoteFactory,
         ILogger<ResetOperation> logger)
     {
         _options = options;
@@ -43,57 +39,30 @@ internal class ResetOperation : Operation
         _vmrUpdater = vmrUpdater;
         _dependencyTracker = dependencyTracker;
         _processManager = processManager;
-        _barClient = barClient;
-        _remoteFactory = remoteFactory;
         _logger = logger;
     }
 
     public override async Task<int> ExecuteAsync()
     {
-        if (_options.Build.HasValue && !string.IsNullOrEmpty(_options.Channel))
+        // Parse the mapping:sha parameter
+        var parts = _options.Target.Split(':', 2);
+        if (parts.Length != 2)
         {
-            _logger.LogError("Cannot specify both --build and --channel options together.");
+            _logger.LogError("Invalid format. Expected [mapping]:[sha] but got: {input}", _options.Target);
             return Constants.ErrorCode;
         }
 
-        string mappingName, targetSha = default!;
-        
-        if (_options.Build.HasValue || !string.IsNullOrEmpty(_options.Channel))
-        {
-            // When --build or --channel is provided, Target should only be the mapping name
-            mappingName = _options.Target;
-            
-            if (mappingName.Contains(':'))
-            {
-                _logger.LogError("When using --build or --channel, the target should only contain the mapping name, not [mapping]:[sha]. Got: {input}", _options.Target);
-                return Constants.ErrorCode;
-            }
-        }
-        else
-        {
-            // Default behavior: Target is in the format [mapping]:[sha]
-            var parts = _options.Target.Split(':', 2);
-            if (parts.Length != 2)
-            {
-                _logger.LogError("Invalid format. Expected [mapping]:[sha] but got: {input}", _options.Target);
-                return Constants.ErrorCode;
-            }
+        var mappingName = parts[0];
+        var targetSha = parts[1];
 
-            mappingName = parts[0];
-            targetSha = parts[1];
-            
-            if (string.IsNullOrWhiteSpace(targetSha))
-            {
-                _logger.LogError("Target SHA cannot be empty. Got: '{sha}'", targetSha);
-                return Constants.ErrorCode;
-            }
-        }
-
-        if (string.IsNullOrWhiteSpace(mappingName))
+        if (string.IsNullOrWhiteSpace(mappingName) || string.IsNullOrWhiteSpace(targetSha))
         {
-            _logger.LogError("Mapping name must be provided.");
+            _logger.LogError("Both mapping name and SHA must be provided. Got mapping: '{mapping}', SHA: '{sha}'",
+                mappingName, targetSha);
             return Constants.ErrorCode;
         }
+
+        _logger.LogInformation("Resetting VMR mapping '{mapping}' to SHA '{sha}'", mappingName, targetSha);
 
         _vmrInfo.VmrPath = new NativePath(_options.VmrPath);
 
@@ -112,18 +81,6 @@ internal class ResetOperation : Operation
             _logger.LogError("Mapping '{mapping}' not found: {error}", mappingName, ex.Message);
             return Constants.ErrorCode;
         }
-
-        // Determine the target SHA from build or channel option
-        if (_options.Build.HasValue)
-        {
-            targetSha = await GetShaFromBuildAsync(_options.Build.Value, mappingName, mapping);
-        }
-        else if (!string.IsNullOrEmpty(_options.Channel))
-        {
-            targetSha = await GetShaFromChannelAsync(_options.Channel, mapping);
-        }
-
-        _logger.LogInformation("Resetting VMR mapping '{mapping}' to SHA '{sha}'", mappingName, targetSha);
 
         var currentVersion = _dependencyTracker.GetDependencyVersion(mapping);
         if (currentVersion == null)
@@ -194,72 +151,5 @@ internal class ResetOperation : Operation
             _logger.LogError(ex, "An error occurred while resetting {mapping}", mappingName);
             return Constants.ErrorCode;
         }
-    }
-
-    /// <summary>
-    /// Gets the commit SHA from a BAR build ID and validates that the build's repository matches the mapping.
-    /// </summary>
-    private async Task<string> GetShaFromBuildAsync(int buildId, string mappingName, SourceMapping mapping)
-    {
-        var build = await _barClient.GetBuildAsync(buildId);
-        
-        if (build == null)
-        {
-            throw new DarcException($"Build with ID {buildId} not found in BAR.");
-        }
-
-        // Validate that the build's repository matches the mapping by checking Version.Details.xml
-        IRemote remote = await _remoteFactory.CreateRemoteAsync(build.GetRepository());
-        var sourceDependency = await remote.GetSourceDependencyAsync(build.GetRepository(), build.Commit);
-            
-        if (sourceDependency == null || string.IsNullOrEmpty(sourceDependency.Mapping))
-        {
-            _logger.LogWarning(
-                "Build {buildId} is from repository {repo} that does not have a Source tag in Version.Details.xml at commit {commit}. " +
-                "Unable to verify that it matches mapping '{mapping}'. Proceeding with the reset.",
-                buildId, build.GetRepository(), mappingName, build.Commit);
-        }
-        else if (!sourceDependency.Mapping.Equals(mappingName, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new DarcException(
-                $"Build {buildId} is from repository {build.GetRepository()} which has mapping '{sourceDependency.Mapping}' in Version.Details.xml, " +
-                $"but you specified mapping '{mappingName}'. These must match.");
-        }
-
-        return build.Commit;
-    }
-
-    /// <summary>
-    /// Gets the commit SHA from the latest build on a channel for the mapping's default remote.
-    /// </summary>
-    private async Task<string> GetShaFromChannelAsync(string channelName, SourceMapping mapping)
-    {
-        _logger.LogInformation("Finding latest build for repository '{repo}' on channel '{channel}'...", 
-            mapping.DefaultRemote, channelName);
-
-        var channels = await _barClient.GetChannelsAsync();
-        var channel = channels.FirstOrDefault(c => 
-            c.Name.Equals(channelName, StringComparison.OrdinalIgnoreCase));
-
-        if (channel == null)
-        {
-            throw new DarcException($"Channel '{channelName}' not found.");
-        }
-
-        _logger.LogInformation("Found channel '{channel}' (ID: {channelId})", channel.Name, channel.Id);
-
-        var build = await _barClient.GetLatestBuildAsync(mapping.DefaultRemote, channel.Id);
-
-        if (build == null)
-        {
-            throw new DarcException(
-                $"No builds found for repository '{mapping.DefaultRemote}' on channel '{channel.Name}'.");
-        }
-
-        _logger.LogInformation(
-            "Found latest build on channel '{channel}': Build {buildId} @ {commit}",
-            channel.Name, build.Id, build.Commit);
-
-        return build.Commit;
     }
 }

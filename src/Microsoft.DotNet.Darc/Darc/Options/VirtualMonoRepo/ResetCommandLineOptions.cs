@@ -18,21 +18,9 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 internal class ResetCommandLineOptions : VmrCommandLineOptions<ResetOperation>
 {
     [Value(0, Required = true, HelpText = 
-        "Repository mapping and optionally target SHA. " +
-        "When --build or --channel is provided, format is [mapping]. " +
-        "Otherwise, format is [mapping]:[sha]. " +
+        "Repository mapping and target SHA in the format [mapping]:[sha]. " +
         "Example: runtime:abc123def456 will reset the runtime mapping to commit abc123def456.")]
     public string Target { get; set; }
-
-    [Option("build", Required = false, HelpText =
-        "BAR build ID to reset to. The mapping will be reset to the commit associated with this build. " +
-        "Cannot be used together with --channel or with [mapping]:[sha] format.")]
-    public int? Build { get; set; }
-
-    [Option("channel", Required = false, HelpText =
-        "Channel name to reset to. The mapping will be reset to the latest build from this channel. " +
-        "Cannot be used together with --build or with [mapping]:[sha] format.")]
-    public string Channel { get; set; }
 
     [Option("additional-remotes", Required = false, HelpText =
         "List of additional remote URIs to consider during resetting [mapping name]:[remote URI]. " +
