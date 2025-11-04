@@ -22,7 +22,7 @@ param(
     [string]$Role = "user"
 )
 
-# Set app role ID based on role parameter
+# Set app role ID based on role parameter (get it from the JSON manifest of the Maestro application in Azure AD)
 $appRoleId = switch ($Role) {
     "user"  { "108187e7-df11-4592-b306-2a2a0b15d8f0" } # User role ID
     "admin" { "8b5767ed-0675-4e95-9858-f9851b884345" } # Admin role ID
