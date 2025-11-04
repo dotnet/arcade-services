@@ -100,6 +100,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
             // The codeflow verification checks should pass now
+            pr = await WaitForUpdatedPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
             await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, true);
 
             TestContext.WriteLine("Making code changes to the repo that should cause a conflict in the PR");
@@ -201,7 +202,8 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         List<CheckRun> checks = await WaitForPullRequestMaestroChecksAsync(pr.Url, pr.Head.Ref, repo.Id);
 
         var stopwatch = Stopwatch.StartNew();
-        while (!checks.Any(c => c.Name.Contains("Codeflow verification") && c.Conclusion != null) && stopwatch.Elapsed < TimeSpan.FromMinutes(1))
+        while (!checks.Any(c => c.Name.Contains("Codeflow verification") && c.Conclusion != null)
+            && stopwatch.Elapsed < TimeSpan.FromMinutes(2))
         {
             await Task.Delay(TimeSpan.FromSeconds(10));
             checks = await WaitForPullRequestMaestroChecksAsync(pr.Url, pr.Head.Ref, repo.Id);

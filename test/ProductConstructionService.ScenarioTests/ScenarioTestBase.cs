@@ -982,14 +982,8 @@ internal abstract partial class ScenarioTestBase
 
     protected static async Task CheckoutRemoteRefAsync(string commit)
     {
-        await RunGitAsync("fetch", "origin", commit);
+        await RunGitAsync("pull", "origin");
         await RunGitAsync("checkout", commit);
-    }
-
-    protected static async Task FastForwardAsync()
-    {
-        await RunGitAsync("fetch", "origin");
-        await RunGitAsync("pull");
     }
 
     protected static async Task CheckoutRemoteBranchAsync(string branchName)
@@ -1080,25 +1074,6 @@ internal abstract partial class ScenarioTestBase
         }
 
         return asset;
-    }
-
-    protected static List<AssetData> GetSingleAssetData(string assetName, string assetVersion)
-    {
-        return
-        [
-            new AssetData(false)
-            {
-                Name = assetName,
-                Version = assetVersion,
-                Locations =
-                [
-                    new AssetLocationData(LocationType.NugetFeed)
-                    {
-                        Location = @"https://pkgs.dev.azure.com/dnceng/public/_packaging/NotARealFeed/nuget/v3/index.json"
-                    }
-                ]
-            }
-        ];
     }
 
     protected static async Task SetRepositoryPolicies(string repoUri, string branchName, string[]? policyParams = null)
