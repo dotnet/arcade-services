@@ -15,7 +15,7 @@ param(
     [string]$ManagedIdentityName,
     
     [Parameter(Mandatory = $false)]
-    [string]$AppServicePrincipal = "caf36d9b-2940-4270-9a1d-c494eda6ea18", # PROD Maestro application object ID, INT Maestro object ID is 8b6d0440-8a2f-438e-84b7-d6ffaa401ca3
+    [string]$AppServicePrincipal = "caf36d9b-2940-4270-9a1d-c494eda6ea18", # PROD Maestro application object ID
     
     [Parameter(Mandatory = $false)]
     [ValidateSet("user", "admin")]
