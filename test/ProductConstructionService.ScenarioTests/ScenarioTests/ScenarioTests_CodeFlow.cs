@@ -98,12 +98,21 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                             TestRepository.VmrTestRepoName,
                             targetBranchName,
                             [$"src/{TestRepository.TestRepo1Name}/{TestFile1Name}"],
-                            TestFilePatches);
+                            TestFilePatches,
+                            PullRequestCleanupOperation.Merge);
 
                         await CheckIfPullRequestCommentExists(
                             TestRepository.VmrTestRepoName,
                             pr,
-                            [$"https://github.com/maestro-auth-test/maestro-test1/pull/{testPrNumber}"]);
+                            // here we're testing for a URI with () around, since that's what we write during the codeflow udpates
+                            [$"(https://github.com/maestro-auth-test/maestro-test1/pull/{testPrNumber})"]);
+
+                        await WaitForPullRequestComment(
+                            TestRepository.VmrTestRepoName,
+                            targetBranchName,
+                            // here we test for this specific format because that's how we tag PRs after merging the forward flow
+                            $"- https://github.com/maestro-auth-test/maestro-test1/pull/{testPrNumber}",
+                            Octokit.ItemStateFilter.Closed);
                     }
                 }
             }
