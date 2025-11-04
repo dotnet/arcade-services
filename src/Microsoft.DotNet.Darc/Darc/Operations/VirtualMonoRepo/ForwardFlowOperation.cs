@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
@@ -33,6 +34,7 @@ internal class ForwardFlowOperation(
     private readonly ForwardFlowCommandLineOptions _options = options;
     private readonly IVmrForwardFlower _forwardFlower = forwardFlower;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
+    private readonly IVmrCloneManager _vmrCloneManager = vmrCloneManager;
     private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
     private readonly IFileSystem _fileSystem = fileSystem;
     private readonly IProcessManager _processManager = processManager;
@@ -49,6 +51,8 @@ internal class ForwardFlowOperation(
         {
             throw new DarcException("Please specify a path to a local clone of the VMR to flow the changed into.");
         }
+
+        _vmrInfo.VmrPath = new NativePath(_options.VmrPath);
 
         await FlowCodeLocallyAsync(
             sourceRepoPath,
@@ -68,6 +72,7 @@ internal class ForwardFlowOperation(
     {
         try
         {
+            var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
             CodeFlowResult result = await _forwardFlower.FlowForwardAsync(
                 mapping.Name,
                 productRepo.Path,
@@ -75,7 +80,7 @@ internal class ForwardFlowOperation(
                 excludedAssets: excludedAssets,
                 headBranch,
                 headBranch,
-                _vmrInfo.VmrPath,
+                (await vmr.GetRemotesAsync()).First().Uri,
                 enableRebase: true,
                 forceUpdate: true,
                 cancellationToken);

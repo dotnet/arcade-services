@@ -1218,7 +1218,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             ? []
             : await ComputeRepoUpdatesAsync(previousSourceSha, build.Commit);
 
-        // Conflicts + no rebase means we have to block the PR until a human resolves the conflicts manually
+        // Conflicts + rebase means we have to block the PR until a human resolves the conflicts manually
         if (enableRebase && codeFlowRes.ConflictedFiles.Count > 0)
         {
             await RequestManualConflictResolutionAsync(
@@ -1229,6 +1229,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 prHeadBranch,
                 codeFlowRes,
                 upstreamRepoDiffs);
+
             return;
         }
 
@@ -1707,6 +1708,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 subscription,
                 codeFlowResult.DependencyUpdates,
                 upstreamRepoDiffs);
+
+            // Since we changed the PR state in cache but no commit was pushed,
+            // we need to delete non-transient check results so that they can be re-evaluated
+            await _mergePolicyEvaluationState.TryDeleteAsync();
         }
 
         _commentCollector.AddComment(

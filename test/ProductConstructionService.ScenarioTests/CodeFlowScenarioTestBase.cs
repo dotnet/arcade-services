@@ -117,8 +117,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string targetBranch,
         string updateFrequency,
         string sourceOrg,
-        string targetDirectory,
-        bool batchable = false)
+        string targetDirectory)
             => await CreateSourceEnabledSubscriptionAsync(
                 sourceChannelName,
                 sourceRepo,
@@ -126,8 +125,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 targetBranch,
                 updateFrequency,
                 sourceOrg,
-                targetDirectory: targetDirectory,
-                batchable: batchable);
+                targetDirectory: targetDirectory);
 
     protected static async Task<AsyncDisposableValue<string>> CreateBackwardFlowSubscriptionAsync(
         string sourceChannelName,
@@ -157,8 +155,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         bool targetIsAzDo = false,
         bool trigger = false,
         string? sourceDirectory = null,
-        string? targetDirectory = null,
-        bool batchable = false)
+        string? targetDirectory = null)
     {
         string directoryType;
         string directoryName;
@@ -176,13 +173,9 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         List<string> additionalOptions =
         [
             "--source-enabled", "true",
+            "--standard-automerge",
             directoryType, directoryName,
         ];
-
-        if (batchable)
-        {
-            additionalOptions.Add("--batchable");
-        }
 
         return await CreateSubscriptionAsync(
                 sourceChannelName,

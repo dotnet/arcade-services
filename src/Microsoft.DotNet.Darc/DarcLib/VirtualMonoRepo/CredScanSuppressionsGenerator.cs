@@ -99,7 +99,7 @@ public class CredScanSuppressionsGenerator : ICredScanSuppressionsGenerator
             await _localGitClient.StageAsync(_vmrInfo.VmrPath, new string[] { VmrInfo.CredScanSuppressionsPath }, cancellationToken);
         }
 
-        _logger.LogInformation("{credscansuppressions} updated", VmrInfo.CredScanSuppressionsPath);
+        _logger.LogDebug("{credscansuppressions} updated", VmrInfo.CredScanSuppressionsPath);
     }
 
     private async Task AddCredScanSuppressionsContent(CredScanSuppressionFile vmrCredScanSuppressionsFile, string repoPath, CancellationToken cancellationToken)
