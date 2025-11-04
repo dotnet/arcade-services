@@ -32,8 +32,8 @@ Write-Host "Using role: $Role (ID: $appRoleId)"
 
 az login
 
-$resourceIdWithManagedIdentity = "/subscriptions/$subscriptionId/resourceGroups/$resourceGroupName/providers/Microsoft.ManagedIdentity/userAssignedIdentities/$managedIdentityName"
-$principalId = (Get-AzResource -ResourceId $resourceIdWithManagedIdentity).Properties.PrincipalId
+$resourceIdWithManagedIdentity = "/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.ManagedIdentity/userAssignedIdentities/$ManagedIdentityName"
+$principalId = (az identity show --resource-group $ResourceGroupName --name $ManagedIdentityName --subscription $SubscriptionId --query 'principalId' -o tsv)
 Write-Host "Managed identity principal ID: $($principalId)"
 
 $body = "{'principalId': '$principalId', 'resourceId': '$($appServicePrincipal)', 'appRoleId': '$($appRoleId)'}"
