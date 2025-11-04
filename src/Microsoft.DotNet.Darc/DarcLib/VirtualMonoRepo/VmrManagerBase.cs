@@ -124,13 +124,11 @@ public abstract class VmrManagerBase
 
     protected virtual async Task CommitAsync(string commitMessage, (string Name, string Email)? author = null)
     {
-        _logger.LogInformation("Committing..");
-
         var watch = Stopwatch.StartNew();
 
         await _localGitClient.CommitAsync(_vmrInfo.VmrPath, commitMessage, allowEmpty: true, author);
 
-        _logger.LogInformation("Committed in {duration} seconds", (int)watch.Elapsed.TotalSeconds);
+        _logger.LogDebug("Committed in {duration} seconds", (int)watch.Elapsed.TotalSeconds);
     }
 
     private async Task UpdateThirdPartyNoticesAsync(string templatePath, CancellationToken cancellationToken)

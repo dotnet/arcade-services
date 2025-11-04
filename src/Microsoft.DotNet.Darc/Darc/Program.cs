@@ -145,7 +145,8 @@ internal static class Program
     // These are under the "vmr" subcommand
     public static Type[] GetVmrOptions() =>
     [
-        typeof(InitializeCommandLineOptions),
+        typeof(AddRepoCommandLineOptions),
+        typeof(RemoveRepoCommandLineOptions),
         typeof(BackflowCommandLineOptions),
         typeof(ForwardFlowCommandLineOptions),
         typeof(ResolveConflictCommandLineOptions),

@@ -1394,6 +1394,36 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         }
     }
 
+    public async Task<IReadOnlyList<string>> GetCommitTitlesForRange(string repoUri, string fromSha, string toSha)
+    {
+        (string owner, string repo) = ParseRepoUri(repoUri);
+        var client = GetClient(owner, repo);
+
+        try
+        {
+            // Get the comparison between the two commits
+            var comparison = await client.Repository.Commit.Compare(owner, repo, fromSha, toSha);
+            
+            // Extract commit titles from the comparison
+            // The commits are ordered from oldest to newest (base to head)
+            var commitTitles = comparison.Commits
+                .Select(commit => commit.Commit.Message.Split('\n')[0]) // Get first line (title)
+                .ToList();
+            
+            return commitTitles;
+        }
+        catch (NotFoundException)
+        {
+            _logger.LogError($"Failed to find commits between {fromSha} and {toSha} in {repoUri}");
+            throw;
+        }
+        catch (Exception)
+        {
+            _logger.LogError($"Failed to get commit titles between {fromSha} and {toSha} in {repoUri}");
+            throw;
+        }
+    }
+
     private static PullRequest ToDarcLibPullRequest(Octokit.PullRequest pr)
     {
         PrStatus status;
