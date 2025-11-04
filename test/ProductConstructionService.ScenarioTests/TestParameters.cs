@@ -46,7 +46,6 @@ public class TestParameters : IDisposable
     public static string GitHubToken { get; }
     public static string AzDoToken => _azDoTokenProvider.GetTokenForAccount("default");
     public static bool IsCI { get; }
-    public static string? PcsToken => PcsApi.Options.Credentials?.GetToken(new TokenRequestContext(), default).Token;
     public static string GitExePath => _gitHubPath!;
     public static List<string> BaseDarcRunArgs => _baseDarcRunArgs!;
 
@@ -106,11 +105,6 @@ public class TestParameters : IDisposable
             "--azdev-pat", AzDoToken,
             IsCI ? "--ci" : ""
         ];
-
-        if (!string.IsNullOrEmpty(PcsToken))
-        {
-            _baseDarcRunArgs.AddRange(["--p", PcsToken]);
-        }
 
         Assembly assembly = typeof(TestParameters).Assembly;
         _gitHubApi =
