@@ -16,6 +16,17 @@ namespace ProductConstructionService.ScenarioTests;
 [Category("CodeFlow")]
 internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 {
+    /*
+    This test does the following
+    - Create an (empty) PR with awaiting conflict resolution
+    - Call `darc vmr resolve-conflicts`
+    - Verify mergeability
+    - Push a new update into the PR
+    - Make a conflicting change in the PR
+    - Push a new update which will require another resolution
+    - Call `darc vmr resolve-conflicts`
+    - Verify mergeability
+    */
     [Test]
     public async Task Vmr_ConflictNoPrForwardFlowWithRebaseTest()
     {
@@ -168,6 +179,17 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         });
     }
 
+    /*
+    This test does the following
+    - Create an (empty) PR with awaiting conflict resolution
+    - Call `darc vmr resolve-conflicts`
+    - Verify mergeability
+    - Push a new update into the PR
+    - Make a conflicting change in the PR
+    - Push a new update which will require another resolution
+    - Call `darc vmr resolve-conflicts`
+    - Verify mergeability
+    */
     [Test]
     public async Task Vmr_ConflictNoPrBackwardFlowWithRebaseTest()
     {
