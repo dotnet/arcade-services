@@ -72,7 +72,7 @@ internal abstract class CodeFlowOperation(
         _logger.LogInformation(
             "Flowing {sourceRepo}'s commit {sourceSha} to {targetRepo} at {targetDirectory}...",
             isForwardFlow ? mappingName : "VMR",
-            DarcLib.Commit.GetShortSha(_options.Ref),
+            DarcLib.Commit.GetShortSha(_options.Ref ?? build.Commit),
             !isForwardFlow ? mappingName : "VMR",
             targetRepo.Path);
 
@@ -80,8 +80,8 @@ internal abstract class CodeFlowOperation(
         await _vmrCloneManager.RegisterVmrAsync(_vmrInfo.VmrPath);
 
         Codeflow currentFlow = isForwardFlow
-            ? new ForwardFlow(_options.Ref, await targetRepo.GetShaForRefAsync())
-            : new Backflow(_options.Ref, await targetRepo.GetShaForRefAsync());
+            ? new ForwardFlow(_options.Ref ?? build.Commit, await targetRepo.GetShaForRefAsync())
+            : new Backflow(_options.Ref ?? build.Commit, await targetRepo.GetShaForRefAsync());
 
         await _dependencyTracker.RefreshMetadataAsync();
 
