@@ -502,7 +502,6 @@ internal class ForwardFlowTests : CodeFlowTests
         await GitOperations.ExecuteGitCommand(VmrPath, ["add", expectedFiles[0]]);
         await GitOperations.ExecuteGitCommand(VmrPath, ["commit", "-m", "Committing the forward flow"]);
         await GitOperations.CheckAllIsCommitted(VmrPath);
-        // await GitOperations.MergePrBranch(VmrPath, branchName);
 
         // Verify final state: The reverts should be correctly applied despite conflicts
 
