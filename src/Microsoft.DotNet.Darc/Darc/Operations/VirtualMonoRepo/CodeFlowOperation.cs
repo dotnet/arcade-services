@@ -167,17 +167,11 @@ internal abstract class CodeFlowOperation(
         try
         {
             string currentSha = await repo.GetShaForRefAsync();
-            
-            // Only checkout if we're not already at the original state
-            if (currentSha == originalSha)
-            {
-                return;
-            }
 
             // If the original state was a detached HEAD, checkout the SHA
             // Otherwise, checkout the branch name
             string refToCheckout = originalBranch == DarcLib.Constants.HEAD ? originalSha : originalBranch;
-            _logger.LogInformation("Restoring {repo} to original state: {ref}", repo.Path, refToCheckout);
+            _logger.LogDebug("Restoring {repo} to original state: {ref}", repo.Path, refToCheckout);
             await repo.CheckoutAsync(refToCheckout);
         }
         catch (Exception ex)
