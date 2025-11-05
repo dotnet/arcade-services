@@ -106,7 +106,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             });
 
             await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, false);
-            await ResolveConflict(repoDir, subscriptionId.Value, false, vmrDir, pr.Head.Ref, [newFileInVmrPath1]);
+            await ResolveConflict(subscriptionId.Value, vmrDir, pr.Head.Ref, [newFileInVmrPath1]);
             (await File.ReadAllTextAsync(newFileInVmrPath2)).Should().Be("content #2 from the repository");
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
@@ -169,7 +169,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, false);
 
             // We resolve the conflict manually
-            await ResolveConflict(repoDir, subscriptionId.Value, false, vmrDir, pr.Head.Ref, [newFileInVmrPath2]);
+            await ResolveConflict(subscriptionId.Value, vmrDir, pr.Head.Ref, [newFileInVmrPath2]);
             (await File.ReadAllTextAsync(newFileInVmrPath2)).Should().Be("content #4 from the repository");
 
             await TriggerSubscriptionAsync(subscriptionId.Value);
@@ -191,7 +191,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
     - Verify mergeability
     */
     [Test]
-    public async Task Vmr_ConflictNoPrBackwardFlowWithRebaseTest()
+    public async Task Vmr_ConflictNoPrBackFlowWithRebaseTest()
     {
         var channelName = GetTestChannelName();
         var sourceBranchName = GetTestBranchName();
@@ -269,7 +269,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             });
 
             await VerifyCodeFlowCheck(pr, TestRepository.TestRepo1Name, false);
-            await ResolveConflict(vmrDir, subscriptionId.Value, true, repoDir, pr.Head.Ref, [newFilePath1]);
+            await ResolveConflict(subscriptionId.Value, repoDir, pr.Head.Ref, [newFilePath1]);
             (await File.ReadAllTextAsync(newFilePath2)).Should().Be("content #2 from the VMR");
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
@@ -332,7 +332,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             await VerifyCodeFlowCheck(pr, TestRepository.TestRepo1Name, false);
 
             // We resolve the conflict manually
-            await ResolveConflict(vmrDir, subscriptionId.Value, true, repoDir, pr.Head.Ref, [newFilePath2]);
+            await ResolveConflict(subscriptionId.Value, repoDir, pr.Head.Ref, [newFilePath2]);
             (await File.ReadAllTextAsync(newFilePath2)).Should().Be("content #4 from the VMR");
 
             await TriggerSubscriptionAsync(subscriptionId.Value);
@@ -342,23 +342,12 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         });
     }
 
-    private static async Task ResolveConflict(string WILL_REMOVE_sourceDir, string WILL_REMOVE_subscriptionId, bool WILL_REMOVE_IS_BACKFLOW, string targetDir, string prBranch, IEnumerable<string> filesToResolve, bool useOurs = false)
+    private static async Task ResolveConflict(string subscriptionId, string targetDir, string prBranch, IEnumerable<string> filesToResolve, bool useOurs = false)
     {
         using var _ = ChangeDirectory(targetDir);
         await CheckoutRemoteRefAsync(prBranch);
 
-        // TODO call resolve-conflict instead of forwardflow
-        // await RunDarcAsync("vmr", "resolve-conflict", "--subscription", subscriptionId.Value);
-        using (ChangeDirectory(WILL_REMOVE_sourceDir))
-        {
-            try
-            {
-                await RunDarcAsync("vmr", WILL_REMOVE_IS_BACKFLOW ? "backflow" : "forwardflow", "--subscription", WILL_REMOVE_subscriptionId, targetDir);
-            }
-            catch
-            {
-            }
-        }
+        await RunDarcAsync("vmr", "resolve-conflict", "--subscription", subscriptionId);
 
         foreach (string file in filesToResolve)
         {
