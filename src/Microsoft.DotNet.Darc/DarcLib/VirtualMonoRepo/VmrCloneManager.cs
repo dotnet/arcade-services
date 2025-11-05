@@ -40,7 +40,6 @@ public interface IVmrCloneManager
         bool resetToRemote = false,
         CancellationToken cancellationToken = default);
 
-
     /// <summary>
     /// Registers a known local location that contains a VMR clone.
     /// </summary>
