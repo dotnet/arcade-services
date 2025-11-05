@@ -98,6 +98,9 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
     public async Task<IReadOnlyCollection<string>> GetStagedFiles()
         => await _localGitClient.GetStagedFiles(Path);
 
+    public async Task<IReadOnlyCollection<string>> GetDirtyFiles()
+        => await _localGitClient.GetDirtyFiles(Path);
+
     public async Task<string> GetConfigValue(string setting)
         => await _localGitClient.GetConfigValue(Path, setting);
 

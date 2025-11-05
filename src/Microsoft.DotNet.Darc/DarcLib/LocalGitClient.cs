@@ -427,6 +427,14 @@ public class LocalGitClient : ILocalGitClient
         return result.GetOutputLines();
     }
 
+    public async Task<IReadOnlyCollection<string>> GetDirtyFiles(string repoPath)
+    {
+        var result = await _processManager.ExecuteGit(repoPath, "diff", "--name-only");
+        result.ThrowIfFailed($"Failed to get staged files in {repoPath}");
+
+        return result.GetOutputLines();
+    }
+
     public async Task<string?> GetFileFromGitAsync(string repoPath, string relativeFilePath, string? revision = "HEAD", string? outputPath = null)
     {
         // git show doesn't work with windows paths \\, so replace it with a /

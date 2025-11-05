@@ -138,6 +138,23 @@ internal abstract class CodeFlowOperation(
                 _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
             }
         }
+        catch (PatchApplicationLeftConflictsException e)
+        {
+            // We need to make sure that working tree matches the staged changes
+            await targetRepo.ExecuteGitCommand(["clean", "-xfd"], cancellationToken: cancellationToken);
+
+            IEnumerable<string> dirtyFiles = await targetRepo.GetDirtyFiles();
+            dirtyFiles = dirtyFiles.Except(e.ConflictedFiles.Select(e => e.Path));
+
+            // Reset only non-conflicted files
+            foreach (var file in dirtyFiles)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await targetRepo.CheckoutAsync(file);
+            }
+
+            throw;
+        }
         finally
         {
             // Restore source repo to its original state, even when exceptions occur
