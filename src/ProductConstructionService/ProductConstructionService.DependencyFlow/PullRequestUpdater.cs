@@ -1591,8 +1591,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 pr.Url);
         }
 
-        _logger.LogInformation("PR {url} has been manually {action}. Stopping tracking it", pr.Url, prInfo.Status.ToString().ToLowerInvariant());
+        _logger.LogInformation("PR {url} has been {how} {action}. Stopping tracking it",
+            pr.Url,
+            reason == DependencyFlowEventReason.AutomaticallyMerged ? "automatically" : "manually",
+            prInfo.Status.ToString().ToLowerInvariant());
 
+        // If the PR we just merged was in conflict with an update we previously tried to apply, we shouldn't delete the reminder for the update
         await ClearAllStateAsync(isCodeflow, clearPendingUpdates: pr.MergeState == InProgressPullRequestState.Mergeable);
 
         // Also try to clean up the PR branch.
