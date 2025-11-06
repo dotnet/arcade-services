@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using System.Text;
-using LibGit2Sharp;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
