@@ -115,7 +115,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                             // here we test for this specific format because that's how we tag PRs after merging the forward flow
                             $"- https://github.com/maestro-auth-test/maestro-test1/pull/{testPrNumber}",
                             Octokit.ItemStateFilter.Closed);
-                        }
+                    }
                 }
             }
         });
