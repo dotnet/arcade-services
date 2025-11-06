@@ -444,7 +444,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     {
         var previousFlow = previousFlows.LastForwardFlow;
 
-        for (int i = 1; i < depth; i++)
+        for (int i = 1; i <= depth; i++)
         {
             var previousFlowSha = await _localGitClient.BlameLineAsync(
                 _vmrInfo.SourceManifestPath,

@@ -121,6 +121,8 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
             cancellationToken);
 
         _vmrInfo.VmrPath = vmr.Path;
+        _vmrInfo.VmrUri = remoteUris.First();
+
         await _dependencyTracker.RefreshMetadataAsync();
 
         return vmr;
