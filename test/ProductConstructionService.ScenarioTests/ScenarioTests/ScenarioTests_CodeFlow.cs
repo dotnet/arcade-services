@@ -106,13 +106,16 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                             // here we're testing for a URI with () around, since that's what we write during the codeflow udpates
                             [$"(https://github.com/maestro-auth-test/maestro-test1/pull/{testPrNumber})"]);
 
+                        // Re trigger the subscription so comments get added
+                        await TriggerSubscriptionAsync(subscriptionId.Value);
+
                         await WaitForPullRequestComment(
                             TestRepository.VmrTestRepoName,
                             targetBranchName,
                             // here we test for this specific format because that's how we tag PRs after merging the forward flow
                             $"- https://github.com/maestro-auth-test/maestro-test1/pull/{testPrNumber}",
                             Octokit.ItemStateFilter.Closed);
-                    }
+                        }
                 }
             }
         });
