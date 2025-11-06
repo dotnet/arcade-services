@@ -138,6 +138,23 @@ internal abstract class CodeFlowOperation(
                 _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
             }
         }
+        catch (PatchApplicationLeftConflictsException e)
+        {
+            // We need to make sure that working tree matches the staged changes
+            await targetRepo.ExecuteGitCommand(["clean", "-xfd"], cancellationToken: cancellationToken);
+
+            IEnumerable<string> dirtyFiles = await targetRepo.GetDirtyFiles();
+            dirtyFiles = dirtyFiles.Except(e.ConflictedFiles.Select(e => e.Path));
+
+            // Reset only non-conflicted files
+            foreach (var file in dirtyFiles)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await targetRepo.CheckoutAsync(file);
+            }
+
+            throw;
+        }
         finally
         {
             // Restore source repo to its original state, even when exceptions occur
@@ -150,17 +167,11 @@ internal abstract class CodeFlowOperation(
         try
         {
             string currentSha = await repo.GetShaForRefAsync();
-            
-            // Only checkout if we're not already at the original state
-            if (currentSha == originalSha)
-            {
-                return;
-            }
 
             // If the original state was a detached HEAD, checkout the SHA
             // Otherwise, checkout the branch name
             string refToCheckout = originalBranch == DarcLib.Constants.HEAD ? originalSha : originalBranch;
-            _logger.LogInformation("Restoring {repo} to original state: {ref}", repo.Path, refToCheckout);
+            _logger.LogDebug("Restoring {repo} to original state: {ref}", repo.Path, refToCheckout);
             await repo.CheckoutAsync(refToCheckout);
         }
         catch (Exception ex)

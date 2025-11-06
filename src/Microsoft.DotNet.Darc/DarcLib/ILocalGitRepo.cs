@@ -208,6 +208,12 @@ public interface ILocalGitRepo
     Task<IReadOnlyCollection<string>> GetStagedFiles();
 
     /// <summary>
+    ///     Returns a list of modified working tree files.
+    /// </summary>
+    /// <returns>List of currently modified staged files</returns>
+    Task<IReadOnlyCollection<string>> GetDirtyFiles();
+
+    /// <summary>
     ///     Stages files from the given path.
     /// </summary>
     /// <param name="pathsToStage">Paths that will be staged to index</param>
