@@ -8,6 +8,7 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Octokit;
+using ProductConstructionService.ScenarioTests.Helpers;
 
 #nullable enable
 namespace ProductConstructionService.ScenarioTests;

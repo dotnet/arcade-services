@@ -5,7 +5,7 @@ using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Newtonsoft.Json.Linq;
 
-namespace ProductConstructionService.ScenarioTests.ObjectHelpers;
+namespace ProductConstructionService.ScenarioTests.Helpers;
 
 public class SubscriptionBuilder
 {

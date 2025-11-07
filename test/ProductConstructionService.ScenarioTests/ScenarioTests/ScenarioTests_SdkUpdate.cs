@@ -7,6 +7,7 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using NUnit.Framework;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Octokit;
+using ProductConstructionService.ScenarioTests.Helpers;
 
 namespace ProductConstructionService.ScenarioTests;
 

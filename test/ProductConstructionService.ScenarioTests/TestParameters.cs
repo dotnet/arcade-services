@@ -3,7 +3,6 @@
 
 using System.Reflection;
 using System.Runtime.InteropServices;
-using Azure.Core;
 using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -12,6 +11,7 @@ using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Configuration;
 using NUnit.Framework;
 using Octokit.Internal;
+using ProductConstructionService.ScenarioTests.Helpers;
 
 #nullable enable
 namespace ProductConstructionService.ScenarioTests;

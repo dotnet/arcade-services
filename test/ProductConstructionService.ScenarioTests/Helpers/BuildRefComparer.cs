@@ -4,7 +4,7 @@
 using System.Collections;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 
-namespace ProductConstructionService.ScenarioTests.ObjectHelpers;
+namespace ProductConstructionService.ScenarioTests.Helpers;
 
 public class BuildRefComparer : IEqualityComparer<BuildRef>, IComparer
 {

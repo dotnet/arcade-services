@@ -5,7 +5,7 @@ using System.Text;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 
-namespace ProductConstructionService.ScenarioTests.ObjectHelpers;
+namespace ProductConstructionService.ScenarioTests.Helpers;
 
 public class DependencyCollectionStringBuilder
 {
