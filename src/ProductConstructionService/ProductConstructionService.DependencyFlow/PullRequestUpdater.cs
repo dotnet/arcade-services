@@ -265,11 +265,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         var returnFlag = await CheckInProgressPullRequestAsync(inProgressPr, pullRequestCheck.IsCodeFlow);
 
-        await _pullRequestCommenter.PostCollectedCommentsAsync(
-                inProgressPr.Url,
-                (await GetTargetAsync()).repository,
-                []);
-
         return returnFlag;
     }
 
@@ -1579,7 +1574,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             if (pr.CodeFlowDirection == CodeFlowDirection.ForwardFlow && !string.IsNullOrEmpty(pr.PreviousSourceSha))
             {
-                await TagForwardFlownPRs(pr.ContainedSubscriptions.Single().SourceRepo, pr.PreviousSourceSha, pr.SourceSha);
+                await TagForwardFlownPRs(pr.Url, pr.ContainedSubscriptions.Single().SourceRepo, pr.PreviousSourceSha, pr.SourceSha);
             }
 
             await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
@@ -1613,7 +1608,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         return (PullRequestStatus.Completed, prInfo);
     }
 
-    private async Task TagForwardFlownPRs(string sourceRepo, string previousSourceRepoSha, string newSourceRepoSha)
+    private async Task TagForwardFlownPRs(
+        string prUrl,
+        string sourceRepo,
+        string previousSourceRepoSha,
+        string newSourceRepoSha)
     {
         var remote = await _remoteFactory.CreateRemoteAsync(sourceRepo);
         var commitTitles = await remote.GetCommitTitlesForRange(
@@ -1643,6 +1642,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             _commentCollector.AddComment(
                 str.ToString(),
                 CommentType.Information);
+            // Post the collected comments right away so they don't end up in the new PR if we create one
+            await _pullRequestCommenter.PostCollectedCommentsAsync(prUrl, sourceRepo, []);
+            _commentCollector.Reset();
         }
     }
 
