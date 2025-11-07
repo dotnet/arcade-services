@@ -283,7 +283,7 @@ public class CodeflowChangeAnalyzerTests
             assets:
             [
                 new Asset(2, 271018, true, "Microsoft.DotNet.Arcade.Sdk", "10.0.0-beta.25306.103",
-                    locations: [new(100, LocationType.NugetFeed, "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-dotnet-44c449ac/nuget/v3/index.json")]),
+                    locations: [new(101, LocationType.NugetFeed, "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-dotnet-44c449ac/nuget/v3/index.json")]),
             ],
             dependencies: [],
             incoherencies: [])
