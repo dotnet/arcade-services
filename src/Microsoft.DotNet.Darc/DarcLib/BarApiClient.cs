@@ -421,6 +421,20 @@ public class BarApiClient : IBarApiClient
 
     #endregion
 
+    #region Pull Request Operations
+
+    /// <summary>
+    ///     Get a tracked pull request by subscription ID.
+    /// </summary>
+    /// <param name="subscriptionId">Id of subscription</param>
+    /// <returns>Tracked pull request information</returns>
+    public async Task<TrackedPullRequest> GetTrackedPullRequestBySubscriptionIdAsync(Guid subscriptionId)
+    {
+        return await _barClient.PullRequest.GetTrackedPullRequestBySubscriptionIdAsync(subscriptionId.ToString());
+    }
+
+    #endregion
+
     #region Build/Asset Operations
 
     /// <summary>

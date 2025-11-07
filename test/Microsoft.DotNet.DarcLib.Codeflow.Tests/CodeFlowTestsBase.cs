@@ -257,6 +257,8 @@ internal abstract class CodeFlowTestsBase
     {
         using var scope = ServiceProvider.CreateScope();
         var codeflower = scope.ServiceProvider.GetRequiredService<IVmrForwardFlower>();
+        var cloneManager = scope.ServiceProvider.GetRequiredService<IVmrCloneManager>();
+        await cloneManager.RegisterVmrAsync(VmrPath);
 
         var codeFlowResult = await codeflower.FlowForwardAsync(
             mappingName,

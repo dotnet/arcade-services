@@ -114,6 +114,17 @@ public interface IBarApiClient : IBasicBarClient
 
     #endregion
 
+    #region Pull Request Operations
+
+    /// <summary>
+    ///   Get a tracked pull request by subscription ID.
+    /// </summary>
+    /// <param name="subscriptionId">Id of subscription</param>
+    /// <returns>Tracked pull request information</returns>
+    Task<TrackedPullRequest> GetTrackedPullRequestBySubscriptionIdAsync(Guid subscriptionId);
+
+    #endregion
+
     #region Channel Operations
 
     /// <summary>
