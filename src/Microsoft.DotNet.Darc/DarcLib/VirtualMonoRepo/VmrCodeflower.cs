@@ -429,7 +429,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                         ? new Backflow(previouslyAppliedBuild.Commit, previousFlow.RepoSha)
                         : new ForwardFlow(previouslyAppliedBuild.Commit, previousFlow.VmrSha),
                     EnableRebase = false,
-                    ForceUpdate = true
+                    ForceUpdate = true,
                 },
                 previousFlows,
                 repo,
