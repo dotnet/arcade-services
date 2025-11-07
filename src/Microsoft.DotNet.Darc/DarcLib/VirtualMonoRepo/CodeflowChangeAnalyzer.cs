@@ -216,7 +216,8 @@ public class CodeflowChangeAnalyzer : ICodeflowChangeAnalyzer
         }
 
         // We ignore stable feeds added in the backflow too
-        var darcFeeds = b.Assets.First().Locations
+        var darcFeeds = b.Assets
+            .SelectMany(a => a.Locations)
             .Where(l => l.Type == LocationType.NugetFeed)
             .Where(l => l.Location.Contains(FeedConstants.MaestroManagedPublicFeedPrefix)
                      || l.Location.Contains(FeedConstants.MaestroManagedInternalFeedPrefix))
