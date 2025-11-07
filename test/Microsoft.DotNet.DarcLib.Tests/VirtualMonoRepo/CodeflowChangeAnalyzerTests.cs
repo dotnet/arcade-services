@@ -149,6 +149,13 @@ public class CodeflowChangeAnalyzerTests
             @@ -21 +21 @@
             -    "Microsoft.DotNet.Arcade.Sdk": "10.0.0-beta.25304.106"
             +    "Microsoft.DotNet.Arcade.Sdk": "10.0.0-beta.25306.103"
+            diff --git a/NuGet.config b/NuGet.config
+            index f515bb267..05aec5aa5 100644
+            --- a/NuGet.config
+            +++ b/NuGet.config
+            @@ -9,7 +9,7 @@
+            -    <add key="darc-pub-dotnet-dotnet-50d7970" value="https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-dotnet-50d79701/nuget/v3/index.json" />
+            +    <add key="darc-pub-dotnet-dotnet-44c449a" value="https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-dotnet-44c449ac/nuget/v3/index.json" />
             """;
 
         SetChangedFiles(changedFiles);
@@ -256,7 +263,8 @@ public class CodeflowChangeAnalyzerTests
             channels: [],
             assets:
             [
-                new Asset(1, 270662, true, "Microsoft.DotNet.Arcade.Sdk", "10.0.0-beta.25304.106", null),
+                new Asset(1, 270662, true, "Microsoft.DotNet.Arcade.Sdk", "10.0.0-beta.25304.106",
+                    locations: [new(100, LocationType.NugetFeed, "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-dotnet-50d79701/nuget/v3/index.json")]),
             ],
             dependencies: [],
             incoherencies: [])
@@ -274,7 +282,8 @@ public class CodeflowChangeAnalyzerTests
             channels: [],
             assets:
             [
-                new Asset(2, 271018, true, "Microsoft.DotNet.Arcade.Sdk", "10.0.0-beta.25306.103", null),
+                new Asset(2, 271018, true, "Microsoft.DotNet.Arcade.Sdk", "10.0.0-beta.25306.103",
+                    locations: [new(100, LocationType.NugetFeed, "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-dotnet-44c449ac/nuget/v3/index.json")]),
             ],
             dependencies: [],
             incoherencies: [])
