@@ -363,8 +363,9 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
     private static async Task VerifyCodeFlowCheck(PullRequest pr, string targetRepoName, bool expectSucceeded)
     {
         Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepoName);
-        List<CheckRun> checks = await WaitForPullRequestMaestroChecksAsync(pr.Url, pr.Head.Ref, repo.Id);
+        List<CheckRun> checks = await WaitForPullRequestMaestroChecksAsync(pr.Url, pr.Head.Ref, repo.Id, attempts: 10);
 
+        // Some checks may appear sooner than other, so we wait until the Codeflow verification check completes
         var stopwatch = Stopwatch.StartNew();
         while (!checks.Any(c => c.Name.Contains("Codeflow verification") && c.Conclusion != null)
             && stopwatch.Elapsed < TimeSpan.FromMinutes(2))
