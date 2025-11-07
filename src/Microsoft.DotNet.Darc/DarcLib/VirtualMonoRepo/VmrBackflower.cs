@@ -487,7 +487,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         Backflow previousFlow = previousFlows.LastBackFlow
             ?? throw new DarcException("No more backflows found to recreate");
 
-        for (int i = 1; i <= depth; i++)
+        for (int i = 1; i < depth; i++)
         {
             var previousFlowSha = await _localGitClient.BlameLineAsync(
                 targetRepo.Path / VersionFiles.VersionDetailsXml,
