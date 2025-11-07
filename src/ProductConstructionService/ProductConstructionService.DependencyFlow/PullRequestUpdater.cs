@@ -1643,7 +1643,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 str.ToString(),
                 CommentType.Information);
             // Post the collected comments right away so they don't end up in the new PR if we create one
-            await _pullRequestCommenter.PostCollectedCommentsAsync(prUrl, sourceRepo, []);
+            var (targetRepo, _) = await GetTargetAsync();
+            await _pullRequestCommenter.PostCollectedCommentsAsync(prUrl, targetRepo, []);
             _commentCollector.Reset();
         }
     }
