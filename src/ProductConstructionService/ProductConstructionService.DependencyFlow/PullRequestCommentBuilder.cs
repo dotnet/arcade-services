@@ -269,7 +269,15 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
 
         foreach (UnixPath filePath in conflictedFiles)
         {
-            string relativeFilePath = filePath.ToString();
+            string filePathString = filePath.ToString();
+            
+            // For forward flow, only include files under the repository source directory
+            if (subscription.IsForwardFlow() && !filePathString.StartsWith(srcDir + "/"))
+            {
+                continue;
+            }
+
+            string relativeFilePath = filePathString;
             if (subscription.IsForwardFlow())
             {
                 relativeFilePath = relativeFilePath.Length > srcDir.Length + 1 ? relativeFilePath.Substring(srcDir.Length + 1) : relativeFilePath;
