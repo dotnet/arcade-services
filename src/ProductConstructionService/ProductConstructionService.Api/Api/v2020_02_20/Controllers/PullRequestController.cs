@@ -210,9 +210,23 @@ public partial class PullRequestController : ControllerBase
         string subscriptionId,
         Maestro.Data.Models.Subscription? subscription)
     {
+        string? org = null;
+        string? repoName = null;
+        if (subscription != null && GitRepoUrlUtils.ParseTypeFromUri(subscription.TargetRepository) == GitRepoType.AzureDevOps)
+        {
+            try
+            {
+                (repoName, org) = GitRepoUrlUtils.GetRepoNameAndOwner(subscription.TargetRepository);
+            }
+            catch
+            {
+                // Repos which do not conform to usual naming will not be handled
+            }
+        }
+
         return new TrackedPullRequest(
             subscriptionId,
-            pr.Url,
+            TurnApiUrlToWebsite(pr.Url, org, repoName),
             subscription?.Channel != null ? new Channel(subscription.Channel) : null,
             subscription?.TargetBranch,
             subscription?.SourceEnabled ?? false,
