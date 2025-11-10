@@ -17,8 +17,6 @@ internal abstract class Operation(
     GitHubClient ghClient,
     IProductConstructionServiceApi localPcsApi)
 {
-    protected IProductConstructionServiceApi LocalPcsApi => localPcsApi;
-    
     protected const string MaestroAuthTestOrgName = "maestro-auth-test";
     protected const string VmrForkRepoName = "dotnet";
     protected const string VmrForkUri = $"https://github.com/{MaestroAuthTestOrgName}/{VmrForkRepoName}";

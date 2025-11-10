@@ -24,6 +24,8 @@ internal class ReproOperation(
         ILogger<ReproOperation> logger)
     : Operation(logger, ghClient, localPcsApi)
 {
+    private readonly IProductConstructionServiceApi _localPcsApi = localPcsApi;
+
     internal override async Task RunAsync()
     {
         await darcProcessManager.InitializeAsync();
@@ -245,7 +247,7 @@ internal class ReproOperation(
                     Value = flag.Value
                 };
                 
-                await LocalPcsApi.FeatureFlags.SetFeatureFlagAsync(request);
+                await _localPcsApi.FeatureFlags.SetFeatureFlagAsync(request);
                 logger.LogInformation("Successfully copied feature flag {flagName}", flag.FlagName);
             }
         }
