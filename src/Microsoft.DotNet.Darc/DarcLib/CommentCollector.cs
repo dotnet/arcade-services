@@ -18,7 +18,8 @@ public interface ICommentCollector
 public enum CommentType
 {
     Information,
-    Warning
+    Warning,
+    Caution,
 }
 
 public class CommentCollector : ICommentCollector
