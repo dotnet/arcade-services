@@ -212,7 +212,8 @@ public partial class PullRequestController : ControllerBase
     {
         string? org = null;
         string? repoName = null;
-        if (subscription != null && GitRepoUrlUtils.ParseTypeFromUri(subscription.TargetRepository) == GitRepoType.AzureDevOps)
+        // Only extract org/repoName for Azure DevOps PRs
+        if (subscription != null && AzdoApiPrUrlRegex().IsMatch(pr.Url))
         {
             try
             {
