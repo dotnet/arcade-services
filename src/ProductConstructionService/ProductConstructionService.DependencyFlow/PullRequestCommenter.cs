@@ -63,6 +63,7 @@ internal class PullRequestCommenter : IPullRequestCommenter
             {
                 CommentType.Warning => "> [!IMPORTANT]",
                 CommentType.Information => "> [!NOTE]",
+                CommentType.Caution => "> [!CAUTION]",
                 _ => throw new ArgumentOutOfRangeException($"Comment type {comment.commentType} is not supported")
             };
 

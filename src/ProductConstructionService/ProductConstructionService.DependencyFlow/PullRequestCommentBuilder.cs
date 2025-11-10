@@ -116,6 +116,7 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         string prHeadBranch)
     {
         StringBuilder comment = new();
+        comment.AppendLine("# 🛑 Conflict detected");
         comment.Append($"A conflict was detected when trying to update this PR with changes from ");
         comment.Append(GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha));
         comment.AppendLine(".");
