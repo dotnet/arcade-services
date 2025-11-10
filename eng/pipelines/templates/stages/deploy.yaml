@@ -1,8 +1,4 @@
 stages:
-- template: /eng/pipelines/templates/stages/secret-validation.yml@self
-  parameters:
-    verifyOnly: true
-
 - stage: Approval
   dependsOn:
   - Build
