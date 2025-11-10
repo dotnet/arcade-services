@@ -3,14 +3,18 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 using ProductConstructionService.Cli.Operations;
+using ProductConstructionService.Common;
 
 namespace ProductConstructionService.Cli.Options;
 internal abstract class Options
 {
     public virtual Task<IServiceCollection> RegisterServices(IServiceCollection services)
     {
-        services.AddLogging(logging => logging.AddConsole());
+        services.AddLogging(b => b
+            .AddConsole(o => o.FormatterName = CompactConsoleLoggerFormatter.FormatterName)
+            .AddConsoleFormatter<CompactConsoleLoggerFormatter, SimpleConsoleFormatterOptions>());
         return Task.FromResult(services);
     }
 
