@@ -63,6 +63,7 @@ internal static class Program
                         {
                             switch (comment.commentType)
                             {
+                                case CommentType.Caution:
                                 case CommentType.Warning:
                                     logger.LogWarning(comment.Text);
                                     break;

@@ -5,6 +5,7 @@ using AwesomeAssertions;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
+using ProductConstructionService.ScenarioTests.Helpers;
 
 namespace ProductConstructionService.ScenarioTests;
 

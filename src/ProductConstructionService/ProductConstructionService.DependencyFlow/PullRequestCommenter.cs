@@ -31,7 +31,7 @@ internal class PullRequestCommenter : IPullRequestCommenter
     private readonly ICommentCollector _commentService;
     private readonly ILogger<PullRequestCommenter> _logger;
 
-    private const string HelpLine = $"> 💡 You may consult the [FAQ]({PullRequestBuilder.CodeFlowPrFaqUri}) for more information or tag **\\@dotnet/prodconsvcs** for assistance.";
+    private const string HelpLine = $"> 💡 You may consult the [FAQ]({PullRequestBuilder.CodeFlowPrFaqUri}) for more information or tag **<b>@</b>dotnet/prodconsvcs** for assistance.";
 
     public PullRequestCommenter(
         IRemoteFactory remoteFactory,
@@ -63,6 +63,7 @@ internal class PullRequestCommenter : IPullRequestCommenter
             {
                 CommentType.Warning => "> [!IMPORTANT]",
                 CommentType.Information => "> [!NOTE]",
+                CommentType.Caution => "> [!CAUTION]",
                 _ => throw new ArgumentOutOfRangeException($"Comment type {comment.commentType} is not supported")
             };
 

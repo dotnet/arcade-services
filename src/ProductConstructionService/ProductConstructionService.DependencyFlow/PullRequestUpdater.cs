@@ -1236,11 +1236,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     subscription,
                     codeFlowRes.ConflictedFiles,
                     build),
-                CommentType.Warning);
+                CommentType.Caution);
         }
     }
 
-    private async Task<string?> GetPreviousSourceSha(IRemote remote, SubscriptionDTO subscription)
+    private static async Task<string?> GetPreviousSourceSha(IRemote remote, SubscriptionDTO subscription)
         => subscription.IsForwardFlow()
             ? (await remote.GetSourceManifestAsync(
                     subscription.TargetRepository,
@@ -1543,7 +1543,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 subscription,
                 pr,
                 prInfo.HeadBranch),
-            CommentType.Warning);
+            CommentType.Caution);
 
         pr.MergeState = InProgressPullRequestState.Conflict;
         pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
@@ -1746,7 +1746,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 subscription,
                 codeFlowResult.ConflictedFiles,
                 prHeadBranch),
-            CommentType.Warning);
+            CommentType.Caution);
 
         // We know for sure that we will fail the codeflow checks (codeflow metadata will be expected to match the new build)
         // So we trigger the evaluation right away

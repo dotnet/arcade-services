@@ -6,7 +6,7 @@ using NUnit.Framework;
 using NUnit.Framework.Internal;
 using NUnit.Framework.Legacy;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
-using ProductConstructionService.ScenarioTests.ObjectHelpers;
+using ProductConstructionService.ScenarioTests.Helpers;
 
 namespace ProductConstructionService.ScenarioTests;
 

@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using NUnit.Framework;
 
-namespace ProductConstructionService.ScenarioTests;
+namespace ProductConstructionService.ScenarioTests.Helpers;
 
 public static class TestHelpers
 {

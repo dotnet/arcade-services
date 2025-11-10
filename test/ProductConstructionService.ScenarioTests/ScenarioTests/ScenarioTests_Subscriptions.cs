@@ -6,7 +6,7 @@ using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.Darc.Helpers;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
-using ProductConstructionService.ScenarioTests.ObjectHelpers;
+using ProductConstructionService.ScenarioTests.Helpers;
 
 namespace ProductConstructionService.ScenarioTests;
 

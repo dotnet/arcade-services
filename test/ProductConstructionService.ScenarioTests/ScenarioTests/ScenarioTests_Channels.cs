@@ -3,6 +3,7 @@
 
 using AwesomeAssertions;
 using NUnit.Framework;
+using ProductConstructionService.ScenarioTests.Helpers;
 
 namespace ProductConstructionService.ScenarioTests;
 
