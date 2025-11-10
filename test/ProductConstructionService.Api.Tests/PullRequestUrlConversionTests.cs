@@ -10,16 +10,33 @@ namespace ProductConstructionService.Api.Tests;
 [TestFixture]
 public class PullRequestUrlConversionTests
 {
+    private static MethodInfo? _turnApiUrlToWebsiteMethod;
+
+    [SetUp]
+    public void Setup()
+    {
+        // Use reflection to get the private static method TurnApiUrlToWebsite
+        _turnApiUrlToWebsiteMethod = typeof(PullRequestController).GetMethod("TurnApiUrlToWebsite", BindingFlags.NonPublic | BindingFlags.Static);
+        _turnApiUrlToWebsiteMethod.Should().NotBeNull("TurnApiUrlToWebsite method should exist");
+    }
+
+    /// <summary>
+    /// Helper method to invoke TurnApiUrlToWebsite with named parameters for clarity.
+    /// </summary>
+    /// <param name="url">The PR URL to convert</param>
+    /// <param name="orgName">Optional organization name (used for Azure DevOps)</param>
+    /// <param name="repoName">Optional repository name (used for Azure DevOps)</param>
+    private static string? InvokeTurnApiUrlToWebsite(string url, string? orgName = null, string? repoName = null)
+    {
+        return _turnApiUrlToWebsiteMethod!.Invoke(null, [url, orgName, repoName]) as string;
+    }
+
     [TestCase("https://api.github.com/repos/dotnet/dotnet/pulls/3205", "https://github.com/dotnet/dotnet/pull/3205")]
     [TestCase("https://api.github.com/repos/dotnet/runtime/pulls/12345", "https://github.com/dotnet/runtime/pull/12345")]
     [TestCase("https://api.github.com/repos/microsoft/CsWinRT/pulls/999", "https://github.com/microsoft/CsWinRT/pull/999")]
     public void TurnApiUrlToWebsite_ConvertsGitHubApiUrlsToWebUrls(string apiUrl, string expectedWebUrl)
     {
-        // Use reflection to call the private static method TurnApiUrlToWebsite
-        var method = typeof(PullRequestController).GetMethod("TurnApiUrlToWebsite", BindingFlags.NonPublic | BindingFlags.Static);
-        method.Should().NotBeNull("TurnApiUrlToWebsite method should exist");
-
-        var result = method!.Invoke(null, [apiUrl, null, null]) as string;
+        var result = InvokeTurnApiUrlToWebsite(apiUrl);
         result.Should().Be(expectedWebUrl);
     }
 
@@ -27,11 +44,7 @@ public class PullRequestUrlConversionTests
               "https://dev.azure.com/dnceng/internal/_git/test-repo-guid/pullrequest/123")]
     public void TurnApiUrlToWebsite_ConvertsAzureDevOpsApiUrlsToWebUrls(string apiUrl, string expectedWebUrl)
     {
-        // Use reflection to call the private static method TurnApiUrlToWebsite
-        var method = typeof(PullRequestController).GetMethod("TurnApiUrlToWebsite", BindingFlags.NonPublic | BindingFlags.Static);
-        method.Should().NotBeNull("TurnApiUrlToWebsite method should exist");
-
-        var result = method!.Invoke(null, [apiUrl, null, null]) as string;
+        var result = InvokeTurnApiUrlToWebsite(apiUrl);
         result.Should().Be(expectedWebUrl);
     }
 
@@ -40,11 +53,7 @@ public class PullRequestUrlConversionTests
     [TestCase("not-a-url")]
     public void TurnApiUrlToWebsite_ReturnsOriginalUrlWhenNotApiUrl(string url)
     {
-        // Use reflection to call the private static method TurnApiUrlToWebsite
-        var method = typeof(PullRequestController).GetMethod("TurnApiUrlToWebsite", BindingFlags.NonPublic | BindingFlags.Static);
-        method.Should().NotBeNull("TurnApiUrlToWebsite method should exist");
-
-        var result = method!.Invoke(null, [url, null, null]) as string;
+        var result = InvokeTurnApiUrlToWebsite(url);
         result.Should().Be(url);
     }
 }
