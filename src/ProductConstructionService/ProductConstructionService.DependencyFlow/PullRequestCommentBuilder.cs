@@ -279,7 +279,7 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
                     continue;
                 }
 
-                relativeFilePath = relativeFilePath.Length > srcDir.Length + 1 ? relativeFilePath.Substring(srcDir.Length + 1) : relativeFilePath;
+                relativeFilePath = relativeFilePath.Substring(srcDir.Length + 1);
             }
 
             var (fileUrlInVmr, fileUrlInRepo) = GetFileUrls(update, subscription, relativeFilePath, prHeadBranch);
