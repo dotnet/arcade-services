@@ -24,9 +24,6 @@ internal class ReproOperation(
         ILogger<ReproOperation> logger)
     : Operation(logger, ghClient, localPcsApi)
 {
-    private readonly IProductConstructionServiceApi _prodPcsApi = prodPcsApi;
-    private readonly IProductConstructionServiceApi _localPcsApi = localPcsApi;
-    
     internal override async Task RunAsync()
     {
         await darcProcessManager.InitializeAsync();
@@ -147,7 +144,7 @@ internal class ReproOperation(
 
         await darcProcessManager.AddBuildToChannelAsync(testBuild.Id, channelName, options.SkipCleanup);
 
-        await CopyFeatureFlagsAsync(subscription.Id, testSubscription.Value);
+        await CopyFeatureFlagsAsync(subscription.Id, Guid.Parse(testSubscription.Value));
 
         await TriggerSubscriptionAsync(testSubscription.Value);
 
@@ -214,7 +211,7 @@ internal class ReproOperation(
 
         await darcProcessManager.AddBuildToChannelAsync(testBuild.Id, channelName, options.SkipCleanup);
 
-        await CopyFeatureFlagsAsync(subscription.Id, testSubscription.Value);
+        await CopyFeatureFlagsAsync(subscription.Id, Guid.Parse(testSubscription.Value));
 
         await TriggerSubscriptionAsync(testSubscription.Value);
 
@@ -223,12 +220,12 @@ internal class ReproOperation(
         await DeleteDarcPRBranchAsync(targetRepoFork.Split('/').Last(), targetRepoTmpBranch.Value);
     }
 
-    private async Task CopyFeatureFlagsAsync(Guid sourceSubscriptionId, string targetSubscriptionId)
+    private async Task CopyFeatureFlagsAsync(Guid sourceSubscriptionId, Guid targetSubscriptionId)
     {
         try
         {
             logger.LogInformation("Fetching feature flags from production subscription {subscriptionId}", sourceSubscriptionId);
-            var featureFlags = await _prodPcsApi.FeatureFlags.GetFeatureFlagsAsync(sourceSubscriptionId);
+            var featureFlags = await prodPcsApi.FeatureFlags.GetFeatureFlagsAsync(sourceSubscriptionId);
             
             if (featureFlags?.Flags == null || featureFlags.Flags.Count == 0)
             {
@@ -242,13 +239,13 @@ internal class ReproOperation(
             {
                 logger.LogInformation("Copying feature flag {flagName} = {value}", flag.FlagName, flag.Value);
                 
-                var request = new Microsoft.DotNet.ProductConstructionService.Client.Models.SetFeatureFlagRequest(Guid.Parse(targetSubscriptionId))
+                var request = new Microsoft.DotNet.ProductConstructionService.Client.Models.SetFeatureFlagRequest(targetSubscriptionId)
                 {
                     FlagName = flag.FlagName,
                     Value = flag.Value
                 };
                 
-                await _localPcsApi.FeatureFlags.SetFeatureFlagAsync(request);
+                await LocalPcsApi.FeatureFlags.SetFeatureFlagAsync(request);
                 logger.LogInformation("Successfully copied feature flag {flagName}", flag.FlagName);
             }
         }
