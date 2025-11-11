@@ -1152,6 +1152,29 @@ internal abstract partial class ScenarioTestBase
         throw new ScenarioTestException($"No Maestro Merge Policy checks were found in the PR ({prUrl}) during the allotted time.");
     }
 
+    protected async Task WaitForFileContentInPullRequest(
+        string repoDir,
+        string targetRepoName,
+        string targetBranch,
+        string filePath,
+        string expectedContent,
+        int maxAttempts = 5)
+    {
+        using var _ = ChangeDirectory(repoDir);
+        for (int attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            var pr = await WaitForUpdatedPullRequestAsync(targetRepoName, targetBranch);
+            await CheckoutRemoteRefAsync(pr.Head.Ref);
+            var content = await File.ReadAllTextAsync(filePath);
+            if (content == expectedContent)
+            {
+                return;
+            }
+        }
+
+        throw new ScenarioTestException($"File {filePath} in branch {targetBranch} did not have expected content in PR.");
+    }
+
     protected static string GetTestChannelName([CallerMemberName] string testName = "")
     {
         return $"Test {testName} {Guid.NewGuid().ToString().Substring(0, 16)}";
