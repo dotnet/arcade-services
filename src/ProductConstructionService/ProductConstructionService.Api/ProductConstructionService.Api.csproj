@@ -26,7 +26,7 @@
     <PackageReference Include="Microsoft.AspNetCore.ApiVersioning.Swashbuckle" />
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers" />
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+
     <PackageReference Include="Microsoft.Identity.Web" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
     <PackageReference Include="Octokit.Webhooks.AspNetCore" />
