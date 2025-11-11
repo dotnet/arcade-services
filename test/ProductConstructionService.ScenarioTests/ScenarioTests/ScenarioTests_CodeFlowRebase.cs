@@ -132,14 +132,17 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             await AddBuildToChannelAsync(build.Id, channelName);
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
-            pr = await WaitForUpdatedPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
-
             // We verify the file got there + make a conflicting change for future
+            await WaitForFileContentInPullRequest(
+                vmrDir,
+                TestRepository.VmrTestRepoName,
+                targetBranchName,
+                newFileInVmrPath2,
+                "content #3 but from the repository");
+
             using (ChangeDirectory(vmrDir))
             {
                 await CheckoutRemoteRefAsync(pr.Head.Ref);
-                (await File.ReadAllTextAsync(newFileInVmrPath2)).Should().Be("content #3 but from the repository");
-
                 await ChangeAndPushAFile(
                     vmrDir,
                     newFileInVmrPath2,
@@ -298,11 +301,16 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             pr = await WaitForUpdatedPullRequestAsync(TestRepository.TestRepo1Name, targetBranchName);
 
             // We verify the file got there + make a conflicting change for future
+            await WaitForFileContentInPullRequest(
+                repoDir,
+                TestRepository.TestRepo1Name,
+                targetBranchName,
+                newFilePath2,
+                "content #3 but from the VMR");
+
             using (ChangeDirectory(repoDir))
             {
                 await CheckoutRemoteRefAsync(pr.Head.Ref);
-                (await File.ReadAllTextAsync(newFilePath2)).Should().Be("content #3 but from the VMR");
-
                 await ChangeAndPushAFile(
                     repoDir,
                     newFilePath2,
