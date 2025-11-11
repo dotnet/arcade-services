@@ -308,7 +308,6 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 newFilePath2,
                 "content #3 but from the VMR");
 
-            // We verify the file got there + make a conflicting change for future
             using (ChangeDirectory(repoDir))
             {
                 await CheckoutRemoteRefAsync(pr.Head.Ref);
