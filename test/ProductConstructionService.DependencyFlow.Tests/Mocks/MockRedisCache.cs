@@ -47,7 +47,11 @@ internal class MockRedisCache : IRedisCache
 
     public IAsyncEnumerable<string> GetKeysAsync(string pattern)
     {
-        return _data.Keys.ToAsyncEnumerable();
+#if NET10_0_OR_GREATER
+        return System.Linq.AsyncEnumerable.ToAsyncEnumerable(_data.Keys);
+#else
+        return System.Linq.AsyncEnumerable.ToAsyncEnumerable(_data.Keys);
+#endif
     }
 }
 
@@ -94,6 +98,6 @@ internal class MockRedisCache<T>
 
     public IAsyncEnumerable<string> GetKeysAsync(string pattern)
     {
-        return _data.Keys.ToAsyncEnumerable();
+        return AsyncEnumerable.ToAsyncEnumerable(_data.Keys);
     }
 }

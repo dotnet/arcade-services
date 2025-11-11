@@ -820,21 +820,22 @@ public class DependencyCoherencyTests
         AddDependency(repoADeps, depB.Name, "v42", depB.RepoUri, "commit5", pinned: false);
         RepoHasDependencies("repoA", "commit1", repoADeps);
 
-        RepoHadBuilds("repoB", "commit5", new List<Build>
-            {
+        RepoHadBuilds("repoB", "commit5",
+            [
                 CreateBuild("repoB", "commit5",
                 [
-                    ("depB", "v42", new string[] {
+                    ("depB", "v42",
+                    [
                         "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json",
                         "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
-                    } )
+                    ])
                 ], 13),
 
                 CreateBuild("repoB", "commit5",
                 [
                     ("depB", "v42", null )
                 ], 1)
-            });
+            ]);
 
         // Repo has no feeds
         RepositoryHasFeeds("repoA", "commit1", []);
@@ -874,20 +875,21 @@ public class DependencyCoherencyTests
         AddDependency(repoADeps, depB.Name, "v42", depB.RepoUri, "commit5", pinned: false);
         RepoHasDependencies("repoA", "commit1", repoADeps);
 
-        RepoHadBuilds("repoB", "commit5", new List<Build>
-            {
+        RepoHadBuilds("repoB", "commit5",
+            [
                 CreateBuild("repoB", "commit5",
                 [
                     ("depB", "v42", null )
                 ]),
                 CreateBuild("repoB", "commit5",
                 [
-                    ("depB", "v42", new string[] {
+                    ("depB", "v42",
+                    [
                         "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json",
-                        "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
-                    } )
+                        "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json",
+                    ])
                 ])
-            });
+            ]);
 
         List <DependencyUpdate> coherencyUpdates = await _resolver.GetRequiredCoherencyUpdatesAsync(existingDetails);
 
@@ -926,8 +928,8 @@ public class DependencyCoherencyTests
         AddDependency(repoADeps, depB.Name, "v42", depB.RepoUri, "commit5", pinned: false);
         RepoHasDependencies("repoA", "commit1", repoADeps);
 
-        RepoHadBuilds("repoB", "commit5", new List<Build>
-            {
+        RepoHadBuilds("repoB", "commit5",
+            [
                 CreateBuild("repoB", "commit5",
                 [
                     ("depB", "v42", new string[] {
@@ -942,7 +944,7 @@ public class DependencyCoherencyTests
                         "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
                     } )
                 ], 10)
-            });
+            ]);
 
         RepositoryHasFeeds("repoA", "commit1", ["https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json"]);
 
@@ -984,8 +986,8 @@ public class DependencyCoherencyTests
         RepoHasDependencies("repoA", "commit1", repoADeps);
 
         // Older build has matching feeds.
-        RepoHadBuilds("repoB", "commit5", new List<Build>
-            {
+        RepoHadBuilds("repoB", "commit5",
+            [
                 CreateBuild("repoB", "commit5",
                 [
                     ("depB", "v42", new string[] {
@@ -1000,7 +1002,7 @@ public class DependencyCoherencyTests
                         "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
                     } )
                 ], 11)
-            });
+            ]);
 
         RepositoryHasFeeds("repoA", "commit1", ["https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json"]);
 
@@ -1042,8 +1044,8 @@ public class DependencyCoherencyTests
         RepoHasDependencies("repoA", "commit1", repoADeps);
 
         // Older build has matching feeds.
-        RepoHadBuilds("repoB", "commit5", new List<Build>
-            {
+        RepoHadBuilds("repoB", "commit5",
+            [
                 CreateBuild("repoB", "commit5",
                 [
                     ("depB", "v42", new string[] {
@@ -1058,7 +1060,7 @@ public class DependencyCoherencyTests
                         "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
                     } )
                 ], 11)
-            });
+            ]);
 
         RepositoryHasFeeds("repoA", "commit1", ["https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json"]);
 
@@ -1128,8 +1130,8 @@ public class DependencyCoherencyTests
         AddDependency(repoADeps, depB.Name, "v42", depB.RepoUri, "commit5", pinned: false);
         RepoHasDependencies("repoA", "commit1", repoADeps);
 
-        RepoHadBuilds("repoB", "commit5", new List<Build>
-            {
+        RepoHadBuilds("repoB", "commit5",
+            [
                 CreateBuild("repoB", "commit5",
                 [
                     ("depB", "v42", new string[] {
@@ -1142,7 +1144,7 @@ public class DependencyCoherencyTests
                 [
                     ("depB", "v43", null )
                 ], 1)
-            });
+            ]);
 
         // Repo has no feeds
         RepositoryHasFeeds("repoA", "commit1", []);
@@ -1190,12 +1192,12 @@ public class DependencyCoherencyTests
         _remoteMock.Setup(m => m.GetDependenciesAsync(repo, commit, null, It.IsAny<UnixPath>())).ReturnsAsync(dependencies);
     }
 
-    private void RepoHadBuilds(string repo, string commit, IEnumerable<Build> builds)
+    private void RepoHadBuilds(string repo, string commit, IEnumerable<ProductConstructionService.Client.Models.Build> builds)
     {
         _barClientMock.Setup(m => m.GetBuildsAsync(repo, commit)).ReturnsAsync(builds);
     }
 
-    private Build CreateBuild(string repo, string commit,
+    private ProductConstructionService.Client.Models.Build CreateBuild(string repo, string commit,
         List<(string name, string version, string[] locations)> assets, int buildId = -1)
     {
         if (buildId == -1)
@@ -1211,7 +1213,7 @@ public class DependencyCoherencyTests
                 a.Item2,
                 a.Item3?.Select(location => new AssetLocation(GetRandomId(), LocationType.NugetFeed, location)).ToList()));
 
-        return new Build(buildId, DateTimeOffset.Now, 0, false, false, commit, null, buildAssets.ToList(), null, null)
+        return new(buildId, DateTimeOffset.Now, 0, false, false, commit, null, buildAssets.ToList(), null, null)
         {
             AzureDevOpsRepository = repo,
             GitHubRepository = repo
@@ -1224,8 +1226,8 @@ public class DependencyCoherencyTests
         List<(string name, string version, string[] locations)> assets,
         int buildId = -1)
     {
-        Build build = CreateBuild(repo, commit, assets, buildId);
-        _barClientMock.Setup(m => m.GetBuildsAsync(repo, commit)).ReturnsAsync(new List<Build> { build });
+        var build = CreateBuild(repo, commit, assets, buildId);
+        _barClientMock.Setup(m => m.GetBuildsAsync(repo, commit)).ReturnsAsync([build]);
     }
 
     private void RepositoryHasFeeds(string repo, string commit, string[] feeds)

@@ -79,7 +79,7 @@ internal class AddBuildToChannelOperation : Operation
     {
         try
         {
-            Build build = await _barClient.GetBuildAsync(_options.Id);
+            var build = await _barClient.GetBuildAsync(_options.Id);
             if (build == null)
             {
                 Console.WriteLine($"Could not find a build with id '{_options.Id}'.");
@@ -220,7 +220,7 @@ internal class AddBuildToChannelOperation : Operation
         }
     }
 
-    private async Task<int> PromoteBuildAsync(Build build, List<Channel> targetChannels, IBarApiClient barClient)
+    private async Task<int> PromoteBuildAsync(ProductConstructionService.Client.Models.Build build, List<Channel> targetChannels, IBarApiClient barClient)
     {
         if (_options.SkipAssetsPublishing)
         {
@@ -385,7 +385,7 @@ internal class AddBuildToChannelOperation : Operation
     /// by specifying both, branch & SHA, on the command line.
     /// </summary>
     /// <param name="build">Build for which the Arcade SDK dependency build will be inferred.</param>
-    private async Task<(string sourceBranch, string sourceVersion)> GetSourceBranchInfoAsync(Build build)
+    private async Task<(string sourceBranch, string sourceVersion)> GetSourceBranchInfoAsync(Microsoft.DotNet.ProductConstructionService.Client.Models.Build build)
     {
         bool hasSourceBranch = !string.IsNullOrEmpty(_options.SourceBranch);
         bool hasSourceSHA = !string.IsNullOrEmpty(_options.SourceSHA);
@@ -444,7 +444,7 @@ internal class AddBuildToChannelOperation : Operation
             return (null, null);
         }
 
-        Build sourceBuildArcadeSDKDepBuild = await _barClient.GetBuildAsync(sourceBuildArcadeSDKDepAsset.BuildId);
+        var sourceBuildArcadeSDKDepBuild = await _barClient.GetBuildAsync(sourceBuildArcadeSDKDepAsset.BuildId);
 
         if (sourceBuildArcadeSDKDepBuild == null)
         {

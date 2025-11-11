@@ -38,7 +38,7 @@ internal class UpdateBuildOperation : Operation
 
         try
         {
-            Build updatedBuild = await _barClient.UpdateBuildAsync(_options.Id, new BuildUpdate { Released = _options.Released });
+            var updatedBuild = await _barClient.UpdateBuildAsync(_options.Id, new BuildUpdate { Released = _options.Released });
 
             Console.WriteLine($"Updated build {_options.Id} with new information.");
             Console.WriteLine(UxHelpers.GetTextBuildDescription(updatedBuild));
