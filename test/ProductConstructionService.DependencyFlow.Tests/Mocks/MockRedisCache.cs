@@ -50,7 +50,7 @@ internal class MockRedisCache : IRedisCache
 #if NET10_0_OR_GREATER
         return System.Linq.AsyncEnumerable.ToAsyncEnumerable(_data.Keys);
 #else
-        return System.Linq.AsyncEnumerable.ToAsyncEnumerable(_data.Keys);
+        return System.Linq.Async.ToAsyncEnumerable(_data.Keys);
 #endif
     }
 }
