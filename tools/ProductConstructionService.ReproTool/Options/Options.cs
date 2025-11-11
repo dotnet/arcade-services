@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using CommandLine;
+using Maestro.Common;
 using Maestro.Data;
 using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
@@ -16,7 +17,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Console;
 using Octokit;
-using ProductConstructionService.Common;
 using ProductConstructionService.ReproTool.Operations;
 using GitHubClient = Octokit.GitHubClient;
 
