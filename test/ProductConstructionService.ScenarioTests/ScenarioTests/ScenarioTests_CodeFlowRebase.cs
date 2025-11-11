@@ -132,14 +132,17 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             await AddBuildToChannelAsync(build.Id, channelName);
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
-            pr = await WaitForUpdatedPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
-
             // We verify the file got there + make a conflicting change for future
+            await WaitForFileContentInPullRequest(
+                vmrDir,
+                TestRepository.VmrTestRepoName,
+                targetBranchName,
+                newFileInVmrPath2,
+                "content #3 but from the repository");
+
             using (ChangeDirectory(vmrDir))
             {
                 await CheckoutRemoteRefAsync(pr.Head.Ref);
-                (await File.ReadAllTextAsync(newFileInVmrPath2)).Should().Be("content #3 but from the repository");
-
                 await ChangeAndPushAFile(
                     vmrDir,
                     newFileInVmrPath2,
@@ -298,11 +301,17 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             pr = await WaitForUpdatedPullRequestAsync(TestRepository.TestRepo1Name, targetBranchName);
 
             // We verify the file got there + make a conflicting change for future
+            await WaitForFileContentInPullRequest(
+                repoDir,
+                TestRepository.TestRepo1Name,
+                targetBranchName,
+                newFilePath2,
+                "content #3 but from the VMR");
+
+            // We verify the file got there + make a conflicting change for future
             using (ChangeDirectory(repoDir))
             {
                 await CheckoutRemoteRefAsync(pr.Head.Ref);
-                (await File.ReadAllTextAsync(newFilePath2)).Should().Be("content #3 but from the VMR");
-
                 await ChangeAndPushAFile(
                     repoDir,
                     newFilePath2,
@@ -402,5 +411,28 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             await GitCommitAsync(commitMessage);
             await RunGitAsync("push", "origin");
         }
+    }
+
+    private async Task WaitForFileContentInPullRequest(
+        string repoDir,
+        string targetRepoName,
+        string targetBranch,
+        string filePath,
+        string expectedContent,
+        int maxAttempts = 5)
+    {
+        using var _ = ChangeDirectory(repoDir);
+        for (int attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            var pr = await WaitForUpdatedPullRequestAsync(targetRepoName, targetBranch);
+            await CheckoutRemoteRefAsync(pr.Head.Ref);
+            var content = await File.ReadAllTextAsync(filePath);
+            if (content == expectedContent)
+            {
+                return;
+            }
+        }
+
+        throw new ScenarioTestException($"File {filePath} in branch {targetBranch} did not have expected content in PR.");
     }
 }
