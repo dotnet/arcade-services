@@ -18,6 +18,7 @@ using NuGet.Configuration;
 using NUnit.Framework;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using ProductConstructionService.ScenarioTests.Helpers;
 
 [assembly: Parallelizable(ParallelScope.Fixtures)]
 
