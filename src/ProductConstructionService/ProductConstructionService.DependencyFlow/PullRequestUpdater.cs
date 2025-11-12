@@ -325,13 +325,17 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 {
                     // Policies evaluated successfully and the PR was merged just now
                     case MergePolicyCheckResult.Merged:
-                        return await HandleMergedOrClosedPr(
-                            remote,
-                            prInfo,
-                            pr,
+                        await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
+                        await AddDependencyFlowEventsAsync(
+                            pr.ContainedSubscriptions,
+                            DependencyFlowEventType.Completed,
                             DependencyFlowEventReason.AutomaticallyMerged,
                             mergePolicyResult,
-                            isCodeFlow);
+                            pr.Url);
+
+                        // If the PR we just merged was in conflict with an update we previously tried to apply, we shouldn't delete the reminder for the update
+                        await ClearAllStateAsync(isCodeFlow, clearPendingUpdates: pr.MergeState == InProgressPullRequestState.Mergeable);
+                        return (PullRequestStatus.Completed, prInfo);
 
                     case MergePolicyCheckResult.FailedPolicies:
                         await TagSourceRepositoryGitHubContactsIfPossibleAsync(pr);
@@ -372,22 +376,41 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 }
 
             case PrStatus.Merged:
-                return await HandleMergedOrClosedPr(
-                    remote,
-                    prInfo,
-                    pr,
-                    DependencyFlowEventReason.ManuallyMerged,
-                    pr.MergePolicyResult,
-                    isCodeFlow);
+                await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
+                if (pr.CodeFlowDirection == CodeFlowDirection.ForwardFlow && !string.IsNullOrEmpty(pr.PreviousSourceSha))
+                {
+                    await TagForwardFlownPRs(pr.ContainedSubscriptions.Single().SourceRepo, pr.PreviousSourceSha, pr.SourceSha);
+                }
+                goto case PrStatus.Closed;
 
             case PrStatus.Closed:
-                return await HandleMergedOrClosedPr(
-                    remote,
-                    prInfo,
-                    pr,
-                    DependencyFlowEventReason.ManuallyClosed,
+                DependencyFlowEventReason reason = prInfo.Status == PrStatus.Merged
+                    ? DependencyFlowEventReason.ManuallyMerged
+                    : DependencyFlowEventReason.ManuallyClosed;
+
+                await AddDependencyFlowEventsAsync(
+                    pr.ContainedSubscriptions,
+                    DependencyFlowEventType.Completed,
+                    reason,
                     pr.MergePolicyResult,
-                    isCodeFlow);
+                    pr.Url);
+
+                _logger.LogInformation("PR {url} has been manually {action}. Stopping tracking it", pr.Url, prInfo.Status.ToString().ToLowerInvariant());
+
+                await ClearAllStateAsync(isCodeFlow, clearPendingUpdates: pr.MergeState == InProgressPullRequestState.Mergeable);
+
+                // Also try to clean up the PR branch.
+                try
+                {
+                    _logger.LogInformation("Trying to clean up the branch for pull request {url}", pr.Url);
+                    await remote.DeletePullRequestBranchAsync(pr.Url);
+                }
+                catch (DarcException)
+                {
+                    _logger.LogInformation("Failed to delete branch associated with pull request {url}", pr.Url);
+                }
+
+                return (PullRequestStatus.Completed, prInfo);
 
             default:
                 throw new NotImplementedException($"Unknown PR status '{prInfo.Status}'");
@@ -1565,52 +1588,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         pr.BlockedFromFutureUpdates = true;
         await _pullRequestState.SetAsync(pr);
-    }
-
-    private async Task<(PullRequestStatus Status, PullRequest PrInfo)> HandleMergedOrClosedPr(
-        IRemote remote,
-        PullRequest prInfo,
-        InProgressPullRequest pr,
-        DependencyFlowEventReason reason,
-        MergePolicyCheckResult mergePolicyResult,
-        bool isCodeflow)
-    {
-        if (reason == DependencyFlowEventReason.ManuallyMerged || reason == DependencyFlowEventReason.AutomaticallyMerged)
-        {
-            if (pr.CodeFlowDirection == CodeFlowDirection.ForwardFlow && !string.IsNullOrEmpty(pr.PreviousSourceSha))
-            {
-                await TagForwardFlownPRs(pr.ContainedSubscriptions.Single().SourceRepo, pr.PreviousSourceSha, pr.SourceSha);
-            }
-
-            await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
-            await AddDependencyFlowEventsAsync(
-                pr.ContainedSubscriptions,
-                DependencyFlowEventType.Completed,
-                reason,
-                mergePolicyResult,
-                pr.Url);
-        }
-
-        _logger.LogInformation("PR {url} has been {how} {action}. Stopping tracking it",
-            pr.Url,
-            reason == DependencyFlowEventReason.AutomaticallyMerged ? "automatically" : "manually",
-            prInfo.Status.ToString().ToLowerInvariant());
-
-        // If the PR we just merged was in conflict with an update we previously tried to apply, we shouldn't delete the reminder for the update
-        await ClearAllStateAsync(isCodeflow, clearPendingUpdates: pr.MergeState == InProgressPullRequestState.Mergeable);
-
-        // Also try to clean up the PR branch.
-        try
-        {
-            _logger.LogInformation("Trying to clean up the branch for pull request {url}", pr.Url);
-            await remote.DeletePullRequestBranchAsync(pr.Url);
-        }
-        catch (DarcException)
-        {
-            _logger.LogInformation("Failed to delete branch associated with pull request {url}", pr.Url);
-        }
-
-        return (PullRequestStatus.Completed, prInfo);
     }
 
     private async Task TagForwardFlownPRs(string sourceRepo, string previousSourceRepoSha, string newSourceRepoSha)
