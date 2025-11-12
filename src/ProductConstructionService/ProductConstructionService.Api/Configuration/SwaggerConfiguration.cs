@@ -67,7 +67,7 @@ public static class SwaggerConfiguration
                         if (paginated != null)
                         {
                             // Add an extension that tells the client generator that this operation is paged with first,prev,next,last urls in the Link header.
-                            op.Extensions["x-ms-paginated"] = new PaginatedExtension
+                            op.Extensions?["x-ms-paginated"] = new PaginatedExtension
                             {
                                 PageParameterName = paginated.PageParameterName,
                                 PageSizeParameterName = paginated.PageSizeParameterName

@@ -10,7 +10,7 @@ internal class NameRequestBodyFilter : IRequestBodyFilter
 {
     public void Apply(OpenApiRequestBody requestBody, RequestBodyFilterContext context)
     {
-        requestBody.Extensions["x-name"] = new RequestBodyNameExtension
+        requestBody.Extensions?["x-name"] = new RequestBodyNameExtension
         {
             Name = context.BodyParameterDescription.Name,
         };
