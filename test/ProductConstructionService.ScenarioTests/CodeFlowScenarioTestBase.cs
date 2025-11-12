@@ -20,8 +20,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string targetRepoName,
         string targetBranch,
         string[] testFiles,
-        Dictionary<string, string> testFilePatches,
-        PullRequestCleanupOperation cleanupOperation = PullRequestCleanupOperation.Close)
+        Dictionary<string, string> testFilePatches)
     {
         // When we expect updates from multiple repos (batchable subscriptions), we need to wait until the PR gets updated with the second repository after it is created
         // Otherwise it might try to validate the contents before all updates are in place
@@ -29,7 +28,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
             ? await WaitForUpdatedPullRequestAsync(targetRepoName, targetBranch)
             : await WaitForPullRequestAsync(targetRepoName, targetBranch);
 
-        await using (CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, targetRepoName, pullRequest, cleanupOperation))
+        await using (CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, targetRepoName, pullRequest))
         {
             IReadOnlyList<PullRequestFile> files = await GitHubApi.PullRequest.Files(
                 TestParameters.GitHubTestOrg,
@@ -195,10 +194,9 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string targetRepo,
         string targetBranch,
         string partialComment,
-        ItemStateFilter prState = ItemStateFilter.Open,
         int attempts = 40)
     {
-        PullRequest pullRequest = await WaitForPullRequestAsync(targetRepo, targetBranch, prState);
+        PullRequest pullRequest = await WaitForPullRequestAsync(targetRepo, targetBranch);
 
         while (attempts-- > 0)
         {
