@@ -63,7 +63,7 @@ RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
 RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/SubscriptionTriggerer /p:UseAppHost=false /p:Version=${PACKAGE_VERSION}
 
 # Copy everything to the final image
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine3.20
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine3.22
 RUN apk add --no-cache git icu-libs
 RUN git config --global user.email "dotnet-maestro[bot]@users.noreply.github.com" \
  && git config --global user.name "dotnet-maestro[bot]" \
