@@ -115,10 +115,9 @@ stages:
       artifact: ProductConstructionService.Cli
 
     - task: UseDotNet@2
-      displayName: Install .NET 10.0
+      displayName: Install .NET
       inputs:
-        version: 10.0.x
-        packageType: runtime
+        useGlobalJson: true
 
     - task: NuGetToolInstaller@1
       displayName: Use NuGet
