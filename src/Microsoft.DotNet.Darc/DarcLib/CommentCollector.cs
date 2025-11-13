@@ -11,8 +11,6 @@ public interface ICommentCollector
     void AddComment(string comment, CommentType commentType);
 
     IReadOnlyList<(string Text, CommentType commentType)> GetComments();
-
-    void Reset();
 }
 
 public enum CommentType
@@ -37,10 +35,5 @@ public class CommentCollector : ICommentCollector
     public IReadOnlyList<(string Text, CommentType commentType)> GetComments()
     {
         return _comments.AsReadOnly();
-    }
-
-    public void Reset()
-    {
-        _comments.Clear();
     }
 }

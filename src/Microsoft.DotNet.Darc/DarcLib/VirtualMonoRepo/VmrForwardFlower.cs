@@ -388,9 +388,9 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         result.ThrowIfFailed($"Failed to get the list of commits between {lastCommit} and {currentCommit} in {sourceRepo.Path}");
 
         var commitMessages = result.GetOutputLines();
-        var prInfo = GitRepoUtils.ExtractPullRequestUrisFromCommitTitles(commitMessages, repoUri);
+        var prsInfo = GitRepoUtils.ExtractPullRequestUrisFromCommitTitles(commitMessages, repoUri);
 
-        if (prInfo.Count == 0)
+        if (prsInfo.Count == 0)
         {
             _logger.LogInformation("No PR numbers were found in the commit messages between {lastCommit} and {currentCommit}", lastCommit, currentCommit);
             return;
@@ -398,14 +398,11 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         else
         {
             StringBuilder str = new("PRs from original repository included in this codeflow update:");
-            // We're using this format so we don't tag the original PR on every update.
-            // We do that after the PR has been merged
-            string format = $"- `{{0}} ({{1}})`";
-            foreach (var pr in prInfo.Distinct())
+            foreach (var prInfo in prsInfo.Distinct())
             {
+                string format = $"- {{0}}";
                 str.AppendLine();
-                str.AppendFormat(format, pr.title, pr.prUri);
-
+                str.AppendFormat(format, prInfo.prUri);
             }
 
             _commentCollector.AddComment(str.ToString(), CommentType.Information);

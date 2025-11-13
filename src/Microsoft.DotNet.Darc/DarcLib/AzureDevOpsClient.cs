@@ -1853,61 +1853,6 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         }
     }
 
-    public async Task<IReadOnlyList<string>> GetCommitTitlesForRange(string repoUri, string fromSha, string toSha)
-    {
-        (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
-
-        try
-        {
-            // Use the same API that powers the branchCompare UI feature in Azure DevOps
-            // This gets commits that are in targetVersion but not in baseVersion (equivalent to git log baseVersion..targetVersion)
-            JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
-                HttpMethod.Post,
-                accountName,
-                projectName,
-                $"_apis/git/repositories/{repoName}/commitsBatch",
-                _logger,
-                body: JsonConvert.SerializeObject(new
-                {
-                    itemVersion = new
-                    {
-                        versionType = "commit",
-                        version = fromSha
-                    },
-                    compareVersion = new
-                    {
-                        versionType = "commit", 
-                        version = toSha
-                    }
-                }));
-
-            var commits = JArray.Parse(content["value"].ToString());
-            
-            // The commitsBatch API returns commits in the range automatically
-            // Extract commit titles (first line of commit message) and reverse for chronological order
-            var commitTitles = commits
-                .Select(commit => 
-                {
-                    string message = commit["comment"].ToString();
-                    return message.Split('\n')[0]; // Get first line (title)
-                })
-                .Reverse() // API returns newest first, we want oldest first (chronological order)
-                .ToList();
-            
-            return commitTitles;
-        }
-        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
-        {
-            _logger.LogError($"Failed to find commits between {fromSha} and {toSha} in {repoUri}");
-            throw;
-        }
-        catch (Exception)
-        {
-            _logger.LogError($"Failed to get commit titles between {fromSha} and {toSha} in {repoUri}");
-            throw;
-        }
-    }
-
     private static PullRequest ToDarcLibPullRequest(GitPullRequest pr) => new()
     {
         Url = pr.Url,
