@@ -343,6 +343,192 @@ public class PullRequestCommentBuilderTests
         comment.Should().NotContain("source-manifest.json");
     }
 
+    [Test]
+    public void ForwardFlowConflictCommentWithVmrRelativePathsContainsCorrectFileUrls()
+    {
+        // This test reproduces the bug from the issue where forward flow conflict comments
+        // had duplicate src/[repo] in URLs when the conflicted file paths were VMR-relative
+        // (which happens when the PR branch already exists and we're updating it)
+        
+        var forwardFlowSubscription = new ClientModels.Subscription(
+            new Guid("12345678-1234-1234-1234-123456789012"),
+            true,
+            true, // sourceEnabled = true
+            "https://github.com/dotnet/roslyn",
+            "https://github.com/dotnet/dotnet",
+            "main",
+            null, // sourceDirectory
+            "roslyn", // targetDirectory - makes this a forward flow
+            "@notifiedUser1",
+            excludedAssets: []);
+
+        var update = new SubscriptionUpdateWorkItem
+        {
+            UpdaterId = "test-updater-id",
+            SubscriptionId = forwardFlowSubscription.Id,
+            BuildId = 12345,
+            SourceSha = "5b20f50823167975bfd1b6dd55fcbdba73ff3a6c",
+            SourceRepo = "https://github.com/dotnet/roslyn"
+        };
+
+        // When ConflictInPrBranchException is created from WorkBranchInConflictException
+        // (i.e., when updating an existing PR branch), the file paths are VMR-relative
+        var conflictedFiles = new List<string>
+        {
+            "src/roslyn/eng/Packages.props", // VMR-relative path
+        };
+
+        var comment = PullRequestCommentBuilder.BuildNotifyAboutConflictingUpdateComment(
+            conflictedFiles,
+            update,
+            forwardFlowSubscription,
+            new InProgressPullRequest()
+            {
+                UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
+                Url = "https://api.github.com/repos/dotnet/dotnet/pulls/3244",
+                HeadBranch = "darc-release/10.0.2xx-320cebc1-5f69-499b-a68e-fb46180df7a5",
+                HeadBranchSha = "pr.head.sha",
+                SourceSha = "update.source.sha",
+                ContainedSubscriptions = [],
+                SourceRepoNotified = false
+            },
+            "darc-release/10.0.2xx-320cebc1-5f69-499b-a68e-fb46180df7a5");
+
+        // Output the comment for debugging
+        Console.WriteLine("=== Generated Comment ===");
+        Console.WriteLine(comment);
+        Console.WriteLine("=== End Comment ===");
+        
+        // Verify the file is mentioned
+        comment.Should().Contain("eng/Packages.props");
+        
+        // Verify correct URL structure - should NOT have duplicate src/roslyn
+        // Repo side should be: https://github.com/dotnet/roslyn/blob/{commit}/eng/Packages.props
+        comment.Should().Contain("https://github.com/dotnet/roslyn/blob/5b20f50823167975bfd1b6dd55fcbdba73ff3a6c/eng/Packages.props");
+        comment.Should().NotContain("https://github.com/dotnet/roslyn/blob/5b20f50823167975bfd1b6dd55fcbdba73ff3a6c/src/roslyn/eng/Packages.props");
+        
+        // VMR side should be: https://github.com/dotnet/dotnet/blob/{branch}/src/roslyn/eng/Packages.props
+        comment.Should().Contain("https://github.com/dotnet/dotnet/blob/darc-release/10.0.2xx-320cebc1-5f69-499b-a68e-fb46180df7a5/src/roslyn/eng/Packages.props");
+        comment.Should().NotContain("https://github.com/dotnet/dotnet/blob/darc-release/10.0.2xx-320cebc1-5f69-499b-a68e-fb46180df7a5/src/roslyn/src/roslyn/eng/Packages.props");
+    }
+
+    [Test]
+    public void ForwardFlowConflictCommentHandlesRepoRelativePaths()
+    {
+        // Test with paths that are ALREADY in repo-relative format (no src/roslyn prefix)
+        // This might happen if ParseResult was already called
+        var forwardFlowSubscription = new ClientModels.Subscription(
+            new Guid("12345678-1234-1234-1234-123456789012"),
+            true,
+            true,
+            "https://github.com/dotnet/roslyn",
+            "https://github.com/dotnet/dotnet",
+            "main",
+            null,
+            "roslyn",
+            "@notifiedUser1",
+            excludedAssets: []);
+
+        var update = new SubscriptionUpdateWorkItem
+        {
+            UpdaterId = "test-updater-id",
+            SubscriptionId = forwardFlowSubscription.Id,
+            BuildId = 12345,
+            SourceSha = "5b20f50823167975bfd1b6dd55fcbdba73ff3a6c",
+            SourceRepo = "https://github.com/dotnet/roslyn"
+        };
+
+        // Paths are already repo-relative (no src/roslyn prefix)
+        var conflictedFiles = new List<string>
+        {
+            "eng/Packages.props",
+        };
+
+        var comment = PullRequestCommentBuilder.BuildNotifyAboutConflictingUpdateComment(
+            conflictedFiles,
+            update,
+            forwardFlowSubscription,
+            new InProgressPullRequest()
+            {
+                UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
+                Url = "https://api.github.com/repos/dotnet/dotnet/pulls/3244",
+                HeadBranch = "darc-release/10.0.2xx-320cebc1-5f69-499b-a68e-fb46180df7a5",
+                HeadBranchSha = "pr.head.sha",
+                SourceSha = "update.source.sha",
+                ContainedSubscriptions = [],
+                SourceRepoNotified = false
+            },
+            "darc-release/10.0.2xx-320cebc1-5f69-499b-a68e-fb46180df7a5");
+
+        // When files don't have src/roslyn prefix, they should be skipped by the filter
+        // So the comment should be empty or have minimal content
+        Console.WriteLine("=== Generated Comment (repo-relative paths) ===");
+        Console.WriteLine(comment);
+        Console.WriteLine("=== End Comment ===");
+        
+        // The file should NOT be listed because it doesn't match the filter
+        comment.Should().NotContain("eng/Packages.props");
+        comment.Should().NotContain("View file in");
+    }
+
+    [Test]
+    public void BackflowConflictCommentContainsCorrectFileUrls()
+    {
+        // Test that backflow URLs are also constructed correctly
+        var backflowSubscription = new ClientModels.Subscription(
+            new Guid("12345678-1234-1234-1234-123456789012"),
+            true,
+            true, // sourceEnabled = true
+            "https://github.com/dotnet/dotnet", // VMR is the source
+            "https://github.com/dotnet/sdk", // Repo is the target
+            "main",
+            "sdk", // sourceDirectory - makes this a backflow
+            null, // targetDirectory is null for backflow
+            "@notifiedUser1",
+            excludedAssets: []);
+
+        var update = new SubscriptionUpdateWorkItem
+        {
+            UpdaterId = "test-updater-id",
+            SubscriptionId = backflowSubscription.Id,
+            BuildId = 12345,
+            SourceSha = "abc123def456",
+            SourceRepo = "https://github.com/dotnet/dotnet"
+        };
+
+        var conflictedFiles = new List<string>
+        {
+            "eng/Versions.props",
+        };
+
+        var comment = PullRequestCommentBuilder.BuildNotifyAboutConflictingUpdateComment(
+            conflictedFiles,
+            update,
+            backflowSubscription,
+            new InProgressPullRequest()
+            {
+                UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
+                Url = "https://api.github.com/repos/dotnet/sdk/pulls/1234",
+                HeadBranch = "darc-backflow-branch",
+                HeadBranchSha = "pr.head.sha",
+                SourceSha = "update.source.sha",
+                ContainedSubscriptions = [],
+                SourceRepoNotified = false
+            },
+            "darc-backflow-branch");
+
+        // Verify the file is mentioned
+        comment.Should().Contain("eng/Versions.props");
+        
+        // VMR side (source) should be: https://github.com/dotnet/dotnet/blob/{commit}/src/sdk/eng/Versions.props
+        comment.Should().Contain("https://github.com/dotnet/dotnet/blob/abc123def456/src/sdk/eng/Versions.props");
+        comment.Should().NotContain("https://github.com/dotnet/dotnet/blob/abc123def456/src/sdk/src/sdk/eng/Versions.props");
+        
+        // Repo side (target) should be: https://github.com/dotnet/sdk/blob/{branch}/eng/Versions.props
+        comment.Should().Contain("https://github.com/dotnet/sdk/blob/darc-backflow-branch/eng/Versions.props");
+        comment.Should().NotContain("https://github.com/dotnet/sdk/blob/darc-backflow-branch/src/sdk/eng/Versions.props");
+    }
+
     private static List<ClientModels.Subscription> GenerateFakeSubscriptionModels() =>
     [
         new ClientModels.Subscription(
