@@ -266,7 +266,7 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
     {
         string srcDir = subscription.IsForwardFlow()
             ? VmrInfo.GetRelativeRepoSourcesPath(subscription.TargetDirectory)
-            : string.Empty;
+            : VmrInfo.GetRelativeRepoSourcesPath(subscription.SourceDirectory);
 
         foreach (UnixPath filePath in conflictedFiles)
         {
@@ -281,6 +281,14 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
                 }
 
                 relativeFilePath = relativeFilePath.Substring(srcDir.Length + 1);
+            }
+            else if (subscription.IsBackflow())
+            {
+                // For backflow, strip the VMR source directory prefix from the file path
+                if (relativeFilePath.StartsWith(srcDir + "/", StringComparison.OrdinalIgnoreCase))
+                {
+                    relativeFilePath = relativeFilePath.Substring(srcDir.Length + 1);
+                }
             }
 
             var (fileUrlInVmr, fileUrlInRepo) = GetFileUrls(update, subscription, relativeFilePath, prHeadBranch);

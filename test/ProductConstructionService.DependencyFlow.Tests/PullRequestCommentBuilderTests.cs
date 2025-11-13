@@ -343,6 +343,120 @@ public class PullRequestCommentBuilderTests
         comment.Should().NotContain("source-manifest.json");
     }
 
+    [Test]
+    public void BackflowConflictCommentGeneratesCorrectFileUrls()
+    {
+        // Create a backflow subscription (has SourceDirectory set, no TargetDirectory)
+        var backflowSubscription = new ClientModels.Subscription(
+            new Guid("12345678-1234-1234-1234-123456789012"),
+            true,
+            true, // sourceEnabled = true
+            $"https://github.com/{FakeOrgName}/vmr", // source is VMR
+            $"https://github.com/{FakeOrgName}/roslyn", // target is repo
+            "main",
+            "roslyn", // sourceDirectory - makes this a backflow
+            null, // targetDirectory
+            "@notifiedUser1",
+            excludedAssets: []);
+
+        var update = new SubscriptionUpdateWorkItem
+        {
+            UpdaterId = "test-updater-id",
+            SubscriptionId = backflowSubscription.Id,
+            BuildId = 12345,
+            SourceSha = "abc123",
+            SourceRepo = $"https://github.com/{FakeOrgName}/vmr"
+        };
+
+        // For backflow, conflicted files come with VMR-relative paths including src/[repo]/
+        var conflictedFiles = new List<string>
+        {
+            "src/roslyn/eng/Packages.props",
+            "src/roslyn/Directory.Build.props"
+        };
+
+        var comment = PullRequestCommentBuilder.BuildNotifyAboutConflictingUpdateComment(
+            conflictedFiles,
+            update,
+            backflowSubscription,
+            new InProgressPullRequest()
+            {
+                UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
+                Url = "https://api.github.com/repos/orgname/reponame/pulls/12345",
+                HeadBranch = "pr-head-branch",
+                HeadBranchSha = "pr.head.sha",
+                SourceSha = "update.source.sha",
+                ContainedSubscriptions = [],
+                SourceRepoNotified = false
+            },
+            "pr-head-branch");
+
+        // Verify the file names are displayed correctly (without VMR prefix)
+        comment.Should().Contain("eng/Packages.props");
+        comment.Should().Contain("Directory.Build.props");
+        
+        // Verify the URLs are constructed correctly
+        // VMR URL should have single src/roslyn/ prefix
+        comment.Should().Contain($"github.com/{FakeOrgName}/vmr/blob/abc123/src/roslyn/eng/Packages.props");
+        comment.Should().NotContain("/src/roslyn/src/roslyn/"); // Should not have double prefix
+        
+        // Repo URL should not have src/roslyn/ prefix at all
+        comment.Should().Contain($"github.com/{FakeOrgName}/roslyn/blob/pr-head-branch/eng/Packages.props");
+        comment.Should().NotContain($"github.com/{FakeOrgName}/roslyn/blob/pr-head-branch/src/roslyn/"); // Should not have VMR prefix
+    }
+
+    [Test]
+    public void BackflowManualConflictCommentGeneratesCorrectFileUrls()
+    {
+        // Create a backflow subscription (has SourceDirectory set, no TargetDirectory)
+        var backflowSubscription = new ClientModels.Subscription(
+            new Guid("12345678-1234-1234-1234-123456789012"),
+            true,
+            true, // sourceEnabled = true
+            $"https://github.com/{FakeOrgName}/vmr", // source is VMR
+            $"https://github.com/{FakeOrgName}/roslyn", // target is repo
+            "main",
+            "roslyn", // sourceDirectory - makes this a backflow
+            null, // targetDirectory
+            "@notifiedUser1",
+            excludedAssets: []);
+
+        var update = new SubscriptionUpdateWorkItem
+        {
+            UpdaterId = "test-updater-id",
+            SubscriptionId = backflowSubscription.Id,
+            BuildId = 12345,
+            SourceSha = "abc123",
+            SourceRepo = $"https://github.com/{FakeOrgName}/vmr"
+        };
+
+        // For backflow, conflicted files come with VMR-relative paths including src/[repo]/
+        var conflictedFiles = new List<Microsoft.DotNet.DarcLib.Helpers.UnixPath>
+        {
+            new("src/roslyn/eng/Packages.props"),
+            new("src/roslyn/Directory.Build.props")
+        };
+
+        var comment = PullRequestCommentBuilder.BuildNotificationAboutManualConflictResolutionComment(
+            update,
+            backflowSubscription,
+            conflictedFiles,
+            "pr-head-branch");
+
+        // Verify the file names are displayed correctly (without VMR prefix)
+        comment.Should().Contain("eng/Packages.props");
+        comment.Should().Contain("Directory.Build.props");
+        
+        // Verify the URLs are constructed correctly
+        // VMR URL should have single src/roslyn/ prefix
+        comment.Should().Contain($"github.com/{FakeOrgName}/vmr/blob/abc123/src/roslyn/eng/Packages.props");
+        comment.Should().NotContain("/src/roslyn/src/roslyn/"); // Should not have double prefix
+        
+        // Repo URL should not have src/roslyn/ prefix at all
+        comment.Should().Contain($"github.com/{FakeOrgName}/roslyn/blob/pr-head-branch/eng/Packages.props");
+        comment.Should().NotContain($"github.com/{FakeOrgName}/roslyn/blob/pr-head-branch/src/roslyn/"); // Should not have VMR prefix
+    }
+
     private static List<ClientModels.Subscription> GenerateFakeSubscriptionModels() =>
     [
         new ClientModels.Subscription(
