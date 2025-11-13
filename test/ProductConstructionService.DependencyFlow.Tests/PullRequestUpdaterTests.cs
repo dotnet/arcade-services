@@ -586,9 +586,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 ? new PatchApplicationLeftConflictsException(conflictedFiles, new NativePath(VmrPath))
                 : new ConflictInPrBranchException(
                     "error: patch failed: " + string.Join(Environment.NewLine + "error: patch failed: ", conflictedFiles),
-                    "branch",
-                    "repo",
-                    isForwardFlow: true));
+                    "branch"));
     }
 
     protected void AndShouldHavePullRequestCheckReminder(string? url = null)
