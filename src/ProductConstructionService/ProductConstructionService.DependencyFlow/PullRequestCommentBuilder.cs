@@ -264,23 +264,29 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         string prHeadBranch,
         StringBuilder sb)
     {
-        string srcDir = subscription.IsForwardFlow()
-            ? VmrInfo.GetRelativeRepoSourcesPath(subscription.TargetDirectory)
-            : string.Empty;
+        // Determine the expected VMR source directory prefix based on flow direction
+        string vmrPrefix = subscription.IsForwardFlow()
+            ? VmrInfo.GetRelativeRepoSourcesPath(subscription.TargetDirectory).ToString()
+            : subscription.SourceDirectory != null 
+                ? VmrInfo.GetRelativeRepoSourcesPath(subscription.SourceDirectory).ToString()
+                : string.Empty;
 
         foreach (UnixPath filePath in conflictedFiles)
         {
             string relativeFilePath = filePath.ToString();
 
-            if (subscription.IsForwardFlow())
+            // Strip the VMR prefix (src/{directory}/) if present to get repo-relative path
+            // This handles cases where paths come in different formats from different code paths
+            if (!string.IsNullOrEmpty(vmrPrefix) && 
+                relativeFilePath.StartsWith(vmrPrefix + "/", StringComparison.OrdinalIgnoreCase))
             {
-                // For forward flow, only include files under the repository source directory
-                if (!relativeFilePath.StartsWith(srcDir + "/", StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                relativeFilePath = relativeFilePath.Substring(srcDir.Length + 1);
+                relativeFilePath = relativeFilePath.Substring(vmrPrefix.Length + 1);
+            }
+            else if (subscription.IsForwardFlow())
+            {
+                // For forward flow, skip files that don't match the expected VMR path structure
+                // This filters out metadata files and files from other repositories
+                continue;
             }
 
             var (fileUrlInVmr, fileUrlInRepo) = GetFileUrls(update, subscription, relativeFilePath, prHeadBranch);
