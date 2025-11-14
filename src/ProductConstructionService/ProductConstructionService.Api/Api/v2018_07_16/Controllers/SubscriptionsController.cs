@@ -75,7 +75,7 @@ public class SubscriptionsController : ControllerBase
             query = query.Where(sub => sub.Enabled == enabled.Value);
         }
 
-        List<Subscription> results = query.AsEnumerable().Select(sub => new Subscription(sub)).ToList();
+        List<Subscription> results = [.. query.AsEnumerable().Select(sub => new Subscription(sub))];
         return Ok(results);
     }
 

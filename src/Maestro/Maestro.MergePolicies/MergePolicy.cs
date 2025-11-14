@@ -38,18 +38,18 @@ public abstract class MergePolicy : IMergePolicy
 
     public abstract Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc);
 
-    public MergePolicyEvaluationResult Pending(string title) => new(MergePolicyEvaluationStatus.Pending, title, string.Empty, this.Name, this.DisplayName);
+    public MergePolicyEvaluationResult Pending(string title) => new(MergePolicyEvaluationStatus.Pending, title, string.Empty, Name, DisplayName);
 
-    public MergePolicyEvaluationResult SucceedDecisively(string title) => new(MergePolicyEvaluationStatus.DecisiveSuccess, title, string.Empty, this.Name, this.DisplayName);
-    public MergePolicyEvaluationResult SucceedTransiently(string title) => new(MergePolicyEvaluationStatus.TransientSuccess, title, string.Empty, this.Name, this.DisplayName);
+    public MergePolicyEvaluationResult SucceedDecisively(string title) => new(MergePolicyEvaluationStatus.DecisiveSuccess, title, string.Empty, Name, DisplayName);
+    public MergePolicyEvaluationResult SucceedTransiently(string title) => new(MergePolicyEvaluationStatus.TransientSuccess, title, string.Empty, Name, DisplayName);
 
-    public MergePolicyEvaluationResult FailDecisively(string title) => new(MergePolicyEvaluationStatus.DecisiveFailure, title, string.Empty, this.Name, this.DisplayName);
+    public MergePolicyEvaluationResult FailDecisively(string title) => new(MergePolicyEvaluationStatus.DecisiveFailure, title, string.Empty, Name, DisplayName);
 
-    public MergePolicyEvaluationResult FailTransiently(string title) => new(MergePolicyEvaluationStatus.TransientFailure, title, string.Empty, this.Name, this.DisplayName);
+    public MergePolicyEvaluationResult FailTransiently(string title) => new(MergePolicyEvaluationStatus.TransientFailure, title, string.Empty, Name, DisplayName);
 
-    public MergePolicyEvaluationResult FailDecisively(string title, string message) => new(MergePolicyEvaluationStatus.DecisiveFailure, title, message, this.Name, this.DisplayName);
+    public MergePolicyEvaluationResult FailDecisively(string title, string message) => new(MergePolicyEvaluationStatus.DecisiveFailure, title, message, Name, DisplayName);
 
-    public MergePolicyEvaluationResult FailTransiently(string title, string message) => new(MergePolicyEvaluationStatus.TransientFailure, title, message, this.Name, this.DisplayName);
+    public MergePolicyEvaluationResult FailTransiently(string title, string message) => new(MergePolicyEvaluationStatus.TransientFailure, title, message, Name, DisplayName);
 }
 
 public interface IMergePolicy : IMergePolicyInfo

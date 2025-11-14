@@ -25,7 +25,7 @@ public static class SharedKustoQueries
 
         string prProject = "public";
 
-        Uri uri = new Uri(repository);
+        var uri = new Uri(repository);
 
         // Builds in AzDo are only found in the internal project.
         if (uri.Host == "dev.azure.com")

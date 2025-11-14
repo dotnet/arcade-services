@@ -269,8 +269,8 @@ internal class UpdateAssetsTests : UpdateAssetsPullRequestUpdaterTests
             targetDirectory: ".,src/foo,src/bar");
         Build b = GivenANewBuild(true);
         UnixPath path1 = UnixPath.Empty;
-        UnixPath path2 = new UnixPath("src/foo");
-        UnixPath path3 = new UnixPath("src/bar");
+        var path2 = new UnixPath("src/foo");
+        var path3 = new UnixPath("src/bar");
         UnixPath[] targetDirectories = [path1, path2, path3];
 
         WithRequireNonCoherencyUpdates();

@@ -3,7 +3,6 @@
 
 using System;
 using Maestro.Common;
-using Microsoft.DotNet.DarcLib.Helpers;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;

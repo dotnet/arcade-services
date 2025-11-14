@@ -9,7 +9,6 @@ using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 

@@ -860,7 +860,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         // Get a remote factory for the target repo
         IRemote darc = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
-        Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> repoDependencyUpdates = new();
+        Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> repoDependencyUpdates = [];
 
         // Get subscription to access excluded assets
         var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId)
@@ -1045,7 +1045,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         string targetBranch,
         TargetRepoDependencyUpdates targetRepositoryUpdates)
     {
-        Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> alteredUpdates = new();
+        Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> alteredUpdates = [];
         foreach (var (targetDirectory, targetDictionaryRepositoryUpdates) in targetRepositoryUpdates.DirectoryUpdates)
         {
             List<DependencyDetail> targetBranchDeps = [.. await darcRemote.GetDependenciesAsync(targetRepository, targetBranch, relativeBasePath: targetDirectory)];
@@ -1524,10 +1524,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             }
 
             // We store it the new head branch SHA in Redis (without having to have to query the remote repo)
-            if (prInfo != null)
-            {
-                prInfo.HeadBranchSha = await _gitClient.GetShaForRefAsync(subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath, prHeadBranch);
-            }
+            prInfo?.HeadBranchSha = await _gitClient.GetShaForRefAsync(subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath, prHeadBranch);
 
             await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
         }

@@ -157,7 +157,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             branchToMerge,
             cancellationToken);
 
-        if (conflictedFiles.Any() && await TryResolvingConflicts(
+        if (conflictedFiles.Count != 0 && await TryResolvingConflicts(
                 conflictedFiles,
                 codeflowOptions.Mapping,
                 codeflowOptions.CurrentFlow,
@@ -461,9 +461,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             ..allUpdates
                 .Select(update => new DependencyUpdate()
                 {
-                    From = headBranchDependencyDict.ContainsKey(update.Key)
-                        ? headBranchDependencyDict[update.Key]
-                        : (DependencyDetail)versionDetailsChanges.Additions[update.Key].Value!,
+                    From = headBranchDependencyDict.TryGetValue(update.Key, out DependencyDetail? value)
+                        ? value : (DependencyDetail)versionDetailsChanges.Additions[update.Key].Value!,
                     To = update.Value,
                 })
                 .Where(update =>
@@ -521,7 +520,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         }
 
         var result = new StringBuilder();
-        if (updatedDependencies.Any())
+        if (updatedDependencies.Count != 0)
         {
             result.AppendLine("Updated Dependencies:");
             foreach ((string versionBlurb, List<string> packageNames) in updatedDependencies)
@@ -530,7 +529,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             }
             result.AppendLine();
         }
-        if (addedDependencies.Any())
+        if (addedDependencies.Count != 0)
         {
             result.AppendLine("Added Dependencies:");
             foreach ((string versionBlurb, List<string> packageNames) in addedDependencies)
@@ -539,7 +538,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             }
             result.AppendLine();
         }
-        if (removedDependencies.Any())
+        if (removedDependencies.Count != 0)
         {
             result.AppendLine("Removed Dependencies:");
             foreach ((string versionBlurb, List<string> packageNames) in removedDependencies)

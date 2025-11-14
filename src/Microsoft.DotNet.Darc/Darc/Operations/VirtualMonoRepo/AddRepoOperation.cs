@@ -2,14 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Maestro.Common;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
@@ -40,7 +37,7 @@ internal class AddRepoOperation : Operation
     {
         var repositories = _options.Repositories.ToList();
 
-        if (!repositories.Any())
+        if (repositories.Count == 0)
         {
             _logger.LogError("Please specify at least one repository to add");
             return Constants.ErrorCode;

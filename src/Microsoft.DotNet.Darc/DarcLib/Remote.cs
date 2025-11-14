@@ -191,7 +191,7 @@ public sealed class Remote : IRemote
         List<DependencyDetail> itemsToUpdate,
         UnixPath relativeDependencyBasePath = null)
     {
-        List<DependencyDetail> oldDependencies = (await GetDependenciesAsync(repoUri, branch, relativeBasePath: relativeDependencyBasePath)).ToList();
+        List<DependencyDetail> oldDependencies = [.. await GetDependenciesAsync(repoUri, branch, relativeBasePath: relativeDependencyBasePath)];
         await _locationResolver.AddAssetLocationToDependenciesAsync(oldDependencies);
 
         // If we are updating the arcade sdk we need to update the eng/common files

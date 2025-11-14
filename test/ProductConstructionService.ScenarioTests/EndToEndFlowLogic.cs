@@ -633,10 +633,10 @@ internal abstract class TestLogic : ScenarioTestBase
             {
                 TestContext.WriteLine("Adding dependencies to target repo in different directories");
                 // Add dependencies to src/maestro-test1
-                await AddDependenciesToLocalRepoWithDirectory(reposFolder.Directory, sourceAssets.ToList(), sourceRepoUri, "src/maestro-test1");
+                await AddDependenciesToLocalRepoWithDirectory(reposFolder.Directory, [.. sourceAssets], sourceRepoUri, "src/maestro-test1");
                 
                 // Add the excluded asset to src/maestro-test2 to test exclusion behavior
-                await AddDependenciesToLocalRepoWithDirectory(reposFolder.Directory, sourceAssets.Skip(1).ToList(), sourceRepoUri, "src/maestro-test2");
+                await AddDependenciesToLocalRepoWithDirectory(reposFolder.Directory, [.. sourceAssets.Skip(1)], sourceRepoUri, "src/maestro-test2");
 
                 TestContext.WriteLine("Pushing branch to remote");
                 await GitCommitAsync("Add dependencies to multiple directories");

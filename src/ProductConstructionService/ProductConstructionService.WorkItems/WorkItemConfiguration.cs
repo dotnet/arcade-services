@@ -3,7 +3,6 @@
 
 using System.Text.Json;
 using Azure.Core;
-using Azure.Identity;
 using Azure.ResourceManager;
 using Azure.ResourceManager.AppContainers;
 using Azure.Storage.Queues;

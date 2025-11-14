@@ -42,7 +42,7 @@ internal abstract class CodeFlowTestsBase
 
     private int _buildId = 100;
     private List<string> _lastFlowCollectedComments = [];
-    private readonly Dictionary<int, ProductConstructionService.Client.Models.Build> _builds = [];
+    private readonly Dictionary<int, Build> _builds = [];
 
     [SetUp]
     public async Task Setup()
@@ -215,7 +215,7 @@ internal abstract class CodeFlowTestsBase
         string mappingName,
         NativePath repoPath,
         string branch,
-        ProductConstructionService.Client.Models.Build? buildToFlow = null,
+        Build? buildToFlow = null,
         IReadOnlyCollection<string>? excludedAssets = null,
         bool useLatestBuild = false,
         bool forceUpdate = true)
@@ -251,7 +251,7 @@ internal abstract class CodeFlowTestsBase
         string mappingName,
         NativePath repoPath,
         string branch,
-        ProductConstructionService.Client.Models.Build? buildToFlow = null,
+        Build? buildToFlow = null,
         IReadOnlyCollection<string>? excludedAssets = null,
         bool forceUpdate = true)
     {
@@ -387,22 +387,22 @@ internal abstract class CodeFlowTestsBase
     protected Local GetLocal(NativePath repoPath) => ActivatorUtilities.CreateInstance<Local>(ServiceProvider, repoPath.ToString());
     protected DependencyFileManager GetDependencyFileManager() => ActivatorUtilities.CreateInstance<DependencyFileManager>(ServiceProvider);
 
-    protected async Task<ProductConstructionService.Client.Models.Build> CreateNewVmrBuild((string name, string version)[] assets, string? commit = null)
+    protected async Task<Build> CreateNewVmrBuild((string name, string version)[] assets, string? commit = null)
         => await CreateNewBuild(VmrPath, assets, commit);
 
-    protected async Task<ProductConstructionService.Client.Models.Build> CreateNewRepoBuild((string name, string version)[] assets, string? commit = null)
+    protected async Task<Build> CreateNewRepoBuild((string name, string version)[] assets, string? commit = null)
         => await CreateNewBuild(ProductRepoPath, assets, commit);
 
-    protected async Task<ProductConstructionService.Client.Models.Build> CreateNewRepoBuild(NativePath repoPath, (string name, string version)[] assets, string? commit = null)
+    protected async Task<Build> CreateNewRepoBuild(NativePath repoPath, (string name, string version)[] assets, string? commit = null)
         => await CreateNewBuild(repoPath, assets, commit);
 
-    protected async Task<ProductConstructionService.Client.Models.Build> CreateNewBuild(NativePath repoPath, (string name, string version)[] assets, string? commit = null)
+    protected async Task<Build> CreateNewBuild(NativePath repoPath, (string name, string version)[] assets, string? commit = null)
     {
         var assetId = 1;
         _buildId++;
         commit ??= await GitOperations.GetRepoLastCommit(repoPath);
 
-        var build = new ProductConstructionService.Client.Models.Build(
+        var build = new Build(
             id: _buildId,
             dateProduced: DateTimeOffset.Now,
             staleness: 0,

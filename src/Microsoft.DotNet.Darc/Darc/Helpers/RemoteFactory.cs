@@ -65,7 +65,7 @@ internal class RemoteFactory : IRemoteFactory
                     _loggerFactory.CreateLogger<AzureDevOpsClient>(),
                     temporaryRepositoryRoot),
 
-            _ => throw new System.InvalidOperationException($"Cannot create a remote of type {repoType}"),
+            _ => throw new InvalidOperationException($"Cannot create a remote of type {repoType}"),
         };
     }
 }

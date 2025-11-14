@@ -1192,12 +1192,12 @@ public class DependencyCoherencyTests
         _remoteMock.Setup(m => m.GetDependenciesAsync(repo, commit, null, It.IsAny<UnixPath>())).ReturnsAsync(dependencies);
     }
 
-    private void RepoHadBuilds(string repo, string commit, IEnumerable<ProductConstructionService.Client.Models.Build> builds)
+    private void RepoHadBuilds(string repo, string commit, IEnumerable<Build> builds)
     {
         _barClientMock.Setup(m => m.GetBuildsAsync(repo, commit)).ReturnsAsync(builds);
     }
 
-    private ProductConstructionService.Client.Models.Build CreateBuild(string repo, string commit,
+    private Build CreateBuild(string repo, string commit,
         List<(string name, string version, string[] locations)> assets, int buildId = -1)
     {
         if (buildId == -1)
@@ -1213,7 +1213,7 @@ public class DependencyCoherencyTests
                 a.Item2,
                 a.Item3?.Select(location => new AssetLocation(GetRandomId(), LocationType.NugetFeed, location)).ToList()));
 
-        return new(buildId, DateTimeOffset.Now, 0, false, false, commit, null, buildAssets.ToList(), null, null)
+        return new(buildId, DateTimeOffset.Now, 0, false, false, commit, null, [.. buildAssets], null, null)
         {
             AzureDevOpsRepository = repo,
             GitHubRepository = repo

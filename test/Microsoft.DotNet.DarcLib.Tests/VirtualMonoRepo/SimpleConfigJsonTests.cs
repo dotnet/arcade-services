@@ -144,7 +144,7 @@ public class SimpleConfigJsonTests
         updatedArrayChange.IsUpdated.Should().BeTrue();
         updatedArrayChange.Value.Should().BeOfType<List<string>>();
         var updatedArray = (List<string>)updatedArrayChange.Value!;
-        updatedArray.Should().BeEquivalentTo(new[] { "new1", "new2" });
+        updatedArray.Should().BeEquivalentTo(["new1", "new2"]);
 
         // Check added property
         var addedChange = changes.Should().ContainSingle(c => c.Name == "added:property").Subject;

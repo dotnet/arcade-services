@@ -16,7 +16,7 @@ internal abstract class PcsStatusOptions : Options
 
     public override Task<IServiceCollection> RegisterServices(IServiceCollection services)
     {
-        services.AddSingleton<IProductConstructionServiceApi>(
+        services.AddSingleton(
             string.IsNullOrEmpty(pcsUri) ?
                 PcsApiFactory.GetAuthenticated(
                     accessToken: null,

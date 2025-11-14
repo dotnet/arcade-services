@@ -110,7 +110,7 @@ internal class CloneOperation : Operation
             }
 
             var dependenciesToClone = new Queue<StrippedDependency>();
-            while (accumulatedDependencies.Any())
+            while (accumulatedDependencies.Count != 0)
             {
                 // add this level's dependencies to the queue and clear it for the next level
                 foreach (StrippedDependency d in accumulatedDependencies)
@@ -120,7 +120,7 @@ internal class CloneOperation : Operation
                 accumulatedDependencies.Clear();
 
                 // this will do one level of clones at a time
-                while (dependenciesToClone.Any())
+                while (dependenciesToClone.Count != 0)
                 {
                     StrippedDependency repo = dependenciesToClone.Dequeue();
                     // the folder for the specific repo-hash we are cloning.  these will be orphaned from the .gitdir.
@@ -204,7 +204,7 @@ internal class CloneOperation : Operation
                 }   // end inner while(dependenciesToClone.Any())
 
 
-                if (_options.CloneDepth == 0 && accumulatedDependencies.Any())
+                if (_options.CloneDepth == 0 && accumulatedDependencies.Count != 0)
                 {
                     _logger.LogInformation($"Reached clone depth limit, aborting with {accumulatedDependencies.Count} dependencies remaining");
                     foreach (StrippedDependency d in accumulatedDependencies)
@@ -423,7 +423,7 @@ internal class CloneOperation : Operation
 
         // commit could actually be a branch or tag, make it filename-safe
         commit = commit.Replace('/', '-').Replace('\\', '-').Replace('?', '-').Replace('*', '-').Replace(':', '-').Replace('|', '-').Replace('"', '-').Replace('<', '-').Replace('>', '-');
-        return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}.{commit}");
+        return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf('/') + 1)}.{commit}");
     }
 
     private static string GetMasterGitDirPath(string gitDirParent, string repoUri)
@@ -438,7 +438,7 @@ internal class CloneOperation : Operation
             repoUri = repoUri.Substring(0, repoUri.Length - ".git".Length);
         }
 
-        return Path.Combine(gitDirParent, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}.git");
+        return Path.Combine(gitDirParent, $"{repoUri.Substring(repoUri.LastIndexOf('/') + 1)}.git");
     }
 
     private static string GetDefaultMasterGitDirPath(string reposFolder, string repoUri)
@@ -448,7 +448,7 @@ internal class CloneOperation : Operation
             repoUri = repoUri.Substring(0, repoUri.Length - ".git".Length);
         }
 
-        return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}", ".git");
+        return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf('/') + 1)}", ".git");
     }
 
     private static string GetMasterGitRepoPath(string reposFolder, string repoUri)
@@ -457,7 +457,7 @@ internal class CloneOperation : Operation
         {
             repoUri = repoUri.Substring(0, repoUri.Length - ".git".Length);
         }
-        return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}");
+        return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf('/') + 1)}");
     }
 
     private static string GetGitDirRedirectString(string gitDir)
@@ -501,11 +501,15 @@ internal class CloneOperation : Operation
         internal static StrippedDependency GetDependency(string repoUrl, string commit)
         {
             StrippedDependency dep;
-            dep = AllDependencies.SingleOrDefault(d => d.RepoUri.ToLowerInvariant() == repoUrl.ToLowerInvariant() && d.Commit.ToLowerInvariant() == commit.ToLowerInvariant());
+            dep = AllDependencies.SingleOrDefault(d => d.RepoUri.Equals(repoUrl, StringComparison.InvariantCultureIgnoreCase)
+                                                    && d.Commit.Equals(commit, StringComparison.InvariantCultureIgnoreCase));
             if (dep == null)
             {
                 dep = new StrippedDependency(repoUrl, commit);
-                foreach (StrippedDependency previousDep in AllDependencies.Where(d => d.RepoUri.ToLowerInvariant() == repoUrl.ToLowerInvariant()).SelectMany(d => d.Dependencies))
+                var repoDependencies = AllDependencies
+                    .Where(d => d.RepoUri.Equals(repoUrl, StringComparison.InvariantCultureIgnoreCase))
+                    .SelectMany(d => d.Dependencies);
+                foreach (StrippedDependency previousDep in repoDependencies)
                 {
                     dep.AddDependency(previousDep);
                 }
@@ -524,12 +528,12 @@ internal class CloneOperation : Operation
         internal void AddDependency(StrippedDependency dep)
         {
             StrippedDependency other = GetDependency(dep);
-            if (Dependencies.Any(d => d.RepoUri.ToLowerInvariant() == other.RepoUri.ToLowerInvariant()))
+            if (Dependencies.Any(d => d.RepoUri.Equals(other.RepoUri, StringComparison.InvariantCultureIgnoreCase)))
             {
                 return;
             }
             Dependencies.Add(other);
-            foreach (StrippedDependency sameUrl in AllDependencies.Where(d => d.RepoUri.ToLowerInvariant() == RepoUri.ToLowerInvariant()))
+            foreach (StrippedDependency sameUrl in AllDependencies.Where(d => d.RepoUri.Equals(RepoUri, StringComparison.InvariantCultureIgnoreCase)))
             {
                 sameUrl.Dependencies.Add(other);
             }
@@ -551,12 +555,12 @@ internal class CloneOperation : Operation
                     {
                         return false;
                     }
-                    if (dep.RepoUri.ToLowerInvariant() == RepoUri.ToLowerInvariant())
+                    if (dep.RepoUri.Equals(RepoUri, StringComparison.InvariantCultureIgnoreCase))
                     {
                         return false;
                     }
                     dep.Visited = true;
-                    hasDep = hasDep || dep.RepoUri.ToLowerInvariant() == repoUrl.ToLowerInvariant() || dep.HasDependencyOn(repoUrl);
+                    hasDep = hasDep || dep.RepoUri.Equals(repoUrl, StringComparison.InvariantCultureIgnoreCase) || dep.HasDependencyOn(repoUrl);
                     if (hasDep)
                     {
                         break;

@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
-using Asset = ProductConstructionService.DependencyFlow.Model.Asset;
 
 namespace ProductConstructionService.DependencyFlow;
 

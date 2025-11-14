@@ -41,7 +41,7 @@ internal static class ApiRedirection
             managedIdentityId: managedIdentityId,
             disableInteractiveAuth: !builder.Environment.IsDevelopment());
 
-        builder.Services.AddKeyedSingleton<IProductConstructionServiceApi>(apiRedirectionTarget, maestroClient);
+        builder.Services.AddKeyedSingleton(apiRedirectionTarget, maestroClient);
     }
 
     public static void UseApiRedirection(this IApplicationBuilder app, bool requireAuth)

@@ -283,11 +283,11 @@ public class DependencyGraph
             // Start with an unknown diff.
             node.DiffFrom = GitDiff.UnknownDiff();
 
-            if (node.ContributingBuilds.Any())
+            if (node.ContributingBuilds.Count != 0)
             {
                 // Choose latest build of node that has a channel.
                 Build newestBuildWithChannel = node.ContributingBuilds.OrderByDescending(b => b.DateProduced).FirstOrDefault(
-                    b => b.Channels != null && b.Channels.Any());
+                    b => b.Channels != null && b.Channels.Count != 0);
                 // If no build was found (e.g. build was flowed without a channel or channel was removed from
                 // a build, then no diff from latest.
                 if (newestBuildWithChannel != null)
@@ -354,7 +354,7 @@ public class DependencyGraph
                     if (newestNode == null)
                     {
                         newestNode = node;
-                        if (newestNode.ContributingBuilds.Any())
+                        if (newestNode.ContributingBuilds.Count != 0)
                         {
                             newestBuild = newestNode.ContributingBuilds.OrderByDescending(b => b.DateProduced).First();
                         }
@@ -684,7 +684,7 @@ public class DependencyGraph
     /// <returns>True if the build contributes, false otherwise.</returns>
     private static bool BuildContributesToNode(DependencyGraphNode node, Build potentialContributingBuild)
     {
-        if (!node.Parents.Any())
+        if (node.Parents.Count == 0)
         {
             return true;
         }
@@ -723,7 +723,7 @@ public class DependencyGraph
         // After reaching the root along all paths, this set will be empty
         var parentsInCycles = currentNode.Parents.Where(p => p.VisitedNodes.Contains(repoCycleRoot)).ToList();
 
-        if (parentsInCycles.Any())
+        if (parentsInCycles.Count != 0)
         {
             // Recurse into each parent, combining the returned cycles together and
             // appending on the current node.
@@ -762,13 +762,13 @@ public class DependencyGraph
         {
             _remotesMapping ??= CreateRemotesMapping(remotesMap);
 
-            if (!_remotesMapping.ContainsKey(repoPath))
+            if (!_remotesMapping.TryGetValue(repoPath, out var value))
             {
                 throw new DarcException($"A key matching '{repoUri}' was not " +
                                         $"found in the mapping. Please make sure to include it...");
             }
 
-            repoPath = _remotesMapping[repoPath];
+            repoPath = value;
         }
         else
         {

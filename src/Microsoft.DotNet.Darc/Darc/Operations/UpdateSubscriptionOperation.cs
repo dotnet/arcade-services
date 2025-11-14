@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
-using CommandLine;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
@@ -270,7 +269,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                 immutableFieldErrors.Add($"Source Enabled (cannot be changed from '{subscription.SourceEnabled}')");
             }
 
-            if (immutableFieldErrors.Any())
+            if (immutableFieldErrors.Count != 0)
             {
                 _logger.LogError("The following immutable fields cannot be modified:");
                 foreach (var error in immutableFieldErrors)
@@ -309,11 +308,10 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                 try
                 {
                     await ValidateCodeflowSubscriptionConflicts(
-                        subscriptionToUpdate.SourceRepository, 
-                        subscription.TargetRepository, 
-                        subscription.TargetBranch, 
-                        sourceDirectory, 
-                        targetDirectory, 
+                        subscription.TargetRepository,
+                        subscription.TargetBranch,
+                        sourceDirectory,
+                        targetDirectory,
                         subscription.Id); // existing subscription id for updates
                 }
                 catch (ArgumentException)
@@ -397,7 +395,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
            || _options.CodeFlowCheckMergePolicy
            || _options.VersionDetailsPropsMergePolicy;
 
-    private IEnumerable<string> GetExistingIgnoreChecks(MergePolicy mergePolicy) => mergePolicy
+    private static IEnumerable<string> GetExistingIgnoreChecks(MergePolicy mergePolicy) => mergePolicy
                     .Properties
                     .GetValueOrDefault(MergePolicyConstants.IgnoreChecksMergePolicyPropertyName)?
                     .ToObject<IEnumerable<string>>()
@@ -409,7 +407,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
         if (existingPolicy != null)
         {
             existingPolicy.Properties[MergePolicyConstants.IgnoreChecksMergePolicyPropertyName] =
-                JToken.FromObject(_options.IgnoreChecks.Concat(GetExistingIgnoreChecks(existingPolicy)).Distinct());
+                JToken.FromObject(_options.IgnoreChecks.Concat(UpdateSubscriptionOperation.GetExistingIgnoreChecks(existingPolicy)).Distinct());
         }
         else
         {

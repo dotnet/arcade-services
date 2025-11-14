@@ -44,9 +44,9 @@ public class GitFile
         // since the writer knows the local repo/remote repo context.
         Content = content.Replace(Environment.NewLine, "\n");
         // Ensure it ends in a newline
-        if (!Content.EndsWith("\n"))
+        if (!Content.EndsWith('\n'))
         {
-            Content = $"{Content}\n";
+            Content += '\n';
         }
         ContentEncoding = contentEncoding;
         Mode = mode;
@@ -99,9 +99,11 @@ public class GitFile
                     .SelectMany(q => Directory.GetFiles(q, "*", SearchOption.AllDirectories));
         foreach (var gitFile in gitFiles)
         {
-            var fileInfo = new FileInfo(gitFile);
-            fileInfo.Attributes = FileAttributes.Normal;
-            fileInfo.IsReadOnly = false;
+            var fileInfo = new FileInfo(gitFile)
+            {
+                Attributes = FileAttributes.Normal,
+                IsReadOnly = false
+            };
         }
     }
 }

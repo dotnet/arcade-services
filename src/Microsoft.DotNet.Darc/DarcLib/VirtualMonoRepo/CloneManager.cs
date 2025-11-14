@@ -117,7 +117,7 @@ public abstract class CloneManager
                 }
             }
 
-            if (!refsToVerify.Any())
+            if (refsToVerify.Count == 0)
             {
                 _logger.LogDebug("All requested refs ({refs}) found in {repo}", string.Join(", ", requestedRefs), path);
                 break;

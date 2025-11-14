@@ -397,9 +397,9 @@ public class GitHubClientTests
             .Callback((string x, string y, int z) =>
             {
                 var theKey = new Tuple<string, string, int>(x, y, z);
-                if (data.ContainsKey(theKey))
+                if (data.TryGetValue(theKey, out List<PullRequestReview> value))
                 {
-                    fakeReviews.AddRange(data[theKey]);
+                    fakeReviews.AddRange(value);
                 }
 
             })

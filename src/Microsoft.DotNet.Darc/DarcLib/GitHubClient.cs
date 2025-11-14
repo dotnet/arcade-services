@@ -365,7 +365,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         IReadOnlyList<PullRequestCommit> pullRequestCommits = await GetClient(owner, repo).PullRequest.Commits(owner, repo, id);
 
-        IList<Commit> commits = new List<Commit>(pullRequestCommits.Count);
+        var commits = new List<Commit>(pullRequestCommits.Count);
         foreach (var commit in pullRequestCommits)
         {
             commits.Add(new Commit(commit.Commit.Author.Name,
@@ -457,9 +457,10 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             ?? throw new InvalidOperationException("We cannot find the sha of the pull request");
 
         // Get a list of all the merge policies checks runs for the current PR
-        List<CheckRun> existingChecksRuns =
-            (await client.Check.Run.GetAllForReference(owner, repo, prSha))
-            .CheckRuns.Where(e => e.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix)).ToList();
+        var allChecks = await client.Check.Run.GetAllForReference(owner, repo, prSha);
+        List<CheckRun> existingChecksRuns = allChecks.CheckRuns
+            .Where(e => e.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix))
+            .ToList();
 
         var toBeAdded = evaluations.Where(e => existingChecksRuns.All(c => c.ExternalId != CheckRunId(e, prSha)));
         var toBeUpdated = existingChecksRuns.Where(c => evaluations.Any(e => c.ExternalId == CheckRunId(e, prSha)));
@@ -1327,7 +1328,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         
         IReadOnlyList<IssueComment> comments = await GetClient(owner, repo).Issue.Comment.GetAllForIssue(owner, repo, id);
         
-        return comments.Select(comment => comment.Body).ToList();
+        return [.. comments.Select(comment => comment.Body)];
     }
 
     public async Task<IReadOnlyCollection<string>> GetGitTreeNames(string path, string repoUri, string branch)

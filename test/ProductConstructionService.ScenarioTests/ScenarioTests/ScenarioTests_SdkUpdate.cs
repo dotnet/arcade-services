@@ -97,7 +97,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
             }
             else
             {
-                Octokit.PullRequest pr = await WaitForPullRequestAsync(TestRepository.TestRepo2Name, targetBranch);
+                PullRequest pr = await WaitForPullRequestAsync(TestRepository.TestRepo2Name, targetBranch);
                 pr.Title.Should().BeEquivalentTo(expectedTitle);
                 prHead = pr.Head.Ref;
 

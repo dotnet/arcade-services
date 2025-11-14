@@ -21,8 +21,8 @@ namespace Microsoft.DotNet.DarcLib;
 public class Local
 {
     private readonly DependencyFileManager _fileManager;
-    private readonly ILocalLibGit2Client _gitClient;
-    private readonly IVersionDetailsParser _versionDetailsParser;
+    private readonly LocalLibGit2Client _gitClient;
+    private readonly VersionDetailsParser _versionDetailsParser;
     private readonly ILogger _logger;
     private readonly Lazy<string> _repoRootDir;
 

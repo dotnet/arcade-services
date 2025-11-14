@@ -10,8 +10,6 @@ namespace Maestro.Data.Models;
 
 public class DefaultChannel
 {
-    private string _repository;
-
     public int Id { get; set; }
 
     [StringLength(300)]
@@ -21,16 +19,14 @@ public class DefaultChannel
     {
         get
         {
-            return AzureDevOpsClient.NormalizeUrl(_repository);
+            return AzureDevOpsClient.NormalizeUrl(field);
         }
 
         set
         {
-            _repository = AzureDevOpsClient.NormalizeUrl(value);
+            field = AzureDevOpsClient.NormalizeUrl(value);
         }
     }
-
-    private string _branch;
 
     [StringLength(100)]
     [Column(TypeName = "varchar(100)")]
@@ -39,11 +35,11 @@ public class DefaultChannel
     {
         get
         {
-            return GitHelpers.NormalizeBranchName(_branch);
+            return GitHelpers.NormalizeBranchName(field);
         }
         set
         {
-            _branch = GitHelpers.NormalizeBranchName(value);
+            field = GitHelpers.NormalizeBranchName(value);
         }
     }
 

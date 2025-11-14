@@ -16,7 +16,7 @@ public class MergePolicyEvaluationResults
 
     public string TargetCommitSha { get; set; }
 
-    public bool Succeeded => Results.Any() && Results.All(r => r.Status is MergePolicyEvaluationStatus.DecisiveSuccess or MergePolicyEvaluationStatus.TransientSuccess);
+    public bool Succeeded => Results.Count != 0 && Results.All(r => r.Status is MergePolicyEvaluationStatus.DecisiveSuccess or MergePolicyEvaluationStatus.TransientSuccess);
 
     public bool Pending => Results.Any(r => r.Status == MergePolicyEvaluationStatus.Pending);
 

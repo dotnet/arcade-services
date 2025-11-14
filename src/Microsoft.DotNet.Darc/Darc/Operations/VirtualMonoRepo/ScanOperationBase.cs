@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
@@ -39,6 +38,6 @@ internal abstract class ScanOperationBase<T> : Operation where T : IVmrScanner
             Console.WriteLine(file);
         }
 
-        return files.Any() ? 1 : Constants.SuccessCode;
+        return files.Count != 0 ? 1 : Constants.SuccessCode;
     }
 }

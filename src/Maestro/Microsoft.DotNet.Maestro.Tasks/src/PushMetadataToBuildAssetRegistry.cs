@@ -243,13 +243,13 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                 var isProduct = dep.Type == DependencyType.Product;
 
-                if (!builds.ContainsKey(buildId.Value))
+                if (!builds.TryGetValue(buildId.Value, out var value))
                 {
                     builds[buildId.Value] = isProduct;
                 }
                 else
                 {
-                    builds[buildId.Value] = isProduct || builds[buildId.Value];
+                    builds[buildId.Value] = isProduct || value;
                 }
             }
 
@@ -581,7 +581,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         {
             SigningInformation mergedInfo = null;
 
-            if (signingInformation.Any())
+            if (signingInformation.Count != 0)
             {
                 foreach (SigningInformation signInfo in signingInformation)
                 {
@@ -627,10 +627,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         /// <returns></returns>
         private void LookupForMatchingGitHubRepository(Manifest manifest)
         {
-            if (manifest == null)
-            {
-                throw new ArgumentNullException(nameof(manifest));
-            }
+            ArgumentNullException.ThrowIfNull(manifest);
 
             using (var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
             {

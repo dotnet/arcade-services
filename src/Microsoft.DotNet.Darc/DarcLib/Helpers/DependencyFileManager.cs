@@ -97,7 +97,7 @@ public class DependencyFileManager : IDependencyFileManager
     }.ToImmutableHashSet();
 
     // In VMR repos, Versions.props doesn't contain any dependency versions maintained by automation, so every change is meaningful
-    public static ImmutableHashSet<string> CodeflowDependencyFiles { get; } = NonCodeflowDependencyFiles.Except([VersionFiles.VersionsProps]).ToImmutableHashSet();
+    public static ImmutableHashSet<string> CodeflowDependencyFiles { get; } = [.. NonCodeflowDependencyFiles.Except([VersionFiles.VersionsProps])];
 
     public async Task<XmlDocument> ReadVersionDetailsXmlAsync(string repoUri, string branch, UnixPath relativeBasePath = null)
         => await ReadXmlFileAsync(GetVersionFilePath(VersionFiles.VersionDetailsXml, relativeBasePath), repoUri, branch);
@@ -1073,7 +1073,7 @@ public class DependencyFileManager : IDependencyFileManager
                     {
                         if (!addedPackageVersionElement && propertyNode.Name.EndsWith(VersionDetailsParser.VersionPropsVersionElementSuffix))
                         {
-                            XmlNode newPackageVersionElement = versionProps.CreateElement(
+                            XmlElement newPackageVersionElement = versionProps.CreateElement(
                                 packageVersionElementName,
                                 documentNamespaceUri);
                             newPackageVersionElement.InnerText = dependency.Version;
@@ -1087,7 +1087,7 @@ public class DependencyFileManager : IDependencyFileManager
                         else if (!addedPackageVersionElement && propertyNode.Name.EndsWith(
                                      VersionDetailsParser.VersionPropsAlternateVersionElementSuffix))
                         {
-                            XmlNode newPackageVersionElement = versionProps.CreateElement(
+                            XmlElement newPackageVersionElement = versionProps.CreateElement(
                                 packageVersionAlternateElementName,
                                 documentNamespaceUri);
                             newPackageVersionElement.InnerText = dependency.Version;
@@ -1110,10 +1110,10 @@ public class DependencyFileManager : IDependencyFileManager
             {
                 // If the repository doesn't have any package version element, then
                 // use the non-alternate element name.
-                XmlNode newPackageVersionElement = versionProps.CreateElement(packageVersionElementName, documentNamespaceUri);
+                XmlElement newPackageVersionElement = versionProps.CreateElement(packageVersionElementName, documentNamespaceUri);
                 newPackageVersionElement.InnerText = dependency.Version;
 
-                XmlNode propertyGroupElement = versionProps.CreateElement("PropertyGroup", documentNamespaceUri);
+                XmlElement propertyGroupElement = versionProps.CreateElement("PropertyGroup", documentNamespaceUri);
                 XmlNode propertyGroupCommentElement = versionProps.CreateComment("Package versions");
                 versionProps.DocumentElement.AppendChild(propertyGroupCommentElement);
                 versionProps.DocumentElement.AppendChild(propertyGroupElement);
@@ -1254,7 +1254,7 @@ public class DependencyFileManager : IDependencyFileManager
             {
                 {
                     XmlNode parentNode = packageVersionNode.ParentNode;
-                    XmlNode newPackageVersionElement = versionProps.CreateElement(
+                    XmlElement newPackageVersionElement = versionProps.CreateElement(
                         foundElementName,
                         versionProps.DocumentElement.NamespaceURI);
                     newPackageVersionElement.InnerText = itemToUpdate.Version;
@@ -1718,11 +1718,13 @@ public class DependencyFileManager : IDependencyFileManager
                 repoNameFromFeed = unableToResolveName;
             }
 
-            if (!result.ContainsKey(repoNameFromFeed))
+            if (!result.TryGetValue(repoNameFromFeed, out HashSet<string> value))
             {
-                result.Add(repoNameFromFeed, []);
+                value = [];
+                result.Add(repoNameFromFeed, value);
             }
-            result[repoNameFromFeed].Add(feedUri);
+
+            value.Add(feedUri);
         }
         return result;
     }
@@ -1806,12 +1808,13 @@ public class DependencyFileManager : IDependencyFileManager
 
         foreach (var dependency in dependencies)
         {
-            if (!assetLocationMappings.ContainsKey(dependency.Name))
+            if (!assetLocationMappings.TryGetValue(dependency.Name, out HashSet<string> value))
             {
-                assetLocationMappings[dependency.Name] = [];
+                value = [];
+                assetLocationMappings[dependency.Name] = value;
             }
 
-            assetLocationMappings[dependency.Name].UnionWith(dependency.Locations ?? []);
+            value.UnionWith(dependency.Locations ?? []);
         }
 
         return assetLocationMappings;

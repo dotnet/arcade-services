@@ -8,7 +8,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
-using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -52,7 +51,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     {
         get => _mappings ?? throw new Exception("Source mappings have not been initialized.");
     }
-            
+
     public VmrDependencyTracker(
         IVmrInfo vmrInfo,
         IFileSystem fileSystem,

@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -22,18 +23,18 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class AddBuildToChannelOperation : Operation
 {
-    private static readonly IReadOnlyDictionary<string, (string project, int pipelineId)> BuildPromotionPipelinesForAccount =
+    private static readonly ReadOnlyDictionary<string, (string project, int pipelineId)> BuildPromotionPipelinesForAccount =
         new Dictionary<string, (string project, int pipelineId)>(StringComparer.OrdinalIgnoreCase)
         {
             { "dnceng", ("internal", 750) },
             { "devdiv", ("devdiv", 12603) }
-        };
+        }.AsReadOnly();
 
     // These channels are unsupported because the Arcade main branch
     // (the branch that has build promotion infra) doesn't have YAML
     // implementation for them. There is usually not a high demand for
     // promoting builds to these channels.
-    private static readonly IReadOnlyDictionary<int, string> UnsupportedChannels = new Dictionary<int, string>
+    private static readonly ReadOnlyDictionary<int, string> UnsupportedChannels = new Dictionary<int, string>
     {
         { 3, ".NET Core 3 Dev" },
         { 19, ".NET Core 3 Release" },
@@ -49,7 +50,7 @@ internal class AddBuildToChannelOperation : Operation
         { 558, ".NET Core SDK 3.1.2xx" },
         { 559, ".NET Core SDK 3.1.1xx Internal" },
         { 560, ".NET Core SDK 3.1.1xx" }
-    };
+    }.AsReadOnly();
 
     private readonly AddBuildToChannelCommandLineOptions _options;
     private readonly ILogger<AddBuildToChannelOperation> _logger;
@@ -129,7 +130,7 @@ internal class AddBuildToChannelOperation : Operation
                         Select(dc => dc.Channel).
                         DistinctBy(c => c.Id));
 
-                if (!targetChannels.Any() && _options.DefaultChannelsRequired)
+                if (targetChannels.Count == 0 && _options.DefaultChannelsRequired)
                 {
                     _logger.LogError(
                         "Build '{buildId}' is from branch '{repository}@{branch}' that is not associated to any enabled default channel(s). Either add one with 'darc add-default-channel' or do not enforce existence with the '--default-channels-required' option.",
@@ -150,7 +151,7 @@ internal class AddBuildToChannelOperation : Operation
                 }
             }
 
-            if (!targetChannels.Any())
+            if (targetChannels.Count == 0)
             {
                 Console.WriteLine($"Build '{build.Id}' is already on all target channel(s).");
                 return Constants.SuccessCode;
@@ -220,7 +221,7 @@ internal class AddBuildToChannelOperation : Operation
         }
     }
 
-    private async Task<int> PromoteBuildAsync(ProductConstructionService.Client.Models.Build build, List<Channel> targetChannels, IBarApiClient barClient)
+    private async Task<int> PromoteBuildAsync(Build build, List<Channel> targetChannels, IBarApiClient barClient)
     {
         if (_options.SkipAssetsPublishing)
         {
@@ -385,7 +386,7 @@ internal class AddBuildToChannelOperation : Operation
     /// by specifying both, branch & SHA, on the command line.
     /// </summary>
     /// <param name="build">Build for which the Arcade SDK dependency build will be inferred.</param>
-    private async Task<(string sourceBranch, string sourceVersion)> GetSourceBranchInfoAsync(Microsoft.DotNet.ProductConstructionService.Client.Models.Build build)
+    private async Task<(string sourceBranch, string sourceVersion)> GetSourceBranchInfoAsync(Build build)
     {
         bool hasSourceBranch = !string.IsNullOrEmpty(_options.SourceBranch);
         bool hasSourceSHA = !string.IsNullOrEmpty(_options.SourceSHA);

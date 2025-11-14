@@ -127,7 +127,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         _dependencyTracker.UpdateSubmodules(changedRecords);
 
-        if (!mapping.Include.Any())
+        if (mapping.Include.Count == 0)
         {
             mapping = mapping with
             {
@@ -143,7 +143,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         ];
 
         // Ignore submodules in the diff, they will be inlined via their own diffs
-        if (submoduleChanges.Any())
+        if (submoduleChanges.Count != 0)
         {
             filters.AddRange(submoduleChanges.Select(c => $":(exclude){c.Path}").Distinct());
         }
@@ -163,7 +163,7 @@ public class VmrPatchHandler : IVmrPatchHandler
             ignoreLineEndings: false,
             cancellationToken));
 
-        if (!submoduleChanges.Any())
+        if (submoduleChanges.Count == 0)
         {
             return patches;
         }

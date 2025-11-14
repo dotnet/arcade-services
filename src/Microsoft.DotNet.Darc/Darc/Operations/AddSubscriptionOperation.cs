@@ -301,11 +301,10 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 try
                 {
                     await ValidateCodeflowSubscriptionConflicts(
-                        sourceRepository, 
-                        targetRepository, 
-                        targetBranch, 
-                        sourceDirectory, 
-                        targetDirectory, 
+                        targetRepository,
+                        targetBranch,
+                        sourceDirectory,
+                        targetDirectory,
                         existingSubscriptionId: null); // null for create (no existing subscription id)
                 }
                 catch (ArgumentException)

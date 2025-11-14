@@ -5,8 +5,6 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.ProductConstructionService.Client;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -26,7 +24,6 @@ internal abstract class SubscriptionOperationBase : Operation
     /// Validates that the codeflow subscription doesn't conflict with existing ones
     /// </summary>
     protected async Task ValidateCodeflowSubscriptionConflicts(
-        string sourceRepository,
         string targetRepository,
         string targetBranch,
         string sourceDirectory,

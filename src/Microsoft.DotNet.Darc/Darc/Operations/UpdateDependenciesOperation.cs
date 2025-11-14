@@ -67,7 +67,7 @@ internal class UpdateDependenciesOperation : Operation
                 ?? new AssetMatcher(null);
             List<UnixPath> targetDirectories = ResolveTargetDirectories(local);
 
-            ConcurrentDictionary<string, Task<ProductConstructionService.Client.Models.Build>> latestBuildTaskDictionary = new();
+            ConcurrentDictionary<string, Task<Build>> latestBuildTaskDictionary = new();
             foreach (var targetDirectory in targetDirectories)
             {
                 await UpdateDependenciesInDirectory(targetDirectory, local, latestBuildTaskDictionary, excludedAssetsMatcher);
@@ -121,7 +121,7 @@ internal class UpdateDependenciesOperation : Operation
     }
 
     private int NonCoherencyUpdatesForBuild(
-        ProductConstructionService.Client.Models.Build build,
+        Build build,
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> candidateDependenciesForUpdate,
         List<DependencyDetail> dependenciesToUpdate,
@@ -167,7 +167,7 @@ internal class UpdateDependenciesOperation : Operation
     private async Task UpdateDependenciesInDirectory(
         UnixPath relativeBasePath,
         Local local,
-        ConcurrentDictionary<string, Task<ProductConstructionService.Client.Models.Build>> latestBuildTaskDictionary,
+        ConcurrentDictionary<string, Task<Build>> latestBuildTaskDictionary,
         IAssetMatcher excludedAssetsMatcher)
     {
         List<DependencyDetail> dependenciesToUpdate = [];
@@ -190,11 +190,11 @@ internal class UpdateDependenciesOperation : Operation
         // source repository.
         if (!string.IsNullOrEmpty(_options.SourceRepository))
         {
-            candidateDependenciesForUpdate = candidateDependenciesForUpdate.Where(
-                dependency => dependency.RepoUri.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase)).ToList();
+            candidateDependenciesForUpdate = [.. candidateDependenciesForUpdate.Where(
+                dependency => dependency.RepoUri.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase))];
         }
 
-        if (!candidateDependenciesForUpdate.Any())
+        if (candidateDependenciesForUpdate.Count == 0)
         {
             _logger.LogInformation("    Found no dependencies to update");
             return;
@@ -244,7 +244,7 @@ internal class UpdateDependenciesOperation : Operation
             throw new DarcException($"Failed to update coherent parent tied dependencies in {relativeBasePath}");
         }
 
-        if (!dependenciesToUpdate.Any())
+        if (dependenciesToUpdate.Count == 0)
         {
             _logger.LogWarning("Found no dependencies to update");
             return;
@@ -309,10 +309,10 @@ internal class UpdateDependenciesOperation : Operation
     }
 
     private void UpdateSpecificDependencyToSpecificVersion(
-        IReadOnlyList<DependencyDetail> candidateDependenciesForUpdate,
+        List<DependencyDetail> candidateDependenciesForUpdate,
         List<DependencyDetail> dependenciesToUpdate)
     {
-        DependencyDetail dependency = candidateDependenciesForUpdate.First();
+        DependencyDetail dependency = candidateDependenciesForUpdate[0];
         dependency.Version = _options.Version;
         dependenciesToUpdate.Add(dependency);
 
@@ -375,7 +375,7 @@ internal class UpdateDependenciesOperation : Operation
     }
 
     private async Task RunNonCoherencyUpdateForChannel(
-        ConcurrentDictionary<string, Task<ProductConstructionService.Client.Models.Build>> latestBuildTaskDictionary,
+        ConcurrentDictionary<string, Task<Build>> latestBuildTaskDictionary,
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> candidateDependenciesForUpdate,
         List<DependencyDetail> dependenciesToUpdate,
@@ -428,7 +428,7 @@ internal class UpdateDependenciesOperation : Operation
         }
     }
 
-    private static IEnumerable<DependencyDetail> GetDependenciesFromPackagesFolder(string pathToFolder, IEnumerable<DependencyDetail> dependencies)
+    private static List<DependencyDetail> GetDependenciesFromPackagesFolder(string pathToFolder, IEnumerable<DependencyDetail> dependencies)
     {
         Dictionary<string, string> dependencyVersionMap = [];
 
@@ -454,10 +454,8 @@ internal class UpdateDependenciesOperation : Operation
         {
             ManifestMetadata manifestMetedata = PackagesHelper.GetManifestMetadata(package);
 
-            if (dependencyVersionMap.ContainsKey(manifestMetedata.Id))
+            if (dependencyVersionMap.TryGetValue(manifestMetedata.Id, out var oldVersion))
             {
-                string oldVersion = dependencyVersionMap[manifestMetedata.Id];
-
                 Console.WriteLine($"Updating '{manifestMetedata.Id}': '{oldVersion}' => '{manifestMetedata.Version.OriginalVersion}'");
 
                 updatedDependencies.Add(new DependencyDetail

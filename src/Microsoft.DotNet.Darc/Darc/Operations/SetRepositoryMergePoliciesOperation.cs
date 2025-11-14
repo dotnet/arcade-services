@@ -11,7 +11,6 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -124,9 +123,9 @@ internal class SetRepositoryMergePoliciesOperation : Operation
         {
             // Look up existing merge policies if the repository and branch were specified, and the user didn't
             // specify policies on the command line. In this case, they typically want to update
-            if (!mergePolicies.Any() && !string.IsNullOrEmpty(repository) && !string.IsNullOrEmpty(branch))
+            if (mergePolicies.Count == 0 && !string.IsNullOrEmpty(repository) && !string.IsNullOrEmpty(branch))
             {
-                mergePolicies = (await _barClient.GetRepositoryMergePoliciesAsync(repository, branch)).ToList();
+                mergePolicies = [.. await _barClient.GetRepositoryMergePoliciesAsync(repository, branch)];
             }
 
             // Help the user along with a form.  We'll use the API to gather suggested values

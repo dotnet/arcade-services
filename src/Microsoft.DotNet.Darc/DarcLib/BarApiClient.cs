@@ -171,7 +171,7 @@ public class BarApiClient : IBarApiClient
             includedFrequencies: [..(includedFrequencies ?? [])]);
 
         var subscriptions = await _barClient.Subscriptions.ListSubscriptionsAsync();
-        var subscriptionsById = subscriptions.ToDictionary(s => s.Id);
+        var subscriptionsById = subscriptions.ToImmutableDictionary(s => s.Id);
 
         var nodes = flowGraph.FlowRefs.Select(ToDependencyFlowNode).ToList();
         var nodesById = nodes.ToImmutableDictionary(n => n.Id);
@@ -206,8 +206,8 @@ public class BarApiClient : IBarApiClient
 
     private static DependencyFlowEdge ToDependencyFlowEdge(
         FlowEdge flowEdge,
-        IReadOnlyDictionary<string, DependencyFlowNode> nodesById,
-        IReadOnlyDictionary<Guid, Subscription> subscriptionsById)
+        ImmutableDictionary<string, DependencyFlowNode> nodesById,
+        ImmutableDictionary<Guid, Subscription> subscriptionsById)
     {
         var fromNode = nodesById[flowEdge.FromId];
         var toNode = nodesById[flowEdge.ToId];

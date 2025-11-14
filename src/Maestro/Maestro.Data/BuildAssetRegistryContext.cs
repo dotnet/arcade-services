@@ -281,12 +281,10 @@ public class BuildAssetRegistryContext(DbContextOptions options)
     {
         var dependencyEntity = Model.FindEntityType(typeof(BuildDependency));
         // The "new" code is much more complicated and might not return what we need, suppress the warning
-#pragma warning disable CS0618
         var buildIdColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.BuildId)).GetColumnName();
         var dependencyIdColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.DependentBuildId)).GetColumnName();
         var isProductColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.IsProduct)).GetColumnName();
         var timeToInclusionInMinutesColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.TimeToInclusionInMinutes)).GetColumnName();
-#pragma warning restore CS0618
         var edgeTable = dependencyEntity.GetTableName();
 
         var sqlTemplate = $@"

@@ -32,12 +32,9 @@ internal class ReproOperation(
 
         logger.LogInformation("Fetching {subscriptionId} subscription from BAR",
             options.Subscription);
-        var subscription = await prodBarClient.GetSubscriptionAsync(options.Subscription);
 
-        if (subscription == null)
-        {
-            throw new ArgumentException($"Couldn't find subscription with subscription id {options.Subscription}");
-        }
+        var subscription = await prodBarClient.GetSubscriptionAsync(options.Subscription)
+            ?? throw new ArgumentException($"Couldn't find subscription with subscription id {options.Subscription}");
 
         if (subscription.SourceEnabled)
         {

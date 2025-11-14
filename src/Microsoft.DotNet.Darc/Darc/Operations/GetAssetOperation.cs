@@ -63,7 +63,7 @@ internal class GetAssetOperation : Operation
 
             // Starting with the remote, get information on the asset name + version
             List<Asset> matchingAssets =
-                (await _barClient.GetAssetsAsync(name: _options.Name, version: _options.Version, buildId: _options.Build)).ToList();
+                [.. await _barClient.GetAssetsAsync(name: _options.Name, version: _options.Version, buildId: _options.Build)];
 
             var queryDescription = new StringBuilder();
             queryDescription.Append(_options.Latest ? " latest asset" : " assets");
@@ -105,9 +105,9 @@ internal class GetAssetOperation : Operation
             var now = DateTimeOffset.Now;
             int checkedAssets = 0;
 
-            List<(Asset asset, ProductConstructionService.Client.Models.Build build)> matchingAssetsAfterDate = [];
+            List<(Asset asset, Build build)> matchingAssetsAfterDate = [];
 
-            ProductConstructionService.Client.Models.Build buildInfo = null;
+            Build buildInfo = null;
             if (_options.Build.HasValue)
             {
                 buildInfo = await _barClient.GetBuildAsync(_options.Build.Value);
@@ -140,7 +140,7 @@ internal class GetAssetOperation : Operation
                 }
             }
 
-            if (!matchingAssetsAfterDate.Any())
+            if (matchingAssetsAfterDate.Count == 0)
             {
                 Console.WriteLine($"No assets found with {queryDescription}");
                 int remaining = matchingAssets.Count - checkedAssets;
@@ -155,12 +155,12 @@ internal class GetAssetOperation : Operation
             switch (_options.OutputFormat)
             {
                 case DarcOutputType.text:
-                    foreach ((Asset asset, ProductConstructionService.Client.Models.Build build) in matchingAssetsAfterDate)
+                    foreach ((Asset asset, Build build) in matchingAssetsAfterDate)
                     {
                         Console.WriteLine($"{asset.Name} @ {asset.Version}");
                         Console.Write(UxHelpers.GetTextBuildDescription(build));
                         Console.WriteLine("Locations:");
-                        if (asset.Locations.Any())
+                        if (asset.Locations.Count != 0)
                         {
                             foreach (var location in asset.Locations)
                             {

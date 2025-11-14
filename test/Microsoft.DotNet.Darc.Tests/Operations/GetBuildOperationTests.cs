@@ -57,7 +57,7 @@ public class GetBuildOperationTests
             subscription2
         ];
 
-        ProductConstructionService.Client.Models.Build build = new(
+        Build build = new(
             id: 0,
             dateProduced: DateTimeOffset.Now,
             staleness: 0,
@@ -73,7 +73,7 @@ public class GetBuildOperationTests
             GitHubRepository = githubRepo,
         };
 
-        List<ProductConstructionService.Client.Models.Build> builds =
+        List<Build> builds =
         [
             build
         ];
@@ -108,7 +108,7 @@ public class GetBuildOperationTests
         string internalRepo = $"internal-{repo}";
         string githubRepo = $"Github-{repo}";
 
-        ProductConstructionService.Client.Models.Build build = new(
+        Build build = new(
             id: buildId,
             dateProduced: DateTimeOffset.Now,
             staleness: 0,

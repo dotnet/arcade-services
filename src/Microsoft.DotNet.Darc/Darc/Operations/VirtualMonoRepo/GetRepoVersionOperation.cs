@@ -34,12 +34,12 @@ internal class GetRepoVersionOperation : Operation
         await _dependencyTracker.RefreshMetadataAsync();
 
         // If there are no repositories, list all.
-        if (!repositories.Any())
+        if (repositories.Count == 0)
         {
             repositories = _dependencyTracker.Mappings.Select(m => m.Name).ToList();
         }
 
-        if (!repositories.Any())
+        if (repositories.Count == 0)
         {
             _logger.LogError("No repositories found in the VMR.");
             return Constants.ErrorCode;

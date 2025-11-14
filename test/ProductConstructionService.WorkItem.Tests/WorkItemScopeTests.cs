@@ -193,7 +193,7 @@ public class WorkItemScopeTests
 
         string? lastText = null;
 
-        _services.AddSingleton<Func<bool>>(() => { lastText = "true"; return true; });
+        _services.AddSingleton(() => { lastText = "true"; return true; });
         _services.AddSingleton<Action<string>>(s => lastText = s);
         _services.AddWorkItemProcessor<TestWorkItem, TestWorkItemProcessor>();
         _services.AddWorkItemProcessor<TestWorkItem2, TestWorkItemProcessor2>();

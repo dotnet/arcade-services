@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Kusto.Cloud.Platform.Utils;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.DotNet.DarcLib;
@@ -18,13 +17,13 @@ public class FeedCleanerJob
     private readonly IServiceProvider _serviceProvider;
     private readonly IAzureDevOpsClient _azureDevOpsClient;
     private readonly IOptions<FeedCleanerOptions> _options;
-    private readonly Microsoft.Extensions.Logging.ILogger<FeedCleanerJob> _logger;
+    private readonly ILogger<FeedCleanerJob> _logger;
 
     public FeedCleanerJob(
         IServiceProvider serviceProvider,
         IAzureDevOpsClient azureDevOpsClient,
         IOptions<FeedCleanerOptions> options,
-        Microsoft.Extensions.Logging.ILogger<FeedCleanerJob> logger)
+        ILogger<FeedCleanerJob> logger)
     {
         _serviceProvider = serviceProvider;
         _azureDevOpsClient = azureDevOpsClient;

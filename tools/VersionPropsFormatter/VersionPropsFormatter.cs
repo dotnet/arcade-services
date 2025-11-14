@@ -63,7 +63,7 @@ public class VersionDetailsPropsFormatter(
         versionsProps.Imports.Any(import =>
             import.Project.Equals(Constants.VersionDetailsProps));
 
-    private void WriteXml(string path, XmlDocument document)
+    private static void WriteXml(string path, XmlDocument document)
     {
         XmlWriterSettings xmlWriterSettings = new()
         {
