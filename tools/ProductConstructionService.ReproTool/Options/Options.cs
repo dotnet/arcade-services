@@ -23,7 +23,7 @@ namespace ProductConstructionService.ReproTool.Options;
 
 internal abstract class Options
 {
-    private const string LocalDbConnectionString = "BuildAssetRegistrySqlConnectionString": "Server=localhost\\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Trusted_Connection=True;Encrypt=False";
+    private const string LocalDbConnectionString = "Server=localhost\\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Trusted_Connection=True;Encrypt=False";
     private const string MaestroProdUri = "https://maestro.dot.net";
     internal const string PcsLocalUri = "https://localhost:53180";
 
