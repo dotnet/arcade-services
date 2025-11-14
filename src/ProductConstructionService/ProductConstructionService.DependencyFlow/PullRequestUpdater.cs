@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
-using System.Text;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -263,9 +262,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             return false;
         }
 
-        var returnFlag = await CheckInProgressPullRequestAsync(inProgressPr, pullRequestCheck.IsCodeFlow);
-
-        return returnFlag;
+        return await CheckInProgressPullRequestAsync(inProgressPr, pullRequestCheck.IsCodeFlow);
     }
 
     protected virtual async Task<bool> CheckInProgressPullRequestAsync(InProgressPullRequest pullRequestCheck, bool isCodeFlow)
@@ -320,13 +317,17 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 {
                     // Policies evaluated successfully and the PR was merged just now
                     case MergePolicyCheckResult.Merged:
-                        return await HandleMergedOrClosedPr(
-                            remote,
-                            prInfo,
-                            pr,
+                        await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
+                        await AddDependencyFlowEventsAsync(
+                            pr.ContainedSubscriptions,
+                            DependencyFlowEventType.Completed,
                             DependencyFlowEventReason.AutomaticallyMerged,
                             mergePolicyResult,
-                            isCodeFlow);
+                            pr.Url);
+
+                        // If the PR we just merged was in conflict with an update we previously tried to apply, we shouldn't delete the reminder for the update
+                        await ClearAllStateAsync(isCodeFlow, clearPendingUpdates: pr.MergeState == InProgressPullRequestState.Mergeable);
+                        return (PullRequestStatus.Completed, prInfo);
 
                     case MergePolicyCheckResult.FailedPolicies:
                         await TagSourceRepositoryGitHubContactsIfPossibleAsync(pr);
@@ -367,22 +368,40 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 }
 
             case PrStatus.Merged:
-                return await HandleMergedOrClosedPr(
-                    remote,
-                    prInfo,
-                    pr,
-                    DependencyFlowEventReason.ManuallyMerged,
-                    pr.MergePolicyResult,
-                    isCodeFlow);
-
             case PrStatus.Closed:
-                return await HandleMergedOrClosedPr(
-                    remote,
-                    prInfo,
-                    pr,
-                    DependencyFlowEventReason.ManuallyClosed,
+                // If the PR has been merged, update the subscription information
+                if (prInfo.Status == PrStatus.Merged)
+                {
+                    await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
+                }
+
+                DependencyFlowEventReason reason = prInfo.Status == PrStatus.Merged
+                    ? DependencyFlowEventReason.ManuallyMerged
+                    : DependencyFlowEventReason.ManuallyClosed;
+
+                await AddDependencyFlowEventsAsync(
+                    pr.ContainedSubscriptions,
+                    DependencyFlowEventType.Completed,
+                    reason,
                     pr.MergePolicyResult,
-                    isCodeFlow);
+                    pr.Url);
+
+                _logger.LogInformation("PR {url} has been manually {action}. Stopping tracking it", pr.Url, prInfo.Status.ToString().ToLowerInvariant());
+
+                await ClearAllStateAsync(isCodeFlow, clearPendingUpdates: pr.MergeState == InProgressPullRequestState.Mergeable);
+
+                // Also try to clean up the PR branch.
+                try
+                {
+                    _logger.LogInformation("Trying to clean up the branch for pull request {url}", pr.Url);
+                    await remote.DeletePullRequestBranchAsync(pr.Url);
+                }
+                catch (DarcException)
+                {
+                    _logger.LogInformation("Failed to delete branch associated with pull request {url}", pr.Url);
+                }
+
+                return (PullRequestStatus.Completed, prInfo);
 
             default:
                 throw new NotImplementedException($"Unknown PR status '{prInfo.Status}'");
@@ -1178,17 +1197,27 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             return;
         }
 
-        previousSourceSha = pr?.PreviousSourceSha != null
-            ? pr.PreviousSourceSha
-            : await GetPreviousSourceSha(remote, subscription);
-        if (pr != null && string.IsNullOrEmpty(pr.PreviousSourceSha))
+        if (isForwardFlow)
         {
-            pr.PreviousSourceSha = previousSourceSha;
-        }
+            SourceManifest? sourceManifest = await remote.GetSourceManifestAsync(
+                subscription.TargetRepository,
+                subscription.TargetBranch);
 
-        upstreamRepoDiffs = isForwardFlow
-            ? []
-            : await ComputeRepoUpdatesAsync(previousSourceSha, build.Commit);
+            previousSourceSha = sourceManifest?
+                .GetRepoVersion(subscription.TargetDirectory)?.CommitSha;
+
+            upstreamRepoDiffs = [];
+        }
+        else
+        {
+            SourceDependency? sourceDependency = await remote.GetSourceDependencyAsync(
+                subscription.TargetRepository,
+                subscription.TargetBranch);
+
+            previousSourceSha = sourceDependency?.Sha;
+
+            upstreamRepoDiffs = await ComputeRepoUpdatesAsync(previousSourceSha, build.Commit);
+        }
 
         // Conflicts + rebase means we have to block the PR until a human resolves the conflicts manually
         if (enableRebase && codeFlowRes.ConflictedFiles.Count > 0)
@@ -1239,18 +1268,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 CommentType.Caution);
         }
     }
-
-    private static async Task<string?> GetPreviousSourceSha(IRemote remote, SubscriptionDTO subscription)
-        => subscription.IsForwardFlow()
-            ? (await remote.GetSourceManifestAsync(
-                    subscription.TargetRepository,
-                    subscription.TargetBranch))
-                ?.GetRepoVersion(subscription.TargetDirectory)
-                ?.CommitSha
-            : (await remote.GetSourceDependencyAsync(
-                    subscription.TargetRepository,
-                    subscription.TargetBranch))
-                ?.Sha;
 
     /// <summary>
     /// Updates the PR's title and description
@@ -1371,7 +1388,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 HeadBranch = prBranch,
                 HeadBranchSha = pr.HeadBranchSha,
                 SourceSha = update.SourceSha,
-                PreviousSourceSha = previousSourceSha,
                 ContainedSubscriptions =
                 [
                     new SubscriptionPullRequestUpdate()
@@ -1560,93 +1576,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         pr.BlockedFromFutureUpdates = true;
         await _pullRequestState.SetAsync(pr);
-    }
-
-    private async Task<(PullRequestStatus Status, PullRequest PrInfo)> HandleMergedOrClosedPr(
-        IRemote remote,
-        PullRequest prInfo,
-        InProgressPullRequest pr,
-        DependencyFlowEventReason reason,
-        MergePolicyCheckResult mergePolicyResult,
-        bool isCodeflow)
-    {
-        if (reason == DependencyFlowEventReason.ManuallyMerged || reason == DependencyFlowEventReason.AutomaticallyMerged)
-        {
-            if (pr.CodeFlowDirection == CodeFlowDirection.ForwardFlow && !string.IsNullOrEmpty(pr.PreviousSourceSha))
-            {
-                await TagForwardFlownPRs(pr.Url, pr.ContainedSubscriptions.Single().SourceRepo, pr.PreviousSourceSha, pr.SourceSha);
-            }
-
-            await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
-            await AddDependencyFlowEventsAsync(
-                pr.ContainedSubscriptions,
-                DependencyFlowEventType.Completed,
-                reason,
-                mergePolicyResult,
-                pr.Url);
-        }
-
-        _logger.LogInformation("PR {url} has been {how} {action}. Stopping tracking it",
-            pr.Url,
-            reason == DependencyFlowEventReason.AutomaticallyMerged ? "automatically" : "manually",
-            prInfo.Status.ToString().ToLowerInvariant());
-
-        // If the PR we just merged was in conflict with an update we previously tried to apply, we shouldn't delete the reminder for the update
-        await ClearAllStateAsync(isCodeflow, clearPendingUpdates: pr.MergeState == InProgressPullRequestState.Mergeable);
-
-        // Also try to clean up the PR branch.
-        try
-        {
-            _logger.LogInformation("Trying to clean up the branch for pull request {url}", pr.Url);
-            await remote.DeletePullRequestBranchAsync(pr.Url);
-        }
-        catch (DarcException)
-        {
-            _logger.LogInformation("Failed to delete branch associated with pull request {url}", pr.Url);
-        }
-
-        return (PullRequestStatus.Completed, prInfo);
-    }
-
-    private async Task TagForwardFlownPRs(
-        string prUrl,
-        string sourceRepo,
-        string previousSourceRepoSha,
-        string newSourceRepoSha)
-    {
-        var remote = await _remoteFactory.CreateRemoteAsync(sourceRepo);
-        var commitTitles = await remote.GetCommitTitlesForRange(
-            sourceRepo,
-            previousSourceRepoSha,
-            newSourceRepoSha);
-
-        var prTitlesAndUris = GitRepoUtils.ExtractPullRequestUrisFromCommitTitles(
-            commitTitles,
-            sourceRepo);
-
-        if (prTitlesAndUris.Count == 0)
-        {
-            _logger.LogInformation("No PRs found to tag in {sourceRepo} between {previousSha} and {newSha}",
-                sourceRepo,
-                previousSourceRepoSha,
-                newSourceRepoSha);
-        }
-        else
-        {
-            StringBuilder str = new("The following pull requests are included in this PR:");
-            foreach (var prUri in prTitlesAndUris)
-            {
-                str.AppendLine();
-                str.Append($"- {prUri.prUri}");
-            }
-            _commentCollector.AddComment(
-                str.ToString(),
-                CommentType.Information);
-            // Post the collected comments right away so they don't end up in the new PR if we create one
-            var (targetRepo, _) = await GetTargetAsync();
-            await _pullRequestCommenter.PostCollectedCommentsAsync(prUrl, targetRepo, []);
-            _commentCollector.Reset();
-        }
     }
 
     // <summary>

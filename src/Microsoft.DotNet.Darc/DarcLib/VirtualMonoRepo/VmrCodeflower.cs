@@ -360,7 +360,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 if (headBranchExisted)
                 {
                     _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
-                    throw new ConflictInPrBranchException(e.Result.StandardError, codeflowOptions.TargetBranch, codeflowOptions.Mapping.Name, isForwardFlow: false);
+                    throw new ConflictInPrBranchException(e.Result.StandardError, codeflowOptions.TargetBranch);
                 }
 
                 // Otherwise, we have a conflicting change in the last backflow PR (before merging)

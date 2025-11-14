@@ -30,11 +30,6 @@ public class InProgressPullRequest : DependencyFlowWorkItem
     /// </summary>
     public required string SourceSha { get; set; }
 
-    /// <summary>
-    /// Previous SHA that the target branch had
-    /// </summary>
-    public string PreviousSourceSha { get; set; }
-
     public bool? CoherencyCheckSuccessful { get; set; }
 
     public List<CoherencyErrorDetails> CoherencyErrors { get; set; }

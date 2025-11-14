@@ -61,10 +61,8 @@ public class ConflictInPrBranchException : DarcException
 
     public ConflictInPrBranchException(
             string failedMergeMessage,
-            string targetBranch,
-            string mappingName,
-            bool isForwardFlow)
-        : this(ParseResult(failedMergeMessage, mappingName, isForwardFlow), targetBranch)
+            string targetBranch)
+        : this(ParseResult(failedMergeMessage), targetBranch)
     {
     }
 
@@ -74,7 +72,7 @@ public class ConflictInPrBranchException : DarcException
         ConflictedFiles = conflictedFiles;
     }
 
-    private static List<string> ParseResult(string failureException, string mappingName, bool isForwardFlow)
+    private static List<string> ParseResult(string failureException)
     {
         List<string> filesInConflict = [];
         var errors = failureException.Split(Environment.NewLine);
@@ -91,16 +89,7 @@ public class ConflictInPrBranchException : DarcException
             }
         }
 
-        if (isForwardFlow)
-        {
-            // Convert VMR paths to normal repo paths, for example src/repo/file.cs -> file.cs
-            return [..filesInConflict.Select(file => file.Split('/', 3)[2]).Distinct()];
-        }
-        else
-        {
-            // If we're backflowing, the file paths are already normalized
-            return [..filesInConflict.Distinct().Select(file => $"src/{mappingName}/{file}")];
-        }
+        return [..filesInConflict.Distinct()];
     }
 }
 

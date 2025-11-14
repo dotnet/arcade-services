@@ -124,7 +124,7 @@ internal static class AuthenticationConfiguration
                 {
                     policy.AddAuthenticationSchemes(AuthenticationSchemes);
                     policy.RequireAuthenticatedUser();
-                    policy.RequireRole(userRole);
+                    policy.RequireRole(userRole, adminRole);
                 })
             .AddPolicy(ApiAuthorizationPolicyName, policy =>
                 {
@@ -133,7 +133,7 @@ internal static class AuthenticationConfiguration
                     // Since cookie scheme returns 200 with the auth exception in the body, Entra should be used instead as it 401s
                     policy.AddAuthenticationSchemes([CookieAuthenticationDefaults.AuthenticationScheme, EntraAuthorizationSchemeName]);
                     policy.RequireAuthenticatedUser();
-                    policy.RequireRole(userRole);
+                    policy.RequireRole(userRole, adminRole);
                 })
             .AddPolicy(AdminAuthorizationPolicyName, policy =>
                 {

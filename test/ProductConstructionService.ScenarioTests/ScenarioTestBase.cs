@@ -12,12 +12,12 @@ using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.Internal.Testing.Utility;
-using Microsoft.DotNet.ProductConstructionService.Client;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NuGet.Configuration;
 using NUnit.Framework;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using ProductConstructionService.ScenarioTests.Helpers;
 
 [assembly: Parallelizable(ParallelScope.Fixtures)]
@@ -46,7 +46,7 @@ internal abstract partial class ScenarioTestBase
         _packageNameSalt = Guid.NewGuid().ToString().Substring(0, 8);
     }
 
-    protected async Task<Octokit.PullRequest> WaitForPullRequestAsync(string targetRepo, string targetBranch, Octokit.ItemStateFilter prState = Octokit.ItemStateFilter.Open)
+    protected async Task<Octokit.PullRequest> WaitForPullRequestAsync(string targetRepo, string targetBranch)
     {
         Octokit.Repository repo = await GitHubApi.Repository.Get(TestParameters.GitHubTestOrg, targetRepo);
 
@@ -56,7 +56,6 @@ internal abstract partial class ScenarioTestBase
             IReadOnlyList<Octokit.PullRequest> prs = await GitHubApi.PullRequest.GetAllForRepository(repo.Id, new Octokit.PullRequestRequest
             {
                 Base = targetBranch,
-                State = prState
             });
 
             if (prs.Count == 1)
@@ -1152,6 +1151,29 @@ internal abstract partial class ScenarioTestBase
         throw new ScenarioTestException($"No Maestro Merge Policy checks were found in the PR ({prUrl}) during the allotted time.");
     }
 
+    protected async Task WaitForFileContentInPullRequest(
+        string repoDir,
+        string targetRepoName,
+        string targetBranch,
+        string filePath,
+        string expectedContent,
+        int maxAttempts = 5)
+    {
+        using var _ = ChangeDirectory(repoDir);
+        for (int attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            var pr = await WaitForUpdatedPullRequestAsync(targetRepoName, targetBranch);
+            await CheckoutRemoteRefAsync(pr.Head.Ref);
+            var content = await File.ReadAllTextAsync(filePath);
+            if (content == expectedContent)
+            {
+                return;
+            }
+        }
+
+        throw new ScenarioTestException($"File {filePath} in branch {targetBranch} did not have expected content in PR.");
+    }
+
     protected static string GetTestChannelName([CallerMemberName] string testName = "")
     {
         return $"Test {testName} {Guid.NewGuid().ToString().Substring(0, 16)}";
@@ -1167,21 +1189,10 @@ internal abstract partial class ScenarioTestBase
         return $"{packageName}.{_packageNameSalt}";
     }
 
-    protected static IAsyncDisposable CleanUpPullRequestAfter(
-        string owner,
-        string repo,
-        Octokit.PullRequest pullRequest,
-        PullRequestCleanupOperation cleanupOperation = PullRequestCleanupOperation.Close)
+    protected static IAsyncDisposable CleanUpPullRequestAfter(string owner, string repo, Octokit.PullRequest pullRequest)
         => AsyncDisposable.Create(async () =>
         {
-            if (cleanupOperation == PullRequestCleanupOperation.Merge)
-            {
-                await MergePullRequest(owner, repo, pullRequest);
-            }
-            else
-            {
-                await ClosePullRequest(owner, repo, pullRequest);
-            }
+            await ClosePullRequest(owner, repo, pullRequest);
         });
 
     protected static async Task ClosePullRequest(string owner, string repo, Octokit.PullRequest pullRequest)
@@ -1194,34 +1205,6 @@ internal abstract partial class ScenarioTestBase
             };
 
             await GitHubApi.Repository.PullRequest.Update(owner, repo, pullRequest.Number, pullRequestUpdate);
-        }
-        catch
-        {
-            // Closed already
-        }
-        try
-        {
-            await GitHubApi.Git.Reference.Delete(owner, repo, $"heads/{pullRequest.Head.Ref}");
-        }
-        catch
-        {
-            // branch already deleted
-        }
-    }
-
-    protected static async Task MergePullRequest(string owner, string repo, Octokit.PullRequest pullRequest)
-    {
-        try
-        {
-            await GitHubApi.PullRequest.Merge(
-                owner,
-                repo,
-                pullRequest.Number,
-                new Octokit.MergePullRequest
-                {
-                    CommitMessage = "Merge pull request",
-                    MergeMethod = Octokit.PullRequestMergeMethod.Merge
-                });
         }
         catch
         {
@@ -1294,10 +1277,4 @@ internal abstract partial class ScenarioTestBase
         pr.MergeableState.ToString().Should().Be("dirty", "PR " + pr.HtmlUrl + " should be dirty");
         return pr;
     }
-}
-
-internal enum PullRequestCleanupOperation
-{
-    Close,
-    Merge
 }
