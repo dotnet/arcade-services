@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using CommandLine;
 using Maestro.Common;
 using Maestro.Data;
 using Maestro.DataProviders;
@@ -21,9 +20,10 @@ using ProductConstructionService.ReproTool.Operations;
 using GitHubClient = Octokit.GitHubClient;
 
 namespace ProductConstructionService.ReproTool.Options;
+
 internal abstract class Options
 {
-    private const string LocalDbConnectionString = "Data Source=localhost\\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Integrated Security=true";
+    private const string LocalDbConnectionString = "BuildAssetRegistrySqlConnectionString": "Server=localhost\\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Trusted_Connection=True;Encrypt=False";
     private const string MaestroProdUri = "https://maestro.dot.net";
     internal const string PcsLocalUri = "https://localhost:53180";
 

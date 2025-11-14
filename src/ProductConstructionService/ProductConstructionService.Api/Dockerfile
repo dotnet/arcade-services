@@ -77,5 +77,10 @@ COPY --from=build /app/publish/SubscriptionTriggerer ./SubscriptionTriggerer
 EXPOSE 8080
 EXPOSE 8081
 
+ENV DOTNET_RUNNING_IN_CONTAINER=true \
+  DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false \
+  LC_ALL=en_US.UTF-8 \
+  LANG=en_US.UTF-8
+
 WORKDIR /app/ProductConstructionService
 ENTRYPOINT ["dotnet", "./ProductConstructionService.Api.dll"]
