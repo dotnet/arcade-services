@@ -118,7 +118,7 @@ internal class ForwardFlowTests : CodeFlowTests
         await File.WriteAllTextAsync(_productRepoVmrFilePath, "A conflicting change in the VMR");
         await GitOperations.CommitAll(VmrPath, "A conflicting change in the VMR");
 
-        Build build = await CreateNewRepoBuild(
+        var build = await CreateNewRepoBuild(
         [
             ("Package.A1", "1.0.1"),
             ("Package.B1", "1.0.1"),

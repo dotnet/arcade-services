@@ -2,11 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure.ResourceManager.AppContainers;
-using Azure.ResourceManager.AppContainers.Models;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 
 namespace ProductConstructionService.WorkItems;
+
 public interface IReplicaWorkItemProcessorStateCacheFactory
 {
     /// <summary>
@@ -48,14 +48,12 @@ public class ReplicaWorkItemProcessorStateCache : IReplicaWorkItemProcessorState
         // Always fetch the latest container app information, in case there was a deployment or something like that
         // in between calls
         _containerApp = await _containerApp.GetAsync();
-        var activeRevision = (await _containerApp.GetContainerAppRevisionAsync(revisionName)).Value;
-        return activeRevision.GetContainerAppReplicas()
-            // Without this, VS can't distinguish between Enumerable and AsyncEnumerable in the Select bellow
-            .ToEnumerable()
-            .Select(replica => new WorkItemProcessorStateCache(
-                _redisCacheFactory,
-                replica.Data.Name,
-                _logger))
-            .ToList();
+        var activeRevision = await _containerApp.GetContainerAppRevisionAsync(revisionName);
+        var replicas = activeRevision.Value.GetContainerAppReplicas().AsEnumerable();
+
+        return
+        [
+            ..replicas.Select(replica => new WorkItemProcessorStateCache(_redisCacheFactory, replica.Data.Name, _logger))
+        ];
     }
 }

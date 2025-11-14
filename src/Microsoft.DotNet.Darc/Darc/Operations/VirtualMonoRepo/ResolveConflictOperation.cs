@@ -56,7 +56,7 @@ internal class ResolveConflictOperation(
             ?? throw new DarcException($"No open PR found for this subscription");
 
         _logger.LogInformation("Fetching build to apply ...");
-        Build build = await _barClient.GetBuildAsync(pr.Updates.Last().BuildId);
+        var build = await _barClient.GetBuildAsync(pr.Updates.Last().BuildId);
 
         NativePath targetGitRepoPath = new(_processManager.FindGitRoot(Directory.GetCurrentDirectory()));
 

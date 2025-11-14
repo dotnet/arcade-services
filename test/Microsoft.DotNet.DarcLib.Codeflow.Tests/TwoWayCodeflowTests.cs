@@ -398,11 +398,10 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         var backBranchName = GetTestBranchName(forwardFlow: false);
         var forwardBranchName = GetTestBranchName();
-        Build build;
         CodeFlowResult codeFlowResult;
 
         // 0. Backflow of a build to populate the version files in the repo with some values
-        build = await CreateNewVmrBuild([(FakePackageName, FakePackageVersion)]);
+        var build = await CreateNewVmrBuild([(FakePackageName, FakePackageVersion)]);
         codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName, build);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, backBranchName);

@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <TargetFramework></TargetFramework>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+
     <OutputType>Exe</OutputType>
     <SignAssembly>false</SignAssembly>
     <IsPackable>true</IsPackable>
@@ -12,10 +15,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Maestro\Maestro.Common\Maestro.Common.csproj" />
-    <ProjectReference Include="..\..\ProductConstructionService\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />
     <ProjectReference Include="..\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <PackageReference Include="CommandLineParser" />
     <PackageReference Include="LibGit2Sharp" />

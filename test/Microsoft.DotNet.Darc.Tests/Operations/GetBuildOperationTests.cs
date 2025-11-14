@@ -57,7 +57,7 @@ public class GetBuildOperationTests
             subscription2
         ];
 
-        Build build = new(
+        ProductConstructionService.Client.Models.Build build = new(
             id: 0,
             dateProduced: DateTimeOffset.Now,
             staleness: 0,
@@ -73,7 +73,7 @@ public class GetBuildOperationTests
             GitHubRepository = githubRepo,
         };
 
-        List<Build> builds =
+        List<ProductConstructionService.Client.Models.Build> builds =
         [
             build
         ];
@@ -107,8 +107,8 @@ public class GetBuildOperationTests
         string sha = "50c88957fb93ccaa0040b5b28ff459a29ecf88c6";
         string internalRepo = $"internal-{repo}";
         string githubRepo = $"Github-{repo}";
-        
-        Build build = new(
+
+        ProductConstructionService.Client.Models.Build build = new(
             id: buildId,
             dateProduced: DateTimeOffset.Now,
             staleness: 0,

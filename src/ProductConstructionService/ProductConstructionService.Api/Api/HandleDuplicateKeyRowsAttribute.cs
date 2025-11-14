@@ -23,8 +23,7 @@ public class HandleDuplicateKeyRowsAttribute : ActionFilterAttribute
         if (executedContext.Exception is DbUpdateException dbEx &&
             // Note: From inspection this will throw Microsoft.Data.SqlClient.SqlException,
             //       not System.Data.SqlClient.SqlException; we will explicitly handle both.
-            (dbEx.InnerException is Microsoft.Data.SqlClient.SqlException ||
-             dbEx.InnerException is System.Data.SqlClient.SqlException) &&
+            (dbEx.InnerException is Microsoft.Data.SqlClient.SqlException) &&
             dbEx.InnerException.Message.Contains("Cannot insert duplicate key"))
         {
             executedContext.Exception = null;

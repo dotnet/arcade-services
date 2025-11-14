@@ -105,9 +105,9 @@ internal class GetAssetOperation : Operation
             var now = DateTimeOffset.Now;
             int checkedAssets = 0;
 
-            List<(Asset asset, Build build)> matchingAssetsAfterDate = [];
+            List<(Asset asset, ProductConstructionService.Client.Models.Build build)> matchingAssetsAfterDate = [];
 
-            Build buildInfo = null;
+            ProductConstructionService.Client.Models.Build buildInfo = null;
             if (_options.Build.HasValue)
             {
                 buildInfo = await _barClient.GetBuildAsync(_options.Build.Value);
@@ -155,7 +155,7 @@ internal class GetAssetOperation : Operation
             switch (_options.OutputFormat)
             {
                 case DarcOutputType.text:
-                    foreach ((Asset asset, Build build) in matchingAssetsAfterDate)
+                    foreach ((Asset asset, ProductConstructionService.Client.Models.Build build) in matchingAssetsAfterDate)
                     {
                         Console.WriteLine($"{asset.Name} @ {asset.Version}");
                         Console.Write(UxHelpers.GetTextBuildDescription(build));

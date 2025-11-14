@@ -353,9 +353,9 @@ internal class GetDependencyGraphOperation : Operation
                 nodeBuilder.Append(node.Commit.AsSpan(0, node.Commit.Length < 10 ? node.Commit.Length : 10));
 
                 // Append a build string (with newline) if available
-                if (node.ContributingBuilds != null && node.ContributingBuilds.Any())
+                if (node.ContributingBuilds != null && node.ContributingBuilds.Count != 0)
                 {
-                    Build newestBuild = node.ContributingBuilds.OrderByDescending(b => b.DateProduced).First();
+                    var newestBuild = node.ContributingBuilds.OrderByDescending(b => b.DateProduced).First();
                     nodeBuilder.Append($"\\n{newestBuild.DateProduced.ToString("g")} (UTC)");
                 }
 

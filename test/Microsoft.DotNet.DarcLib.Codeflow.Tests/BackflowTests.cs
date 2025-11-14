@@ -513,7 +513,7 @@ internal class BackflowTests : CodeFlowTests
             VmrPath / VmrInfo.GetRelativeRepoSourcesPath("arcade") / DarcLib.Constants.CommonScriptFilesPath / "build.ps2");
         await GitOperations.CommitAll(VmrPath, "Changing VMR's eng/common");
 
-        Build build = await CreateNewVmrBuild(
+        ProductConstructionService.Client.Models.Build build = await CreateNewVmrBuild(
         [
             ("Package.A1", "1.0.1"),
             ("Package.B1", "1.0.1"),

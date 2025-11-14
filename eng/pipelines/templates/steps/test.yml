@@ -14,7 +14,7 @@ steps:
   inputs:
     command: custom
     projects: |
-      $(Build.SourcesDirectory)\arcade-services.sln
+      $(Build.SourcesDirectory)\arcade-services.slnx
     custom: test
     arguments: >
       --configuration ${{ parameters.configuration }}

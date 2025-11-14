@@ -138,12 +138,12 @@ public class FeedCleanerJob
         List<AzureDevOpsFeed> packageFeeds = activeFeeds
             .Where(f => FeedConstants.MaestroManagedFeedNamePattern.IsMatch(f.Name)
                     && !FeedConstants.MaestroManagedSymbolFeedNamePattern.IsMatch(f.Name))
-            .Shuffle()
+            .OrderBy(_ => Random.Shared.Next())
             .ToList();
 
         List<AzureDevOpsFeed> symbolFeeds = activeFeeds
             .Where(f => FeedConstants.MaestroManagedSymbolFeedNamePattern.IsMatch(f.Name))
-            .Shuffle()
+            .OrderBy(_ => Random.Shared.Next())
             .ToList();
 
         _logger.LogInformation("Found {totalCount} ({packageFeedCount} package and {symbolFeedCount} symbol) feeds for account {account}.",

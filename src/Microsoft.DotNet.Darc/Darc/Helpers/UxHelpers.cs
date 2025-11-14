@@ -84,7 +84,7 @@ public static class UxHelpers
     /// </summary>
     /// <param name="build">Build</param>
     /// <returns>JObject</returns>
-    public static JObject GetJsonBuildDescription(Build build)
+    public static JObject GetJsonBuildDescription(ProductConstructionService.Client.Models.Build build)
     {
         return JObject.FromObject(new
         {
@@ -106,7 +106,7 @@ public static class UxHelpers
     /// </summary>
     /// <param name="build">Build</param>
     /// <returns>Description</returns>
-    public static string GetTextBuildDescription(Build build)
+    public static string GetTextBuildDescription(ProductConstructionService.Client.Models.Build build)
     {
         var builder = new StringBuilder();
         builder.AppendLine($"Repository:    {build.GetRepository()}");
@@ -186,27 +186,30 @@ public static class UxHelpers
 
     public static string GetTextSubscriptionDescription(Subscription subscription, IEnumerable<MergePolicy> mergePolicies = null)
     {
+        var excludedAssets = subscription.ExcludedAssets.Count != 0
+            ? string.Join(Environment.NewLine + "    - ", new List<string>([string.Empty, .. subscription.ExcludedAssets]))
+            : " []";
+
         var subInfo = new StringBuilder($"""
             {subscription.SourceRepository} ({subscription.Channel.Name}) ==> '{subscription.TargetRepository}' ('{subscription.TargetBranch}')
               - Id: {subscription.Id}
               - Update Frequency: {subscription.Policy.UpdateFrequency}
               - Enabled: {subscription.Enabled}
               - Batchable: {subscription.Policy.Batchable}
-              - Excluded Assets:{(subscription.ExcludedAssets.Any() ? string.Join(Environment.NewLine + "    - ", [string.Empty, .. subscription.ExcludedAssets]) : " []")}
+              - Excluded Assets:{excludedAssets}
               - PR Failure Notification tags: {subscription.PullRequestFailureNotificationTags}
               - Source-enabled: {subscription.SourceEnabled}
 
             """);
+
         if (!string.IsNullOrEmpty(subscription.TargetDirectory))
         {
             subInfo.AppendLine($"  - Target Directory: {subscription.TargetDirectory}");
         }
-        if (subscription.SourceEnabled)
+
+        if (subscription.SourceEnabled && !string.IsNullOrEmpty(subscription.SourceDirectory))
         {
-            if (!string.IsNullOrEmpty(subscription.SourceDirectory))
-            {
-                subInfo.AppendLine($"  - Source Directory: {subscription.SourceDirectory}");
-            }
+            subInfo.AppendLine($"  - Source Directory: {subscription.SourceDirectory}");
         }
 
         IEnumerable<MergePolicy> policies = mergePolicies ?? subscription.Policy.MergePolicies;
@@ -243,7 +246,7 @@ public static class UxHelpers
 
     public static string GetSimpleRepoName(string repoUri)
     {
-        var lastSlash = repoUri.LastIndexOf("/");
+        var lastSlash = repoUri.LastIndexOf('/');
         if (lastSlash != -1 && lastSlash < repoUri.Length - 1)
         {
             return repoUri.Substring(lastSlash + 1);
