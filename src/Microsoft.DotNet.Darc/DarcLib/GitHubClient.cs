@@ -1515,7 +1515,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         var request = new CommitRequest
         {
-            Sha = branch ?? "main",
+            Sha = branch,
         };
 
         var options = new ApiOptions
@@ -1559,7 +1559,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         return [.. allCommits.Take(maxCount)];
     }
 
-    public async Task<ForwardFlow?> GetLastIncomingForwardFlow(string vmrUrl, string mappingName, string commit)
+    public async Task<ForwardFlow?> GetLastIncomingForwardFlowAtCommitAsync(string vmrUrl, string mappingName, string commit)
     {
         var content = await GetFileContentAtCommit(
             vmrUrl,
@@ -1590,7 +1590,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         return new ForwardFlow(lastForwardFlowRepoSha, lastForwardFlowVmrSha);
     }
 
-    public async Task<Backflow?> GetLastIncomingBackflow(string repoUrl, string commit)
+    public async Task<Backflow?> GetLastIncomingBackflowAtCommitAsync(string repoUrl, string commit)
     {
         var content = await GetFileContentAtCommit(
             repoUrl,
