@@ -31,135 +31,143 @@ public record CodeflowGraphCommit(
     DateTimeOffset CommitDate,
     string Author,
     string Description,
-    CodeflowGraphCommit? IncomingCodeflow);
+    string? IncomingCodeflowSha);
 
-public class CodeflowHistoryManager : ICodeflowHistoryManager
+public class CodeflowHistoryManager(
+    IRemoteFactory remoteFactory,
+    IConnectionMultiplexer connection) : ICodeflowHistoryManager
 {
-    private readonly IRedisCacheFactory _redisCacheFactory;
-    private readonly IRemoteFactory _remoteFactory;
+    private readonly IRemoteFactory _remoteFactory = remoteFactory;
+    private readonly IConnectionMultiplexer _connection = connection;
 
-    public CodeflowHistoryManager(
-        IRedisCacheFactory cacheFactory,
-        IRemoteFactory remoteFactory)
+    public async Task<CodeflowHistory?> GetCachedCodeflowHistoryAsync(string subscriptionId, int commitFetchCount)
     {
-        _redisCacheFactory = cacheFactory;
-        _remoteFactory = remoteFactory;
+        if (commitFetchCount < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(commitFetchCount));
+        }
+
+        var cache = _connection.GetDatabase();
+
+        var commitShas = await cache.SortedSetRangeByRankWithScores(
+            key: subscriptionId,
+            start: 0,
+            stop: commitFetchCount - 1,
+            order: Order.Descending())
+            .Select(e => (string)e.Element)
+            .ToList();
+
+        return await cache.StringGetAsync(commitShas)
+            .Select()
     }
 
-    public async Task<CodeflowHistory?> GetCachedCodeflowHistoryAsync(Subscription subscription)
-    {
-        string id = subscription.Id.ToString()!;
-        var cache = _redisCacheFactory.Create<CodeflowGraphCommit>(id);
-        return await cache.TryGetStateAsync();
-    }
-
-    public async Task<CodeflowHistory?> GetCachedCodeflowHistoryAsync(
-        Subscription subscription,
-        string commitSha,
-        int commitFetchCount)
-    {
-        // todo this method returns the codeflow history starting from commitSha. 
-        // It only reads from redis and never modifies the cache
-    }
-
-
-    // get cached commits
-    // fetched fresh commits & fresh codeflows
-    // erase old if no connection
-    // persist new
     public async Task<CodeflowHistory?> FetchLatestCodeflowHistoryAsync(
         Subscription subscription,
         int commitFetchCount)
     {
-        //todo acquire lock on the redis Zset here
-        // (or not ? Maybe the unique commit SHA as the zset key ensures that commits can't be added twice)
-        // in that case, we'd only have to check that when a write fails due to the commit already being cached,
-        // we don't fail the flow
         var cachedCommits = await GetCachedCodeflowHistoryAsync(subscription.Id);
 
         var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
 
-        latestCachedCommitSha = cachedCommits?.Commits.FirstOrDefault()?.CommitSha;
+        latestCachedCommitSha = cachedCommits?
+            .Commits
+            .FirstOrDefault()?
+            .CommitSha;
 
-        var latestCommits = await remote.FetchNewerRepoCommitsAsync(
+        var newCommits = await remote.FetchNewerRepoCommitsAsync(
             subscription.TargetBranch,
             subscription.TargetBranch,
             latestCachedCommitSha,
             commitFetchCount);
 
-        if (latestCommits.Count == commitFetchCount &&
-            latestCommits.LastOrDefault()?.CommitSha != latestCachedCommitSha)
+        if (newCommits.Count == commitFetchCount
+            && latestCommits.LastOrDefault()?.CommitSha != latestCachedCommitSha)
         {
-            // we have a gap in the history - throw away cache because we can't form a continuous history
-            cachedCommits = [];
-        }
-        else
-        {
-            latestCommits = latestCommits
-                .Where(commit => commit.CommitSha != latestCachedCommitSha)
-                .ToList();
+            // there's a gap between the new and cached commits. clear the cache and start from scratch.
+            ClearCodeflowCacheAsync(subscription.Id);
         }
 
-        var latestCachedCodeflow = cachedCommits?.Commits.FirstOrDefault(
-            commit => commit.IncomingCodeflows != null);
+        newCommits.Remove(latestCachedCommitSha);
 
-        var codeFlows = await FetchLatestIncomingCodeflows(
+        var codeFlows = await EnrichCommitsWithCodeflowDataAsync(
             subscription.TargetRepository,
             subscription.TargetBranch,
             !string.IsNullOrEmpty(subscription.TargetDirectory),
             latestCommits,
             remote);
 
-        foreach (var commit in latestCommits)
-        {
-            string? sourceCommitSha = codeflows.GetCodeflowSourceCommit(commit.CommitSha);
-            commit.IncomingCodeflow = sourceCommitSha;
-        }
-
-        // todo cache fresh commits and release lock on the Zset
-        await CacheCommits(latestCommits);
+        await CacheCommitsAsync(latestCommits);
 
         return null;
     }
 
-    private async Task<GraphCodeflows> FetchLatestIncomingCodeflows(
+    private async Task<GraphCodeflows> EnrichCommitsWithCodeflowDataAsync(
         string repo,
         string branch,
         bool isForwardFlow,
-        List<CodeflowGraphCommit> latestCommits,
-        IRemote? remote)
+        List<CodeflowGraphCommit> commits)
     {
-        remote ??= await _remoteFactory.CreateRemoteAsync(repo);
+        if (commits.Count == 0)
+        {
+            return [];
+        }
 
-        string? lastFlowSha = null;
-        string? lastCachedFlowSha = latestCommits
-            .FirstOrDefault(commit => commit.IncomingCodeflow != null)
-            ?.IncomingCodeflow
-            ?.CommitSha;
-        
-        while (last)
-            if (isForwardFlow)
+        remote = await _remoteFactory.CreateRemoteAsync(repo);
+
+        var lastCommitSha = commits
+            .First()
+            .CommitSha;
+
+        var commitLookups = commits.ToDictionary(c => c.CommitSha, c => c);
+
+        while (true)
+        {
+            var lastFlow = isForwardFlow
+                ? await _remoteFactory.GetLastVmrIncomingCodeflowAsync(branch, lastCommitSha)
+                : await _remoteFactory.GetLastRepoIncomingCodeflowAsync(branch, lastCommitSha);
+
+            if (commitLookups.Contains(lastFlow.TargetCommitSha))
             {
-                var lastFlow = remote.GetVmrLastIncomingCodeflowAsync(branch, latestCachedCommit?.CommitSha);
+                commitLookups[lastFlow.TargetCommitSha].IncomingCodeflowSha = lastFlow.SourceCommitSha;
+                commitLookups.Remove(lastFlow.TargetCommitSha); // prevent the possibility of infinite loops
+                lastCommitSha = lastFlow.TargetCommitSha;
             }
             else
             {
-                var lastFlow = remote.GetRepoLastIncomingCodeflowAsync(branch, latestCachedCommit?.CommitSha);
+                break;
             }
-
-        
-        return null;
+        }
+        return commits;
     }
 
-    private async Task CacheCommits(List<CodeflowGraphCommit> commits)
+    private async Task CacheCommitsAsync(
+        string subscriptionId,
+        List<CodeflowGraphCommit> commits,
+        int latestCachedCommitScore)
     {
-        // Cache the commits as part of the subscription's redis ZSet of CodeflowGraphCommit objects
         if (commits.Count == 0)
         {
             return;
         }
-        var cache = _redisCacheFactory.Create<CodeflowGraphCommit>(subscription.Id.ToString()!);
-        await cache.SetStateAsync(new CodeflowHistory(commits, codeflows));
+        var cache = _connection.GetDatabase();
+
+        int i = latestCachedCommitScore ?? 0;
+
+        var sortedSetEntries = commits
+            .Select(c => new SortedSetEntry(c.CommitSha, i++))
+            .ToArray();
+
+        await cache.SortedSetAddAsync(subscriptionId, sortedSetEntries);
+
+        // todo key must either be unique to mapping, or contain last flow info for all mappings
+        // ..... or not! any one single commit is relevant only to one mapping
+        var commitGraphEntries = commits
+            .Select(c => new KeyValuePair<string, CodeflowGraphCommit>("CodeflowGraphCommit_" + c.CommitSha, c))
+            .ToArray();
+
+        await cache.StringSetAsync(commits);
+
+        ClearCacheTail(); // remove any elements after the 3000th or so?
     }
 }
 
@@ -180,5 +188,5 @@ class GraphCodeflows
             return sourceCommit;
         }
         return null;
-    }
+    } 
 }
