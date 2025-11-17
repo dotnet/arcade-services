@@ -146,8 +146,8 @@ public class VersionDetailsFileMergerTests
             })
             .ReturnsAsync(true);
 
-        _dependencyFileManagerMock.Setup(d => d.TryAddOrUpdateDependency(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>(), It.IsAny<bool>()))
-            .Callback((DependencyDetail dependency, string repo, string commit, UnixPath? _, bool _, bool? _) =>
+        _dependencyFileManagerMock.Setup(d => d.TryAddOrUpdateDependency(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>()))
+            .Callback((DependencyDetail dependency, string repo, string commit, UnixPath? _, bool _, bool? _, bool _) =>
             {
                 var versionDetails = versionDetailsDictionary[targetCurrentKey];
                 var dep = versionDetails.Dependencies.FirstOrDefault(d => d.Name == dependency.Name);
@@ -255,7 +255,7 @@ public class VersionDetailsFileMergerTests
         _versionDetailsParserMock.Setup(p => p.ParseVersionDetailsXml(It.IsAny<string>(), It.IsAny<bool>()))
             .Returns((string key, bool _) => versionDetailsDictionary[key]);
 
-        _dependencyFileManagerMock.Setup(d => d.TryAddOrUpdateDependency(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>(), It.IsAny<bool>()))
+        _dependencyFileManagerMock.Setup(d => d.TryAddOrUpdateDependency(It.IsAny<DependencyDetail>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<UnixPath>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>()))
             .ReturnsAsync(true);
 
         var result = await _versionDetailsFileMerger.MergeVersionDetails(
@@ -283,6 +283,6 @@ public class VersionDetailsFileMergerTests
             Version = version,
             Commit = commit,
             RepoUri = "uri",
-            Type = type,
+            Type = type
         };
 }

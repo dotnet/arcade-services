@@ -102,7 +102,7 @@ public class VersionDetailsFileMerger : VmrVersionFileMerger, IVersionDetailsFil
         var content = await repo.GetFileFromGitAsync(relativePath, commit);
         return content == null
             ? new VersionDetails([], null)
-            : _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: false);
+            : _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: true);
     }
 
     private static List<DependencyUpdate> ComputeChanges(VersionDetails before, VersionDetails after)
@@ -178,7 +178,8 @@ public class VersionDetailsFileMerger : VmrVersionFileMerger, IVersionDetailsFil
                 null!,
                 versionFilesBasePath,
                 versionDetailsOnly: true,
-                versionDetailsPropsExists))
+                versionDetailsPropsExists,
+                allowPinnedDependencyUpdate: true))
             {
                 appliedChanges.Updates[assetName] = update;
             }

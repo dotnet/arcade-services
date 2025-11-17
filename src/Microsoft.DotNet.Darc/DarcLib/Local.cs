@@ -44,9 +44,9 @@ public class Local
     /// <summary>
     ///     Adds a dependency to the dependency files
     /// </summary>
-    public async Task AddDependencyAsync(DependencyDetail dependency, UnixPath relativeBasePath = null)
+    public async Task AddDependencyAsync(DependencyDetail dependency, UnixPath relativeBasePath = null, bool allowPinnedDependencyUpdate = false)
     {
-        await _fileManager.AddDependencyAsync(dependency, _repoRootDir.Value, null, relativeBasePath);
+        await _fileManager.AddDependencyAsync(dependency, _repoRootDir.Value, null, relativeBasePath, allowPinnedDependencyUpdate: allowPinnedDependencyUpdate);
     }
 
     /// <summary>
