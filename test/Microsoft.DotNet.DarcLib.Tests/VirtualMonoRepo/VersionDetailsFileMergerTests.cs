@@ -283,6 +283,6 @@ public class VersionDetailsFileMergerTests
             Version = version,
             Commit = commit,
             RepoUri = "uri",
-            Type = type
+            Type = type,
         };
 }
