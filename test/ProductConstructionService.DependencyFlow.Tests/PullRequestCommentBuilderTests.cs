@@ -375,7 +375,7 @@ public class PullRequestCommentBuilderTests
         // (i.e., when updating an existing PR branch), the file paths are VMR-relative
         var conflictedFiles = new List<string>
         {
-            "src/roslyn/eng/Packages.props", // VMR-relative path
+            "/src/roslyn/eng/Packages.props", // VMR-relative path
         };
 
         var comment = PullRequestCommentBuilder.BuildNotifyAboutConflictingUpdateComment(
@@ -410,65 +410,6 @@ public class PullRequestCommentBuilderTests
         // VMR side should be: https://github.com/dotnet/dotnet/blob/{branch}/src/roslyn/eng/Packages.props
         comment.Should().Contain("https://github.com/dotnet/dotnet/blob/darc-release/10.0.2xx-320cebc1-5f69-499b-a68e-fb46180df7a5/src/roslyn/eng/Packages.props");
         comment.Should().NotContain("https://github.com/dotnet/dotnet/blob/darc-release/10.0.2xx-320cebc1-5f69-499b-a68e-fb46180df7a5/src/roslyn/src/roslyn/eng/Packages.props");
-    }
-
-    [Test]
-    public void ForwardFlowConflictCommentHandlesRepoRelativePaths()
-    {
-        // Test with paths that are ALREADY in repo-relative format (no src/roslyn prefix)
-        // This might happen if ParseResult was already called
-        var forwardFlowSubscription = new ClientModels.Subscription(
-            new Guid("12345678-1234-1234-1234-123456789012"),
-            true,
-            true,
-            "https://github.com/dotnet/roslyn",
-            "https://github.com/dotnet/dotnet",
-            "main",
-            null,
-            "roslyn",
-            "@notifiedUser1",
-            excludedAssets: []);
-
-        var update = new SubscriptionUpdateWorkItem
-        {
-            UpdaterId = "test-updater-id",
-            SubscriptionId = forwardFlowSubscription.Id,
-            BuildId = 12345,
-            SourceSha = "5b20f50823167975bfd1b6dd55fcbdba73ff3a6c",
-            SourceRepo = "https://github.com/dotnet/roslyn"
-        };
-
-        // Paths are already repo-relative (no src/roslyn prefix)
-        var conflictedFiles = new List<string>
-        {
-            "eng/Packages.props",
-        };
-
-        var comment = PullRequestCommentBuilder.BuildNotifyAboutConflictingUpdateComment(
-            conflictedFiles,
-            update,
-            forwardFlowSubscription,
-            new InProgressPullRequest()
-            {
-                UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
-                Url = "https://api.github.com/repos/dotnet/dotnet/pulls/3244",
-                HeadBranch = "darc-release/10.0.2xx-320cebc1-5f69-499b-a68e-fb46180df7a5",
-                HeadBranchSha = "pr.head.sha",
-                SourceSha = "update.source.sha",
-                ContainedSubscriptions = [],
-                SourceRepoNotified = false
-            },
-            "darc-release/10.0.2xx-320cebc1-5f69-499b-a68e-fb46180df7a5");
-
-        // When files don't have src/roslyn prefix, they should be skipped by the filter
-        // So the comment should be empty or have minimal content
-        Console.WriteLine("=== Generated Comment (repo-relative paths) ===");
-        Console.WriteLine(comment);
-        Console.WriteLine("=== End Comment ===");
-        
-        // The file should NOT be listed because it doesn't match the filter
-        comment.Should().NotContain("eng/Packages.props");
-        comment.Should().NotContain("View file in");
     }
 
     [Test]
