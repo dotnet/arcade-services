@@ -322,42 +322,39 @@ internal class PullRequestBuilder : IPullRequestBuilder
             description = description.Remove(footerStartIndex, footerEndIndex - footerStartIndex + FooterEndMarker.Length);
         }
 
-        if (upstreamRepoDiffs == null || upstreamRepoDiffs.Count == 0)
-        {
-            return description;
-        }
-        else
-        {
-            description +=
-                $"""
-                {FooterStartMarker}
+        description +=
+            $"""
+            {FooterStartMarker}
 
-                ## Associated changes in source repos
-                {GenerateUpstreamRepoDiffs(upstreamRepoDiffs)}
-                {GenerateDarcDiffHelp(build, subscription.TargetRepository, headBranch)}
-                {FooterEndMarker}
-                """;
-            return description;
-        }
+            {GenerateUpstreamRepoDiffsSection(upstreamRepoDiffs ?? [])}
+            {GenerateDarcDiffHelpSection(build, subscription.TargetRepository, headBranch)}
+            {FooterEndMarker}
+            """;
+        return description;
     }
 
-    private static string GenerateUpstreamRepoDiffs(IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs)
+    private static string GenerateUpstreamRepoDiffsSection(IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs)
     {
-        StringBuilder sb = new();
-        foreach (UpstreamRepoDiff upstreamRepoDiff in upstreamRepoDiffs)
+        if (upstreamRepoDiffs.Count > 0)
         {
-            if (!string.IsNullOrEmpty(upstreamRepoDiff.RepoUri)
-                && !string.IsNullOrEmpty(upstreamRepoDiff.OldCommitSha)
-                && !string.IsNullOrEmpty(upstreamRepoDiff.NewCommitSha))
+            StringBuilder sb = new();
+            sb.AppendLine("## Associated changes in source repos");
+            foreach (UpstreamRepoDiff upstreamRepoDiff in upstreamRepoDiffs)
             {
-                string cleanRepoUri = upstreamRepoDiff.RepoUri.TrimEnd('/');
-                sb.AppendLine($"- {cleanRepoUri}/compare/{upstreamRepoDiff.OldCommitSha}...{upstreamRepoDiff.NewCommitSha}");
+                if (!string.IsNullOrEmpty(upstreamRepoDiff.RepoUri)
+                    && !string.IsNullOrEmpty(upstreamRepoDiff.OldCommitSha)
+                    && !string.IsNullOrEmpty(upstreamRepoDiff.NewCommitSha))
+                {
+                    string cleanRepoUri = upstreamRepoDiff.RepoUri.TrimEnd('/');
+                    sb.AppendLine($"- {cleanRepoUri}/compare/{upstreamRepoDiff.OldCommitSha}...{upstreamRepoDiff.NewCommitSha}");
+                }
             }
+            return sb.ToString();
         }
-        return sb.ToString();
+        return string.Empty;
     }
 
-    private static string GenerateDarcDiffHelp(BuildDTO build, string targetRepository, string headBranch) =>
+    private static string GenerateDarcDiffHelpSection(BuildDTO build, string targetRepository, string headBranch) =>
         $"""
         <!--
             To diff the source repo and PR branch contents locally, run:
