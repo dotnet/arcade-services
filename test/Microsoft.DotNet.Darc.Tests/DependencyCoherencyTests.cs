@@ -1213,7 +1213,7 @@ public class DependencyCoherencyTests
                 a.Item2,
                 a.Item3?.Select(location => new AssetLocation(GetRandomId(), LocationType.NugetFeed, location)).ToList()));
 
-        return new(buildId, DateTimeOffset.Now, 0, false, false, commit, null, [.. buildAssets], null, null)
+        return new(buildId, DateTimeOffset.Now, 0, false, false, commit, null, [..buildAssets], null, null)
         {
             AzureDevOpsRepository = repo,
             GitHubRepository = repo

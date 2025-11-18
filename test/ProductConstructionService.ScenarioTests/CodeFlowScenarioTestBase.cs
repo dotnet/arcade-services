@@ -99,12 +99,12 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
             files.FirstOrDefault(f => f.FileName.Contains("eng/common")).Should().BeNull();
 
             // Verify that the dependencies have the expected versions
-            var versionDetailsContent = (await GitHubApi.Repository.Content.GetAllContentsByRef(
+            var versionDetailsContent = await GitHubApi.Repository.Content.GetAllContentsByRef(
                 TestParameters.GitHubTestOrg,
                 targetRepoName,
-                VersionFiles.VersionDetailsXml,
-                pullRequest.Head.Ref)).FirstOrDefault()!.Content;
-            VersionDetails versionDetails = new VersionDetailsParser().ParseVersionDetailsXml(versionDetailsContent, includePinned: true);
+                "eng/Version.Details.xml",
+                pullRequest.Head.Sha);
+            VersionDetails versionDetails = new VersionDetailsParser().ParseVersionDetailsXml(versionDetailsContent[0].Content, includePinned: true);
             dependenciesToVerify.All(
                 dep => versionDetails.Dependencies.Any(d => d.Name == dep.Name && d.Version == dep.Version)).Should().BeTrue();
         }

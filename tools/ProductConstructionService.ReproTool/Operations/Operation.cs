@@ -125,14 +125,16 @@ internal abstract class Operation(
         Func<string, string> contentUpdater)
     {
         logger.LogInformation("Updating file {file} on branch {branch} in the VMR fork", filePath, branch);
-        // Fetch remote file and replace the product repo URI with the repo we're testing on        
-        var sourceMappingsFile = (await ghClient.Repository.Content.GetAllContentsByRef(
-                MaestroAuthTestOrgName,
-                VmrForkRepoName,
-                filePath,
-                branch))
-            .FirstOrDefault()
-            ?? throw new Exception($"Failed to find file {filePath} in {MaestroAuthTestOrgName}/{VmrForkRepoName} on branch {branch}");
+
+        // Fetch remote file and replace the product repo URI with the repo we're testing on
+        var sourceMappingsContent = await ghClient.Repository.Content.GetAllContentsByRef(
+            MaestroAuthTestOrgName,
+            VmrForkRepoName,
+            filePath,
+            branch);
+        var sourceMappingsFile = sourceMappingsContent.Count > 0
+            ? sourceMappingsContent[0]
+            : throw new Exception($"Failed to find file {filePath} in {MaestroAuthTestOrgName}/{VmrForkRepoName} on branch {branch}");
 
         UpdateFileRequest update = new(
             $"Updated {filePath}",

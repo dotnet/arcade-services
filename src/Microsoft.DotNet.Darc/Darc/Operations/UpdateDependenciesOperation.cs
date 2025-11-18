@@ -67,7 +67,7 @@ internal class UpdateDependenciesOperation : Operation
                 ?? new AssetMatcher(null);
             List<UnixPath> targetDirectories = ResolveTargetDirectories(local);
 
-            ConcurrentDictionary<string, Task<Build>> latestBuildTaskDictionary = new();
+            ConcurrentDictionary<string, Task<ProductConstructionService.Client.Models.Build>> latestBuildTaskDictionary = new();
             foreach (var targetDirectory in targetDirectories)
             {
                 await UpdateDependenciesInDirectory(targetDirectory, local, latestBuildTaskDictionary, excludedAssetsMatcher);
@@ -121,7 +121,7 @@ internal class UpdateDependenciesOperation : Operation
     }
 
     private int NonCoherencyUpdatesForBuild(
-        Build build,
+        ProductConstructionService.Client.Models.Build build,
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> candidateDependenciesForUpdate,
         List<DependencyDetail> dependenciesToUpdate,
@@ -167,7 +167,7 @@ internal class UpdateDependenciesOperation : Operation
     private async Task UpdateDependenciesInDirectory(
         UnixPath relativeBasePath,
         Local local,
-        ConcurrentDictionary<string, Task<Build>> latestBuildTaskDictionary,
+        ConcurrentDictionary<string, Task<ProductConstructionService.Client.Models.Build>> latestBuildTaskDictionary,
         IAssetMatcher excludedAssetsMatcher)
     {
         List<DependencyDetail> dependenciesToUpdate = [];
@@ -375,7 +375,7 @@ internal class UpdateDependenciesOperation : Operation
     }
 
     private async Task RunNonCoherencyUpdateForChannel(
-        ConcurrentDictionary<string, Task<Build>> latestBuildTaskDictionary,
+        ConcurrentDictionary<string, Task<ProductConstructionService.Client.Models.Build>> latestBuildTaskDictionary,
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> candidateDependenciesForUpdate,
         List<DependencyDetail> dependenciesToUpdate,

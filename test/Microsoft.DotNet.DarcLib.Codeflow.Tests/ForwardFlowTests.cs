@@ -371,6 +371,51 @@ internal class ForwardFlowTests : CodeFlowTests
         deps.Should().ContainSingle(d => d.Name == "Package.A1" && d.Version == "1.0.2");
     }
 
+    [Test]
+    public async Task PinnedDependenciesCodeFlow()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        const string ffBranch = nameof(PinnedDependenciesCodeFlow);
+        var repo = GetLocal(ProductRepoPath);
+
+        // Add a dependency and forward flow it
+        var dep = new DependencyDetail
+        {
+            Name = "Package.A1",
+            Version = "1.0.0",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "a01",
+            Type = DependencyType.Product,
+        };
+        await repo.AddDependencyAsync(dep);
+        await GitOperations.CommitAll(ProductRepoPath, "Add Package.A1 v1.0.0");
+        var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranch);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, ffBranch);
+
+        // Now update the dependency, while also pinning it
+        dep = new DependencyDetail
+        {
+            Name = "Package.A1",
+            Version = "1.0.1",
+            RepoUri = "https://github.com/dotnet/repo1",
+            Commit = "a01",
+            Type = DependencyType.Product,
+            Pinned = true,
+        };
+        await repo.AddDependencyAsync(dep, allowPinnedDependencyUpdate: true);
+        await GitOperations.CommitAll(TmpPath / "product-repo1", "Update and pin Package.A1 to v1.0.1");
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranch);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, ffBranch);
+
+        // The dependency should be at 1.0.1 in the VMR now
+        var vmrRepo = GetLocal(VmrPath);
+        var deps = await vmrRepo.GetDependenciesAsync(relativeBasePath: VmrInfo.GetRelativeRepoSourcesPath(Constants.ProductRepoName));
+        deps.Should().ContainSingle(d => d.Name == "Package.A1" && d.Version == "1.0.1");
+    }
+
 
     /*
         This test verifies a scenario where a file is changed (added, removed, edited) and later reverted

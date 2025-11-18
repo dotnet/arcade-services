@@ -109,7 +109,6 @@ internal abstract class CodeFlowOperation(
                 hasChanges = await FlowForwardAsync(
                     productRepo,
                     build,
-                    currentFlow,
                     mapping,
                     currentTargetRepoBranch,
                     excludedAssets,
@@ -216,7 +215,6 @@ internal abstract class CodeFlowOperation(
     protected async Task<bool> FlowForwardAsync(
         ILocalGitRepo productRepo,
         BarBuild build,
-        Codeflow currentFlow,
         SourceMapping mapping,
         string headBranch,
         IReadOnlyList<string> excludedAssets,

@@ -138,7 +138,6 @@ internal class ReproOperation(
             sourceEnabled: true,
             sourceDirectory: subscription.SourceDirectory,
             targetDirectory: subscription.TargetDirectory,
-            excludedAssets: ["*"],
             skipCleanup: options.SkipCleanup);
 
         await darcProcessManager.AddBuildToChannelAsync(testBuild.Id, channelName, options.SkipCleanup);

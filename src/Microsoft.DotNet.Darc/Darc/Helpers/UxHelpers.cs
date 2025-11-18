@@ -84,7 +84,7 @@ public static class UxHelpers
     /// </summary>
     /// <param name="build">Build</param>
     /// <returns>JObject</returns>
-    public static JObject GetJsonBuildDescription(Build build)
+    public static JObject GetJsonBuildDescription(ProductConstructionService.Client.Models.Build build)
     {
         return JObject.FromObject(new
         {
@@ -106,7 +106,7 @@ public static class UxHelpers
     /// </summary>
     /// <param name="build">Build</param>
     /// <returns>Description</returns>
-    public static string GetTextBuildDescription(Build build)
+    public static string GetTextBuildDescription(ProductConstructionService.Client.Models.Build build)
     {
         var builder = new StringBuilder();
         builder.AppendLine($"Repository:    {build.GetRepository()}");
