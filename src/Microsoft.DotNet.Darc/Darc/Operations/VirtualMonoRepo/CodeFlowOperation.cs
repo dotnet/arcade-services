@@ -95,6 +95,12 @@ internal abstract class CodeFlowOperation(
         string originalSourceRepoSha = await sourceRepo.GetShaForRefAsync();
 
         string currentTargetRepoBranch = await targetRepo.GetCheckedOutBranchAsync();
+        if (currentTargetRepoBranch.Equals(DarcLib.Constants.HEAD, StringComparison.OrdinalIgnoreCase))
+        {
+            currentTargetRepoBranch = $"darc-{Guid.NewGuid()}";
+            _logger.LogInformation("Creating branch '{branch}' for code flow operations.", currentTargetRepoBranch);
+            await targetRepo.CreateBranchAsync(currentTargetRepoBranch);
+        }
 
         // Parse excluded assets from options
         IReadOnlyList<string> excludedAssets = string.IsNullOrEmpty(_options.ExcludedAssets)
