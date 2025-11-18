@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
@@ -77,6 +78,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
     private readonly IDependencyFileManager _dependencyFileManager;
     private readonly IJsonFileMerger _jsonFileMerger;
     private readonly IVersionDetailsFileMerger _versionDetailsFileMerger;
+    private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IGitRepoFactory _gitRepoFactory;
 
     public ForwardFlowConflictResolver(
@@ -87,6 +89,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         IDependencyFileManager dependencyFileManager,
         IJsonFileMerger jsonFileMerger,
         IVersionDetailsFileMerger versionDetailsFileMerger,
+        IVersionDetailsParser versionDetailsParser,
         IGitRepoFactory gitRepoFactory,
         IFileSystem fileSystem,
         ILogger<ForwardFlowConflictResolver> logger)
@@ -100,6 +103,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         _dependencyFileManager = dependencyFileManager;
         _jsonFileMerger = jsonFileMerger;
         _versionDetailsFileMerger = versionDetailsFileMerger;
+        _versionDetailsParser = versionDetailsParser;
         _gitRepoFactory = gitRepoFactory;
     }
 
@@ -368,49 +372,38 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             targetBranch,
             relativeBasePath: relativeSourceMappingPath);
 
+        XmlDocument? vmrVersionDetailsXml = null;
         if (repoVersionDetails.Source != null
             && repoVersionDetails.Source.BarId != vmrVersionDetails.Source?.BarId)
         {
-            var vmrVersionDetailsXml = await _dependencyFileManager.ReadVersionDetailsXmlAsync(
-                    vmr.Path,
-                    null!, // get the staged version details,
-                    relativeSourceMappingPath);
-            _dependencyFileManager.UpdateVersionDetailsXmlSourceTag(
-                vmrVersionDetailsXml,
-                repoVersionDetails.Source);
-            var gitFile = new GitFile(
-                relativeSourceMappingPath / VersionFiles.VersionDetailsXml,
-                vmrVersionDetailsXml);
-            await _gitRepoFactory.CreateClient(vmr.Path).CommitFilesAsync(
-                [gitFile],
-                vmr.Path,
-                targetBranch,
-                "Update source tag");
+            // Get the staged version details
+            vmrVersionDetailsXml = await _dependencyFileManager.ReadVersionDetailsXmlAsync(vmr.Path, null!, relativeSourceMappingPath);
+            _dependencyFileManager.UpdateVersionDetailsXmlSourceTag(vmrVersionDetailsXml, repoVersionDetails.Source);
+
+            _fileSystem.WriteToFile(
+                vmr.Path / relativeSourceMappingPath / VersionFiles.VersionDetailsXml,
+                GitFile.GetIndentedXmlBody(vmrVersionDetailsXml));
+
+            await vmr.StageAsync([relativeSourceMappingPath / VersionFiles.VersionDetailsXml], cancellationToken);
         }
 
         // If we didn't have any changes, and we just added Version.Details.props, we need to generate it
         if (!versionDetailsChanges.HasChanges && versionDetailsPropsCreated)
         {
-            var vdp = new GitFile(
-                relativeSourceMappingPath / VersionFiles.VersionDetailsProps,
-                DependencyFileManager.GenerateVersionDetailsProps(
-                    await _dependencyFileManager.ParseVersionDetailsXmlAsync(
-                        vmr.Path,
-                        branch: null!,
-                        includePinned: true,
-                        relativeSourceMappingPath)));
-            await _gitRepoFactory.CreateClient(vmr.Path).CommitFilesAsync(
-                [vdp],
-                vmr.Path,
-                targetBranch,
-                "Initialize Version.Details.props");
+            vmrVersionDetailsXml ??= await _dependencyFileManager.ReadVersionDetailsXmlAsync(vmr.Path, null!, relativeSourceMappingPath);
+            var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(vmrVersionDetailsXml);
+            var versionPropsXml = DependencyFileManager.GenerateVersionDetailsProps(versionDetails);
+
+            _fileSystem.WriteToFile(
+                vmr.Path / relativeSourceMappingPath / VersionFiles.VersionDetailsProps,
+                GitFile.GetIndentedXmlBody(versionPropsXml));
+
+            await vmr.StageAsync([relativeSourceMappingPath / VersionFiles.VersionDetailsProps], cancellationToken);
         }
 
         if (!await vmr.HasWorkingTreeChangesAsync() && !await vmr.HasStagedChangesAsync())
         {
             _logger.LogInformation("No changes to dependencies in this forward flow update");
         }
-
-        await vmr.StageAsync([relativeSourceMappingPath / "eng"], cancellationToken);
     }
 }

@@ -20,6 +20,7 @@ internal class BackflowOperation(
     IVmrForwardFlower forwardFlower,
     IVmrBackFlower backFlower,
     IBackflowConflictResolver backflowConflictResolver,
+    IForwardFlowConflictResolver forwardFlowConflictResolver,
     IVmrCloneManager vmrCloneManager,
     IVmrDependencyTracker dependencyTracker,
     ILocalGitRepoFactory localGitRepoFactory,
@@ -28,7 +29,7 @@ internal class BackflowOperation(
     IProcessManager processManager,
     IFileSystem fileSystem,
     ILogger<BackflowOperation> logger)
-    : CodeFlowOperation(options, forwardFlower, backFlower, backflowConflictResolver,  vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
+    : CodeFlowOperation(options, forwardFlower, backFlower, backflowConflictResolver, forwardFlowConflictResolver, vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
 {
     private readonly BackflowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;

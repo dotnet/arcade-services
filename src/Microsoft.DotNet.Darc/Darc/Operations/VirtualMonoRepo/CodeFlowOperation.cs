@@ -25,6 +25,7 @@ internal abstract class CodeFlowOperation(
         IVmrForwardFlower forwardFlower,
         IVmrBackFlower backFlower,
         IBackflowConflictResolver backflowConflictResolver,
+        IForwardFlowConflictResolver forwardFlowConflictResolver,
         IVmrInfo vmrInfo,
         IVmrCloneManager vmrCloneManager,
         IVmrDependencyTracker dependencyTracker,
@@ -39,6 +40,7 @@ internal abstract class CodeFlowOperation(
     private readonly IVmrForwardFlower _forwardFlower = forwardFlower;
     private readonly IVmrBackFlower _backFlower = backFlower;
     private readonly IBackflowConflictResolver _backflowConflictResolver = backflowConflictResolver;
+    private readonly IForwardFlowConflictResolver _forwardFlowConflictResolver = forwardFlowConflictResolver;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly IVmrCloneManager _vmrCloneManager = vmrCloneManager;
     private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
@@ -230,6 +232,30 @@ internal abstract class CodeFlowOperation(
             targetRepoUri = remotes.First().Uri;
         }
 
+        LastFlows lastFlows = await _forwardFlower.GetLastFlowsAsync(
+            mapping.Name,
+            productRepo,
+            currentIsBackflow: false);
+
+        // We only want to update the source manifest once per flow operation
+        // It resolves conflicts and updates the source manifest to only contain the current repo's update
+        bool sourceManifestUpdated = false;
+        async Task UpdateSourceManifestAsync(BarBuild build, SourceMapping mapping, string headBranch, CancellationToken cancellationToken)
+        {
+            if (sourceManifestUpdated)
+            {
+                return;
+            }
+
+            var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+            var sourceManifestContent = await vmr.GetFileFromGitAsync(VmrInfo.DefaultRelativeSourceManifestPath, headBranch);
+            var sourceManifest = SourceManifest.FromJson(sourceManifestContent!);
+            sourceManifest.UpdateVersion(mapping.Name, build.GetRepository(), build.Commit, build.Id);
+            _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, sourceManifest.ToJson());
+            await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
+            sourceManifestUpdated = true;
+        }
+
         try
         {
             CodeFlowResult result = await _forwardFlower.FlowForwardAsync(
@@ -246,15 +272,28 @@ internal abstract class CodeFlowOperation(
 
             return result.HadUpdates;
         }
+        catch (PatchApplicationLeftConflictsException)
+        {
+            await UpdateSourceManifestAsync(build, mapping, headBranch, cancellationToken);
+
+            // Update dependencies after flow
+            await _forwardFlowConflictResolver.MergeDependenciesAsync(
+                mapping.Name,
+                productRepo,
+                headBranch,
+                lastFlows.LastForwardFlow.RepoSha,
+                // if there's a crossing flow, we need to make sure it doesn't bring in any downgrades https://github.com/dotnet/arcade-services/issues/5331
+                lastFlows.CrossingFlow != null
+                    ? lastFlows.LastBackFlow!.VmrSha
+                    : lastFlows.LastForwardFlow.VmrSha,
+                (ForwardFlow)currentFlow,
+                cancellationToken);
+
+            throw;
+        }
         finally
         {
-            // Update target branch's source manifest with the new commit
-            var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-            var sourceManifestContent = await vmr.GetFileFromGitAsync(VmrInfo.DefaultRelativeSourceManifestPath, headBranch);
-            var sourceManifest = SourceManifest.FromJson(sourceManifestContent!);
-            sourceManifest.UpdateVersion(mapping.Name, build.GetRepository(), build.Commit, build.Id);
-            _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, sourceManifest.ToJson());
-            await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
+            await UpdateSourceManifestAsync(build, mapping, headBranch, cancellationToken);
         }
     }
 
