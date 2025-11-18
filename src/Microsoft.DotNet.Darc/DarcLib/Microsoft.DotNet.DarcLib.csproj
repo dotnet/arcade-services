@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>    
     <NoWarn>$(NoWarn);NU1701</NoWarn>
     <SignAssembly>false</SignAssembly>
     <IsPackable>true</IsPackable>
@@ -20,8 +21,7 @@
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="NuGet.Packaging" />
     <PackageReference Include="Octokit" />
-    <PackageReference Include="System.Linq.Async" />
-    <PackageReference Include="System.Net.Http" />
+
     <PackageReference Include="System.IO.Hashing" />
   </ItemGroup>
 

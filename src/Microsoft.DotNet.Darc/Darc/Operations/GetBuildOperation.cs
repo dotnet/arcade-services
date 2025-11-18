@@ -40,7 +40,7 @@ internal class GetBuildOperation : Operation
     {
         try
         {
-            List<Build>? matchingBuilds = null;
+            List<ProductConstructionService.Client.Models.Build>? matchingBuilds = null;
             if (_options.Id != 0)
             {
                 if (!string.IsNullOrEmpty(_options.Repo) ||
@@ -88,7 +88,7 @@ internal class GetBuildOperation : Operation
             switch (_options.OutputFormat)
             {
                 case DarcOutputType.text:
-                    foreach (Build build in matchingBuilds)
+                    foreach (var build in matchingBuilds)
                     {
                         Console.Write(UxHelpers.GetTextBuildDescription(build));
                     }

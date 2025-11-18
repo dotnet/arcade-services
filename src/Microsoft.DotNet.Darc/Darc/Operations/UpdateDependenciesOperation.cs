@@ -67,7 +67,7 @@ internal class UpdateDependenciesOperation : Operation
                 ?? new AssetMatcher(null);
             List<UnixPath> targetDirectories = ResolveTargetDirectories(local);
 
-            ConcurrentDictionary<string, Task<Build>> latestBuildTaskDictionary = new();
+            ConcurrentDictionary<string, Task<ProductConstructionService.Client.Models.Build>> latestBuildTaskDictionary = new();
             foreach (var targetDirectory in targetDirectories)
             {
                 await UpdateDependenciesInDirectory(targetDirectory, local, latestBuildTaskDictionary, excludedAssetsMatcher);
@@ -121,7 +121,7 @@ internal class UpdateDependenciesOperation : Operation
     }
 
     private int NonCoherencyUpdatesForBuild(
-        Build build,
+        ProductConstructionService.Client.Models.Build build,
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> candidateDependenciesForUpdate,
         List<DependencyDetail> dependenciesToUpdate,
@@ -167,7 +167,7 @@ internal class UpdateDependenciesOperation : Operation
     private async Task UpdateDependenciesInDirectory(
         UnixPath relativeBasePath,
         Local local,
-        ConcurrentDictionary<string, Task<Build>> latestBuildTaskDictionary,
+        ConcurrentDictionary<string, Task<ProductConstructionService.Client.Models.Build>> latestBuildTaskDictionary,
         IAssetMatcher excludedAssetsMatcher)
     {
         List<DependencyDetail> dependenciesToUpdate = [];
@@ -375,7 +375,7 @@ internal class UpdateDependenciesOperation : Operation
     }
 
     private async Task RunNonCoherencyUpdateForChannel(
-        ConcurrentDictionary<string, Task<Build>> latestBuildTaskDictionary,
+        ConcurrentDictionary<string, Task<ProductConstructionService.Client.Models.Build>> latestBuildTaskDictionary,
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> candidateDependenciesForUpdate,
         List<DependencyDetail> dependenciesToUpdate,
@@ -407,7 +407,7 @@ internal class UpdateDependenciesOperation : Operation
 
         foreach (var repoToQuery in repositoryUrisForQuery)
         {
-            Build build = await latestBuildTaskDictionary[repoToQuery];
+            var build = await latestBuildTaskDictionary[repoToQuery];
             if (build == null)
             {
                 _logger.LogTrace("  No build of '{uri}' found on channel '{channel}'.", repoToQuery, _options.Channel);
@@ -551,11 +551,8 @@ internal class UpdateDependenciesOperation : Operation
         // Find the latest build from the source repository on the channel (unless build ID is provided)
         if (_options.BARBuildId == 0)
         {
-            Build latestBuild = await _barClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
-            if (latestBuild == null)
-            {
-                throw new DarcException($"No builds found for repository '{subscription.SourceRepository}' on channel '{subscription.Channel.Name}'.");
-            }
+            var latestBuild = await _barClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id)
+                ?? throw new DarcException($"No builds found for repository '{subscription.SourceRepository}' on channel '{subscription.Channel.Name}'.");
 
             Console.WriteLine($"  Latest build: {latestBuild.AzureDevOpsBuildNumber} (BAR ID: {latestBuild.Id})");
             Console.WriteLine($"  Build commit: {latestBuild.Commit}");
