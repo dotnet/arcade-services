@@ -68,14 +68,14 @@ jobs:
         scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
-          $darcBuild = .\darc\darc.exe get-build `
+          $darcBuild = .\.dotnet\dotnet darc get-build `
             --repo "https://github.com/dotnet/arcade-services" `
             --commit $(Build.SourceVersion) `
             --ci `
             --output-format json |
             ConvertFrom-Json
 
-          .\darc\darc.exe add-build-to-channel `
+          .\.dotnet\dotnet darc add-build-to-channel `
             --id $darcBuild[0].id `
             --channel "General Testing" `
             --ci `
