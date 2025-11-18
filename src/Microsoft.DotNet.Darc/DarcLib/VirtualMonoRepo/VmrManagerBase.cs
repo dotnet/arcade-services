@@ -5,17 +5,20 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public abstract class VmrManagerBase
+public abstract partial class VmrManagerBase
 {
+    [GeneratedRegex(@"\{(\w+)\}")]
+    private static partial Regex TemplatePlaceholderRegex();
+
     protected const string InterruptedSyncExceptionMessage =
         "A new branch was created for the sync and didn't get merged as the sync " +
         "was interrupted. A new sync should start from {original} branch.";
@@ -153,13 +156,14 @@ public abstract class VmrManagerBase
     /// <param name="oldSha">SHA we are updating from</param>
     /// <param name="newSha">SHA we are updating to</param>
     /// <param name="additionalMessage">Additional message inserted in the commit body</param>
-    protected static string PrepareCommitMessage(
+    public static string PrepareCommitMessage(
         string template,
         string name,
         string remote,
         string? oldSha = null,
         string? newSha = null,
-        string? additionalMessage = null)
+        string? additionalMessage = null,
+        string? conflictingFiles = null)
     {
         var replaces = new Dictionary<string, string?>
         {
@@ -170,13 +174,13 @@ public abstract class VmrManagerBase
             { "oldShaShort", oldSha is null ? string.Empty : Commit.GetShortSha(oldSha) },
             { "newShaShort", newSha is null ? string.Empty : Commit.GetShortSha(newSha) },
             { "commitMessage", additionalMessage ?? string.Empty },
+            { "conflictingFilesList", conflictingFiles ?? string.Empty }
         };
 
-        foreach (var replace in replaces)
+        return TemplatePlaceholderRegex().Replace(template, match =>
         {
-            template = template.Replace($"{{{replace.Key}}}", replace.Value);
-        }
-
-        return template;
+            var key = match.Groups[1].Value;
+            return replaces.TryGetValue(key, out var value) ? value ?? string.Empty : match.Value;
+        });
     }
 }
