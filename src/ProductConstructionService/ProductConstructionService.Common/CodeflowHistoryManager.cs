@@ -28,7 +28,8 @@ public class CodeflowHistoryManager(
     private readonly IRemoteFactory _remoteFactory = remoteFactory;
     private readonly IConnectionMultiplexer _connection = connection;
 
-    private static RedisKey GetCommitKey(string commitSha) => $"CodeflowGraphCommit_{commitSha}";
+    private static RedisKey GetCodeflowGraphCommitKey(string id) => $"CodeflowGraphCommit_{id}";
+    private static RedisKey GetSortedSetKey(string id) => $"CodeflowHistory_{id}";
 
     private const int MaxCommitFetchCount = 500;
 
@@ -86,7 +87,7 @@ public class CodeflowHistoryManager(
         else
         {
             // there's a gap between the new and cached commits. clear the cache and start from scratch.
-            await ClearCodeflowCacheAsync(subscription.Id);
+            await ClearCodeflowCacheAsync(subscription.Id.ToString());
         }
 
         var graphCommits = await EnrichCommitsWithCodeflowDataAsync(
@@ -159,13 +160,19 @@ public class CodeflowHistoryManager(
 
         var commitGraphEntries = commits
             .Select(c => new KeyValuePair<RedisKey, RedisValue>(
-                GetCommitKey(c.CommitSha),
+                GetCodeflowGraphCommitKey(c.CommitSha),
                 JsonSerializer.Serialize(c)))
             .ToArray();
 
         await cache.StringSetAsync(commitGraphEntries);
 
         //todo remove any elements after the 3000th or so? to keep the cache from growing indefinitely
+    }
+
+    private async Task ClearCodeflowCacheAsync(string subscriptionId)
+    {
+        var cache = _connection.GetDatabase();
+        await cache.KeyDeleteAsync(GetSortedSetKey(subscriptionId));
     }
 
     private async Task<List<CodeflowGraphCommit>> FetchNewCommits(
