@@ -335,23 +335,22 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
     private static string GenerateUpstreamRepoDiffsSection(IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs)
     {
-        if (upstreamRepoDiffs.Count > 0)
+        if (upstreamRepoDiffs.Count == 0)
         {
-            StringBuilder sb = new();
-            sb.AppendLine("## Associated changes in source repos");
-            foreach (UpstreamRepoDiff upstreamRepoDiff in upstreamRepoDiffs)
-            {
-                if (!string.IsNullOrEmpty(upstreamRepoDiff.RepoUri)
-                    && !string.IsNullOrEmpty(upstreamRepoDiff.OldCommitSha)
-                    && !string.IsNullOrEmpty(upstreamRepoDiff.NewCommitSha))
-                {
-                    string cleanRepoUri = upstreamRepoDiff.RepoUri.TrimEnd('/');
-                    sb.AppendLine($"- {cleanRepoUri}/compare/{upstreamRepoDiff.OldCommitSha}...{upstreamRepoDiff.NewCommitSha}");
-                }
-            }
-            return sb.ToString();
+            return string.Empty;
         }
-        return string.Empty;
+        
+        StringBuilder sb = new();
+        sb.AppendLine("## Associated changes in source repos");
+        foreach (UpstreamRepoDiff upstreamRepoDiff in upstreamRepoDiffs
+            .Where(repoDiff => !string.IsNullOrEmpty(repoDiff.RepoUri)
+                && !string.IsNullOrEmpty(repoDiff.OldCommitSha)
+                && !string.IsNullOrEmpty(repoDiff.NewCommitSha)))
+        {
+            string cleanRepoUri = upstreamRepoDiff.RepoUri.TrimEnd('/');
+            sb.AppendLine($"- {cleanRepoUri}/compare/{upstreamRepoDiff.OldCommitSha}...{upstreamRepoDiff.NewCommitSha}");
+        }
+        return sb.ToString();
     }
 
     private static string GenerateDarcDiffHelpSection(BuildDTO build, string targetRepository, string headBranch) =>
