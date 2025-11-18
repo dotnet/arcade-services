@@ -48,20 +48,25 @@ internal class ResolveConflictOperation(
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Fetching subscription information ...");
+        NativePath targetGitRepoPath = new(_processManager.FindGitRoot(Directory.GetCurrentDirectory()));
+
+        _logger.LogInformation("Fetching subscription {subscriptionId}...", _options.SubscriptionId);
         var subscription = await FetchCodeflowSubscriptionAsync(_options.SubscriptionId);
 
-        _logger.LogInformation("Fetching PR information ...");
+        _logger.LogInformation("Fetching PR information...");
         TrackedPullRequest pr = await _barClient.GetTrackedPullRequestBySubscriptionIdAsync(subscription.Id)
             ?? throw new DarcException($"No open PR found for this subscription");
+        _logger.LogInformation("Found open PR: {prId}", pr.Url);
 
-        _logger.LogInformation("Fetching build to apply ...");
+        _logger.LogInformation("Fetching build to apply...");
         var build = await _barClient.GetBuildAsync(pr.Updates.Last().BuildId);
-
-        NativePath targetGitRepoPath = new(_processManager.FindGitRoot(Directory.GetCurrentDirectory()));
+        _logger.LogInformation("Build {buildId} / {buildName} found: {buildUrl}", build.Id, build.AzureDevOpsBuildNumber, build.GetBuildLink());
 
         NativePath repoPath;
         ILocalGitRepo vmr;
+
+        _logger.LogInformation("Fetching PR branch {branchName}...", pr.HeadBranch);
+
         if (subscription.IsForwardFlow())
         {
             // Register/prepare VMR on the current directory
@@ -72,6 +77,10 @@ internal class ResolveConflictOperation(
                 pr.HeadBranch,
                 resetToRemote: false,
                 cancellationToken);
+
+            _logger.LogInformation("Cloning source repository {repoUrl} at commit {commit}...",
+                build.GetRepository(),
+                DarcLib.Commit.GetShortSha(build.Commit));
 
             // Clone the source repo to a temp location
             repoPath = (await _repositoryCloneManager.PrepareCloneAsync(
@@ -90,6 +99,10 @@ internal class ResolveConflictOperation(
                 pr.HeadBranch,
                 resetToRemote: false,
                 cancellationToken);
+
+            _logger.LogInformation("Cloning VMR {repoUrl} at commit {commit}...",
+                build.GetRepository(),
+                DarcLib.Commit.GetShortSha(build.Commit));
 
             // Clone VMR to a temp location
             vmr = await _vmrCloneManager.PrepareVmrAsync(
@@ -137,7 +150,7 @@ internal class ResolveConflictOperation(
 
         if (string.IsNullOrEmpty(sourceDependency?.Mapping))
         {
-            throw new DarcException("The current working directory does not appear to be a repository managed by Darc.");
+            throw new DarcException("The current working directory does not appear to be a repository managed by darc.");
         }
 
         if (!sourceDependency.Mapping.Equals(mappingName))
