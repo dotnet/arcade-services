@@ -279,7 +279,7 @@ public class MergeSigningInfoTests
     public void GivenNullSigningInfoList()
     {
         Action act = () => PushMetadataToBuildAssetRegistry.MergeSigningInfo(null);
-        act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<NullReferenceException>();
     }
 
     [Test]
