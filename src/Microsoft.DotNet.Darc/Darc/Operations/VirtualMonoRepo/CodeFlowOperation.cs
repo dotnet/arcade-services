@@ -15,6 +15,8 @@ using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
+using BarBuild = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
+
 #nullable enable
 namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
@@ -50,7 +52,7 @@ internal abstract class CodeFlowOperation(
         NativePath repoPath,
         bool isForwardFlow,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
-        Build build,
+        BarBuild build,
         Subscription? subscription,
         CancellationToken cancellationToken)
     {
@@ -181,9 +183,9 @@ internal abstract class CodeFlowOperation(
         }
     }
 
-    protected async Task<Build> GetOrCreateBuildAsync(ILocalGitRepo sourceRepo, int buildId)
+    protected async Task<BarBuild> GetOrCreateBuildAsync(ILocalGitRepo sourceRepo, int buildId)
     {
-        Build build;
+        BarBuild build;
         if (buildId == 0)
         {
             _options.Ref = await sourceRepo.GetShaForRefAsync(_options.Ref);
@@ -213,7 +215,7 @@ internal abstract class CodeFlowOperation(
 
     protected async Task<bool> FlowForwardAsync(
         ILocalGitRepo productRepo,
-        Build build,
+        BarBuild build,
         Codeflow currentFlow,
         SourceMapping mapping,
         string headBranch,
@@ -258,7 +260,7 @@ internal abstract class CodeFlowOperation(
 
     protected async Task<bool> FlowBackAsync(
         ILocalGitRepo productRepo,
-        Build build,
+        BarBuild build,
         Codeflow currentFlow,
         SourceMapping mapping,
         string headBranch,
@@ -403,7 +405,7 @@ internal abstract class CodeFlowOperation(
         // If build ID is not provided, find the latest build from the source repository on the channel
         if (_options.Build == 0)
         {
-            Build latestBuild = await _barApiClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
+            var latestBuild = await _barApiClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
             if (latestBuild is null)
             {
                 string channelName = subscription.Channel?.Name ?? "(unknown channel)";

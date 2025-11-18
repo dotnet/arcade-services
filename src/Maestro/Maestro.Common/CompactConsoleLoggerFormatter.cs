@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 // TODO (https://github.com/dotnet/arcade/issues/8836): Use the formatter from Arcade.Common once we're able to consume latest Arcade
 
-namespace ProductConstructionService.Common;
+namespace Maestro.Common;
 
 /// <summary>
 /// Copied over from SimpleConsoleFormatter. Leaves out the logger name and new line, turning

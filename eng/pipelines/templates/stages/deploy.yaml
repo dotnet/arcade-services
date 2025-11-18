@@ -114,6 +114,11 @@ stages:
       displayName: Download ProductConstructionService.Cli
       artifact: ProductConstructionService.Cli
 
+    - task: UseDotNet@2
+      displayName: Install .NET
+      inputs:
+        useGlobalJson: true
+
     - task: NuGetToolInstaller@1
       displayName: Use NuGet
       inputs:

@@ -13,7 +13,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
-using Azure.Identity;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -24,11 +23,13 @@ using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
+using BarBuild = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
+
 namespace Microsoft.DotNet.Darc.Operations;
 
 internal class InputBuilds
 {
-    public IEnumerable<Build> Builds { get; set; }
+    public IEnumerable<BarBuild> Builds { get; set; }
     public bool Successful { get; set; }
 }
 
@@ -160,7 +161,7 @@ internal class GatherDropOperation : Operation
         }
     }
 
-    private async Task<IEnumerable<DependencyDetail>> GetBuildDependenciesAsync(Build build)
+    private async Task<IEnumerable<DependencyDetail>> GetBuildDependenciesAsync(BarBuild build)
     {
         var repoUri = build.GetRepository();
         IRemote remote = await _remoteFactory.CreateRemoteAsync(repoUri);
@@ -210,7 +211,7 @@ internal class GatherDropOperation : Operation
     ///     Obtain the root builds to start with.
     /// </summary>
     /// <returns>Root builds to start with, or null if a root build could not be found.</returns>
-    private async Task<IEnumerable<Build>> GetRootBuildsAsync()
+    private async Task<IEnumerable<BarBuild>> GetRootBuildsAsync()
     {
         if (!ValidateRootBuildsOptions())
         {
@@ -221,7 +222,7 @@ internal class GatherDropOperation : Operation
 
         if (_options.RootBuildIds.Any())
         {
-            List<Task<Build>> rootBuildTasks = [];
+            List<Task<BarBuild>> rootBuildTasks = [];
             foreach (var rootBuildId in _options.RootBuildIds)
             {
                 Console.WriteLine($"Looking up build by id {rootBuildId}");
@@ -246,18 +247,18 @@ internal class GatherDropOperation : Operation
                 }
                 Channel targetChannel = desiredChannels.First();
                 Console.WriteLine($"Looking up latest build of '{repoUri}' on channel '{targetChannel.Name}'");
-                Build rootBuild = await _barClient.GetLatestBuildAsync(repoUri, targetChannel.Id);
+                var rootBuild = await _barClient.GetLatestBuildAsync(repoUri, targetChannel.Id);
                 if (rootBuild == null)
                 {
                     Console.WriteLine($"No build of '{repoUri}' found on channel '{targetChannel.Name}'");
                     return null;
                 }
-                return new List<Build> { rootBuild };
+                return [rootBuild];
             }
             else if (!string.IsNullOrEmpty(_options.Commit))
             {
                 Console.WriteLine($"Looking up builds of {_options.RepoUri}@{_options.Commit}");
-                IEnumerable<Build> builds = await _barClient.GetBuildsAsync(_options.RepoUri, _options.Commit);
+                var builds = await _barClient.GetBuildsAsync(_options.RepoUri, _options.Commit);
                 // If more than one is available, print them with their IDs.
                 if (builds.Count() > 1)
                 {
@@ -268,27 +269,27 @@ internal class GatherDropOperation : Operation
                     }
                     return null;
                 }
-                Build rootBuild = builds.SingleOrDefault();
+                BarBuild rootBuild = builds.SingleOrDefault();
                 if (rootBuild == null)
                 {
                     Console.WriteLine($"No builds were found of {_options.RepoUri}@{_options.Commit}");
                     return null;
                 }
-                return new List<Build> { rootBuild };
+                return [rootBuild];
             }
         }
         // Shouldn't get here if ValidateRootBuildOptions is correct.
         throw new DarcException("Options for root builds were not validated properly. Please contact @dnceng");
     }
 
-    private class BuildComparer : IEqualityComparer<Build>
+    private class BuildComparer : IEqualityComparer<BarBuild>
     {
-        public bool Equals(Build x, Build y)
+        public bool Equals(BarBuild x, BarBuild y)
         {
             return x.Id == y.Id;
         }
 
-        public int GetHashCode(Build obj)
+        public int GetHashCode(BarBuild obj)
         {
             return obj.Id;
         }
@@ -398,7 +399,7 @@ internal class GatherDropOperation : Operation
     /// </summary>
     /// <param name="inputBuilds">Input builds</param>
     /// <returns>Builds to download</returns>
-    private IEnumerable<Build> FilterReleasedBuilds(IEnumerable<Build> builds)
+    private IEnumerable<BarBuild> FilterReleasedBuilds(IEnumerable<BarBuild> builds)
     {
         if (!_options.IncludeReleased)
         {
@@ -426,7 +427,7 @@ internal class GatherDropOperation : Operation
     ///     not desired (just determine the root build and return it) or it could
     ///     be a matter of determining all builds that contributed to all dependencies.
     /// </remarks>
-    private async Task<InputBuilds> GatherBuildsToDownloadAsync(IEnumerable<Build> rootBuilds)
+    private async Task<InputBuilds> GatherBuildsToDownloadAsync(IEnumerable<BarBuild> rootBuilds)
     {
         Console.WriteLine("Determining what builds to download...");
 
@@ -435,7 +436,7 @@ internal class GatherDropOperation : Operation
             return new InputBuilds { Successful = false };
         }
 
-        foreach (Build rootBuild in rootBuilds)
+        foreach (BarBuild rootBuild in rootBuilds)
         {
             Console.WriteLine($"Root build - Build number {rootBuild.AzureDevOpsBuildNumber} of {rootBuild.AzureDevOpsRepository} @ {rootBuild.Commit}");
         }
@@ -461,8 +462,8 @@ internal class GatherDropOperation : Operation
             };
         }
 
-        var builds = new HashSet<Build>(new BuildComparer());
-        foreach (Build rootBuild in rootBuilds)
+        var builds = new HashSet<BarBuild>(new BuildComparer());
+        foreach (BarBuild rootBuild in rootBuilds)
         {
             builds.Add(rootBuild);
         }
@@ -481,7 +482,7 @@ internal class GatherDropOperation : Operation
         };
 
         Console.WriteLine("Building graph of all dependencies under root builds...");
-        foreach (Build rootBuild in rootBuilds)
+        foreach (BarBuild rootBuild in rootBuilds)
         {
             Console.WriteLine($"Building graph for {rootBuild.AzureDevOpsBuildNumber} of {rootBuild.GetRepository()} @ {rootBuild.Commit}");
 
@@ -540,7 +541,7 @@ internal class GatherDropOperation : Operation
             }
         }
 
-        IEnumerable<Build> filteredBuilds = FilterReleasedBuilds(builds);
+        IEnumerable<BarBuild> filteredBuilds = FilterReleasedBuilds(builds);
 
         if (!filteredBuilds.Any())
         {
@@ -578,7 +579,7 @@ internal class GatherDropOperation : Operation
     /// </summary>
     /// <param name="build">Build to gather drop for</param>
     /// <param name="rootOutputDirectory">Output directory. Must exist.</param>
-    private async Task<DownloadedBuild> GatherDropForBuildAsync(Build build, string rootOutputDirectory)
+    private async Task<DownloadedBuild> GatherDropForBuildAsync(BarBuild build, string rootOutputDirectory)
     {
         var success = true;
         var unifiedOutputDirectory = rootOutputDirectory;
