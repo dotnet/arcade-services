@@ -322,14 +322,20 @@ internal class PullRequestBuilder : IPullRequestBuilder
             description = description.Remove(footerStartIndex, footerEndIndex - footerStartIndex + FooterEndMarker.Length);
         }
 
-        description +=
-            $"""
-            {FooterStartMarker}
+        var footerBuilder = new StringBuilder();
+        footerBuilder.AppendLine(FooterStartMarker);
+        footerBuilder.AppendLine();
 
-            {GenerateUpstreamRepoDiffsSection(upstreamRepoDiffs ?? [])}
-            {GenerateDarcDiffHelpSection(build, subscription.TargetRepository, headBranch)}
-            {FooterEndMarker}
-            """;
+        var upstreamRepoDiffsSection = GenerateUpstreamRepoDiffsSection(upstreamRepoDiffs ?? []);
+        if (!string.IsNullOrEmpty(upstreamRepoDiffsSection))
+        {
+            footerBuilder.AppendLine(upstreamRepoDiffsSection);
+        }
+
+        footerBuilder.AppendLine(GenerateDarcDiffHelpSection(build, subscription.TargetRepository, headBranch));
+        footerBuilder.Append(FooterEndMarker);
+
+        description += footerBuilder.ToString();
         return description;
     }
 
