@@ -60,12 +60,10 @@ stages:
             path: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.ScenarioTests\$(_BuildConfig)\net10.0\publish
             artifact: ProductConstructionService.ScenarioTests
             displayName: Publish E2E Tests
-            isProduction: false
           - output: pipelineArtifact
             path: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Cli\$(_BuildConfig)\net10.0
             artifact: ProductConstructionService.Cli
             displayName: Publish PCS CLI
-            isProduction: false
       - job: BuildAndPublishDocker
         displayName: Build/publish docker image
         pool:
