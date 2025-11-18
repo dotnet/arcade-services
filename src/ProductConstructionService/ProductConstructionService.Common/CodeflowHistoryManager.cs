@@ -32,6 +32,7 @@ public class CodeflowHistoryManager(
     private static RedisKey GetSortedSetKey(string id) => $"CodeflowHistory_{id}";
 
     private const int MaxCommitFetchCount = 500;
+    private const int MaxCommitsCached = 3000;
 
 
     public async Task<List<CodeflowGraphCommit>> GetCachedCodeflowHistoryAsync(
@@ -166,7 +167,13 @@ public class CodeflowHistoryManager(
 
         await cache.StringSetAsync(commitGraphEntries);
 
-        //todo remove any elements after the 3000th or so? to keep the cache from growing indefinitely
+        if (latestCachedCommitScore > MaxCommitsCached)
+        {
+            await cache.SortedSetRemoveRangeByScoreAsync(
+                key: subscriptionId,
+                start: 0,
+                stop: latestCachedCommitScore - MaxCommitsCached);
+        }
     }
 
     private async Task ClearCodeflowCacheAsync(string subscriptionId)
