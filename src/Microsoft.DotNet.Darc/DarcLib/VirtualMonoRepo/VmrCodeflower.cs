@@ -345,7 +345,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     },
                     productRepo,
                     lastFlows,
-                    async () => await applyLatestChanges(enableRebase: true),
+                    async () => await applyLatestChanges(enableRebase: false),
                     cancellationToken);
 
                 // Workaround for files that can be left behind after HandleRevertedFiles()
@@ -421,20 +421,29 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 : await _localGitClient.GetShaForRefAsync(_vmrInfo.VmrPath);
 
             // We replay the previous flows, excluding manual changes that might have caused the conflict
-            await FlowCodeAsync(
-                codeflowOptions with
-                {
-                    Build = previouslyAppliedBuild,
-                    CurrentFlow = currentIsBackflow
-                        ? new Backflow(previouslyAppliedBuild.Commit, previousFlow.RepoSha)
-                        : new ForwardFlow(previouslyAppliedBuild.Commit, previousFlow.VmrSha),
-                    EnableRebase = false,
-                    ForceUpdate = true,
-                },
-                previousFlows,
-                repo,
-                headBranchExisted: true, // Head branch was created when we rewound to the previous flow
-                cancellationToken);
+            try
+            {
+                await FlowCodeAsync(
+                    codeflowOptions with
+                    {
+                        Build = previouslyAppliedBuild,
+                        CurrentFlow = currentIsBackflow
+                            ? new Backflow(previouslyAppliedBuild.Commit, previousFlow.RepoSha)
+                            : new ForwardFlow(previouslyAppliedBuild.Commit, previousFlow.VmrSha),
+                        EnableRebase = false,
+                        ForceUpdate = true,
+                    },
+                    previousFlows,
+                    repo,
+                    headBranchExisted: true, // Head branch was created when we rewound to the previous flow
+                    cancellationToken);
+            }
+            catch (Exception e) when (e is PatchApplicationFailedException || e is ConflictInPrBranchException)
+            {
+                _logger.LogInformation("Recreated {count} flows but current changes conflict with them. Recreating deeper...", flowsToRecreate);
+                flowsToRecreate++;
+                continue;
+            }
 
             var changedFilesAfterRecreation = await GetChangesInHeadBranch(
                 codeflowOptions.Mapping,

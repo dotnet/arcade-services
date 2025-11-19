@@ -594,7 +594,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.Checkout(ProductRepoPath, "main");
         await GitOperations.VerifyMergeConflict(ProductRepoPath, backBranchName,
             mergeTheirs: true,
-            expectedConflictingFile: _productRepoFileName);
+            expectedConflictingFiles: [_productRepoFileName]);
         CheckFileContents(_productRepoFilePath, "New content from the VMR #2");
 
         // 7. The forward flow PR will have a conflict the opposite way - repo has the content from step 3 but VMR has the one from step 1
@@ -602,7 +602,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.Checkout(VmrPath, "main");
         await GitOperations.VerifyMergeConflict(VmrPath, forwardBranchName,
             mergeTheirs: true,
-            expectedConflictingFile: VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName);
+            expectedConflictingFiles: [VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName]);
         CheckFileContents(_productRepoVmrFilePath, "New content from the individual repo #2");
 
         // 9. We try to forward flow again so the VMR version of the file will flow back to the VMR
@@ -613,7 +613,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.VerifyMergeConflict(VmrPath, forwardBranchName,
             mergeTheirs: true,
-            expectedConflictingFile: VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName);
+            expectedConflictingFiles: [VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName]);
 
         // Both VMR and repo need to have the version from the VMR as it flowed to the repo and back
         CheckFileContents(_productRepoFilePath, "New content from the VMR #2");
@@ -954,7 +954,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // Verify we have a conflict and resolve it using theirs (repo content)
         await GitOperations.VerifyMergeConflict(VmrPath, branchName,
             mergeTheirs: true,
-            expectedConflictingFile: VmrInfo.SourcesDir / Constants.ProductRepoName / "conflict.txt");
+            expectedConflictingFiles: [VmrInfo.SourcesDir / Constants.ProductRepoName / "conflict.txt"]);
 
         await GitOperations.CheckAllIsCommitted(VmrPath);
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
@@ -1033,7 +1033,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // Verify we have a conflict and resolve it using theirs (VMR content)
         await GitOperations.VerifyMergeConflict(ProductRepoPath, branchName,
             mergeTheirs: true,
-            expectedConflictingFile: "conflict.txt");
+            expectedConflictingFiles: ["conflict.txt"]);
 
         await GitOperations.CheckAllIsCommitted(VmrPath);
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
