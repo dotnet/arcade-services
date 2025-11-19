@@ -220,6 +220,7 @@ internal class ResolveConflictOperation(
         string lastFlownSha,
         IEnumerable<UnixPath> conflictedFiles)
     {
+        // Overwrite .git/SQUASH_MSG to preset the commit message. This file is created by the codeflow's squash rebase.
         var commitEditMsgPath = Path.Combine(targetRepoPath, ".git", "SQUASH_MSG");
 
         var mappingName = subscription.IsForwardFlow()
