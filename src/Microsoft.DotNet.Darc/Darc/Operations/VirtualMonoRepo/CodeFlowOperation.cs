@@ -118,7 +118,6 @@ internal abstract class CodeFlowOperation(
                 hasChanges = await FlowForwardAsync(
                     productRepo,
                     build,
-                    currentFlow,
                     mapping,
                     currentTargetRepoBranch,
                     excludedAssets,
@@ -127,14 +126,18 @@ internal abstract class CodeFlowOperation(
             }
             else
             {
-                hasChanges = await FlowBackAsync(
-                    productRepo,
+                var result = await _backFlower.FlowBackAsync(
+                    mapping.Name,
+                    productRepo.Path,
                     build,
-                    currentFlow,
-                    mapping,
+                    excludedAssets: excludedAssets,
                     currentTargetRepoBranch,
-                    excludedAssets,
+                    currentTargetRepoBranch,
+                    enableRebase: true,
+                    forceUpdate: true,
                     cancellationToken);
+
+                hasChanges = result.HadUpdates;
             }
 
             if (!hasChanges)
@@ -225,7 +228,6 @@ internal abstract class CodeFlowOperation(
     protected async Task<bool> FlowForwardAsync(
         ILocalGitRepo productRepo,
         BarBuild build,
-        Codeflow currentFlow,
         SourceMapping mapping,
         string headBranch,
         IReadOnlyList<string> excludedAssets,
@@ -239,37 +241,13 @@ internal abstract class CodeFlowOperation(
             targetRepoUri = remotes.First().Uri;
         }
 
-        LastFlows lastFlows = await _forwardFlower.GetLastFlowsAsync(
-            mapping.Name,
-            productRepo,
-            currentIsBackflow: false);
-
-        // We only want to update the source manifest once per flow operation
-        // It resolves conflicts and updates the source manifest to only contain the current repo's update
-        bool sourceManifestUpdated = false;
-        async Task UpdateSourceManifestAsync(BarBuild build, SourceMapping mapping, string headBranch, CancellationToken cancellationToken)
-        {
-            if (sourceManifestUpdated)
-            {
-                return;
-            }
-
-            var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-            var sourceManifestContent = await vmr.GetFileFromGitAsync(VmrInfo.DefaultRelativeSourceManifestPath, headBranch);
-            var sourceManifest = SourceManifest.FromJson(sourceManifestContent!);
-            sourceManifest.UpdateVersion(mapping.Name, build.GetRepository(), build.Commit, build.Id);
-            _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, sourceManifest.ToJson());
-            await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
-            sourceManifestUpdated = true;
-        }
-
         try
         {
             CodeFlowResult result = await _forwardFlower.FlowForwardAsync(
                 mapping.Name,
                 productRepo.Path,
                 build,
-                excludedAssets: excludedAssets,
+                excludedAssets,
                 headBranch,
                 headBranch,
                 targetRepoUri,
@@ -279,69 +257,14 @@ internal abstract class CodeFlowOperation(
 
             return result.HadUpdates;
         }
-        catch (PatchApplicationLeftConflictsException)
-        {
-            await UpdateSourceManifestAsync(build, mapping, headBranch, cancellationToken);
-
-            // Update dependencies after flow
-            await _forwardFlowConflictResolver.MergeDependenciesAsync(
-                mapping.Name,
-                productRepo,
-                headBranch,
-                lastFlows.LastForwardFlow.RepoSha,
-                // if there's a crossing flow, we need to make sure it doesn't bring in any downgrades https://github.com/dotnet/arcade-services/issues/5331
-                lastFlows.CrossingFlow != null
-                    ? lastFlows.LastBackFlow!.VmrSha
-                    : lastFlows.LastForwardFlow.VmrSha,
-                (ForwardFlow)currentFlow,
-                cancellationToken);
-
-            throw;
-        }
         finally
         {
-            await UpdateSourceManifestAsync(build, mapping, headBranch, cancellationToken);
-        }
-    }
-
-    protected async Task<bool> FlowBackAsync(
-        ILocalGitRepo productRepo,
-        BarBuild build,
-        Codeflow currentFlow,
-        SourceMapping mapping,
-        string headBranch,
-        IReadOnlyList<string> excludedAssets,
-        CancellationToken cancellationToken)
-    {
-        LastFlows lastFlows = await _backFlower.GetLastFlowsAsync(
-            mapping.Name,
-            productRepo,
-            currentIsBackflow: true);
-
-        try
-        {
-            var result = await _backFlower.FlowBackAsync(
-                mapping.Name,
-                productRepo.Path,
-                build,
-                excludedAssets: excludedAssets,
-                headBranch,
-                headBranch,
-                enableRebase: true,
-                forceUpdate: true,
-                cancellationToken);
-
-            return result.HadUpdates;
-        }
-        finally
-        {
-            await _backflowConflictResolver.TryMergingBranchAndUpdateDependencies(
-                new CodeflowOptions(mapping, currentFlow, headBranch, headBranch, build, excludedAssets, true, false),
-                lastFlows,
-                productRepo,
-                headBranch,
-                headBranchExisted: true,
-                cancellationToken);
+            var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+            var sourceManifestContent = await vmr.GetFileFromGitAsync(VmrInfo.DefaultRelativeSourceManifestPath, headBranch);
+            var sourceManifest = SourceManifest.FromJson(sourceManifestContent!);
+            sourceManifest.UpdateVersion(mapping.Name, build.GetRepository(), build.Commit, build.Id);
+            _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, sourceManifest.ToJson());
+            await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
         }
     }
 
