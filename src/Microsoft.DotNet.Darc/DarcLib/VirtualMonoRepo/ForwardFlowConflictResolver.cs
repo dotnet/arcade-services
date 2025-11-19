@@ -79,7 +79,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
     private readonly IJsonFileMerger _jsonFileMerger;
     private readonly IVersionDetailsFileMerger _versionDetailsFileMerger;
     private readonly IVersionDetailsParser _versionDetailsParser;
-    private readonly IGitRepoFactory _gitRepoFactory;
 
     public ForwardFlowConflictResolver(
         IVmrInfo vmrInfo,
@@ -90,7 +89,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         IJsonFileMerger jsonFileMerger,
         IVersionDetailsFileMerger versionDetailsFileMerger,
         IVersionDetailsParser versionDetailsParser,
-        IGitRepoFactory gitRepoFactory,
         IFileSystem fileSystem,
         ILogger<ForwardFlowConflictResolver> logger)
         : base(vmrInfo, patchHandler, fileSystem, logger)
@@ -104,7 +102,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         _jsonFileMerger = jsonFileMerger;
         _versionDetailsFileMerger = versionDetailsFileMerger;
         _versionDetailsParser = versionDetailsParser;
-        _gitRepoFactory = gitRepoFactory;
     }
 
     public async Task<IReadOnlyCollection<UnixPath>> TryMergingBranch(
