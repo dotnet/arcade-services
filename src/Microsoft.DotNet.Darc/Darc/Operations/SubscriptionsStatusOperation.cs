@@ -125,7 +125,12 @@ internal class SubscriptionsStatusOperation : Operation
                     ChannelName = subscription.Channel.Name,
                     SourceRepository = subscription.SourceRepository,
                     Enabled = _options.Enable,
-                    Policy = subscription.Policy
+                    Policy = subscription.Policy,
+                    SourceEnabled = subscription.SourceEnabled,
+                    PullRequestFailureNotificationTags = subscription.PullRequestFailureNotificationTags,
+                    SourceDirectory = subscription.SourceDirectory,
+                    TargetDirectory = subscription.TargetDirectory,
+                    ExcludedAssets = subscription.ExcludedAssets
                 };
                 subscriptionToUpdate.Policy.Batchable = subscription.Policy.Batchable;
                 subscriptionToUpdate.Policy.UpdateFrequency = subscription.Policy.UpdateFrequency;
