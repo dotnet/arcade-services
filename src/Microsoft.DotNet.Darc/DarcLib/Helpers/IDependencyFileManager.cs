@@ -25,7 +25,8 @@ public interface IDependencyFileManager
         string? branch,
         UnixPath? relativeBasePath = null,
         bool versionDetailsOnly = false,
-        bool? repoHasVersionDetailsProps = null);
+        bool? repoHasVersionDetailsProps = null,
+        bool allowPinnedDependencyUpdate = false);
 
     Task AddDependencyAsync(
         DependencyDetail dependency,
@@ -33,7 +34,8 @@ public interface IDependencyFileManager
         string? branch,
         UnixPath? relativeBasePath = null,
         bool versionDetailsOnly = false,
-        bool? repoHasVersionDetailsProps = null);
+        bool? repoHasVersionDetailsProps = null,
+        bool allowPinnedDependencyUpdate = false);
 
     Task<bool> TryRemoveDependencyAsync(
         string dependencyName,

@@ -108,7 +108,7 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
         await GitOperations.Checkout(ProductRepoPath, "main");
     }
 
-    protected static List<DependencyDetail> GetDependencies(Build build)
+    protected static List<DependencyDetail> GetDependencies(ProductConstructionService.Client.Models.Build build)
         => build.Assets
             .Select(a => new DependencyDetail
             {

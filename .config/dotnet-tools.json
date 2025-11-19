@@ -3,19 +3,19 @@
   "isRoot": true,
   "tools": {
     "microsoft.dnceng.secretmanager": {
-      "version": "1.1.0-beta.25555.6",
+      "version": "1.1.0-beta.25564.1",
       "commands": [
         "secret-manager"
       ]
     },
     "dotnet-ef": {
-      "version": "8.0.0",
+      "version": "10.0.0",
       "commands": [
         "dotnet-ef"
       ]
     },
     "microsoft.dnceng.configuration.bootstrap": {
-      "version": "1.1.0-beta.25555.6",
+      "version": "1.1.0-beta.25564.1",
       "commands": [
         "bootstrap-dnceng-configuration"
       ]

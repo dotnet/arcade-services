@@ -1,18 +1,20 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Linq;
+using System.Text.Json;
 using Azure;
 using Azure.ResourceManager.AppContainers;
 using Azure.ResourceManager.AppContainers.Models;
 using Azure.ResourceManager.Resources;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.Common;
 using ProductConstructionService.Cli.Options;
+using ProductConstructionService.Common;
 using ProductConstructionService.WorkItems;
-using System.Text.Json;
 
 namespace ProductConstructionService.Cli.Operations;
+
 internal class DeploymentOperation : IOperation
 {
     private readonly DeploymentOptions _options;
@@ -159,7 +161,7 @@ internal class DeploymentOperation : IOperation
     private async Task CleanupRevisionsAsync(IEnumerable<ContainerAppRevisionTrafficWeight> revisionsTrafficWeight)
     {
         IEnumerable<ContainerAppRevisionResource> activeRevisions = _containerApp.GetContainerAppRevisions()
-            .ToEnumerable()
+            .AsEnumerable()
             .Where(revision => revision.Data.IsActive ?? false)
             .Where(revision => revision.Data.TrafficWeight != 100);
 

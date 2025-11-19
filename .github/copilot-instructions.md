@@ -98,7 +98,7 @@ After making changes, validate by testing these workflows:
 - Docker for local development
 
 ## Common File Locations
-- Main solution: `arcade-services.sln`
+- Main solution: `arcade-services.slnx`
 - Global configuration: `global.json`, `Directory.Build.props`
 - Build configuration: `eng/` folder
 - API controllers: `src/ProductConstructionService/ProductConstructionService.Api/Api/`
@@ -117,7 +117,7 @@ After making changes, validate by testing these workflows:
 ### Repository Root Contents
 Key files you'll encounter:
 ```
-arcade-services.sln       # Main solution file
+arcade-services.slnx     # Main solution file
 global.json              # .NET SDK version requirements  
 Directory.Build.props    # MSBuild properties for all projects
 build.sh / Build.cmd     # Entry point build scripts

@@ -16,6 +16,7 @@ namespace ProductConstructionService.ReproTool.Operations;
 
 internal class ReproOperation(
         IBarApiClient prodBarClient,
+        IProductConstructionServiceApi prodPcsApi,
         ReproOptions options,
         DarcProcessManager darcProcessManager,
         [FromKeyedServices("local")] IProductConstructionServiceApi localPcsApi,
@@ -23,6 +24,8 @@ internal class ReproOperation(
         ILogger<ReproOperation> logger)
     : Operation(logger, ghClient, localPcsApi)
 {
+    private readonly IProductConstructionServiceApi _localPcsApi = localPcsApi;
+
     internal override async Task RunAsync()
     {
         await darcProcessManager.InitializeAsync();
@@ -138,10 +141,11 @@ internal class ReproOperation(
             sourceEnabled: true,
             sourceDirectory: subscription.SourceDirectory,
             targetDirectory: subscription.TargetDirectory,
-            excludedAssets: ["*"],
             skipCleanup: options.SkipCleanup);
 
         await darcProcessManager.AddBuildToChannelAsync(testBuild.Id, channelName, options.SkipCleanup);
+
+        await CopyFeatureFlagsAsync(subscription.Id, Guid.Parse(testSubscription.Value));
 
         await TriggerSubscriptionAsync(testSubscription.Value);
 
@@ -208,10 +212,47 @@ internal class ReproOperation(
 
         await darcProcessManager.AddBuildToChannelAsync(testBuild.Id, channelName, options.SkipCleanup);
 
+        await CopyFeatureFlagsAsync(subscription.Id, Guid.Parse(testSubscription.Value));
+
         await TriggerSubscriptionAsync(testSubscription.Value);
 
         logger.LogInformation("Code flow successfully recreated. Press enter to finish and cleanup");
         Console.ReadLine();
         await DeleteDarcPRBranchAsync(targetRepoFork.Split('/').Last(), targetRepoTmpBranch.Value);
+    }
+
+    private async Task CopyFeatureFlagsAsync(Guid sourceSubscriptionId, Guid targetSubscriptionId)
+    {
+        try
+        {
+            logger.LogInformation("Fetching feature flags from production subscription {subscriptionId}", sourceSubscriptionId);
+            var featureFlags = await prodPcsApi.FeatureFlags.GetFeatureFlagsAsync(sourceSubscriptionId);
+            
+            if (featureFlags?.Flags == null || featureFlags.Flags.Count == 0)
+            {
+                logger.LogInformation("No feature flags found on production subscription");
+                return;
+            }
+
+            logger.LogInformation("Found {count} feature flag(s) to copy", featureFlags.Flags.Count);
+            
+            foreach (var flag in featureFlags.Flags)
+            {
+                logger.LogInformation("Copying feature flag {flagName} = {value}", flag.FlagName, flag.Value);
+                
+                var request = new Microsoft.DotNet.ProductConstructionService.Client.Models.SetFeatureFlagRequest(targetSubscriptionId)
+                {
+                    FlagName = flag.FlagName,
+                    Value = flag.Value
+                };
+                
+                await _localPcsApi.FeatureFlags.SetFeatureFlagAsync(request);
+                logger.LogInformation("Successfully copied feature flag {flagName}", flag.FlagName);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to copy feature flags. The test subscription will run without feature flags");
+        }
     }
 }

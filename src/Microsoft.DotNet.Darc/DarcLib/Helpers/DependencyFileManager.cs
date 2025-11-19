@@ -218,7 +218,8 @@ public class DependencyFileManager : IDependencyFileManager
         string branch,
         UnixPath relativeBasePath = null,
         bool versionDetailsOnly = false,
-        bool? repoHasVersionDetailsProps = null)
+        bool? repoHasVersionDetailsProps = null,
+        bool allowPinnedDependencyUpdate = false)
     {
         var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(await ReadVersionDetailsXmlAsync(repoUri, branch, relativeBasePath));
 
@@ -231,7 +232,7 @@ public class DependencyFileManager : IDependencyFileManager
             return false;
         }
 
-        await AddDependencyAsync(dependency, repoUri, branch, relativeBasePath, versionDetailsOnly, repoHasVersionDetailsProps);
+        await AddDependencyAsync(dependency, repoUri, branch, relativeBasePath, versionDetailsOnly, repoHasVersionDetailsProps, allowPinnedDependencyUpdate);
         return true;
     }
 
@@ -249,14 +250,15 @@ public class DependencyFileManager : IDependencyFileManager
         string branch,
         UnixPath relativeBasePath = null,
         bool versionDetailsOnly = false,
-        bool? repoHasVersionDetailsProps = null)
+        bool? repoHasVersionDetailsProps = null,
+        bool allowPinnedDependencyUpdate = false)
     {
         if (!repoHasVersionDetailsProps.HasValue)
         {
             repoHasVersionDetailsProps = await VersionDetailsPropsExistsAsync(repoUri, branch, relativeBasePath);
         }
 
-        await AddDependencyToVersionDetailsAsync(repoUri, branch, dependency, repoHasVersionDetailsProps.Value, relativeBasePath);
+        await AddDependencyToVersionDetailsAsync(repoUri, branch, dependency, repoHasVersionDetailsProps.Value, relativeBasePath, allowPinnedDependencyUpdate);
 
         if (!versionDetailsOnly)
         {
@@ -422,12 +424,12 @@ public class DependencyFileManager : IDependencyFileManager
         return element;
     }
 
-    private static void UpdateVersionDetailsDependency(XmlDocument versionDetails, DependencyDetail itemToUpdate)
+    private static void UpdateVersionDetailsDependency(XmlDocument versionDetails, DependencyDetail itemToUpdate, bool allowPinnedDependencyUpdate)
     {
         itemToUpdate.Validate();
 
         // Double check that the dependency is not pinned
-        if (itemToUpdate.Pinned)
+        if (itemToUpdate.Pinned && !allowPinnedDependencyUpdate)
         {
             throw new DarcException($"An attempt to update pinned dependency '{itemToUpdate.Name}' was made");
         }
@@ -508,7 +510,7 @@ public class DependencyFileManager : IDependencyFileManager
                 throw new DarcException(e.Message + $" in repo '{repoUri}' and branch '{branch}'", e);
             }
 
-            UpdateVersionDetailsDependency(versionDetails, itemToUpdate);
+            UpdateVersionDetailsDependency(versionDetails, itemToUpdate, allowPinnedDependencyUpdate: false);
 
             if (!repoHasVersionDetailsProps.Value)
             {
@@ -977,7 +979,8 @@ public class DependencyFileManager : IDependencyFileManager
         string branch,
         DependencyDetail dependency,
         bool repoHasVersionDetailsProps,
-        UnixPath relativeBasePath)
+        UnixPath relativeBasePath,
+        bool allowPinnedDependencyUpdate)
     {
         XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repo, null, relativeBasePath);
 
@@ -989,7 +992,7 @@ public class DependencyFileManager : IDependencyFileManager
 
         if (existingDependency.Count == 1)
         {
-            UpdateVersionDetailsDependency(versionDetails, dependency);
+            UpdateVersionDetailsDependency(versionDetails, dependency, allowPinnedDependencyUpdate);
         }
         else
         {

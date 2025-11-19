@@ -68,6 +68,7 @@ jobs:
         scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
+          $env:DOTNET_ROOT = (Resolve-Path ".\.dotnet").Path
           $darcBuild = .\darc\darc.exe get-build `
             --repo "https://github.com/dotnet/arcade-services" `
             --commit $(Build.SourceVersion) `
