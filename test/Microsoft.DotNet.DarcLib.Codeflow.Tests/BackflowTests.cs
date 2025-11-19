@@ -555,7 +555,7 @@ internal class BackflowTests : CodeFlowTests
         await GitOperations.ExecuteGitCommand(ProductRepoPath, ["add", _productRepoFilePath]);
         await GitOperations.ExecuteGitCommand(ProductRepoPath, ["commit", "-m", "Committing the backflow"]);
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
-        (await GetLocal(ProductRepoPath).GetDependenciesAsync("Package.New")).Should().ContainEquivalentOf(newDependency);
+        (await GetLocal(ProductRepoPath).GetDependenciesAsync(newDependency.Name)).Should().ContainEquivalentOf(newDependency);
 
         // Now we make another set of changes in the VMR and try again
         // This time it will be same direction flow as the previous one (before it was opposite)
@@ -568,6 +568,17 @@ internal class BackflowTests : CodeFlowTests
         // Now we make several changes in the VMR and try to locally flow them via darc
         await File.WriteAllTextAsync(_productRepoVmrFilePath, "New content in the VMR AGAIN");
         await File.WriteAllTextAsync(_productRepoVmrFilePath + "-added-in-repo", "New file from the VMR AGAIN");
+        newDependency = new DependencyDetail
+        {
+            Name = "Package.NewNew",
+            Version = "3.0.0",
+            RepoUri = "https://github.com/some/repo",
+            Commit = "commit-sha",
+            Type = DependencyType.Toolset,
+        };
+        await GetLocal(VmrPath).AddDependencyAsync(
+            newDependency,
+            relativeBasePath: VmrInfo.GetRelativeRepoSourcesPath(Constants.ProductRepoName));
         await GitOperations.CommitAll(VmrPath, "New content in the VMR again");
 
         build = await CreateNewVmrBuild(
@@ -591,6 +602,8 @@ internal class BackflowTests : CodeFlowTests
         CheckFileContents(ProductRepoPath / expectedFiles[1], "New file from the VMR AGAIN");
         (await File.ReadAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml)).Should().Contain("1.0.2");
         (await File.ReadAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsProps)).Should().Contain("1.0.2");
+        (await GetLocal(ProductRepoPath).GetDependenciesAsync("Package.B1")).First().Version.Should().Be("1.0.2");
+        (await GetLocal(ProductRepoPath).GetDependenciesAsync(newDependency.Name)).Should().ContainEquivalentOf(newDependency);
     }
 
     // Tests a scenario where we misconfigure subscriptions and let two different VMR branches backflow into the same repo branch.

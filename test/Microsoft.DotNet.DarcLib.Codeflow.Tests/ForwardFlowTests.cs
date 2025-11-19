@@ -123,7 +123,7 @@ internal class ForwardFlowTests : CodeFlowTests
         File.Exists(VmrPath / expectedFiles[0] + "-removed-in-vmr").Should().BeFalse();
         File.Exists(VmrPath / expectedFiles[2]).Should().BeTrue();
         File.Exists(VmrPath / expectedFiles[2].Replace("ps2", "ps1")).Should().BeFalse();
-        (await GetLocal(VmrPath).GetDependenciesAsync("Package.New", relativeBasePath: VmrInfo.SourcesDir / Constants.ProductRepoName))
+        (await GetLocal(VmrPath).GetDependenciesAsync(newDependency.Name, relativeBasePath: VmrInfo.SourcesDir / Constants.ProductRepoName))
             .Should().ContainEquivalentOf(newDependency);
 
         // Now we reset, make a conflicting change and see if darc can handle it and the conflict appears
@@ -149,7 +149,7 @@ internal class ForwardFlowTests : CodeFlowTests
         await GitOperations.ExecuteGitCommand(VmrPath, ["add", _productRepoVmrFilePath]);
         await GitOperations.ExecuteGitCommand(VmrPath, ["commit", "-m", "Committing the forward flow"]);
         await GitOperations.CheckAllIsCommitted(VmrPath);
-        (await GetLocal(VmrPath).GetDependenciesAsync("Package.New", relativeBasePath: VmrInfo.SourcesDir / Constants.ProductRepoName))
+        (await GetLocal(VmrPath).GetDependenciesAsync(newDependency.Name, relativeBasePath: VmrInfo.SourcesDir / Constants.ProductRepoName))
             .Should().ContainEquivalentOf(newDependency);
 
         // Now we make another set of changes in the repo and try again
@@ -163,7 +163,15 @@ internal class ForwardFlowTests : CodeFlowTests
         // Now we make several changes in the repo and try to locally flow them via darc
         await File.WriteAllTextAsync(_productRepoFilePath, "New content in the individual repo AGAIN");
         await File.WriteAllTextAsync(_productRepoFilePath + "-added-in-repo", "New file from the repo AGAIN");
-        await File.WriteAllTextAsync(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "build.ps2", "New stuff");
+        await File.WriteAllTextAsync(ProductRepoPath / DarcLib.Constants.CommonScriptFilesPath / "build.ps2", "New stuff"); newDependency = new DependencyDetail
+        {
+            Name = "Package.NewNew",
+            Version = "3.0.0",
+            RepoUri = "https://github.com/some/repo",
+            Commit = "commit-sha",
+            Type = DependencyType.Toolset,
+        };
+        await GetLocal(ProductRepoPath).AddDependencyAsync(newDependency);
         await GitOperations.CommitAll(ProductRepoPath, "New content in the individual repo again");
 
         build = await CreateNewRepoBuild(
@@ -176,11 +184,11 @@ internal class ForwardFlowTests : CodeFlowTests
 
         // File -added-in-repo is deleted in the VMR and changed in the repo so it will conflict
         stagedFiles = await CallDarcForwardflow(build.Id, [expectedFiles[1]]);
-        stagedFiles.Should().BeEquivalentTo(expectedFiles.Take(expectedFiles.Length - 2), "There should be staged files after forward flow");
+        stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
         await VerifyNoConflictMarkers(VmrPath, stagedFiles.Except([expectedFiles[1]]));
         CheckFileContents(VmrPath / expectedFiles[1], "New file from the repo AGAIN");
         CheckFileContents(VmrPath / expectedFiles[2], "New stuff");
-        (await GetLocal(VmrPath).GetDependenciesAsync("Package.New", relativeBasePath: VmrInfo.SourcesDir / Constants.ProductRepoName))
+        (await GetLocal(VmrPath).GetDependenciesAsync(newDependency.Name, relativeBasePath: VmrInfo.SourcesDir / Constants.ProductRepoName))
             .Should().ContainEquivalentOf(newDependency);
     }
 
