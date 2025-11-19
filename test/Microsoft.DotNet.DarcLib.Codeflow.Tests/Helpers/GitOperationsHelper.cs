@@ -206,9 +206,9 @@ internal class GitOperationsHelper
         if (mergeTheirs == true)
         {
             result = await _processManager.ExecuteGit(repo, "checkout", "--theirs", ".");
-            result.ThrowIfFailed($"Failed to merge ours in {repo}");
+            result.ThrowIfFailed($"Failed to merge theirs in {repo}");
         }
-        // If we take theirs, we already resolved the conflicting files above but the version files need to come from our branch
+        // If we take ours, we already resolved the conflicting files above but the version files need to come from our branch
         else
         {
             foreach (var file in DependencyFileManager.CodeflowDependencyFiles.Append(VmrInfo.DefaultRelativeSourceManifestPath))
@@ -223,7 +223,7 @@ internal class GitOperationsHelper
             }
         }
 
-        await CommitAll(repo, $"Merged {branch} into {targetBranch} {(mergeTheirs.Value ? "using " + targetBranch : "using " + targetBranch)}");
+        await CommitAll(repo, $"Merged {branch} into {targetBranch} using {(mergeTheirs.Value ? targetBranch : branch)}");
         await DeleteBranch(repo, branch);
     }
 
