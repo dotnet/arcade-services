@@ -227,9 +227,9 @@ internal class ResolveConflictOperation(
             ? subscription.TargetDirectory
             : subscription.SourceDirectory;
 
-        var conflictedFilesList = conflictedFiles
-            .Select(f => $"- {f}")
-            .Aggregate((a, b) => a + Environment.NewLine + b);
+        var conflictedFilesList = string.Join(
+            Environment.NewLine,
+            conflictedFiles.Select(f => $"- {f}"));
 
         var commitMessage = VmrManagerBase.PrepareCommitMessage(
             ResolveConflictCommitMessage,
