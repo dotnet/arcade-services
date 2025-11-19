@@ -345,7 +345,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     },
                     productRepo,
                     lastFlows,
-                    async () => await applyLatestChanges(enableRebase: false),
+                    async () => await applyLatestChanges(enableRebase: true),
                     cancellationToken);
 
                 // Workaround for files that can be left behind after HandleRevertedFiles()
