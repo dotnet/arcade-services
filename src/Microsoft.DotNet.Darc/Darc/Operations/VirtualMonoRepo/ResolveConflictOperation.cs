@@ -54,6 +54,7 @@ internal class ResolveConflictOperation(
         The following files had conflicts that were resolved by a user:
 
         {additionalMessage}
+
         """;
 
     protected override async Task ExecuteInternalAsync(
