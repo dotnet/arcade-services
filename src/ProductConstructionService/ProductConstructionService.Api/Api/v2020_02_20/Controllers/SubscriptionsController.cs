@@ -181,6 +181,17 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
             return BadRequest(new ApiError("The request is invalid. Batched codeflow subscriptions are not supported."));
         }
 
+        // Subscriptions are not allowed to change their sourceEnabled setting
+        if (subscription.SourceEnabled != (update.SourceEnabled ?? false))
+        {
+            return BadRequest(new ApiError("The request is invalid. Subscriptions are not allowed to change their sourceEnabled setting."));
+        }
+
+        if (update.SourceEnabled == true && string.IsNullOrEmpty(update.TargetDirectory) && string.IsNullOrEmpty(update.SourceDirectory))
+        {
+            return base.BadRequest(new ApiError("The request is invalid. Source-enabled subscriptions require the source or target directory to be set"));
+        }    
+
         var doUpdate = false;
 
         if (!string.IsNullOrEmpty(update.SourceRepository))
