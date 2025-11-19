@@ -175,7 +175,7 @@ public abstract partial class VmrManagerBase
             { "oldShaShort", oldSha is null ? string.Empty : Commit.GetShortSha(oldSha) },
             { "newShaShort", newSha is null ? string.Empty : Commit.GetShortSha(newSha) },
             { "commitMessage", additionalMessage ?? string.Empty },
-            { "conflictingFilesList", conflictingFiles ?? string.Empty }
+            { "conflictingFilesList", conflictingFiles ?? string.Empty },
         };
 
         return TemplatePlaceholderRegex().Replace(template, match =>
