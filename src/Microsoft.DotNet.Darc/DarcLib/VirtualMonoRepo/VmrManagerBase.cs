@@ -163,8 +163,7 @@ public abstract partial class VmrManagerBase
         string remote,
         string? oldSha = null,
         string? newSha = null,
-        string? additionalMessage = null,
-        string? conflictingFiles = null)
+        string? additionalMessage = null)
     {
         var replaces = new Dictionary<string, string?>
         {
@@ -174,8 +173,7 @@ public abstract partial class VmrManagerBase
             { "newSha", newSha },
             { "oldShaShort", oldSha is null ? string.Empty : Commit.GetShortSha(oldSha) },
             { "newShaShort", newSha is null ? string.Empty : Commit.GetShortSha(newSha) },
-            { "commitMessage", additionalMessage ?? string.Empty },
-            { "conflictingFilesList", conflictingFiles ?? string.Empty },
+            { "additionalMessage", additionalMessage ?? string.Empty },
         };
 
         return TemplatePlaceholderRegex().Replace(template, match =>

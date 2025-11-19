@@ -53,7 +53,7 @@ internal class ResolveConflictOperation(
 
         The following files had conflicts that were resolved by a user:
 
-        {conflictingFilesList}
+        {additionalMessage}
         """;
 
     protected override async Task ExecuteInternalAsync(
@@ -226,7 +226,7 @@ internal class ResolveConflictOperation(
             ? subscription.TargetDirectory
             : subscription.SourceDirectory;
 
-        var conflictedFilesList = string.Join(
+        var conflictedFilesBlurb = string.Join(
             Environment.NewLine,
             conflictedFiles.Select(f => $"- {f}"));
 
@@ -236,7 +236,7 @@ internal class ResolveConflictOperation(
             subscription.SourceRepository,
             lastFlownSha,
             build.Commit,
-            conflictingFiles: conflictedFilesList);
+            additionalMessage: conflictedFilesBlurb);
 
         _fileSystem.WriteToFile(commitEditMsgPath, commitMessage);
     }
