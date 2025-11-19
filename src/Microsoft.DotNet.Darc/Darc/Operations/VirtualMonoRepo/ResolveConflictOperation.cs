@@ -235,8 +235,8 @@ internal class ResolveConflictOperation(
             ResolveConflictCommitMessage,
             mappingName,
             subscription.SourceRepository,
-            DarcLib.Commit.GetShortSha(lastFlownSha),
-            DarcLib.Commit.GetShortSha(build.Commit),
+            lastFlownSha,
+            build.Commit,
             conflictingFiles: conflictedFilesList);
 
         File.WriteAllText(commitEditMsgPath, commitMessage);
