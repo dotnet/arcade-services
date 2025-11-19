@@ -41,6 +41,7 @@ internal class ResolveConflictOperation(
     private readonly IProcessManager _processManager = processManager;
     private readonly IBarApiClient _barClient = barApiClient;
     private readonly ILogger<ResolveConflictOperation> _logger = logger;
+    private readonly IFileSystem _fileSystem = fileSystem;
 
     private const string ResolveConflictCommitMessage =
         $$"""
@@ -53,8 +54,6 @@ internal class ResolveConflictOperation(
         The following files had conflicts that were resolved by a user:
 
         {conflictingFilesList}
-
-        {{DarcLib.Constants.AUTOMATION_COMMIT_TAG}}
         """;
 
     protected override async Task ExecuteInternalAsync(
@@ -239,6 +238,6 @@ internal class ResolveConflictOperation(
             build.Commit,
             conflictingFiles: conflictedFilesList);
 
-        File.WriteAllText(commitEditMsgPath, commitMessage);
+        _fileSystem.WriteToFile(commitEditMsgPath, commitMessage);
     }
 }
