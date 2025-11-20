@@ -14,7 +14,6 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
@@ -270,17 +269,6 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
         var gitResult = await GitOperations.ExecuteGitCommand(targetRepo, "diff", "--name-only", "--cached");
         gitResult.Succeeded.Should().BeTrue("Git diff should succeed");
         return gitResult.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-    }
-
-    protected static async Task VerifyNoConflictMarkers(NativePath productRepoPath, IEnumerable<string> stagedFiles)
-    {
-        foreach (var file in stagedFiles)
-        {
-            var filePath = productRepoPath / file;
-            var content = await File.ReadAllTextAsync(filePath);
-
-            content.Should().NotContain("<<<<<<<", $"File {filePath} contains conflict markers");
-        }
     }
 }
 

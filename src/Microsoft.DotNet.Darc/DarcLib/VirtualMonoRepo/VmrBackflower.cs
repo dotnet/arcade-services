@@ -132,27 +132,41 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        var hasChanges = await FlowCodeAsync(
-            codeflowOptions,
-            lastFlows,
-            targetRepo,
-            headBranchExisted,
-            cancellationToken);
+        async Task<VersionFileUpdateResult> UpdateDependenciesAndVersionFiles() =>
+            await _conflictResolver.TryMergingBranchAndUpdateDependencies(
+                codeflowOptions,
+                lastFlows,
+                targetRepo,
+                codeflowOptions.TargetBranch,
+                headBranchExisted,
+                cancellationToken);
 
-        // We try to merge the target branch and we apply dependency updates
-        VersionFileUpdateResult mergeResult = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
-            codeflowOptions,
-            lastFlows,
-            targetRepo,
-            codeflowOptions.TargetBranch,
-            headBranchExisted,
-            cancellationToken);
+        bool hasChanges;
+
+        try
+        {
+            hasChanges = await FlowCodeAsync(
+                codeflowOptions,
+                lastFlows,
+                targetRepo,
+                headBranchExisted,
+                cancellationToken);
+        }
+        catch (PatchApplicationLeftConflictsException) when (codeflowOptions.EnableRebase)
+        {
+            // When we are rebasing and ended up with conflicts, we will still update version files
+            await UpdateDependenciesAndVersionFiles();
+            throw;
+        }
+
+        VersionFileUpdateResult mergeResult = await UpdateDependenciesAndVersionFiles();
 
         return new CodeFlowResult(
             hasChanges || mergeResult.DependencyUpdates.Count > 0,
             mergeResult.ConflictedFiles,
             targetRepo.Path,
             mergeResult.DependencyUpdates);
+
     }
 
     protected override async Task<bool> SameDirectionFlowAsync(

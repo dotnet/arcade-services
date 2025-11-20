@@ -2,10 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests.Helpers;
@@ -163,7 +166,7 @@ internal class GitOperationsHelper
     public async Task VerifyMergeConflict(
         NativePath repo,
         string branch,
-        string? expectedConflictingFile = null,
+        string[]? expectedConflictingFiles = null,
         bool? mergeTheirs = null,
         string targetBranch = "main")
     {
@@ -173,22 +176,81 @@ internal class GitOperationsHelper
         result = await _processManager.ExecuteGit(repo, "merge", "--no-commit", "--no-ff", branch);
         result.Succeeded.Should().BeFalse($"Expected merge conflict in {repo} but none happened");
 
-        if (expectedConflictingFile != null)
+        if (expectedConflictingFiles != null)
         {
-            result.StandardOutput.Should().Match($"*Merge conflict in {expectedConflictingFile}*");
+            foreach (var expectedConflictingFile in expectedConflictingFiles)
+            {
+                result.StandardOutput.Should().Match($"*Merge conflict in {expectedConflictingFile}*");
+            }
+
+            await VerifyConflictMarkers(repo, expectedConflictingFiles);
+
+            if (mergeTheirs.HasValue)
+            {
+                foreach (var expectedConflictingFile in expectedConflictingFiles)
+                {
+                    result = await _processManager.ExecuteGit(repo, "checkout", mergeTheirs.Value ? "--theirs" : "--ours", expectedConflictingFile);
+                    result.ThrowIfFailed($"Failed to merge {(mergeTheirs.Value ? "theirs" : "ours")} {expectedConflictingFile} in {repo}");
+                }
+            }
         }
 
-        if (mergeTheirs.HasValue)
-        {
-            result = await _processManager.ExecuteGit(repo, "checkout", mergeTheirs.Value ? "--theirs" : "--ours", ".");
-            result.ThrowIfFailed($"Failed to merge {(mergeTheirs.Value ? "theirs" : "ours")} {repo}");
-            await CommitAll(repo, $"Merged {branch} into {targetBranch} {(mergeTheirs.Value ? "using " + targetBranch : "using " + targetBranch)}");
-            await DeleteBranch(repo, branch);
-        }
-        else
+        if (!mergeTheirs.HasValue)
         {
             result = await _processManager.ExecuteGit(repo, "merge", "--abort");
             result.ThrowIfFailed($"Failed to abort merge in {repo}");
+            return;
+        }
+
+        // If we take theirs, we can just checkout all files (because version files will be accepted from our branch)
+        if (mergeTheirs == true)
+        {
+            result = await _processManager.ExecuteGit(repo, "checkout", "--theirs", ".");
+            result.ThrowIfFailed($"Failed to merge theirs in {repo}");
+        }
+        // If we take ours, we already resolved the conflicting files above but the version files need to come from our branch
+        else
+        {
+            foreach (var file in DependencyFileManager.CodeflowDependencyFiles.Append(VmrInfo.DefaultRelativeSourceManifestPath))
+            {
+                if (!File.Exists(repo / file))
+                {
+                    continue;
+                }
+
+                result = await _processManager.ExecuteGit(repo, "checkout", "--ours", file);
+                result.ThrowIfFailed($"Failed to merge ours {file} in {repo}");
+            }
+        }
+
+        await CommitAll(repo, $"Merged {branch} into {targetBranch} using {(mergeTheirs.Value ? targetBranch : branch)}");
+        await DeleteBranch(repo, branch);
+    }
+
+    public Task VerifyConflictMarkers(NativePath productRepoPath, IEnumerable<string> files)
+        => VerifyConflictMarkers(productRepoPath, files, shouldHaveMarkers: true);
+
+    public Task VerifyNoConflictMarkers(NativePath productRepoPath, IEnumerable<string> files)
+        => VerifyConflictMarkers(productRepoPath, files, shouldHaveMarkers: false);
+
+    private static async Task VerifyConflictMarkers(
+        NativePath productRepoPath,
+        IEnumerable<string> files,
+        bool shouldHaveMarkers)
+    {
+        foreach (var file in files)
+        {
+            var filePath = productRepoPath / file;
+            var content = await File.ReadAllTextAsync(filePath);
+
+            if (shouldHaveMarkers)
+            {
+                content.Should().Contain("<<<<<<<", $"File {filePath} does not contain conflict markers");
+            }
+            else
+            {
+                content.Should().NotContain("<<<<<<<", $"File {filePath} contains conflict markers");
+            }
         }
     }
 }

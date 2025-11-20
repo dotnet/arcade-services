@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
@@ -129,21 +128,12 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         await sourceRepo.FetchAllAsync([mapping.DefaultRemote, repoInfo.RemoteUri], cancellationToken);
 
         ForwardFlow currentFlow = new(build.Commit, lastFlows.LastFlow.VmrSha);
+        ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
-        bool hasChanges = await FlowCodeAsync(
-            new CodeflowOptions(mapping, currentFlow, targetBranch, headBranch, build, excludedAssets, enableRebase, forceUpdate),
-            lastFlows,
-            sourceRepo,
-            headBranchExisted,
-            cancellationToken);
+        bool hasChanges;
 
-        IReadOnlyCollection<UnixPath>? conflictedFiles = null;
-        if (hasChanges)
-        {
-            // We try to merge the target branch so that we can potentially
-            // resolve some expected conflicts in the version files
-            ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-            conflictedFiles = await _conflictResolver.TryMergingBranch(
+        async Task<IReadOnlyCollection<UnixPath>> UpdateVersionFiles() =>
+            await _conflictResolver.TryMergingBranch(
                 mapping.Name,
                 vmr,
                 sourceRepo,
@@ -153,6 +143,29 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 lastFlows,
                 enableRebase,
                 cancellationToken);
+
+        try
+        {
+            hasChanges = await FlowCodeAsync(
+                new CodeflowOptions(mapping, currentFlow, targetBranch, headBranch, build, excludedAssets, enableRebase, forceUpdate),
+                lastFlows,
+                sourceRepo,
+                headBranchExisted,
+                cancellationToken);
+        }
+        catch (PatchApplicationLeftConflictsException) when (enableRebase)
+        {
+            // When we are rebasing and ended up with conflicts, we will still update version files
+            await UpdateVersionFiles();
+            throw;
+        }
+
+        IReadOnlyCollection<UnixPath>? conflictedFiles = null;
+        if (hasChanges)
+        {
+            // We try to merge the target branch so that we can potentially
+            // resolve some expected conflicts in the version files
+            conflictedFiles = await UpdateVersionFiles();
         }
 
         // If we don't force the update, we'll set hasChanges to false when the updates are not meaningful

@@ -41,7 +41,7 @@ public class WorkBranchFactory(
             throw new Exception(message);
         }
 
-        _logger.LogInformation("Creating a branch {branchName}", branchName);
+        _logger.LogInformation("Creating a working branch {branchName}", branchName);
 
         await repo.CreateBranchAsync(branchName, overwriteExistingBranch: true);
 

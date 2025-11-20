@@ -22,6 +22,7 @@ internal class ResolveConflictOperation(
         IVmrForwardFlower forwardFlower,
         IVmrBackFlower backFlower,
         IBackflowConflictResolver backflowConflictResolver,
+        IForwardFlowConflictResolver forwardFlowConflictResolver,
         IVmrInfo vmrInfo,
         IVmrCloneManager vmrCloneManager,
         IRepositoryCloneManager repositoryCloneManager,
@@ -32,7 +33,7 @@ internal class ResolveConflictOperation(
         IFileSystem fileSystem,
         IProcessManager processManager,
         ILogger<ResolveConflictOperation> logger)
-    : CodeFlowOperation(options, forwardFlower, backFlower, backflowConflictResolver, vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
+    : CodeFlowOperation(options, forwardFlower, backFlower, backflowConflictResolver, forwardFlowConflictResolver, vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
 {
     private readonly ResolveConflictCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
@@ -41,6 +42,21 @@ internal class ResolveConflictOperation(
     private readonly IProcessManager _processManager = processManager;
     private readonly IBarApiClient _barClient = barApiClient;
     private readonly ILogger<ResolveConflictOperation> _logger = logger;
+    private readonly IFileSystem _fileSystem = fileSystem;
+
+    private const string ResolveConflictCommitMessage =
+        $$"""
+        [{name}] Source update {oldShaShort}{{DarcLib.Constants.Arrow}}{newShaShort}
+        Diff: {remote}/compare/{oldSha}..{newSha}
+        
+        From: {remote}/commit/{oldSha}
+        To: {remote}/commit/{newSha}
+
+        The following files had conflicts that were resolved by a user:
+
+        {additionalMessage}
+
+        """;
 
     protected override async Task ExecuteInternalAsync(
         string repoName,
@@ -113,6 +129,7 @@ internal class ResolveConflictOperation(
                 cancellationToken);
         }
 
+        string lastFlownSha = await GetLastFlownShaAsync(subscription, repoPath);
         _vmrInfo.VmrPath = vmr.Path;
 
         await ValidateLocalRepo(subscription, repoPath);
@@ -133,8 +150,12 @@ internal class ResolveConflictOperation(
             _logger.LogInformation("Codeflow has finished, and {conflictedFiles} conflicting file(s) have been" +
                 " left on the current branch.", e.ConflictedFiles.Count);
             _logger.LogInformation("Please resolve the conflicts locally, commit and push your changes to unblock the codeflow PR.");
+
+            CreateCommitMessageFile(targetGitRepoPath, subscription, build, lastFlownSha, e.ConflictedFiles);
+
             return;
         }
+
         _logger.LogInformation("Codeflow has finished and changes have been staged on the local branch. "
             + "However, no conflicts were encountered.");
     }
@@ -176,5 +197,50 @@ internal class ResolveConflictOperation(
         }
 
         return subscription;
+    }
+
+    private async Task<string> GetLastFlownShaAsync(Subscription subscription, NativePath repoPath)
+    {
+        var local = new Local(_options.GetRemoteTokenProvider(), _logger, repoPath);
+
+        if (subscription.IsForwardFlow())
+        {
+            var sourceManifest = await local.GetSourceManifestAsync(_vmrInfo.VmrPath);
+            return sourceManifest.GetRepoVersion(subscription.TargetDirectory).CommitSha;
+        }
+        else
+        {
+            var sourceDependency = await local.GetSourceDependencyAsync();
+            return sourceDependency.Sha;
+        }
+    }
+
+    private void CreateCommitMessageFile(
+        string targetRepoPath,
+        Subscription subscription,
+        Build build,
+        string lastFlownSha,
+        IEnumerable<UnixPath> conflictedFiles)
+    {
+        // Overwrite .git/SQUASH_MSG to preset the commit message. This file is created by the codeflow's squash rebase.
+        var commitEditMsgPath = Path.Combine(targetRepoPath, ".git", "SQUASH_MSG");
+
+        var mappingName = subscription.IsForwardFlow()
+            ? subscription.TargetDirectory
+            : subscription.SourceDirectory;
+
+        var conflictedFilesBlurb = string.Join(
+            Environment.NewLine,
+            conflictedFiles.Select(f => $"- {f}"));
+
+        var commitMessage = VmrManagerBase.PrepareCommitMessage(
+            ResolveConflictCommitMessage,
+            mappingName,
+            subscription.SourceRepository,
+            lastFlownSha,
+            build.Commit,
+            additionalMessage: conflictedFilesBlurb);
+
+        _fileSystem.WriteToFile(commitEditMsgPath, commitMessage);
     }
 }
