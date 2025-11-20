@@ -54,13 +54,66 @@ internal class BackflowTests : CodeFlowTests
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.VerifyMergeConflict(ProductRepoPath, branchName,
             mergeTheirs: true,
-            expectedConflictingFile: _productRepoFileName);
+            expectedConflictingFiles: [_productRepoFileName]);
 
         // We used the changes from the VMR - let's verify flowing to the VMR
         codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         codeFlowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
+
+        // Now we will make a series of backflows where each will make a conflicting change
+        // The last backflow will have to recreate all of the flows to be able to apply the changes
+
+        // Make another flow to repo to have flows both ways ready
+        codeFlowResult = await ChangeVmrFileAndFlowIt("Again some content from the VMR", branchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(ProductRepoPath, branchName);
+
+        // The file.txt will keep getting changed and conflicting in each flow
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / "file.txt", "Repo conflicting content");
+        await GitOperations.CommitAll(ProductRepoPath, "Set up conflicting file in repo");
+
+        for (int i = 1; i <= 3; i++)
+        {
+            await GitOperations.Checkout(VmrPath, "main");
+            await File.WriteAllTextAsync(_productRepoVmrPath / "file.txt", $"VMR content {i}");
+            await GitOperations.CommitAll(VmrPath, $"Add files for iteration {i}");
+            codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+            codeFlowResult.ShouldHaveUpdates();
+            // Make a conflicting change in the PR branch before merging
+            await File.WriteAllTextAsync(ProductRepoPath / $"conflicting_file_{i}.txt", $"Conflicting content {i}");
+            await GitOperations.CommitAll(ProductRepoPath, $"Conflicting change in iteration {i}");
+            await GitOperations.VerifyMergeConflict(ProductRepoPath, branchName, ["file.txt"], mergeTheirs: false);
+            CheckFileContents(ProductRepoPath / "file.txt", ["Repo conflicting content"]);
+        }
+
+        // Now we create a new backflow that will conflict with each of the previous flows
+        await GitOperations.Checkout(VmrPath, "main");
+        for (int i = 1; i <= 3; i++)
+        {
+            await File.WriteAllTextAsync(_productRepoVmrPath / $"file_{i}.txt", $"New content {i}");
+            await File.WriteAllTextAsync(_productRepoVmrPath / $"conflicting_file_{i}.txt", $"New content {i}");
+        }
+        await GitOperations.CommitAll(VmrPath, "New conflicting flow");
+
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.VerifyMergeConflict(
+            ProductRepoPath,
+            branchName,
+            [
+                ..Enumerable.Range(1, 3).Select(i => $"conflicting_file_{i}.txt"),
+                "file.txt",
+            ],
+            mergeTheirs: true);
+
+        for (int i = 1; i <= 3; i++)
+        {
+            CheckFileContents(ProductRepoPath / $"file_{i}.txt", $"New content {i}");
+            CheckFileContents(ProductRepoPath / $"conflicting_file_{i}.txt", $"New content {i}");
+        }
     }
 
     [Test]
@@ -509,7 +562,7 @@ internal class BackflowTests : CodeFlowTests
 
         // We check if everything got staged properly
         stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after backflow");
-        await VerifyNoConflictMarkers(ProductRepoPath, stagedFiles);
+        await GitOperations.VerifyNoConflictMarkers(ProductRepoPath, stagedFiles);
         CheckFileContents(_productRepoFilePath, "New content in the VMR again");
         CheckFileContents(ProductRepoPath / expectedFiles[1], "New file from the VMR");
         File.Exists(ProductRepoPath / expectedFiles[0] + "-removed-in-repo").Should().BeFalse();
@@ -546,7 +599,7 @@ internal class BackflowTests : CodeFlowTests
 
         stagedFiles = await CallDarcBackflow(build.Id, [expectedFiles[0]]);
         stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after backflow");
-        await VerifyNoConflictMarkers(ProductRepoPath, stagedFiles.Except([expectedFiles[0]]));
+        await GitOperations.VerifyNoConflictMarkers(ProductRepoPath, stagedFiles.Except([expectedFiles[0]]));
         CheckFileContents(ProductRepoPath / expectedFiles[1], "New file from the VMR");
         File.Exists(ProductRepoPath / expectedFiles.Last().Replace("ps2", "ps1")).Should().BeFalse();
 
@@ -598,7 +651,7 @@ internal class BackflowTests : CodeFlowTests
             VersionFiles.VersionDetailsXml,
             VersionFiles.VersionDetailsProps,
         ]);
-        await VerifyNoConflictMarkers(ProductRepoPath, stagedFiles.Except([expectedFiles[1]]));
+        await GitOperations.VerifyNoConflictMarkers(ProductRepoPath, stagedFiles.Except([expectedFiles[1]]));
         CheckFileContents(ProductRepoPath / expectedFiles[1], "New file from the VMR AGAIN");
         (await File.ReadAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsXml)).Should().Contain("1.0.2");
         (await File.ReadAllTextAsync(ProductRepoPath / VersionFiles.VersionDetailsProps)).Should().Contain("1.0.2");

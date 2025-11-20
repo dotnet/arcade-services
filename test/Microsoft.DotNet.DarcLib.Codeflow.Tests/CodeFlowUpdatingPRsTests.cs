@@ -161,7 +161,7 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
         await GitOperations.VerifyMergeConflict(
             VmrPath,
             forwardFlowBranch,
-            $"src/{Constants.ProductRepoName}/Foo.txt",
+            [$"src/{Constants.ProductRepoName}/Foo.txt"],
             mergeTheirs: true);
 
         var content = await File.ReadAllTextAsync(VmrPath / "src" / Constants.ProductRepoName / "Foo.txt");
@@ -213,7 +213,7 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
         result.ShouldHaveUpdates();
 
         // Verify that there is a conflict in Foo.txt
-        await GitOperations.VerifyMergeConflict(ProductRepoPath, backflowBranch, "Foo.txt", mergeTheirs: true);
+        await GitOperations.VerifyMergeConflict(ProductRepoPath, backflowBranch, ["Foo.txt"], mergeTheirs: true);
 
         var content = await File.ReadAllTextAsync(ProductRepoPath / "Foo.txt");
         content.Should().Be("Foo is changed in the VMR");
