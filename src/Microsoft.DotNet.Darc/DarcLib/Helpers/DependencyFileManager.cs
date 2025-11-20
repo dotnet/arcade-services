@@ -494,9 +494,15 @@ public class DependencyFileManager : IDependencyFileManager
         JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, relativeBasePath);
         JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, relativeBasePath);
         (string nugetConfigName, XmlDocument nugetConfig) = await ReadNugetConfigAsync(repoUri, branch, relativeBasePath);
+        
         if (!repoHasVersionDetailsProps.HasValue)
         {
             repoHasVersionDetailsProps = await VersionDetailsPropsExistsAsync(repoUri, branch, relativeBasePath);
+        }
+
+        if (!repoHasVersionDetailsProps.Value)
+        {
+            versionProps = await ReadVersionPropsAsync(repoUri, branch, relativeBasePath);
         }
 
         foreach (DependencyDetail itemToUpdate in itemsToUpdate)
@@ -514,7 +520,6 @@ public class DependencyFileManager : IDependencyFileManager
 
             if (!repoHasVersionDetailsProps.Value)
             {
-                versionProps = await ReadVersionPropsAsync(repoUri, branch, relativeBasePath);
                 UpdateVersionProps(versionProps, itemToUpdate);
             }
 
