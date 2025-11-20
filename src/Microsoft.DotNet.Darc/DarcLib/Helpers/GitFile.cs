@@ -67,7 +67,7 @@ public class GitFile
 
     public const string GitDirectory = ".git";
 
-    private static string GetIndentedXmlBody(XmlDocument xmlDocument)
+    public static string GetIndentedXmlBody(XmlDocument xmlDocument)
     {
         var mStream = new MemoryStream();
         var writer = new XmlTextWriter(mStream, Encoding.Unicode);

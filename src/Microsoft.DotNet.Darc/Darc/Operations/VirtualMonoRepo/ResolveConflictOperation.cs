@@ -22,6 +22,7 @@ internal class ResolveConflictOperation(
         IVmrForwardFlower forwardFlower,
         IVmrBackFlower backFlower,
         IBackflowConflictResolver backflowConflictResolver,
+        IForwardFlowConflictResolver forwardFlowConflictResolver,
         IVmrInfo vmrInfo,
         IVmrCloneManager vmrCloneManager,
         IRepositoryCloneManager repositoryCloneManager,
@@ -32,7 +33,7 @@ internal class ResolveConflictOperation(
         IFileSystem fileSystem,
         IProcessManager processManager,
         ILogger<ResolveConflictOperation> logger)
-    : CodeFlowOperation(options, forwardFlower, backFlower, backflowConflictResolver, vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
+    : CodeFlowOperation(options, forwardFlower, backFlower, backflowConflictResolver, forwardFlowConflictResolver, vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
 {
     private readonly ResolveConflictCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;

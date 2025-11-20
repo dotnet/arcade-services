@@ -25,6 +25,7 @@ internal abstract class CodeFlowOperation(
         IVmrForwardFlower forwardFlower,
         IVmrBackFlower backFlower,
         IBackflowConflictResolver backflowConflictResolver,
+        IForwardFlowConflictResolver forwardFlowConflictResolver,
         IVmrInfo vmrInfo,
         IVmrCloneManager vmrCloneManager,
         IVmrDependencyTracker dependencyTracker,
@@ -39,6 +40,7 @@ internal abstract class CodeFlowOperation(
     private readonly IVmrForwardFlower _forwardFlower = forwardFlower;
     private readonly IVmrBackFlower _backFlower = backFlower;
     private readonly IBackflowConflictResolver _backflowConflictResolver = backflowConflictResolver;
+    private readonly IForwardFlowConflictResolver _forwardFlowConflictResolver = forwardFlowConflictResolver;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly IVmrCloneManager _vmrCloneManager = vmrCloneManager;
     private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
@@ -116,7 +118,6 @@ internal abstract class CodeFlowOperation(
                 hasChanges = await FlowForwardAsync(
                     productRepo,
                     build,
-                    currentFlow,
                     mapping,
                     currentTargetRepoBranch,
                     excludedAssets,
@@ -125,14 +126,18 @@ internal abstract class CodeFlowOperation(
             }
             else
             {
-                hasChanges = await FlowBackAsync(
-                    productRepo,
+                var result = await _backFlower.FlowBackAsync(
+                    mapping.Name,
+                    productRepo.Path,
                     build,
-                    currentFlow,
-                    mapping,
+                    excludedAssets: excludedAssets,
                     currentTargetRepoBranch,
-                    excludedAssets,
+                    currentTargetRepoBranch,
+                    enableRebase: true,
+                    forceUpdate: true,
                     cancellationToken);
+
+                hasChanges = result.HadUpdates;
             }
 
             if (!hasChanges)
@@ -223,7 +228,6 @@ internal abstract class CodeFlowOperation(
     protected async Task<bool> FlowForwardAsync(
         ILocalGitRepo productRepo,
         BarBuild build,
-        Codeflow currentFlow,
         SourceMapping mapping,
         string headBranch,
         IReadOnlyList<string> excludedAssets,
@@ -243,7 +247,7 @@ internal abstract class CodeFlowOperation(
                 mapping.Name,
                 productRepo.Path,
                 build,
-                excludedAssets: excludedAssets,
+                excludedAssets,
                 headBranch,
                 headBranch,
                 targetRepoUri,
@@ -255,54 +259,12 @@ internal abstract class CodeFlowOperation(
         }
         finally
         {
-            // Update target branch's source manifest with the new commit
             var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
             var sourceManifestContent = await vmr.GetFileFromGitAsync(VmrInfo.DefaultRelativeSourceManifestPath, headBranch);
             var sourceManifest = SourceManifest.FromJson(sourceManifestContent!);
             sourceManifest.UpdateVersion(mapping.Name, build.GetRepository(), build.Commit, build.Id);
             _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, sourceManifest.ToJson());
             await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
-        }
-    }
-
-    protected async Task<bool> FlowBackAsync(
-        ILocalGitRepo productRepo,
-        BarBuild build,
-        Codeflow currentFlow,
-        SourceMapping mapping,
-        string headBranch,
-        IReadOnlyList<string> excludedAssets,
-        CancellationToken cancellationToken)
-    {
-        LastFlows lastFlows = await _backFlower.GetLastFlowsAsync(
-            mapping.Name,
-            productRepo,
-            currentIsBackflow: true);
-
-        try
-        {
-            var result = await _backFlower.FlowBackAsync(
-                mapping.Name,
-                productRepo.Path,
-                build,
-                excludedAssets: excludedAssets,
-                headBranch,
-                headBranch,
-                enableRebase: true,
-                forceUpdate: true,
-                cancellationToken);
-
-            return result.HadUpdates;
-        }
-        finally
-        {
-            await _backflowConflictResolver.TryMergingBranchAndUpdateDependencies(
-                new CodeflowOptions(mapping, currentFlow, headBranch, headBranch, build, excludedAssets, true, false),
-                lastFlows,
-                productRepo,
-                headBranch,
-                headBranchExisted: true,
-                cancellationToken);
         }
     }
 
