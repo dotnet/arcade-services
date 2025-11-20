@@ -103,7 +103,7 @@ public abstract class VmrVersionFileMerger
                         There was a conflict when merging version properties. In file {fileTargetRepoPath}, property '{propertyNameTransformer(property)}'
                         was added in the target branch but removed in the source repo.
 
-                        We will prefer the source repo change and not add the property.
+                        We will prefer the change from the source branch and not add the property.
                         """;
                     _commentCollector.AddComment(message, CommentType.Information);
                     continue;
