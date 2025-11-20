@@ -345,7 +345,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     },
                     productRepo,
                     lastFlows,
-                    async () => await applyLatestChanges(enableRebase: true),
+                    async () => await applyLatestChanges(enableRebase: false),
                     cancellationToken);
 
                 // Workaround for files that can be left behind after HandleRevertedFiles()
@@ -387,7 +387,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         Func<Task> reapplyChanges,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Failed to create PR branch because of a conflict. Re-creating previous flows..");
+        _logger.LogInformation("Failed to flow changes because of a conflict. Rebasing onto an older commit and recreating previous flows..");
 
         // Create a fake previously applied build that we will use when reapplying the previous flow.
         // We only care about the sha here, because it will get overwritten anyway with the current build which will be applied on top.
