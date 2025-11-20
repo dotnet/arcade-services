@@ -97,7 +97,7 @@ public class LocalGitClient : ILocalGitClient
         // After we apply the diff to the index, working tree won't have the files so they will be missing
         // We have to reset working tree to the index then
         // This will end up having the working tree match what is staged
-        _logger.LogInformation("Cleaning the working tree directory {path}...", repoPath / relativePath);
+        _logger.LogDebug("Cleaning the working tree directory {path}...", repoPath / relativePath);
         var args = new string[] { "checkout", relativePath };
         var result = await _processManager.ExecuteGit(repoPath, args, cancellationToken: CancellationToken.None);
 
@@ -116,7 +116,7 @@ public class LocalGitClient : ILocalGitClient
             {
                 // In case a submodule was removed, it won't be in the index anymore and the checkout will fail
                 // We can just remove the working tree folder then
-                _logger.LogInformation("A removed submodule detected. Removing files at {path}...", relativePath);
+                _logger.LogDebug("A removed submodule detected. Removing files at {path}...", relativePath);
                 _fileSystem.DeleteDirectory(repoPath / relativePath, true);
             }
         }
