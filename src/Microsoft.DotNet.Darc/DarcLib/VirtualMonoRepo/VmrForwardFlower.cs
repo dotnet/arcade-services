@@ -156,14 +156,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         catch (PatchApplicationLeftConflictsException) when (enableRebase)
         {
             // When we are rebasing and ended up with conflicts, we will still update version files
-            try
-            {
-                await UpdateVersionFiles();
-            }
-            catch
-            {
-                // Swallow any exceptions here as we want to re-throw the original exception
-            }
+            await UpdateVersionFiles();
             throw;
         }
 

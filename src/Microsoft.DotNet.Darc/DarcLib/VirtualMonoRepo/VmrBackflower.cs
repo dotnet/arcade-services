@@ -132,7 +132,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        async Task<VersionFileUpdateResult> UpdateDependencies() =>
+        async Task<VersionFileUpdateResult> UpdateDependenciesAndVersionFiles() =>
             await _conflictResolver.TryMergingBranchAndUpdateDependencies(
                 codeflowOptions,
                 lastFlows,
@@ -155,18 +155,11 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         catch (PatchApplicationLeftConflictsException) when (codeflowOptions.EnableRebase)
         {
             // When we are rebasing and ended up with conflicts, we will still update version files
-            try
-            {
-                await UpdateDependencies();
-            }
-            catch
-            {
-                // Swallow any exceptions here as we want to re-throw the original exception
-            }
+            await UpdateDependenciesAndVersionFiles();
             throw;
         }
 
-        VersionFileUpdateResult mergeResult = await UpdateDependencies();
+        VersionFileUpdateResult mergeResult = await UpdateDependenciesAndVersionFiles();
 
         return new CodeFlowResult(
             hasChanges || mergeResult.DependencyUpdates.Count > 0,
