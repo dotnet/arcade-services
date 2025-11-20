@@ -1151,7 +1151,7 @@ internal abstract partial class ScenarioTestBase
         throw new ScenarioTestException($"No Maestro Merge Policy checks were found in the PR ({prUrl}) during the allotted time.");
     }
 
-    protected async Task WaitForFileContentInPullRequest(
+    protected async Task<Octokit.PullRequest> WaitForFileContentInPullRequest(
         string repoDir,
         string targetRepoName,
         string targetBranch,
@@ -1167,7 +1167,7 @@ internal abstract partial class ScenarioTestBase
             var content = await File.ReadAllTextAsync(filePath);
             if (content == expectedContent)
             {
-                return;
+                return pr;
             }
         }
 
