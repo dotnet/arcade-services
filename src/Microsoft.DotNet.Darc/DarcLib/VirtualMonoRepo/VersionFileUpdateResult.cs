@@ -14,6 +14,8 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 /// </summary>
 /// <param name="ConflictedFiles">Lis of conflicts (if any) preventing from merging the branches</param>
 /// <param name="DependencyUpdates">List of dependencies updated during the process</param>
+/// <param name="hasToolsetUpdates">Whether or not toolset dependencies had any changes</param>
 public record VersionFileUpdateResult(
     IReadOnlyCollection<UnixPath> ConflictedFiles,
-    List<DependencyUpdate> DependencyUpdates);
+    List<DependencyUpdate> DependencyUpdates,
+    bool HasToolsetUpdates);

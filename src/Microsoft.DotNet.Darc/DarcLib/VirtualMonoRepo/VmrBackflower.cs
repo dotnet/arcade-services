@@ -149,7 +149,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             cancellationToken);
 
         return new CodeFlowResult(
-            hasChanges || mergeResult.DependencyUpdates.Count > 0,
+            hasChanges || mergeResult.DependencyUpdates.Count > 0 || mergeResult.HasToolsetUpdates,
             mergeResult.ConflictedFiles,
             targetRepo.Path,
             mergeResult.DependencyUpdates);

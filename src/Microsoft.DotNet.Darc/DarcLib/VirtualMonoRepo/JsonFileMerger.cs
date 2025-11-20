@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -18,7 +17,7 @@ public interface IJsonFileMerger
     /// <summary>
     /// Merges the changes in a JSON file between two references in the source and target repo.
     /// </summary>
-    Task MergeJsonsAsync(
+    Task<bool> MergeJsonsAsync(
         ILocalGitRepo targetRepo,
         string targetRepoJsonRelativePath,
         string targetRepoPreviousRef,
@@ -34,7 +33,7 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
 {
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly ICommentCollector _commentCollector;
-    private const string EmptyJsonString = "{}";
+    public const string EmptyJsonString = "{}";
 
     public JsonFileMerger(
             IGitRepoFactory gitRepoFactory,
@@ -45,7 +44,7 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
         _commentCollector = commentCollector;
     }
 
-    public async Task MergeJsonsAsync(
+    public async Task<bool> MergeJsonsAsync(
         ILocalGitRepo targetRepo,
         string targetRepoJsonRelativePath,
         string targetRepoPreviousRef,
@@ -56,11 +55,19 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
         string sourceRepoCurrentRef,
         bool allowMissingFiles = false)
     {
+
         var targetRepoPreviousJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, targetRepoPreviousRef, allowMissingFiles);
         var targetRepoCurrentJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, targetRepoCurrentRef, allowMissingFiles);
 
         var sourcePreviousJson = await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoPreviousRef, allowMissingFiles);
         var sourceCurrentJson = await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoCurrentRef, allowMissingFiles);
+
+        if (targetRepoCurrentJson == EmptyJsonString)
+        {
+            return false;
+        }
+
+        bool hasChanges = false;
 
         if (!allowMissingFiles || !await DeleteFileIfRequiredAsync(
                 targetRepoPreviousJson,
@@ -69,8 +76,7 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
                 sourceCurrentJson,
                 targetRepo.Path,
                 targetRepoJsonRelativePath,
-                targetRepoCurrentRef,
-                EmptyJsonString))
+                targetRepoCurrentRef))
         {
             var targetRepoChanges = FlatJson.Parse(targetRepoPreviousJson).GetDiff(FlatJson.Parse(targetRepoCurrentJson));
             var vmrChanges = FlatJson.Parse(sourcePreviousJson).GetDiff(FlatJson.Parse(sourceCurrentJson));
@@ -85,6 +91,8 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
             var currentJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, "HEAD", allowMissingFiles);
             var mergedJson = FlatJson.ApplyJsonChanges(currentJson, mergedChanges);
 
+            hasChanges |= FlatJson.Parse(currentJson).GetDiff(FlatJson.Parse(mergedJson)).Count != 0;
+
             var newJson = new GitFile(targetRepo.Path / targetRepoJsonRelativePath, mergedJson);
 
             await _gitRepoFactory.CreateClient(targetRepo.Path)
@@ -96,6 +104,8 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
         }
 
         await targetRepo.StageAsync([targetRepoJsonRelativePath]);
+
+        return hasChanges;
     }
 
     private static async Task<string> GetJsonFromGit(ILocalGitRepo repo, string jsonRelativePath, string reference, bool allowMissingFile) =>
