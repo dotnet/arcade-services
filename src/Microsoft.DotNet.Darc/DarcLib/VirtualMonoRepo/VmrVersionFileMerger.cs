@@ -31,8 +31,14 @@ public abstract class VmrVersionFileMerger
         string sourceRepoCurrentJson,
         NativePath repoPath,
         string filePath,
-        string targetRepoCurrentRef)
+        string targetRepoCurrentRef,
+        bool allowMissingFiles)
     {
+        if (!allowMissingFiles)
+        {
+            return false;
+        }
+
         if (sourceRepoCurrentJson == JsonFileMerger.EmptyJsonString)
         {
             var deletedJson = new GitFile(repoPath / filePath, targetRepoCurrentJson, ContentEncoding.Utf8, operation: GitFileOperation.Delete);

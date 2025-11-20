@@ -68,14 +68,15 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
 
         bool hasChanges = false;
 
-        if (!allowMissingFiles || !await DeleteFileIfRequiredAsync(
+        if (!await DeleteFileIfRequiredAsync(
                 targetRepoPreviousJson,
                 targetRepoCurrentJson,
                 sourcePreviousJson,
                 sourceCurrentJson,
                 targetRepo.Path,
                 targetRepoJsonRelativePath,
-                targetRepoCurrentRef))
+                targetRepoCurrentRef,
+                allowMissingFiles))
         {
             var targetRepoChanges = FlatJson.Parse(targetRepoPreviousJson).GetDiff(FlatJson.Parse(targetRepoCurrentJson));
             var vmrChanges = FlatJson.Parse(sourcePreviousJson).GetDiff(FlatJson.Parse(sourceCurrentJson));
@@ -100,6 +101,11 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
                     targetRepo.Path,
                     targetRepoCurrentRef,
                     $"Merge {targetRepoJsonRelativePath} changes from VMR");
+        }
+        else
+        {
+            // File was deleted
+            hasChanges = true;
         }
 
         await targetRepo.StageAsync([targetRepoJsonRelativePath]);
