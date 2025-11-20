@@ -55,7 +55,6 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
         string sourceRepoCurrentRef,
         bool allowMissingFiles = false)
     {
-
         var targetRepoPreviousJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, targetRepoPreviousRef, allowMissingFiles);
         var targetRepoCurrentJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, targetRepoCurrentRef, allowMissingFiles);
 
