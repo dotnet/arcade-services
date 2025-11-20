@@ -123,7 +123,7 @@ public class DependencyFileManager : IDependencyFileManager
     {
         var path = GetVersionFilePath(VersionFiles.GlobalJson, relativeBasePath);
 
-        _logger.LogInformation("Reading '{filePath}' in repo '{repoUri}' and branch '{branch}'...",
+        _logger.LogDebug("Reading '{filePath}' in repo '{repoUri}' and branch '{branch}'...",
             path,
             repoUri,
             branch);
@@ -137,7 +137,7 @@ public class DependencyFileManager : IDependencyFileManager
     {
         var path = GetVersionFilePath(VersionFiles.DotnetToolsConfigJson, relativeBasePath);
 
-        _logger.LogInformation("Reading '{filePath}' in repo '{repoUri}' and branch '{branch}'...",
+        _logger.LogDebug("Reading '{filePath}' in repo '{repoUri}' and branch '{branch}'...",
             path,
             repoUri,
             branch);
@@ -165,7 +165,7 @@ public class DependencyFileManager : IDependencyFileManager
         JObject globalJson = await ReadGlobalJsonAsync(repoUri, commit, relativeBasePath);
         JToken dotnet = globalJson.SelectToken("tools.dotnet", true);
 
-        _logger.LogInformation("Reading dotnet version from global.json succeeded!");
+        _logger.LogDebug("Reading dotnet version from global.json succeeded!");
 
         if (!SemanticVersion.TryParse(dotnet.ToString(), out SemanticVersion dotnetVersion))
         {
@@ -490,7 +490,7 @@ public class DependencyFileManager : IDependencyFileManager
         UnixPath relativeBasePath = null)
     {
         XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch, relativeBasePath);
-        XmlDocument versionProps = await ReadVersionPropsAsync(repoUri, branch, relativeBasePath);
+        XmlDocument versionProps = null;
         JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch, relativeBasePath);
         JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch, relativeBasePath);
         (string nugetConfigName, XmlDocument nugetConfig) = await ReadNugetConfigAsync(repoUri, branch, relativeBasePath);
@@ -514,6 +514,7 @@ public class DependencyFileManager : IDependencyFileManager
 
             if (!repoHasVersionDetailsProps.Value)
             {
+                versionProps = await ReadVersionPropsAsync(repoUri, branch, relativeBasePath);
                 UpdateVersionProps(versionProps, itemToUpdate);
             }
 
@@ -758,7 +759,7 @@ public class DependencyFileManager : IDependencyFileManager
     // - Ensure all disableFeedKeyPrefix key values have entries under <disabledPackageSources> with value="true"
     private void CreateOrUpdateDisabledSourcesBlock(XmlDocument nugetConfig, Dictionary<string, HashSet<string>> maestroManagedFeedsByRepo, string disableFeedKeyPrefix)
     {
-        _logger.LogInformation($"Ensuring a <disabledPackageSources> node exists and is actively disabling any feed starting with {disableFeedKeyPrefix}");
+        _logger.LogDebug($"Ensuring a <disabledPackageSources> node exists and is actively disabling any feed starting with {disableFeedKeyPrefix}");
         XmlNode disabledSourcesNode = nugetConfig.SelectSingleNode("//configuration/disabledPackageSources");
         XmlNode insertAfterNode = null;
 
@@ -812,7 +813,7 @@ public class DependencyFileManager : IDependencyFileManager
 
             if (insertAfterNode != null)
             {
-                _logger.LogInformation("Found a <clear/> in disabledPackageSources; will insert or update as needed after it.");
+                _logger.LogDebug("Found a <clear/> in disabledPackageSources; will insert or update as needed after it.");
             }
         }
 
