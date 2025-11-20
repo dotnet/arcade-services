@@ -39,7 +39,8 @@ public abstract class VmrVersionFileMerger
             return false;
         }
 
-        if (sourceRepoCurrentJson == JsonFileMerger.EmptyJsonString)
+        if (sourceRepoPreviousJson != JsonFileMerger.EmptyJsonString
+            && sourceRepoCurrentJson == JsonFileMerger.EmptyJsonString)
         {
             var deletedJson = new GitFile(repoPath / filePath, targetRepoCurrentJson, ContentEncoding.Utf8, operation: GitFileOperation.Delete);
             await _gitRepoFactory.CreateClient(repoPath)

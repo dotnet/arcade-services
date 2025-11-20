@@ -61,8 +61,11 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
         var sourcePreviousJson = await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoPreviousRef, allowMissingFiles);
         var sourceCurrentJson = await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoCurrentRef, allowMissingFiles);
 
-        if (targetRepoCurrentJson == EmptyJsonString)
+        if (sourcePreviousJson != EmptyJsonString
+            && sourceCurrentJson == EmptyJsonString
+            && targetRepoCurrentJson == EmptyJsonString)
         {
+            // the target file is already deleted, nothing more to do
             return false;
         }
 
