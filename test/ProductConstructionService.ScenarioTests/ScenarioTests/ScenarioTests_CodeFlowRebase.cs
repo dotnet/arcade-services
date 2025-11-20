@@ -133,7 +133,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
             // We verify the file got there + make a conflicting change for future
-            await WaitForFileContentInPullRequest(
+            pr = await WaitForFileContentInPullRequest(
                 vmrDir,
                 TestRepository.VmrTestRepoName,
                 targetBranchName,
@@ -298,10 +298,8 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             await AddBuildToChannelAsync(build.Id, channelName);
             await TriggerSubscriptionAsync(subscriptionId.Value);
 
-            pr = await WaitForUpdatedPullRequestAsync(TestRepository.TestRepo1Name, targetBranchName);
-
             // We verify the file got there + make a conflicting change for future
-            await WaitForFileContentInPullRequest(
+            pr = await WaitForFileContentInPullRequest(
                 repoDir,
                 TestRepository.TestRepo1Name,
                 targetBranchName,
