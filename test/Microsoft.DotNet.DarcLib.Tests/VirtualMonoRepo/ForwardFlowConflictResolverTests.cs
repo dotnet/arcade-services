@@ -30,7 +30,7 @@ public class ForwardFlowConflictResolverTests
         Mock<IDependencyFileManager> dependencyFileManagerMock = new();
         Mock<IJsonFileMerger> jsonMergerMock = new();
         Mock<IVersionDetailsFileMerger> versionDetailsFileMergerMock = new();
-        Mock<IGitRepoFactory> gitRepoFactoryMock = new();
+        Mock<IVersionDetailsParser> versionDetailsParserMock = new();
         Mock<IGitRepo> vmrGitRepoMock = new();
 
         var lastFlowRepoSha = "lastFlowRepoSha";
@@ -122,8 +122,6 @@ public class ForwardFlowConflictResolverTests
         dependencyFileManagerMock.Setup(m => m.ReadVersionDetailsXmlAsync(
                 vmrPath, It.IsAny<string>(), It.IsAny<UnixPath>()))
             .ReturnsAsync(doc);
-        gitRepoFactoryMock.Setup(f => f.CreateClient(vmrPath))
-            .Returns(vmrGitRepoMock.Object);
 
         ForwardFlowConflictResolver resolver = new(
             new Mock<IVmrInfo>().Object,
@@ -133,7 +131,7 @@ public class ForwardFlowConflictResolverTests
             dependencyFileManagerMock.Object,
             jsonMergerMock.Object,
             versionDetailsFileMergerMock.Object,
-            gitRepoFactoryMock.Object,
+            versionDetailsParserMock.Object,
             new Mock<IFileSystem>().Object,
             NullLogger<ForwardFlowConflictResolver>.Instance);
 
