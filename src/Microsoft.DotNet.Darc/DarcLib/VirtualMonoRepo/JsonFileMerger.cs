@@ -57,7 +57,6 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
     {
         bool hasChanges = false;
 
-        //todo - could this be head branch instead of target?
         var targetRepoPreviousJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, targetRepoPreviousRef, allowMissingFiles);
         var targetRepoCurrentJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, targetRepoCurrentRef, allowMissingFiles);
 
