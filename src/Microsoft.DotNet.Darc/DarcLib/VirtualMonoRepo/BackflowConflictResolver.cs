@@ -417,7 +417,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
         await targetRepo.StageAsync([..filesToCommit.Select(f => f.FilePath)], cancellationToken);
 
-        Dictionary<string, DependencyDetail> allUpdates = buildUpdates.ToDictionary(u => u.Name);
+        Dictionary<string, DependencyDetail> allUpdates = buildUpdates.ToDictionary(u => u.Name, comparer: StringComparer.OrdinalIgnoreCase);
 
         // if a repo was added during the merge and then updated, it's not an update, but an addition
         foreach ((var key, var addition) in versionDetailsChanges.Additions)
