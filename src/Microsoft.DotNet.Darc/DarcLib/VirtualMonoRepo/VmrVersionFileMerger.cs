@@ -103,7 +103,7 @@ public abstract class VmrVersionFileMerger
                     var message =
                         $"""
                         There was a conflict when merging version properties. In file {fileTargetRepoPath}, property '{propertyNameTransformer(property)}'
-                        was added in the target branch but removed in the source repo.
+                        was added in the target branch but removed in the source repo's branch.
 
                         We will prefer the change from the source branch and not add the property.
                         """;
