@@ -83,8 +83,7 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
                 sourceCurrentJson,
                 targetRepo.Path,
                 targetRepoJsonRelativePath,
-                targetRepoCurrentRef,
-                allowMissingFiles))
+                targetRepoCurrentRef))
         {
             hasChanges = true;
         }

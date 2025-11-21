@@ -31,8 +31,7 @@ public abstract class VmrVersionFileMerger
         string sourceRepoCurrentJson,
         NativePath repoPath,
         string filePath,
-        string targetRepoCurrentRef,
-        bool allowMissingFiles)
+        string targetRepoCurrentRef)
     {
         if (sourceRepoPreviousJson != JsonFileMerger.EmptyJsonString
             && sourceRepoCurrentJson == JsonFileMerger.EmptyJsonString
