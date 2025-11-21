@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Moq;
@@ -184,7 +185,7 @@ public class JsonFileMergerTests
             .ReturnsAsync(sourceCurrentJson);
 
         // Act
-        await _jsonFileMerger.MergeJsonsAsync(
+        var hadChanges = await _jsonFileMerger.MergeJsonsAsync(
             _targetRepoMock.Object,
             TestJsonPath,
             TargetPreviousSha,
@@ -195,6 +196,7 @@ public class JsonFileMergerTests
             VmrCurrentSha);
 
         // Assert
+        hadChanges.Should().BeTrue();
         _vmrRepoMock.Verify(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()), Times.Once);
         _gitRepoMock.Verify(g => g.CommitFilesAsync(
             It.Is<List<GitFile>>(files => files.Count == 1 && ValidateGitFile(files[0], expectedJson, GitFileOperation.Add)),
@@ -267,7 +269,7 @@ public class JsonFileMergerTests
             .ReturnsAsync(sourceCurrentJson);
 
         // Act
-        await _jsonFileMerger.MergeJsonsAsync(
+        var hadChanges = await _jsonFileMerger.MergeJsonsAsync(
             _targetRepoMock.Object,
             TestJsonPath,
             TargetPreviousSha,
@@ -278,6 +280,8 @@ public class JsonFileMergerTests
             VmrCurrentSha,
             allowMissingFiles: true);
 
+        // Assert
+        hadChanges.Should().BeTrue();
         _gitRepoMock.Verify(g => g.CommitFilesAsync(
             It.Is<List<GitFile>>(files => files.Count == 1 && ValidateGitFile(files[0], expectedJson, GitFileOperation.Add)),
             It.IsAny<string>(),
@@ -403,7 +407,7 @@ public class JsonFileMergerTests
         _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
             .ReturnsAsync(vmrCurrentJson);
 
-        await _jsonFileMerger.MergeJsonsAsync(
+        var hadChanges = await _jsonFileMerger.MergeJsonsAsync(
                 _targetRepoMock.Object,
                 TestJsonPath,
                 TargetPreviousSha,
@@ -413,6 +417,8 @@ public class JsonFileMergerTests
                 VmrPreviousSha,
                 VmrCurrentSha);
 
+        // Assert
+        hadChanges.Should().BeFalse();
         _gitRepoMock.Verify(g => g.CommitFilesAsync(
             It.Is<List<GitFile>>(files => files.Count == 1 && ValidateGitFile(files[0], expectedJson, GitFileOperation.Add)),
             It.IsAny<string>(),
@@ -464,7 +470,7 @@ public class JsonFileMergerTests
         _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
             .ReturnsAsync(vmrCurrentJson);
 
-        await _jsonFileMerger.MergeJsonsAsync(
+        var hadChanges = await _jsonFileMerger.MergeJsonsAsync(
             _targetRepoMock.Object,
             TestJsonPath,
             TargetPreviousSha,
@@ -475,6 +481,8 @@ public class JsonFileMergerTests
             VmrCurrentSha,
             allowMissingFiles: true);
 
+        // Assert
+        hadChanges.Should().BeFalse();
         // Nothing was deleted because the target branch already has the file deleted
         _gitRepoMock.Verify(g => g.CommitFilesAsync(
             It.IsAny<List<GitFile>>(),
@@ -525,7 +533,7 @@ public class JsonFileMergerTests
             .ReturnsAsync(vmrCurrentJson);
 
         // Act
-        await _jsonFileMerger.MergeJsonsAsync(
+        var hadChanges = await _jsonFileMerger.MergeJsonsAsync(
             _targetRepoMock.Object,
             TestJsonPath,
             TargetPreviousSha,
@@ -537,6 +545,7 @@ public class JsonFileMergerTests
             allowMissingFiles: true);
 
         // Assert - File should be deleted from target repo and no merge should occur
+        hadChanges.Should().BeTrue();
         _gitRepoMock.Verify(g => g.CommitFilesAsync(
             It.Is<List<GitFile>>(files => files.Count == 1 && ValidateGitFile(files[0], targetCurrentJson, GitFileOperation.Delete)),
             It.IsAny<string>(),
@@ -590,7 +599,7 @@ public class JsonFileMergerTests
         _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
             .ReturnsAsync(vmrCurrentJson);
 
-        await _jsonFileMerger.MergeJsonsAsync(
+        var hadChanges = await _jsonFileMerger.MergeJsonsAsync(
             _targetRepoMock.Object,
             TestJsonPath,
             TargetPreviousSha,
@@ -600,6 +609,8 @@ public class JsonFileMergerTests
             VmrPreviousSha,
             VmrCurrentSha);
 
+        // Assert
+        hadChanges.Should().BeFalse();
         _gitRepoMock.Verify(g => g.CommitFilesAsync(
             It.Is<List<GitFile>>(files => files.Count == 1 && ValidateGitFile(files[0], expectedJson, GitFileOperation.Add)),
             It.IsAny<string>(),
@@ -654,7 +665,7 @@ public class JsonFileMergerTests
         _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
             .ReturnsAsync(vmrCurrentJson);
 
-        await _jsonFileMerger.MergeJsonsAsync(
+        var hadChanges = await _jsonFileMerger.MergeJsonsAsync(
             _targetRepoMock.Object,
             TestJsonPath,
             TargetPreviousSha,
@@ -664,6 +675,8 @@ public class JsonFileMergerTests
             VmrPreviousSha,
             VmrCurrentSha);
 
+        // Assert
+        hadChanges.Should().BeFalse();
         _gitRepoMock.Verify(g => g.CommitFilesAsync(
             It.Is<List<GitFile>>(files => files.Count == 1 && ValidateGitFile(files[0], expectedJson, GitFileOperation.Add)),
             It.IsAny<string>(),
@@ -729,7 +742,7 @@ public class JsonFileMergerTests
         _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
             .ReturnsAsync(vmrCurrentJson);
 
-        await _jsonFileMerger.MergeJsonsAsync(
+        var hadChanges = await _jsonFileMerger.MergeJsonsAsync(
             _targetRepoMock.Object,
             TestJsonPath,
             TargetPreviousSha,
@@ -739,6 +752,8 @@ public class JsonFileMergerTests
             VmrPreviousSha,
             VmrCurrentSha);
 
+        // Assert
+        hadChanges.Should().BeTrue();
         _gitRepoMock.Verify(g => g.CommitFilesAsync(
             It.Is<List<GitFile>>(files => files.Count == 1 && ValidateGitFile(files[0], expectedJson, GitFileOperation.Add)),
             It.IsAny<string>(),
@@ -816,7 +831,7 @@ public class JsonFileMergerTests
         _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
             .ReturnsAsync(vmrCurrentJson);
 
-        await _jsonFileMerger.MergeJsonsAsync(
+        var hadChanges = await _jsonFileMerger.MergeJsonsAsync(
             _targetRepoMock.Object,
             TestJsonPath,
             TargetPreviousSha,
@@ -826,6 +841,8 @@ public class JsonFileMergerTests
             VmrPreviousSha,
             VmrCurrentSha);
 
+        // Assert
+        hadChanges.Should().BeTrue();
         _gitRepoMock.Verify(g => g.CommitFilesAsync(
             It.Is<List<GitFile>>(files => files.Count == 1 && ValidateGitFile(files[0], expectedJson, GitFileOperation.Add)),
             It.IsAny<string>(),

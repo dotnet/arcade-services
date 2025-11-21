@@ -31,17 +31,11 @@ public abstract class VmrVersionFileMerger
         string sourceRepoCurrentJson,
         NativePath repoPath,
         string filePath,
-        string targetRepoCurrentRef,
-        string emptyContent)
+        string targetRepoCurrentRef)
     {
-        // was it deleted in the target repo?
-        if (targetRepoPreviousJson != emptyContent && targetRepoCurrentJson == emptyContent)
-        {
-            // no need to do anything, it's already deleted
-            return true;
-        }
-        // was it deleted in the source repo?
-        if (sourceRepoPreviousJson != emptyContent && sourceRepoCurrentJson == emptyContent)
+        if (sourceRepoPreviousJson != JsonFileMerger.EmptyJsonString
+            && sourceRepoCurrentJson == JsonFileMerger.EmptyJsonString
+            && targetRepoCurrentJson != JsonFileMerger.EmptyJsonString)
         {
             var deletedJson = new GitFile(repoPath / filePath, targetRepoCurrentJson, ContentEncoding.Utf8, operation: GitFileOperation.Delete);
             await _gitRepoFactory.CreateClient(repoPath)
@@ -52,7 +46,6 @@ public abstract class VmrVersionFileMerger
                     $"Delete {filePath} in target repo");
             return true;
         }
-
         return false;
     }
 
@@ -106,13 +99,12 @@ public abstract class VmrVersionFileMerger
             {
                 if (addedInTarget)
                 {
-                    // even if the property was removed in the source repo, we'll take whatever is in the target repo
                     var message =
                         $"""
                         There was a conflict when merging version properties. In file {fileTargetRepoPath}, property '{propertyNameTransformer(property)}'
-                        was added in the target branch but removed in the source repo.
+                        was added in the target branch but removed in the source repo's branch.
 
-                        We will prefer the target repo change and not add the property.
+                        We will prefer the change from the source branch and not add the property.
                         """;
                     _commentCollector.AddComment(message, CommentType.Information);
                     continue;
