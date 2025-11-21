@@ -642,7 +642,7 @@ public class DependencyFileManager : IDependencyFileManager
         var targetRepoVersion = SemanticVersion.Parse(dotnetVersion);
         if (targetRepoVersion.CompareTo(incomingDotnetVersion) >= 0)
         {
-            _logger.LogInformation($"The dotnet SDK version in the target repo's `{VersionFiles.GlobalJson}` is higher or equal than the " +
+            _logger.LogInformation($"The dotnet SDK version in the target repo's `{VersionFiles.GlobalJson}` is higher than or equal to the " +
                 "incoming change. Skipping dotnet SDK update.");
             return null;
         }
