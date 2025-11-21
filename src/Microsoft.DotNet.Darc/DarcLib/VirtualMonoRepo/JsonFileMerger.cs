@@ -55,23 +55,29 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
         string sourceRepoCurrentRef,
         bool allowMissingFiles = false)
     {
+        bool hasChanges = false;
+
+        //todo - could this be head branch instead of target?
         var targetRepoPreviousJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, targetRepoPreviousRef, allowMissingFiles);
         var targetRepoCurrentJson = await GetJsonFromGit(targetRepo, targetRepoJsonRelativePath, targetRepoCurrentRef, allowMissingFiles);
 
         var sourcePreviousJson = await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoPreviousRef, allowMissingFiles);
         var sourceCurrentJson = await GetJsonFromGit(sourceRepo, sourceRepoJsonRelativePath, sourceRepoCurrentRef, allowMissingFiles);
 
-        if (sourcePreviousJson != EmptyJsonString
-            && sourceCurrentJson == EmptyJsonString
-            && targetRepoCurrentJson == EmptyJsonString)
+        bool jsonDeletedInSource = sourcePreviousJson != EmptyJsonString
+            && sourceCurrentJson == EmptyJsonString;
+
+        bool jsonDeletedInTarget = targetRepoPreviousJson != EmptyJsonString
+            && targetRepoCurrentJson == EmptyJsonString;
+
+        if (jsonDeletedInTarget
+            || (jsonDeletedInSource && targetRepoCurrentJson == EmptyJsonString))
         {
             // the target file is already deleted, nothing more to do
             return false;
         }
 
-        bool hasChanges = false;
-
-        if (!await DeleteFileIfRequiredAsync(
+        if (await DeleteFileIfRequiredAsync(
                 targetRepoPreviousJson,
                 targetRepoCurrentJson,
                 sourcePreviousJson,
@@ -80,6 +86,10 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
                 targetRepoJsonRelativePath,
                 targetRepoCurrentRef,
                 allowMissingFiles))
+        {
+            hasChanges = true;
+        }
+        else
         {
             var targetRepoChanges = FlatJson.Parse(targetRepoPreviousJson).GetDiff(FlatJson.Parse(targetRepoCurrentJson));
             var vmrChanges = FlatJson.Parse(sourcePreviousJson).GetDiff(FlatJson.Parse(sourceCurrentJson));
@@ -104,11 +114,6 @@ public class JsonFileMerger : VmrVersionFileMerger, IJsonFileMerger
                     targetRepo.Path,
                     targetRepoCurrentRef,
                     $"Merge {targetRepoJsonRelativePath} changes from VMR");
-        }
-        else
-        {
-            // File was deleted
-            hasChanges = true;
         }
 
         await targetRepo.StageAsync([targetRepoJsonRelativePath]);
