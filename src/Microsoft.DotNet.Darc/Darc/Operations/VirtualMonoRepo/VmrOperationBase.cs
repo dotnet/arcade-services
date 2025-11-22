@@ -120,8 +120,7 @@ internal abstract class VmrOperationBase : Operation
             catch (Exception e)
             {
                 _logger.LogError(
-                    "Failed to synchronize repo {name}{exception}.", 
-                    repoName, 
+                    "The command terminated unsuccessfully. {exception}.", 
                     Environment.NewLine + e.Message);
 
                 _logger.LogDebug("{exception}", e);
