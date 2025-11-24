@@ -103,7 +103,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
             query = query.Where(sub => sub.TargetDirectory == targetDirectory);
         }
 
-        List<Subscription> results = query.AsEnumerable().Select(sub => new Subscription(sub)).ToList();
+        List<Subscription> results = [.. query.AsEnumerable().Select(sub => new Subscription(sub))];
         return Ok(results);
     }
 
@@ -286,7 +286,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         var currentSubscriptions = subscription.ExcludedAssets.Select(a => a.Filter).OrderBy(a => a);
         if (!currentSubscriptions.SequenceEqual(update.ExcludedAssets))
         {
-            subscription.ExcludedAssets = update.ExcludedAssets.Select(asset => new Maestro.Data.Models.AssetFilter() { Filter = asset }).ToList();
+            subscription.ExcludedAssets = [.. update.ExcludedAssets.Select(asset => new Maestro.Data.Models.AssetFilter() { Filter = asset })];
             doUpdate = true;
         }
 

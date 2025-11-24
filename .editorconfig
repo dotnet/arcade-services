@@ -175,12 +175,6 @@ csharp_style_allow_blank_lines_between_consecutive_braces_experimental = true:si
 csharp_style_allow_blank_line_after_token_in_conditional_expression_experimental = true:silent
 csharp_style_allow_blank_line_after_token_in_arrow_expression_clause_experimental = true:silent
 
-# CA1727: Use PascalCase for named placeholders
-dotnet_diagnostic.CA1727.severity = none
-
-# CA1848: Use the LoggerMessage delegates
-dotnet_diagnostic.CA1848.severity = none
-
 # C++ Files
 [*.{cpp,h,in}]
 curly_bracket_next_line = true
@@ -231,3 +225,12 @@ dotnet_style_prefer_inferred_anonymous_type_member_names = false:suggestion
 dotnet_style_prefer_compound_assignment = true:suggestion
 dotnet_style_prefer_simplified_interpolation = true:suggestion
 dotnet_style_namespace_match_folder = true:suggestion
+
+# Manual custom suppressions for specific rules
+
+# CA1727: Use PascalCase for named placeholders
+dotnet_diagnostic.CA1727.severity = none
+# CA1848: Use the LoggerMessage delegates
+dotnet_diagnostic.CA1848.severity = none
+# CA1873: Avoid 'Params' suffix in parameter array names
+dotnet_diagnostic.CA1873.severity = none

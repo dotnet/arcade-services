@@ -267,7 +267,7 @@ public class CoherencyUpdateResolver : ICoherencyUpdateResolver
             }
         }
 
-        if (coherencyErrors.Any())
+        if (coherencyErrors.Count != 0)
         {
             throw new DarcCoherencyException(coherencyErrors.Values);
         }
@@ -349,7 +349,7 @@ public class CoherencyUpdateResolver : ICoherencyUpdateResolver
         // we need to look up the asset information for this
         if (!buildCache.TryGetValue($"{cpdDependency.RepoUri}@{cpdDependency.Commit}", out List<Build> potentialBuilds))
         {
-            potentialBuilds = (await _barClient.GetBuildsAsync(cpdDependency.RepoUri, cpdDependency.Commit)).ToList();
+            potentialBuilds = [.. await _barClient.GetBuildsAsync(cpdDependency.RepoUri, cpdDependency.Commit)];
         }
 
         // Builds are ordered newest to oldest in the cache. Most of the time there

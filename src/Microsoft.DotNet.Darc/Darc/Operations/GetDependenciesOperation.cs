@@ -43,12 +43,8 @@ internal class GetDependenciesOperation : Operation
             {
                 DependencyDetail dependency = dependencies
                     .Where(d => d.Name.Equals(_options.Name, StringComparison.InvariantCultureIgnoreCase))
-                    .FirstOrDefault();
-
-                if (dependency == null)
-                {
-                    throw new Exception($"A dependency with name '{_options.Name}' was not found...");
-                }
+                    .FirstOrDefault()
+                    ?? throw new Exception($"A dependency with name '{_options.Name}' was not found...");
 
                 LogDependency(dependency);
             }

@@ -400,7 +400,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
         GitPullRequest pullRequest = await client.GetPullRequestAsync(project, repoName, id, includeCommits: true);
 
-        IList<Commit> commits = new List<Commit>(pullRequest.Commits.Length);
+        var commits = new List<Commit>(pullRequest.Commits.Length);
         foreach (var commit in pullRequest.Commits)
         {
             commits.Add(new Commit(
@@ -1602,7 +1602,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         {
             var objectType = entry["gitObjectType"].ToString().ToLowerInvariant();
             var sha = entry["objectId"].ToString();
-            var treePath = $"{path}/{entry["relativePath"].ToString()}";
+            var treePath = $"{path}/{entry["relativePath"]}";
 
             if (objectType == "tree")
             {
@@ -1629,7 +1629,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         string treeSha, 
         string path)
     {
-        var pathSegments = path.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        var pathSegments = path.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries);
         var currentTreeSha = treeSha;
 
         foreach (var segment in pathSegments)
@@ -1644,14 +1644,11 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
             // Find the entry matching the current path segment
             var entries = treeResponse["treeEntries"].ToObject<JArray>();
-            var matchingEntry = entries.FirstOrDefault(e => 
-                e["relativePath"].ToString() == segment && 
-                e["gitObjectType"].ToString().ToLowerInvariant() == "tree");
-
-            if (matchingEntry == null)
-            {
-                throw new DirectoryNotFoundException($"Path segment '{segment}' not found in tree.");
-            }
+            var matchingEntry = entries
+                .FirstOrDefault(e => 
+                    e["relativePath"].ToString() == segment && 
+                    e["gitObjectType"].ToString().Equals("tree", StringComparison.InvariantCultureIgnoreCase))
+                ?? throw new DirectoryNotFoundException($"Path segment '{segment}' not found in tree.");
 
             currentTreeSha = matchingEntry["objectId"].ToString();
         }
@@ -1752,7 +1749,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
     public async Task<List<string>> GetPullRequestCommentsAsync(string pullRequestUrl)
     {
-        (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
+        (string accountName, string _, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
 
         _logger.LogInformation("Retrieving comments for pull request {PullRequestUrl}", pullRequestUrl);
 
@@ -1838,7 +1835,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             // Filter and return only folder names (tree objects)
             var entries = treeResponse["treeEntries"].ToObject<JArray>();
             var folderNames = entries
-                .Where(entry => entry["gitObjectType"].ToString().ToLowerInvariant() == "tree")
+                .Where(entry => entry["gitObjectType"].ToString().Equals("tree", StringComparison.InvariantCultureIgnoreCase))
                 .Select(entry => entry["relativePath"].ToString())
                 .ToList();
 

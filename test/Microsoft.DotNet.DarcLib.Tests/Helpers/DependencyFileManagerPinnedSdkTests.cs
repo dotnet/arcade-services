@@ -43,7 +43,7 @@ public class DependencyFileManagerPinnedSdkTests
         </configuration>
         """;
 
-    private void SetupCommonMocks(Mock<IGitRepo> repo, string globalJsonContent)
+    private static void SetupCommonMocks(Mock<IGitRepo> repo, string globalJsonContent)
     {
         repo.Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync(VersionDetails);

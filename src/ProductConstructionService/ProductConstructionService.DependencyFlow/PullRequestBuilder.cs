@@ -295,7 +295,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
                 endIndex + GetEndMarker(subscription.Id).Length;
 
             var beforeSpan = currentDescription.Substring(0, startCutoff);
-            var afterSpan = currentDescription.Substring(endCutoff, currentDescription.Length - endCutoff);
+            var afterSpan = currentDescription.Substring(endCutoff);
             var generatedDescription = await GenerateCodeFlowDescriptionForSubscription(
                 subscription.Id,
                 previousSourceCommit,
@@ -763,7 +763,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         description.AppendLine();
     }
 
-    private void AppendNonCoherencyCommitMessage(string relativeBasePath, List<DependencyUpdate> deps, StringBuilder message)
+    private static void AppendNonCoherencyCommitMessage(string relativeBasePath, List<DependencyUpdate> deps, StringBuilder message)
     {
         message.AppendLine($"On relative base path {(UnixPath.IsEmptyPath(relativeBasePath) ? "root" : relativeBasePath)}");
         
@@ -780,7 +780,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         message.AppendLine();
     }
 
-    private void AppendCoherencyCommitMessage(string relativeBasePath, List<DependencyUpdate> deps, StringBuilder message)
+    private static void AppendCoherencyCommitMessage(string relativeBasePath, List<DependencyUpdate> deps, StringBuilder message)
     {
         message.AppendLine($"On relative base path {(UnixPath.IsEmptyPath(relativeBasePath) ? "root" : relativeBasePath)}");
         

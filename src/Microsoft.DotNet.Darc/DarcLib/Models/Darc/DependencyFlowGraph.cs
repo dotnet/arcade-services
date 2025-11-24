@@ -140,7 +140,7 @@ public class DependencyFlowGraph
         var startNode = new DependencyFlowNode("start", "start", "start");
         foreach (DependencyFlowNode node in Nodes)
         {
-            if (!node.OutgoingEdges.Any())
+            if (node.OutgoingEdges.Count == 0)
             {
                 var newEdge = new DependencyFlowEdge(node, startNode, null);
                 startNode.IncomingEdges.Add(newEdge);
@@ -240,9 +240,9 @@ public class DependencyFlowGraph
             while (nodesToVisit.Count > 0)
             {
                 DependencyFlowNode node = nodesToVisit.Dequeue();
-                if (visitedNodes.ContainsKey(node))
+                if (visitedNodes.TryGetValue(node, out HashSet<DependencyFlowNode> value))
                 {
-                    visitedNodes[node].Add(node);
+                    value.Add(node);
                 }
                 else
                 {
@@ -255,9 +255,9 @@ public class DependencyFlowGraph
 
                     if (!visitedNodes[node].Contains(child) && !nodesToVisit.Contains(child))
                     {
-                        if (visitedNodes.ContainsKey(child))
+                        if (visitedNodes.TryGetValue(child, out HashSet<DependencyFlowNode> value1))
                         {
-                            visitedNodes[child].UnionWith(visitedNodes[node]);
+                            value1.UnionWith(visitedNodes[node]);
                         }
                         else
                         {
@@ -368,7 +368,7 @@ public class DependencyFlowGraph
             }
         }
 
-        return new DependencyFlowGraph(nodes.Select(kv => kv.Value).ToList(), edges);
+        return new DependencyFlowGraph([.. nodes.Select(kv => kv.Value)], edges);
     }
 
     private static DependencyFlowNode GetOrCreateNode(

@@ -58,9 +58,9 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
                 + SeekHelpMsg);
         }
 
-        List<string> configurationErrors = CalculateConfigurationErrors(sourceDependency, pr, update);
+        List<string> configurationErrors = CalculateConfigurationErrors(sourceDependency, update);
 
-        if (configurationErrors.Any())
+        if (configurationErrors.Count != 0)
         {
             string failureMessage = string.Concat(
                 ConfigurationErrorsHeader,
@@ -74,7 +74,6 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
 
     private static List<string> CalculateConfigurationErrors(
         SourceDependency sourceDependency,
-        PullRequestUpdateSummary pr,
         SubscriptionUpdateSummary update)
     {
         List<string> configurationErrors = [];

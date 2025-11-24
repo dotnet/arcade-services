@@ -26,7 +26,7 @@ internal abstract class Operation(
     protected const string SourceManifestPath = $"{VmrInfo.SourceDirName}/{VmrInfo.SourceManifestFileName}";
     protected const string DarcPRBranchPrefix = "darc";
 
-    private static readonly JsonSerializerOptions JsonSerializerOptions = new JsonSerializerOptions
+    private static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {
         AllowTrailingCommas = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -125,19 +125,23 @@ internal abstract class Operation(
         Func<string, string> contentUpdater)
     {
         logger.LogInformation("Updating file {file} on branch {branch} in the VMR fork", filePath, branch);
+
         // Fetch remote file and replace the product repo URI with the repo we're testing on        
-        var sourceMappingsFile = (await ghClient.Repository.Content.GetAllContentsByRef(
-                MaestroAuthTestOrgName,
-                VmrForkRepoName,
-                filePath,
-                branch))
-            .FirstOrDefault()
-            ?? throw new Exception($"Failed to find file {filePath} in {MaestroAuthTestOrgName}/{VmrForkRepoName} on branch {branch}");
+        IReadOnlyList<RepositoryContent> repositoryContents = await ghClient.Repository.Content.GetAllContentsByRef(
+            MaestroAuthTestOrgName,
+            VmrForkRepoName,
+            filePath,
+            branch);
+
+        if (repositoryContents.Count == 0)
+        {
+            throw new Exception($"Failed to find file {filePath} in {MaestroAuthTestOrgName}/{VmrForkRepoName} on branch {branch}");
+        }
 
         UpdateFileRequest update = new(
             $"Updated {filePath}",
-            contentUpdater(sourceMappingsFile.Content),
-            sourceMappingsFile.Sha,
+            contentUpdater(repositoryContents[0].Content),
+            repositoryContents[0].Sha,
             branch);
 
         await ghClient.Repository.Content.UpdateFile(

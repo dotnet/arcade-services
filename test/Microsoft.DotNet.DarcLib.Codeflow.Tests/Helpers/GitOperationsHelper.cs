@@ -227,10 +227,10 @@ internal class GitOperationsHelper
         await DeleteBranch(repo, branch);
     }
 
-    public Task VerifyConflictMarkers(NativePath productRepoPath, IEnumerable<string> files)
+    public static Task VerifyConflictMarkers(NativePath productRepoPath, IEnumerable<string> files)
         => VerifyConflictMarkers(productRepoPath, files, shouldHaveMarkers: true);
 
-    public Task VerifyNoConflictMarkers(NativePath productRepoPath, IEnumerable<string> files)
+    public static Task VerifyNoConflictMarkers(NativePath productRepoPath, IEnumerable<string> files)
         => VerifyConflictMarkers(productRepoPath, files, shouldHaveMarkers: false);
 
     private static async Task VerifyConflictMarkers(

@@ -27,7 +27,9 @@ internal class AddDependencyOperation : Operation
 
     public override async Task<int> ExecuteAsync()
     {
-        DependencyType type = _options.Type.ToLower() == "toolset" ? DependencyType.Toolset : DependencyType.Product;
+        DependencyType type = _options.Type.Equals("toolset", StringComparison.CurrentCultureIgnoreCase)
+            ? DependencyType.Toolset
+            : DependencyType.Product;
 
         var local = new Local(_options.GetRemoteTokenProvider(), _logger);
 

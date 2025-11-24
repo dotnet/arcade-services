@@ -3,14 +3,12 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Net;
-using System.Reflection;
 using Maestro.Data;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.v2018_07_16.Models;
 

@@ -62,7 +62,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Helpers
 
             // Remove empty categories
             categories = categories
-                .Where(c => c.Channels.Any())
+                .Where(c => c.Channels.Count != 0)
                 .ToList();
 
             // Apply specific ordering for certain categories

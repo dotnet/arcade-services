@@ -32,7 +32,6 @@ public class FeatureFlagsController20200220Tests
     {
         // Arrange
         var request = new SetFeatureFlagRequest(_testSubscriptionId, "invalid-flag", "true");
-        var expectedResponse = new FeatureFlagResponse(false, "Unknown feature flag: invalid-flag");
 
         // Act
         var result = await _controller.SetFeatureFlag(request);

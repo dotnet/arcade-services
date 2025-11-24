@@ -43,6 +43,6 @@ internal static class StringExtensions
             terms.Add(currentTerm.ToString());
         }
 
-        return terms.ToArray();
+        return [.. terms];
     }
 }

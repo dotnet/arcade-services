@@ -63,7 +63,7 @@ internal class GetAssetOperation : Operation
 
             // Starting with the remote, get information on the asset name + version
             List<Asset> matchingAssets =
-                (await _barClient.GetAssetsAsync(name: _options.Name, version: _options.Version, buildId: _options.Build)).ToList();
+                [..await _barClient.GetAssetsAsync(name: _options.Name, version: _options.Version, buildId: _options.Build)];
 
             var queryDescription = new StringBuilder();
             queryDescription.Append(_options.Latest ? " latest asset" : " assets");
@@ -140,7 +140,7 @@ internal class GetAssetOperation : Operation
                 }
             }
 
-            if (!matchingAssetsAfterDate.Any())
+            if (matchingAssetsAfterDate.Count == 0)
             {
                 Console.WriteLine($"No assets found with {queryDescription}");
                 int remaining = matchingAssets.Count - checkedAssets;
@@ -160,7 +160,7 @@ internal class GetAssetOperation : Operation
                         Console.WriteLine($"{asset.Name} @ {asset.Version}");
                         Console.Write(UxHelpers.GetTextBuildDescription(build));
                         Console.WriteLine("Locations:");
-                        if (asset.Locations.Any())
+                        if (asset.Locations.Count != 0)
                         {
                             foreach (var location in asset.Locations)
                             {

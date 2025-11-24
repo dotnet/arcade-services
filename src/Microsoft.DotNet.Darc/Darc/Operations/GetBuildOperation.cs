@@ -9,7 +9,6 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ProductConstructionService.Client;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -79,7 +78,7 @@ internal class GetBuildOperation : Operation
             }
 
             // Print the build info.
-            if (!matchingBuilds.Any())
+            if (matchingBuilds.Count == 0)
             {
                 Console.WriteLine($"Could not any builds matching the given criteria.");
                 return Constants.ErrorCode;

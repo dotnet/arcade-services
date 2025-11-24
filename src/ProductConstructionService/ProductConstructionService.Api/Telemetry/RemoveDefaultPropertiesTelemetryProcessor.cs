@@ -20,7 +20,7 @@ public class RemoveDefaultPropertiesTelemetryProcessor : ITelemetryProcessor
 
     public void Process(ITelemetry item)
     {
-        ISupportProperties supportProperties = (ISupportProperties)item;
+        var supportProperties = (ISupportProperties)item;
         supportProperties.Properties.Remove(DeveloperMode);
         supportProperties.Properties.Remove(AspNetCoreEnvironment);
         Next.Process(item);

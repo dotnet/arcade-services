@@ -64,15 +64,12 @@ public class VersionDetailsParser : IVersionDetailsParser
 
     public VersionDetails ParseVersionDetailsXml(XmlDocument document, bool includePinned = true)
     {
-        XmlNodeList? dependencyNodes = document?.DocumentElement?.SelectNodes($"//{DependencyElementName}");
-        if (dependencyNodes == null)
-        {
-            throw new Exception($"There was an error while reading '{VersionFiles.VersionDetailsXml}' and it came back empty. " +
+        XmlNodeList? dependencyNodes = (document?.DocumentElement?.SelectNodes($"//{DependencyElementName}"))
+            ?? throw new Exception($"There was an error while reading '{VersionFiles.VersionDetailsXml}' and it came back empty. " +
                 $"Look for exceptions above.");
-        }
 
         List<DependencyDetail> dependencies = ParseDependencyDetails(dependencyNodes);
-        dependencies = includePinned ? dependencies : dependencies.Where(d => !d.Pinned).ToList();
+        dependencies = includePinned ? dependencies : [.. dependencies.Where(d => !d.Pinned)];
 
         // Parse the VMR codeflow if it exists
         SourceDependency? vmrCodeflow = ParseSourceSection(document?.DocumentElement?.SelectSingleNode($"//{SourceElementName}"));

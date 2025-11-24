@@ -14,7 +14,6 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.ProductConstructionService.Client;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -271,7 +270,7 @@ internal class GetDependencyGraphOperation : Operation
         }
         if (node.ContributingBuilds != null)
         {
-            if (node.ContributingBuilds.Any())
+            if (node.ContributingBuilds.Count != 0)
             {
                 await writer.WriteLineAsync($"{indent}  Builds:");
                 foreach (var build in node.ContributingBuilds)
@@ -337,7 +336,7 @@ internal class GetDependencyGraphOperation : Operation
             await writer.WriteLineAsync("    node [shape=record]");
             foreach (DependencyGraphNode node in graph.Nodes)
             {
-                StringBuilder nodeBuilder = new StringBuilder();
+                StringBuilder nodeBuilder = new();
 
                 // First add the node name
                 nodeBuilder.Append($"    {UxHelpers.CalculateGraphVizNodeName(node)}");
@@ -450,7 +449,7 @@ internal class GetDependencyGraphOperation : Operation
     {
         // Log the repository information.
         await LogBasicNodeDetails(writer, node, indent);
-        if (node.Dependencies != null && node.Dependencies.Any())
+        if (node.Dependencies != null && node.Dependencies.Count != 0)
         {
             await writer.WriteLineAsync($"{indent}  Dependencies:");
 
@@ -466,7 +465,7 @@ internal class GetDependencyGraphOperation : Operation
             }
         }
 
-        if (node.Children.Any())
+        if (node.Children.Count != 0)
         {
             await writer.WriteLineAsync($"{indent}  Input Repositories:");
 

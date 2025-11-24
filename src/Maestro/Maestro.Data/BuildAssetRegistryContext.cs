@@ -165,8 +165,8 @@ public class BuildAssetRegistryContext(DbContextOptions options)
                 })
             .IsUnique();
 
-        builder.Entity<SubscriptionUpdate>().Property(typeof(DateTime), "SysStartTime").HasColumnType("datetime2");
-        builder.Entity<SubscriptionUpdate>().Property(typeof(DateTime), "SysEndTime").HasColumnType("datetime2");
+        builder.Entity<SubscriptionUpdate>().Property<DateTime>("SysStartTime").HasColumnType("datetime2");
+        builder.Entity<SubscriptionUpdate>().Property<DateTime>("SysEndTime").HasColumnType("datetime2");
 
         builder.Entity<SubscriptionUpdate>()
             .ToTable(b =>
@@ -186,8 +186,8 @@ public class BuildAssetRegistryContext(DbContextOptions options)
 
         builder.Entity<SubscriptionUpdateHistory>().ToTable(nameof(SubscriptionUpdateHistory));
         builder.Entity<SubscriptionUpdateHistory>().HasNoKey();
-        builder.Entity<SubscriptionUpdateHistory>().Property(typeof(DateTime), "SysStartTime").HasColumnType("datetime2");
-        builder.Entity<SubscriptionUpdateHistory>().Property(typeof(DateTime), "SysEndTime").HasColumnType("datetime2");
+        builder.Entity<SubscriptionUpdateHistory>().Property<DateTime>("SysStartTime").HasColumnType("datetime2");
+        builder.Entity<SubscriptionUpdateHistory>().Property<DateTime>("SysEndTime").HasColumnType("datetime2");
         builder.Entity<SubscriptionUpdateHistory>().HasIndex("SysEndTime", "SysStartTime").IsClustered();
         builder.Entity<SubscriptionUpdateHistory>().HasIndex("SubscriptionId", "SysEndTime", "SysStartTime");
 
@@ -214,8 +214,8 @@ public class BuildAssetRegistryContext(DbContextOptions options)
                     ru.BranchName
                 });
 
-        builder.Entity<RepositoryBranchUpdate>().Property(typeof(DateTime), "SysStartTime").HasColumnType("datetime2");
-        builder.Entity<RepositoryBranchUpdate>().Property(typeof(DateTime), "SysEndTime").HasColumnType("datetime2");
+        builder.Entity<RepositoryBranchUpdate>().Property<DateTime>("SysStartTime").HasColumnType("datetime2");
+        builder.Entity<RepositoryBranchUpdate>().Property<DateTime>("SysEndTime").HasColumnType("datetime2");
         builder.Entity<RepositoryBranchUpdate>()
             .ToTable(b =>
             {
@@ -240,8 +240,8 @@ public class BuildAssetRegistryContext(DbContextOptions options)
         builder.Entity<RepositoryBranchUpdateHistory>()
             .HasNoKey();
 
-        builder.Entity<RepositoryBranchUpdateHistory>().Property(typeof(DateTime), "SysStartTime").HasColumnType("datetime2");
-        builder.Entity<RepositoryBranchUpdateHistory>().Property(typeof(DateTime), "SysEndTime").HasColumnType("datetime2");
+        builder.Entity<RepositoryBranchUpdateHistory>().Property<DateTime>("SysStartTime").HasColumnType("datetime2");
+        builder.Entity<RepositoryBranchUpdateHistory>().Property<DateTime>("SysEndTime").HasColumnType("datetime2");
         builder.Entity<RepositoryBranchUpdateHistory>().HasIndex("SysEndTime", "SysStartTime").IsClustered();
         builder.Entity<RepositoryBranchUpdateHistory>()
             .HasIndex("RepositoryName", "BranchName", "SysEndTime", "SysStartTime");
@@ -281,12 +281,10 @@ public class BuildAssetRegistryContext(DbContextOptions options)
     {
         var dependencyEntity = Model.FindEntityType(typeof(BuildDependency));
         // The "new" code is much more complicated and might not return what we need, suppress the warning
-#pragma warning disable CS0618
         var buildIdColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.BuildId)).GetColumnName();
         var dependencyIdColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.DependentBuildId)).GetColumnName();
         var isProductColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.IsProduct)).GetColumnName();
         var timeToInclusionInMinutesColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.TimeToInclusionInMinutes)).GetColumnName();
-#pragma warning restore CS0618
         var edgeTable = dependencyEntity.GetTableName();
 
         var sqlTemplate = $@"

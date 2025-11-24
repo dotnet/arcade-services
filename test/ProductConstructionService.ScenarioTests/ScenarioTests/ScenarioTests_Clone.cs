@@ -141,7 +141,7 @@ internal class ScenarioTests_Clone : ScenarioTestBase
                 {
                     using var hashGenerator = SHA256.Create();
                     var fileHash = hashGenerator.ComputeHash(stream);
-                    var fileHashInHex = BitConverter.ToString(fileHash).Replace("-", "");
+                    var fileHashInHex = Convert.ToHexString(fileHash);
                     fileHashInHex.Should().Be(expectedRepos[name], $"Expected {versionPath} to have hash '{expectedRepos[name]}', actual hash '{fileHash}'");
                 }
             }

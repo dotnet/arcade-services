@@ -7,7 +7,6 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ProductConstructionService.Common;
-using Azure.Identity;
 using ProductConstructionService.WorkItems;
 using Maestro.Data;
 using Azure.Core;

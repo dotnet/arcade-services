@@ -63,7 +63,7 @@ public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannels
             query = query.Where(dc => dc.Enabled == enabled.Value);
         }
 
-        List<DefaultChannel> results = query.AsEnumerable().Select(dc => new DefaultChannel(dc)).ToList();
+        List<DefaultChannel> results = [.. query.AsEnumerable().Select(dc => new DefaultChannel(dc))];
 
         if (!string.IsNullOrEmpty(branch))
         {

@@ -4,21 +4,20 @@
 using System;
 using System.Collections.Generic;
 
-namespace Microsoft.DotNet.Maestro.Tasks
-{
-    /// <summary>
-    ///     Compares ItemsToSign objects based on file
-    /// </summary>
-    public class ItemsToSignComparer : IEqualityComparer<ItemsToSign>
-    {
-        public bool Equals(ItemsToSign x, ItemsToSign y)
-        {
-            return x.Include.Equals(y.Include, StringComparison.OrdinalIgnoreCase);
-        }
+namespace Microsoft.DotNet.Maestro.Tasks;
 
-        public int GetHashCode(ItemsToSign obj)
-        {
-            return (obj.Include).GetHashCode();
-        }
+/// <summary>
+///     Compares ItemsToSign objects based on file
+/// </summary>
+public class ItemsToSignComparer : IEqualityComparer<ItemsToSign>
+{
+    public bool Equals(ItemsToSign x, ItemsToSign y)
+    {
+        return x.Include.Equals(y.Include, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public int GetHashCode(ItemsToSign obj)
+    {
+        return (obj.Include).GetHashCode();
     }
 }
