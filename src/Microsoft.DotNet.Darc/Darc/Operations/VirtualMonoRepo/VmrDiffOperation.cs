@@ -438,7 +438,7 @@ internal class VmrDiffOperation : Operation
         // A mapping name is likely a simple name without path separators, URI schemes, or colons
         // If it contains known URI schemes or path separators, it's likely not a mapping name
         if (input.StartsWith("http://") || input.StartsWith("https://") || 
-            input.Contains("/") || input.Contains("\\") ||
+            input.Contains('/') || input.Contains('\\') ||
             (input.Length > 2 && char.IsLetter(input[0]) && input[1] == ':')) // Windows path like C:
         {
             return false;
