@@ -4,14 +4,13 @@
 using Microsoft.Build.Utilities;
 using System.Diagnostics;
 
-namespace Microsoft.DotNet.Maestro.Tasks
+namespace Microsoft.DotNet.Maestro.Tasks;
+
+public class LaunchDebugger : Task
 {
-    public class LaunchDebugger : Task
+    public override bool Execute()
     {
-        public override bool Execute()
-        {
-            Debugger.Launch();
-            return true;
-        }
+        Debugger.Launch();
+        return true;
     }
 }
