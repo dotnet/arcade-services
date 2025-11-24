@@ -3,7 +3,6 @@
 
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 

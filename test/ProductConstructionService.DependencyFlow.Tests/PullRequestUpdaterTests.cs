@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
-using System.Security.Policy;
 using AwesomeAssertions;
 using Maestro.Data;
 using Maestro.Data.Models;

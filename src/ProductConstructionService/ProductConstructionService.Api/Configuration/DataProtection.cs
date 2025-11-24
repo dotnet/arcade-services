@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure.Core;
-using Azure.Identity;
 using Microsoft.AspNetCore.DataProtection;
 
 namespace ProductConstructionService.Api.Configuration;
