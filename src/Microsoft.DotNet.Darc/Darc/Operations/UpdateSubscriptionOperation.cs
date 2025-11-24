@@ -270,7 +270,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                 immutableFieldErrors.Add($"Source Enabled (cannot be changed from '{subscription.SourceEnabled}')");
             }
 
-            if (immutableFieldErrors.Any())
+            if (immutableFieldErrors.Count != 0)
             {
                 _logger.LogError("The following immutable fields cannot be modified:");
                 foreach (var error in immutableFieldErrors)

@@ -267,7 +267,7 @@ public class CoherencyUpdateResolver : ICoherencyUpdateResolver
             }
         }
 
-        if (coherencyErrors.Any())
+        if (coherencyErrors.Count != 0)
         {
             throw new DarcCoherencyException(coherencyErrors.Values);
         }

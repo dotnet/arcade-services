@@ -112,7 +112,7 @@ public class SubscriptionHealthMetric : HealthMetric
         {
             // When the dependency file is not found, then we're good as long as this repo is not
             // targeted by any subscriptions
-            if (Subscriptions.Any())
+            if (Subscriptions.Count != 0)
             {
                 MissingVersionDetailsFile = true;
                 Result = HealthResult.Failed;

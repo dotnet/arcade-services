@@ -40,7 +40,7 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
 
         List<string> configurationErrors = CalculateConfigurationErrors(pr, repoNamesToBarIds, repoNamesToCommitSha);
 
-        if (configurationErrors.Any())
+        if (configurationErrors.Count != 0)
         {
             string failureMessage = string.Concat(
                 ConfigurationErrorsHeader,

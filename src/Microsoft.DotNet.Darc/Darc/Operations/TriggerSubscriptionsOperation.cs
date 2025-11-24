@@ -98,7 +98,7 @@ internal class TriggerSubscriptionsOperation : Operation
             List<Subscription> disabledSubscriptions = subscriptionsToTrigger.Where(s => !s.Enabled).ToList();
             subscriptionsToTrigger = subscriptionsToTrigger.Where(s => s.Enabled).ToList();
 
-            if (disabledSubscriptions.Any())
+            if (disabledSubscriptions.Count != 0)
             {
                 Console.WriteLine($"The following {disabledSubscriptions.Count} subscription(s) are disabled and will not be triggered");
                 foreach (var subscription in disabledSubscriptions)
@@ -107,7 +107,7 @@ internal class TriggerSubscriptionsOperation : Operation
                 }
             }
 
-            if (!subscriptionsToTrigger.Any())
+            if (subscriptionsToTrigger.Count == 0)
             {
                 Console.WriteLine("No enabled subscriptions found matching the specified criteria.");
                 return Constants.ErrorCode;

@@ -124,7 +124,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
         {
             // Look up existing merge policies if the repository and branch were specified, and the user didn't
             // specify policies on the command line. In this case, they typically want to update
-            if (!mergePolicies.Any() && !string.IsNullOrEmpty(repository) && !string.IsNullOrEmpty(branch))
+            if (mergePolicies.Count == 0 && !string.IsNullOrEmpty(repository) && !string.IsNullOrEmpty(branch))
             {
                 mergePolicies = (await _barClient.GetRepositoryMergePoliciesAsync(repository, branch)).ToList();
             }

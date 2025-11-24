@@ -39,6 +39,6 @@ internal abstract class ScanOperationBase<T> : Operation where T : IVmrScanner
             Console.WriteLine(file);
         }
 
-        return files.Any() ? 1 : Constants.SuccessCode;
+        return files.Count != 0 ? 1 : Constants.SuccessCode;
     }
 }

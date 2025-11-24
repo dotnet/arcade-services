@@ -521,9 +521,9 @@ internal class GatherDropOperation : Operation
             // we'd always have it on and would probably miss some real errors. The good news is that this is basically always the
             // same two nodes in the graph; specifically exclude these known missing items.
 
-            var nodesWithNoContributingBuilds = graph.Nodes.Where(node => !node.ContributingBuilds.Any() &&
+            var nodesWithNoContributingBuilds = graph.Nodes.Where(node => node.ContributingBuilds.Count == 0 &&
                                                                           !DependenciesAlwaysMissingBuilds.Any(missingNode => node.Repository == missingNode.repo && node.Commit == missingNode.sha)).ToList();
-            if (nodesWithNoContributingBuilds.Any())
+            if (nodesWithNoContributingBuilds.Count != 0)
             {
                 Console.WriteLine("Dependency graph nodes missing builds:");
                 foreach (var node in nodesWithNoContributingBuilds)
@@ -639,7 +639,7 @@ internal class GatherDropOperation : Operation
         }
 
         // Now download the extras (if any)
-        if (mustDownloadAssets.Any())
+        if (mustDownloadAssets.Count != 0)
         {
             var extraAssetsDirectory = Path.Join(rootOutputDirectory, "extra-assets");
             Directory.CreateDirectory(extraAssetsDirectory);

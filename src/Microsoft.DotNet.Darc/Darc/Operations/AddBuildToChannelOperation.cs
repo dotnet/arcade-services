@@ -129,7 +129,7 @@ internal class AddBuildToChannelOperation : Operation
                         Select(dc => dc.Channel).
                         DistinctBy(c => c.Id));
 
-                if (!targetChannels.Any() && _options.DefaultChannelsRequired)
+                if (targetChannels.Count == 0 && _options.DefaultChannelsRequired)
                 {
                     _logger.LogError(
                         "Build '{buildId}' is from branch '{repository}@{branch}' that is not associated to any enabled default channel(s). Either add one with 'darc add-default-channel' or do not enforce existence with the '--default-channels-required' option.",
@@ -150,7 +150,7 @@ internal class AddBuildToChannelOperation : Operation
                 }
             }
 
-            if (!targetChannels.Any())
+            if (targetChannels.Count == 0)
             {
                 Console.WriteLine($"Build '{build.Id}' is already on all target channel(s).");
                 return Constants.SuccessCode;

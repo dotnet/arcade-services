@@ -110,7 +110,7 @@ internal class CloneOperation : Operation
             }
 
             var dependenciesToClone = new Queue<StrippedDependency>();
-            while (accumulatedDependencies.Any())
+            while (accumulatedDependencies.Count != 0)
             {
                 // add this level's dependencies to the queue and clear it for the next level
                 foreach (StrippedDependency d in accumulatedDependencies)
@@ -120,7 +120,7 @@ internal class CloneOperation : Operation
                 accumulatedDependencies.Clear();
 
                 // this will do one level of clones at a time
-                while (dependenciesToClone.Any())
+                while (dependenciesToClone.Count != 0)
                 {
                     StrippedDependency repo = dependenciesToClone.Dequeue();
                     // the folder for the specific repo-hash we are cloning.  these will be orphaned from the .gitdir.
@@ -204,7 +204,7 @@ internal class CloneOperation : Operation
                 }   // end inner while(dependenciesToClone.Any())
 
 
-                if (_options.CloneDepth == 0 && accumulatedDependencies.Any())
+                if (_options.CloneDepth == 0 && accumulatedDependencies.Count != 0)
                 {
                     _logger.LogInformation($"Reached clone depth limit, aborting with {accumulatedDependencies.Count} dependencies remaining");
                     foreach (StrippedDependency d in accumulatedDependencies)

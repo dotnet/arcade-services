@@ -119,7 +119,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             ? []
             : await TryMergingBranch(vmr, headBranch, branchToMerge, cancellationToken);
 
-        if (conflictedFiles.Any() && await TryResolvingConflicts(
+        if (conflictedFiles.Count != 0 && await TryResolvingConflicts(
             mappingName,
             vmr,
             sourceRepo,

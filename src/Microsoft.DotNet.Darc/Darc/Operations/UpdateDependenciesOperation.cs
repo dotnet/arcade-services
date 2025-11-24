@@ -194,7 +194,7 @@ internal class UpdateDependenciesOperation : Operation
                 dependency => dependency.RepoUri.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase)).ToList();
         }
 
-        if (!candidateDependenciesForUpdate.Any())
+        if (candidateDependenciesForUpdate.Count == 0)
         {
             _logger.LogInformation("    Found no dependencies to update");
             return;
@@ -244,7 +244,7 @@ internal class UpdateDependenciesOperation : Operation
             throw new DarcException($"Failed to update coherent parent tied dependencies in {relativeBasePath}");
         }
 
-        if (!dependenciesToUpdate.Any())
+        if (dependenciesToUpdate.Count == 0)
         {
             _logger.LogWarning("Found no dependencies to update");
             return;

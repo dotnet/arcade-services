@@ -79,7 +79,7 @@ internal class GetBuildOperation : Operation
             }
 
             // Print the build info.
-            if (!matchingBuilds.Any())
+            if (matchingBuilds.Count == 0)
             {
                 Console.WriteLine($"Could not any builds matching the given criteria.");
                 return Constants.ErrorCode;

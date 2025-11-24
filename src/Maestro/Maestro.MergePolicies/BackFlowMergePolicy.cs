@@ -60,7 +60,7 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
 
         List<string> configurationErrors = CalculateConfigurationErrors(sourceDependency, pr, update);
 
-        if (configurationErrors.Any())
+        if (configurationErrors.Count != 0)
         {
             string failureMessage = string.Concat(
                 ConfigurationErrorsHeader,

@@ -40,7 +40,7 @@ internal class AddRepoOperation : Operation
     {
         var repositories = _options.Repositories.ToList();
 
-        if (!repositories.Any())
+        if (repositories.Count == 0)
         {
             _logger.LogError("Please specify at least one repository to add");
             return Constants.ErrorCode;

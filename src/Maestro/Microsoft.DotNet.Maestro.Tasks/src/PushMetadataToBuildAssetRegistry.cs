@@ -581,7 +581,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         {
             SigningInformation mergedInfo = null;
 
-            if (signingInformation.Any())
+            if (signingInformation.Count != 0)
             {
                 foreach (SigningInformation signInfo in signingInformation)
                 {

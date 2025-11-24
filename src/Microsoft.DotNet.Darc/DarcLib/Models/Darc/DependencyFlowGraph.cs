@@ -140,7 +140,7 @@ public class DependencyFlowGraph
         var startNode = new DependencyFlowNode("start", "start", "start");
         foreach (DependencyFlowNode node in Nodes)
         {
-            if (!node.OutgoingEdges.Any())
+            if (node.OutgoingEdges.Count == 0)
             {
                 var newEdge = new DependencyFlowEdge(node, startNode, null);
                 startNode.IncomingEdges.Add(newEdge);

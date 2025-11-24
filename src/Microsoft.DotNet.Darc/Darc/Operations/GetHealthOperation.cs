@@ -78,7 +78,7 @@ internal class GetHealthOperation : Operation
             // this is currently an error. Because different PKPIs apply to different input items differently,
             // this check may not be useful in the future.
 
-            if (channelsToEvaluate.Any())
+            if (channelsToEvaluate.Count != 0)
             {
                 Console.WriteLine("Evaluating the following channels:");
                 foreach (string channel in channelsToEvaluate)
@@ -92,7 +92,7 @@ internal class GetHealthOperation : Operation
                 return Constants.ErrorCode;
             }
 
-            if (reposToEvaluate.Any())
+            if (reposToEvaluate.Count != 0)
             {
                 Console.WriteLine("Evaluating the following repositories:");
                 foreach (string repo in reposToEvaluate)
