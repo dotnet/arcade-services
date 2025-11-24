@@ -391,10 +391,7 @@ public class DependencyFileManager : IDependencyFileManager
         var versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch, relativeBasePath);
         XmlNode dependencyNode = versionDetails.SelectSingleNode($"//{VersionDetailsParser.DependencyElementName}[@Name='{dependencyName}']");
 
-        if (dependencyNode != null)
-        {
-            dependencyNode.ParentNode.RemoveChild(dependencyNode);
-        }
+        dependencyNode?.ParentNode.RemoveChild(dependencyNode);
 
         return versionDetails;
     }

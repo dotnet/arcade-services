@@ -8,7 +8,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
-using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -46,11 +45,10 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     private readonly IVmrInfo _vmrInfo;
     private readonly IFileSystem _fileSystem;
     private readonly ISourceMappingParser _sourceMappingParser;
-    private IReadOnlyCollection<SourceMapping>? _mappings;
 
     public IReadOnlyCollection<SourceMapping> Mappings
     {
-        get => _mappings ?? throw new Exception("Source mappings have not been initialized.");
+        get => field ?? throw new Exception("Source mappings have not been initialized."); private set;
     }
             
     public VmrDependencyTracker(
@@ -63,7 +61,6 @@ public class VmrDependencyTracker : IVmrDependencyTracker
         _sourceManifest = sourceManifest;
         _fileSystem = fileSystem;
         _sourceMappingParser = sourceMappingParser;
-        _mappings = null;
     }
 
     public bool TryGetMapping(string name, [NotNullWhen(true)] out SourceMapping? mapping)
@@ -83,7 +80,7 @@ public class VmrDependencyTracker : IVmrDependencyTracker
     private async Task InitializeSourceMappings(string? sourceMappingsPath = null)
     {
         sourceMappingsPath ??= _vmrInfo.VmrPath / VmrInfo.DefaultRelativeSourceMappingsPath;
-        _mappings = await _sourceMappingParser.ParseMappings(sourceMappingsPath);
+        Mappings = await _sourceMappingParser.ParseMappings(sourceMappingsPath);
     }
 
     public async Task RefreshMetadataAsync(string? sourceMappingsPath = null)

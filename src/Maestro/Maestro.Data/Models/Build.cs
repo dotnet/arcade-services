@@ -12,11 +12,6 @@ namespace Maestro.Data.Models;
 
 public class Build
 {
-    private string _azureDevOpsRepository;
-    private string _gitHubRepository;
-    private string _azureDevOpsBranch;
-    private string _githubBranch;
-
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int Id { get; set; }
@@ -37,12 +32,12 @@ public class Build
     {
         get
         {
-            return AzureDevOpsClient.NormalizeUrl(_azureDevOpsRepository);
+            return AzureDevOpsClient.NormalizeUrl(field);
         }
 
         set
         {
-            _azureDevOpsRepository = AzureDevOpsClient.NormalizeUrl(value);
+            field = AzureDevOpsClient.NormalizeUrl(value);
         }
     }
 
@@ -50,12 +45,12 @@ public class Build
     {
         get
         {
-            return AzureDevOpsClient.NormalizeUrl(_azureDevOpsBranch);
+            return AzureDevOpsClient.NormalizeUrl(field);
         }
 
         set
         {
-            _azureDevOpsBranch = AzureDevOpsClient.NormalizeUrl(value);
+            field = AzureDevOpsClient.NormalizeUrl(value);
         }
     }
 
@@ -63,12 +58,12 @@ public class Build
     {
         get
         {
-            return AzureDevOpsClient.NormalizeUrl(_gitHubRepository);
+            return AzureDevOpsClient.NormalizeUrl(field);
         }
 
         set
         {
-            _gitHubRepository = AzureDevOpsClient.NormalizeUrl(value);
+            field = AzureDevOpsClient.NormalizeUrl(value);
         }
     }
 
@@ -76,11 +71,11 @@ public class Build
     {
         get
         {
-            return GitHelpers.NormalizeBranchName(_githubBranch);
+            return GitHelpers.NormalizeBranchName(field);
         }
         set
         {
-            _githubBranch = GitHelpers.NormalizeBranchName(value);
+            field = GitHelpers.NormalizeBranchName(value);
         }
     }
 

@@ -33,21 +33,18 @@ public class TestParameters : IDisposable
     private static readonly AzureDevOpsTokenProvider _azDoTokenProvider;
 
     private static TemporaryDirectory? _dir;
-    private static Octokit.GitHubClient? _gitHubApi;
-    private static AzureDevOpsClient? _azDoClient;
     private static string? _gitHubPath;
-    private static List<string>? _baseDarcRunArgs;
 
     public static string DarcExePath { get; private set; } = string.Empty;
     public static IProductConstructionServiceApi PcsApi { get; }
-    public static Octokit.GitHubClient GitHubApi => _gitHubApi!;
-    public static AzureDevOpsClient AzDoClient => _azDoClient!;
+    public static Octokit.GitHubClient GitHubApi { get => field!; private set; }
+    public static AzureDevOpsClient AzDoClient { get => field!; private set; }
     public static string PcsBaseUri { get; }
     public static string GitHubToken { get; }
     public static string AzDoToken => _azDoTokenProvider.GetTokenForAccount("default");
     public static bool IsCI { get; }
     public static string GitExePath => _gitHubPath!;
-    public static List<string> BaseDarcRunArgs => _baseDarcRunArgs!;
+    public static List<string> BaseDarcRunArgs { get => field!; private set; }
 
     static TestParameters()
     {
@@ -98,7 +95,7 @@ public class TestParameters : IDisposable
         DarcExePath = Path.Join(darcRootDir, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "darc.exe" : "darc");
         _gitHubPath = await TestHelpers.Which("git");
 
-        _baseDarcRunArgs =
+        BaseDarcRunArgs =
         [
             "--bar-uri", PcsBaseUri,
             "--github-pat", GitHubToken,
@@ -107,11 +104,11 @@ public class TestParameters : IDisposable
         ];
 
         Assembly assembly = typeof(TestParameters).Assembly;
-        _gitHubApi =
+        GitHubApi =
             new Octokit.GitHubClient(
                 new Octokit.ProductHeaderValue(assembly.GetName().Name, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),
                 new InMemoryCredentialStore(new Octokit.Credentials(GitHubToken)));
-        _azDoClient =
+        AzDoClient =
             new AzureDevOpsClient(
                 _azDoTokenProvider,
                 new ProcessManager(new NUnitLogger(), _gitHubPath),
