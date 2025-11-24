@@ -19,6 +19,7 @@ using Microsoft.DotNet.Maestro.Tasks.Proxies;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
+using Microsoft.VisualStudio.Services.Common;
 using MSBuild = Microsoft.Build.Utilities;
 
 namespace Microsoft.DotNet.Maestro.Tasks;
@@ -110,14 +111,9 @@ public class PushMetadataToBuildAssetRegistry : MSBuild.Task, ICancelableTask
                     manifest = parsedManifests[0];
                 }
 
-                var signingInformation = new List<SigningInformation>();
-                foreach (var m in parsedManifests)
-                {
-                    if (m.SigningInformation != null)
-                    {
-                        signingInformation.Add(m.SigningInformation);
-                    }
-                }
+                List<SigningInformation> signingInformation = [..parsedManifests
+                    .Where(m => m.SigningInformation != null)
+                    .Select(m => m.SigningInformation)];
 
                 //get packages blobs and signing info 
                 (List<PackageArtifactModel> packages,
@@ -294,12 +290,10 @@ public class PushMetadataToBuildAssetRegistry : MSBuild.Task, ICancelableTask
         // Commonly, if a repository has a dependency on an asset from a build, more dependencies will be to that same build
         // lets fetch all assets from that build to save time later.
         var build = await client.Builds.GetBuildAsync(buildId.Value, cancellationToken);
-        foreach (var asset in build.Assets)
+
+        foreach (var asset in build.Assets.Where(asset => !assetCache.ContainsKey((asset.Name, asset.Version, build.Commit))))
         {
-            if (!assetCache.ContainsKey((asset.Name, asset.Version, build.Commit)))
-            {
-                assetCache.Add((asset.Name, asset.Version, build.Commit), build.Id);
-            }
+            assetCache.Add((asset.Name, asset.Version, build.Commit), build.Id);
         }
 
         return buildId;
@@ -400,56 +394,21 @@ public class PushMetadataToBuildAssetRegistry : MSBuild.Task, ICancelableTask
         var uri = new Uri(_getEnvProxy.GetEnv("SYSTEM_TEAMFOUNDATIONCOLLECTIONURI"));
         if (uri.Host == "dev.azure.com")
         {
-            return uri.AbsolutePath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries).First();
+            return uri.AbsolutePath.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries).First();
         }
 
-        return uri.Host.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries).First();
+        return uri.Host.Split(['.'], StringSplitOptions.RemoveEmptyEntries).First();
     }
 
-    private string GetAzDevProject()
-    {
-        return _getEnvProxy.GetEnv("SYSTEM_TEAMPROJECT");
-    }
-
-    private string GetAzDevBuildNumber()
-    {
-        return _getEnvProxy.GetEnv("BUILD_BUILDNUMBER");
-    }
-
-    private string GetAzDevRepository()
-    {
-        return _getEnvProxy.GetEnv("BUILD_REPOSITORY_URI");
-    }
-
-    private string GetAzDevRepositoryName()
-    {
-        return _getEnvProxy.GetEnv("BUILD_REPOSITORY_NAME");
-    }
-
-    private string GetAzDevBranch()
-    {
-        return _getEnvProxy.GetEnv("BUILD_SOURCEBRANCH");
-    }
-
-    private int GetAzDevBuildId()
-    {
-        return int.Parse(_getEnvProxy.GetEnv("BUILD_BUILDID"));
-    }
-
-    private int GetAzDevBuildDefinitionId()
-    {
-        return int.Parse(_getEnvProxy.GetEnv("SYSTEM_DEFINITIONID"));
-    }
-
-    private string GetAzDevCommit()
-    {
-        return _getEnvProxy.GetEnv("BUILD_SOURCEVERSION");
-    }
-
-    private string GetAzDevStagingDirectory()
-    {
-        return _getEnvProxy.GetEnv("BUILD_STAGINGDIRECTORY");
-    }
+    private string GetAzDevProject() => _getEnvProxy.GetEnv("SYSTEM_TEAMPROJECT");
+    private string GetAzDevBuildNumber() => _getEnvProxy.GetEnv("BUILD_BUILDNUMBER");
+    private string GetAzDevRepository() => _getEnvProxy.GetEnv("BUILD_REPOSITORY_URI");
+    private string GetAzDevRepositoryName() => _getEnvProxy.GetEnv("BUILD_REPOSITORY_NAME");
+    private string GetAzDevBranch() => _getEnvProxy.GetEnv("BUILD_SOURCEBRANCH");
+    private int GetAzDevBuildId() => int.Parse(_getEnvProxy.GetEnv("BUILD_BUILDID"));
+    private int GetAzDevBuildDefinitionId() => int.Parse(_getEnvProxy.GetEnv("SYSTEM_DEFINITIONID"));
+    private string GetAzDevCommit() => _getEnvProxy.GetEnv("BUILD_SOURCEVERSION");
+    private string GetAzDevStagingDirectory() => _getEnvProxy.GetEnv("BUILD_STAGINGDIRECTORY");
 
     /// <summary>
     ///     Add a new asset to the list of assets that will be uploaded to BAR
@@ -475,28 +434,24 @@ public class PushMetadataToBuildAssetRegistry : MSBuild.Task, ICancelableTask
 
     internal static (List<PackageArtifactModel>, List<BlobArtifactModel>) GetPackagesAndBlobsInfo(Manifest manifest)
     {
-        var packageArtifacts = new List<PackageArtifactModel>();
-        var blobArtifacts = new List<BlobArtifactModel>();
-
-        foreach (var package in manifest.Packages)
-        {
-            PackageArtifactModel packageArtifact = new()
-            {
-                Attributes = new Dictionary<string, string>
+        List<PackageArtifactModel> packageArtifacts =
+        [
+            ..manifest.Packages.Select(package =>
+                new PackageArtifactModel()
                 {
-                    { NonShippingAttributeName, package.NonShipping.ToString().ToLower() },
-                    { DotNetReleaseShippingAttributeName, package.DotNetReleaseShipping.ToString().ToLower() }
-                },
-                Id = package.Id,
-                Version = package.Version
-            };
+                    Attributes = new Dictionary<string, string>
+                    {
+                        { NonShippingAttributeName, package.NonShipping.ToString().ToLower() },
+                        { DotNetReleaseShippingAttributeName, package.DotNetReleaseShipping.ToString().ToLower() }
+                    },
+                    Id = package.Id,
+                    Version = package.Version
+                })
+        ];
 
-            packageArtifacts.Add(packageArtifact);
-        }
-
-        foreach (var blob in manifest.Blobs)
-        {
-            BlobArtifactModel blobArtifact = new BlobArtifactModel()
+        List<BlobArtifactModel> blobArtifacts =
+        [
+            ..manifest.Blobs.Select(blob => new BlobArtifactModel()
             {
                 Attributes = new Dictionary<string, string>
                 {
@@ -508,10 +463,8 @@ public class PushMetadataToBuildAssetRegistry : MSBuild.Task, ICancelableTask
                     { DotNetReleaseShippingAttributeName, blob.DotNetReleaseShipping.ToString().ToLower() }
                 },
                 Id = blob.Id,
-            };
-
-            blobArtifacts.Add(blobArtifact);
-        }
+            })
+        ];
 
         return (packageArtifacts, blobArtifacts);
 
@@ -581,30 +534,32 @@ public class PushMetadataToBuildAssetRegistry : MSBuild.Task, ICancelableTask
     {
         SigningInformation mergedInfo = null;
 
-        if (signingInformation.Count != 0)
+        if (signingInformation.Count == 0)
         {
-            foreach (SigningInformation signInfo in signingInformation)
-            {
-                if (mergedInfo == null)
-                {
-                    mergedInfo = signInfo;
-                }
-                else
-                {
-                    mergedInfo.FileExtensionSignInfos.AddRange(signInfo.FileExtensionSignInfos);
-                    mergedInfo.FileSignInfos.AddRange(signInfo.FileSignInfos);
-                    mergedInfo.CertificatesSignInfo.AddRange(signInfo.CertificatesSignInfo);
-                    mergedInfo.ItemsToSign.AddRange(signInfo.ItemsToSign);
-                    mergedInfo.StrongNameSignInfos.AddRange(signInfo.StrongNameSignInfos);
-                }
-            }
-
-            mergedInfo.FileExtensionSignInfos = [.. mergedInfo.FileExtensionSignInfos.Distinct(new FileExtensionSignInfoComparer())];
-            mergedInfo.FileSignInfos = [.. mergedInfo.FileSignInfos.Distinct(new FileSignInfoComparer())];
-            mergedInfo.CertificatesSignInfo = [.. mergedInfo.CertificatesSignInfo.Distinct(new CertificatesSignInfoComparer())];
-            mergedInfo.ItemsToSign = [.. mergedInfo.ItemsToSign.Distinct(new ItemsToSignComparer())];
-            mergedInfo.StrongNameSignInfos = [.. mergedInfo.StrongNameSignInfos.Distinct(new StrongNameSignInfoComparer())];
+            return mergedInfo;
         }
+
+        foreach (SigningInformation signInfo in signingInformation)
+        {
+            if (mergedInfo == null)
+            {
+                mergedInfo = signInfo;
+            }
+            else
+            {
+                mergedInfo.FileExtensionSignInfos.AddRange(signInfo.FileExtensionSignInfos);
+                mergedInfo.FileSignInfos.AddRange(signInfo.FileSignInfos);
+                mergedInfo.CertificatesSignInfo.AddRange(signInfo.CertificatesSignInfo);
+                mergedInfo.ItemsToSign.AddRange(signInfo.ItemsToSign);
+                mergedInfo.StrongNameSignInfos.AddRange(signInfo.StrongNameSignInfos);
+            }
+        }
+
+        mergedInfo.FileExtensionSignInfos = [.. mergedInfo.FileExtensionSignInfos.Distinct(new FileExtensionSignInfoComparer())];
+        mergedInfo.FileSignInfos = [.. mergedInfo.FileSignInfos.Distinct(new FileSignInfoComparer())];
+        mergedInfo.CertificatesSignInfo = [.. mergedInfo.CertificatesSignInfo.Distinct(new CertificatesSignInfoComparer())];
+        mergedInfo.ItemsToSign = [.. mergedInfo.ItemsToSign.Distinct(new ItemsToSignComparer())];
+        mergedInfo.StrongNameSignInfos = [.. mergedInfo.StrongNameSignInfos.Distinct(new StrongNameSignInfoComparer())];
 
         return mergedInfo;
     }
@@ -748,7 +703,6 @@ public class PushMetadataToBuildAssetRegistry : MSBuild.Task, ICancelableTask
         var buildModel = new BuildModel(
             new BuildIdentity
             {
-
                 Attributes = new Dictionary<string, string>()
                 {
                     { "InitialAssetsLocation", manifest.InitialAssetsLocation },
