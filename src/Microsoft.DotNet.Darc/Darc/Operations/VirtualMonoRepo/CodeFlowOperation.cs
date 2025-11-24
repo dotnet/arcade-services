@@ -72,6 +72,8 @@ internal abstract class CodeFlowOperation(
 
         await VerifyLocalRepositoriesAsync(productRepo);
 
+        cancellationToken.ThrowIfCancellationRequested();
+
         _logger.LogInformation(
             "Flowing {sourceRepo}'s commit {sourceSha} to {targetRepo} at {targetDirectory}...",
             isForwardFlow ? mappingName : "VMR",
@@ -104,6 +106,8 @@ internal abstract class CodeFlowOperation(
         IReadOnlyList<string> excludedAssets = string.IsNullOrEmpty(_options.ExcludedAssets)
             ? []
             : _options.ExcludedAssets.Split(';').ToList();
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         try
         {

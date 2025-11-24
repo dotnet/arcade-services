@@ -54,6 +54,8 @@ internal class ForwardFlowOperation(
         var build = await GetOrCreateBuildAsync(sourceRepo, _options.Build);
         _vmrInfo.VmrPath = new NativePath(_options.VmrPath);
 
+        cancellationToken.ThrowIfCancellationRequested();
+
         await _cloneManager.RegisterCloneAsync(sourceRepo.Path);
 
         await FlowCodeLocallyAsync(

@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
@@ -10,7 +10,9 @@ public interface ICommentCollector
 {
     void AddComment(string comment, CommentType commentType);
 
-    IReadOnlyList<(string Text, CommentType commentType)> GetComments();
+    (string Text, CommentType commentType)[] GetComments();
+
+    void ClearComments();
 }
 
 public enum CommentType
@@ -22,7 +24,7 @@ public enum CommentType
 
 public class CommentCollector : ICommentCollector
 {
-    private readonly List<(string, CommentType)> _comments = [];
+    private readonly ConcurrentBag<(string, CommentType)> _comments = [];
 
     public void AddComment(string comment, CommentType commentType)
     {
@@ -32,8 +34,13 @@ public class CommentCollector : ICommentCollector
         }
     }
 
-    public IReadOnlyList<(string Text, CommentType commentType)> GetComments()
+    public void ClearComments()
     {
-        return _comments.AsReadOnly();
+        _comments.Clear();
+    }
+
+    public (string Text, CommentType commentType)[] GetComments()
+    {
+        return [.. _comments];
     }
 }

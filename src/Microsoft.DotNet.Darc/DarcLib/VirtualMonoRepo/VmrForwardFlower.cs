@@ -130,7 +130,10 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         ForwardFlow currentFlow = new(build.Commit, lastFlows.LastFlow.VmrSha);
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
-        bool hasChanges;
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // We detect ingested PRs before we flow in case we try to rebase and fail (then we'd still want these)
+        await CommentIncludedPRs(sourceRepo, lastFlows.LastForwardFlow.RepoSha, build.Commit, mapping.DefaultRemote, cancellationToken);
 
         async Task<IReadOnlyCollection<UnixPath>> UpdateVersionFiles() =>
             await _conflictResolver.TryMergingBranch(
@@ -144,6 +147,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 enableRebase,
                 cancellationToken);
 
+        bool hasChanges;
         try
         {
             hasChanges = await FlowCodeAsync(
@@ -172,11 +176,12 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         if (conflictedFiles != null && !forceUpdate && hasChanges && !headBranchExisted)
         {
             hasChanges &= await _codeflowChangeAnalyzer.ForwardFlowHasMeaningfulChangesAsync(mapping.Name, headBranch, targetBranch);
-        }
 
-        if (hasChanges)
-        {
-            await CommentIncludedPRs(sourceRepo, lastFlows.LastForwardFlow.RepoSha, build.Commit, mapping.DefaultRemote, cancellationToken);
+            // If all changes were deemed non-meaningful, we drop all comments
+            if (!hasChanges)
+            {
+                _commentCollector.ClearComments();
+            }
         }
 
         return new CodeFlowResult(
