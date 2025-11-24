@@ -48,7 +48,7 @@ internal abstract class VmrCommandLineOptionsBase<T> : CommandLineOptions<T> whe
         if (tmpPath == null)
         {
             tmpPath = Environment.GetEnvironmentVariable("DARC_TMP_DIR");
-            if (tmpPath != null)
+            if (tmpPath == null)
             {
                 tmpPath = new NativePath(Path.GetTempPath()) / Constants.DefaultDarcClonesDirectoryName;
                 Directory.CreateDirectory(tmpPath);
