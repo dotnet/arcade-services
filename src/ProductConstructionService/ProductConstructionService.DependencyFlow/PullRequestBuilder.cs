@@ -295,7 +295,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
                 endIndex + GetEndMarker(subscription.Id).Length;
 
             var beforeSpan = currentDescription.Substring(0, startCutoff);
-            var afterSpan = currentDescription.Substring(endCutoff, currentDescription.Length - endCutoff);
+            var afterSpan = currentDescription.Substring(endCutoff);
             var generatedDescription = await GenerateCodeFlowDescriptionForSubscription(
                 subscription.Id,
                 previousSourceCommit,
