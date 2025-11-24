@@ -24,8 +24,6 @@ internal abstract class CodeFlowOperation(
         ICodeFlowCommandLineOptions options,
         IVmrForwardFlower forwardFlower,
         IVmrBackFlower backFlower,
-        IBackflowConflictResolver backflowConflictResolver,
-        IForwardFlowConflictResolver forwardFlowConflictResolver,
         IVmrInfo vmrInfo,
         IVmrCloneManager vmrCloneManager,
         IVmrDependencyTracker dependencyTracker,
@@ -39,8 +37,6 @@ internal abstract class CodeFlowOperation(
     private readonly ICodeFlowCommandLineOptions _options = options;
     private readonly IVmrForwardFlower _forwardFlower = forwardFlower;
     private readonly IVmrBackFlower _backFlower = backFlower;
-    private readonly IBackflowConflictResolver _backflowConflictResolver = backflowConflictResolver;
-    private readonly IForwardFlowConflictResolver _forwardFlowConflictResolver = forwardFlowConflictResolver;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly IVmrCloneManager _vmrCloneManager = vmrCloneManager;
     private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
@@ -53,7 +49,6 @@ internal abstract class CodeFlowOperation(
     protected async Task FlowCodeLocallyAsync(
         NativePath repoPath,
         bool isForwardFlow,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         BarBuild build,
         Subscription? subscription,
         CancellationToken cancellationToken)
@@ -69,23 +64,23 @@ internal abstract class CodeFlowOperation(
         ILocalGitRepo sourceRepo = isForwardFlow ? productRepo : vmr;
         ILocalGitRepo targetRepo = isForwardFlow ? vmr : productRepo;
 
-        string mappingName = await GetSourceMappingNameAsync(productRepo.Path);
+        Codeflow currentFlow = isForwardFlow
+            ? new ForwardFlow(_options.Ref ?? build.Commit, await targetRepo.GetShaForRefAsync())
+            : new Backflow(_options.Ref ?? build.Commit, await targetRepo.GetShaForRefAsync());
+
+        string mappingName = await GetSourceMappingNameAsync(productRepo.Path, currentFlow.RepoSha);
 
         await VerifyLocalRepositoriesAsync(productRepo);
 
         _logger.LogInformation(
             "Flowing {sourceRepo}'s commit {sourceSha} to {targetRepo} at {targetDirectory}...",
             isForwardFlow ? mappingName : "VMR",
-            DarcLib.Commit.GetShortSha(_options.Ref ?? build.Commit),
+            DarcLib.Commit.GetShortSha(currentFlow.SourceSha),
             !isForwardFlow ? mappingName : "VMR",
             targetRepo.Path);
 
         // Tell the VMR clone manager about the local VMR
         await _vmrCloneManager.RegisterVmrAsync(_vmrInfo.VmrPath);
-
-        Codeflow currentFlow = isForwardFlow
-            ? new ForwardFlow(_options.Ref ?? build.Commit, await targetRepo.GetShaForRefAsync())
-            : new Backflow(_options.Ref ?? build.Commit, await targetRepo.GetShaForRefAsync());
 
         await _dependencyTracker.RefreshMetadataAsync();
 
@@ -201,6 +196,9 @@ internal abstract class CodeFlowOperation(
         if (buildId == 0)
         {
             _options.Ref = await sourceRepo.GetShaForRefAsync(_options.Ref);
+
+            _logger.LogInformation("Flowing {sha}...", DarcLib.Commit.GetShortSha(_options.Ref));
+
             build = new(-1, DateTimeOffset.Now, 0, false, false, _options.Ref, [], [], [], [])
             {
                 GitHubRepository = sourceRepo.Path,
@@ -213,6 +211,11 @@ internal abstract class CodeFlowOperation(
             try
             {
                 _options.Ref = await sourceRepo.GetShaForRefAsync(build.Commit);
+
+                _logger.LogInformation("Flowing build {buildNumber} ({buildId}) of commit {sha}...",
+                    build.AzureDevOpsBuildNumber,
+                    buildId,
+                    DarcLib.Commit.GetShortSha(_options.Ref));
             }
             catch (ProcessFailedException)
             {
@@ -296,9 +299,9 @@ internal abstract class CodeFlowOperation(
         }
     }
 
-    protected async Task<string> GetSourceMappingNameAsync(NativePath repoPath)
+    protected async Task<string> GetSourceMappingNameAsync(NativePath repoPath, string gitRef)
     {
-        var versionDetails = await _dependencyFileManager.ParseVersionDetailsXmlAsync(repoPath, DarcLib.Constants.HEAD);
+        var versionDetails = await _dependencyFileManager.ParseVersionDetailsXmlAsync(repoPath, gitRef);
 
         if (string.IsNullOrEmpty(versionDetails.Source?.Mapping))
         {

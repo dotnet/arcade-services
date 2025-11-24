@@ -18,8 +18,6 @@ internal class ForwardFlowOperation(
         ForwardFlowCommandLineOptions options,
         IVmrForwardFlower forwardFlower,
         IVmrBackFlower backFlower,
-        IBackflowConflictResolver backflowConflictResolver,
-        IForwardFlowConflictResolver forwardFlowConflictResolver,
         IVmrInfo vmrInfo,
         IVmrCloneManager vmrCloneManager,
         IVmrDependencyTracker dependencyTracker,
@@ -29,7 +27,7 @@ internal class ForwardFlowOperation(
         IFileSystem fileSystem,
         IProcessManager processManager,
         ILogger<ForwardFlowOperation> logger)
-    : CodeFlowOperation(options, forwardFlower, backFlower, backflowConflictResolver, forwardFlowConflictResolver, vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
+    : CodeFlowOperation(options, forwardFlower, backFlower, vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
 {
     private readonly ForwardFlowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
@@ -57,9 +55,8 @@ internal class ForwardFlowOperation(
         await FlowCodeLocallyAsync(
             sourceRepoPath,
             isForwardFlow: true,
-            additionalRemotes,
-            build,
+            build: build,
             subscription: null,
-            cancellationToken);
+            cancellationToken: cancellationToken);
     }
 }
