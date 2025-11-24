@@ -116,7 +116,7 @@ internal class ResetOperation : Operation
         // Determine the target SHA from build or channel option
         if (_options.Build.HasValue)
         {
-            targetSha = await GetShaFromBuildAsync(_options.Build.Value, mappingName, mapping);
+            targetSha = await GetShaFromBuildAsync(_options.Build.Value, mappingName);
         }
         else if (!string.IsNullOrEmpty(_options.Channel))
         {
@@ -199,7 +199,7 @@ internal class ResetOperation : Operation
     /// <summary>
     /// Gets the commit SHA from a BAR build ID and validates that the build's repository matches the mapping.
     /// </summary>
-    private async Task<string> GetShaFromBuildAsync(int buildId, string mappingName, SourceMapping mapping)
+    private async Task<string> GetShaFromBuildAsync(int buildId, string mappingName)
     {
         var build = await _barClient.GetBuildAsync(buildId);
         

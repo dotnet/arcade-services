@@ -289,8 +289,6 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         string vmrComparisonSha)
     {
         bool hasUpdates = false;
-
-        var headBranchDependencies = await GetRepoDependencies(targetRepo, commit: null /* working tree */);
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
         // handle global.json

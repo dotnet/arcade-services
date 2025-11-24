@@ -26,7 +26,6 @@ internal abstract class SubscriptionOperationBase : Operation
     /// Validates that the codeflow subscription doesn't conflict with existing ones
     /// </summary>
     protected async Task ValidateCodeflowSubscriptionConflicts(
-        string sourceRepository,
         string targetRepository,
         string targetBranch,
         string sourceDirectory,

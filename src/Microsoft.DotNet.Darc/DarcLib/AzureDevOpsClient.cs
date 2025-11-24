@@ -1752,7 +1752,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
     public async Task<List<string>> GetPullRequestCommentsAsync(string pullRequestUrl)
     {
-        (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
+        (string accountName, string _, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
 
         _logger.LogInformation("Retrieving comments for pull request {PullRequestUrl}", pullRequestUrl);
 

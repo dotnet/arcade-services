@@ -111,7 +111,7 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
 
             // Remove source mapping
             var sourceMappingsPath = _vmrInfo.VmrPath / VmrInfo.DefaultRelativeSourceMappingsPath;
-            if (await RemoveSourceMappingAsync(mapping.Name, sourceMappingsPath, cancellationToken))
+            if (await RemoveSourceMappingAsync(mapping.Name, sourceMappingsPath))
             {
                 pathsToStage.Add(sourceMappingsPath);
             }
@@ -155,8 +155,7 @@ public class VmrRemover : VmrManagerBase, IVmrRemover
 
     private async Task<bool> RemoveSourceMappingAsync(
         string repoName,
-        LocalPath sourceMappingsPath,
-        CancellationToken cancellationToken)
+        LocalPath sourceMappingsPath)
     {
         // Read the existing source-mappings.json file
         var json = await _fileSystem.ReadAllTextAsync(sourceMappingsPath);

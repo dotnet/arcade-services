@@ -309,11 +309,10 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                 try
                 {
                     await ValidateCodeflowSubscriptionConflicts(
-                        subscriptionToUpdate.SourceRepository, 
-                        subscription.TargetRepository, 
-                        subscription.TargetBranch, 
-                        sourceDirectory, 
-                        targetDirectory, 
+                        subscription.TargetRepository,
+                        subscription.TargetBranch,
+                        sourceDirectory,
+                        targetDirectory,
                         subscription.Id); // existing subscription id for updates
                 }
                 catch (ArgumentException)
