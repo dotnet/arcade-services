@@ -43,7 +43,7 @@ public abstract class EditorPopUp
 
         foreach (string content in contents)
         {
-            if (!content.TrimStart().StartsWith("#") && !string.IsNullOrEmpty(content))
+            if (!content.TrimStart().StartsWith('#') && !string.IsNullOrEmpty(content))
             {
                 values.Add(new Line(content));
             }

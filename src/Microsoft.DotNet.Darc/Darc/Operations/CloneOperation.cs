@@ -423,7 +423,7 @@ internal class CloneOperation : Operation
 
         // commit could actually be a branch or tag, make it filename-safe
         commit = commit.Replace('/', '-').Replace('\\', '-').Replace('?', '-').Replace('*', '-').Replace(':', '-').Replace('|', '-').Replace('"', '-').Replace('<', '-').Replace('>', '-');
-        return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}.{commit}");
+        return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf('/') + 1)}.{commit}");
     }
 
     private static string GetMasterGitDirPath(string gitDirParent, string repoUri)
@@ -438,7 +438,7 @@ internal class CloneOperation : Operation
             repoUri = repoUri.Substring(0, repoUri.Length - ".git".Length);
         }
 
-        return Path.Combine(gitDirParent, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}.git");
+        return Path.Combine(gitDirParent, $"{repoUri.Substring(repoUri.LastIndexOf('/') + 1)}.git");
     }
 
     private static string GetDefaultMasterGitDirPath(string reposFolder, string repoUri)
@@ -448,7 +448,7 @@ internal class CloneOperation : Operation
             repoUri = repoUri.Substring(0, repoUri.Length - ".git".Length);
         }
 
-        return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}", ".git");
+        return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf('/') + 1)}", ".git");
     }
 
     private static string GetMasterGitRepoPath(string reposFolder, string repoUri)
@@ -457,7 +457,7 @@ internal class CloneOperation : Operation
         {
             repoUri = repoUri.Substring(0, repoUri.Length - ".git".Length);
         }
-        return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}");
+        return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf('/') + 1)}");
     }
 
     private static string GetGitDirRedirectString(string gitDir)

@@ -589,7 +589,7 @@ internal class GatherDropOperation : Operation
         // repo uri plus the build number (to disambiguate overlapping builds)
         string releaseOutputDirectory = null;
         var repoUri = build.GetRepository();
-        var lastSlash = repoUri.LastIndexOf("/");
+        var lastSlash = repoUri.LastIndexOf('/');
         if (lastSlash != -1 && lastSlash != repoUri.Length - 1)
         {
             releaseOutputDirectory = Path.Combine(rootOutputDirectory, repoUri.Substring(lastSlash + 1), build.AzureDevOpsBuildNumber);
@@ -1170,7 +1170,7 @@ internal class GatherDropOperation : Operation
             baseUri = baseUri.Substring(0, baseUri.Length - "index.json".Length);
         }
 
-        if (!baseUri.EndsWith("/"))
+        if (!baseUri.EndsWith('/'))
         {
             baseUri += "/";
         }
