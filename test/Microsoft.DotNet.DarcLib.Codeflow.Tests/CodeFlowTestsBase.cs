@@ -251,14 +251,14 @@ internal abstract class CodeFlowTestsBase
         string mappingName,
         NativePath repoPath,
         string branch,
-        ProductConstructionService.Client.Models.Build? buildToFlow = null,
+        Build? buildToFlow = null,
         IReadOnlyCollection<string>? excludedAssets = null,
         bool forceUpdate = true)
     {
         using var scope = ServiceProvider.CreateScope();
         var codeflower = scope.ServiceProvider.GetRequiredService<IVmrForwardFlower>();
         var cloneManager = scope.ServiceProvider.GetRequiredService<IVmrCloneManager>();
-        await cloneManager.RegisterVmrAsync(VmrPath);
+        await cloneManager.RegisterCloneAsync(VmrPath);
 
         var codeFlowResult = await codeflower.FlowForwardAsync(
             mappingName,

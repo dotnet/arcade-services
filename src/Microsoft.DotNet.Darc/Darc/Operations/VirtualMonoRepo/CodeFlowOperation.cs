@@ -80,7 +80,7 @@ internal abstract class CodeFlowOperation(
             targetRepo.Path);
 
         // Tell the VMR clone manager about the local VMR
-        await _vmrCloneManager.RegisterVmrAsync(_vmrInfo.VmrPath);
+        await _vmrCloneManager.RegisterCloneAsync(_vmrInfo.VmrPath);
 
         await _dependencyTracker.RefreshMetadataAsync();
 

@@ -14,7 +14,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public record AdditionalRemote(string Mapping, string RemoteUri);
 
-public interface IRepositoryCloneManager
+public interface IRepositoryCloneManager : ICloneManager
 {
     /// <summary>
     /// Clones a target repo URI into a given directory and checks out a given ref.
@@ -83,11 +83,6 @@ public interface IRepositoryCloneManager
         string checkoutRef,
         bool resetToRemote = false,
         CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Registers a known local location that contains a clone.
-    /// </summary>
-    Task RegisterCloneAsync(NativePath localPath);
 }
 
 /// <summary>
@@ -98,8 +93,6 @@ public interface IRepositoryCloneManager
 /// </summary>
 public class RepositoryCloneManager : CloneManager, IRepositoryCloneManager
 {
-    private readonly ILocalGitClient _localGitRepo;
-
     public RepositoryCloneManager(
         IVmrInfo vmrInfo,
         IGitRepoCloner gitRepoCloner,
@@ -110,25 +103,6 @@ public class RepositoryCloneManager : CloneManager, IRepositoryCloneManager
         ILogger<RepositoryCloneManager> logger)
         : base(vmrInfo, gitRepoCloner, localGitRepo, localGitRepoFactory, telemetryRecorder, fileSystem, logger)
     {
-        _localGitRepo = localGitRepo;
-    }
-
-    public async Task RegisterCloneAsync(NativePath localPath)
-    {
-        var remotes = await _localGitRepo.GetRemotesAsync(localPath);
-        var branch = await _localGitRepo.GetCheckedOutBranchAsync(localPath);
-
-        if (string.IsNullOrEmpty(branch))
-        {
-            throw new DarcException($"The provided path '{localPath}' does not appear to be a git repository.");
-        }
-
-        _clones[localPath] = localPath;
-
-        foreach (var remote in remotes)
-        {
-            _clones[remote.Uri] = localPath;
-        }
     }
 
     public async Task<ILocalGitRepo> PrepareCloneAsync(
