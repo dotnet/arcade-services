@@ -65,7 +65,7 @@ public class CredScanSuppressionsGenerator : ICredScanSuppressionsGenerator
 
         var destPath = _vmrInfo.VmrPath / VmrInfo.CredScanSuppressionsPath;
 
-        CredScanSuppressionFile vmrCredScanSuppressionsFile = new CredScanSuppressionFile();
+        CredScanSuppressionFile vmrCredScanSuppressionsFile = new();
 
         _fileSystem.CreateDirectory(_fileSystem.GetDirectoryName(destPath)
             ?? throw new Exception($"Failed to create {VmrInfo.CredScanSuppressionsFileName} in {destPath}"));

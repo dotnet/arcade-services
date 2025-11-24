@@ -103,7 +103,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
             query = query.Where(sub => sub.TargetDirectory == targetDirectory);
         }
 
-        List<Subscription> results = query.AsEnumerable().Select(sub => new Subscription(sub)).ToList();
+        List<Subscription> results = [.. query.AsEnumerable().Select(sub => new Subscription(sub))];
         return Ok(results);
     }
 

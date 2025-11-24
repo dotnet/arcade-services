@@ -42,7 +42,7 @@ internal static class Program
         // If we're using the 'get-asset' command, we don't want to interfere with the --version parameter it has
         bool useAutoVersion = args.FirstOrDefault() != "get-asset";
 
-        Parser parser = new Parser(settings => { settings.AutoVersion = useAutoVersion; settings.HelpWriter = Console.Error; });
+        Parser parser = new(settings => { settings.AutoVersion = useAutoVersion; settings.HelpWriter = Console.Error; });
 
         return parser.ParseArguments(args, options)
                 .MapResult(

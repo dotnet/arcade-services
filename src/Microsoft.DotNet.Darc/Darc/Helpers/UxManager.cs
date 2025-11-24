@@ -160,7 +160,7 @@ public class UxManager
 
     public static ParsedCommand GetParsedCommand(string command)
     {
-        ParsedCommand parsedCommand = new ParsedCommand();
+        ParsedCommand parsedCommand = new();
 
         // If it's quoted then find the end of the quoted string.
         // If non quoted find a space or the end of the string.

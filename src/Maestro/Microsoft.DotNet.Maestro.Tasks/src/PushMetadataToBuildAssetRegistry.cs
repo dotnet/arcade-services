@@ -268,7 +268,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
             var assets = client.Assets.ListAssetsAsync(name: dep.Name, version: dep.Version,
                 cancellationToken: cancellationToken);
-            List<Asset> matchingAssetsFromSameSha = new List<Asset>();
+            List<Asset> matchingAssetsFromSameSha = [];
 
             // Filter out those assets which do not have matching commits
             await foreach (Asset asset in assets)
@@ -480,7 +480,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
             foreach (var package in manifest.Packages)
             {
-                PackageArtifactModel packageArtifact = new PackageArtifactModel()
+                PackageArtifactModel packageArtifact = new()
                 {
                     Attributes = new Dictionary<string, string>
                     {

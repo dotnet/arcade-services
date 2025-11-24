@@ -337,7 +337,7 @@ internal class GetDependencyGraphOperation : Operation
             await writer.WriteLineAsync("    node [shape=record]");
             foreach (DependencyGraphNode node in graph.Nodes)
             {
-                StringBuilder nodeBuilder = new StringBuilder();
+                StringBuilder nodeBuilder = new();
 
                 // First add the node name
                 nodeBuilder.Append($"    {UxHelpers.CalculateGraphVizNodeName(node)}");

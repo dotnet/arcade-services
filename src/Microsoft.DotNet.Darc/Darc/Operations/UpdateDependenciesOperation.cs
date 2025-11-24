@@ -375,7 +375,7 @@ internal class UpdateDependenciesOperation : Operation
     }
 
     private async Task RunNonCoherencyUpdateForChannel(
-        ConcurrentDictionary<string, Task<ProductConstructionService.Client.Models.Build>> latestBuildTaskDictionary,
+        ConcurrentDictionary<string, Task<Build>> latestBuildTaskDictionary,
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> candidateDependenciesForUpdate,
         List<DependencyDetail> dependenciesToUpdate,
