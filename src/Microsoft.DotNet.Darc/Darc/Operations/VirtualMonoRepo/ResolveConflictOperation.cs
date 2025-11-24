@@ -79,40 +79,46 @@ internal class ResolveConflictOperation(
             pr.HeadBranch,
             cancellationToken);
 
-        await ValidateLocalRepo(subscription, repo.Path);
+        if (!subscription.IsForwardFlow())
+        {
+            await ValidateLocalRepo(subscription, repo.Path, subscription.SourceDirectory);
+        }
 
-        await ExecuteCodeflowAndPrepareCommitMessageAsync(subscription, build, repo, targetGitRepoPath, additionalRemotes, cancellationToken);
+        await ExecuteCodeflowAndPrepareCommitMessageAsync(
+            subscription,
+            build,
+            repo,
+            targetGitRepoPath,
+            additionalRemotes,
+            cancellationToken);
     }
 
-    private async Task ValidateLocalRepo(Subscription subscription, NativePath repoPath)
+    private async Task ValidateLocalRepo(Subscription subscription, NativePath repoPath, string mappingName)
     {
-        var mappingName = subscription.IsForwardFlow()
-            ? subscription.TargetDirectory
-            : subscription.SourceDirectory;
-
         var local = new Local(_options.GetRemoteTokenProvider(), _logger, repoPath);
         var sourceDependency = await local.GetSourceDependencyAsync();
 
         if (string.IsNullOrEmpty(sourceDependency?.Mapping))
         {
-            throw new DarcException("The current working directory does not appear to be a repository managed by darc.");
+            throw new DarcException("The repository at the current working directory does not appear " +
+                "to be part of a VMR (Virtual MonoRepo).");
         }
 
         if (!sourceDependency.Mapping.Equals(mappingName))
         {
-            throw new DarcException("The current working directory does not match the subscription " +
+            throw new DarcException("The current working directory does not match the subscription's " +
                 $"source directory '{subscription.SourceDirectory}'.");
         }
     }
 
     private async Task<Subscription> FetchCodeflowSubscriptionAsync(string subscriptionId)
     {
-        _logger.LogInformation("Fetching subscription {subscriptionId}...", _options.SubscriptionId);
-
         if (string.IsNullOrEmpty(subscriptionId))
         {
             throw new ArgumentException("Please specify a subscription id.");
         }
+
+        _logger.LogInformation("Fetching subscription {subscriptionId}...", _options.SubscriptionId);
 
         var subscription = await _barClient.GetSubscriptionAsync(subscriptionId)
             ?? throw new DarcException($"No subscription found with id `{subscriptionId}`.");
@@ -140,12 +146,8 @@ internal class ResolveConflictOperation(
     {
         _logger.LogInformation("Fetching PR information...");
 
-        TrackedPullRequest pr = await _barClient.GetTrackedPullRequestBySubscriptionIdAsync(subscriptionId);
-
-        if (pr == null)
-        {
-            throw new DarcException($"No open PR found for this subscription");
-        }
+        TrackedPullRequest pr = await _barClient.GetTrackedPullRequestBySubscriptionIdAsync(subscriptionId)
+            ?? throw new DarcException($"No PR was found for this subscription, or the PR is  already closed.");
 
         _logger.LogInformation("Found open PR: {prId}", pr.Url);
 
@@ -263,7 +265,7 @@ internal class ResolveConflictOperation(
 
     private void CreateCommitMessageFile(
         string targetRepoPath,
-        ProductConstructionService.Client.Models.Subscription subscription,
+        Subscription subscription,
         Build build,
         string lastFlownSha,
         IEnumerable<UnixPath> conflictedFiles)
