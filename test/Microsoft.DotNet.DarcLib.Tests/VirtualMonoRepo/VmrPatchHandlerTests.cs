@@ -298,7 +298,7 @@ public class VmrPatchHandlerTests
             cancellationToken: CancellationToken.None);
 
         // Verify diff for the individual repo
-        var expectedArgs = GetExpectedGitDiffArguments(
+        IEnumerable<string> expectedArgs = GetExpectedGitDiffArguments(
             expectedPatchName, Sha1, Sha2, new[] { _submoduleInfo.Path });
 
         _processManager
@@ -390,7 +390,7 @@ public class VmrPatchHandlerTests
             cancellationToken: CancellationToken.None);
 
         // Verify diff for the individual repo
-        var expectedArgs = GetExpectedGitDiffArguments(
+        IEnumerable<string> expectedArgs = GetExpectedGitDiffArguments(
             expectedPatchName, Sha1, Sha2, new[] { _submoduleInfo.Path });
 
         _processManager
@@ -498,7 +498,7 @@ public class VmrPatchHandlerTests
             cancellationToken: CancellationToken.None);
 
         // Verify diff for the individual repo
-        var expectedArgs = GetExpectedGitDiffArguments(
+        IEnumerable<string> expectedArgs = GetExpectedGitDiffArguments(
             expectedPatchName, Sha1, Sha2, new[] { _submoduleInfo.Path });
 
         _processManager
@@ -576,7 +576,7 @@ public class VmrPatchHandlerTests
             cancellationToken: CancellationToken.None);
 
         // Verify diff for the individual repo
-        var expectedArgs = GetExpectedGitDiffArguments(
+        IEnumerable<string> expectedArgs = GetExpectedGitDiffArguments(
             expectedPatchName, Sha1, Sha2, new[] { _submoduleInfo.Path });
 
         _processManager
@@ -655,7 +655,7 @@ public class VmrPatchHandlerTests
             cancellationToken: CancellationToken.None);
 
         // Verify diff for the individual repo
-        var expectedArgs = GetExpectedGitDiffArguments(
+        IEnumerable<string> expectedArgs = GetExpectedGitDiffArguments(
             expectedPatchName, Sha1, Sha2, new[] { _submoduleInfo.Path });
 
         _processManager
@@ -862,7 +862,7 @@ public class VmrPatchHandlerTests
             .Verify(x => x.ExecuteGit(repoDir, expectedArguments, It.IsAny<Dictionary<string, string>?>(), It.IsAny<CancellationToken>()), times ?? Times.Once());
     }
 
-    private static IEnumerable<string> GetExpectedGitDiffArguments(
+    private static List<string> GetExpectedGitDiffArguments(
         string patchPath,
         string Sha1,
         string Sha2,

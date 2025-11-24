@@ -365,7 +365,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
         IReadOnlyList<PullRequestCommit> pullRequestCommits = await GetClient(owner, repo).PullRequest.Commits(owner, repo, id);
 
-        IList<Commit> commits = new List<Commit>(pullRequestCommits.Count);
+        var commits = new List<Commit>(pullRequestCommits.Count);
         foreach (var commit in pullRequestCommits)
         {
             commits.Add(new Commit(commit.Commit.Author.Name,

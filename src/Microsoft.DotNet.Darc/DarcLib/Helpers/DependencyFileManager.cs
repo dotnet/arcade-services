@@ -1082,7 +1082,7 @@ public class DependencyFileManager : IDependencyFileManager
                     {
                         if (!addedPackageVersionElement && propertyNode.Name.EndsWith(VersionDetailsParser.VersionPropsVersionElementSuffix))
                         {
-                            XmlNode newPackageVersionElement = versionProps.CreateElement(
+                            XmlElement newPackageVersionElement = versionProps.CreateElement(
                                 packageVersionElementName,
                                 documentNamespaceUri);
                             newPackageVersionElement.InnerText = dependency.Version;
@@ -1096,7 +1096,7 @@ public class DependencyFileManager : IDependencyFileManager
                         else if (!addedPackageVersionElement && propertyNode.Name.EndsWith(
                                      VersionDetailsParser.VersionPropsAlternateVersionElementSuffix))
                         {
-                            XmlNode newPackageVersionElement = versionProps.CreateElement(
+                            XmlElement newPackageVersionElement = versionProps.CreateElement(
                                 packageVersionAlternateElementName,
                                 documentNamespaceUri);
                             newPackageVersionElement.InnerText = dependency.Version;
@@ -1119,10 +1119,10 @@ public class DependencyFileManager : IDependencyFileManager
             {
                 // If the repository doesn't have any package version element, then
                 // use the non-alternate element name.
-                XmlNode newPackageVersionElement = versionProps.CreateElement(packageVersionElementName, documentNamespaceUri);
+                XmlElement newPackageVersionElement = versionProps.CreateElement(packageVersionElementName, documentNamespaceUri);
                 newPackageVersionElement.InnerText = dependency.Version;
 
-                XmlNode propertyGroupElement = versionProps.CreateElement("PropertyGroup", documentNamespaceUri);
+                XmlElement propertyGroupElement = versionProps.CreateElement("PropertyGroup", documentNamespaceUri);
                 XmlNode propertyGroupCommentElement = versionProps.CreateComment("Package versions");
                 versionProps.DocumentElement.AppendChild(propertyGroupCommentElement);
                 versionProps.DocumentElement.AppendChild(propertyGroupElement);
@@ -1263,7 +1263,7 @@ public class DependencyFileManager : IDependencyFileManager
             {
                 {
                     XmlNode parentNode = packageVersionNode.ParentNode;
-                    XmlNode newPackageVersionElement = versionProps.CreateElement(
+                    XmlElement newPackageVersionElement = versionProps.CreateElement(
                         foundElementName,
                         versionProps.DocumentElement.NamespaceURI);
                     newPackageVersionElement.InnerText = itemToUpdate.Version;

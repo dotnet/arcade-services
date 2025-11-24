@@ -400,7 +400,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
         GitPullRequest pullRequest = await client.GetPullRequestAsync(project, repoName, id, includeCommits: true);
 
-        IList<Commit> commits = new List<Commit>(pullRequest.Commits.Length);
+        var commits = new List<Commit>(pullRequest.Commits.Length);
         foreach (var commit in pullRequest.Commits)
         {
             commits.Add(new Commit(

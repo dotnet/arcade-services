@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -22,18 +23,18 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal class AddBuildToChannelOperation : Operation
 {
-    private static readonly IReadOnlyDictionary<string, (string project, int pipelineId)> BuildPromotionPipelinesForAccount =
+    private static readonly ImmutableDictionary<string, (string project, int pipelineId)> BuildPromotionPipelinesForAccount =
         new Dictionary<string, (string project, int pipelineId)>(StringComparer.OrdinalIgnoreCase)
         {
             { "dnceng", ("internal", 750) },
             { "devdiv", ("devdiv", 12603) }
-        };
+        }.ToImmutableDictionary();
 
     // These channels are unsupported because the Arcade main branch
     // (the branch that has build promotion infra) doesn't have YAML
     // implementation for them. There is usually not a high demand for
     // promoting builds to these channels.
-    private static readonly IReadOnlyDictionary<int, string> UnsupportedChannels = new Dictionary<int, string>
+    private static readonly ImmutableDictionary<int, string> UnsupportedChannels = new Dictionary<int, string>
     {
         { 3, ".NET Core 3 Dev" },
         { 19, ".NET Core 3 Release" },
@@ -49,7 +50,7 @@ internal class AddBuildToChannelOperation : Operation
         { 558, ".NET Core SDK 3.1.2xx" },
         { 559, ".NET Core SDK 3.1.1xx Internal" },
         { 560, ".NET Core SDK 3.1.1xx" }
-    };
+    }.ToImmutableDictionary();
 
     private readonly AddBuildToChannelCommandLineOptions _options;
     private readonly ILogger<AddBuildToChannelOperation> _logger;
