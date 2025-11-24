@@ -14,23 +14,23 @@ using ProductConstructionService.DependencyFlow.Model;
 namespace ProductConstructionService.DependencyFlow.Tests;
 internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
 {
-    protected static string DeprecatedMergePolicyName = "Deprecated";
-    protected static string DeprecatedMergePolicyDisplayName = "Deprecated Merge Policy";
+    protected readonly static string DeprecatedMergePolicyName = "Deprecated";
+    protected readonly static string DeprecatedMergePolicyDisplayName = "Deprecated Merge Policy";
 
-    protected static string AlwaysSucceedMergePolicyName = "AlwaysSucceed";
-    protected static string AlwaysSucceedMergePolicyDisplayName = "Always Succeed Merge Policy";
+    protected readonly static string AlwaysSucceedMergePolicyName = "AlwaysSucceed";
+    protected readonly static string AlwaysSucceedMergePolicyDisplayName = "Always Succeed Merge Policy";
 
-    protected static string AlwaysFailMergePolicyName = "AlwaysFail";
-    protected static string AlwaysFailMergePolicyDisplayName = "Always Fail Merge Policy";
+    protected readonly static string AlwaysFailMergePolicyName = "AlwaysFail";
+    protected readonly static string AlwaysFailMergePolicyDisplayName = "Always Fail Merge Policy";
 
-    protected static MergePolicyEvaluationResult AlwaysSucceedMergePolicyResult = new(
+    protected readonly static MergePolicyEvaluationResult AlwaysSucceedMergePolicyResult = new(
         MergePolicyEvaluationStatus.DecisiveSuccess,
         "check succeeded :)",
         "yay :)",
         AlwaysSucceedMergePolicyName,
         AlwaysSucceedMergePolicyDisplayName);
 
-    protected static MergePolicyEvaluationResult AlwaysFailMergePolicyResult = new(
+    protected readonly static MergePolicyEvaluationResult AlwaysFailMergePolicyResult = new(
         MergePolicyEvaluationStatus.DecisiveFailure,
         "check failed :(",
         "oh no :(",
@@ -38,7 +38,7 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
         AlwaysSucceedMergePolicyDisplayName);
 
 
-    protected static MergePolicyEvaluationResult DeprecatedMergePolicyResult = new(
+    protected readonly static MergePolicyEvaluationResult DeprecatedMergePolicyResult = new(
         MergePolicyEvaluationStatus.DecisiveFailure,
         "N/A",
         "This result should never exist after merge policy evaluation",
