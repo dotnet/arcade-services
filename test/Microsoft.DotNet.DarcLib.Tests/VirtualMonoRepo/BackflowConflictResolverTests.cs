@@ -188,6 +188,7 @@ public class BackflowConflictResolverTests
                 CreateDependency("Package.Also.Excluded.From.Backflow", "1.0.0", LastVmrSha),
                 CreateDependency("Package.Updated.In.Both", "3.0.0", LastVmrSha),
                 CreateDependency("Package.Added.In.VMR", "2.0.0", LastVmrSha),
+                CreateDependency("Package.Added.In.VMR2", "2.0.0", LastVmrSha),
                 CreateDependency("Package.Added.In.Both", "2.2.2", LastVmrSha),
                 repoDependencyAtCurrentFlow,
             ],
@@ -206,6 +207,7 @@ public class BackflowConflictResolverTests
             ("Another.Package.From.Build", "1.0.5"),
             ("Yet.Another.Package.From.Build", "1.0.5"),
             ("Package.Removed.In.Repo", "1.0.5"),
+            ("Package.Added.In.vmr2", "2.1.0"), // newer version than was just added to the VMR, but has a different indentation
             ("Package.Added.In.Repo", "4.0.0") // package was added at some point, but then a newer version was produced in the build
         ]);
 
@@ -227,9 +229,10 @@ public class BackflowConflictResolverTests
             _versionDetails[$"repo/{TargetBranch}"].Dependencies.ToArray(),
             _versionDetails[$"repo/{TargetBranch}"].Source);
 
-        Dictionary<string, DependencyUpdate> expectedAddition = new()
+        Dictionary<string, DependencyUpdate> additions = new()
         {
-            { "Package.Added.In.Repo", new DependencyUpdate() { From = null, To = new DependencyDetail { Name = "Package.Added.In.Repo", Version = "1.0.1" }}}
+            { "Package.Added.In.Repo", new DependencyUpdate() { From = null, To = new DependencyDetail { Name = "Package.Added.In.Repo", Version = "1.0.1" }}},
+            { "Package.Added.In.VMR2", new DependencyUpdate() { From = null, To = new DependencyDetail { Name = "Package.Added.In.VMR2", Version = "2.0.0" }} }
         };
 
         _versionDetailsFileMergerMock.Setup(x => x.MergeVersionDetails(
@@ -244,7 +247,7 @@ public class BackflowConflictResolverTests
                 It.IsAny<string?>()))
             .ReturnsAsync(new VersionFileChanges<DependencyUpdate>(
                 [],
-                expectedAddition,
+                additions,
                 new Dictionary<string, DependencyUpdate>()
                 {
                     // this represents the repo-side update to Version.Details.xml prior to the current codeflow
@@ -271,6 +274,7 @@ public class BackflowConflictResolverTests
                 ("Package.Updated.In.Both", "3.0.0"),
                 ("Package.Added.In.Repo", "4.0.0"),
                 ("Package.Added.In.VMR", "2.0.0"),
+                ("Package.Added.In.VMR2", "2.1.0"),
                 ("Package.Added.In.Both", "2.2.2"),
                 ("Another.Package.From.Build", "1.0.5"),
                 ("Yet.Another.Package.From.Build", "1.0.5"),
@@ -283,6 +287,7 @@ public class BackflowConflictResolverTests
                 new("Another.Package.From.Build", "1.0.1", "1.0.5"),
                 new("Yet.Another.Package.From.Build", "1.0.1", "1.0.5"),
                 new("Package.Added.In.Repo", null, "4.0.0"),
+                new("Package.Added.In.VMR2", null, "2.1.0"),
             ],
             headBranchExisted: false,
             excludedAssets: ["Package.Excluded.From.Backflow", "Package.Also.*"]);
@@ -440,7 +445,9 @@ public class BackflowConflictResolverTests
         // Test the final state of V.D.xml (from the working tree)
         _versionDetails["repo/"].Dependencies
             .Select(x => (x.Name, x.Version))
-            .Should().BeEquivalentTo(expectedDependencies, options => options.WithoutStrictOrdering());
+            .Should().BeEquivalentTo(expectedDependencies, options => options.WithoutStrictOrdering()
+                .Using<string>(ctx => ctx.Subject.Equals(ctx.Expectation, StringComparison.OrdinalIgnoreCase))
+                .WhenTypeIs<string>());
 
         _libGit2Client.Verify(x => x.CommitFilesAsync(It.IsAny<List<GitFile>>(), _repoPath.Path, null, null), Times.AtLeastOnce);
         _localRepo.Verify(x => x.StageAsync(It.IsAny<IEnumerable<string>>(), cancellationToken), Times.AtLeastOnce);

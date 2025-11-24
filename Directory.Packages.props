@@ -101,5 +101,8 @@
     <PackageVersion Include="TextCopy" Version="6.2.1" />
     <PackageVersion Include="Verify.NUnit" Version="25.0.2" />
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />
+
+    <!-- Pinned to clear a CG alert (this package comes via Microsoft.TeamFoundationServer.Client -->
+    <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.0" />
   </ItemGroup>
 </Project>
