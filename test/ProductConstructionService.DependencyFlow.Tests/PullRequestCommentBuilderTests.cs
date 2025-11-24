@@ -18,7 +18,7 @@ public class PullRequestCommentBuilderTests
 {
     private const string FakeOrgName = "orgname";
     private const string FakeRepoName = "reponame";
-    private List<ClientModels.Subscription> _fakeSubscriptions = GenerateFakeSubscriptionModels();
+    private readonly List<ClientModels.Subscription> _fakeSubscriptions = GenerateFakeSubscriptionModels();
 
     private readonly Mock<IRemoteFactory> _remoteFactoryMock = new();
     private readonly Mock<IBasicBarClient> _basicBarClientMock = new();

@@ -14,15 +14,15 @@ public static class GitRepoUtils
 {
     // Regex to extract PR number from a github merge commit message
     // e.g.: "Update dependencies from source-repo (#12345)" extracts "12345"
-    private readonly static Regex GitHubPullRequestNumberExtractionRegex = new Regex(".+\\(#(\\d+)\\)$");
+    private static readonly Regex GitHubPullRequestNumberExtractionRegex = new Regex(".+\\(#(\\d+)\\)$");
 
     // Alternative regex to extract PR number from a github merge commit message
     // e.g.: "Merge pull request #12345 from source-repo/branch" extracts "12345"
-    private readonly static Regex AlternativeGitHubPullRequestNumberExtractionRegex = new Regex("^Merge pull request #(\\d+)");
+    private static readonly Regex AlternativeGitHubPullRequestNumberExtractionRegex = new Regex("^Merge pull request #(\\d+)");
 
     // Regex to extract PR number from an AzDO merge commit message
     // e.g.: "Merged PR 12345: Update dependencies from source-repo" extracts "12345"
-    private readonly static Regex AzDoPullRequestNumberExtractionRegex = new Regex("^Merged PR (\\d+):");
+    private static readonly Regex AzDoPullRequestNumberExtractionRegex = new Regex("^Merged PR (\\d+):");
 
     public static IReadOnlyList<(string title, string prUri)> ExtractPullRequestUrisFromCommitTitles(
         IReadOnlyCollection<string> commitTitles,
