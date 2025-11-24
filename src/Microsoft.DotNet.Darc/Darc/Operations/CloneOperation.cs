@@ -501,11 +501,12 @@ internal class CloneOperation : Operation
         internal static StrippedDependency GetDependency(string repoUrl, string commit)
         {
             StrippedDependency dep;
-            dep = AllDependencies.SingleOrDefault(d => d.RepoUri.ToLowerInvariant() == repoUrl.ToLowerInvariant() && d.Commit.ToLowerInvariant() == commit.ToLowerInvariant());
+            dep = AllDependencies.SingleOrDefault(d => d.RepoUri.Equals(repoUrl, StringComparison.InvariantCultureIgnoreCase)
+                                                    && d.Commit.Equals(commit, StringComparison.InvariantCultureIgnoreCase));
             if (dep == null)
             {
                 dep = new StrippedDependency(repoUrl, commit);
-                foreach (StrippedDependency previousDep in AllDependencies.Where(d => d.RepoUri.ToLowerInvariant() == repoUrl.ToLowerInvariant()).SelectMany(d => d.Dependencies))
+                foreach (StrippedDependency previousDep in AllDependencies.Where(d => d.RepoUri.Equals(repoUrl, StringComparison.InvariantCultureIgnoreCase)).SelectMany(d => d.Dependencies))
                 {
                     dep.AddDependency(previousDep);
                 }
@@ -524,12 +525,12 @@ internal class CloneOperation : Operation
         internal void AddDependency(StrippedDependency dep)
         {
             StrippedDependency other = GetDependency(dep);
-            if (Dependencies.Any(d => d.RepoUri.ToLowerInvariant() == other.RepoUri.ToLowerInvariant()))
+            if (Dependencies.Any(d => d.RepoUri.Equals(other.RepoUri, StringComparison.InvariantCultureIgnoreCase)))
             {
                 return;
             }
             Dependencies.Add(other);
-            foreach (StrippedDependency sameUrl in AllDependencies.Where(d => d.RepoUri.ToLowerInvariant() == RepoUri.ToLowerInvariant()))
+            foreach (StrippedDependency sameUrl in AllDependencies.Where(d => d.RepoUri.Equals(RepoUri, StringComparison.InvariantCultureIgnoreCase)))
             {
                 sameUrl.Dependencies.Add(other);
             }
@@ -551,12 +552,12 @@ internal class CloneOperation : Operation
                     {
                         return false;
                     }
-                    if (dep.RepoUri.ToLowerInvariant() == RepoUri.ToLowerInvariant())
+                    if (dep.RepoUri.Equals(RepoUri, StringComparison.InvariantCultureIgnoreCase))
                     {
                         return false;
                     }
                     dep.Visited = true;
-                    hasDep = hasDep || dep.RepoUri.ToLowerInvariant() == repoUrl.ToLowerInvariant() || dep.HasDependencyOn(repoUrl);
+                    hasDep = hasDep || dep.RepoUri.Equals(repoUrl, StringComparison.InvariantCultureIgnoreCase) || dep.HasDependencyOn(repoUrl);
                     if (hasDep)
                     {
                         break;

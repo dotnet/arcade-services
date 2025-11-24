@@ -1646,7 +1646,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             var entries = treeResponse["treeEntries"].ToObject<JArray>();
             var matchingEntry = entries.FirstOrDefault(e => 
                 e["relativePath"].ToString() == segment && 
-                e["gitObjectType"].ToString().ToLowerInvariant() == "tree");
+                e["gitObjectType"].ToString().Equals("tree", StringComparison.InvariantCultureIgnoreCase));
 
             if (matchingEntry == null)
             {
@@ -1838,7 +1838,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             // Filter and return only folder names (tree objects)
             var entries = treeResponse["treeEntries"].ToObject<JArray>();
             var folderNames = entries
-                .Where(entry => entry["gitObjectType"].ToString().ToLowerInvariant() == "tree")
+                .Where(entry => entry["gitObjectType"].ToString().Equals("tree", StringComparison.InvariantCultureIgnoreCase))
                 .Select(entry => entry["relativePath"].ToString())
                 .ToList();
 
