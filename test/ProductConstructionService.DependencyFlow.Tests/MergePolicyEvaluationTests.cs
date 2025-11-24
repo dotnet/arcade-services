@@ -23,14 +23,14 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
     protected static string AlwaysFailMergePolicyName = "AlwaysFail";
     protected static string AlwaysFailMergePolicyDisplayName = "Always Fail Merge Policy";
 
-    protected static MergePolicyEvaluationResult AlwaysSucceedMergePolicyResult = new MergePolicyEvaluationResult(
+    protected static MergePolicyEvaluationResult AlwaysSucceedMergePolicyResult = new(
         MergePolicyEvaluationStatus.DecisiveSuccess,
         "check succeeded :)",
         "yay :)",
         AlwaysSucceedMergePolicyName,
         AlwaysSucceedMergePolicyDisplayName);
 
-    protected static MergePolicyEvaluationResult AlwaysFailMergePolicyResult = new MergePolicyEvaluationResult(
+    protected static MergePolicyEvaluationResult AlwaysFailMergePolicyResult = new(
         MergePolicyEvaluationStatus.DecisiveFailure,
         "check failed :(",
         "oh no :(",
@@ -38,7 +38,7 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
         AlwaysSucceedMergePolicyDisplayName);
 
 
-    protected static MergePolicyEvaluationResult DeprecatedMergePolicyResult = new MergePolicyEvaluationResult(
+    protected static MergePolicyEvaluationResult DeprecatedMergePolicyResult = new(
         MergePolicyEvaluationStatus.DecisiveFailure,
         "N/A",
         "This result should never exist after merge policy evaluation",

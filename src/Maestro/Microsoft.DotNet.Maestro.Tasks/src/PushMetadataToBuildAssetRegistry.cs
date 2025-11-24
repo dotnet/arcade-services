@@ -47,7 +47,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         private const string SearchPattern = "*.xml";
         private const string MergedManifestFileName = "MergedManifest.xml";
         private const string NoCategory = "NONE";
-        private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
+        private readonly CancellationTokenSource _tokenSource = new();
         private string _gitHubRepository = "";
         private string _gitHubBranch = "";
 

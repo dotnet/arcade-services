@@ -23,8 +23,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     nameof(FileExtensionSignInfo),
                     new XAttribute[]
                     {
-                        new XAttribute(nameof(fileExtensionSignInfo.Include), fileExtensionSignInfo.Include),
-                        new XAttribute(nameof(fileExtensionSignInfo.CertificateName), fileExtensionSignInfo.CertificateName)
+                        new(nameof(fileExtensionSignInfo.Include), fileExtensionSignInfo.Include),
+                        new(nameof(fileExtensionSignInfo.CertificateName), fileExtensionSignInfo.CertificateName)
                     }));
             }
 
@@ -32,8 +32,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
             {
                 var xAttributes = new List<XAttribute>()
                 {
-                    new XAttribute(nameof(fileSignInfo.Include), fileSignInfo.Include),
-                    new XAttribute(nameof(fileSignInfo.CertificateName), fileSignInfo.CertificateName)
+                    new(nameof(fileSignInfo.Include), fileSignInfo.Include),
+                    new(nameof(fileSignInfo.CertificateName), fileSignInfo.CertificateName)
                 };
 
                 if (!string.IsNullOrEmpty(fileSignInfo.PublicKeyToken))
@@ -53,8 +53,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     nameof(CertificatesSignInfo),
                     new XAttribute[]
                     {
-                        new XAttribute(nameof(certificatesSignInfo.Include), certificatesSignInfo.Include),
-                        new XAttribute(nameof(certificatesSignInfo.DualSigningAllowed), certificatesSignInfo.DualSigningAllowed)
+                        new(nameof(certificatesSignInfo.Include), certificatesSignInfo.Include),
+                        new(nameof(certificatesSignInfo.DualSigningAllowed), certificatesSignInfo.DualSigningAllowed)
                     }));
             }
 
@@ -64,7 +64,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     nameof(ItemsToSign),
                     new XAttribute[]
                     {
-                        new XAttribute(nameof(itemsToSign.Include), itemsToSign.Include)
+                        new(nameof(itemsToSign.Include), itemsToSign.Include)
                     }));
             }
 
@@ -74,9 +74,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     nameof(StrongNameSignInfo),
                     new XAttribute[]
                     {
-                        new XAttribute(nameof(strongNameSignInfo.Include), strongNameSignInfo.Include),
-                        new XAttribute(nameof(strongNameSignInfo.PublicKeyToken), strongNameSignInfo.PublicKeyToken),
-                        new XAttribute(nameof(strongNameSignInfo.CertificateName), strongNameSignInfo.CertificateName)
+                        new(nameof(strongNameSignInfo.Include), strongNameSignInfo.Include),
+                        new(nameof(strongNameSignInfo.PublicKeyToken), strongNameSignInfo.PublicKeyToken),
+                        new(nameof(strongNameSignInfo.CertificateName), strongNameSignInfo.CertificateName)
                     }));
             }
             return new XElement(nameof(SigningInformation), signingMetadata);

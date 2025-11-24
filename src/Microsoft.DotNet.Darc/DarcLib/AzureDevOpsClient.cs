@@ -1602,7 +1602,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         {
             var objectType = entry["gitObjectType"].ToString().ToLowerInvariant();
             var sha = entry["objectId"].ToString();
-            var treePath = $"{path}/{entry["relativePath"].ToString()}";
+            var treePath = $"{path}/{entry["relativePath"]}";
 
             if (objectType == "tree")
             {

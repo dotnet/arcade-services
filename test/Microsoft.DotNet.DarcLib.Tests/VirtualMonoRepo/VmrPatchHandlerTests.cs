@@ -52,7 +52,7 @@ public class VmrPatchHandlerTests
     private readonly Mock<IFileSystem> _fileSystem = new();
     private VmrPatchHandler _patchHandler = null!;
 
-    private readonly NativePath _vmrPath = new NativePath("/data/vmr");
+    private readonly NativePath _vmrPath = new("/data/vmr");
     private readonly NativePath _patchDir = TmpDir / "patch";
     private LocalGitRepo _vmrClone = null!;
     private LocalGitRepo _repoClone = null!;

@@ -26,7 +26,7 @@ internal abstract class Operation(
     protected const string SourceManifestPath = $"{VmrInfo.SourceDirName}/{VmrInfo.SourceManifestFileName}";
     protected const string DarcPRBranchPrefix = "darc";
 
-    private static readonly JsonSerializerOptions JsonSerializerOptions = new JsonSerializerOptions
+    private static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {
         AllowTrailingCommas = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
