@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
@@ -132,16 +133,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        async Task<VersionFileUpdateResult> UpdateDependenciesAndVersionFiles() =>
-            await _conflictResolver.TryMergingBranchAndUpdateDependencies(
-                codeflowOptions,
-                lastFlows,
-                targetRepo,
-                codeflowOptions.TargetBranch,
-                headBranchExisted,
-                cancellationToken);
-
-        bool hasChanges;
+        bool hasChanges = false;
+        ExceptionDispatchInfo? rebaseException = null;
 
         try
         {
@@ -152,21 +145,26 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 headBranchExisted,
                 cancellationToken);
         }
-        catch (PatchApplicationLeftConflictsException) when (codeflowOptions.EnableRebase)
+        catch (PatchApplicationLeftConflictsException e) when (codeflowOptions.EnableRebase)
         {
-            // When we are rebasing and ended up with conflicts, we will still update version files
-            await UpdateDependenciesAndVersionFiles();
-            throw;
+            rebaseException = ExceptionDispatchInfo.Capture(e);
         }
 
-        VersionFileUpdateResult mergeResult = await UpdateDependenciesAndVersionFiles();
+        VersionFileUpdateResult mergeResult = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
+            codeflowOptions,
+            lastFlows,
+            targetRepo,
+            codeflowOptions.TargetBranch,
+            headBranchExisted,
+            cancellationToken);
+
+        rebaseException?.Throw();
 
         return new CodeFlowResult(
             hasChanges || mergeResult.DependencyUpdates.Count > 0 || mergeResult.HasToolsetUpdates,
             mergeResult.ConflictedFiles,
             targetRepo.Path,
             mergeResult.DependencyUpdates);
-
     }
 
     protected override async Task<bool> SameDirectionFlowAsync(

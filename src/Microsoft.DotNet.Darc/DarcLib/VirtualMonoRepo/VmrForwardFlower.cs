@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -132,22 +133,12 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         cancellationToken.ThrowIfCancellationRequested();
 
+        ExceptionDispatchInfo? rebaseException = null;
+
         // We detect ingested PRs before we flow in case we try to rebase and fail (then we'd still want these)
         await CommentIncludedPRs(sourceRepo, lastFlows.LastForwardFlow.RepoSha, build.Commit, mapping.DefaultRemote, cancellationToken);
 
-        async Task<IReadOnlyCollection<UnixPath>> UpdateVersionFiles() =>
-            await _conflictResolver.TryMergingBranch(
-                mapping.Name,
-                vmr,
-                sourceRepo,
-                headBranch,
-                targetBranch,
-                currentFlow,
-                lastFlows,
-                enableRebase,
-                cancellationToken);
-
-        bool hasChanges;
+        bool hasChanges = false;
         try
         {
             hasChanges = await FlowCodeAsync(
@@ -157,20 +148,29 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 headBranchExisted,
                 cancellationToken);
         }
-        catch (PatchApplicationLeftConflictsException) when (enableRebase)
+        catch (PatchApplicationLeftConflictsException e) when (enableRebase)
         {
-            // When we are rebasing and ended up with conflicts, we will still update version files
-            await UpdateVersionFiles();
-            throw;
+            rebaseException = ExceptionDispatchInfo.Capture(e);
         }
 
         IReadOnlyCollection<UnixPath>? conflictedFiles = null;
-        if (hasChanges)
+        if (hasChanges || rebaseException != null)
         {
             // We try to merge the target branch so that we can potentially
             // resolve some expected conflicts in the version files
-            conflictedFiles = await UpdateVersionFiles();
+            conflictedFiles = await _conflictResolver.TryMergingBranch(
+                mapping.Name,
+                vmr,
+                sourceRepo,
+                headBranch,
+                targetBranch,
+                currentFlow,
+                lastFlows,
+                enableRebase,
+                cancellationToken);
         }
+
+        rebaseException?.Throw();
 
         // If we don't force the update, we'll set hasChanges to false when the updates are not meaningful
         if (conflictedFiles != null && !forceUpdate && hasChanges && !headBranchExisted)
