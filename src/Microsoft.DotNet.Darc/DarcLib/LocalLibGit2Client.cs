@@ -602,12 +602,8 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
 
                 foreach (var part in pathParts)
                 {
-                    var treeEntry = currentTree.FirstOrDefault(e => e.Name == part);
-
-                    if (treeEntry == null)
-                    {
-                        throw new DirectoryNotFoundException($"Path '{path}' not found in the repository.");
-                    }
+                    var treeEntry = currentTree.FirstOrDefault(e => e.Name == part)
+                        ?? throw new DirectoryNotFoundException($"Path '{path}' not found in the repository.");
 
                     if (treeEntry.TargetType != TreeEntryTargetType.Tree)
                     {

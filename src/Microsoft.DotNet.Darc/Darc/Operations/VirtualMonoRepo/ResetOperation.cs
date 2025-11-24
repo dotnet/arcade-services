@@ -201,12 +201,8 @@ internal class ResetOperation : Operation
     /// </summary>
     private async Task<string> GetShaFromBuildAsync(int buildId, string mappingName)
     {
-        var build = await _barClient.GetBuildAsync(buildId);
-        
-        if (build == null)
-        {
-            throw new DarcException($"Build with ID {buildId} not found in BAR.");
-        }
+        var build = await _barClient.GetBuildAsync(buildId)
+            ?? throw new DarcException($"Build with ID {buildId} not found in BAR.");
 
         // Validate that the build's repository matches the mapping by checking Version.Details.xml
         IRemote remote = await _remoteFactory.CreateRemoteAsync(build.GetRepository());
@@ -238,23 +234,14 @@ internal class ResetOperation : Operation
             mapping.DefaultRemote, channelName);
 
         var channels = await _barClient.GetChannelsAsync();
-        var channel = channels.FirstOrDefault(c => 
-            c.Name.Equals(channelName, StringComparison.OrdinalIgnoreCase));
-
-        if (channel == null)
-        {
-            throw new DarcException($"Channel '{channelName}' not found.");
-        }
+        var channel = channels
+            .FirstOrDefault(c => c.Name.Equals(channelName, StringComparison.OrdinalIgnoreCase))
+            ?? throw new DarcException($"Channel '{channelName}' not found.");
 
         _logger.LogInformation("Found channel '{channel}' (ID: {channelId})", channel.Name, channel.Id);
 
-        var build = await _barClient.GetLatestBuildAsync(mapping.DefaultRemote, channel.Id);
-
-        if (build == null)
-        {
-            throw new DarcException(
-                $"No builds found for repository '{mapping.DefaultRemote}' on channel '{channel.Name}'.");
-        }
+        var build = await _barClient.GetLatestBuildAsync(mapping.DefaultRemote, channel.Id)
+            ?? throw new DarcException($"No builds found for repository '{mapping.DefaultRemote}' on channel '{channel.Name}'.");
 
         _logger.LogInformation(
             "Found latest build on channel '{channel}': Build {buildId} @ {commit}",

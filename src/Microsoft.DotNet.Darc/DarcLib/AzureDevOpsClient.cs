@@ -1644,14 +1644,11 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
             // Find the entry matching the current path segment
             var entries = treeResponse["treeEntries"].ToObject<JArray>();
-            var matchingEntry = entries.FirstOrDefault(e => 
-                e["relativePath"].ToString() == segment && 
-                e["gitObjectType"].ToString().Equals("tree", StringComparison.InvariantCultureIgnoreCase));
-
-            if (matchingEntry == null)
-            {
-                throw new DirectoryNotFoundException($"Path segment '{segment}' not found in tree.");
-            }
+            var matchingEntry = entries
+                .FirstOrDefault(e => 
+                    e["relativePath"].ToString() == segment && 
+                    e["gitObjectType"].ToString().Equals("tree", StringComparison.InvariantCultureIgnoreCase))
+                ?? throw new DirectoryNotFoundException($"Path segment '{segment}' not found in tree.");
 
             currentTreeSha = matchingEntry["objectId"].ToString();
         }
