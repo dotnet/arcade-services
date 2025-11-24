@@ -99,9 +99,11 @@ public class GitFile
                     .SelectMany(q => Directory.GetFiles(q, "*", SearchOption.AllDirectories));
         foreach (var gitFile in gitFiles)
         {
-            var fileInfo = new FileInfo(gitFile);
-            fileInfo.Attributes = FileAttributes.Normal;
-            fileInfo.IsReadOnly = false;
+            var fileInfo = new FileInfo(gitFile)
+            {
+                Attributes = FileAttributes.Normal,
+                IsReadOnly = false
+            };
         }
     }
 }

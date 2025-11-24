@@ -73,8 +73,10 @@ internal class MergePolicyEvaluationTests : PullRequestUpdaterTests
     {
         GivenATestChannel();
 
-        var alwaysFailMergePolicyDefinition = new MergePolicyDefinition();
-        alwaysFailMergePolicyDefinition.Name = AlwaysFailMergePolicyName;
+        var alwaysFailMergePolicyDefinition = new MergePolicyDefinition
+        {
+            Name = AlwaysFailMergePolicyName
+        };
 
         GivenACodeFlowSubscription(
             new SubscriptionPolicy
