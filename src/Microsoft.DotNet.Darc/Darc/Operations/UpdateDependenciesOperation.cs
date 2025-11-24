@@ -190,8 +190,8 @@ internal class UpdateDependenciesOperation : Operation
         // source repository.
         if (!string.IsNullOrEmpty(_options.SourceRepository))
         {
-            candidateDependenciesForUpdate = candidateDependenciesForUpdate.Where(
-                dependency => dependency.RepoUri.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase)).ToList();
+            candidateDependenciesForUpdate = [.. candidateDependenciesForUpdate.Where(
+                dependency => dependency.RepoUri.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase))];
         }
 
         if (candidateDependenciesForUpdate.Count == 0)

@@ -31,7 +31,7 @@ public class BuildData
         {
             Commit = Commit,
             AzureDevOpsBuildNumber = BuildNumber,
-            Assets = Assets.Select(a => a.ToDb()).ToList(),
+            Assets = [.. Assets.Select(a => a.ToDb())],
 
             GitHubRepository = isGitHubInfo ? Repository : null,
             GitHubBranch = isGitHubInfo ? Branch : null,

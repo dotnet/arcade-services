@@ -63,7 +63,7 @@ internal class GetAssetOperation : Operation
 
             // Starting with the remote, get information on the asset name + version
             List<Asset> matchingAssets =
-                (await _barClient.GetAssetsAsync(name: _options.Name, version: _options.Version, buildId: _options.Build)).ToList();
+                [..await _barClient.GetAssetsAsync(name: _options.Name, version: _options.Version, buildId: _options.Build)];
 
             var queryDescription = new StringBuilder();
             queryDescription.Append(_options.Latest ? " latest asset" : " assets");

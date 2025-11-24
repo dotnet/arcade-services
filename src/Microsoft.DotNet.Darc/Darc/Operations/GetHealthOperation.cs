@@ -331,7 +331,7 @@ internal class GetHealthOperation : Operation
         else
         {
             // Look up all channels
-            return channels.Select(c => c.Name).ToHashSet();
+            return [.. channels.Select(c => c.Name)];
         }
     }
 

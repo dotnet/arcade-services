@@ -38,7 +38,7 @@ public interface IProcessManager
         IEnumerable<string> arguments,
         Dictionary<string, string>? envVariables = null,
         CancellationToken cancellationToken = default)
-        => ExecuteGit(repoPath, arguments.ToArray(), envVariables, cancellationToken);
+        => ExecuteGit(repoPath, [.. arguments], envVariables, cancellationToken);
 
     string FindGitRoot(string path);
 

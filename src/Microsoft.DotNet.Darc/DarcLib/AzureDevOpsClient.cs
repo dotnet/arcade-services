@@ -1629,7 +1629,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         string treeSha, 
         string path)
     {
-        var pathSegments = path.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        var pathSegments = path.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries);
         var currentTreeSha = treeSha;
 
         foreach (var segment in pathSegments)

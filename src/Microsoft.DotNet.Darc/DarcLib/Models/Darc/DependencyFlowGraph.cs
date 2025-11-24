@@ -368,7 +368,7 @@ public class DependencyFlowGraph
             }
         }
 
-        return new DependencyFlowGraph(nodes.Select(kv => kv.Value).ToList(), edges);
+        return new DependencyFlowGraph([.. nodes.Select(kv => kv.Value)], edges);
     }
 
     private static DependencyFlowNode GetOrCreateNode(

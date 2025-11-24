@@ -974,7 +974,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             if (coherencyUpdates.Count != 0)
             {
-                repoDependencyUpdates[targetDirectory].CoherencyUpdates = coherencyUpdates.ToList();
+                repoDependencyUpdates[targetDirectory].CoherencyUpdates = [.. coherencyUpdates];
             }
 
             _logger.LogInformation("Finished getting Required Updates for {branch} of {targetRepository} on relative path {relativePath}",
@@ -1120,11 +1120,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             pr.CoherencyCheckSuccessful,
             pr.CoherencyErrors,
             pr.RequiredUpdates,
-            pr.ContainedSubscriptions.Select(su => new SubscriptionUpdateSummary(
-                su.SubscriptionId,
-                su.BuildId,
-                su.SourceRepo,
-                su.CommitSha)).ToList(),
+            pr.ContainedSubscriptions
+                .Select(su => new SubscriptionUpdateSummary(
+                    su.SubscriptionId,
+                    su.BuildId,
+                    su.SourceRepo,
+                    su.CommitSha))
+                .ToList(),
             pr.HeadBranch,
             targetRepo,
             pr.CodeFlowDirection);
@@ -1295,13 +1297,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         pullRequest.RequiredUpdates = MergeExistingWithIncomingUpdates(
             pullRequest.RequiredUpdates,
-            newDependencyUpdates
-                .Select(u => new DependencyUpdateSummary(u))
-                .ToList());
+            [.. newDependencyUpdates.Select(u => new DependencyUpdateSummary(u))]);
 
         var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(
             subscription.TargetBranch,
-            pullRequest.ContainedSubscriptions.Select(s => s.SourceRepo).ToList());
+            [.. pullRequest.ContainedSubscriptions.Select(s => s.SourceRepo)]);
 
         var description = await _pullRequestBuilder.GenerateCodeFlowPRDescription(
             build,

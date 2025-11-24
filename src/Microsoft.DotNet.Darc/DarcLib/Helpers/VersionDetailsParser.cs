@@ -69,7 +69,7 @@ public class VersionDetailsParser : IVersionDetailsParser
                 $"Look for exceptions above.");
 
         List<DependencyDetail> dependencies = ParseDependencyDetails(dependencyNodes);
-        dependencies = includePinned ? dependencies : dependencies.Where(d => !d.Pinned).ToList();
+        dependencies = includePinned ? dependencies : [.. dependencies.Where(d => !d.Pinned)];
 
         // Parse the VMR codeflow if it exists
         SourceDependency? vmrCodeflow = ParseSourceSection(document?.DocumentElement?.SelectSingleNode($"//{SourceElementName}"));

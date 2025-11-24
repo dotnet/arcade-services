@@ -95,8 +95,8 @@ internal class TriggerSubscriptionsOperation : Operation
             }
 
             // Filter away subscriptions that are disabled
-            List<Subscription> disabledSubscriptions = subscriptionsToTrigger.Where(s => !s.Enabled).ToList();
-            subscriptionsToTrigger = subscriptionsToTrigger.Where(s => s.Enabled).ToList();
+            List<Subscription> disabledSubscriptions = [.. subscriptionsToTrigger.Where(s => !s.Enabled)];
+            subscriptionsToTrigger = [.. subscriptionsToTrigger.Where(s => s.Enabled)];
 
             if (disabledSubscriptions.Count != 0)
             {

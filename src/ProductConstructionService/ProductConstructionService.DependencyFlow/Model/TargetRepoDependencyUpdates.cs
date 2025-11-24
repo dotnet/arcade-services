@@ -14,7 +14,6 @@ internal class TargetRepoDependencyUpdates
     public bool CoherencyCheckSuccessful => DirectoryUpdates.Values.All(v => v.CoherencyCheckSuccessful);
 
     public List<CoherencyErrorDetails> GetAgregatedCoherencyErrors()
-        => DirectoryUpdates.Values.SelectMany(update => update.CoherencyErrors ?? [])
-            .ToList();
+        => [.. DirectoryUpdates.Values.SelectMany(update => update.CoherencyErrors ?? [])];
 
 }

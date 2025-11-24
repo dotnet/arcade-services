@@ -97,7 +97,7 @@ public partial class ChannelsController20200220Tests
             var objResult = (ObjectResult)result;
             objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
             objResult.Value.Should().BeAssignableTo<IEnumerable<string>>();
-            repositories = ((IEnumerable<string>)objResult.Value!).ToList();
+            repositories = [.. (IEnumerable<string>)objResult.Value!];
         }
 
         repositories.Should().ContainSingle();

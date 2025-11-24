@@ -597,7 +597,7 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
             // If a path is specified, navigate to that tree
             if (!string.IsNullOrEmpty(path))
             {
-                var pathParts = path.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+                var pathParts = path.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries);
                 var currentTree = rootTree;
 
                 foreach (var part in pathParts)

@@ -66,7 +66,7 @@ public class DependencyFlowNode
             }
 
             // Tooling subscriptions should not be included in longest path calculation
-            edgesOfInterest = edgesOfInterest.Where(e => !e.IsToolingOnly).ToList();
+            edgesOfInterest = [.. edgesOfInterest.Where(e => !e.IsToolingOnly)];
 
             var maxWorstCaseEdgeTime = edgesOfInterest
                 .Select(e => e.To.WorstCasePathTime + e.To.PrBuildTime)

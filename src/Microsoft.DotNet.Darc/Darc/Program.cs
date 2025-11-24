@@ -32,7 +32,7 @@ internal static class Program
         if (args.FirstOrDefault() == "vmr")
         {
             options = GetVmrOptions();
-            args = args.Skip(1).ToArray();
+            args = [.. args.Skip(1)];
         }
         else
         {

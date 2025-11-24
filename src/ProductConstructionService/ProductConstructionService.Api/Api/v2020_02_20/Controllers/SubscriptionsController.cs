@@ -286,7 +286,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         var currentSubscriptions = subscription.ExcludedAssets.Select(a => a.Filter).OrderBy(a => a);
         if (!currentSubscriptions.SequenceEqual(update.ExcludedAssets))
         {
-            subscription.ExcludedAssets = update.ExcludedAssets.Select(asset => new Maestro.Data.Models.AssetFilter() { Filter = asset }).ToList();
+            subscription.ExcludedAssets = [.. update.ExcludedAssets.Select(asset => new Maestro.Data.Models.AssetFilter() { Filter = asset })];
             doUpdate = true;
         }
 

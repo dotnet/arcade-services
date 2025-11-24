@@ -73,7 +73,7 @@ public partial class DefaultChannelsController20200220Tests
             var objResult = (ObjectResult)result;
             objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
             objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
-            listOfInsertedDefaultChannels = ((IEnumerable<DefaultChannel>)objResult.Value!).ToList();
+            listOfInsertedDefaultChannels = [.. ((IEnumerable<DefaultChannel>) objResult.Value!)];
         }
 
         listOfInsertedDefaultChannels.Should().ContainSingle();
@@ -130,7 +130,7 @@ public partial class DefaultChannelsController20200220Tests
             var objResult = (ObjectResult)result;
             objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
             objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
-            defaultChannels = ((IEnumerable<DefaultChannel>)objResult.Value!).ToList();
+            defaultChannels = [.. ((IEnumerable<DefaultChannel>) objResult.Value!)];
         }
 
         defaultChannels.Should().ContainSingle();
@@ -177,7 +177,7 @@ public partial class DefaultChannelsController20200220Tests
                 var objResult = (ObjectResult)result;
                 objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
                 objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
-                defaultChannels = ((IEnumerable<DefaultChannel>)objResult.Value!).ToList();
+                defaultChannels = [.. ((IEnumerable<DefaultChannel>)objResult.Value!)];
             }
             defaultChannels.Should().ContainSingle();
             defaultChannels.Single().Channel.Id.Should().Be(channel.Id);
@@ -192,7 +192,7 @@ public partial class DefaultChannelsController20200220Tests
                 var objResult = (ObjectResult)result;
                 objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
                 objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
-                defaultChannels = ((IEnumerable<DefaultChannel>)objResult.Value!).ToList();
+                defaultChannels = [.. ((IEnumerable<DefaultChannel>)objResult.Value!)];
             }
             defaultChannels.Should().BeEmpty();
         }

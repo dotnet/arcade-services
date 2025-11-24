@@ -53,7 +53,7 @@ public class SqlBarClient : ISqlBarClient
             sub.SourceDirectory,
             sub.TargetDirectory,
             sub.PullRequestFailureNotificationTags,
-            sub.ExcludedAssets.Select(s => s.Filter).ToList());
+            [.. sub.ExcludedAssets.Select(s => s.Filter)]);
     }
 
     public async Task<Subscription> GetSubscriptionAsync(string subscriptionId)
