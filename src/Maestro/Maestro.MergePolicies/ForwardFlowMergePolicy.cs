@@ -28,10 +28,8 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
                 + SeekHelpMsg);
         }
 
-        Dictionary<string, int?> repoNamesToBarIds;
-        Dictionary<string, string> repoNamesToCommitSha;
-        if (!TryCreateBarIdDictionaryFromSourceManifest(sourceManifest, out repoNamesToBarIds) ||
-            !TryCreateCommitShaDictionaryFromSourceManifest(sourceManifest, out repoNamesToCommitSha))
+        if (!TryCreateBarIdDictionaryFromSourceManifest(sourceManifest, out Dictionary<string, int?> repoNamesToBarIds) ||
+            !TryCreateCommitShaDictionaryFromSourceManifest(sourceManifest, out Dictionary<string, string> repoNamesToCommitSha))
         {
             return FailDecisively(
                 "The source manifest file is malformed",
@@ -57,7 +55,7 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
         Dictionary<string, int?> repoNamesToBarIds,
         Dictionary<string, string> repoNamesToCommitSha)
     {
-        List<string> configurationErrors = new();
+        List<string> configurationErrors = [];
         foreach (SubscriptionUpdateSummary PRUpdateSummary in pr.ContainedUpdates)
         {
             if (!repoNamesToBarIds.TryGetValue(PRUpdateSummary.SourceRepo, out int? sourceManifestBarId) || sourceManifestBarId == null)
@@ -98,7 +96,7 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
 
     private static bool TryCreateBarIdDictionaryFromSourceManifest(SourceManifest sourceManifest, out Dictionary<string, int?> repoNamesToBarIds)
     {
-        repoNamesToBarIds = new Dictionary<string, int?>();
+        repoNamesToBarIds = [];
         foreach (var repo in sourceManifest.Repositories)
         {
             if (repoNamesToBarIds.ContainsKey(repo.RemoteUri))
@@ -113,7 +111,7 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
 
     private static bool TryCreateCommitShaDictionaryFromSourceManifest(SourceManifest sourceManifest, out Dictionary<string, string> repoNamesToCommitSha)
     {
-        repoNamesToCommitSha = new Dictionary<string, string>();
+        repoNamesToCommitSha = [];
         foreach (var repo in sourceManifest.Repositories)
         {
             if (repoNamesToCommitSha.ContainsKey(repo.RemoteUri))

@@ -353,7 +353,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 stable: IsStableBuild,
                 released: false)
             {
-                Assets = new List<AssetData>(),
+                Assets = [],
                 AzureDevOpsBuildId = manifest.AzureDevOpsBuildId ?? GetAzDevBuildId(),
                 AzureDevOpsBuildDefinitionId = manifest.AzureDevOpsBuildDefinitionId ?? GetAzDevBuildDefinitionId(),
                 GitHubRepository = manifest.Name,
@@ -467,7 +467,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             {
                 Locations = location == null
                     ? null
-                    : new List<AssetLocationData>() { new AssetLocationData(locationType) { Location = location } },
+                    : [new AssetLocationData(locationType) { Location = location }],
                 Name = assetName,
                 Version = version,
             });
@@ -599,19 +599,11 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     }
                 }
 
-                mergedInfo.FileExtensionSignInfos =
-                    new List<FileExtensionSignInfo>(
-                        mergedInfo.FileExtensionSignInfos.Distinct(new FileExtensionSignInfoComparer()));
-                mergedInfo.FileSignInfos =
-                    new List<FileSignInfo>(mergedInfo.FileSignInfos.Distinct(new FileSignInfoComparer()));
-                mergedInfo.CertificatesSignInfo =
-                    new List<CertificatesSignInfo>(
-                        mergedInfo.CertificatesSignInfo.Distinct(new CertificatesSignInfoComparer()));
-                mergedInfo.ItemsToSign =
-                    new List<ItemsToSign>(mergedInfo.ItemsToSign.Distinct(new ItemsToSignComparer()));
-                mergedInfo.StrongNameSignInfos =
-                    new List<StrongNameSignInfo>(
-                        mergedInfo.StrongNameSignInfos.Distinct(new StrongNameSignInfoComparer()));
+                mergedInfo.FileExtensionSignInfos = [.. mergedInfo.FileExtensionSignInfos.Distinct(new FileExtensionSignInfoComparer())];
+                mergedInfo.FileSignInfos = [.. mergedInfo.FileSignInfos.Distinct(new FileSignInfoComparer())];
+                mergedInfo.CertificatesSignInfo = [.. mergedInfo.CertificatesSignInfo.Distinct(new CertificatesSignInfoComparer())];
+                mergedInfo.ItemsToSign = [.. mergedInfo.ItemsToSign.Distinct(new ItemsToSignComparer())];
+                mergedInfo.StrongNameSignInfos = [.. mergedInfo.StrongNameSignInfos.Distinct(new StrongNameSignInfoComparer())];
             }
 
             return mergedInfo;
