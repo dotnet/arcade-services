@@ -454,20 +454,20 @@ internal class UpdateDependenciesOperation : Operation
         {
             ManifestMetadata manifestMetedata = PackagesHelper.GetManifestMetadata(package);
 
-            if (dependencyVersionMap.ContainsKey(manifestMetedata.Id))
+            if (!dependencyVersionMap.TryGetValue(manifestMetedata.Id, out var oldVersion))
             {
-                string oldVersion = dependencyVersionMap[manifestMetedata.Id];
-
-                Console.WriteLine($"Updating '{manifestMetedata.Id}': '{oldVersion}' => '{manifestMetedata.Version.OriginalVersion}'");
-
-                updatedDependencies.Add(new DependencyDetail
-                {
-                    Commit = manifestMetedata.Repository.Commit,
-                    Name = manifestMetedata.Id,
-                    RepoUri = manifestMetedata.Repository.Url,
-                    Version = manifestMetedata.Version.OriginalVersion,
-                });
+                continue;
             }
+
+            Console.WriteLine($"Updating '{manifestMetedata.Id}': '{oldVersion}' => '{manifestMetedata.Version.OriginalVersion}'");
+
+            updatedDependencies.Add(new DependencyDetail
+            {
+                Commit = manifestMetedata.Repository.Commit,
+                Name = manifestMetedata.Id,
+                RepoUri = manifestMetedata.Repository.Url,
+                Version = manifestMetedata.Version.OriginalVersion,
+            });
         }
 
         return updatedDependencies;

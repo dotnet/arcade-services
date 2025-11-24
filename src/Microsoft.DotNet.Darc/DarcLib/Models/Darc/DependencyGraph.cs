@@ -762,13 +762,13 @@ public class DependencyGraph
         {
             _remotesMapping ??= CreateRemotesMapping(remotesMap);
 
-            if (!_remotesMapping.ContainsKey(repoPath))
+            if (!_remotesMapping.TryGetValue(repoPath, out var value))
             {
                 throw new DarcException($"A key matching '{repoUri}' was not " +
                                         $"found in the mapping. Please make sure to include it...");
             }
 
-            repoPath = _remotesMapping[repoPath];
+            repoPath = value;
         }
         else
         {

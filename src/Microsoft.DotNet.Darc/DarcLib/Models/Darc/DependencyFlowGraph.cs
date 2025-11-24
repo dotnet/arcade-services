@@ -240,9 +240,9 @@ public class DependencyFlowGraph
             while (nodesToVisit.Count > 0)
             {
                 DependencyFlowNode node = nodesToVisit.Dequeue();
-                if (visitedNodes.ContainsKey(node))
+                if (visitedNodes.TryGetValue(node, out HashSet<DependencyFlowNode> value))
                 {
-                    visitedNodes[node].Add(node);
+                    value.Add(node);
                 }
                 else
                 {
@@ -255,9 +255,9 @@ public class DependencyFlowGraph
 
                     if (!visitedNodes[node].Contains(child) && !nodesToVisit.Contains(child))
                     {
-                        if (visitedNodes.ContainsKey(child))
+                        if (visitedNodes.TryGetValue(child, out HashSet<DependencyFlowNode> value1))
                         {
-                            visitedNodes[child].UnionWith(visitedNodes[node]);
+                            value1.UnionWith(visitedNodes[node]);
                         }
                         else
                         {

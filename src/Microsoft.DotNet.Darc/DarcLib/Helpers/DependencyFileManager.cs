@@ -1727,11 +1727,13 @@ public class DependencyFileManager : IDependencyFileManager
                 repoNameFromFeed = unableToResolveName;
             }
 
-            if (!result.ContainsKey(repoNameFromFeed))
+            if (!result.TryGetValue(repoNameFromFeed, out HashSet<string> value))
             {
-                result.Add(repoNameFromFeed, []);
+                value = [];
+                result.Add(repoNameFromFeed, value);
             }
-            result[repoNameFromFeed].Add(feedUri);
+
+            value.Add(feedUri);
         }
         return result;
     }
@@ -1815,12 +1817,13 @@ public class DependencyFileManager : IDependencyFileManager
 
         foreach (var dependency in dependencies)
         {
-            if (!assetLocationMappings.ContainsKey(dependency.Name))
+            if (!assetLocationMappings.TryGetValue(dependency.Name, out HashSet<string> value))
             {
-                assetLocationMappings[dependency.Name] = [];
+                value = [];
+                assetLocationMappings[dependency.Name] = value;
             }
 
-            assetLocationMappings[dependency.Name].UnionWith(dependency.Locations ?? []);
+            value.UnionWith(dependency.Locations ?? []);
         }
 
         return assetLocationMappings;

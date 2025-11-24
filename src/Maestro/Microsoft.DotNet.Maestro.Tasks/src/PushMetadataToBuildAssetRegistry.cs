@@ -243,13 +243,13 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                 var isProduct = dep.Type == DependencyType.Product;
 
-                if (!builds.ContainsKey(buildId.Value))
+                if (!builds.TryGetValue(buildId.Value, out var value))
                 {
                     builds[buildId.Value] = isProduct;
                 }
                 else
                 {
-                    builds[buildId.Value] = isProduct || builds[buildId.Value];
+                    builds[buildId.Value] = isProduct || value;
                 }
             }
 

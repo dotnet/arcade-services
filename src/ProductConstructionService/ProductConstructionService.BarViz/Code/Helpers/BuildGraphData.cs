@@ -90,11 +90,11 @@ public class BuildGraphData
             graphBuilds.Add(build.Id, build);
 
             string repoUrl = build.GetRepoUrl();
-            if (!buildsCoherency.ContainsKey(repoUrl))
+            if (!buildsCoherency.TryGetValue(repoUrl, out Build? value))
             {
                 buildsCoherency.Add(build.GetRepoUrl(), build);
             }
-            else if (buildsCoherency[repoUrl].Commit != build.Commit)
+            else if (value.Commit != build.Commit)
             {
                 buildGridRow.ConflictDependency = true;
             }

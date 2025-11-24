@@ -484,9 +484,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             ..allUpdates
                 .Select(update => new DependencyUpdate()
                 {
-                    From = headBranchDependencyDict.ContainsKey(update.Key)
-                        ? headBranchDependencyDict[update.Key]
-                        : (DependencyDetail)versionDetailsChanges.Additions[update.Key].Value!,
+                    From = headBranchDependencyDict.TryGetValue(update.Key, out DependencyDetail? value)
+                        ? value : (DependencyDetail)versionDetailsChanges.Additions[update.Key].Value!,
                     To = update.Value,
                 })
                 .Where(update =>
