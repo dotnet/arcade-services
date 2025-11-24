@@ -543,7 +543,7 @@ internal class UpdateDependenciesOperation : Operation
             Console.WriteLine($"  Target directory: {subscription.TargetDirectory}");
         }
 
-        if (subscription.ExcludedAssets?.Any() == true)
+        if (subscription.ExcludedAssets?.Count > 0)
         {
             Console.WriteLine($"  Excluded assets: {string.Join(", ", subscription.ExcludedAssets)}");
         }
@@ -571,7 +571,7 @@ internal class UpdateDependenciesOperation : Operation
         _options.TargetDirectory = subscription.TargetDirectory;
 
         // Use subscription's excluded assets only if not provided via command line
-        if (string.IsNullOrEmpty(_options.ExcludedAssets) && subscription.ExcludedAssets?.Any() == true)
+        if (string.IsNullOrEmpty(_options.ExcludedAssets) && subscription.ExcludedAssets?.Count > 0)
         {
             _options.ExcludedAssets = string.Join(";", subscription.ExcludedAssets);
         }

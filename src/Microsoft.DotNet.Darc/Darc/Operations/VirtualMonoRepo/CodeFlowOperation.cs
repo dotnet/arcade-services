@@ -361,7 +361,7 @@ internal abstract class CodeFlowOperation(
         }
 
         // Set excluded assets from subscription if not already set via command line
-        if (string.IsNullOrEmpty(_options.ExcludedAssets) && subscription.ExcludedAssets?.Any() == true)
+        if (string.IsNullOrEmpty(_options.ExcludedAssets) && subscription.ExcludedAssets?.Count > 0)
         {
             _options.ExcludedAssets = string.Join(";", subscription.ExcludedAssets);
             _logger.LogInformation("  Excluded assets: {excludedAssets}", _options.ExcludedAssets);
