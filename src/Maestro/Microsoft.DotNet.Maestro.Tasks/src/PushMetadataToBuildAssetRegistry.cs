@@ -627,10 +627,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         /// <returns></returns>
         private void LookupForMatchingGitHubRepository(Manifest manifest)
         {
-            if (manifest == null)
-            {
-                throw new ArgumentNullException(nameof(manifest));
-            }
+            ArgumentNullException.ThrowIfNull(manifest);
 
             using (var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
             {
