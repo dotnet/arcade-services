@@ -760,7 +760,7 @@ internal class VmrDiffOperation : Operation
                 .GroupBy(f => f.Sha)
                 .ToDictionary(group => group.Key, group => group.ToList());
 
-            ProcessRepoFiles(
+            VmrDiffOperation.ProcessRepoFiles(
                 repoFiles,
                 vmrFiles,
                 directoriesToProcess,
@@ -791,7 +791,7 @@ internal class VmrDiffOperation : Operation
         return sourceMapping.Exclude;
     }
 
-    private void RecordBlobDiff(
+    private static void RecordBlobDiff(
         GitTreeItem sourceFile,
         IReadOnlyList<GitTreeItem> vmrFiles,
         Dictionary<string, string> fileDifferences,
@@ -808,7 +808,7 @@ internal class VmrDiffOperation : Operation
         }
     }
 
-    private void ProcessRepoFiles(
+    private static void ProcessRepoFiles(
         List<GitTreeItem> repoFiles,
         List<GitTreeItem> vmrFiles,
         Queue<string?> directoriesToProcess,
@@ -849,7 +849,7 @@ internal class VmrDiffOperation : Operation
         }
     }
 
-    private void ProcessVmrOnlyFiles(
+    private static void ProcessVmrOnlyFiles(
         Dictionary<string, List<GitTreeItem>> filesOnlyInVmr,
         Dictionary<string, string> fileDifferences,
         Queue<string?> directoriesToProcess,
@@ -870,7 +870,7 @@ internal class VmrDiffOperation : Operation
         }
     }
 
-    private void HandleSubmodule(
+    private static void HandleSubmodule(
         GitTreeItem sourceFile,
         IReadOnlyCollection<ISourceComponent> submodules,
         Dictionary<string, string> fileDifferences,
@@ -894,7 +894,7 @@ internal class VmrDiffOperation : Operation
         }
     }
 
-    private bool TryFindFileInVmrAndUpdateFilesOnlyInVmr(
+    private static bool TryFindFileInVmrAndUpdateFilesOnlyInVmr(
         GitTreeItem sourceFile,
         Dictionary<string, List<GitTreeItem>> filesOnlyInVmr)
     {
@@ -922,7 +922,7 @@ internal class VmrDiffOperation : Operation
         return true;
     }
 
-    private List<GitTreeItem> FilterExcludedFiles(List<GitTreeItem> gitItems, List<Regex> regexes)
+    private static List<GitTreeItem> FilterExcludedFiles(List<GitTreeItem> gitItems, List<Regex> regexes)
         => gitItems.Where(item => !regexes.Any(regex => regex.IsMatch(item.Path))).ToList();
 
     /// <summary>
@@ -930,7 +930,7 @@ internal class VmrDiffOperation : Operation
     /// </summary>
     /// <param name="globPattern">The glob pattern to convert.</param>
     /// <returns>A regex pattern that matches the same files as the glob pattern.</returns>
-    private string ConvertGlobToRegexPattern(string globPattern)
+    private static string ConvertGlobToRegexPattern(string globPattern)
     {
         if (string.IsNullOrWhiteSpace(globPattern))
         {
@@ -958,5 +958,5 @@ internal class VmrDiffOperation : Operation
         return $"^{regexPattern}$";
     }
 
-    private char GetDiffDirection(bool fromRepoDirection) => fromRepoDirection ? '-' : '+';
+    private static char GetDiffDirection(bool fromRepoDirection) => fromRepoDirection ? '-' : '+';
 }

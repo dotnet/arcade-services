@@ -694,5 +694,5 @@ public class DependencyFileManagerTests
             Times.Once);
     }
 
-    private string NormalizeLineEndings(string input) => input.Replace("\r\n", "\n").TrimEnd();
+    private static string NormalizeLineEndings(string input) => input.Replace("\r\n", "\n").TrimEnd();
 }

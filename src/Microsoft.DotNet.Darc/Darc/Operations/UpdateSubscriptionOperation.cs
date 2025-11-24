@@ -397,11 +397,11 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
            || _options.CodeFlowCheckMergePolicy
            || _options.VersionDetailsPropsMergePolicy;
 
-    private IEnumerable<string> GetExistingIgnoreChecks(MergePolicy mergePolicy) => mergePolicy
-                    .Properties
-                    .GetValueOrDefault(MergePolicyConstants.IgnoreChecksMergePolicyPropertyName)?
-                    .ToObject<IEnumerable<string>>()
-                    ?? [];
+    private static IEnumerable<string> GetExistingIgnoreChecks(MergePolicy mergePolicy) => mergePolicy
+        .Properties
+        .GetValueOrDefault(MergePolicyConstants.IgnoreChecksMergePolicyPropertyName)?
+        .ToObject<IEnumerable<string>>()
+        ?? [];
 
     private void AddMergePolicyWithIgnoreChecksIfMissing(List<MergePolicy> mergePolicies, string policy)
     {
