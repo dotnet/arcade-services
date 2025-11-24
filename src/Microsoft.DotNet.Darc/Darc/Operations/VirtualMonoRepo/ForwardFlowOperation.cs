@@ -18,10 +18,9 @@ internal class ForwardFlowOperation(
         ForwardFlowCommandLineOptions options,
         IVmrForwardFlower forwardFlower,
         IVmrBackFlower backFlower,
-        IBackflowConflictResolver backflowConflictResolver,
-        IForwardFlowConflictResolver forwardFlowConflictResolver,
         IVmrInfo vmrInfo,
         IVmrCloneManager vmrCloneManager,
+        IRepositoryCloneManager cloneManager,
         IVmrDependencyTracker dependencyTracker,
         IDependencyFileManager dependencyFileManager,
         ILocalGitRepoFactory localGitRepoFactory,
@@ -29,10 +28,11 @@ internal class ForwardFlowOperation(
         IFileSystem fileSystem,
         IProcessManager processManager,
         ILogger<ForwardFlowOperation> logger)
-    : CodeFlowOperation(options, forwardFlower, backFlower, backflowConflictResolver, forwardFlowConflictResolver, vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
+    : CodeFlowOperation(options, forwardFlower, backFlower, vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
 {
     private readonly ForwardFlowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
+    private readonly IRepositoryCloneManager _cloneManager = cloneManager;
     private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
     private readonly IProcessManager _processManager = processManager;
 
@@ -54,12 +54,13 @@ internal class ForwardFlowOperation(
         var build = await GetOrCreateBuildAsync(sourceRepo, _options.Build);
         _vmrInfo.VmrPath = new NativePath(_options.VmrPath);
 
+        await _cloneManager.RegisterCloneAsync(sourceRepo.Path);
+
         await FlowCodeLocallyAsync(
             sourceRepoPath,
             isForwardFlow: true,
-            additionalRemotes,
-            build,
+            build: build,
             subscription: null,
-            cancellationToken);
+            cancellationToken: cancellationToken);
     }
 }

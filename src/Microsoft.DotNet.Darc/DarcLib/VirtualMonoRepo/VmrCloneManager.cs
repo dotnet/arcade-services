@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public interface IVmrCloneManager
+public interface IVmrCloneManager : ICloneManager
 {
     /// <summary>
     /// Prepares the local VMR clone by fetching from given remotes one-by-one until all requested commits are available.
@@ -39,11 +39,6 @@ public interface IVmrCloneManager
         string checkoutRef,
         bool resetToRemote = false,
         CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Registers a known local location that contains a VMR clone.
-    /// </summary>
-    Task RegisterVmrAsync(NativePath localPath);
 }
 
 public class VmrCloneManager : CloneManager, IVmrCloneManager
@@ -126,24 +121,6 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
         await _dependencyTracker.RefreshMetadataAsync();
 
         return vmr;
-    }
-
-    public async Task RegisterVmrAsync(NativePath localPath)
-    {
-        var remotes = await _localGitRepo.GetRemotesAsync(localPath);
-        var branch = await _localGitRepo.GetCheckedOutBranchAsync(localPath);
-
-        if (string.IsNullOrEmpty(branch))
-        {
-            throw new DarcException($"The provided path '{localPath}' does not appear to be a git repository.");
-        }
-
-        _clones[localPath] = localPath; 
-
-        foreach (var remote in remotes)
-        {
-            _clones[remote.Uri] = localPath;
-        }
     }
 
     // When we initialize with a single static VMR,

@@ -1028,7 +1028,7 @@ public class DependencyFileManager : IDependencyFileManager
         await GetGitClient(repo).CommitFilesAsync(updatedGitFiles, repo, branch, $"Add {dependency} to " +
             $"'{VersionFiles.VersionDetailsXml}'");
 
-        _logger.LogInformation(
+        _logger.LogDebug(
             $"Dependency '{dependency.Name}' with version '{dependency.Version}' successfully added to " +
             $"'{VersionFiles.VersionDetailsXml}'");
     }
@@ -1137,7 +1137,7 @@ public class DependencyFileManager : IDependencyFileManager
         await GetGitClient(repo).CommitFilesAsync([file], repo, branch, $"Add {dependency} to " +
             $"'{VersionFiles.VersionsProps}'");
 
-        _logger.LogInformation(
+        _logger.LogDebug(
             $"Dependency '{dependency.Name}' with version '{dependency.Version}' successfully added to " +
             $"'{VersionFiles.VersionsProps}'");
     }
@@ -1179,7 +1179,7 @@ public class DependencyFileManager : IDependencyFileManager
             branch,
             $"Add {dependency.Name} to '{VersionFiles.GlobalJson}'");
 
-        _logger.LogInformation("Dependency '{name}' with version '{version}' added to " + VersionFiles.GlobalJson, dependency.Name, dependency.Version);
+        _logger.LogDebug("Dependency '{name}' with version '{version}' added to " + VersionFiles.GlobalJson, dependency.Name, dependency.Version);
     }
 
     public static XmlDocument GetXmlDocument(string fileContent)

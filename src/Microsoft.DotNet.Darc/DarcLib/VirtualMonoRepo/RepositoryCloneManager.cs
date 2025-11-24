@@ -14,7 +14,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public record AdditionalRemote(string Mapping, string RemoteUri);
 
-public interface IRepositoryCloneManager
+public interface IRepositoryCloneManager : ICloneManager
 {
     /// <summary>
     /// Clones a target repo URI into a given directory and checks out a given ref.
