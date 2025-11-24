@@ -70,7 +70,7 @@ internal class ResolveConflictOperation(
 
         var pr = await FetchTrackedPrAsync(subscription.Id);
 
-        var build = await FetchLastAppliedBuildAsync(pr);
+        var build = await FetchPrLastAppliedBuildAsync(pr);
 
         (var _, var repo) = await CloneReposAndFetchBranchesAsync(
             subscription,
@@ -131,7 +131,7 @@ internal class ResolveConflictOperation(
         return subscription;
     }
 
-    private async Task<Build> FetchLastAppliedBuildAsync(TrackedPullRequest pr)
+    private async Task<Build> FetchPrLastAppliedBuildAsync(TrackedPullRequest pr)
     {
         _logger.LogInformation("Fetching build to apply...");
 
