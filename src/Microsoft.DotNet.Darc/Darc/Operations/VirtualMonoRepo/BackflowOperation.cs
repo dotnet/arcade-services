@@ -40,7 +40,6 @@ internal class BackflowOperation(
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        
         if (string.IsNullOrEmpty(targetDirectory))
         {
             throw new DarcException("Please specify path to a local repository to flow to");
