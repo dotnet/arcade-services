@@ -312,7 +312,7 @@ internal class UpdateDependenciesOperation : Operation
         IReadOnlyList<DependencyDetail> candidateDependenciesForUpdate,
         List<DependencyDetail> dependenciesToUpdate)
     {
-        DependencyDetail dependency = candidateDependenciesForUpdate.First();
+        DependencyDetail dependency = candidateDependenciesForUpdate[0];
         dependency.Version = _options.Version;
         dependenciesToUpdate.Add(dependency);
 
