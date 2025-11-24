@@ -61,7 +61,7 @@ public class CredScanSuppressionsGenerator : ICredScanSuppressionsGenerator
     /// </summary>
     public async Task UpdateCredScanSuppressions(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Updating {credscansuppressions}...", VmrInfo.CredScanSuppressionsPath);
+        _logger.LogDebug("Updating {credscansuppressions}...", VmrInfo.CredScanSuppressionsPath);
 
         var destPath = _vmrInfo.VmrPath / VmrInfo.CredScanSuppressionsPath;
 
