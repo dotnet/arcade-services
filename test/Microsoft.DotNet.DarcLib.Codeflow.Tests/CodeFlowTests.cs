@@ -128,7 +128,12 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
 
         var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);
         CheckFileContents(_productRepoVmrFilePath, newContent);
-        await GitOperations.CheckAllIsCommitted(VmrPath);
+
+        if (!enableRebase)
+        {
+            await GitOperations.CheckAllIsCommitted(VmrPath);
+        }
+
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
         await GitOperations.Checkout(ProductRepoPath, "main");
         return codeFlowResult;
@@ -141,6 +146,14 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
         await GitOperations.CommitAll(VmrPath, $"Changing a VMR file to '{newContent}'");
 
         var codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);
+
+        if (!enableRebase)
+        {
+            await GitOperations.CheckAllIsCommitted(ProductRepoPath);
+        }
+
+        await GitOperations.CheckAllIsCommitted(VmrPath);
+
         CheckFileContents(_productRepoFilePath, newContent);
         return codeFlowResult;
     }
