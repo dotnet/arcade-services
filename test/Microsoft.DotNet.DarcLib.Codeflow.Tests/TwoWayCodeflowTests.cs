@@ -236,7 +236,9 @@ internal class TwoWayCodeflowTests : CodeFlowTests
           │                     │
      */
     [Test]
-    public async Task ForwardFlowConflictWithPreviousFlowAutoResolutionTest()
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task ForwardFlowConflictWithPreviousFlowAutoResolutionTest(bool enableRebase)
     {
         await EnsureTestRepoIsInitialized();
 
@@ -244,7 +246,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         const string forwardBranchName = nameof(ForwardFlowConflictResolutionTest) + "-ff";
 
         // 0. Prepare repo and VMR
-        await ChangeRepoFileAndFlowIt("AAA", forwardBranchName + "-first");
+        await ChangeRepoFileAndFlowIt("AAA", forwardBranchName + "-first", enableRebase);
         await GitOperations.MergePrBranch(VmrPath, forwardBranchName + "-first");
 
         // 1. Change a different file in VMR
@@ -257,7 +259,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         codeFlowResult.ShouldHaveUpdates();
 
         // 3-4. Change the file in the repo again
-        codeFlowResult = await ChangeRepoFileAndFlowIt("BBB", forwardBranchName + "-second");
+        codeFlowResult = await ChangeRepoFileAndFlowIt("BBB", forwardBranchName + "-second", enableRebase);
         codeFlowResult.ShouldHaveUpdates();
 
         // 5. Merge the backflow PR
@@ -267,7 +269,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.MergePrBranch(VmrPath, forwardBranchName + "-second");
 
         // 7-8. Update the file again in the repo
-        codeFlowResult = await ChangeRepoFileAndFlowIt("CCC", forwardBranchName + "-third");
+        codeFlowResult = await ChangeRepoFileAndFlowIt("CCC", forwardBranchName + "-third", enableRebase);
 
         // 9. Merge the forward flow PR - any conflicts are dealt with automatically
         await GitOperations.MergePrBranch(VmrPath, forwardBranchName + "-third");

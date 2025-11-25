@@ -120,7 +120,7 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
             })
             .ToList();
 
-    protected async Task<CodeFlowResult> ChangeRepoFileAndFlowIt(string newContent, string branchName)
+    protected async Task<CodeFlowResult> ChangeRepoFileAndFlowIt(string newContent, string branchName, bool enableRebase = false)
     {
         await GitOperations.Checkout(ProductRepoPath, "main");
         await File.WriteAllTextAsync(_productRepoFilePath, newContent);
