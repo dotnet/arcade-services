@@ -44,6 +44,8 @@ public class RepositoryBranch
         set => PolicyString = value == null ? null : JsonConvert.SerializeObject(value);
     }
 
+    public Namespace Namespace { get; set; }
+
     public class Policy
     {
         public List<MergePolicyDefinition> MergePolicies { get; set; }

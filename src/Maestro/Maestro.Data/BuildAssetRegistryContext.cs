@@ -64,6 +64,7 @@ public class BuildAssetRegistryContext(DbContextOptions options)
     public DbSet<DependencyFlowEvent> DependencyFlowEvents { get; set; }
     public DbSet<GoalTime> GoalTime { get; set; }
     public DbSet<LongestBuildPath> LongestBuildPaths { get; set; }
+    public DbSet<Namespace> Namespaces { get; set; }
 
     public virtual IQueryable<RepositoryBranchUpdateHistoryEntry> RepositoryBranchUpdateHistory => RepositoryBranchUpdates
         .TemporalAll()
@@ -258,6 +259,31 @@ public class BuildAssetRegistryContext(DbContextOptions options)
             .HasOne(gt => gt.Channel)
             .WithMany()
             .HasForeignKey(gt => gt.ChannelId);
+
+        builder.Entity<Namespace>()
+            .HasKey(n => n.Id);
+
+        builder.Entity<Namespace>()
+            .HasIndex(n => n.Name)
+            .IsUnique();
+
+        // Configure Subscription -> Namespace relationship
+        builder.Entity<Subscription>()
+            .HasOne(s => s.Namespace)
+            .WithMany()
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Configure Channel -> Namespace relationship
+        builder.Entity<Channel>()
+            .HasOne(c => c.Namespace)
+            .WithMany()
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // Configure RepositoryBranch -> Namespace relationship
+        builder.Entity<RepositoryBranch>()
+            .HasOne(rb => rb.Namespace)
+            .WithMany()
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasDbFunction(() => JsonExtensions.JsonValue("", ""))
             .HasTranslation(args => new SqlFunctionExpression(

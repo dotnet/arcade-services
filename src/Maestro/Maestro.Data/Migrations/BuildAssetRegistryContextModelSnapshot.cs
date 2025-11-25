@@ -17,10 +17,10 @@ namespace Maestro.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "6.0.36")
+                .HasAnnotation("ProductVersion", "10.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder, 1L, 1);
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
             modelBuilder.Entity("Maestro.Data.ApplicationUser", b =>
                 {
@@ -28,7 +28,7 @@ namespace Maestro.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
@@ -102,7 +102,7 @@ namespace Maestro.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("ApplicationUserId")
                         .HasColumnType("int");
@@ -122,7 +122,7 @@ namespace Maestro.Data.Migrations
                         .IsUnique()
                         .HasFilter("[Name] IS NOT NULL");
 
-                    b.ToTable("AspNetUserPersonalAccessTokens");
+                    b.ToTable("AspNetUserPersonalAccessTokens", (string)null);
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.Asset", b =>
@@ -131,7 +131,7 @@ namespace Maestro.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("BuildId")
                         .HasColumnType("int");
@@ -153,7 +153,7 @@ namespace Maestro.Data.Migrations
 
                     b.HasIndex("Name", "Version");
 
-                    b.ToTable("Assets");
+                    b.ToTable("Assets", (string)null);
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.AssetFilter", b =>
@@ -162,7 +162,7 @@ namespace Maestro.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Filter")
                         .HasColumnType("nvarchar(max)");
@@ -174,7 +174,7 @@ namespace Maestro.Data.Migrations
 
                     b.HasIndex("SubscriptionId");
 
-                    b.ToTable("AssetFilters");
+                    b.ToTable("AssetFilters", (string)null);
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.AssetLocation", b =>
@@ -183,7 +183,7 @@ namespace Maestro.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int?>("AssetId")
                         .HasColumnType("int");
@@ -198,7 +198,7 @@ namespace Maestro.Data.Migrations
 
                     b.HasIndex("AssetId");
 
-                    b.ToTable("AssetLocations");
+                    b.ToTable("AssetLocations", (string)null);
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.Build", b =>
@@ -207,7 +207,7 @@ namespace Maestro.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("AzureDevOpsAccount")
                         .HasColumnType("nvarchar(max)");
@@ -250,7 +250,25 @@ namespace Maestro.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Builds");
+                    b.ToTable("Builds", (string)null);
+                });
+
+            modelBuilder.Entity("Maestro.Data.Models.BuildChannel", b =>
+                {
+                    b.Property<int>("BuildId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ChannelId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("DateTimeAdded")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("BuildId", "ChannelId");
+
+                    b.HasIndex("ChannelId");
+
+                    b.ToTable("BuildChannels", (string)null);
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.BuildDependency", b =>
@@ -271,25 +289,7 @@ namespace Maestro.Data.Migrations
 
                     b.HasIndex("DependentBuildId");
 
-                    b.ToTable("BuildDependencies");
-                });
-
-            modelBuilder.Entity("Maestro.Data.Models.BuildChannel", b =>
-                {
-                    b.Property<int>("BuildId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ChannelId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTimeOffset>("DateTimeAdded")
-                        .HasColumnType("datetimeoffset");
-
-                    b.HasKey("BuildId", "ChannelId");
-
-                    b.HasIndex("ChannelId");
-
-                    b.ToTable("BuildChannels");
+                    b.ToTable("BuildDependencies", (string)null);
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.BuildIncoherence", b =>
@@ -298,7 +298,7 @@ namespace Maestro.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int?>("BuildId")
                         .HasColumnType("int");
@@ -319,7 +319,31 @@ namespace Maestro.Data.Migrations
 
                     b.HasIndex("BuildId");
 
-                    b.ToTable("BuildIncoherencies");
+                    b.ToTable("BuildIncoherencies", (string)null);
+                });
+
+            modelBuilder.Entity("Maestro.Data.Models.Channel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Classification")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Channels", (string)null);
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.DefaultChannel", b =>
@@ -328,7 +352,7 @@ namespace Maestro.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Branch")
                         .IsRequired()
@@ -353,7 +377,7 @@ namespace Maestro.Data.Migrations
                     b.HasIndex("Repository", "Branch", "ChannelId")
                         .IsUnique();
 
-                    b.ToTable("DefaultChannels");
+                    b.ToTable("DefaultChannels", (string)null);
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.DependencyFlowEvent", b =>
@@ -362,7 +386,7 @@ namespace Maestro.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<int>("BuildId")
                         .HasColumnType("int");
@@ -397,7 +421,7 @@ namespace Maestro.Data.Migrations
 
                     b.HasIndex("BuildId");
 
-                    b.ToTable("DependencyFlowEvents");
+                    b.ToTable("DependencyFlowEvents", (string)null);
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.GoalTime", b =>
@@ -415,31 +439,7 @@ namespace Maestro.Data.Migrations
 
                     b.HasIndex("ChannelId");
 
-                    b.ToTable("GoalTime");
-                });
-
-            modelBuilder.Entity("Maestro.Data.Models.Channel", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
-
-                    b.Property<string>("Classification")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("Channels");
+                    b.ToTable("GoalTime", (string)null);
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.LongestBuildPath", b =>
@@ -448,7 +448,7 @@ namespace Maestro.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<double>("BestCaseTimeInMinutes")
                         .HasColumnType("float");
@@ -469,7 +469,7 @@ namespace Maestro.Data.Migrations
 
                     b.HasIndex("ChannelId");
 
-                    b.ToTable("LongestBuildPaths");
+                    b.ToTable("LongestBuildPaths", (string)null);
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.Repository", b =>
@@ -483,7 +483,7 @@ namespace Maestro.Data.Migrations
 
                     b.HasKey("RepositoryName");
 
-                    b.ToTable("Repositories");
+                    b.ToTable("Repositories", (string)null);
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.RepositoryBranch", b =>
@@ -502,7 +502,7 @@ namespace Maestro.Data.Migrations
 
                     b.HasKey("RepositoryName", "BranchName");
 
-                    b.ToTable("RepositoryBranches");
+                    b.ToTable("RepositoryBranches", (string)null);
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.RepositoryBranchUpdate", b =>
@@ -542,19 +542,18 @@ namespace Maestro.Data.Migrations
 
                     b.HasKey("RepositoryName", "BranchName");
 
-                    b.ToTable("RepositoryBranchUpdates");
+                    b.ToTable("RepositoryBranchUpdates", (string)null);
 
                     b.ToTable(tb => tb.IsTemporal(ttb =>
-                        {
-                            ttb.UseHistoryTable("RepositoryBranchUpdateHistory");
-                            ttb
-                                .HasPeriodStart("SysStartTime")
-                                .HasColumnName("SysStartTime");
-                            ttb
-                                .HasPeriodEnd("SysEndTime")
-                                .HasColumnName("SysEndTime");
-                        }
-                    ));
+                            {
+                                ttb.UseHistoryTable("RepositoryBranchUpdateHistory");
+                                ttb
+                                    .HasPeriodStart("SysStartTime")
+                                    .HasColumnName("SysStartTime");
+                                ttb
+                                    .HasPeriodEnd("SysEndTime")
+                                    .HasColumnName("SysEndTime");
+                            }));
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.RepositoryBranchUpdateHistory", b =>
@@ -645,7 +644,7 @@ namespace Maestro.Data.Migrations
 
                     b.HasIndex("LastAppliedBuildId");
 
-                    b.ToTable("Subscriptions");
+                    b.ToTable("Subscriptions", (string)null);
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.SubscriptionUpdate", b =>
@@ -680,19 +679,18 @@ namespace Maestro.Data.Migrations
 
                     b.HasKey("SubscriptionId");
 
-                    b.ToTable("SubscriptionUpdates");
+                    b.ToTable("SubscriptionUpdates", (string)null);
 
                     b.ToTable(tb => tb.IsTemporal(ttb =>
-                        {
-                            ttb.UseHistoryTable("SubscriptionUpdateHistory");
-                            ttb
-                                .HasPeriodStart("SysStartTime")
-                                .HasColumnName("SysStartTime");
-                            ttb
-                                .HasPeriodEnd("SysEndTime")
-                                .HasColumnName("SysEndTime");
-                        }
-                    ));
+                            {
+                                ttb.UseHistoryTable("SubscriptionUpdateHistory");
+                                ttb
+                                    .HasPeriodStart("SysStartTime")
+                                    .HasColumnName("SysStartTime");
+                                ttb
+                                    .HasPeriodEnd("SysEndTime")
+                                    .HasColumnName("SysEndTime");
+                            }));
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.SubscriptionUpdateHistory", b =>
@@ -736,7 +734,7 @@ namespace Maestro.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -766,7 +764,7 @@ namespace Maestro.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ClaimType")
                         .HasColumnType("nvarchar(max)");
@@ -790,7 +788,7 @@ namespace Maestro.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ClaimType")
                         .HasColumnType("nvarchar(max)");
@@ -897,25 +895,6 @@ namespace Maestro.Data.Migrations
                         .HasForeignKey("AssetId");
                 });
 
-            modelBuilder.Entity("Maestro.Data.Models.BuildDependency", b =>
-                {
-                    b.HasOne("Maestro.Data.Models.Build", "Build")
-                        .WithMany()
-                        .HasForeignKey("BuildId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Maestro.Data.Models.Build", "DependentBuild")
-                        .WithMany()
-                        .HasForeignKey("DependentBuildId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Build");
-
-                    b.Navigation("DependentBuild");
-                });
-
             modelBuilder.Entity("Maestro.Data.Models.BuildChannel", b =>
                 {
                     b.HasOne("Maestro.Data.Models.Build", "Build")
@@ -933,6 +912,25 @@ namespace Maestro.Data.Migrations
                     b.Navigation("Build");
 
                     b.Navigation("Channel");
+                });
+
+            modelBuilder.Entity("Maestro.Data.Models.BuildDependency", b =>
+                {
+                    b.HasOne("Maestro.Data.Models.Build", "Build")
+                        .WithMany()
+                        .HasForeignKey("BuildId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Maestro.Data.Models.Build", "DependentBuild")
+                        .WithMany()
+                        .HasForeignKey("DependentBuildId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Build");
+
+                    b.Navigation("DependentBuild");
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.BuildIncoherence", b =>
