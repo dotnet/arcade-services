@@ -135,9 +135,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         ExceptionDispatchInfo? rebaseException = null;
 
-        // We detect ingested PRs before we flow in case we try to rebase and fail (then we'd still want these)
-        await CommentIncludedPRs(sourceRepo, lastFlows.LastForwardFlow.RepoSha, build.Commit, mapping.DefaultRemote, cancellationToken);
-
         bool hasChanges = false;
         try
         {
@@ -151,10 +148,11 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         catch (PatchApplicationLeftConflictsException e) when (enableRebase)
         {
             rebaseException = ExceptionDispatchInfo.Capture(e);
+            hasChanges = true;
         }
 
         IReadOnlyCollection<UnixPath>? conflictedFiles = null;
-        if (hasChanges || rebaseException != null)
+        if (hasChanges)
         {
             // We try to merge the target branch so that we can potentially
             // resolve some expected conflicts in the version files
@@ -168,6 +166,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 lastFlows,
                 enableRebase,
                 cancellationToken);
+
+            await CommentIncludedPRs(sourceRepo, lastFlows.LastForwardFlow.RepoSha, build.Commit, mapping.DefaultRemote, cancellationToken);
         }
 
         rebaseException?.Throw();
@@ -176,12 +176,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         if (conflictedFiles != null && !forceUpdate && hasChanges && !headBranchExisted)
         {
             hasChanges &= await _codeflowChangeAnalyzer.ForwardFlowHasMeaningfulChangesAsync(mapping.Name, headBranch, targetBranch);
-
-            // If all changes were deemed non-meaningful, we drop all comments
-            if (!hasChanges)
-            {
-                _commentCollector.ClearComments();
-            }
         }
 
         return new CodeFlowResult(

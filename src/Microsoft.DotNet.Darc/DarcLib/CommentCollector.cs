@@ -11,8 +11,6 @@ public interface ICommentCollector
     void AddComment(string comment, CommentType commentType);
 
     (string Text, CommentType commentType)[] GetComments();
-
-    void ClearComments();
 }
 
 public enum CommentType
@@ -32,11 +30,6 @@ public class CommentCollector : ICommentCollector
         {
             _comments.Add((comment, commentType));
         }
-    }
-
-    public void ClearComments()
-    {
-        _comments.Clear();
     }
 
     public (string Text, CommentType commentType)[] GetComments()
