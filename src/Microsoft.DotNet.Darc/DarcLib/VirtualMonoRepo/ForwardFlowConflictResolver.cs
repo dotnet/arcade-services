@@ -112,28 +112,23 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             ? await vmr.GetConflictedFilesAsync(cancellationToken)
             : await TryMergingBranch(vmr, codeflowOptions.HeadBranch, branchToMerge, cancellationToken);
 
-        if (conflictedFiles.Count != 0 && await TryResolvingConflicts(codeflowOptions, vmr, sourceRepo, conflictedFiles, lastFlows.CrossingFlow, cancellationToken))
+        if (conflictedFiles.Count != 0
+            && await TryResolvingConflicts(codeflowOptions, vmr, sourceRepo, conflictedFiles, lastFlows.CrossingFlow, cancellationToken)
+            && !codeflowOptions.EnableRebase)
         {
-            _logger.LogInformation("Successfully resolved file conflicts between branches {headBranch} and {headBranch}",
-                branchToMerge,
-                codeflowOptions.HeadBranch);
-
-            if (!codeflowOptions.EnableRebase)
+            try
             {
-                try
-                {
-                    conflictedFiles = [];
-                    await vmr.CommitAsync(
-                        $"Merge branch {branchToMerge} into {codeflowOptions.HeadBranch}",
-                        allowEmpty: true,
-                        cancellationToken: CancellationToken.None);
-                }
-                catch (Exception e) when (e.Message.Contains("Your branch is ahead of"))
-                {
-                    // There was no reason to merge, we're fast-forward ahead from the target branch
-                }
+                conflictedFiles = [];
+                await vmr.CommitAsync(
+                    $"Merge branch {branchToMerge} into {codeflowOptions.HeadBranch}",
+                    allowEmpty: true,
+                    cancellationToken: CancellationToken.None);
             }
-        }     
+            catch (Exception e) when (e.Message.Contains("Your branch is ahead of"))
+            {
+                // There was no reason to merge, we're fast-forward ahead from the target branch
+            }
+        }
 
         try
         {
@@ -209,7 +204,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             return false;
         }
 
-        _logger.LogInformation("Successfully auto-resolved {count} conflicts", count);
+        _logger.LogInformation("Successfully auto-resolved {count} expected conflicts", count);
 
         return true;
     }
@@ -250,7 +245,8 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         // We load the source manifest from the target branch and replace the
         // current mapping (and its submodules) with our branches' information
         var result = await vmr.RunGitCommandAsync(
-            ["show", (enableRebase ? "REBASE_HEAD:" : "MERGE_HEAD:") + VmrInfo.DefaultRelativeSourceManifestPath],
+            // Rebase vs merge direction (ours/theirs)
+            ["show", (enableRebase ? ":3:" : ":2:") + VmrInfo.DefaultRelativeSourceManifestPath],
             cancellationToken);
 
         var theirSourceManifest = SourceManifest.FromJson(result.StandardOutput);
