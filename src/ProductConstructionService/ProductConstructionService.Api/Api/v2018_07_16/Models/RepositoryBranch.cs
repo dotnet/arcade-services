@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
+using ProductConstructionService.Api.Api.v2020_02_20.Models;
 
 #nullable disable
 namespace ProductConstructionService.Api.v2018_07_16.Models;
@@ -14,11 +15,13 @@ public class RepositoryBranch : IValidatableObject
         Repository = other.RepositoryName;
         Branch = other.BranchName;
         MergePolicies = (other.PolicyObject?.MergePolicies ?? []).Select(p => new MergePolicy(p)).ToImmutableList();
+        Namespace = new(other.Namespace);
     }
 
     public string Repository { get; set; }
     public string Branch { get; set; }
     public ImmutableList<MergePolicy> MergePolicies { get; set; }
+    public Namespace Namespace { get; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

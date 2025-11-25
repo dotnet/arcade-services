@@ -20,14 +20,7 @@ public class BuildAssetRegistryContextFactory : IDesignTimeDbContextFactory<Buil
 {
     public BuildAssetRegistryContext CreateDbContext(string[] args)
     {
-        var connectionString = GetConnectionString("BuildAssetRegistry");
-
-        var envVarConnectionString = Environment.GetEnvironmentVariable("BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING");
-        if (!string.IsNullOrEmpty(envVarConnectionString))
-        {
-            Console.WriteLine("Using Connection String from environment.");
-            connectionString = envVarConnectionString;
-        }
+        var connectionString = GetConnectionString();
 
         DbContextOptions options = new DbContextOptionsBuilder()
             .UseSqlServerWithRetry(connectionString, opts =>
@@ -39,9 +32,17 @@ public class BuildAssetRegistryContextFactory : IDesignTimeDbContextFactory<Buil
         return new BuildAssetRegistryContext(options);
     }
 
-    public static string GetConnectionString(string databaseName)
+    public static string GetConnectionString()
     {
-        return $@"Data Source=localhost\SQLEXPRESS;Initial Catalog={databaseName};Integrated Security=true;Encrypt=false"; // CodeQL [SM03452] This 'connection string' is only for the local SQLExpress instance and has no credentials, Encrypt=false for .NET 8+ compatibility
+        var connectionString =  @"Data Source=localhost\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Integrated Security=true;Encrypt=false"; // CodeQL [SM03452] This 'connection string' is only for the local SQLExpress instance and has no credentials, Encrypt=false for .NET 8+ compatibility
+        var envVarConnectionString = Environment.GetEnvironmentVariable("BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING");
+        if (!string.IsNullOrEmpty(envVarConnectionString))
+        {
+            Console.WriteLine("Using Connection String from environment.");
+            connectionString = envVarConnectionString;
+        }
+
+        return connectionString;
     }
 }
 
@@ -267,22 +268,24 @@ public class BuildAssetRegistryContext(DbContextOptions options)
             .HasIndex(n => n.Name)
             .IsUnique();
 
-        // Configure Subscription -> Namespace relationship
         builder.Entity<Subscription>()
             .HasOne(s => s.Namespace)
-            .WithMany()
+            .WithMany(n => n.Subscriptions)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Configure Channel -> Namespace relationship
         builder.Entity<Channel>()
             .HasOne(c => c.Namespace)
-            .WithMany()
+            .WithMany(n => n.Channels)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Configure RepositoryBranch -> Namespace relationship
         builder.Entity<RepositoryBranch>()
             .HasOne(rb => rb.Namespace)
-            .WithMany()
+            .WithMany(n => n.RepositoryBranches)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<DefaultChannel>()
+            .HasOne(dc => dc.Namespace)
+            .WithMany(n => n.DefaultChannels)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasDbFunction(() => JsonExtensions.JsonValue("", ""))

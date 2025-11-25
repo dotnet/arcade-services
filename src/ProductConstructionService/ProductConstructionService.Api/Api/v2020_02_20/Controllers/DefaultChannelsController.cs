@@ -10,9 +10,9 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
-
-using Channel = Maestro.Data.Models.Channel;
+using Microsoft.Extensions.Options;
 using ProductConstructionService.Api.v2020_02_20.Models;
+using Channel = Maestro.Data.Models.Channel;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
@@ -24,14 +24,17 @@ namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannelsController
 {
     private readonly BuildAssetRegistryContext _context;
+    private readonly IOptions<EnvironmentNamespaceOptions> _environmentNamespaceOptions;
+
     // Branch names can't possibly start with -, so we'll use this fact to guarantee the user 
     // wants to use a regex, and not direct matching.
     private const string RegexBranchPrefix = "-regex:";
 
-    public DefaultChannelsController(BuildAssetRegistryContext context)
+    public DefaultChannelsController(BuildAssetRegistryContext context, IOptions<EnvironmentNamespaceOptions> environmentNamespaceOptions)
         : base(context)
     {
         _context = context;
+        _environmentNamespaceOptions = environmentNamespaceOptions;
     }
 
     /// <summary>
@@ -128,12 +131,14 @@ public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannels
         }
         else
         {
+            var defaultNamespace = await _context.Namespaces.SingleOrDefaultAsync(n => n.Name == _environmentNamespaceOptions.Value.DefaultNamespaceName);
             defaultChannel = new Maestro.Data.Models.DefaultChannel
             {
                 Channel = channel,
                 Repository = data.Repository,
                 Branch = data.Branch,
-                Enabled = data.Enabled ?? true
+                Enabled = data.Enabled ?? true,
+                Namespace = defaultNamespace
             };
             await _context.DefaultChannels.AddAsync(defaultChannel);
             await _context.SaveChangesAsync();

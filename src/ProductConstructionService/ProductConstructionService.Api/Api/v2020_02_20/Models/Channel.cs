@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.ComponentModel.DataAnnotations;
+using ProductConstructionService.Api.Api.v2020_02_20.Models;
 
 #nullable disable
 namespace ProductConstructionService.Api.v2020_02_20.Models;
@@ -15,6 +16,7 @@ public class Channel
         Id = other.Id;
         Name = other.Name;
         Classification = other.Classification;
+        Namespace = new(other.Namespace);
     }
 
     public int Id { get; }
@@ -24,4 +26,6 @@ public class Channel
 
     [Required]
     public string Classification { get; }
+
+    public Namespace Namespace { get; }
 }
