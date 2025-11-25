@@ -12,6 +12,7 @@ internal class FeatureFlagListByFlagOperation : IOperation
     private readonly FeatureFlagListByFlagOptions _options;
     private readonly IProductConstructionServiceApi _client;
     private readonly ILogger<FeatureFlagListByFlagOperation> _logger;
+    private readonly SubscriptionDescriptionHelper _subscriptionHelper;
 
     public FeatureFlagListByFlagOperation(
         FeatureFlagListByFlagOptions options,
@@ -21,6 +22,7 @@ internal class FeatureFlagListByFlagOperation : IOperation
         _options = options;
         _client = client;
         _logger = logger;
+        _subscriptionHelper = new SubscriptionDescriptionHelper(client);
     }
 
     public async Task<int> RunAsync()
@@ -41,7 +43,7 @@ internal class FeatureFlagListByFlagOperation : IOperation
 
             foreach (var flag in response.Flags.OrderBy(f => f.SubscriptionId))
             {
-                var subscriptionDescription = await SubscriptionDescriptionHelper.GetSubscriptionDescriptionAsync(_client, flag.SubscriptionId);
+                var subscriptionDescription = await _subscriptionHelper.GetSubscriptionDescriptionAsync(flag.SubscriptionId);
                 _logger.LogInformation("  {SubscriptionDescription}", subscriptionDescription);
                 _logger.LogInformation("    Value: {Value}", flag.Value);
                 

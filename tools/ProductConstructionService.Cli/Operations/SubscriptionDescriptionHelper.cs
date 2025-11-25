@@ -8,27 +8,44 @@ namespace ProductConstructionService.Cli.Operations;
 
 /// <summary>
 /// Helper class for generating human-readable subscription descriptions.
+/// Caches subscription lookups to avoid redundant API calls.
 /// </summary>
-internal static class SubscriptionDescriptionHelper
+internal class SubscriptionDescriptionHelper
 {
+    private readonly IProductConstructionServiceApi _client;
+    private readonly Dictionary<Guid, string> _cache = [];
+
+    public SubscriptionDescriptionHelper(IProductConstructionServiceApi client)
+    {
+        _client = client;
+    }
+
     /// <summary>
     /// Gets a human-readable description of a subscription by its ID.
     /// If the subscription cannot be fetched, returns just the subscription ID.
+    /// Results are cached to avoid redundant API calls.
     /// </summary>
-    public static async Task<string> GetSubscriptionDescriptionAsync(
-        IProductConstructionServiceApi client,
-        Guid subscriptionId)
+    public async Task<string> GetSubscriptionDescriptionAsync(Guid subscriptionId)
     {
+        if (_cache.TryGetValue(subscriptionId, out var cachedDescription))
+        {
+            return cachedDescription;
+        }
+
+        string description;
         try
         {
-            var subscription = await client.Subscriptions.GetSubscriptionAsync(subscriptionId);
-            return GetSubscriptionDescription(subscription);
+            var subscription = await _client.Subscriptions.GetSubscriptionAsync(subscriptionId);
+            description = GetSubscriptionDescription(subscription);
         }
         catch (RestApiException)
         {
             // If we can't fetch the subscription (e.g., it was deleted), fall back to just the ID
-            return subscriptionId.ToString();
+            description = subscriptionId.ToString();
         }
+
+        _cache[subscriptionId] = description;
+        return description;
     }
 
     /// <summary>
@@ -37,6 +54,8 @@ internal static class SubscriptionDescriptionHelper
     /// </summary>
     public static string GetSubscriptionDescription(Subscription subscription)
     {
+        ArgumentNullException.ThrowIfNull(subscription);
+        
         var channelName = subscription.Channel?.Name ?? "unknown channel";
         return $"{subscription.SourceRepository} ({channelName}) → {subscription.TargetRepository} ({subscription.TargetBranch})";
     }

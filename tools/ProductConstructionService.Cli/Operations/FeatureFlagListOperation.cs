@@ -12,6 +12,7 @@ internal class FeatureFlagListOperation : IOperation
     private readonly FeatureFlagListOptions _options;
     private readonly IProductConstructionServiceApi _client;
     private readonly ILogger<FeatureFlagListOperation> _logger;
+    private readonly SubscriptionDescriptionHelper _subscriptionHelper;
 
     public FeatureFlagListOperation(
         FeatureFlagListOptions options,
@@ -21,6 +22,7 @@ internal class FeatureFlagListOperation : IOperation
         _options = options;
         _client = client;
         _logger = logger;
+        _subscriptionHelper = new SubscriptionDescriptionHelper(client);
     }
 
     public async Task<int> RunAsync()
@@ -62,7 +64,7 @@ internal class FeatureFlagListOperation : IOperation
             return (flowControl: false, value: 1);
         }
 
-        var subscriptionDescription = await SubscriptionDescriptionHelper.GetSubscriptionDescriptionAsync(_client, subscriptionId);
+        var subscriptionDescription = await _subscriptionHelper.GetSubscriptionDescriptionAsync(subscriptionId);
         Console.WriteLine("Listing feature flags for subscription {0}", subscriptionDescription);
 
         var response = await _client.FeatureFlags.GetFeatureFlagsAsync(subscriptionId);
@@ -104,7 +106,7 @@ internal class FeatureFlagListOperation : IOperation
 
         foreach (var group in groupedFlags)
         {
-            var subscriptionDescription = await SubscriptionDescriptionHelper.GetSubscriptionDescriptionAsync(_client, group.Key);
+            var subscriptionDescription = await _subscriptionHelper.GetSubscriptionDescriptionAsync(group.Key);
             Console.WriteLine("{0}:", subscriptionDescription);
 
             foreach (var flag in group.OrderBy(f => f.FlagName))
