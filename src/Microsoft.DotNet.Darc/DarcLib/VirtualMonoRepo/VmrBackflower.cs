@@ -148,6 +148,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         catch (PatchApplicationLeftConflictsException e) when (codeflowOptions.EnableRebase)
         {
             rebaseException = ExceptionDispatchInfo.Capture(e);
+            hasChanges = true;
         }
 
         VersionFileUpdateResult mergeResult = await _conflictResolver.TryMergingBranchAndUpdateDependencies(

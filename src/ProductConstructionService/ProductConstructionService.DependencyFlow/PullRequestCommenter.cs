@@ -49,7 +49,7 @@ internal class PullRequestCommenter : IPullRequestCommenter
         IEnumerable<(string oldValue, string newValue)> replacements)
     {
         var comments = _commentService.GetComments();
-        if (comments.Count == 0)
+        if (comments.Length == 0)
         {
             _logger.LogDebug("No collected comments to post to PR {prUrl}", prUrl);
             return;
