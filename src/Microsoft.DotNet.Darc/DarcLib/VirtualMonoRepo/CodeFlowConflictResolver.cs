@@ -148,7 +148,7 @@ public abstract class CodeFlowConflictResolver
                 removePatchAfter: true,
                 keepConflicts: false,
                 cancellationToken: cancellationToken);
-            _logger.LogDebug("Successfully auto-resolved a conflict in {filePath}", conflictedFile);
+            _logger.LogInformation("Successfully auto-resolved a conflict in {filePath}", conflictedFile);
 
             if (codeflowOptions.EnableRebase)
             {

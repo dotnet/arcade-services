@@ -323,12 +323,6 @@ internal abstract class CodeFlowOperation(
     /// </summary>
     private async Task PopulateOptionsFromSubscriptionAsync()
     {
-        // Validate that subscription is not used with conflicting options
-        if (!string.IsNullOrEmpty(_options.Ref))
-        {
-            throw new DarcException("The --subscription parameter cannot be used with --ref. The subscription determines which commit to flow.");
-        }
-
         // Parse and validate subscription ID
         if (!Guid.TryParse(_options.SubscriptionId, out Guid subscriptionId))
         {
