@@ -64,6 +64,7 @@ internal class ResolveConflictOperation(
     {
         NativePath targetGitRepoPath = new(_processManager.FindGitRoot(Directory.GetCurrentDirectory()));
 
+        _logger.LogInformation("Fetching subscription {subscriptionId}...", _options.SubscriptionId);
         var subscription = await FetchCodeflowSubscriptionAsync(_options.SubscriptionId);
 
         var pr = await FetchTrackedPrAsync(subscription.Id);
@@ -198,6 +199,8 @@ internal class ResolveConflictOperation(
                 build.GetRepository(),
                 build.Commit,
                 cancellationToken: cancellationToken);
+
+            _logger.LogInformation("Cloned {repoName} into {path}", subscription.TargetDirectory, repo.Path);
         }
         else
         {
@@ -219,6 +222,8 @@ internal class ResolveConflictOperation(
                 build.Commit,
                 resetToRemote: false,
                 cancellationToken);
+
+            _logger.LogInformation("Cloned the VMR into {path}", vmr.Path);
         }
 
         _vmrInfo.VmrPath = vmr.Path;

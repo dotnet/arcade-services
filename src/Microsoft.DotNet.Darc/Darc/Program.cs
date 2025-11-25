@@ -61,7 +61,7 @@ internal static class Program
 
                         foreach (var comment in comments)
                         {
-                            switch (comment.commentType)
+                            switch (comment.Type)
                             {
                                 case CommentType.Caution:
                                 case CommentType.Warning:
