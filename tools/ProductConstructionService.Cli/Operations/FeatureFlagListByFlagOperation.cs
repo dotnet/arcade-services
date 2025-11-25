@@ -51,8 +51,6 @@ internal class FeatureFlagListByFlagOperation : IOperation
                 {
                     _logger.LogInformation("    Created: {CreatedAt:yyyy-MM-dd HH:mm:ss} UTC", flag.CreatedAt.Value);
                 }
-
-                _logger.LogInformation("");
             }
 
             _logger.LogInformation("Total: {Total} subscriptions have this flag set", response.Total);
