@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.DotNet.ProductConstructionService.Client;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Cli.Options;
 
@@ -42,7 +41,7 @@ internal class FeatureFlagListByFlagOperation : IOperation
 
             foreach (var flag in response.Flags.OrderBy(f => f.SubscriptionId))
             {
-                var subscriptionDescription = await GetSubscriptionDescriptionAsync(flag.SubscriptionId);
+                var subscriptionDescription = await SubscriptionDescriptionHelper.GetSubscriptionDescriptionAsync(_client, flag.SubscriptionId);
                 _logger.LogInformation("  {SubscriptionDescription}", subscriptionDescription);
                 _logger.LogInformation("    Value: {Value}", flag.Value);
                 
@@ -63,25 +62,5 @@ internal class FeatureFlagListByFlagOperation : IOperation
             _logger.LogError("✗ Error: {Message}", ex.Message);
             return 1;
         }
-    }
-
-    private async Task<string> GetSubscriptionDescriptionAsync(Guid subscriptionId)
-    {
-        try
-        {
-            var subscription = await _client.Subscriptions.GetSubscriptionAsync(subscriptionId);
-            return GetSubscriptionDescription(subscription);
-        }
-        catch (Exception)
-        {
-            // If we can't fetch the subscription, fall back to just the ID
-            return subscriptionId.ToString();
-        }
-    }
-
-    private static string GetSubscriptionDescription(Subscription subscription)
-    {
-        var channelName = subscription.Channel?.Name ?? "unknown channel";
-        return $"{subscription.SourceRepository} ({channelName}) → {subscription.TargetRepository} ({subscription.TargetBranch})";
     }
 }

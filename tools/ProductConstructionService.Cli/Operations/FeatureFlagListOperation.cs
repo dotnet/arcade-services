@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.DotNet.ProductConstructionService.Client;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Cli.Options;
 
@@ -63,7 +62,7 @@ internal class FeatureFlagListOperation : IOperation
             return (flowControl: false, value: 1);
         }
 
-        var subscriptionDescription = await GetSubscriptionDescriptionAsync(subscriptionId);
+        var subscriptionDescription = await SubscriptionDescriptionHelper.GetSubscriptionDescriptionAsync(_client, subscriptionId);
         Console.WriteLine("Listing feature flags for subscription {0}", subscriptionDescription);
 
         var response = await _client.FeatureFlags.GetFeatureFlagsAsync(subscriptionId);
@@ -105,7 +104,7 @@ internal class FeatureFlagListOperation : IOperation
 
         foreach (var group in groupedFlags)
         {
-            var subscriptionDescription = await GetSubscriptionDescriptionAsync(group.Key);
+            var subscriptionDescription = await SubscriptionDescriptionHelper.GetSubscriptionDescriptionAsync(_client, group.Key);
             Console.WriteLine("{0}:", subscriptionDescription);
 
             foreach (var flag in group.OrderBy(f => f.FlagName))
@@ -118,25 +117,5 @@ internal class FeatureFlagListOperation : IOperation
 
         Console.WriteLine("Total: {0} flags across {1} subscriptions", response.Total, groupedFlags.Count());
         return (flowControl: true, value: 0);
-    }
-
-    private async Task<string> GetSubscriptionDescriptionAsync(Guid subscriptionId)
-    {
-        try
-        {
-            var subscription = await _client.Subscriptions.GetSubscriptionAsync(subscriptionId);
-            return GetSubscriptionDescription(subscription);
-        }
-        catch (Exception)
-        {
-            // If we can't fetch the subscription, fall back to just the ID
-            return subscriptionId.ToString();
-        }
-    }
-
-    private static string GetSubscriptionDescription(Subscription subscription)
-    {
-        var channelName = subscription.Channel?.Name ?? "unknown channel";
-        return $"{subscription.SourceRepository} ({channelName}) → {subscription.TargetRepository} ({subscription.TargetBranch})";
     }
 }
