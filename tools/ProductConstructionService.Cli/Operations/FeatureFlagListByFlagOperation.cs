@@ -40,6 +40,9 @@ internal class FeatureFlagListByFlagOperation : IOperation
                 return 0;
             }
 
+            // Prefetch all subscription descriptions in parallel
+            await _subscriptionHelper.PrefetchSubscriptionDescriptionsAsync(response.Flags.Select(f => f.SubscriptionId));
+
             _logger.LogInformation("Subscriptions with feature flag '{FlagName}':", _options.FlagName);
 
             foreach (var flag in response.Flags.OrderBy(f => f.SubscriptionId))

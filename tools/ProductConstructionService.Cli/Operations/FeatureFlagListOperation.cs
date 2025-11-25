@@ -105,6 +105,9 @@ internal class FeatureFlagListOperation : IOperation
 
         var groupedFlags = response.Flags.GroupBy(f => f.SubscriptionId).OrderBy(g => g.Key);
 
+        // Prefetch all subscription descriptions in parallel
+        await _subscriptionHelper.PrefetchSubscriptionDescriptionsAsync(groupedFlags.Select(g => g.Key));
+
         foreach (var group in groupedFlags)
         {
             var subscriptionDescription = await _subscriptionHelper.GetSubscriptionDescriptionAsync(group.Key);

@@ -16,6 +16,12 @@ internal interface ISubscriptionDescriptionHelper
     /// If the subscription cannot be fetched, returns just the subscription ID.
     /// </summary>
     Task<string> GetSubscriptionDescriptionAsync(Guid subscriptionId);
+
+    /// <summary>
+    /// Prefetches subscription descriptions for multiple IDs in parallel.
+    /// This populates the cache so subsequent calls to GetSubscriptionDescriptionAsync are fast.
+    /// </summary>
+    Task PrefetchSubscriptionDescriptionsAsync(IEnumerable<Guid> subscriptionIds);
 }
 
 /// <summary>
@@ -58,6 +64,25 @@ internal class SubscriptionDescriptionHelper : ISubscriptionDescriptionHelper
 
         _cache[subscriptionId] = description;
         return description;
+    }
+
+    /// <summary>
+    /// Prefetches subscription descriptions for multiple IDs in parallel.
+    /// This populates the cache so subsequent calls to GetSubscriptionDescriptionAsync are fast.
+    /// </summary>
+    public async Task PrefetchSubscriptionDescriptionsAsync(IEnumerable<Guid> subscriptionIds)
+    {
+        var uncachedIds = subscriptionIds.Distinct().Where(id => !_cache.ContainsKey(id)).ToList();
+        
+        if (uncachedIds.Count == 0)
+        {
+            return;
+        }
+
+        await Task.WhenAll(uncachedIds.Select(async id =>
+        {
+            await GetSubscriptionDescriptionAsync(id);
+        }));
     }
 
     /// <summary>
