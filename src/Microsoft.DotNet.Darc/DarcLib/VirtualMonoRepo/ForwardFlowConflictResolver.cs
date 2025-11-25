@@ -245,7 +245,8 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         // We load the source manifest from the target branch and replace the
         // current mapping (and its submodules) with our branches' information
         var result = await vmr.RunGitCommandAsync(
-            // Rebase vs merge direction (ours/theirs)
+            // During merge: :2: is ours (current branch), :3: is theirs (branch being merged)
+            // During rebase: :2: is theirs (base branch), :3: is ours (commits being replayed)
             ["show", (enableRebase ? ":3:" : ":2:") + VmrInfo.DefaultRelativeSourceManifestPath],
             cancellationToken);
 
