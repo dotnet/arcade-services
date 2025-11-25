@@ -89,46 +89,38 @@ public abstract class CodeFlowConflictResolver
     /// </summary>
     /// <returns>True when auto-resolution succeeded</returns>
     protected async Task<bool> TryResolvingConflictWithCrossingFlow(
-        string mappingName,
+        CodeflowOptions codeflowOptions,
         ILocalGitRepo vmr,
         ILocalGitRepo repo,
         UnixPath conflictedFile,
-        Codeflow currentFlow,
         Codeflow crossingFlow,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Trying to auto-resolve a conflict in {filePath} based on a crossing flow...", conflictedFile);
+        _logger.LogDebug("Trying to auto-resolve a conflict in {filePath} based on a crossing flow...", conflictedFile);
 
-        bool isForwardFlow = currentFlow is ForwardFlow;
-
-        UnixPath vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(mappingName);
-        if (isForwardFlow && !conflictedFile.Path.StartsWith(vmrSourcesPath + '/'))
+        UnixPath vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name);
+        if (codeflowOptions.CurrentFlow.IsForwardFlow && !conflictedFile.Path.StartsWith(vmrSourcesPath + '/'))
         {
-            _logger.LogInformation("Conflict in {file} is not in the source repo, skipping auto-resolution", conflictedFile);
+            _logger.LogWarning("Conflict in {file} is not in the source repo, skipping auto-resolution", conflictedFile);
             return false;
         }
 
-        if (isForwardFlow)
-        {
-            await vmr.ResolveConflict(conflictedFile, ours: false);
-        }
-        else
-        {
-            await repo.ResolveConflict(conflictedFile, ours: false);
-        }
+        var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : repo;
 
-        var patchName = _vmrInfo.TmpPath / $"{mappingName}-{Guid.NewGuid()}.patch";
+        await targetRepo.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase /* rebase vs merge direction */);
+
+        var patchName = _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch";
         List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
             patchName,
-            isForwardFlow ? crossingFlow.RepoSha : crossingFlow.VmrSha,
-            isForwardFlow ? currentFlow.RepoSha : currentFlow.VmrSha,
-            isForwardFlow
+            crossingFlow.SourceSha,
+            codeflowOptions.CurrentFlow.SourceSha,
+            codeflowOptions.CurrentFlow.IsForwardFlow
                 ? new UnixPath(conflictedFile.Path.Substring(vmrSourcesPath.Length + 1))
                 : conflictedFile,
             filters: null,
             relativePaths: true,
-            workingDir: isForwardFlow ? repo.Path : vmr.Path / vmrSourcesPath,
-            applicationPath: isForwardFlow ? vmrSourcesPath : null,
+            workingDir: codeflowOptions.CurrentFlow.IsForwardFlow ? repo.Path : vmr.Path / vmrSourcesPath,
+            applicationPath: codeflowOptions.CurrentFlow.IsForwardFlow ? vmrSourcesPath : null,
             ignoreLineEndings: true,
             cancellationToken);
 
@@ -152,18 +144,32 @@ public abstract class CodeFlowConflictResolver
         {
             await _patchHandler.ApplyPatch(
                 patches[0],
-                isForwardFlow ? vmr.Path : repo.Path,
+                targetRepo.Path,
                 removePatchAfter: true,
                 keepConflicts: false,
                 cancellationToken: cancellationToken);
-            _logger.LogInformation("Successfully auto-resolved a conflict in {filePath} based on a crossing flow", conflictedFile);
+            _logger.LogDebug("Successfully auto-resolved a conflict in {filePath}", conflictedFile);
+
+            if (codeflowOptions.EnableRebase)
+            {
+                // Stage the file for commit
+                await targetRepo.StageAsync([conflictedFile], CancellationToken.None);
+            }
+
             return true;
         }
         catch (PatchApplicationFailedException)
         {
             // If the patch failed, we cannot resolve the conflict automatically
             // We will just leave it as is and let the user resolve it manually
-            _logger.LogInformation("Failed to auto-resolve conflicts in {filePath} - conflicting changes detected", conflictedFile);
+            _logger.LogDebug("Failed to auto-resolve conflicts in {filePath} - conflicting changes detected", conflictedFile);
+
+            if (codeflowOptions.EnableRebase)
+            {
+                // Revert the file into the conflicted state for manual resolution
+                await targetRepo.ExecuteGitCommand(["checkout", "--conflict=merge", "--", conflictedFile], CancellationToken.None);
+            }
+
             return false;
         }
     }

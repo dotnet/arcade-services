@@ -86,7 +86,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
     {
         // If we are rebasing, we are already on top of the branch and we don't need to merge it
         IReadOnlyCollection<UnixPath> conflictedFiles = codeflowOptions.EnableRebase
-            ? []
+            ? await targetRepo.GetConflictedFilesAsync(cancellationToken)
             : await TryMergingBranchAndResolveConflicts(
                 codeflowOptions,
                 lastFlows,
@@ -166,11 +166,9 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
         if (conflictedFiles.Count != 0 && await TryResolvingConflicts(
                 conflictedFiles,
-                codeflowOptions.Mapping,
-                codeflowOptions.CurrentFlow,
+                codeflowOptions,
                 lastFlows.CrossingFlow,
                 targetRepo,
-                codeflowOptions.HeadBranch,
                 branchToMerge,
                 headBranchExisted,
                 cancellationToken))
@@ -223,11 +221,9 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
     /// </summary>
     private async Task<bool> TryResolvingConflicts(
         IReadOnlyCollection<UnixPath> conflictedFiles,
-        SourceMapping mapping,
-        Codeflow currentFlow,
+        CodeflowOptions codeflowOptions,
         Codeflow? crossingFlow,
         ILocalGitRepo repo,
-        string headBranch,
         string branchToMerge,
         bool headBranchExisted,
         CancellationToken cancellationToken)
@@ -252,14 +248,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             // Check DetectCrossingFlow documentation for more details
             if (crossingFlow != null)
             {
-                if (await TryResolvingConflictWithCrossingFlow(
-                    mapping.Name,
-                    vmr,
-                    repo,
-                    conflictedFile,
-                    currentFlow,
-                    crossingFlow,
-                    cancellationToken))
+                if (await TryResolvingConflictWithCrossingFlow(codeflowOptions, vmr, repo, conflictedFile, crossingFlow, cancellationToken))
                 {
                     continue;
                 }
@@ -267,7 +256,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
             _logger.LogInformation("Failed to merge the branch {branchToMerge} into {headBranch} due to unresolvable conflict in {conflictedFile}",
                 branchToMerge,
-                headBranch,
+                codeflowOptions.HeadBranch,
                 conflictedFile);
 
             await AbortMerge(repo);
@@ -276,7 +265,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
         _logger.LogInformation("Successfully auto-resolved all conflicts between {branchToMerge} and {headBranch}",
             branchToMerge,
-            headBranch);
+            codeflowOptions.HeadBranch);
 
         return true;
     }

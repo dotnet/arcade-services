@@ -129,21 +129,18 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         await sourceRepo.FetchAllAsync([mapping.DefaultRemote, repoInfo.RemoteUri], cancellationToken);
 
         ForwardFlow currentFlow = new(build.Commit, lastFlows.LastFlow.VmrSha);
+        CodeflowOptions codeflowOptions = new(mapping, currentFlow, targetBranch, headBranch, build, excludedAssets, enableRebase, forceUpdate);
+
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
         cancellationToken.ThrowIfCancellationRequested();
 
         ExceptionDispatchInfo? rebaseException = null;
 
-        bool hasChanges = false;
+        bool hasChanges;
         try
         {
-            hasChanges = await FlowCodeAsync(
-                new CodeflowOptions(mapping, currentFlow, targetBranch, headBranch, build, excludedAssets, enableRebase, forceUpdate),
-                lastFlows,
-                sourceRepo,
-                headBranchExisted,
-                cancellationToken);
+            hasChanges = await FlowCodeAsync(codeflowOptions, lastFlows, sourceRepo, headBranchExisted, cancellationToken);
         }
         catch (PatchApplicationLeftConflictsException e) when (enableRebase)
         {
@@ -157,14 +154,11 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             // We try to merge the target branch so that we can potentially
             // resolve some expected conflicts in the version files
             conflictedFiles = await _conflictResolver.TryMergingBranch(
-                mapping.Name,
+                codeflowOptions,
                 vmr,
                 sourceRepo,
-                headBranch,
                 targetBranch,
-                currentFlow,
                 lastFlows,
-                enableRebase,
                 cancellationToken);
 
             await CommentIncludedPRs(sourceRepo, lastFlows.LastForwardFlow.RepoSha, build.Commit, mapping.DefaultRemote, cancellationToken);
