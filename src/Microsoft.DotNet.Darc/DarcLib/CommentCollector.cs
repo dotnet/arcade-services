@@ -10,7 +10,7 @@ public interface ICommentCollector
 {
     void AddComment(string comment, CommentType commentType);
 
-    (string Text, CommentType commentType)[] GetComments();
+    Comment[] GetComments();
 }
 
 public enum CommentType
@@ -22,18 +22,20 @@ public enum CommentType
 
 public class CommentCollector : ICommentCollector
 {
-    private readonly ConcurrentBag<(string, CommentType)> _comments = [];
+    private readonly ConcurrentBag<Comment> _comments = [];
 
     public void AddComment(string comment, CommentType commentType)
     {
         if (!string.IsNullOrWhiteSpace(comment))
         {
-            _comments.Add((comment, commentType));
+            _comments.Add(new(comment, commentType));
         }
     }
 
-    public (string Text, CommentType commentType)[] GetComments()
+    public Comment[] GetComments()
     {
         return [.. _comments];
     }
 }
+
+public record Comment(string Text, CommentType Type);

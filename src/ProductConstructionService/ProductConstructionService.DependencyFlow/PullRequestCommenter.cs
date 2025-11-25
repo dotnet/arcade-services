@@ -59,12 +59,12 @@ internal class PullRequestCommenter : IPullRequestCommenter
 
         foreach (var comment in comments)
         {
-            var header = comment.commentType switch
+            var header = comment.Type switch
             {
                 CommentType.Warning => "> [!IMPORTANT]",
                 CommentType.Information => "> [!NOTE]",
                 CommentType.Caution => "> [!CAUTION]",
-                _ => throw new ArgumentOutOfRangeException($"Comment type {comment.commentType} is not supported")
+                _ => throw new ArgumentOutOfRangeException($"Comment type {comment.Type} is not supported")
             };
 
             var commentText = comment.Text;
