@@ -160,19 +160,11 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         {
             hasChanges = true;
             conflictedSourceFiles = e.ConflictedFiles;
-            if (!allowConflicts)
-            {
-                return new CodeFlowResult(
-                    hasChanges,
-                    [],
-                    conflictedSourceFiles,
-                    sourceRepo.Path,
-                    DependencyUpdates: []);
-            }
         }
 
         IReadOnlyCollection<UnixPath>? conflictedFiles = null;
-        if (hasChanges)
+        if (hasChanges &&
+           (allowConflicts || conflictedSourceFiles.Count == 0))
         {
             // We try to merge the target branch so that we can potentially
             // resolve some expected conflicts in the version files
