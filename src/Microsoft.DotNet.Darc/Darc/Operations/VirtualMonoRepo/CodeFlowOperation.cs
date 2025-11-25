@@ -110,12 +110,12 @@ internal abstract class CodeFlowOperation(
             ? []
             : _options.ExcludedAssets.Split(';').ToList();
 
+        CodeFlowResult result;
         try
         {
-            bool hasChanges;
             if (currentFlow is ForwardFlow)
             {
-                hasChanges = await FlowForwardAsync(
+                result = await FlowForwardAsync(
                     productRepo,
                     build,
                     mapping,
@@ -126,7 +126,7 @@ internal abstract class CodeFlowOperation(
             }
             else
             {
-                var result = await _backFlower.FlowBackAsync(
+                result = await _backFlower.FlowBackAsync(
                     mapping.Name,
                     productRepo.Path,
                     build,
@@ -135,15 +135,14 @@ internal abstract class CodeFlowOperation(
                     currentTargetRepoBranch,
                     enableRebase: true,
                     forceUpdate: true,
+                    allowConflicts: true,
                     cancellationToken);
-
-                hasChanges = result.HadUpdates;
             }
 
-            if (!hasChanges)
+            if (!result.HadUpdates)
             {
 
-                if (!hasChanges)
+                if (!result.HadUpdates)
                 {
                     _logger.LogInformation("No changes to flow between the VMR and {repo}.", mapping.Name);
                     return;
@@ -152,13 +151,19 @@ internal abstract class CodeFlowOperation(
                 _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
             }
         }
-        catch (PatchApplicationLeftConflictsException e)
+        finally
+        {
+            // Restore source repo to its original state, even when exceptions occur
+            await RestoreRepoToOriginalStateAsync(sourceRepo, originalSourceRepoBranch, originalSourceRepoSha);
+        }
+
+        if (result.ConflictedSourceFiles.Count > 0)
         {
             // We need to make sure that working tree matches the staged changes
             await targetRepo.ExecuteGitCommand(["clean", "-xfd"], cancellationToken: cancellationToken);
 
             IEnumerable<string> dirtyFiles = await targetRepo.GetDirtyFiles();
-            dirtyFiles = dirtyFiles.Except(e.ConflictedFiles.Select(e => e.Path));
+            dirtyFiles = dirtyFiles.Except(result.ConflictedSourceFiles.Select(e => e.Path));
 
             // Reset only non-conflicted files
             foreach (var file in dirtyFiles)
@@ -166,13 +171,6 @@ internal abstract class CodeFlowOperation(
                 cancellationToken.ThrowIfCancellationRequested();
                 await targetRepo.CheckoutAsync(file);
             }
-
-            throw;
-        }
-        finally
-        {
-            // Restore source repo to its original state, even when exceptions occur
-            await RestoreRepoToOriginalStateAsync(sourceRepo, originalSourceRepoBranch, originalSourceRepoSha);
         }
     }
 
@@ -225,7 +223,7 @@ internal abstract class CodeFlowOperation(
         return build;
     }
 
-    protected async Task<bool> FlowForwardAsync(
+    protected async Task<CodeFlowResult> FlowForwardAsync(
         ILocalGitRepo productRepo,
         BarBuild build,
         SourceMapping mapping,
@@ -253,9 +251,10 @@ internal abstract class CodeFlowOperation(
                 targetRepoUri,
                 enableRebase: true,
                 forceUpdate: true,
+                allowConflicts: true,
                 cancellationToken);
 
-            return result.HadUpdates;
+            return result;
         }
         finally
         {

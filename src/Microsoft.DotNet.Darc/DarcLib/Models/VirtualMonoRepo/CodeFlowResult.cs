@@ -10,6 +10,7 @@ namespace Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 
 public record CodeFlowResult(
     bool HadUpdates,
-    IReadOnlyCollection<UnixPath> ConflictedFiles,
+    IReadOnlyCollection<UnixPath> ConflictedDependencyFiles,
+    IReadOnlyCollection<UnixPath> ConflictedSourceFiles,
     NativePath RepoPath,
     List<DependencyUpdate> DependencyUpdates);

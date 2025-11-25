@@ -39,6 +39,7 @@ public interface IVmrBackFlower : IVmrCodeFlower
         string headBranch,
         bool enableRebase,
         bool forceUpdate,
+        bool allowConflicts,
         CancellationToken cancellationToken = default);
 }
 
@@ -98,6 +99,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string headBranch,
         bool enableRebase,
         bool forceUpdate,
+        bool allowConflicts,
         CancellationToken cancellationToken = default)
     {
         (bool headBranchExisted, SourceMapping mapping, LastFlows lastFlows, ILocalGitRepo targetRepo) = await PrepareVmrAndRepo(
@@ -118,7 +120,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 build,
                 excludedAssets,
                 enableRebase,
-                forceUpdate),
+                forceUpdate,
+                allowConflicts),
             targetRepo,
             lastFlows,
             headBranchExisted,
@@ -142,7 +145,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 cancellationToken);
 
         bool hasChanges;
-
+        IReadOnlyCollection<UnixPath> conflictedSourceFiles = [];
         try
         {
             hasChanges = await FlowCodeAsync(
@@ -152,11 +155,20 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 headBranchExisted,
                 cancellationToken);
         }
-        catch (PatchApplicationLeftConflictsException) when (codeflowOptions.EnableRebase)
+        catch (PatchApplicationLeftConflictsException e) when (codeflowOptions.EnableRebase)
         {
-            // When we are rebasing and ended up with conflicts, we will still update version files
-            await UpdateDependenciesAndVersionFiles();
-            throw;
+            hasChanges = true;
+            conflictedSourceFiles = e.ConflictedFiles;
+
+            if (!codeflowOptions.AllowConflicts)
+            {
+                return new CodeFlowResult(
+                    true,
+                    [],
+                    conflictedSourceFiles,
+                    targetRepo.Path,
+                    []);
+            }
         }
 
         VersionFileUpdateResult mergeResult = await UpdateDependenciesAndVersionFiles();
@@ -164,6 +176,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         return new CodeFlowResult(
             hasChanges || mergeResult.DependencyUpdates.Count > 0,
             mergeResult.ConflictedFiles,
+            conflictedSourceFiles,
             targetRepo.Path,
             mergeResult.DependencyUpdates);
 

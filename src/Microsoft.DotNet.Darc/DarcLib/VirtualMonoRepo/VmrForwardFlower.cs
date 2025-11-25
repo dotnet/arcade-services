@@ -47,6 +47,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
         string targetVmrUri,
         bool enableRebase,
         bool forceUpdate,
+        bool allowConflicts,
         CancellationToken cancellationToken = default);
 }
 
@@ -110,6 +111,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string targetVmrUri,
         bool enableRebase,
         bool forceUpdate,
+        bool allowConflicts,
         CancellationToken cancellationToken = default)
     {
         ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
@@ -131,6 +133,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
         bool hasChanges;
+        IReadOnlyCollection<UnixPath> conflictedSourceFiles = [];
 
         async Task<IReadOnlyCollection<UnixPath>> UpdateVersionFiles() =>
             await _conflictResolver.TryMergingBranch(
@@ -147,17 +150,25 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         try
         {
             hasChanges = await FlowCodeAsync(
-                new CodeflowOptions(mapping, currentFlow, targetBranch, headBranch, build, excludedAssets, enableRebase, forceUpdate),
+                new CodeflowOptions(mapping, currentFlow, targetBranch, headBranch, build, excludedAssets, enableRebase, forceUpdate, allowConflicts),
                 lastFlows,
                 sourceRepo,
                 headBranchExisted,
                 cancellationToken);
         }
-        catch (PatchApplicationLeftConflictsException) when (enableRebase)
+        catch (PatchApplicationLeftConflictsException e) when (enableRebase)
         {
-            // When we are rebasing and ended up with conflicts, we will still update version files
-            await UpdateVersionFiles();
-            throw;
+            hasChanges = true;
+            conflictedSourceFiles = e.ConflictedFiles;
+            if (!allowConflicts)
+            {
+                return new CodeFlowResult(
+                    hasChanges,
+                    [],
+                    conflictedSourceFiles,
+                    sourceRepo.Path,
+                    DependencyUpdates: []);
+            }
         }
 
         IReadOnlyCollection<UnixPath>? conflictedFiles = null;
@@ -182,6 +193,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         return new CodeFlowResult(
             hasChanges,
             conflictedFiles ?? [],
+            conflictedSourceFiles,
             sourceRepo.Path,
             DependencyUpdates: []);
     }

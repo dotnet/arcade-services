@@ -84,6 +84,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             subscription.TargetRepository,
             enableRebase,
             forceUpdate,
+            allowConflicts: false, // In PCS, we don't continue if conflicts were encountered
             cancellationToken);
     }
 

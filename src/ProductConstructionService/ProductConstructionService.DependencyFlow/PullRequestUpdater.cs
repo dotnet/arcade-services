@@ -1220,7 +1220,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
 
         // Conflicts + rebase means we have to block the PR until a human resolves the conflicts manually
-        if (enableRebase && codeFlowRes.ConflictedFiles.Count > 0)
+        if (enableRebase && codeFlowRes.ConflictedSourceFiles.Count > 0)
         {
             await RequestManualConflictResolutionAsync(
                 update,
@@ -1256,14 +1256,14 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 upstreamRepoDiffs);
         }
 
-        if (pr != null && codeFlowRes.ConflictedFiles.Count > 0 && !enableRebase)
+        if (pr != null && codeFlowRes.ConflictedDependencyFiles.Count > 0 && !enableRebase)
         {
             _commentCollector.AddComment(
                 PullRequestCommentBuilder.NotifyAboutMergeConflict(
                     pr,
                     update,
                     subscription,
-                    codeFlowRes.ConflictedFiles,
+                    codeFlowRes.ConflictedDependencyFiles,
                     build),
                 CommentType.Caution);
         }
@@ -1472,16 +1472,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     cancellationToken: default);
             }
         }
-        catch (PatchApplicationLeftConflictsException e) // only thrown when enableRebase is true
-        {
-            // We were unable to flow changes and user intervention will be required
-            _logger.LogInformation("Unable to flow changes due to conflicts in {files}", string.Concat(", ", e.ConflictedFiles));
-            return new CodeFlowResult(
-                HadUpdates: true,
-                RepoPath: e.RepoPath,
-                DependencyUpdates: [],
-                ConflictedFiles: e.ConflictedFiles);
-        }
         catch (ConflictInPrBranchException conflictWithPrChanges)
         {
             if (pr != null && prInfo != null)
@@ -1508,6 +1498,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 build.Id,
                 subscription.Id);
             throw;
+        }
+
+        if (codeFlowRes.ConflictedSourceFiles.Count > 0)
+        {
+            _logger.LogInformation("Unable to flow changes due to conflicts in {files}", string.Concat(", ", codeFlowRes.ConflictedSourceFiles));
+            return codeFlowRes;
         }
 
         if (codeFlowRes.HadUpdates)
@@ -1673,7 +1669,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             PullRequestCommentBuilder.BuildNotificationAboutManualConflictResolutionComment(
                 update,
                 subscription,
-                codeFlowResult.ConflictedFiles,
+                codeFlowResult.ConflictedSourceFiles,
                 prHeadBranch),
             CommentType.Caution);
 

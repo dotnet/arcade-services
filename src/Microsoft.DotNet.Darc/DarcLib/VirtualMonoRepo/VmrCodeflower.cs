@@ -31,7 +31,8 @@ public record CodeflowOptions(
     Build Build,
     IReadOnlyCollection<string>? ExcludedAssets,
     bool EnableRebase,
-    bool ForceUpdate);
+    bool ForceUpdate,
+    bool AllowConflicts);
 
 /// <summary>
 /// This class is responsible for taking changes done to a repo in the VMR and backflowing them into the repo.

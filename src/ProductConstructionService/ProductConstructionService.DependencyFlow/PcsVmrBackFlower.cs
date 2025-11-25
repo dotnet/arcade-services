@@ -82,7 +82,9 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 build,
                 subscription.ExcludedAssets,
                 enableRebase,
-                forceUpdate),
+                forceUpdate,
+                AllowConflicts: false // In PCS, we don't continue if conflicts were encountered
+                ),
             targetRepo,
             lastFlows,
             headBranchExisted,
