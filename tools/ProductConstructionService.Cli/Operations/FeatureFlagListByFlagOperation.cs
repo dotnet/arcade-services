@@ -12,17 +12,18 @@ internal class FeatureFlagListByFlagOperation : IOperation
     private readonly FeatureFlagListByFlagOptions _options;
     private readonly IProductConstructionServiceApi _client;
     private readonly ILogger<FeatureFlagListByFlagOperation> _logger;
-    private readonly SubscriptionDescriptionHelper _subscriptionHelper;
+    private readonly ISubscriptionDescriptionHelper _subscriptionHelper;
 
     public FeatureFlagListByFlagOperation(
         FeatureFlagListByFlagOptions options,
         IProductConstructionServiceApi client,
-        ILogger<FeatureFlagListByFlagOperation> logger)
+        ILogger<FeatureFlagListByFlagOperation> logger,
+        ISubscriptionDescriptionHelper subscriptionHelper)
     {
         _options = options;
         _client = client;
         _logger = logger;
-        _subscriptionHelper = new SubscriptionDescriptionHelper(client);
+        _subscriptionHelper = subscriptionHelper;
     }
 
     public async Task<int> RunAsync()

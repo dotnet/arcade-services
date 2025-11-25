@@ -7,10 +7,22 @@ using Microsoft.DotNet.ProductConstructionService.Client.Models;
 namespace ProductConstructionService.Cli.Operations;
 
 /// <summary>
+/// Interface for generating human-readable subscription descriptions.
+/// </summary>
+internal interface ISubscriptionDescriptionHelper
+{
+    /// <summary>
+    /// Gets a human-readable description of a subscription by its ID.
+    /// If the subscription cannot be fetched, returns just the subscription ID.
+    /// </summary>
+    Task<string> GetSubscriptionDescriptionAsync(Guid subscriptionId);
+}
+
+/// <summary>
 /// Helper class for generating human-readable subscription descriptions.
 /// Caches subscription lookups to avoid redundant API calls.
 /// </summary>
-internal class SubscriptionDescriptionHelper
+internal class SubscriptionDescriptionHelper : ISubscriptionDescriptionHelper
 {
     private readonly IProductConstructionServiceApi _client;
     private readonly Dictionary<Guid, string> _cache = [];
