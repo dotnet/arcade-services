@@ -270,6 +270,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         // 7-8. Update the file again in the repo
         codeFlowResult = await ChangeRepoFileAndFlowIt("CCC", forwardBranchName + "-third", enableRebase);
+        codeFlowResult.ShouldHaveUpdates();
 
         // 9. Merge the forward flow PR - any conflicts are dealt with automatically
         await GitOperations.MergePrBranch(VmrPath, forwardBranchName + "-third");
@@ -314,7 +315,9 @@ internal class TwoWayCodeflowTests : CodeFlowTests
           │                     │
      */
     [Test]
-    public async Task BackflowConflictWithPreviousFlowAutoResolutionTest()
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task BackflowConflictWithPreviousFlowAutoResolutionTest(bool enableRebase)
     {
         await EnsureTestRepoIsInitialized();
 
@@ -322,7 +325,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         const string forwardBranchName = nameof(BackflowConflictWithPreviousFlowAutoResolutionTest) + "-ff";
 
         // 0. Prepare repo and VMR
-        await ChangeVmrFileAndFlowIt("AAA", backBranchName + "-first");
+        await ChangeVmrFileAndFlowIt("AAA", backBranchName + "-first", enableRebase);
         await GitOperations.MergePrBranch(ProductRepoPath, backBranchName + "-first");
 
         // 1. Change a different file in the repo
@@ -335,7 +338,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         codeFlowResult.ShouldHaveUpdates();
 
         // 3-4. Change the file in the VMR again
-        codeFlowResult = await ChangeVmrFileAndFlowIt("BBB", backBranchName + "-second");
+        codeFlowResult = await ChangeVmrFileAndFlowIt("BBB", backBranchName + "-second", enableRebase);
         codeFlowResult.ShouldHaveUpdates();
 
         // 5. Merge the forwardflow PR
@@ -345,7 +348,8 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.MergePrBranch(ProductRepoPath, backBranchName + "-second");
 
         // 7-8. Update the file again in the VMR
-        codeFlowResult = await ChangeVmrFileAndFlowIt("CCC", backBranchName + "-third");
+        codeFlowResult = await ChangeVmrFileAndFlowIt("CCC", backBranchName + "-third", enableRebase);
+        codeFlowResult.ShouldHaveUpdates();
 
         // 9. Merge the backflow PR - any conflicts are dealt with automatically
         await GitOperations.MergePrBranch(ProductRepoPath, backBranchName + "-third");
