@@ -88,6 +88,16 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             headBranchExisted,
             cancellationToken);
 
+        if (result.HadUpdates && enableRebase)
+        {
+            var stagedFiles = await targetRepo.GetStagedFiles();
+            if (stagedFiles.Count > 0)
+            {
+                // When we do a rebase flow, the files stay staged and we need to commit them
+                await targetRepo.CommitAsync("Update dependencies", allowEmpty: false, cancellationToken: cancellationToken);
+            }
+        }
+
         return result with
         {
             // For already existing PRs, we want to always push the changes (even if only the <Source> tag changed)

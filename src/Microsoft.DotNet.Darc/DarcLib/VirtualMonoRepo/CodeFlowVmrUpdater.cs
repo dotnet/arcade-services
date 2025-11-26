@@ -119,7 +119,7 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
 
         _logger.LogInformation("Synchronizing {name} from {current} to {repo} / {revision}",
             mapping.Name,
-            currentVersion.Sha,
+            fromSha ?? currentVersion.Sha,
             update.RemoteUri,
             build.Commit);
 

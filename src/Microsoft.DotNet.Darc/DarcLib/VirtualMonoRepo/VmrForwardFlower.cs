@@ -164,7 +164,10 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             await CommentIncludedPRs(sourceRepo, lastFlows.LastForwardFlow.RepoSha, build.Commit, mapping.DefaultRemote, cancellationToken);
         }
 
-        rebaseException?.Throw();
+        if (conflictedFiles?.Count > 0)
+        {
+            rebaseException?.Throw();
+        }
 
         // If we don't force the update, we'll set hasChanges to false when the updates are not meaningful
         if (conflictedFiles != null && !forceUpdate && hasChanges && !headBranchExisted)

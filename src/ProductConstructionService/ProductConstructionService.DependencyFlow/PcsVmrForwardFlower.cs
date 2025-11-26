@@ -35,7 +35,9 @@ internal interface IPcsVmrForwardFlower
 
 internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
 {
+    private readonly IVmrInfo _vmrInfo;
     private readonly IRepositoryCloneManager _repositoryCloneManager;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory;
 
     public PcsVmrForwardFlower(
         IVmrInfo vmrInfo,
@@ -57,7 +59,9 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         ILogger<VmrCodeFlower> logger)
         : base(vmrInfo, sourceManifest, vmrUpdater, dependencyTracker, vmrCloneManager, localGitClient, localGitRepoFactory, versionDetailsParser, codeflowChangeAnalyzer, conflictResolver, workBranchFactory, processManager, barClient, fileSystem, commentCollector, logger)
     {
+        _vmrInfo = vmrInfo;
         _repositoryCloneManager = repositoryCloneManager;
+        _localGitRepoFactory = localGitRepoFactory;
     }
 
     public async Task<CodeFlowResult> FlowForwardAsync(
@@ -74,7 +78,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             ShouldResetClones,
             cancellationToken);
 
-        return await FlowForwardAsync(
+        CodeFlowResult result = await FlowForwardAsync(
             subscription.TargetDirectory,
             sourceRepo.Path,
             build,
@@ -85,6 +89,19 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             enableRebase,
             forceUpdate,
             cancellationToken);
+
+        if (result.HadUpdates && enableRebase)
+        {
+            var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+            var stagedFiles = await vmr.GetStagedFiles();
+            if (stagedFiles.Count > 0)
+            {
+                // When we do a rebase flow, the files stay staged and we need to commit them
+                await vmr.CommitAsync("Update dependencies", allowEmpty: false, cancellationToken: cancellationToken);
+            }
+        }
+
+        return result;
     }
 
     // During forward flow, we're targeting a specific remote VMR branch, so we should make sure our local branch is reset to it
