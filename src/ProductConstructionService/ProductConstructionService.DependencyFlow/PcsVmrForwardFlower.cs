@@ -93,7 +93,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         if (result.HadUpdates && enableRebase)
         {
             var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-            var stagedFiles = await vmr.GetStagedFiles();
+            var stagedFiles = await vmr.GetStagedFilesAsync();
             if (stagedFiles.Count > 0)
             {
                 // When we do a rebase flow, the files stay staged and we need to commit them

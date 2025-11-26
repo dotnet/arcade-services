@@ -41,6 +41,45 @@ public abstract class CodeFlowConflictResolver
         bool headBranchExisted,
         CancellationToken cancellationToken);
 
+    protected async Task<IReadOnlyCollection<UnixPath>> TryMergingBranchAndResolvingConflicts(
+        CodeflowOptions codeflowOptions,
+        ILocalGitRepo vmr,
+        ILocalGitRepo productRepo,
+        LastFlows lastFlows,
+        bool headBranchExisted,
+        CancellationToken cancellationToken)
+    {
+        var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : productRepo;
+
+        IReadOnlyCollection<UnixPath> conflictedFiles = codeflowOptions.EnableRebase && (await targetRepo.GetStagedFilesAsync()).Count > 0
+            ? await targetRepo.GetConflictedFilesAsync(cancellationToken)
+            : await TryMergingBranch(targetRepo, codeflowOptions.HeadBranch, codeflowOptions.TargetBranch, cancellationToken);
+
+        if (conflictedFiles.Count != 0 && await TryResolvingConflicts(
+                codeflowOptions,
+                vmr,
+                productRepo,
+                conflictedFiles,
+                lastFlows.CrossingFlow,
+                headBranchExisted,
+                cancellationToken))
+        {
+            if (!codeflowOptions.EnableRebase)
+            {
+                await targetRepo.CommitAsync(
+                    $"""
+                    Merge {codeflowOptions.TargetBranch} into {codeflowOptions.HeadBranch}
+                    Auto-resolved conflicts:
+                    - {string.Join(Environment.NewLine + "- ", conflictedFiles.Select(f => f.Path))}
+                    """,
+                    allowEmpty: true,
+                cancellationToken: CancellationToken.None);
+            }
+        }
+
+        return await targetRepo.GetConflictedFilesAsync(cancellationToken);
+    }
+
     protected async Task<IReadOnlyCollection<UnixPath>> TryMergingBranch(
         ILocalGitRepo repo,
         string headBranch,

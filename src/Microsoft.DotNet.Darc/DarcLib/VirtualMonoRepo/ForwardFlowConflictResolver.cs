@@ -108,36 +108,13 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        var conflictedFiles = codeflowOptions.EnableRebase
-            ? await vmr.GetConflictedFilesAsync(cancellationToken)
-            : await TryMergingBranch(vmr, codeflowOptions.HeadBranch, codeflowOptions.TargetBranch, cancellationToken);
-
-        if (conflictedFiles.Count != 0 && await TryResolvingConflicts(
-                codeflowOptions,
-                vmr,
-                sourceRepo,
-                conflictedFiles,
-                lastFlows.CrossingFlow,
-                headBranchExisted,
-                cancellationToken))
-        {
-            if (!codeflowOptions.EnableRebase)
-            {
-                conflictedFiles = [];
-
-                try
-                {
-                    await vmr.CommitAsync(
-                        $"Merge branch {codeflowOptions.TargetBranch} into {codeflowOptions.HeadBranch}",
-                        allowEmpty: true,
-                        cancellationToken: CancellationToken.None);
-                }
-                catch (Exception e) when (e.Message.Contains("Your branch is ahead of"))
-                {
-                    // There was no reason to merge, we're fast-forward ahead from the target branch
-                }
-            }
-        }
+        await TryMergingBranchAndResolvingConflicts(
+            codeflowOptions,
+            vmr,
+            sourceRepo,
+            lastFlows,
+            headBranchExisted,
+            cancellationToken);
 
         try
         {

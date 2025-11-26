@@ -419,7 +419,7 @@ public class LocalGitClient : ILocalGitClient
         return submodules;
     }
 
-    public async Task<IReadOnlyCollection<string>> GetStagedFiles(string repoPath)
+    public async Task<IReadOnlyCollection<string>> GetStagedFilesAsync(string repoPath)
     {
         var result = await _processManager.ExecuteGit(repoPath, "diff", "--name-only", "--cached");
         result.ThrowIfFailed($"Failed to get staged files in {repoPath}");
@@ -427,7 +427,7 @@ public class LocalGitClient : ILocalGitClient
         return result.GetOutputLines();
     }
 
-    public async Task<IReadOnlyCollection<string>> GetDirtyFiles(string repoPath)
+    public async Task<IReadOnlyCollection<string>> GetDirtyFilesAsync(string repoPath)
     {
         var result = await _processManager.ExecuteGit(repoPath, "diff", "--name-only");
         result.ThrowIfFailed($"Failed to get staged files in {repoPath}");

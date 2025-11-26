@@ -83,10 +83,12 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         CancellationToken cancellationToken)
     {
         // If we are rebasing, we are already on top of the branch and we don't need to merge it
-        IReadOnlyCollection<UnixPath> conflictedFiles = await TryMergingBranchAndResolveConflicts(
+        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+        IReadOnlyCollection<UnixPath> conflictedFiles = await TryMergingBranchAndResolvingConflicts(
             codeflowOptions,
-            lastFlows,
+            vmr,
             targetRepo,
+            lastFlows,
             headBranchExisted,
             cancellationToken);
 
@@ -143,42 +145,6 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 targetRepo.Path);
             throw;
         }
-    }
-
-    private async Task<IReadOnlyCollection<UnixPath>> TryMergingBranchAndResolveConflicts(
-        CodeflowOptions codeflowOptions,
-        LastFlows lastFlows,
-        ILocalGitRepo targetRepo,
-        bool headBranchExisted,
-        CancellationToken cancellationToken)
-    {
-        IReadOnlyCollection<UnixPath> conflictedFiles = codeflowOptions.EnableRebase
-            ? await targetRepo.GetConflictedFilesAsync(cancellationToken)
-            : await TryMergingBranch(targetRepo, codeflowOptions.HeadBranch, codeflowOptions.TargetBranch, cancellationToken);
-
-        if (conflictedFiles.Count != 0 && await TryResolvingConflicts(
-                codeflowOptions,
-                _localGitRepoFactory.Create(_vmrInfo.VmrPath),
-                targetRepo,
-                conflictedFiles,
-                lastFlows.CrossingFlow,
-                headBranchExisted,
-                cancellationToken))
-        {
-            if (!codeflowOptions.EnableRebase)
-            {
-                await targetRepo.CommitAsync(
-                    $"""
-                    Merge {codeflowOptions.TargetBranch} into {codeflowOptions.HeadBranch}
-                    Auto-resolved conflicts:
-                    - {string.Join(Environment.NewLine + "- ", conflictedFiles.Select(f => f.Path))}
-                    """,
-                    allowEmpty: true,
-                cancellationToken: CancellationToken.None);
-            }
-        }
-
-        return await targetRepo.GetConflictedFilesAsync(cancellationToken);
     }
 
     protected override async Task<bool> TryResolvingConflict(

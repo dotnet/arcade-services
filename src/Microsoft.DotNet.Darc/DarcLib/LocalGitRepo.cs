@@ -95,11 +95,11 @@ public class LocalGitRepo(NativePath repoPath, ILocalGitClient localGitClient, I
     public async Task PullAsync(CancellationToken cancellationToken = default)
         => await _localGitClient.PullAsync(Path, cancellationToken);
 
-    public async Task<IReadOnlyCollection<string>> GetStagedFiles()
-        => await _localGitClient.GetStagedFiles(Path);
+    public async Task<IReadOnlyCollection<string>> GetStagedFilesAsync()
+        => await _localGitClient.GetStagedFilesAsync(Path);
 
-    public async Task<IReadOnlyCollection<string>> GetDirtyFiles()
-        => await _localGitClient.GetDirtyFiles(Path);
+    public async Task<IReadOnlyCollection<string>> GetDirtyFilesAsync()
+        => await _localGitClient.GetDirtyFilesAsync(Path);
 
     public async Task<string> GetConfigValue(string setting)
         => await _localGitClient.GetConfigValue(Path, setting);

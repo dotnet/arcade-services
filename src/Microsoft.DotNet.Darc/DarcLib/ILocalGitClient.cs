@@ -182,13 +182,13 @@ public interface ILocalGitClient
     /// </summary>
     /// <param name="repoPath">Path to a git repository</param>
     /// <returns>List of currently modified staged files</returns>
-    Task<IReadOnlyCollection<string>> GetStagedFiles(string repoPath);
+    Task<IReadOnlyCollection<string>> GetStagedFilesAsync(string repoPath);
 
     /// <summary>
     ///     Returns a list of modified working tree files.
     /// </summary>
     /// <returns>List of currently modified staged files</returns>
-    Task<IReadOnlyCollection<string>> GetDirtyFiles(string repoPath);
+    Task<IReadOnlyCollection<string>> GetDirtyFilesAsync(string repoPath);
 
     /// <summary>
     ///     Determines if a given path is a git repository.

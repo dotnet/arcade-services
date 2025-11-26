@@ -90,7 +90,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
 
         if (result.HadUpdates && enableRebase)
         {
-            var stagedFiles = await targetRepo.GetStagedFiles();
+            var stagedFiles = await targetRepo.GetStagedFilesAsync();
             if (stagedFiles.Count > 0)
             {
                 // When we do a rebase flow, the files stay staged and we need to commit them

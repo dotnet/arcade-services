@@ -156,7 +156,7 @@ internal abstract class CodeFlowOperation(
             // We need to make sure that working tree matches the staged changes
             await targetRepo.ExecuteGitCommand(["clean", "-xfd"], cancellationToken: cancellationToken);
 
-            IEnumerable<string> dirtyFiles = await targetRepo.GetDirtyFiles();
+            IEnumerable<string> dirtyFiles = await targetRepo.GetDirtyFilesAsync();
             dirtyFiles = dirtyFiles.Except(e.ConflictedFiles.Select(e => e.Path));
 
             // Reset only non-conflicted files
