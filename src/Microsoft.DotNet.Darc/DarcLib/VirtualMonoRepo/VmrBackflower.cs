@@ -155,7 +155,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             codeflowOptions,
             lastFlows,
             targetRepo,
-            codeflowOptions.TargetBranch,
             headBranchExisted,
             cancellationToken);
 

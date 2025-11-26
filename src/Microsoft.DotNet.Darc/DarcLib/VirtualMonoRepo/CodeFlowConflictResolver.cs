@@ -32,6 +32,15 @@ public abstract class CodeFlowConflictResolver
         _logger = logger;
     }
 
+    protected abstract Task<bool> TryResolvingConflict(
+        CodeflowOptions codeflowOptions,
+        ILocalGitRepo vmr,
+        ILocalGitRepo productRepo,
+        UnixPath filePath,
+        Codeflow? crossingFlow,
+        bool headBranchExisted,
+        CancellationToken cancellationToken);
+
     protected async Task<IReadOnlyCollection<UnixPath>> TryMergingBranch(
         ILocalGitRepo repo,
         string headBranch,
@@ -81,6 +90,88 @@ public abstract class CodeFlowConflictResolver
                 .Select(line => new UnixPath(line))
                 .ToList();
         }
+    }
+
+    /// <summary>
+    /// Tries to resolve well-known conflicts that can occur during a code flow operation.
+    /// The conflicts can happen when backward a forward flow PRs get merged out of order
+    /// and so called "crossing" flow occurs.
+    /// This can be shown on the following schema (the order of events is numbered):
+    /// 
+    ///     repo                   VMR
+    ///       O────────────────────►O
+    ///       │  2.                 │ 1.
+    ///       │   O◄────────────────O- - ┐
+    ///       │   │            4.   │
+    ///     3.O───┼────────────►O   │    │
+    ///       │   │             │   │
+    ///       │ ┌─┘             │   │    │
+    ///       │ │               │   │
+    ///     5.O◄┘               └──►O 6. │
+    ///       │                 7.  │    O (actual branch for 7. is based on top of 1.)
+    ///       |────────────────►O   │
+    ///       │                 └──►x 8.
+    ///       │                     │
+    ///
+    /// In this diagram, the flows 1->5 and 3->6 are crossing each other.
+    ///
+    /// The conflict arises in step 8. and is caused by the fact that:
+    ///   - When the forward flow PR branch is being opened in 7., the last sync (from the point of view of 5.) is from 1.
+    ///   - This means that the PR branch will be based on 1. (the real PR branch is the "actual 7.")
+    ///   - This means that when 6. merged, VMR's source-manifest.json got updated with the SHA of the 3.
+    ///   - So the source-manifest in 6. contains the SHA of 3.
+    ///   - The forward flow PR branch contains the SHA of 5.
+    ///   - So the source-manifest file conflicts on the SHA (3. vs 5.)
+    ///   - However, if only the version files are in conflict, we can try merging 6. into 7. and resolve the conflict.
+    ///   - This is because basically we know we want to set the version files to point at 5.
+    /// </summary>
+    protected async Task<bool> TryResolvingConflicts(
+        CodeflowOptions codeflowOptions,
+        ILocalGitRepo vmr,
+        ILocalGitRepo sourceRepo,
+        IReadOnlyCollection<UnixPath> conflictedFiles,
+        Codeflow? crossingFlow,
+        bool headBranchExisted,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Auto-resolving expected conflicts...");
+        int count = 0;
+        bool success = true;
+
+        foreach (var filePath in conflictedFiles)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                if (await TryResolvingConflict(codeflowOptions, vmr, sourceRepo, filePath, crossingFlow, headBranchExisted, cancellationToken))
+                {
+                    count++;
+                    continue;
+                }
+                else if (codeflowOptions.EnableRebase)
+                {
+                    // When we fail to resolve conflicts during a rebase, we are fine with keeping it
+                    success = false;
+                    continue;
+                }
+                else
+                {
+                    _logger.LogDebug("Conflict in {filePath} cannot be resolved automatically", filePath);
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to resolve conflicts in {filePath}", filePath);
+            }
+
+            _logger.LogInformation("Failed to auto-resolve a conflict in {conflictedFile}", filePath);
+
+            await AbortMerge(codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : sourceRepo);
+            return false;
+        }
+
+        _logger.LogInformation("Successfully auto-resolved {count} expected conflicts", count);
+        return success;
     }
 
     /// <summary>

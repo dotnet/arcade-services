@@ -429,7 +429,6 @@ public class BackflowConflictResolverTests
                 ForceUpdate: false),
             lastFlows,
             _localRepo.Object,
-            TargetBranch,
             headBranchExisted,
             cancellationToken);
 

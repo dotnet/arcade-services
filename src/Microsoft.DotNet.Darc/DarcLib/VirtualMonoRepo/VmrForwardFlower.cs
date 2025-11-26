@@ -157,8 +157,8 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 codeflowOptions,
                 vmr,
                 sourceRepo,
-                targetBranch,
                 lastFlows,
+                headBranchExisted,
                 cancellationToken);
 
             await CommentIncludedPRs(sourceRepo, lastFlows.LastForwardFlow.RepoSha, build.Commit, mapping.DefaultRemote, cancellationToken);

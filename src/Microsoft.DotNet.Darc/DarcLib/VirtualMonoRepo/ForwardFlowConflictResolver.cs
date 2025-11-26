@@ -51,8 +51,8 @@ public interface IForwardFlowConflictResolver
         CodeflowOptions codeflowOptions,
         ILocalGitRepo vmr,
         ILocalGitRepo sourceRepo,
-        string branchToMerge,
         LastFlows lastFlows,
+        bool headBranchExisted,
         CancellationToken cancellationToken);
 
     Task MergeDependenciesAsync(
@@ -104,29 +104,38 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         CodeflowOptions codeflowOptions,
         ILocalGitRepo vmr,
         ILocalGitRepo sourceRepo,
-        string branchToMerge,
         LastFlows lastFlows,
+        bool headBranchExisted,
         CancellationToken cancellationToken)
     {
         var conflictedFiles = codeflowOptions.EnableRebase
             ? await vmr.GetConflictedFilesAsync(cancellationToken)
-            : await TryMergingBranch(vmr, codeflowOptions.HeadBranch, branchToMerge, cancellationToken);
+            : await TryMergingBranch(vmr, codeflowOptions.HeadBranch, codeflowOptions.TargetBranch, cancellationToken);
 
-        if (conflictedFiles.Count != 0
-            && await TryResolvingConflicts(codeflowOptions, vmr, sourceRepo, conflictedFiles, lastFlows.CrossingFlow, cancellationToken)
-            && !codeflowOptions.EnableRebase)
+        if (conflictedFiles.Count != 0 && await TryResolvingConflicts(
+                codeflowOptions,
+                vmr,
+                sourceRepo,
+                conflictedFiles,
+                lastFlows.CrossingFlow,
+                headBranchExisted,
+                cancellationToken))
         {
-            try
+            if (!codeflowOptions.EnableRebase)
             {
                 conflictedFiles = [];
-                await vmr.CommitAsync(
-                    $"Merge branch {branchToMerge} into {codeflowOptions.HeadBranch}",
-                    allowEmpty: true,
-                    cancellationToken: CancellationToken.None);
-            }
-            catch (Exception e) when (e.Message.Contains("Your branch is ahead of"))
-            {
-                // There was no reason to merge, we're fast-forward ahead from the target branch
+
+                try
+                {
+                    await vmr.CommitAsync(
+                        $"Merge branch {codeflowOptions.TargetBranch} into {codeflowOptions.HeadBranch}",
+                        allowEmpty: true,
+                        cancellationToken: CancellationToken.None);
+                }
+                catch (Exception e) when (e.Message.Contains("Your branch is ahead of"))
+                {
+                    // There was no reason to merge, we're fast-forward ahead from the target branch
+                }
             }
         }
 
@@ -146,7 +155,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             if (!codeflowOptions.EnableRebase)
             {
                 await vmr.CommitAsync(
-                    $"Update dependencies after merging {branchToMerge} into {codeflowOptions.HeadBranch}",
+                    $"Update dependencies after merging {codeflowOptions.TargetBranch} into {codeflowOptions.HeadBranch}",
                     allowEmpty: true,
                     cancellationToken: CancellationToken.None);
             }
@@ -155,66 +164,22 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         {
             // We don't want to push this as there is some problem
             _logger.LogError(e, "Failed to update dependencies after merging {branchToMerge} into {headBranch} in {repoPath}",
-                branchToMerge,
+                codeflowOptions.TargetBranch,
                 codeflowOptions.HeadBranch,
                 vmr.Path);
             throw;
         }
 
-        return conflictedFiles;
+        return await vmr.GetConflictedFilesAsync(cancellationToken);
     }
 
-    private async Task<bool> TryResolvingConflicts(
-        CodeflowOptions codeflowOptions,
-        ILocalGitRepo vmr,
-        ILocalGitRepo sourceRepo,
-        IReadOnlyCollection<UnixPath> conflictedFiles,
-        Codeflow? crossingFlow,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Auto-resolving expected conflicts...");
-        int count = 0;
-
-        foreach (var filePath in conflictedFiles)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            try
-            {
-                if (await TryResolvingConflict(codeflowOptions, vmr, sourceRepo, filePath, crossingFlow, cancellationToken))
-                {
-                    count++;
-                    continue;
-                }
-                else if (codeflowOptions.EnableRebase)
-                {
-                    // When we fail to resolve conflicts during a rebase, we are fine with keeping it
-                    continue;
-                }
-                else
-                {
-                    _logger.LogDebug("Conflict in {filePath} cannot be resolved automatically", filePath);
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Failed to resolve conflicts in {filePath}", filePath);
-            }
-
-            await AbortMerge(vmr);
-            return false;
-        }
-
-        _logger.LogInformation("Successfully auto-resolved {count} expected conflicts", count);
-
-        return true;
-    }
-
-    private async Task<bool> TryResolvingConflict(
+    protected override async Task<bool> TryResolvingConflict(
         CodeflowOptions codeflowOptions,
         ILocalGitRepo vmr,
         ILocalGitRepo sourceRepo,
         UnixPath conflictedFile,
         Codeflow? crossingFlow,
+        bool headBranchExisted,
         CancellationToken cancellationToken)
     {
         // Known conflict in source-manifest.json
