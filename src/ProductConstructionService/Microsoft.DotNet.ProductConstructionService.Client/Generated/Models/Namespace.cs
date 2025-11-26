@@ -3,7 +3,7 @@
 
 using Newtonsoft.Json;
 
-namespace ProductConstructionService.Client.Models
+namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
     public partial class Namespace
     {
