@@ -25,6 +25,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
+using PrComment = Microsoft.TeamFoundation.SourceControl.WebApi.Comment;
+
 namespace Microsoft.DotNet.DarcLib;
 
 public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsClient
@@ -472,7 +474,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         using VssConnection connection = CreateVssConnection(accountName);
         using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
 
-        var prComment = new Comment()
+        var prComment = new PrComment()
         {
             CommentType = TeamFoundation.SourceControl.WebApi.CommentType.Text,
             Content = $"{message}{CommentMarker}"
@@ -487,12 +489,12 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             {
                 continue;
             }
-            List<Comment> comments = await client.GetCommentsAsync(repoName, id, commentThread.Id);
+            List<PrComment> comments = await client.GetCommentsAsync(repoName, id, commentThread.Id);
             bool threadHasCommentWithMarker = comments.Any(comment => comment.CommentType == TeamFoundation.SourceControl.WebApi.CommentType.Text && comment.Content.EndsWith(CommentMarker));
             if (threadHasCommentWithMarker)
             {
                 // Check if last comment in that thread has the marker.
-                Comment lastComment = comments.Last();
+                PrComment lastComment = comments.Last();
                 if (lastComment.CommentType == TeamFoundation.SourceControl.WebApi.CommentType.Text && lastComment.Content.EndsWith(CommentMarker))
                 {
                     // Update comment
@@ -1538,7 +1540,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         using VssConnection connection = CreateVssConnection(accountName);
         using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
 
-        var prComment = new Comment()
+        var prComment = new PrComment()
         {
             CommentType = TeamFoundation.SourceControl.WebApi.CommentType.Text,
             Content = $"{comment}{CommentMarker}"
@@ -1765,9 +1767,9 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             if (commentThread.Status == CommentThreadStatus.Active || 
                 commentThread.Status == CommentThreadStatus.Unknown)
             {
-                List<Comment> threadComments = await client.GetCommentsAsync(repoName, id, commentThread.Id);
+                List<PrComment> threadComments = await client.GetCommentsAsync(repoName, id, commentThread.Id);
                 
-                foreach (Comment comment in threadComments)
+                foreach (PrComment comment in threadComments)
                 {
                     if (comment.CommentType == TeamFoundation.SourceControl.WebApi.CommentType.Text && !string.IsNullOrEmpty(comment.Content))
                     {

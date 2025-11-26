@@ -4,6 +4,7 @@
 using CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.DotNet.ProductConstructionService.Client;
+using ProductConstructionService.Cli.Operations;
 
 namespace ProductConstructionService.Cli.Options;
 
@@ -27,6 +28,7 @@ internal abstract class PcsStatusOptions : Options
                     accessToken: null,
                     managedIdentityId: null,
                     disableInteractiveAuth: IsCi));
+        services.AddSingleton<ISubscriptionDescriptionHelper, SubscriptionDescriptionHelper>();
         return base.RegisterServices(services);
     }
 }

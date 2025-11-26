@@ -49,7 +49,7 @@ internal class PullRequestCommenter : IPullRequestCommenter
         IEnumerable<(string oldValue, string newValue)> replacements)
     {
         var comments = _commentService.GetComments();
-        if (comments.Count == 0)
+        if (comments.Length == 0)
         {
             _logger.LogDebug("No collected comments to post to PR {prUrl}", prUrl);
             return;
@@ -59,12 +59,12 @@ internal class PullRequestCommenter : IPullRequestCommenter
 
         foreach (var comment in comments)
         {
-            var header = comment.commentType switch
+            var header = comment.Type switch
             {
                 CommentType.Warning => "> [!IMPORTANT]",
                 CommentType.Information => "> [!NOTE]",
                 CommentType.Caution => "> [!CAUTION]",
-                _ => throw new ArgumentOutOfRangeException($"Comment type {comment.commentType} is not supported")
+                _ => throw new ArgumentOutOfRangeException($"Comment type {comment.Type} is not supported")
             };
 
             var commentText = comment.Text;

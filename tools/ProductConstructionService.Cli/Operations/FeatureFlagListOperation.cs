@@ -12,15 +12,18 @@ internal class FeatureFlagListOperation : IOperation
     private readonly FeatureFlagListOptions _options;
     private readonly IProductConstructionServiceApi _client;
     private readonly ILogger<FeatureFlagListOperation> _logger;
+    private readonly ISubscriptionDescriptionHelper _subscriptionHelper;
 
     public FeatureFlagListOperation(
         FeatureFlagListOptions options,
         IProductConstructionServiceApi client,
-        ILogger<FeatureFlagListOperation> logger)
+        ILogger<FeatureFlagListOperation> logger,
+        ISubscriptionDescriptionHelper subscriptionHelper)
     {
         _options = options;
         _client = client;
         _logger = logger;
+        _subscriptionHelper = subscriptionHelper;
     }
 
     public async Task<int> RunAsync()
@@ -62,17 +65,18 @@ internal class FeatureFlagListOperation : IOperation
             return (flowControl: false, value: 1);
         }
 
-        Console.WriteLine("Listing feature flags for subscription {0}", subscriptionId);
+        var subscriptionDescription = await _subscriptionHelper.GetSubscriptionDescriptionAsync(subscriptionId);
+        Console.WriteLine("Listing feature flags for subscription {0}", subscriptionDescription);
 
         var response = await _client.FeatureFlags.GetFeatureFlagsAsync(subscriptionId);
 
         if (response.Flags?.Count == 0 || response.Flags == null)
         {
-            Console.WriteLine("No feature flags found for subscription {0}", subscriptionId);
+            Console.WriteLine("No feature flags found for subscription {0}", subscriptionDescription);
             return (flowControl: false, value: 0);
         }
 
-        Console.WriteLine("Feature flags for subscription {0}:", subscriptionId);
+        Console.WriteLine("Feature flags for subscription {0}:", subscriptionDescription);
         Console.WriteLine("");
 
         foreach (var flag in response.Flags)
@@ -101,9 +105,13 @@ internal class FeatureFlagListOperation : IOperation
 
         var groupedFlags = response.Flags.GroupBy(f => f.SubscriptionId).OrderBy(g => g.Key);
 
+        // Prefetch all subscription descriptions in parallel
+        await _subscriptionHelper.PrefetchSubscriptionDescriptionsAsync(groupedFlags.Select(g => g.Key));
+
         foreach (var group in groupedFlags)
         {
-            Console.WriteLine("Subscription {0}:", group.Key);
+            var subscriptionDescription = await _subscriptionHelper.GetSubscriptionDescriptionAsync(group.Key);
+            Console.WriteLine("{0}:", subscriptionDescription);
 
             foreach (var flag in group.OrderBy(f => f.FlagName))
             {

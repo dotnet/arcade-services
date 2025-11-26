@@ -1115,9 +1115,9 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // both of the changes were conflicting, so we took whatever the target branch had, resulting in no updates
         codeFlowResult.DependencyUpdates.Should().BeEmpty();
         var comments = GetLastFlowCollectedComments();
-        comments.Should().HaveCount(2);
-        comments[0].Should().Contain($"There was a conflict when merging version properties. In file eng/Version.Details.xml, property 'Package.B1'{Environment.NewLine}was removed in the target branch but added in the source repo.");
-        comments[1].Should().Contain($"There was a conflict when merging version properties. In file eng/Version.Details.xml, property 'Package.A1'{Environment.NewLine}was added in the target branch but removed in the source repo's branch.");
+        comments.Should().HaveCountGreaterThanOrEqualTo(2);
+        comments.Should().Contain(c => c.Contains($"There was a conflict when merging version properties. In file eng/Version.Details.xml, property 'Package.B1'{Environment.NewLine}was removed in the target branch but added in the source repo."));
+        comments.Should().Contain(c => c.Contains($"There was a conflict when merging version properties. In file eng/Version.Details.xml, property 'Package.A1'{Environment.NewLine}was added in the target branch but removed in the source repo's branch."));
     }
 
     /*
