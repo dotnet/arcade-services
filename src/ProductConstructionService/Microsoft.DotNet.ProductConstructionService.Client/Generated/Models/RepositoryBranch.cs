@@ -20,5 +20,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 
         [JsonProperty("mergePolicies")]
         public List<MergePolicy> MergePolicies { get; set; }
+
+        [JsonProperty("namespace")]
+        public Namespace Namespace { get; set; }
     }
 }

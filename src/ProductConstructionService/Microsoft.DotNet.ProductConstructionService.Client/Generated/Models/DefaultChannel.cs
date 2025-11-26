@@ -29,6 +29,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         [JsonProperty("enabled")]
         public bool Enabled { get; set; }
 
+        [JsonProperty("namespace")]
+        public Namespace Namespace { get; set; }
+
         [JsonIgnore]
         public bool IsValid
         {
