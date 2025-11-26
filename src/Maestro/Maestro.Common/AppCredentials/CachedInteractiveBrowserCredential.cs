@@ -3,11 +3,13 @@
 
 using Azure.Core;
 using Azure.Identity;
+using Microsoft.Identity.Client.Extensions.Msal;
 
 namespace Maestro.Common.AppCredentials;
 public class CachedInteractiveBrowserCredential: TokenCredential
 {
-    private readonly InteractiveBrowserCredential _credential;
+    private InteractiveBrowserCredential _credential;
+    private readonly InteractiveBrowserCredentialOptions _options;
     private readonly string _authRecordPath;
 
     private bool _isCached = false;
@@ -16,6 +18,7 @@ public class CachedInteractiveBrowserCredential: TokenCredential
         InteractiveBrowserCredentialOptions options,
         string authRecordPath)
     {
+        _options = options;
         _authRecordPath = authRecordPath;
 
         if (File.Exists(_authRecordPath))
@@ -71,8 +74,23 @@ public class CachedInteractiveBrowserCredential: TokenCredential
             Directory.CreateDirectory(authRecordDir);
         }
 
-        // Prompt the user for consent and save the resulting authentication record on disk
-        var authRecord = _credential.Authenticate(requestContext);
+        static bool IsMsalCachePersistenceException(Exception e) =>
+            e is MsalCachePersistenceException || (e.InnerException is not null && IsMsalCachePersistenceException(e.InnerException));
+
+        AuthenticationRecord authRecord;
+        try
+        {
+            // Prompt the user for consent and save the resulting authentication record on disk
+            authRecord = _credential.Authenticate(requestContext);
+        }
+        catch (Exception e) when (IsMsalCachePersistenceException(e))
+        {
+            // If we cannot persist the token cache, fall back to interactive authentication without persistence
+            _options.TokenCachePersistenceOptions = null;
+            _credential = new InteractiveBrowserCredential(_options);
+            _credential.Authenticate(requestContext);
+            return;
+        }
 
         using var authRecordStream = new FileStream(_authRecordPath, FileMode.Create, FileAccess.Write);
         authRecord.Serialize(authRecordStream);

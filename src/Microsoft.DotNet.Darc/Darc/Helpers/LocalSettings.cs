@@ -51,7 +51,7 @@ internal class LocalSettings
         {
             localSettings = LoadSettingsFile();
         }
-        catch (FileNotFoundException)
+        catch (Exception e) when (e is DirectoryNotFoundException || e is FileNotFoundException)
         {
             // User has not called darc authenticate yet
             // Not a problem of it self unless the operation they run needs the GitHub token
