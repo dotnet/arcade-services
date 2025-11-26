@@ -145,7 +145,7 @@ public class CachedInteractiveBrowserCredential: TokenCredential
         try
         {
             return _browserCredential.Authenticate(requestContext, cancellationToken)
-                ?? _deviceCodeCredential!.Authenticate(requestContext, cancellationToken);
+                ?? _deviceCodeCredential.Authenticate(requestContext, cancellationToken);
         }
         catch (AuthenticationFailedException)
         {
