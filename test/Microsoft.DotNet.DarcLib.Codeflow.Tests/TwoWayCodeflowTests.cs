@@ -37,6 +37,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
         // Make some changes in the product repo
+        await GitOperations.Checkout(ProductRepoPath, "main");
         await File.WriteAllTextAsync(ProductRepoPath / "a.txt", aFileContent);
         await File.WriteAllTextAsync(ProductRepoPath / "cloaked.dll", "A cloaked file");
         await GitOperations.CommitAll(ProductRepoPath, aFileContent);
