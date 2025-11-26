@@ -8,11 +8,14 @@ using Microsoft.Identity.Client.Extensions.Msal;
 namespace Maestro.Common.AppCredentials;
 public class CachedInteractiveBrowserCredential: TokenCredential
 {
-    private InteractiveBrowserCredential _credential;
+    private InteractiveBrowserCredential _browserCredential;
+    private DeviceCodeCredential _deviceCodeCredential;
+
     private readonly InteractiveBrowserCredentialOptions _options;
     private readonly string _authRecordPath;
 
     private bool _isCached = false;
+    private bool _isDeviceCodeFallback = false;
 
     public CachedInteractiveBrowserCredential(
         InteractiveBrowserCredentialOptions options,
@@ -36,21 +39,53 @@ public class CachedInteractiveBrowserCredential: TokenCredential
             }
         }
 
-        _credential = new InteractiveBrowserCredential(options);
+        _browserCredential = new InteractiveBrowserCredential(options);
+        _deviceCodeCredential = new DeviceCodeCredential(new()
+        {
+            TenantId = _options.TenantId,
+            ClientId = _options.ClientId,
+            TokenCachePersistenceOptions = _options.TokenCachePersistenceOptions,
+        });
     }
 
     public override AccessToken GetToken(TokenRequestContext requestContext, CancellationToken cancellationToken)
     {
-        CacheAuthenticationRecord(requestContext);
+        CacheAuthenticationRecord(requestContext, cancellationToken);
 
-        return _credential.GetToken(requestContext, cancellationToken);
+        if (_isDeviceCodeFallback)
+        {
+            return _deviceCodeCredential.GetToken(requestContext, cancellationToken);
+        }
+
+        try
+        {
+            return _browserCredential.GetToken(requestContext, cancellationToken);
+        }
+        catch (AuthenticationFailedException)
+        {
+            _isDeviceCodeFallback = true;
+            return _deviceCodeCredential.GetToken(requestContext, cancellationToken);
+        }
     }
 
-    public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
+    public override async ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
     {
-        CacheAuthenticationRecord(requestContext);
+        CacheAuthenticationRecord(requestContext, cancellationToken);
 
-        return _credential.GetTokenAsync(requestContext, cancellationToken);
+        if (_isDeviceCodeFallback)
+        {
+            return await _deviceCodeCredential.GetTokenAsync(requestContext, cancellationToken);
+        }
+
+        try
+        {
+            return await _browserCredential.GetTokenAsync(requestContext, cancellationToken);
+        }
+        catch (AuthenticationFailedException)
+        {
+            _isDeviceCodeFallback = true;
+            return await _deviceCodeCredential.GetTokenAsync(requestContext, cancellationToken);
+        }
     }
 
     private AuthenticationRecord GetAuthenticationRecord()
@@ -59,7 +94,7 @@ public class CachedInteractiveBrowserCredential: TokenCredential
         return AuthenticationRecord.Deserialize(authRecordReadStream);
     }
 
-    private void CacheAuthenticationRecord(TokenRequestContext requestContext)
+    private void CacheAuthenticationRecord(TokenRequestContext requestContext, CancellationToken cancellationToken)
     {
         if (_isCached)
         {
@@ -81,20 +116,41 @@ public class CachedInteractiveBrowserCredential: TokenCredential
         try
         {
             // Prompt the user for consent and save the resulting authentication record on disk
-            authRecord = _credential.Authenticate(requestContext);
+            authRecord = Authenticate(requestContext, cancellationToken);
         }
         catch (Exception e) when (IsMsalCachePersistenceException(e))
         {
             // If we cannot persist the token cache, fall back to interactive authentication without persistence
-            _options.TokenCachePersistenceOptions = null;
-            _credential = new InteractiveBrowserCredential(_options);
-            _credential.Authenticate(requestContext);
-            return;
+            _browserCredential = new InteractiveBrowserCredential(new InteractiveBrowserCredentialOptions()
+            {
+                TenantId = _options.TenantId,
+                ClientId = _options.ClientId,
+            });
+            _deviceCodeCredential = new DeviceCodeCredential(new()
+            {
+                TenantId = _options.TenantId,
+                ClientId = _options.ClientId,
+            });
+            authRecord = Authenticate(requestContext, cancellationToken);
         }
 
         using var authRecordStream = new FileStream(_authRecordPath, FileMode.Create, FileAccess.Write);
-        authRecord.Serialize(authRecordStream);
+        authRecord.Serialize(authRecordStream, cancellationToken);
 
         _isCached = true;
+    }
+
+    private AuthenticationRecord Authenticate(TokenRequestContext requestContext, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return _browserCredential.Authenticate(requestContext, cancellationToken)
+                ?? _deviceCodeCredential!.Authenticate(requestContext, cancellationToken);
+        }
+        catch (AuthenticationFailedException)
+        {
+            _isDeviceCodeFallback = true;
+            return _deviceCodeCredential.Authenticate(requestContext, cancellationToken);
+        }
     }
 }
