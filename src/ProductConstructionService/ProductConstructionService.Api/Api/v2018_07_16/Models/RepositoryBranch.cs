@@ -15,7 +15,7 @@ public class RepositoryBranch : IValidatableObject
         Repository = other.RepositoryName;
         Branch = other.BranchName;
         MergePolicies = (other.PolicyObject?.MergePolicies ?? []).Select(p => new MergePolicy(p)).ToImmutableList();
-        Namespace = new(other.Namespace);
+        Namespace = other.Namespace == null ? null : new(other.Namespace);
     }
 
     public string Repository { get; set; }

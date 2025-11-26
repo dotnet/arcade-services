@@ -49,7 +49,8 @@ public class ChannelsController : v2018_07_16.Controllers.ChannelsController
     [ValidateModelState]
     public override IActionResult ListChannels(string? classification = null)
     {
-        IQueryable<Maestro.Data.Models.Channel> query = _context.Channels;
+        IQueryable<Maestro.Data.Models.Channel> query = _context.Channels
+            .Include(c => c.Namespace);
         if (!string.IsNullOrEmpty(classification))
         {
             query = query.Where(c => c.Classification == classification);

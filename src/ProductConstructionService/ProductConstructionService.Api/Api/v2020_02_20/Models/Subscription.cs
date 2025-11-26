@@ -23,7 +23,7 @@ public class Subscription
         SourceEnabled = other.SourceEnabled;
         SourceDirectory = other.SourceDirectory;
         TargetDirectory = other.TargetDirectory;
-        Namespace = new(other.Namespace);
+        Namespace = other.Namespace == null ? null : new(other.Namespace);
         Policy = new v2018_07_16.Models.SubscriptionPolicy(other.PolicyObject);
         PullRequestFailureNotificationTags = other.PullRequestFailureNotificationTags;
         ExcludedAssets = other.ExcludedAssets != null ? [.. other.ExcludedAssets.Select(s => s.Filter)] : [];

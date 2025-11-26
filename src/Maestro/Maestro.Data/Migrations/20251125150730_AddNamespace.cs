@@ -110,7 +110,7 @@ namespace Maestro.Data.Migrations
                 onDelete: ReferentialAction.Restrict);
 
             // Insert default namespace for the environment
-            var connectionstring = BuildAssetRegistryContextFactory.GetConnectionString();
+            var connectionstring = BuildAssetRegistryContextFactory.GetConnectionString("BuildAssetRegistry");
             Console.WriteLine($"Connection string: {connectionstring}");
             string namespaceName;
             if (connectionstring.Contains("maestro-int-server"))

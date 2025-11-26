@@ -16,7 +16,7 @@ public class Channel
         Id = other.Id;
         Name = other.Name;
         Classification = other.Classification;
-        Namespace = new(other.Namespace);
+        Namespace = other.Namespace == null ? null : new(other.Namespace);
     }
 
     public int Id { get; }
