@@ -52,7 +52,7 @@ public class CachedInteractiveBrowserCredential: TokenCredential
     {
         CacheAuthenticationRecord(requestContext, cancellationToken);
 
-        if (Interlocked.CompareExchange(ref _isDeviceCodeFallback, 0, 0) == 1)
+        if (Volatile.Read(ref _isDeviceCodeFallback) == 1)
         {
             return _deviceCodeCredential.GetToken(requestContext, cancellationToken);
         }
@@ -72,7 +72,7 @@ public class CachedInteractiveBrowserCredential: TokenCredential
     {
         CacheAuthenticationRecord(requestContext, cancellationToken);
 
-        if (Interlocked.CompareExchange(ref _isDeviceCodeFallback, 0, 0) == 1)
+        if (Volatile.Read(ref _isDeviceCodeFallback) == 1)
         {
             return await _deviceCodeCredential.GetTokenAsync(requestContext, cancellationToken);
         }
@@ -96,7 +96,7 @@ public class CachedInteractiveBrowserCredential: TokenCredential
 
     private void CacheAuthenticationRecord(TokenRequestContext requestContext, CancellationToken cancellationToken)
     {
-        if (Interlocked.CompareExchange(ref _isCached, 0, 0) == 1)
+        if (Volatile.Read(ref _isCached) == 1)
         {
             return;
         }
