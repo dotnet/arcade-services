@@ -31,17 +31,14 @@ namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 public class ChannelsController : v2018_07_16.Controllers.ChannelsController
 {
     private readonly BuildAssetRegistryContext _context;
-    private readonly IOptions<EnvironmentNamespaceOptions> _environmentNamespaceOptions;
-
 
     public ChannelsController(
         BuildAssetRegistryContext context,
         IBasicBarClient barClient,
         IOptions<EnvironmentNamespaceOptions> environmentNamespaceOptions)
-        : base(context, barClient)
+        : base(context, barClient, environmentNamespaceOptions)
     {
         _context = context;
-        _environmentNamespaceOptions = environmentNamespaceOptions;
     }
 
     [HttpGet]
@@ -159,7 +156,7 @@ public class ChannelsController : v2018_07_16.Controllers.ChannelsController
     [HandleDuplicateKeyRows("Could not create channel '{name}'. A channel with the specified name already exists.")]
     public override async Task<IActionResult> CreateChannel([Required] string name, [Required] string classification)
     {
-        var defaultNamespace = await _context.Namespaces.SingleOrDefaultAsync(n => n.Name == _environmentNamespaceOptions.Value.DefaultNamespaceName);
+        var defaultNamespace = await _context.Namespaces.SingleAsync(n => n.Name == _environmentNamespaceOptions.Value.DefaultNamespaceName);
         var channelModel = new Maestro.Data.Models.Channel
         {
             Name = name,

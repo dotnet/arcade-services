@@ -23,17 +23,15 @@ namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannelsController
 {
     private readonly BuildAssetRegistryContext _context;
-    private readonly IOptions<EnvironmentNamespaceOptions> _environmentNamespaceOptions;
 
     // Branch names can't possibly start with -, so we'll use this fact to guarantee the user 
     // wants to use a regex, and not direct matching.
     private const string RegexBranchPrefix = "-regex:";
 
     public DefaultChannelsController(BuildAssetRegistryContext context, IOptions<EnvironmentNamespaceOptions> environmentNamespaceOptions)
-        : base(context)
+        : base(context, environmentNamespaceOptions)
     {
         _context = context;
-        _environmentNamespaceOptions = environmentNamespaceOptions;
     }
 
     /// <summary>
@@ -130,7 +128,7 @@ public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannels
         }
         else
         {
-            var defaultNamespace = await _context.Namespaces.SingleOrDefaultAsync(n => n.Name == _environmentNamespaceOptions.Value.DefaultNamespaceName);
+            var defaultNamespace = await _context.Namespaces.SingleAsync(n => n.Name == _environmentNamespaceOptions.Value.DefaultNamespaceName);
             defaultChannel = new Maestro.Data.Models.DefaultChannel
             {
                 Channel = channel,

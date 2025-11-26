@@ -36,13 +36,14 @@ public class BuildAssetRegistryContextFactory : IDesignTimeDbContextFactory<Buil
     {
         var connectionString =  $@"Data Source=localhost\SQLEXPRESS;Initial Catalog={databaseName};Integrated Security=true;Encrypt=false"; // CodeQL [SM03452] This 'connection string' is only for the local SQLExpress instance and has no credentials, Encrypt=false for .NET 8+ compatibility
         var envVarConnectionString = Environment.GetEnvironmentVariable("BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING");
-        if (!string.IsNullOrEmpty(envVarConnectionString))
+        if (string.IsNullOrEmpty(envVarConnectionString))
         {
-            Console.WriteLine("Using Connection String from environment.");
-            connectionString = envVarConnectionString;
+            return connectionString;
         }
-
-        return connectionString;
+        else
+        {
+            return envVarConnectionString;
+        }
     }
 }
 

@@ -23,9 +23,6 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         [JsonProperty("classification")]
         public string Classification { get; }
 
-        [JsonProperty("namespace")]
-        public Namespace Namespace { get; set; }
-
         [JsonIgnore]
         public bool IsValid
         {

@@ -59,9 +59,6 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         [JsonProperty("pullRequestFailureNotificationTags")]
         public string PullRequestFailureNotificationTags { get; }
 
-        [JsonProperty("namespace")]
-        public Namespace Namespace { get; set; }
-
         [JsonProperty("excludedAssets")]
         public List<string> ExcludedAssets { get; }
     }

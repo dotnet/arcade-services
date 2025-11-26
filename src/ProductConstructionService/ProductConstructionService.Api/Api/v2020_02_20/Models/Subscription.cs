@@ -3,8 +3,6 @@
 
 #nullable disable
 
-using ProductConstructionService.Api.Api.v2020_02_20.Models;
-
 namespace ProductConstructionService.Api.v2020_02_20.Models;
 
 public class Subscription
@@ -23,7 +21,6 @@ public class Subscription
         SourceEnabled = other.SourceEnabled;
         SourceDirectory = other.SourceDirectory;
         TargetDirectory = other.TargetDirectory;
-        Namespace = other.Namespace == null ? null : new(other.Namespace);
         Policy = new v2018_07_16.Models.SubscriptionPolicy(other.PolicyObject);
         PullRequestFailureNotificationTags = other.PullRequestFailureNotificationTags;
         ExcludedAssets = other.ExcludedAssets != null ? [.. other.ExcludedAssets.Select(s => s.Filter)] : [];
@@ -52,8 +49,6 @@ public class Subscription
     public string TargetDirectory { get; }
 
     public string PullRequestFailureNotificationTags { get; }
-
-    public Namespace Namespace { get; }
 
     public IReadOnlyCollection<string> ExcludedAssets { get; }
 }

@@ -26,7 +26,6 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
 
     private readonly BuildAssetRegistryContext _context;
     private readonly IGitHubClientFactory _gitHubClientFactory;
-    private readonly IOptions<EnvironmentNamespaceOptions> _environmentNamespaceOptions;
 
     public SubscriptionsController(
         BuildAssetRegistryContext context,
@@ -35,11 +34,10 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         IWorkItemProducerFactory workItemProducerFactory,
         IOptions<EnvironmentNamespaceOptions> environmentNamespaceOptions,
         ILogger<SubscriptionsController> logger)
-        : base(context, workItemProducerFactory, gitHubInstallationRetriever, logger)
+        : base(context, workItemProducerFactory, gitHubInstallationRetriever, environmentNamespaceOptions, logger)
     {
         _context = context;
         _gitHubClientFactory = gitHubClientFactory;
-        _environmentNamespaceOptions = environmentNamespaceOptions;
     }
 
     [ApiRemoved]
@@ -446,7 +444,7 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
         subscriptionModel.Channel = channel;
         subscriptionModel.Id = Guid.NewGuid();
         // set the Namespace to the default value for the environment we're running in
-        subscriptionModel.Namespace = await _context.Namespaces.SingleOrDefaultAsync(n => n.Name == _environmentNamespaceOptions.Value.DefaultNamespaceName);
+        subscriptionModel.Namespace = await _context.Namespaces.SingleAsync(n => n.Name == _environmentNamespaceOptions.Value.DefaultNamespaceName);
 
         // Check that we're not about add an existing subscription that is identical
         Maestro.Data.Models.Subscription? equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);

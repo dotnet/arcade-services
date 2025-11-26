@@ -3,7 +3,6 @@
 
 using System.Net;
 using AwesomeAssertions;
-using ProductConstructionService.Api.v2018_07_16.Models;
 using Maestro.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
@@ -15,8 +14,11 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Internal;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
+using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Api.v2018_07_16.Controllers;
+using ProductConstructionService.Api.v2018_07_16.Models;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 
@@ -173,6 +175,13 @@ public partial class ChannelsController20180716Tests
                 .Returns(mockWorkItemProducer.Object);
 
             collection.AddSingleton(mockWorkItemProducerFactory.Object);
+
+            collection.AddSingleton<IOptions<EnvironmentNamespaceOptions>>(
+                new OptionsWrapper<EnvironmentNamespaceOptions>(
+                    new EnvironmentNamespaceOptions
+                    {
+                        DefaultNamespaceName = TestDatabase.TestNamespace
+                    }));
         }
 
         public static Func<IServiceProvider, TestClock> Clock(IServiceCollection collection)

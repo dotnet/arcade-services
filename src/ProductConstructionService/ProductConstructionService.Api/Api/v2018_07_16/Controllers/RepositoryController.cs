@@ -131,7 +131,7 @@ public class RepositoryController : ControllerBase
         Maestro.Data.Models.RepositoryBranch repoBranch = await GetRepositoryBranch(repository, branch);
         Maestro.Data.Models.RepositoryBranch.Policy policy = repoBranch.PolicyObject ?? new Maestro.Data.Models.RepositoryBranch.Policy();
         policy.MergePolicies = policies?.Select(p => p.ToDb()).ToList() ?? [];
-        var defaultNamespace = await _context.Namespaces.SingleOrDefaultAsync(n => n.Name == _environmentNamespaceOptions.Value.DefaultNamespaceName);
+        var defaultNamespace = await _context.Namespaces.SingleAsync(n => n.Name == _environmentNamespaceOptions.Value.DefaultNamespaceName);
         repoBranch.PolicyObject = policy;
         repoBranch.Namespace = defaultNamespace;
         await _context.SaveChangesAsync();

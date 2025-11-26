@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.ComponentModel.DataAnnotations;
-using ProductConstructionService.Api.Api.v2020_02_20.Models;
 
 #nullable disable
 namespace ProductConstructionService.Api.v2020_02_20.Models;
@@ -17,7 +16,6 @@ public class DefaultChannel
         Repository = other.Repository;
         Branch = other.Branch;
         Channel = other.Channel == null ? null : new(other.Channel);
-        Namespace = other.Namespace == null ? null : new(other.Namespace);
         Enabled = other.Enabled;
     }
 
@@ -33,9 +31,6 @@ public class DefaultChannel
     public Channel Channel { get; set; }
 
     public bool Enabled { get; set; }
-
-    public Namespace Namespace { get; }
-
 
     public class DefaultChannelCreateData
     {
