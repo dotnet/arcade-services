@@ -247,14 +247,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         // 0. Prepare repo and VMR
         await ChangeRepoFileAndFlowIt("AAA", forwardBranchName + "-first", enableRebase);
-        if (enableRebase)
-        {
-            await GitOperations.CommitAll(VmrPath, "Forward flow");
-        }
-        else
-        {
-            await GitOperations.MergePrBranch(VmrPath, forwardBranchName + "-first");
-        }
+        await FinalizeForwardFlow(enableRebase, forwardBranchName + "-first");
 
         // 1. Change a different file in VMR
         await File.WriteAllTextAsync(_productRepoVmrPath / "different-file.txt", "XXX");
@@ -273,28 +266,14 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.MergePrBranch(ProductRepoPath, backBranchName);
 
         // 6. Merge the forward flow PR
-        if (enableRebase)
-        {
-            await GitOperations.CommitAll(VmrPath, "Forward flow");
-        }
-        else
-        {
-            await GitOperations.MergePrBranch(VmrPath, forwardBranchName + "-second");
-        }
+        await FinalizeForwardFlow(enableRebase, forwardBranchName + "-second");
 
         // 7-8. Update the file again in the repo
         codeFlowResult = await ChangeRepoFileAndFlowIt("CCC", forwardBranchName + "-third", enableRebase);
         codeFlowResult.ShouldHaveUpdates();
 
         // 9. Merge the forward flow PR - any conflicts are dealt with automatically
-        if (enableRebase)
-        {
-            await GitOperations.CommitAll(VmrPath, "Forward flow");
-        }
-        else
-        {
-            await GitOperations.MergePrBranch(VmrPath, forwardBranchName + "-third");
-        }
+        await FinalizeForwardFlow(enableRebase, forwardBranchName + "-third");
 
         // Both VMR and repo need to have the version from the VMR as it flowed to the repo and back
         (string, string)[] expectedFiles =
@@ -347,14 +326,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         // 0. Prepare repo and VMR
         await ChangeVmrFileAndFlowIt("AAA", backBranchName + "-first", enableRebase);
-        if (enableRebase)
-        {
-            await GitOperations.CommitAll(ProductRepoPath, "Forward flow");
-        }
-        else
-        {
-            await GitOperations.MergePrBranch(ProductRepoPath, backBranchName + "-first");
-        }
+        await FinalizeBackFlow(enableRebase, backBranchName + "-first");
 
         // 1. Change a different file in the repo
         await File.WriteAllTextAsync(ProductRepoPath / "different-file.txt", "XXX");
@@ -373,28 +345,14 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
 
         // 6. Merge the backflow PR
-        if (enableRebase)
-        {
-            await GitOperations.CommitAll(ProductRepoPath, "Forward flow");
-        }
-        else
-        {
-            await GitOperations.MergePrBranch(ProductRepoPath, backBranchName + "-second");
-        }
+        await FinalizeBackFlow(enableRebase, backBranchName + "-second");
 
         // 7-8. Update the file again in the VMR
         codeFlowResult = await ChangeVmrFileAndFlowIt("CCC", backBranchName + "-third", enableRebase);
         codeFlowResult.ShouldHaveUpdates();
 
         // 9. Merge the backflow PR - any conflicts are dealt with automatically
-        if (enableRebase)
-        {
-            await GitOperations.CommitAll(ProductRepoPath, "Forward flow");
-        }
-        else
-        {
-            await GitOperations.MergePrBranch(ProductRepoPath, backBranchName + "-third");
-        }
+        await FinalizeBackFlow(enableRebase, backBranchName + "-third");
 
         // Both VMR and repo need to have the version from the VMR as it flowed to the repo and back
         (string, string)[] expectedFiles =
@@ -1097,7 +1055,9 @@ internal class TwoWayCodeflowTests : CodeFlowTests
     // This test verifies that backflows work if the target repo if since tha last backflow, the product repo has added or removed dependencies,
     // while the VMR did the opposite
     [Test]
-    public async Task BackflowingConflictingDependenciesWorks()
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task BackflowingConflictingDependenciesWorks(bool enableRebase)
     {
         const string forwardBranchName = nameof(BackflowingConflictingDependenciesWorks);
         const string backfBranchName = nameof(BackflowingConflictingDependenciesWorks) + "-back";
@@ -1130,12 +1090,12 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.CommitAll(ProductRepoPath, "Adding a new dependency in the PR branch");
 
         // forward flow it and merge
-        var codeFlowResult = await ChangeRepoFileAndFlowIt("not important", forwardBranchName);
+        var codeFlowResult = await ChangeRepoFileAndFlowIt("not important", forwardBranchName, enableRebase);
         codeFlowResult.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
+        await FinalizeForwardFlow(enableRebase, forwardBranchName);
 
         // now open a backflow, but don't merge
-        codeFlowResult = await ChangeVmrFileAndFlowIt("not important1", backfBranchName);
+        codeFlowResult = await ChangeVmrFileAndFlowIt("not important1", backfBranchName, enableRebase);
         codeFlowResult.ShouldHaveUpdates();
 
         // remove the first dependency and add a second one in the backflow PR and merge
@@ -1157,7 +1117,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.CommitAll(VmrPath, "Removing the dependency in the VMR repo");
 
         // and now backflow, this will cause a conflict
-        codeFlowResult = await ChangeVmrFileAndFlowIt("not important2", backfBranchName);
+        codeFlowResult = await ChangeVmrFileAndFlowIt("not important2", backfBranchName, enableRebase);
 
         codeFlowResult.ShouldHaveUpdates();
         // both of the changes were conflicting, so we took whatever the target branch had, resulting in no updates
@@ -1219,5 +1179,21 @@ internal class TwoWayCodeflowTests : CodeFlowTests
                 ProductRepoPath,
                 branchName,
                 forceUpdate: false));
+    }
+
+    private async Task FinalizeBackFlow(bool enableRebase, string branchName)
+        => await FinalizeFlow(ProductRepoPath, enableRebase, branchName);
+
+    private async Task FinalizeForwardFlow(bool enableRebase, string branchName)
+        => await FinalizeFlow(VmrPath, enableRebase, branchName);
+
+    private async Task FinalizeFlow(NativePath targetRepo, bool enableRebase, string branchName)
+    {
+        if (enableRebase)
+        {
+            await GitOperations.CommitAll(targetRepo, "Commit codeflow");
+        }
+
+        await GitOperations.MergePrBranch(targetRepo, branchName);
     }
 }

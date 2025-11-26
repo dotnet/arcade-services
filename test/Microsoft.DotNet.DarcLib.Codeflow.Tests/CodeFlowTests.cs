@@ -145,7 +145,15 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
         await File.WriteAllTextAsync(_productRepoVmrPath / _productRepoFileName, newContent);
         await GitOperations.CommitAll(VmrPath, $"Changing a VMR file to '{newContent}'");
 
-        var codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);
+        CodeFlowResult codeFlowResult;
+        try
+        {
+            codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);
+        }
+        catch (PatchApplicationLeftConflictsException e)
+        {
+            return new CodeFlowResult(true, e.ConflictedFiles, e.RepoPath, []);
+        }
 
         if (!enableRebase)
         {
