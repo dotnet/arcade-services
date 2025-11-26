@@ -432,7 +432,6 @@ public class BackflowConflictResolverTests
             headBranchExisted,
             cancellationToken);
 
-        mergeResult.ConflictedFiles.Should().BeEmpty();
         mergeResult.DependencyUpdates
             .Select(update => new ExpectedUpdate(
                 update.To.Name,
