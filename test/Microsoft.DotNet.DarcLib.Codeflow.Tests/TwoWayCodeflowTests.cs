@@ -20,12 +20,14 @@ namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 internal class TwoWayCodeflowTests : CodeFlowTests
 {
     [Test]
-    public async Task ZigZagCodeflowTest()
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task ZigZagCodeflowTest(bool enableRebase)
     {
         const string aFileContent = "Added a new file in the repo";
         const string bFileContent = "Added a new file in the product repo in the meantime";
         const string bFileContent2 = "New content for the b file";
-        const string branchName = nameof(ZigZagCodeflowTest);
+        string branchName = GetTestBranchName();
 
         await EnsureTestRepoIsInitialized();
 
@@ -33,8 +35,9 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await File.WriteAllTextAsync(_productRepoVmrPath / "we-will-delete-this-later.txt", "And it will stay deleted");
         await GitOperations.CommitAll(VmrPath, "Added a file that will be deleted later");
 
-        var codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName);
-        await GitOperations.MergePrBranch(VmrPath, branchName);
+        var codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName, enableRebase);
+        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeForwardFlow(enableRebase, branchName);
 
         // Make some changes in the product repo
         await GitOperations.Checkout(ProductRepoPath, "main");
@@ -43,27 +46,35 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.CommitAll(ProductRepoPath, aFileContent);
 
         // Flow unrelated changes from the VMR
-        codeFlowResult = await ChangeVmrFileAndFlowIt("New content from the VMR", branchName);
+        codeFlowResult = await ChangeVmrFileAndFlowIt("New content from the VMR", branchName, enableRebase);
         codeFlowResult.ShouldHaveUpdates();
+        if (enableRebase)
+        {
+            await GitOperations.CommitAll(ProductRepoPath, "Backflow commit");
+        }
 
         // Before we merge the PR branch, make a change in the product repo
         await File.WriteAllTextAsync(ProductRepoPath / "b.txt", bFileContent);
         await GitOperations.CommitAll(ProductRepoPath, bFileContent);
 
         // Merge the backflow branch and verify files
-        await GitOperations.MergePrBranch(ProductRepoPath, branchName);
+        await FinalizeBackFlow(enableRebase, branchName);
         CheckFileContents(ProductRepoPath / "a.txt", aFileContent);
         CheckFileContents(ProductRepoPath / "b.txt", bFileContent);
         CheckFileContents(_productRepoFilePath, "New content from the VMR");
 
         // Make a change in the VMR again
-        codeFlowResult = await ChangeVmrFileAndFlowIt("New content from the VMR again", branchName);
+        codeFlowResult = await ChangeVmrFileAndFlowIt("New content from the VMR again", branchName, enableRebase);
         codeFlowResult.ShouldHaveUpdates();
+        if (enableRebase)
+        {
+            await GitOperations.CommitAll(ProductRepoPath, "Backflow commit");
+        }
 
         // Make an additional change in the PR branch before merging
         await File.WriteAllTextAsync(_productRepoFilePath, "Change that happened in the PR");
         await GitOperations.CommitAll(ProductRepoPath, "Extra commit in the PR");
-        await GitOperations.MergePrBranch(ProductRepoPath, branchName);
+        await FinalizeBackFlow(enableRebase, branchName);
 
         // Delete a file in the VMR to make sure it's not brought back by the forward flow
         await GitOperations.Checkout(VmrPath, "main");
@@ -73,9 +84,10 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // Forward flow
         await File.WriteAllTextAsync(ProductRepoPath / "b.txt", bFileContent2);
         await GitOperations.CommitAll(ProductRepoPath, bFileContent2);
-        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);
         codeFlowResult.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, branchName);
+        await FinalizeForwardFlow(enableRebase, branchName);
+
         CheckFileContents(_productRepoVmrPath / "a.txt", aFileContent);
         CheckFileContents(_productRepoVmrPath / "b.txt", bFileContent2);
         CheckFileContents(_productRepoVmrFilePath, "Change that happened in the PR");
@@ -84,9 +96,9 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.CheckAllIsCommitted(VmrPath);
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
 
-        // Backflow - should be a no-op
-        await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
-        await GitOperations.MergePrBranch(ProductRepoPath, branchName);
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);
+        codeFlowResult.ShouldHaveUpdates();
+        File.Exists(ProductRepoPath / "we-will-delete-this-later.txt").Should().BeFalse();
     }
 
     [Test]
@@ -607,42 +619,64 @@ internal class TwoWayCodeflowTests : CodeFlowTests
           │                     │   
      */
     [Test]
-    public async Task OutOfOrderMergesWithConflictsTest()
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task OutOfOrderMergesWithConflictsTest(bool enableRebase)
     {
         await EnsureTestRepoIsInitialized();
 
-        var aFileContent = "Added a new file in the repo";
+        const string aFileContent = "Added a new file in the repo";
         const string bFileContent = "Added a new file in the VMR";
-        const string backBranchName = nameof(OutOfOrderMergesWithConflictsTest);
-        const string forwardBranchName = nameof(OutOfOrderMergesWithConflictsTest) + "-ff";
+        string backBranchName = GetTestBranchName();
+        string forwardBranchName = GetTestBranchName(forwardFlow: true);
 
         // Do a forward flow once and merge so we have something to fall back on
-        var codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo", forwardBranchName);
+        var codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo", forwardBranchName, enableRebase);
         codeFlowResult.ShouldHaveUpdates();
+        if (enableRebase)
+        {
+            await GitOperations.CommitAll(VmrPath, "Forward flow commit");
+        }
         await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
 
         // 1. Change file in VMR
         // 2. Open a backflow PR
         await File.WriteAllTextAsync(_productRepoVmrPath / "b.txt", bFileContent);
         await GitOperations.CommitAll(VmrPath, bFileContent);
-        codeFlowResult = await ChangeVmrFileAndFlowIt("New content from the VMR #1", backBranchName);
+        codeFlowResult = await ChangeVmrFileAndFlowIt("New content from the VMR #1", backBranchName, enableRebase);
         codeFlowResult.ShouldHaveUpdates();
+        if (enableRebase)
+        {
+            await GitOperations.CommitAll(ProductRepoPath, "Backflow commit");
+        }
         // We make another commit in the repo and add it to the PR branch (this is not in the diagram above)
         await GitOperations.Checkout(ProductRepoPath, "main");
-        codeFlowResult = await ChangeVmrFileAndFlowIt("New content from the VMR #2", backBranchName);
+        codeFlowResult = await ChangeVmrFileAndFlowIt("New content from the VMR #2", backBranchName, enableRebase);
         codeFlowResult.ShouldHaveUpdates();
+        if (enableRebase)
+        {
+            await GitOperations.CommitAll(ProductRepoPath, "Backflow commit");
+        }
 
         // 3. Change file in the repo
         // 4. Open a forward flow PR
         await GitOperations.Checkout(ProductRepoPath, "main");
         await File.WriteAllTextAsync(ProductRepoPath / "a.txt", aFileContent);
         await GitOperations.CommitAll(ProductRepoPath, aFileContent);
-        codeFlowResult = await ChangeRepoFileAndFlowIt("New content from the individual repo #1", forwardBranchName);
+        codeFlowResult = await ChangeRepoFileAndFlowIt("New content from the individual repo #1", forwardBranchName, enableRebase);
         codeFlowResult.ShouldHaveUpdates();
+        if (enableRebase)
+        {
+            await GitOperations.CommitAll(VmrPath, "Forward flow commit");
+        }
         // We make another commit in the repo and add it to the PR branch (this is not in the diagram above)
         await GitOperations.Checkout(ProductRepoPath, "main");
-        codeFlowResult = await ChangeRepoFileAndFlowIt("New content from the individual repo #2", forwardBranchName);
+        codeFlowResult = await ChangeRepoFileAndFlowIt("New content from the individual repo #2", forwardBranchName, enableRebase);
         codeFlowResult.ShouldHaveUpdates();
+        if (enableRebase)
+        {
+            await GitOperations.CommitAll(VmrPath, "Forward flow commit");
+        }
 
         // 5. The backflow PR is now in conflict - repo has the content from step 3 but VMR has the one from step 1
         // 6. We resolve the conflict by using the content from the VMR
@@ -664,8 +698,12 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // While the VMR accepted the content from the repo but it will get overriden by the VMR content again
         await GitOperations.Checkout(ProductRepoPath, "main");
         await GitOperations.Checkout(VmrPath, "main");
-        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName, enableRebase: enableRebase);
         codeFlowResult.ShouldHaveUpdates();
+        if (enableRebase)
+        {
+            await GitOperations.CommitAll(VmrPath, "Forward flow commit", allowEmpty: true);
+        }
         await GitOperations.VerifyMergeConflict(VmrPath, forwardBranchName,
             mergeTheirs: true,
             expectedConflictingFiles: [VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName]);
@@ -1229,21 +1267,5 @@ internal class TwoWayCodeflowTests : CodeFlowTests
                 ProductRepoPath,
                 branchName,
                 forceUpdate: false));
-    }
-
-    private async Task FinalizeBackFlow(bool enableRebase, string branchName)
-        => await FinalizeFlow(ProductRepoPath, enableRebase, branchName);
-
-    private async Task FinalizeForwardFlow(bool enableRebase, string branchName)
-        => await FinalizeFlow(VmrPath, enableRebase, branchName);
-
-    private async Task FinalizeFlow(NativePath targetRepo, bool enableRebase, string branchName)
-    {
-        if (enableRebase)
-        {
-            await GitOperations.CommitAll(targetRepo, "Commit codeflow", allowEmpty: true);
-        }
-
-        await GitOperations.MergePrBranch(targetRepo, branchName);
     }
 }

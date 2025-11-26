@@ -19,26 +19,36 @@ internal class ForwardFlowTests : CodeFlowTests
 {
 
     [Test]
-    public async Task OnlyForwardflowsTest()
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task OnlyForwardflowsTest(bool enableRebase)
     {
         await EnsureTestRepoIsInitialized();
 
         const string branchName = nameof(OnlyForwardflowsTest);
 
-        var codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName);
+        var codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName, enableRebase);
         codeFlowResult.ShouldHaveUpdates();
+        if (enableRebase)
+        {
+            await GitOperations.CommitAll(VmrPath, "Forward flow commit");
+        }
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
         // Flow again - should be a no-op
-        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);
         codeFlowResult.ShouldNotHaveUpdates();
         await GitOperations.Checkout(VmrPath, "main");
         await GitOperations.DeleteBranch(VmrPath, branchName);
         CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo");
 
         // Make a change in the repo again
-        codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo again", branchName);
+        codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo again", branchName, enableRebase);
         codeFlowResult.ShouldHaveUpdates();
+        if (enableRebase)
+        {
+            await GitOperations.CommitAll(VmrPath, "Forward flow commit");
+        }
         CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo again");
 
         // Make an additional change in the PR branch before merging
@@ -48,24 +58,36 @@ internal class ForwardFlowTests : CodeFlowTests
         CheckFileContents(_productRepoVmrFilePath, "Change that happened in the PR");
 
         // Make a conflicting change in the VMR
-        codeFlowResult = await ChangeRepoFileAndFlowIt("A completely different change", branchName);
+        codeFlowResult = await ChangeRepoFileAndFlowIt("A completely different change", branchName, enableRebase);
         codeFlowResult.ShouldHaveUpdates();
+        if (enableRebase)
+        {
+            await GitOperations.CommitAll(VmrPath, "Forward flow commit", allowEmpty: true);
+        }
         await GitOperations.VerifyMergeConflict(VmrPath, branchName,
             mergeTheirs: true,
             expectedConflictingFiles: [VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName]);
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
 
         // We used the changes from the repo - let's verify flowing back won't change anything
-        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
+        if (enableRebase)
+        {
+            await GitOperations.CommitAll(ProductRepoPath, "Backflow commit", allowEmpty: true);
+        }
         await GitOperations.MergePrBranch(ProductRepoPath, branchName);
 
         // Now we will make a series of forward flows where each will make a conflicting change
         // The last forward flow will have to recreate all of the flows to be able to apply the changes
 
         // Make another flow to VMR to have flows both ways ready
-        codeFlowResult = await ChangeRepoFileAndFlowIt("Again some content in the individual repo", branchName);
+        codeFlowResult = await ChangeRepoFileAndFlowIt("Again some content in the individual repo", branchName, enableRebase);
         codeFlowResult.ShouldHaveUpdates();
+        if (enableRebase)
+        {
+            await GitOperations.CommitAll(VmrPath, "Forward flow commit");
+        }
         await GitOperations.MergePrBranch(VmrPath, branchName);
 
         // The file.txt will keep getting changed and conflicting in each flow
@@ -78,8 +100,12 @@ internal class ForwardFlowTests : CodeFlowTests
             await GitOperations.Checkout(ProductRepoPath, "main");
             await File.WriteAllTextAsync(ProductRepoPath / "file.txt", $"Repo content {i}");
             await GitOperations.CommitAll(ProductRepoPath, $"Add files for iteration {i}");
-            codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+            codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);
             codeFlowResult.ShouldHaveUpdates();
+            if (enableRebase)
+            {
+                await GitOperations.CommitAll(VmrPath, $"Forward flow iteration {i}", allowEmpty: true);
+            }
             // Make a conflicting change in the PR branch before merging
             await File.WriteAllTextAsync(_productRepoVmrPath / $"conflicting_file_{i}.txt", $"Conflicting content {i}");
             await GitOperations.CommitAll(VmrPath, $"Conflicting change in iteration {i}");
@@ -96,8 +122,12 @@ internal class ForwardFlowTests : CodeFlowTests
         }
         await GitOperations.CommitAll(ProductRepoPath, "New conflicting flow");
 
-        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);
         codeFlowResult.ShouldHaveUpdates();
+        if (enableRebase)
+        {
+            await GitOperations.CommitAll(VmrPath, "Final forward flow commit", allowEmpty: true);
+        }
         await GitOperations.VerifyMergeConflict(
             VmrPath,
             branchName,
