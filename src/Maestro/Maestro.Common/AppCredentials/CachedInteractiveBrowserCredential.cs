@@ -14,8 +14,8 @@ public class CachedInteractiveBrowserCredential: TokenCredential
     private readonly InteractiveBrowserCredentialOptions _options;
     private readonly string _authRecordPath;
 
-    private bool _isCached = false;
-    private bool _isDeviceCodeFallback = false;
+    private int _isCached = 0;
+    private int _isDeviceCodeFallback = 0;
 
     public CachedInteractiveBrowserCredential(
         InteractiveBrowserCredentialOptions options,
@@ -30,7 +30,7 @@ public class CachedInteractiveBrowserCredential: TokenCredential
             {
                 // Fetch existing authentication record to not prompt the user for consent
                 options.AuthenticationRecord = GetAuthenticationRecord();
-                _isCached = true;
+                Interlocked.Exchange(ref _isCached, 1);
             }
             catch
             {
@@ -52,7 +52,7 @@ public class CachedInteractiveBrowserCredential: TokenCredential
     {
         CacheAuthenticationRecord(requestContext, cancellationToken);
 
-        if (_isDeviceCodeFallback)
+        if (Volatile.Read(ref _isDeviceCodeFallback) == 1)
         {
             return _deviceCodeCredential.GetToken(requestContext, cancellationToken);
         }
@@ -63,7 +63,7 @@ public class CachedInteractiveBrowserCredential: TokenCredential
         }
         catch (AuthenticationFailedException)
         {
-            _isDeviceCodeFallback = true;
+            Interlocked.Exchange(ref _isDeviceCodeFallback, 1);
             return _deviceCodeCredential.GetToken(requestContext, cancellationToken);
         }
     }
@@ -72,7 +72,7 @@ public class CachedInteractiveBrowserCredential: TokenCredential
     {
         CacheAuthenticationRecord(requestContext, cancellationToken);
 
-        if (_isDeviceCodeFallback)
+        if (Volatile.Read(ref _isDeviceCodeFallback) == 1)
         {
             return await _deviceCodeCredential.GetTokenAsync(requestContext, cancellationToken);
         }
@@ -83,7 +83,7 @@ public class CachedInteractiveBrowserCredential: TokenCredential
         }
         catch (AuthenticationFailedException)
         {
-            _isDeviceCodeFallback = true;
+            Interlocked.Exchange(ref _isDeviceCodeFallback, 1);
             return await _deviceCodeCredential.GetTokenAsync(requestContext, cancellationToken);
         }
     }
@@ -96,7 +96,7 @@ public class CachedInteractiveBrowserCredential: TokenCredential
 
     private void CacheAuthenticationRecord(TokenRequestContext requestContext, CancellationToken cancellationToken)
     {
-        if (_isCached)
+        if (Volatile.Read(ref _isCached) == 1)
         {
             return;
         }
@@ -137,7 +137,7 @@ public class CachedInteractiveBrowserCredential: TokenCredential
         using var authRecordStream = new FileStream(_authRecordPath, FileMode.Create, FileAccess.Write);
         authRecord.Serialize(authRecordStream, cancellationToken);
 
-        _isCached = true;
+        Interlocked.Exchange(ref _isCached, 1);
     }
 
     private AuthenticationRecord Authenticate(TokenRequestContext requestContext, CancellationToken cancellationToken)
@@ -149,7 +149,7 @@ public class CachedInteractiveBrowserCredential: TokenCredential
         }
         catch (AuthenticationFailedException)
         {
-            _isDeviceCodeFallback = true;
+            Interlocked.Exchange(ref _isDeviceCodeFallback, 1);
             return _deviceCodeCredential.Authenticate(requestContext, cancellationToken);
         }
     }
