@@ -12,7 +12,6 @@ using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using ProductConstructionService.Api.v2020_02_20.Models;
-using Channel = Maestro.Data.Models.Channel;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
@@ -109,7 +108,7 @@ public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannels
     public async Task<IActionResult> Create([FromBody, Required] DefaultChannel.DefaultChannelCreateData data)
     {
         int channelId = data.ChannelId;
-        Channel? channel = await _context.Channels.FindAsync(channelId);
+        Maestro.Data.Models.Channel? channel = await _context.Channels.FindAsync(channelId);
         if (channel == null)
         {
             return NotFound(new ApiError($"The channel with id '{channelId}' was not found."));
@@ -193,7 +192,7 @@ public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannels
         if (update.ChannelId.HasValue)
         {
             int channelId = update.ChannelId.Value;
-            Channel? channel = await _context.Channels.FindAsync(channelId);
+            Maestro.Data.Models.Channel? channel = await _context.Channels.FindAsync(channelId);
             if (channel == null)
             {
                 return NotFound(new ApiError($"The channel with id '{channelId}' was not found."));

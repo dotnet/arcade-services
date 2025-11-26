@@ -132,7 +132,7 @@ namespace Maestro.Data.Migrations
                 columns: new[] { "Name" },
                 values: new object[] { namespaceName });
 
-            // Update all existing records to use the 'local' namespace
+            // Update all existing records to use the default namespace
             migrationBuilder.Sql($@"
                 DECLARE @MainNamespaceId int = (SELECT Id FROM Namespaces WHERE Name = '{namespaceName}')
                 

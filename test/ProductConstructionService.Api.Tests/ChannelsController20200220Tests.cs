@@ -206,10 +206,5 @@ public partial class ChannelsController20200220Tests
             collection.AddSingleton<BuildsController>();
             return s => s.GetRequiredService<BuildsController>();
         }
-
-        public static Func<IServiceProvider, BuildAssetRegistryContext> DbContext(IServiceCollection collection)
-        {
-            return s => s.GetRequiredService<BuildAssetRegistryContext>();
-        }
     }
 }
