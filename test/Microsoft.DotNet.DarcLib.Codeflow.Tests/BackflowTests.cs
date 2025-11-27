@@ -29,16 +29,14 @@ internal class BackflowTests : CodeFlowTests
 
         var codeFlowResult = await ChangeVmrFileAndFlowIt("New content from the VMR", branchName, enableRebase);
         codeFlowResult.ShouldHaveUpdates();
-        if (enableRebase)
-        {
-            await GitOperations.CommitAll(ProductRepoPath, "Backflow commit");
-        }
-
-        await GitOperations.MergePrBranch(ProductRepoPath, branchName);
+        await FinalizeBackFlow(enableRebase, branchName);
         CheckFileContents(_productRepoFilePath, "New content from the VMR");
+
         // Backflow again - should be a no-op
         // We want to flow the same build again, so the BarId doesn't change
         codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName, useLatestBuild: true, enableRebase: enableRebase);
+        codeFlowResult.ShouldNotHaveUpdates();
+
         await GitOperations.Checkout(ProductRepoPath, "main");
         await GitOperations.DeleteBranch(ProductRepoPath, branchName);
         CheckFileContents(_productRepoFilePath, "New content from the VMR");
@@ -56,7 +54,7 @@ internal class BackflowTests : CodeFlowTests
         await GitOperations.Checkout(ProductRepoPath, branchName);
         await File.WriteAllTextAsync(_productRepoFilePath, "Change that happened in the PR");
         await GitOperations.CommitAll(ProductRepoPath, "Extra commit in the PR");
-        await GitOperations.MergePrBranch(ProductRepoPath, branchName);
+        await FinalizeBackFlow(enableRebase, branchName);
         CheckFileContents(_productRepoFilePath, "Change that happened in the PR");
 
         // Make a conflicting change in the VMR
@@ -64,11 +62,14 @@ internal class BackflowTests : CodeFlowTests
         codeFlowResult.ShouldHaveUpdates();
         if (enableRebase)
         {
-            await GitOperations.CommitAll(ProductRepoPath, "Backflow commit", allowEmpty: true);
+            codeFlowResult.ConflictedFiles.Should().BeEmpty();
         }
-        await GitOperations.VerifyMergeConflict(ProductRepoPath, branchName,
-            mergeTheirs: true,
-            expectedConflictingFiles: [_productRepoFileName]);
+        else
+        {
+            await GitOperations.VerifyMergeConflict(ProductRepoPath, branchName,
+                mergeTheirs: true,
+                expectedConflictingFiles: [_productRepoFileName]);
+        }
 
         // We used the changes from the VMR - let's verify flowing to the VMR
         codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);

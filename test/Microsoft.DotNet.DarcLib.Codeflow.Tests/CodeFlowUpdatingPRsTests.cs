@@ -254,16 +254,12 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
         var result = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch, enableRebase: enableRebase);
         result.ShouldHaveUpdates();
 
-        if (enableRebase)
-        {
-            result.ConflictedFiles.Should().Contain(new UnixPath(conflictingFileName));
-            await GitOperations.ExecuteGitCommand(ProductRepoPath, "checkout", "--theirs", "--", conflictingFileName);
-        }
-        else
-        {
-            // Verify that there is a conflict in Foo.txt
-            await GitOperations.VerifyMergeConflict(ProductRepoPath, backflowBranch, [conflictingFileName], mergeTheirs: true);
-        }
+        await GitOperations.VerifyMergeConflict(
+            ProductRepoPath,
+            backflowBranch,
+            [conflictingFileName],
+            mergeTheirs: true,
+            enableRebase: enableRebase);
 
         var content = await File.ReadAllTextAsync(ProductRepoPath / conflictingFileName);
         content.Should().Be("Foo is changed in the VMR");

@@ -168,19 +168,37 @@ internal class GitOperationsHelper
         string branch,
         string[]? expectedConflictingFiles = null,
         bool? mergeTheirs = null,
-        string targetBranch = "main")
+        string targetBranch = "main",
+        bool enableRebase = true)
     {
-        var result = await _processManager.ExecuteGit(repo, "checkout", targetBranch);
-        result.ThrowIfFailed($"Could not checkout main branch in {repo}");
+        ProcessExecutionResult result = null!;
+        if (!enableRebase)
+        {
+            result = await _processManager.ExecuteGit(repo, "checkout", targetBranch);
+            result.ThrowIfFailed($"Could not checkout main branch in {repo}");
 
-        result = await _processManager.ExecuteGit(repo, "merge", "--no-commit", "--no-ff", branch);
-        result.Succeeded.Should().BeFalse($"Expected merge conflict in {repo} but none happened");
+            result = await _processManager.ExecuteGit(repo, "merge", "--no-commit", "--no-ff", branch);
+            result.Succeeded.Should().BeFalse($"Expected merge conflict in {repo} but none happened");
+        }
 
         if (expectedConflictingFiles != null)
         {
-            foreach (var expectedConflictingFile in expectedConflictingFiles)
+            if (enableRebase)
             {
-                result.StandardOutput.Should().Match($"*Merge conflict in {expectedConflictingFile}*");
+                result = await _processManager.ExecuteGit(repo, "diff", "--name-only", "--diff-filter=U");
+                var conflictedFiles = result.GetOutputLines();
+
+                foreach (var expectedConflictingFile in expectedConflictingFiles)
+                {
+                    conflictedFiles.Should().Contain(expectedConflictingFile, $"Expected conflicting file {expectedConflictingFile}");
+                }
+            }
+            else
+            {
+                foreach (var expectedConflictingFile in expectedConflictingFiles)
+                {
+                    result.StandardOutput.Should().Match($"*Merge conflict in {expectedConflictingFile}*");
+                }
             }
 
             await VerifyConflictMarkers(repo, expectedConflictingFiles);
@@ -224,7 +242,11 @@ internal class GitOperationsHelper
         }
 
         await CommitAll(repo, $"Merged {branch} into {targetBranch} using {(mergeTheirs.Value ? targetBranch : branch)}");
-        await DeleteBranch(repo, branch);
+
+        if (!enableRebase)
+        {
+            await DeleteBranch(repo, branch);
+        }
     }
 
     public static Task VerifyConflictMarkers(NativePath productRepoPath, IEnumerable<string> files)
