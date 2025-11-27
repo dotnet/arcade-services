@@ -51,8 +51,7 @@ internal class BackflowOperation(
         _vmrInfo.VmrPath = vmrPath;
 
         var vmr = _localGitRepoFactory.Create(vmrPath);
-
-        var build = await GetOrCreateBuildAsync(vmr, _options.Build);
+        var build = await ParseOptionsAndGetBuildToFlowAsync(vmr);
 
         await FlowCodeLocallyAsync(
             targetRepoPath,

@@ -427,7 +427,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             _logger.LogInformation("NOT Merged: PR '{url}' failed policies {policies}",
                 pr.Url,
                 string.Join(Environment.NewLine, updatedResult.Results
-                    .Where(r => r.Status is not MergePolicyEvaluationStatus.DecisiveSuccess or MergePolicyEvaluationStatus.TransientSuccess)
+                    .Where(r => r.Status is not MergePolicyEvaluationStatus.DecisiveSuccess && r.Status is not MergePolicyEvaluationStatus.TransientSuccess)
                     .Select(r => $"{r.MergePolicyName} - {r.Title}: " + r.Message)));
 
             return MergePolicyCheckResult.FailedPolicies;
@@ -1183,6 +1183,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         string? previousSourceSha; // is null in some edge cases like onboarding a new repository
 
         bool enableRebase = await _featureFlagService.IsFeatureOnAsync(subscription.Id, FeatureFlag.EnableRebaseStrategy);
+
+        if (enableRebase)
+        {
+            _logger.LogInformation("Rebase strategy is enabled for subscription {subscriptionId}", subscription.Id);
+        }
 
         var codeFlowRes = await ExecuteCodeFlowAsync(
             pr,
