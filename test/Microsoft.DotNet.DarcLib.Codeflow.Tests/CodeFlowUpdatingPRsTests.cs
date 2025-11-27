@@ -192,16 +192,13 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
         result.ShouldHaveUpdates();
 
         var conflictedFile = VmrInfo.GetRelativeRepoSourcesPath(Constants.ProductRepoName) / conflictingFileName;
-        if (enableRebase)
-        {
-            result.ConflictedFiles.Should().Contain(conflictedFile);
-            await GitOperations.ExecuteGitCommand(VmrPath, "checkout", "--theirs", "--", conflictedFile);
-        }
-        else
-        {
-            // Verify that there is a conflict in Foo.txt
-            await GitOperations.VerifyMergeConflict(VmrPath, forwardFlowBranch, [conflictedFile], mergeTheirs: true);
-        }
+        // Verify that there is a conflict in Foo.txt
+        await GitOperations.VerifyMergeConflict(
+            VmrPath,
+            forwardFlowBranch,
+            [conflictedFile],
+            mergeTheirs: true,
+            enableRebase: enableRebase);
 
         var content = await File.ReadAllTextAsync(VmrPath / conflictedFile);
         content.Should().Be("Foo is changed in the repo");
