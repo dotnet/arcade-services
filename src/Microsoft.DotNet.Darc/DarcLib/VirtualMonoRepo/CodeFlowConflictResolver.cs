@@ -110,7 +110,14 @@ public abstract class CodeFlowConflictResolver
             }
         }
 
-        return await targetRepo.GetConflictedFilesAsync(cancellationToken);
+        if (codeflowOptions.EnableRebase)
+        {
+            return await targetRepo.GetConflictedFilesAsync(cancellationToken);
+        }
+        else
+        {
+            return conflictedFiles;
+        }
     }
 
     protected async Task<IReadOnlyCollection<UnixPath>> TryMergingBranch(
