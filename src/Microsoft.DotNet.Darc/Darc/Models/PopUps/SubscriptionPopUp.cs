@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.Yaml;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -17,7 +18,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps;
 /// <summary>
 /// Common class for subscription management popups.
 /// </summary>
-internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : SubscriptionData
+internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : SubscriptionYaml
 {
     protected readonly TData _data;
     private readonly bool _forceCreation;
@@ -28,6 +29,8 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Sub
     private readonly ILogger _logger;
     private readonly IGitRepoFactory _gitRepoFactory;
 
+    public string Id => _data.Id;
+    public bool Enabled => bool.Parse(_data.Enabled);
     public string Channel => _data.Channel;
     public string SourceRepository => _data.SourceRepository;
     public string TargetRepository => _data.TargetRepository;
@@ -75,7 +78,7 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Sub
 
         foreach (string line in lines)
         {
-            if (line.StartsWith(SubscriptionData.SourceEnabledElement))
+            if (line.StartsWith(SubscriptionYaml.SourceEnabledElement))
             {
                 Contents.AddRange(
                 [
@@ -87,7 +90,7 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Sub
             Contents.Add(new Line(line));
         }
 
-        Contents.Add(new($"Suggested repository URLs for '{SubscriptionData.SourceRepoElement}' or '{SubscriptionData.TargetRepoElement}':", true));
+        Contents.Add(new($"Suggested repository URLs for '{SubscriptionYaml.SourceRepoElement}' or '{SubscriptionYaml.TargetRepoElement}':", true));
 
         foreach (string suggestedRepo in _suggestedRepositories)
         {

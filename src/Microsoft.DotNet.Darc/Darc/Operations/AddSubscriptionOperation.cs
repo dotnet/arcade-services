@@ -152,6 +152,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             return Constants.ErrorCode;
         }
 
+        bool enabled = _options.Enabled != false; //if not pre-filled, default to true
         string channel = _options.Channel;
         string sourceRepository = _options.SourceRepository;
         string targetRepository = _options.TargetRepository;
@@ -208,6 +209,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 _options.ForceCreation,
                 _gitRepoFactory,
                 _logger,
+                enabled,
                 channel,
                 sourceRepository,
                 targetRepository,
@@ -235,6 +237,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 return exitCode;
             }
 
+            enabled = addSubscriptionPopup.Enabled;
             channel = addSubscriptionPopup.Channel;
             sourceRepository = addSubscriptionPopup.SourceRepository;
             targetRepository = addSubscriptionPopup.TargetRepository;

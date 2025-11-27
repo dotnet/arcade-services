@@ -9,6 +9,9 @@ namespace Microsoft.DotNet.Darc.Options;
 [Verb("add-subscription", HelpText = "Add a new subscription.")]
 internal class AddSubscriptionCommandLineOptions : SubscriptionCommandLineOptions<AddSubscriptionOperation>
 {
+    [Option("enabled", HelpText = "Whether subscription is enabled (active) or not")]
+    public bool? Enabled { get; set; }
+
     [Option("channel", HelpText = "Name of channel to pull from.")]
     public string Channel { get; set; }
 

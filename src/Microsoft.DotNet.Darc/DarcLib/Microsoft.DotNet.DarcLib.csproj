@@ -21,6 +21,7 @@
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="NuGet.Packaging" />
     <PackageReference Include="Octokit" />
+    <PackageReference Include="YamlDotNet" />
 
     <PackageReference Include="System.IO.Hashing" />
   </ItemGroup>
