@@ -3,7 +3,6 @@
 
 using System.Net;
 using AwesomeAssertions;
-using ProductConstructionService.Api.v2020_02_20.Models;
 using Maestro.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
@@ -15,10 +14,13 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Internal;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
+using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
-using ProductConstructionService.WorkItems;
+using ProductConstructionService.Api.v2020_02_20.Models;
 using ProductConstructionService.DependencyFlow.WorkItems;
+using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api.Tests;
 
@@ -32,6 +34,7 @@ public partial class ChannelsController20200220Tests
         Channel channel;
         var channelName = "TEST-CHANNEL-BASIC";
         var classification = "TEST-CLASSIFICATION";
+
         {
             IActionResult result = await data.Controller.CreateChannel(channelName, classification);
             result.Should().BeAssignableTo<ObjectResult>();
@@ -169,6 +172,13 @@ public partial class ChannelsController20200220Tests
             });
             collection.AddSingleton(Mock.Of<IRemoteFactory>());
             collection.AddSingleton(Mock.Of<IBasicBarClient>());
+
+            collection.AddSingleton<IOptions<EnvironmentNamespaceOptions>>(
+                new OptionsWrapper<EnvironmentNamespaceOptions>(
+                    new EnvironmentNamespaceOptions
+                    {
+                        DefaultNamespaceName = TestDatabase.TestNamespace
+                    }));
 
             var mockWorkItemProducerFactory = new Mock<IWorkItemProducerFactory>();
             var mockWorkItemProducer = new Mock<IWorkItemProducer<BuildCoherencyInfoWorkItem>>();

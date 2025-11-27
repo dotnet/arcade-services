@@ -36,4 +36,6 @@ public class DefaultChannel
     public bool Enabled { get; set; } = true;
 
     public Channel Channel { get; set; }
+
+    public Namespace Namespace { get; set; }
 }

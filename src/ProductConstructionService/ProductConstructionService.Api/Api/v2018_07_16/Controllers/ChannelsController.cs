@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.EntityFrameworkCore;
-
+using Microsoft.Extensions.Options;
 using Build = Maestro.Data.Models.Build;
 using Channel = ProductConstructionService.Api.v2018_07_16.Models.Channel;
 using FlowGraph = ProductConstructionService.Api.v2018_07_16.Models.FlowGraph;
@@ -28,13 +28,16 @@ public class ChannelsController : ControllerBase
 {
     private readonly BuildAssetRegistryContext _context;
     private readonly IBasicBarClient _barClient;
+    protected readonly IOptions<EnvironmentNamespaceOptions> _environmentNamespaceOptions;
 
     public ChannelsController(
         BuildAssetRegistryContext context,
-        IBasicBarClient barClient)
+        IBasicBarClient barClient,
+        IOptions<EnvironmentNamespaceOptions> environmentNamespaceOptions)
     {
         _context = context;
         _barClient = barClient;
+        _environmentNamespaceOptions = environmentNamespaceOptions;
     }
 
     /// <summary>
@@ -156,10 +159,14 @@ public class ChannelsController : ControllerBase
     [HandleDuplicateKeyRows("Could not create channel '{name}'. A channel with the specified name already exists.")]
     public virtual async Task<IActionResult> CreateChannel([Required] string name, [Required] string classification)
     {
+        var namespaces = await _context.Namespaces.ToListAsync();
+        var defaultNamespace = await _context.Namespaces.SingleAsync(n => n.Name == _environmentNamespaceOptions.Value.DefaultNamespaceName);
+
         var channelModel = new Maestro.Data.Models.Channel
         {
             Name = name,
-            Classification = classification
+            Classification = classification,
+            Namespace = defaultNamespace
         };
         await _context.Channels.AddAsync(channelModel);
         await _context.SaveChangesAsync();

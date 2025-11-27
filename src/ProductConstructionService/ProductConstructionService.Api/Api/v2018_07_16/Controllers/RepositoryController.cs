@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Services.Utility;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using ProductConstructionService.Api.v2018_07_16.Models;
 using ProductConstructionService.WorkItems;
 
@@ -24,12 +26,16 @@ public class RepositoryController : ControllerBase
 {
     public RepositoryController(
         BuildAssetRegistryContext context,
-        IWorkItemProducerFactory workItemProducerFactory)
+        IWorkItemProducerFactory workItemProducerFactory,
+        IOptions<EnvironmentNamespaceOptions> environmentNamespaceOptions)
     {
         _context = context;
+        _environmentNamespaceOptions = environmentNamespaceOptions;
     }
 
     private BuildAssetRegistryContext _context { get; }
+    private readonly IOptions<EnvironmentNamespaceOptions> _environmentNamespaceOptions;
+
 
     /// <summary>
     ///   Gets the list of <see cref="RepositoryBranch">RepositoryBranch</see>, optionally filtered by
@@ -125,7 +131,9 @@ public class RepositoryController : ControllerBase
         Maestro.Data.Models.RepositoryBranch repoBranch = await GetRepositoryBranch(repository, branch);
         Maestro.Data.Models.RepositoryBranch.Policy policy = repoBranch.PolicyObject ?? new Maestro.Data.Models.RepositoryBranch.Policy();
         policy.MergePolicies = policies?.Select(p => p.ToDb()).ToList() ?? [];
+        var defaultNamespace = await _context.Namespaces.SingleAsync(n => n.Name == _environmentNamespaceOptions.Value.DefaultNamespaceName);
         repoBranch.PolicyObject = policy;
+        repoBranch.Namespace = defaultNamespace;
         await _context.SaveChangesAsync();
         return Ok();
     }

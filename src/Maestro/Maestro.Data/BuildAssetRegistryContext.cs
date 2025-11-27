@@ -22,13 +22,6 @@ public class BuildAssetRegistryContextFactory : IDesignTimeDbContextFactory<Buil
     {
         var connectionString = GetConnectionString("BuildAssetRegistry");
 
-        var envVarConnectionString = Environment.GetEnvironmentVariable("BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING");
-        if (!string.IsNullOrEmpty(envVarConnectionString))
-        {
-            Console.WriteLine("Using Connection String from environment.");
-            connectionString = envVarConnectionString;
-        }
-
         DbContextOptions options = new DbContextOptionsBuilder()
             .UseSqlServerWithRetry(connectionString, opts =>
             {
@@ -41,7 +34,16 @@ public class BuildAssetRegistryContextFactory : IDesignTimeDbContextFactory<Buil
 
     public static string GetConnectionString(string databaseName)
     {
-        return $@"Data Source=localhost\SQLEXPRESS;Initial Catalog={databaseName};Integrated Security=true;Encrypt=false"; // CodeQL [SM03452] This 'connection string' is only for the local SQLExpress instance and has no credentials, Encrypt=false for .NET 8+ compatibility
+        var connectionString =  $@"Data Source=localhost\SQLEXPRESS;Initial Catalog={databaseName};Integrated Security=true;Encrypt=false"; // CodeQL [SM03452] This 'connection string' is only for the local SQLExpress instance and has no credentials, Encrypt=false for .NET 8+ compatibility
+        var envVarConnectionString = Environment.GetEnvironmentVariable("BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING");
+        if (string.IsNullOrEmpty(envVarConnectionString))
+        {
+            return connectionString;
+        }
+        else
+        {
+            return envVarConnectionString;
+        }
     }
 }
 
@@ -64,6 +66,7 @@ public class BuildAssetRegistryContext(DbContextOptions options)
     public DbSet<DependencyFlowEvent> DependencyFlowEvents { get; set; }
     public DbSet<GoalTime> GoalTime { get; set; }
     public DbSet<LongestBuildPath> LongestBuildPaths { get; set; }
+    public DbSet<Namespace> Namespaces { get; set; }
 
     public virtual IQueryable<RepositoryBranchUpdateHistoryEntry> RepositoryBranchUpdateHistory => RepositoryBranchUpdates
         .TemporalAll()
@@ -258,6 +261,33 @@ public class BuildAssetRegistryContext(DbContextOptions options)
             .HasOne(gt => gt.Channel)
             .WithMany()
             .HasForeignKey(gt => gt.ChannelId);
+
+        builder.Entity<Namespace>()
+            .HasKey(n => n.Id);
+
+        builder.Entity<Namespace>()
+            .HasIndex(n => n.Name)
+            .IsUnique();
+
+        builder.Entity<Subscription>()
+            .HasOne(s => s.Namespace)
+            .WithMany(n => n.Subscriptions)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Channel>()
+            .HasOne(c => c.Namespace)
+            .WithMany(n => n.Channels)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<RepositoryBranch>()
+            .HasOne(rb => rb.Namespace)
+            .WithMany(n => n.RepositoryBranches)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<DefaultChannel>()
+            .HasOne(dc => dc.Namespace)
+            .WithMany(n => n.DefaultChannels)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasDbFunction(() => JsonExtensions.JsonValue("", ""))
             .HasTranslation(args => new SqlFunctionExpression(

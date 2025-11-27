@@ -81,4 +81,6 @@ public class Subscription
     public Build LastAppliedBuild { get; set; }
 
     public string PullRequestFailureNotificationTags { get; set; }
+
+    public Namespace Namespace { get; set; }
 }

@@ -9,8 +9,9 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
-using Channel = Maestro.Data.Models.Channel;
+using Microsoft.Extensions.Options;
 using ProductConstructionService.Api.v2018_07_16.Models;
+using Channel = Maestro.Data.Models.Channel;
 
 namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 
@@ -22,10 +23,12 @@ namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 public class DefaultChannelsController : ControllerBase
 {
     private readonly BuildAssetRegistryContext _context;
+    protected readonly IOptions<EnvironmentNamespaceOptions> _environmentNamespaceOptions;
 
-    public DefaultChannelsController(BuildAssetRegistryContext context)
+    public DefaultChannelsController(BuildAssetRegistryContext context, IOptions<EnvironmentNamespaceOptions> environmentNamespaceoptions)
     {
         _context = context;
+        _environmentNamespaceOptions = environmentNamespaceoptions;
     }
 
     /// <summary>
@@ -86,12 +89,14 @@ public class DefaultChannelsController : ControllerBase
             return NotFound(new ApiError($"The channel with id '{channelId}' was not found."));
         }
 
+        var defaultNamespace = await _context.Namespaces.SingleAsync(n => n.Name == _environmentNamespaceOptions.Value.DefaultNamespaceName);
         var defaultChannel = new Maestro.Data.Models.DefaultChannel
         {
             Channel = channel,
             Repository = data.Repository,
             Branch = data.Branch,
-            Enabled = data.Enabled ?? true
+            Enabled = data.Enabled ?? true,
+            Namespace = defaultNamespace
         };
         await _context.DefaultChannels.AddAsync(defaultChannel);
         await _context.SaveChangesAsync();

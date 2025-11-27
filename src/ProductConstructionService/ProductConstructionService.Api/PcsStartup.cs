@@ -90,6 +90,8 @@ internal static class PcsStartup
         string databaseConnectionString = builder.Configuration.GetRequiredValue(ConfigurationKeys.DatabaseConnectionString)
             .Replace(SqlConnectionStringUserIdPlaceholder, managedIdentityId);
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
+        builder.Services.Configure<EnvironmentNamespaceOptions>(
+            builder.Configuration.GetSection(EnvironmentNamespaceOptions.ConfigurationKey));
 
         TokenCredential azureCredential = AzureAuthentication.GetServiceCredential(isDevelopment, managedIdentityId);
 

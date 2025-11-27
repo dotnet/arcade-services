@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using ProductConstructionService.Api.v2019_01_16.Models;
 using ProductConstructionService.WorkItems;
 
@@ -26,8 +27,9 @@ public class SubscriptionsController : v2018_07_16.Controllers.SubscriptionsCont
         BuildAssetRegistryContext context,
         IWorkItemProducerFactory workItemProducerFactory,
         IGitHubInstallationIdResolver gitHubInstallationRetriever,
+        IOptions<EnvironmentNamespaceOptions> environmentNamespaceOptions,
         ILogger<SubscriptionsController> logger)
-        : base(context, workItemProducerFactory, gitHubInstallationRetriever, logger)
+        : base(context, workItemProducerFactory, gitHubInstallationRetriever, environmentNamespaceOptions, logger)
     {
         _context = context;
     }
@@ -240,9 +242,11 @@ public class SubscriptionsController : v2018_07_16.Controllers.SubscriptionsCont
             ]));
         }
 
+        var defaultNamespace = await _context.Namespaces.SingleAsync(n => n.Name == _environmentNamespaceOptions.Value.DefaultNamespaceName);
         Maestro.Data.Models.Subscription subscriptionModel = subscription.ToDb();
         subscriptionModel.Channel = channel;
         subscriptionModel.Id = Guid.NewGuid();
+        subscriptionModel.Namespace = defaultNamespace;
 
         // Check that we're not about add an existing subscription that is identical
         Maestro.Data.Models.Subscription? equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);

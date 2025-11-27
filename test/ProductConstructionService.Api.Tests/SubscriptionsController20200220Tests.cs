@@ -3,10 +3,10 @@
 
 using System.Net;
 using AwesomeAssertions;
-using ProductConstructionService.Api.v2020_02_20.Models;
 using Maestro.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
@@ -16,12 +16,13 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Internal;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
-using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
-using ProductConstructionService.WorkItems;
-using ProductConstructionService.DependencyFlow.WorkItems;
-using Microsoft.DotNet.DarcLib.Helpers;
 using ProductConstructionService.Api.Api;
+using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
+using ProductConstructionService.Api.v2020_02_20.Models;
+using ProductConstructionService.DependencyFlow.WorkItems;
+using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api.Tests;
 
@@ -648,6 +649,13 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             collection.AddSingleton(Mock.Of<IBasicBarClient>());
             collection.AddSingleton(mockWorkItemProducerFactory.Object);
             collection.AddSingleton(_mockInstallationIdResolver.Object);
+
+            collection.AddSingleton<IOptions<EnvironmentNamespaceOptions>>(
+                new OptionsWrapper<EnvironmentNamespaceOptions>(
+                    new EnvironmentNamespaceOptions
+                    {
+                        DefaultNamespaceName = TestDatabase.TestNamespace
+                    }));
         }
 
         public static void GitHub(IServiceCollection collection)
