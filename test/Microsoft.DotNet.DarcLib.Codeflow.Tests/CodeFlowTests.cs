@@ -120,27 +120,36 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
             })
             .ToList();
 
-    protected async Task<CodeFlowResult> ChangeRepoFileAndFlowIt(string newContent, string branchName)
+    protected async Task<CodeFlowResult> ChangeRepoFileAndFlowIt(string newContent, string branchName, bool enableRebase = false)
     {
         await GitOperations.Checkout(ProductRepoPath, "main");
         await File.WriteAllTextAsync(_productRepoFilePath, newContent);
         await GitOperations.CommitAll(ProductRepoPath, $"Changing a repo file to '{newContent}'");
 
-        var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);
         CheckFileContents(_productRepoVmrFilePath, newContent);
-        await GitOperations.CheckAllIsCommitted(VmrPath);
-        await GitOperations.CheckAllIsCommitted(ProductRepoPath);
-        await GitOperations.Checkout(ProductRepoPath, "main");
+
+        if (!enableRebase)
+        {
+            await GitOperations.CheckAllIsCommitted(VmrPath);
+        }
+
         return codeFlowResult;
     }
 
-    protected async Task<CodeFlowResult> ChangeVmrFileAndFlowIt(string newContent, string branchName)
+    protected async Task<CodeFlowResult> ChangeVmrFileAndFlowIt(string newContent, string branchName, bool enableRebase = false)
     {
         await GitOperations.Checkout(VmrPath, "main");
         await File.WriteAllTextAsync(_productRepoVmrPath / _productRepoFileName, newContent);
         await GitOperations.CommitAll(VmrPath, $"Changing a VMR file to '{newContent}'");
 
-        var codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        var codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);
+
+        if (!enableRebase)
+        {
+            await GitOperations.CheckAllIsCommitted(ProductRepoPath);
+        }
+
         CheckFileContents(_productRepoFilePath, newContent);
         return codeFlowResult;
     }

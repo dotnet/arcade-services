@@ -133,7 +133,8 @@ public abstract class CommandLineOptions : ICommandLineOptions
         services.AddLogging(b => b
             .AddConsole(o => o.FormatterName = CompactConsoleLoggerFormatter.FormatterName)
             .AddConsoleFormatter<CompactConsoleLoggerFormatter, SimpleConsoleFormatterOptions>()
-            .SetMinimumLevel(level));
+            .SetMinimumLevel(level)
+            .AddFilter("Microsoft.DotNet.DarcLib.VirtualMonoRepo." + nameof(VmrPatchHandler), LogLevel.Warning));
 
         services.TryAddSingleton<IFileSystem, FileSystem>();
         services.TryAddSingleton<IRemoteFactory, RemoteFactory>();

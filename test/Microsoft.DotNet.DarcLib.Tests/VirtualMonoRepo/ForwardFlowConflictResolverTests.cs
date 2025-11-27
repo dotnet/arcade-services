@@ -136,12 +136,11 @@ public class ForwardFlowConflictResolverTests
             NullLogger<ForwardFlowConflictResolver>.Instance);
 
         await resolver.MergeDependenciesAsync(
-            mapping,
+            new CodeflowOptions(new SourceMapping(mapping, "https://github.com/dotnet/runtime", "main", [], [], false), currentFlow, targetBranch, "main", null!, null, false, false),
             productRepo.Object,
             targetBranch,
             lastFlow.RepoSha,
             lastFlow.VmrSha,
-            currentFlow,
             CancellationToken.None);
 
         jsonMergerMock.Verify(

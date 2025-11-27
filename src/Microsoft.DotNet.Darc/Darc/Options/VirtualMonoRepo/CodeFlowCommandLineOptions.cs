@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
@@ -48,6 +49,12 @@ internal abstract class CodeFlowCommandLineOptions<T>
 
     public override IServiceCollection RegisterServices(IServiceCollection services)
     {
+        // Validate that subscription is not used with conflicting options
+        if (!string.IsNullOrEmpty(Ref) && !string.IsNullOrEmpty(SubscriptionId))
+        {
+            throw new DarcException("The --subscription parameter cannot be used with --ref. The subscription determines which commit to flow.");
+        }
+
         if (!Verbose && !Debug)
         {
             // Force verbose output for these commands

@@ -62,11 +62,9 @@ public class VersionDetailsFileMerger : VmrVersionFileMerger, IVersionDetailsFil
         string? mappingToApplyChanges)
     {
         _logger.LogInformation(
-            "Resolving dependency updates between {sourceRepo} {sourceSha1}..{sourceSha2} and {targetRepo} {targetSha1}..{targetSha2}",
-            sourceRepo.Path,
+            "Resolving dependency updates in source {sourceSha1}..{sourceSha2} and target {targetSha1}..{targetSha2}",
             sourceRepoPreviousRef,
             Constants.HEAD,
-            targetRepo.Path,
             targetRepoPreviousRef,
             targetRepoCurrentRef);
 

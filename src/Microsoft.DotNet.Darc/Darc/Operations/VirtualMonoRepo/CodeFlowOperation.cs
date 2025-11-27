@@ -156,7 +156,7 @@ internal abstract class CodeFlowOperation(
             // We need to make sure that working tree matches the staged changes
             await targetRepo.ExecuteGitCommand(["clean", "-xfd"], cancellationToken: cancellationToken);
 
-            IEnumerable<string> dirtyFiles = await targetRepo.GetDirtyFiles();
+            IEnumerable<string> dirtyFiles = await targetRepo.GetDirtyFilesAsync();
             dirtyFiles = dirtyFiles.Except(e.ConflictedFiles.Select(e => e.Path));
 
             // Reset only non-conflicted files
@@ -323,12 +323,6 @@ internal abstract class CodeFlowOperation(
     /// </summary>
     private async Task PopulateOptionsFromSubscriptionAsync()
     {
-        // Validate that subscription is not used with conflicting options
-        if (!string.IsNullOrEmpty(_options.Ref))
-        {
-            throw new DarcException("The --subscription parameter cannot be used with --ref. The subscription determines which commit to flow.");
-        }
-
         // Parse and validate subscription ID
         if (!Guid.TryParse(_options.SubscriptionId, out Guid subscriptionId))
         {

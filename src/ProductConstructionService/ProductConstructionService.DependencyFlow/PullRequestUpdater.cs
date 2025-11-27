@@ -1475,7 +1475,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         catch (PatchApplicationLeftConflictsException e) // only thrown when enableRebase is true
         {
             // We were unable to flow changes and user intervention will be required
-            _logger.LogInformation("Unable to flow changes due to conflicts in {files}", string.Concat(", ", e.ConflictedFiles));
+            _logger.LogInformation("Unable to flow changes due to conflicts in {files}", string.Join(", ", e.ConflictedFiles));
             return new CodeFlowResult(
                 HadUpdates: true,
                 RepoPath: e.RepoPath,

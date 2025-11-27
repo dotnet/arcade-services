@@ -133,9 +133,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        bool hasChanges = false;
         ExceptionDispatchInfo? rebaseException = null;
-
+        bool hasChanges;
         try
         {
             hasChanges = await FlowCodeAsync(
@@ -155,7 +154,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             codeflowOptions,
             lastFlows,
             targetRepo,
-            codeflowOptions.TargetBranch,
             headBranchExisted,
             cancellationToken);
 

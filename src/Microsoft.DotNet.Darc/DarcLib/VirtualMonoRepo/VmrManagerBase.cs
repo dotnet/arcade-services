@@ -137,7 +137,7 @@ public abstract partial class VmrManagerBase
     private async Task UpdateThirdPartyNoticesAsync(string templatePath, CancellationToken cancellationToken)
     {
         var isTpnUpdated = (await _localGitClient
-            .GetStagedFiles(_vmrInfo.VmrPath))
+            .GetStagedFilesAsync(_vmrInfo.VmrPath))
             .Where(ThirdPartyNoticesGenerator.IsTpnPath)
             .Any();
 

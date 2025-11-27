@@ -205,13 +205,13 @@ public interface ILocalGitRepo
     ///     Returns a list of modified staged files.
     /// </summary>
     /// <returns>List of currently modified staged files</returns>
-    Task<IReadOnlyCollection<string>> GetStagedFiles();
+    Task<IReadOnlyCollection<string>> GetStagedFilesAsync();
 
     /// <summary>
     ///     Returns a list of modified working tree files.
     /// </summary>
     /// <returns>List of currently modified staged files</returns>
-    Task<IReadOnlyCollection<string>> GetDirtyFiles();
+    Task<IReadOnlyCollection<string>> GetDirtyFilesAsync();
 
     /// <summary>
     ///     Stages files from the given path.

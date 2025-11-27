@@ -429,11 +429,9 @@ public class BackflowConflictResolverTests
                 ForceUpdate: false),
             lastFlows,
             _localRepo.Object,
-            TargetBranch,
             headBranchExisted,
             cancellationToken);
 
-        mergeResult.ConflictedFiles.Should().BeEmpty();
         mergeResult.DependencyUpdates
             .Select(update => new ExpectedUpdate(
                 update.To.Name,

@@ -42,7 +42,7 @@ internal abstract class CodeFlowTestsBase
 
     private int _buildId = 100;
     private List<string> _lastFlowCollectedComments = [];
-    private readonly Dictionary<int, ProductConstructionService.Client.Models.Build> _builds = [];
+    private readonly Dictionary<int, Build> _builds = [];
 
     [SetUp]
     public async Task Setup()
@@ -215,9 +215,10 @@ internal abstract class CodeFlowTestsBase
         string mappingName,
         NativePath repoPath,
         string branch,
-        ProductConstructionService.Client.Models.Build? buildToFlow = null,
+        Build? buildToFlow = null,
         IReadOnlyCollection<string>? excludedAssets = null,
         bool useLatestBuild = false,
+        bool enableRebase = false,
         bool forceUpdate = true)
     {
         using var scope = ServiceProvider.CreateScope();
@@ -228,16 +229,24 @@ internal abstract class CodeFlowTestsBase
             buildToFlow = await _basicBarClient.Object.GetBuildAsync(_buildId);
         }
 
-        var codeFlowResult = await codeflower.FlowBackAsync(
-            mappingName,
-            repoPath,
-            buildToFlow ?? await CreateNewVmrBuild([]),
-            excludedAssets,
-            "main",
-            branch,
-            enableRebase: false,
-            forceUpdate: forceUpdate,
-            cancellationToken: _cancellationToken.Token);
+        CodeFlowResult codeFlowResult;
+        try
+        {
+            codeFlowResult = await codeflower.FlowBackAsync(
+                mappingName,
+                repoPath,
+                buildToFlow ?? await CreateNewVmrBuild([]),
+                excludedAssets,
+                "main",
+                branch,
+                enableRebase,
+                forceUpdate,
+                cancellationToken: _cancellationToken.Token);
+        }
+        catch (PatchApplicationLeftConflictsException e)
+        {
+            codeFlowResult = new(true, e.ConflictedFiles, e.RepoPath, []);
+        }
 
         _lastFlowCollectedComments = scope.ServiceProvider.GetRequiredService<ICommentCollector>()
             .GetComments()
@@ -253,6 +262,7 @@ internal abstract class CodeFlowTestsBase
         string branch,
         Build? buildToFlow = null,
         IReadOnlyCollection<string>? excludedAssets = null,
+        bool enableRebase = false,
         bool forceUpdate = true)
     {
         using var scope = ServiceProvider.CreateScope();
@@ -260,17 +270,25 @@ internal abstract class CodeFlowTestsBase
         var cloneManager = scope.ServiceProvider.GetRequiredService<IVmrCloneManager>();
         await cloneManager.RegisterCloneAsync(VmrPath);
 
-        var codeFlowResult = await codeflower.FlowForwardAsync(
-            mappingName,
-            repoPath,
-            buildToFlow ?? await CreateNewRepoBuild(repoPath, []),
-            excludedAssets,
-            "main",
-            branch,
-            VmrPath,
-            enableRebase: false,
-            forceUpdate,
-            cancellationToken: _cancellationToken.Token);
+        CodeFlowResult codeFlowResult;
+        try
+        {
+            codeFlowResult = await codeflower.FlowForwardAsync(
+                mappingName,
+                repoPath,
+                buildToFlow ?? await CreateNewRepoBuild(repoPath, []),
+                excludedAssets,
+                "main",
+                branch,
+                VmrPath,
+                enableRebase,
+                forceUpdate,
+                cancellationToken: _cancellationToken.Token);
+        }
+        catch (PatchApplicationLeftConflictsException e)
+        {
+            codeFlowResult = new(true, e.ConflictedFiles, e.RepoPath, []);
+        }
 
         _lastFlowCollectedComments = scope.ServiceProvider.GetRequiredService<ICommentCollector>()
             .GetComments()
