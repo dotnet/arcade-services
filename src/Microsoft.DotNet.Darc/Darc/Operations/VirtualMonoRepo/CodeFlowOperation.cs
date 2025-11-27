@@ -201,8 +201,6 @@ internal abstract class CodeFlowOperation(
         {
             _options.Ref = await sourceRepo.GetShaForRefAsync(_options.Ref);
 
-            _logger.LogInformation("Flowing {sha}...", DarcLib.Commit.GetShortSha(_options.Ref));
-
             build = new(-1, DateTimeOffset.Now, 0, false, false, _options.Ref, [], [], [], [])
             {
                 GitHubRepository = sourceRepo.Path,
