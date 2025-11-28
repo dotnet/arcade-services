@@ -707,9 +707,11 @@ internal class TwoWayCodeflowTests : CodeFlowTests
     // This repo simulates frequent changes in the Version.Details.xml file.
     // It tests how updates to different packages would (not) conflict with each other.
     [Test]
-    public async Task VersionDetailsConflictTest()
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task VersionDetailsConflictTest(bool enableRebase)
     {
-        const string branchName = nameof(VersionDetailsConflictTest);
+        string branchName = GetTestBranchName();
 
         await EnsureTestRepoIsInitialized();
 
@@ -822,9 +824,9 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         // Level the repo and the VMR
         await GitOperations.CommitAll(ProductRepoPath, "Changing version files");
-        var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
+        var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);
         codeFlowResult.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, branchName);
+        await FinalizeForwardFlow(enableRebase, branchName);
 
         // Update repo1 and repo3 dependencies in the product repo
         await GitOperations.Checkout(ProductRepoPath, "main");
@@ -874,15 +876,15 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.CommitAll(VmrPath, "Update repo2 dependencies in the VMR");
 
         // Flow repo to the VMR
-        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "2");
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "2", enableRebase: enableRebase);
         codeFlowResult.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, branchName + "2");
+        await FinalizeForwardFlow(enableRebase, branchName + "2");
 
         // Flow changes back from the VMR
         var build = await CreateNewVmrBuild([("Package.A1", "1.0.20")]);
-        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "3", build);
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName + "3", build, enableRebase: enableRebase);
         codeFlowResult.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(ProductRepoPath, branchName + "3");
+        await FinalizeBackFlow(enableRebase, branchName + "3");
 
         // Verify the version files have both of the changes
         List<DependencyDetail> expectedDependencies =
@@ -928,9 +930,9 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await VerifyDependenciesInRepo(ProductRepoPath, expectedDependencies);
 
         // Flow repo to the VMR
-        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "4");
+        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName + "4", enableRebase: enableRebase);
         codeFlowResult.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, branchName + "4");
+        await FinalizeForwardFlow(enableRebase, branchName + "4");
 
         new VersionDetailsParser()
             .ParseVersionDetailsFile(_productRepoVmrPath / VersionFiles.VersionDetailsXml)
