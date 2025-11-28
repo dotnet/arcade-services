@@ -47,7 +47,7 @@ public interface IForwardFlowConflictResolver
     ///   - This is because basically we know we want to set the version files to point at 5.
     /// </summary>
     /// <returns>Conflicted files (if any)</returns>
-    Task<IReadOnlyCollection<UnixPath>> TryMergingBranch(
+    Task<IReadOnlyCollection<UnixPath>> TryMergingBranchAndUpdateDependencies(
         CodeflowOptions codeflowOptions,
         ILocalGitRepo vmr,
         ILocalGitRepo sourceRepo,
@@ -100,7 +100,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         _versionDetailsParser = versionDetailsParser;
     }
 
-    public async Task<IReadOnlyCollection<UnixPath>> TryMergingBranch(
+    public async Task<IReadOnlyCollection<UnixPath>> TryMergingBranchAndUpdateDependencies(
         CodeflowOptions codeflowOptions,
         ILocalGitRepo vmr,
         ILocalGitRepo sourceRepo,
@@ -108,7 +108,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        await TryMergingBranchAndResolvingConflicts(
+        IReadOnlyCollection<UnixPath> conflictedFiles = await TryMergingBranchAndResolvingConflicts(
             codeflowOptions,
             vmr,
             sourceRepo,
@@ -147,7 +147,14 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             throw;
         }
 
-        return await vmr.GetConflictedFilesAsync(cancellationToken);
+        if (codeflowOptions.EnableRebase)
+        {
+            return await vmr.GetConflictedFilesAsync(cancellationToken);
+        }
+        else
+        {
+            return conflictedFiles;
+        }
     }
 
     protected override async Task<bool> TryResolvingConflict(

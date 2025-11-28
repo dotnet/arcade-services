@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
+using Microsoft.DotNet.Services.Utility;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Helpers;
@@ -57,12 +58,18 @@ public class ProcessManager : IProcessManager
         GitExecutable = gitExecutable;
     }
 
-    public Task<ProcessExecutionResult> ExecuteGit(
+    public async Task<ProcessExecutionResult> ExecuteGit(
         string repoPath,
         string[] arguments,
         Dictionary<string, string>? envVariables = null,
         CancellationToken cancellationToken = default)
-        => Execute(GitExecutable, (new[] { "-C", repoPath }).Concat(arguments), envVariables: envVariables, cancellationToken: cancellationToken);
+    {
+        // When another process is using the directory, we retry a few times
+        return await ExponentialRetry.Default.RetryAsync(
+            async() => await Execute(GitExecutable, (new[] { "-C", repoPath }).Concat(arguments), envVariables: envVariables, cancellationToken: cancellationToken),
+            ex => _logger.LogDebug("Another git process seems to be running in this repository, retrying..."),
+            ex => ex is ProcessFailedException e && e.ExecutionResult.ExitCode == 128 && e.ExecutionResult.StandardError.Contains(".git/index.lock"));
+    }
 
     public async Task<ProcessExecutionResult> Execute(
         string executable,

@@ -50,13 +50,11 @@ internal class ForwardFlowOperation(
         }
 
         var sourceRepo = _localGitRepoFactory.Create(sourceRepoPath);
-
-        var build = await GetOrCreateBuildAsync(sourceRepo, _options.Build);
+        var build = await ParseOptionsAndGetBuildToFlowAsync(sourceRepo);
         _vmrInfo.VmrPath = new NativePath(_options.VmrPath);
+        await _cloneManager.RegisterCloneAsync(sourceRepo.Path);
 
         cancellationToken.ThrowIfCancellationRequested();
-
-        await _cloneManager.RegisterCloneAsync(sourceRepo.Path);
 
         await FlowCodeLocallyAsync(
             sourceRepoPath,

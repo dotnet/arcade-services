@@ -99,6 +99,7 @@ public abstract class CodeFlowConflictResolver
         {
             if (!codeflowOptions.EnableRebase)
             {
+                conflictedFiles = [];
                 await targetRepo.CommitAsync(
                     $"""
                     Merge {codeflowOptions.TargetBranch} into {codeflowOptions.HeadBranch}
@@ -110,7 +111,14 @@ public abstract class CodeFlowConflictResolver
             }
         }
 
-        return await targetRepo.GetConflictedFilesAsync(cancellationToken);
+        if (codeflowOptions.EnableRebase)
+        {
+            return await targetRepo.GetConflictedFilesAsync(cancellationToken);
+        }
+        else
+        {
+            return conflictedFiles;
+        }
     }
 
     protected async Task<IReadOnlyCollection<UnixPath>> TryMergingBranch(
@@ -209,7 +217,11 @@ public abstract class CodeFlowConflictResolver
             return false;
         }
 
-        _logger.LogInformation("Successfully auto-resolved {count} expected conflicts", count);
+        if (success)
+        {
+            _logger.LogInformation("Successfully auto-resolved {count} expected conflicts", count);
+        }
+
         return success;
     }
 

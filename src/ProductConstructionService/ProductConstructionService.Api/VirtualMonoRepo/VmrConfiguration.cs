@@ -16,7 +16,7 @@ internal static class VmrConfiguration
     public static void AddVmrRegistrations(this WebApplicationBuilder builder)
     {
         string tmpPath = builder.Configuration.GetRequiredValue(TmpPathKey);
-        builder.Services.AddMultiVmrSupport(tmpPath);
+        builder.Services.AddCodeflow(tmpPath);
     }
 
     public static void InitializeVmrFromRemote(this WebApplicationBuilder builder)

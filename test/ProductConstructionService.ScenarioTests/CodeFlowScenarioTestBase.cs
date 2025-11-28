@@ -209,7 +209,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
             await Task.Delay(TimeSpan.FromSeconds(5));
         }
 
-        throw new ScenarioTestException($"Comment containing '{partialComment}' was not found in the pull request.");
+        throw new ScenarioTestException($"Comment containing '{partialComment}' was not found in the pull request {pullRequest.HtmlUrl}.");
     }
 
     public static async Task CheckIfPullRequestCommentExists(
@@ -223,7 +223,9 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
 
         foreach (var expected in stringsExpectedInComment)
         {
-            allCommentBodies.Should().Contain(expected);
+            allCommentBodies.Should().Contain(
+                expected,
+                $"PR {pullRequest.HtmlUrl} should contain '{string.Join("', '", stringsExpectedInComment)}'");
         }
     }
 }
