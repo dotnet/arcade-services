@@ -369,7 +369,7 @@ internal abstract class CodeFlowOperation(
         // Parse and validate subscription ID
         BarBuild? build = await PopulateOptionsAndBuildFromSubscription();
 
-        if (_options.Build != 0)
+        if (_options.Build != 0 && build == null)
         {
             build = await _barApiClient.GetBuildAsync(_options.Build);
         }
