@@ -256,7 +256,7 @@ public class PullRequestCommentBuilderTests
             UpdaterId = "test-updater-id",
             SubscriptionId = forwardFlowSubscription.Id,
             BuildId = 12345,
-            SourceSha = "abc123",
+            SourceSha = "abcdefg123",
             SourceRepo = $"https://github.com/{FakeOrgName}/source-repo"
         };
 
