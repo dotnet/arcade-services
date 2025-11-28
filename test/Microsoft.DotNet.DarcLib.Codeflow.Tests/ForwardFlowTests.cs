@@ -29,11 +29,7 @@ internal class ForwardFlowTests : CodeFlowTests
 
         var codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo", branchName, enableRebase);
         codeFlowResult.ShouldHaveUpdates();
-        if (enableRebase)
-        {
-            await GitOperations.CommitAll(VmrPath, "Forward flow commit");
-        }
-        await GitOperations.MergePrBranch(VmrPath, branchName);
+        await FinalizeForwardFlow(enableRebase, branchName);
 
         // Flow again - should be a no-op
         codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);
@@ -45,10 +41,6 @@ internal class ForwardFlowTests : CodeFlowTests
         // Make a change in the repo again
         codeFlowResult = await ChangeRepoFileAndFlowIt("New content in the individual repo again", branchName, enableRebase);
         codeFlowResult.ShouldHaveUpdates();
-        if (enableRebase)
-        {
-            await GitOperations.CommitAll(VmrPath, "Forward flow commit");
-        }
         CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo again");
 
         // Make an additional change in the PR branch before merging
@@ -60,23 +52,16 @@ internal class ForwardFlowTests : CodeFlowTests
         // Make a conflicting change in the VMR
         codeFlowResult = await ChangeRepoFileAndFlowIt("A completely different change", branchName, enableRebase);
         codeFlowResult.ShouldHaveUpdates();
-        if (enableRebase)
-        {
-            await GitOperations.CommitAll(VmrPath, "Forward flow commit", allowEmpty: true);
-        }
         await GitOperations.VerifyMergeConflict(VmrPath, branchName,
             mergeTheirs: true,
-            expectedConflictingFiles: [VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName]);
+            expectedConflictingFiles: [VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName],
+            enableRebase: enableRebase);
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
 
         // We used the changes from the repo - let's verify flowing back won't change anything
         codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);
         CheckFileContents(_productRepoVmrFilePath, "A completely different change");
-        if (enableRebase)
-        {
-            await GitOperations.CommitAll(ProductRepoPath, "Backflow commit", allowEmpty: true);
-        }
-        await GitOperations.MergePrBranch(ProductRepoPath, branchName);
+        await FinalizeBackFlow(enableRebase, branchName);
 
         // Now we will make a series of forward flows where each will make a conflicting change
         // The last forward flow will have to recreate all of the flows to be able to apply the changes
@@ -84,11 +69,7 @@ internal class ForwardFlowTests : CodeFlowTests
         // Make another flow to VMR to have flows both ways ready
         codeFlowResult = await ChangeRepoFileAndFlowIt("Again some content in the individual repo", branchName, enableRebase);
         codeFlowResult.ShouldHaveUpdates();
-        if (enableRebase)
-        {
-            await GitOperations.CommitAll(VmrPath, "Forward flow commit");
-        }
-        await GitOperations.MergePrBranch(VmrPath, branchName);
+        await FinalizeForwardFlow(enableRebase, branchName);
 
         // The file.txt will keep getting changed and conflicting in each flow
         await GitOperations.Checkout(VmrPath, "main");
@@ -102,14 +83,10 @@ internal class ForwardFlowTests : CodeFlowTests
             await GitOperations.CommitAll(ProductRepoPath, $"Add files for iteration {i}");
             codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);
             codeFlowResult.ShouldHaveUpdates();
-            if (enableRebase)
-            {
-                await GitOperations.CommitAll(VmrPath, $"Forward flow iteration {i}", allowEmpty: true);
-            }
             // Make a conflicting change in the PR branch before merging
             await File.WriteAllTextAsync(_productRepoVmrPath / $"conflicting_file_{i}.txt", $"Conflicting content {i}");
             await GitOperations.CommitAll(VmrPath, $"Conflicting change in iteration {i}");
-            await GitOperations.VerifyMergeConflict(VmrPath, branchName, [VmrInfo.SourcesDir / Constants.ProductRepoName / "file.txt"], mergeTheirs: false);
+            await GitOperations.VerifyMergeConflict(VmrPath, branchName, [VmrInfo.SourcesDir / Constants.ProductRepoName / "file.txt"], mergeTheirs: false, enableRebase: enableRebase);
             CheckFileContents(_productRepoVmrPath / "file.txt", ["VMR conflicting content"]);
         }
 
@@ -124,10 +101,6 @@ internal class ForwardFlowTests : CodeFlowTests
 
         codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);
         codeFlowResult.ShouldHaveUpdates();
-        if (enableRebase)
-        {
-            await GitOperations.CommitAll(VmrPath, "Final forward flow commit", allowEmpty: true);
-        }
         await GitOperations.VerifyMergeConflict(
             VmrPath,
             branchName,
@@ -135,7 +108,8 @@ internal class ForwardFlowTests : CodeFlowTests
                 ..Enumerable.Range(1, 3).Select(i => VmrInfo.SourcesDir / Constants.ProductRepoName / $"conflicting_file_{i}.txt"),
                 VmrInfo.SourcesDir / Constants.ProductRepoName / "file.txt",
             ],
-            mergeTheirs: true);
+            mergeTheirs: true,
+            enableRebase: enableRebase);
 
         for (int i = 1; i <= 3; i++)
         {

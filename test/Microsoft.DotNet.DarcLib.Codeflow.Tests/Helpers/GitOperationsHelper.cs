@@ -169,7 +169,7 @@ internal class GitOperationsHelper
         string[]? expectedConflictingFiles = null,
         bool? mergeTheirs = null,
         string targetBranch = "main",
-        bool enableRebase = true)
+        bool enableRebase = false)
     {
         ProcessExecutionResult result = null!;
         if (!enableRebase)
@@ -190,7 +190,7 @@ internal class GitOperationsHelper
 
                 foreach (var expectedConflictingFile in expectedConflictingFiles)
                 {
-                    conflictedFiles.Should().Contain(expectedConflictingFile, $"Expected conflicting file {expectedConflictingFile}");
+                    conflictedFiles.Should().Contain(expectedConflictingFile);
                 }
             }
             else
