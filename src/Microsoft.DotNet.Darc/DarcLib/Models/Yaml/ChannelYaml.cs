@@ -10,6 +10,7 @@ public class ChannelYaml
     [YamlMember(Alias = "Name", ApplyNamingConventions = false)]
     public string Name { get; set; }
 
-    [YamlMember(DefaultValuesHandling = DefaultValuesHandling.OmitNull | DefaultValuesHandling.OmitDefaults)]
+    [YamlMember(Alias = "Classification", ApplyNamingConventions = false,
+        DefaultValuesHandling = DefaultValuesHandling.OmitNull | DefaultValuesHandling.OmitDefaults)]
     public string Classification { get; set; }
 }
