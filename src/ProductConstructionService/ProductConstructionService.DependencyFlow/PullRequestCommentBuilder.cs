@@ -156,7 +156,7 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
                 ⚠️ Temporarily please install and use the following darc version:
                 ```bash
                 # Linux / MacOS
-                ./eng/commong/darc-init.sh --darcversion {maestroVersion}
+                ./eng/common/darc-init.sh --darcversion {maestroVersion}
                 # or on Windows
                 .\eng\common\darc-init.ps1 -darcVersion {maestroVersion}
                 ```
