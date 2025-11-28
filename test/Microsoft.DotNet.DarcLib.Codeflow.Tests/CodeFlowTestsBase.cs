@@ -11,6 +11,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
+using Maestro.Common;
+using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.DotNet.DarcLib.Codeflow.Tests.Helpers;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
@@ -95,10 +97,10 @@ internal abstract class CodeFlowTestsBase
 
     protected virtual IServiceCollection CreateServiceProvider() => new ServiceCollection()
         .AddLogging(b => b.AddConsole().AddFilter(l => l >= LogLevel.Debug))
-        .AddSingleVmrSupport("git", VmrPath, TmpPath, null, null)
+        .AddCodeflow(TmpPath, VmrPath)
         .AddSingleton(_basicBarClient.Object)
         .AddTransient<IRemoteFactory, RemoteFactory>()
-        .AddScoped<ICommentCollector, CommentCollector>();
+        .AddSingleton(Mock.Of<IRemoteTokenProvider>());
 
     protected static List<NativePath> GetExpectedFilesInVmr(
         NativePath vmrPath,
