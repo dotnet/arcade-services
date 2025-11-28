@@ -10,8 +10,7 @@ using Microsoft.Extensions.Logging;
 namespace Microsoft.DotNet.Darc.Helpers;
 
 /// <summary>
-/// Token provider that attempts to retrieve a GitHub token from the GitHub CLI ('gh auth token')
-/// if no static token is provided. Falls back to the provided token or null if gh CLI is not available.
+/// Token provider that uses a given token and if none is provided, it attempts to retrieve a GitHub token from the GitHub CLI.
 /// </summary>
 internal class GitHubCliTokenProvider : IRemoteTokenProvider
 {
