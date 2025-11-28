@@ -7,6 +7,7 @@ namespace Microsoft.DotNet.DarcLib.Models.Yaml;
 
 public class ChannelYaml
 {
+    [YamlMember(Alias = "Name", ApplyNamingConventions = false)]
     public string Name { get; set; }
 
     [YamlMember(DefaultValuesHandling = DefaultValuesHandling.OmitNull | DefaultValuesHandling.OmitDefaults)]
