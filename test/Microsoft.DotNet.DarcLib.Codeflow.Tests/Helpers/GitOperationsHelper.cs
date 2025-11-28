@@ -10,6 +10,7 @@ using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests.Helpers;
 
@@ -174,10 +175,10 @@ internal class GitOperationsHelper
         ProcessExecutionResult result = null!;
         if (!enableRebase)
         {
-            result = await _processManager.ExecuteGit(repo, "checkout", targetBranch);
+            result = await ExecuteGitCommand(repo, "checkout", targetBranch);
             result.ThrowIfFailed($"Could not checkout main branch in {repo}");
 
-            result = await _processManager.ExecuteGit(repo, "merge", "--no-commit", "--no-ff", branch);
+            result = await ExecuteGitCommand(repo, "merge", "--no-commit", "--no-ff", branch);
             result.Succeeded.Should().BeFalse($"Expected merge conflict in {repo} but none happened");
         }
 
@@ -185,7 +186,7 @@ internal class GitOperationsHelper
         {
             if (enableRebase)
             {
-                result = await _processManager.ExecuteGit(repo, "diff", "--name-only", "--diff-filter=U");
+                result = await ExecuteGitCommand(repo, "diff", "--name-only", "--diff-filter=U");
                 var conflictedFiles = result.GetOutputLines();
 
                 foreach (var expectedConflictingFile in expectedConflictingFiles)
@@ -207,7 +208,7 @@ internal class GitOperationsHelper
             {
                 foreach (var expectedConflictingFile in expectedConflictingFiles)
                 {
-                    result = await _processManager.ExecuteGit(repo, "checkout", mergeTheirs.Value ? "--theirs" : "--ours", expectedConflictingFile);
+                    result = await ExecuteGitCommand(repo, "checkout", mergeTheirs.Value ? "--theirs" : "--ours", expectedConflictingFile);
                     result.ThrowIfFailed($"Failed to merge {(mergeTheirs.Value ? "theirs" : "ours")} {expectedConflictingFile} in {repo}");
                 }
             }
@@ -215,7 +216,7 @@ internal class GitOperationsHelper
 
         if (!mergeTheirs.HasValue)
         {
-            result = await _processManager.ExecuteGit(repo, "merge", "--abort");
+            result = await ExecuteGitCommand(repo, "merge", "--abort");
             result.ThrowIfFailed($"Failed to abort merge in {repo}");
             return;
         }
@@ -223,7 +224,7 @@ internal class GitOperationsHelper
         // If we take theirs, we can just checkout all files (because version files will be accepted from our branch)
         if (mergeTheirs == true)
         {
-            result = await _processManager.ExecuteGit(repo, "checkout", "--theirs", ".");
+            result = await ExecuteGitCommand(repo, "checkout", "--theirs", ".");
             result.ThrowIfFailed($"Failed to merge theirs in {repo}");
         }
         // If we take ours, we already resolved the conflicting files above but the version files need to come from our branch
@@ -236,17 +237,20 @@ internal class GitOperationsHelper
                     continue;
                 }
 
-                result = await _processManager.ExecuteGit(repo, "checkout", "--ours", file);
+                result = await ExecuteGitCommand(repo, "checkout", "--ours", file);
                 result.ThrowIfFailed($"Failed to merge ours {file} in {repo}");
             }
         }
 
         await CommitAll(repo, $"Merged {branch} into {targetBranch} using {(mergeTheirs.Value ? targetBranch : branch)}");
 
-        if (!enableRebase)
+        if (enableRebase)
         {
-            await DeleteBranch(repo, branch);
+            await Checkout(repo, targetBranch);
+            await ExecuteGitCommand(repo, "merge", "--ff-only", branch);
         }
+
+        await DeleteBranch(repo, branch);
     }
 
     public static Task VerifyConflictMarkers(NativePath productRepoPath, IEnumerable<string> files)

@@ -11,6 +11,7 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.VisualStudio.Services.TestManagement.TestPlanning.WebApi;
 using Moq;
 using NUnit.Framework;
 
@@ -655,6 +656,8 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         codeFlowResult.ShouldHaveUpdates();
         if (enableRebase)
         {
+            // During rebase, we already have a conflict on top of main
+            await GitOperations.ExecuteGitCommand(VmrPath, "checkout", "--theirs", _productRepoVmrFilePath);
             await GitOperations.CommitAll(VmrPath, "Forward flow commit");
         }
 
@@ -662,6 +665,10 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.Checkout(ProductRepoPath, "main");
         codeFlowResult = await ChangeRepoFileAndFlowIt("New content from the individual repo #2", forwardBranchName, enableRebase);
         codeFlowResult.ShouldHaveUpdates();
+        if (enableRebase)
+        {
+            await GitOperations.CommitAll(VmrPath, "Forward flow commit");
+        }
 
         // 5. The backflow PR is now in conflict - repo has the content from step 3 but VMR has the one from step 1
         // 6. We resolve the conflict by using the content from the VMR
@@ -670,16 +677,22 @@ internal class TwoWayCodeflowTests : CodeFlowTests
             backBranchName,
             mergeTheirs: true,
             expectedConflictingFiles: [_productRepoFileName],
-            enableRebase: enableRebase);
+            enableRebase: false /* intentional, we commit everything */);
         CheckFileContents(_productRepoFilePath, "New content from the VMR #2");
 
         // 7. The forward flow PR will have a conflict the opposite way - repo has the content from step 3 but VMR has the one from step 1
         // 8. We resolve the conflict by using the content from the VMR too
-        await GitOperations.Checkout(VmrPath, "main");
-        await GitOperations.VerifyMergeConflict(VmrPath, forwardBranchName,
-            mergeTheirs: true,
-            expectedConflictingFiles: [VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName],
-            enableRebase: enableRebase);
+        if (!enableRebase)
+        {
+            await GitOperations.VerifyMergeConflict(VmrPath, forwardBranchName,
+                mergeTheirs: true,
+                expectedConflictingFiles: [VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName]);
+        }
+        else
+        {
+            await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
+        }
+
         CheckFileContents(_productRepoVmrFilePath, "New content from the individual repo #2");
 
         // 9. We try to forward flow again so the VMR version of the file will flow back to the VMR
