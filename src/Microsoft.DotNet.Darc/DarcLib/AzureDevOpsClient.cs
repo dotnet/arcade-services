@@ -25,6 +25,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
+using PrComment = Microsoft.TeamFoundation.SourceControl.WebApi.Comment;
+
 namespace Microsoft.DotNet.DarcLib;
 
 public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsClient
@@ -400,7 +402,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
         GitPullRequest pullRequest = await client.GetPullRequestAsync(project, repoName, id, includeCommits: true);
 
-        IList<Commit> commits = new List<Commit>(pullRequest.Commits.Length);
+        var commits = new List<Commit>(pullRequest.Commits.Length);
         foreach (var commit in pullRequest.Commits)
         {
             commits.Add(new Commit(
@@ -472,7 +474,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         using VssConnection connection = CreateVssConnection(accountName);
         using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
 
-        var prComment = new Comment()
+        var prComment = new PrComment()
         {
             CommentType = TeamFoundation.SourceControl.WebApi.CommentType.Text,
             Content = $"{message}{CommentMarker}"
@@ -487,12 +489,12 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             {
                 continue;
             }
-            List<Comment> comments = await client.GetCommentsAsync(repoName, id, commentThread.Id);
+            List<PrComment> comments = await client.GetCommentsAsync(repoName, id, commentThread.Id);
             bool threadHasCommentWithMarker = comments.Any(comment => comment.CommentType == TeamFoundation.SourceControl.WebApi.CommentType.Text && comment.Content.EndsWith(CommentMarker));
             if (threadHasCommentWithMarker)
             {
                 // Check if last comment in that thread has the marker.
-                Comment lastComment = comments.Last();
+                PrComment lastComment = comments.Last();
                 if (lastComment.CommentType == TeamFoundation.SourceControl.WebApi.CommentType.Text && lastComment.Content.EndsWith(CommentMarker))
                 {
                     // Update comment
@@ -1538,7 +1540,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         using VssConnection connection = CreateVssConnection(accountName);
         using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
 
-        var prComment = new Comment()
+        var prComment = new PrComment()
         {
             CommentType = TeamFoundation.SourceControl.WebApi.CommentType.Text,
             Content = $"{comment}{CommentMarker}"
@@ -1602,7 +1604,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         {
             var objectType = entry["gitObjectType"].ToString().ToLowerInvariant();
             var sha = entry["objectId"].ToString();
-            var treePath = $"{path}/{entry["relativePath"].ToString()}";
+            var treePath = $"{path}/{entry["relativePath"]}";
 
             if (objectType == "tree")
             {
@@ -1629,7 +1631,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         string treeSha, 
         string path)
     {
-        var pathSegments = path.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        var pathSegments = path.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries);
         var currentTreeSha = treeSha;
 
         foreach (var segment in pathSegments)
@@ -1644,14 +1646,11 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
             // Find the entry matching the current path segment
             var entries = treeResponse["treeEntries"].ToObject<JArray>();
-            var matchingEntry = entries.FirstOrDefault(e => 
-                e["relativePath"].ToString() == segment && 
-                e["gitObjectType"].ToString().ToLowerInvariant() == "tree");
-
-            if (matchingEntry == null)
-            {
-                throw new DirectoryNotFoundException($"Path segment '{segment}' not found in tree.");
-            }
+            var matchingEntry = entries
+                .FirstOrDefault(e => 
+                    e["relativePath"].ToString() == segment && 
+                    e["gitObjectType"].ToString().Equals("tree", StringComparison.InvariantCultureIgnoreCase))
+                ?? throw new DirectoryNotFoundException($"Path segment '{segment}' not found in tree.");
 
             currentTreeSha = matchingEntry["objectId"].ToString();
         }
@@ -1752,7 +1751,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
     public async Task<List<string>> GetPullRequestCommentsAsync(string pullRequestUrl)
     {
-        (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
+        (string accountName, string _, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
 
         _logger.LogInformation("Retrieving comments for pull request {PullRequestUrl}", pullRequestUrl);
 
@@ -1768,9 +1767,9 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             if (commentThread.Status == CommentThreadStatus.Active || 
                 commentThread.Status == CommentThreadStatus.Unknown)
             {
-                List<Comment> threadComments = await client.GetCommentsAsync(repoName, id, commentThread.Id);
+                List<PrComment> threadComments = await client.GetCommentsAsync(repoName, id, commentThread.Id);
                 
-                foreach (Comment comment in threadComments)
+                foreach (PrComment comment in threadComments)
                 {
                     if (comment.CommentType == TeamFoundation.SourceControl.WebApi.CommentType.Text && !string.IsNullOrEmpty(comment.Content))
                     {
@@ -1838,7 +1837,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             // Filter and return only folder names (tree objects)
             var entries = treeResponse["treeEntries"].ToObject<JArray>();
             var folderNames = entries
-                .Where(entry => entry["gitObjectType"].ToString().ToLowerInvariant() == "tree")
+                .Where(entry => entry["gitObjectType"].ToString().Equals("tree", StringComparison.InvariantCultureIgnoreCase))
                 .Select(entry => entry["relativePath"].ToString())
                 .ToList();
 

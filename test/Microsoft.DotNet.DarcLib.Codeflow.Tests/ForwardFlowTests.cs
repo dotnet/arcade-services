@@ -171,7 +171,7 @@ internal class ForwardFlowTests : CodeFlowTests
         ];
 
         stagedFiles.Should().BeEquivalentTo(expectedFiles);
-        await GitOperations.VerifyNoConflictMarkers(VmrPath, stagedFiles);
+        await Helpers.GitOperationsHelper.VerifyNoConflictMarkers(VmrPath, stagedFiles);
         CheckFileContents(_productRepoVmrFilePath, "New content in the individual repo again");
         CheckFileContents(VmrPath / expectedFiles[1], "New file from the repo");
         File.Exists(VmrPath / expectedFiles[0] + "-removed-in-vmr").Should().BeFalse();
@@ -195,7 +195,7 @@ internal class ForwardFlowTests : CodeFlowTests
 
         stagedFiles = await CallDarcForwardflow(build.Id, [expectedFiles[0]]);
         stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
-        await GitOperations.VerifyNoConflictMarkers(VmrPath, stagedFiles.Except([expectedFiles[0]]));
+        await Helpers.GitOperationsHelper.VerifyNoConflictMarkers(VmrPath, stagedFiles.Except([expectedFiles[0]]));
         CheckFileContents(VmrPath / expectedFiles[1], "New file from the repo");
 
         // Now we commit this flow and verify all files are staged
@@ -239,7 +239,7 @@ internal class ForwardFlowTests : CodeFlowTests
         // File -added-in-repo is deleted in the VMR and changed in the repo so it will conflict
         stagedFiles = await CallDarcForwardflow(build.Id, [expectedFiles[1]]);
         stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
-        await GitOperations.VerifyNoConflictMarkers(VmrPath, stagedFiles.Except([expectedFiles[1]]));
+        await Helpers.GitOperationsHelper.VerifyNoConflictMarkers(VmrPath, stagedFiles.Except([expectedFiles[1]]));
         CheckFileContents(VmrPath / expectedFiles[1], "New file from the repo AGAIN");
         CheckFileContents(VmrPath / expectedFiles[2], "New stuff");
         (await GetLocal(VmrPath).GetDependenciesAsync(newDependency.Name, relativeBasePath: VmrInfo.SourcesDir / Constants.ProductRepoName))
@@ -598,7 +598,7 @@ internal class ForwardFlowTests : CodeFlowTests
         // Step 2: Forward flow first changes
         var stagedFiles = await CallDarcForwardflow();
         stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
-        await GitOperations.VerifyNoConflictMarkers(VmrPath, stagedFiles);
+        await Helpers.GitOperationsHelper.VerifyNoConflictMarkers(VmrPath, stagedFiles);
         CheckFileContents(VmrPath / expectedFiles[0], "This file will cause a conflict");
         CheckFileContents(VmrPath / expectedFiles[1], "This file will be added and then removed");
         CheckFileContents(VmrPath / expectedFiles[2], PartialRevertChange1);
@@ -620,7 +620,7 @@ internal class ForwardFlowTests : CodeFlowTests
         // Removed file is new, V.D.xml is not changed anymore
         expectedFiles[4] = VmrInfo.SourcesDir / Constants.ProductRepoName / FileRemovedAndAddedName;
         stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
-        await GitOperations.VerifyNoConflictMarkers(VmrPath, stagedFiles.Except([expectedFiles[0], expectedFiles[1]]));
+        await Helpers.GitOperationsHelper.VerifyNoConflictMarkers(VmrPath, stagedFiles.Except([expectedFiles[0], expectedFiles[1]]));
 
         // Now we commit this flow and verify all files are staged
         await GitOperations.ExecuteGitCommand(VmrPath, ["checkout", "--theirs", "--", expectedFiles[0]]);

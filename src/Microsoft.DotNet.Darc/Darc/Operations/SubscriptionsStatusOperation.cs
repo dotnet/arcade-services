@@ -87,9 +87,9 @@ internal class SubscriptionsStatusOperation : Operation
             }
 
             // Filter away subscriptions that already have the desired state:
-            subscriptionsToEnableDisable = subscriptionsToEnableDisable.Where(s => s.Enabled != _options.Enable).ToList();
+            subscriptionsToEnableDisable = [.. subscriptionsToEnableDisable.Where(s => s.Enabled != _options.Enable)];
 
-            if (!subscriptionsToEnableDisable.Any())
+            if (subscriptionsToEnableDisable.Count == 0)
             {
                 Console.WriteLine($"All subscriptions are already {pastTenseStatusMessage}.");
                 return Constants.SuccessCode;

@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
@@ -14,7 +15,6 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.ProductConstructionService.Client;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -24,6 +24,7 @@ internal class GetDependencyGraphOperation : Operation
     private readonly GetDependencyGraphCommandLineOptions _options;
     private readonly LocalLibGit2Client _gitClient;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly IRemoteTokenProvider _remoteTokenProvider;
     private readonly IBarApiClient _barClient;
     private readonly ILogger<GetDependencyGraphOperation> _logger;
 
@@ -31,17 +32,19 @@ internal class GetDependencyGraphOperation : Operation
         GetDependencyGraphCommandLineOptions options,
         ILogger<GetDependencyGraphOperation> logger,
         IRemoteFactory remoteFactory,
+        IRemoteTokenProvider remoteTokenProvider,
         IBarApiClient barClient)
     {
         _options = options;
         _gitClient = new LocalLibGit2Client(
-            options.GetRemoteTokenProvider(),
+            _remoteTokenProvider,
             new NoTelemetryRecorder(),
             new ProcessManager(logger, _options.GitLocation),
             new FileSystem(),
             logger);
         _logger = logger;
         _remoteFactory = remoteFactory;
+        _remoteTokenProvider = remoteTokenProvider;
         _barClient = barClient;
     }
 
@@ -105,7 +108,7 @@ internal class GetDependencyGraphOperation : Operation
                     Console.WriteLine($"Getting root dependencies from local repository...");
 
                     // Grab root dependency set from local repo
-                    var local = new Local(_options.GetRemoteTokenProvider(), _logger);
+                    var local = new Local(_remoteTokenProvider, _logger);
                     rootDependencies = await local.GetDependenciesAsync(
                         _options.AssetName);
                 }
@@ -141,7 +144,7 @@ internal class GetDependencyGraphOperation : Operation
             {
                 Console.WriteLine($"Getting root dependencies from local repository...");
 
-                var local = new Local(_options.GetRemoteTokenProvider(), _logger);
+                var local = new Local(_remoteTokenProvider, _logger);
                 rootDependencies = await local.GetDependenciesAsync(
                     _options.AssetName);
 
@@ -271,7 +274,7 @@ internal class GetDependencyGraphOperation : Operation
         }
         if (node.ContributingBuilds != null)
         {
-            if (node.ContributingBuilds.Any())
+            if (node.ContributingBuilds.Count != 0)
             {
                 await writer.WriteLineAsync($"{indent}  Builds:");
                 foreach (var build in node.ContributingBuilds)
@@ -337,7 +340,7 @@ internal class GetDependencyGraphOperation : Operation
             await writer.WriteLineAsync("    node [shape=record]");
             foreach (DependencyGraphNode node in graph.Nodes)
             {
-                StringBuilder nodeBuilder = new StringBuilder();
+                StringBuilder nodeBuilder = new();
 
                 // First add the node name
                 nodeBuilder.Append($"    {UxHelpers.CalculateGraphVizNodeName(node)}");
@@ -450,7 +453,7 @@ internal class GetDependencyGraphOperation : Operation
     {
         // Log the repository information.
         await LogBasicNodeDetails(writer, node, indent);
-        if (node.Dependencies != null && node.Dependencies.Any())
+        if (node.Dependencies != null && node.Dependencies.Count != 0)
         {
             await writer.WriteLineAsync($"{indent}  Dependencies:");
 
@@ -466,7 +469,7 @@ internal class GetDependencyGraphOperation : Operation
             }
         }
 
-        if (node.Children.Any())
+        if (node.Children.Count != 0)
         {
             await writer.WriteLineAsync($"{indent}  Input Repositories:");
 

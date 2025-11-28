@@ -4,7 +4,6 @@
 using System.Globalization;
 using System.Net;
 using System.Text;
-using Azure.Identity;
 using EntityFrameworkCore.Triggers;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
@@ -91,6 +90,8 @@ internal static class PcsStartup
         string databaseConnectionString = builder.Configuration.GetRequiredValue(ConfigurationKeys.DatabaseConnectionString)
             .Replace(SqlConnectionStringUserIdPlaceholder, managedIdentityId);
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
+        builder.Services.Configure<EnvironmentNamespaceOptions>(
+            builder.Configuration.GetSection(EnvironmentNamespaceOptions.ConfigurationKey));
 
         TokenCredential azureCredential = AzureAuthentication.GetServiceCredential(isDevelopment, managedIdentityId);
 

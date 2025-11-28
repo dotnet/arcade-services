@@ -29,7 +29,6 @@ public interface IBackflowConflictResolver
         CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
         ILocalGitRepo targetRepo,
-        string branchToMerge,
         bool headBranchExisted,
         CancellationToken cancellationToken);
 }
@@ -80,20 +79,18 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
         ILocalGitRepo targetRepo,
-        string branchToMerge,
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
         // If we are rebasing, we are already on top of the branch and we don't need to merge it
-        IReadOnlyCollection<UnixPath> conflictedFiles = codeflowOptions.EnableRebase
-            ? []
-            : await TryMergingBranchAndResolveConflicts(
-                codeflowOptions,
-                lastFlows,
-                targetRepo,
-                branchToMerge,
-                headBranchExisted,
-                cancellationToken);
+        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+        IReadOnlyCollection<UnixPath> conflictedFiles = await TryMergingBranchAndResolvingConflicts(
+            codeflowOptions,
+            vmr,
+            targetRepo,
+            lastFlows,
+            headBranchExisted,
+            cancellationToken);
 
         try
         {
@@ -125,14 +122,14 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             var hasToolsetUpdates = await BackflowToolsets(
                 codeflowOptions,
                 targetRepo,
-                branchToMerge,
+                codeflowOptions.TargetBranch,
                 repoComparisonSha,
                 vmrComparisonSha);
 
             var updates = await BackflowDependencies(
                 codeflowOptions,
                 targetRepo,
-                branchToMerge,
+                codeflowOptions.TargetBranch,
                 repoComparisonSha,
                 vmrComparisonSha,
                 cancellationToken);
@@ -143,142 +140,42 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         {
             // We don't want to push this as there is some problem
             _logger.LogError(e, "Failed to update dependencies after merging {branchToMerge} into {headBranch} in {repoPath}",
-                branchToMerge,
+                codeflowOptions.TargetBranch,
                 codeflowOptions.HeadBranch,
                 targetRepo.Path);
             throw;
         }
     }
 
-    private async Task<IReadOnlyCollection<UnixPath>> TryMergingBranchAndResolveConflicts(
+    protected override async Task<bool> TryResolvingConflict(
         CodeflowOptions codeflowOptions,
-        LastFlows lastFlows,
+        ILocalGitRepo vmr,
         ILocalGitRepo targetRepo,
-        string branchToMerge,
-        bool headBranchExisted,
-        CancellationToken cancellationToken)
-    {
-        IReadOnlyCollection<UnixPath> conflictedFiles = await TryMergingBranch(
-            targetRepo,
-            codeflowOptions.HeadBranch,
-            branchToMerge,
-            cancellationToken);
-
-        if (conflictedFiles.Any() && await TryResolvingConflicts(
-                conflictedFiles,
-                codeflowOptions.Mapping,
-                codeflowOptions.CurrentFlow,
-                lastFlows.CrossingFlow,
-                targetRepo,
-                codeflowOptions.HeadBranch,
-                branchToMerge,
-                headBranchExisted,
-                cancellationToken))
-        {
-            await targetRepo.CommitAsync(
-                $"""
-                Merge {branchToMerge} into {codeflowOptions.HeadBranch}
-                Auto-resolved conflicts:
-                - {string.Join(Environment.NewLine + "- ", conflictedFiles.Select(f => f.Path))}
-                """,
-                allowEmpty: true,
-                cancellationToken: CancellationToken.None);
-        }
-
-        return conflictedFiles;
-    }
-
-    /// <summary>
-    /// Tries to resolve well-known conflicts that can occur during a code flow operation.
-    /// The conflicts can happen when backward a forward flow PRs get merged out of order
-    /// and so called "crossing" flow occurs.
-    /// This can be shown on the following schema (the order of events is numbered):
-    /// 
-    ///     repo                   VMR
-    ///       O────────────────────►O
-    ///       │  2.                 │ 1.
-    ///       │   O◄────────────────O- - ┐
-    ///       │   │            4.   │
-    ///     3.O───┼────────────►O   │    │
-    ///       │   │             │   │
-    ///       │ ┌─┘             │   │    │
-    ///       │ │               │   │
-    ///     5.O◄┘               └──►O 6. │
-    ///       │                 7.  │    O (actual branch for 7. is based on top of 1.)
-    ///       |────────────────►O   │
-    ///       │                 └──►x 8.
-    ///       │                     │
-    ///
-    /// In this diagram, the flows 1->5 and 3->6 are crossing each other.
-    ///
-    /// The conflict arises in step 8. and is caused by the fact that:
-    ///   - When the forward flow PR branch is being opened in 7., the last sync (from the point of view of 5.) is from 1.
-    ///   - This means that the PR branch will be based on 1. (the real PR branch is the "actual 7.")
-    ///   - This means that when 6. merged, VMR's source-manifest.json got updated with the SHA of the 3.
-    ///   - So the source-manifest in 6. contains the SHA of 3.
-    ///   - The forward flow PR branch contains the SHA of 5.
-    ///   - So the source-manifest file conflicts on the SHA (3. vs 5.)
-    ///   - However, if only the version files are in conflict, we can try merging 6. into 7. and resolve the conflict.
-    ///   - This is because basically we know we want to set the version files to point at 5.
-    /// </summary>
-    private async Task<bool> TryResolvingConflicts(
-        IReadOnlyCollection<UnixPath> conflictedFiles,
-        SourceMapping mapping,
-        Codeflow currentFlow,
+        UnixPath filePath,
         Codeflow? crossingFlow,
-        ILocalGitRepo repo,
-        string headBranch,
-        string branchToMerge,
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-
-        foreach (var conflictedFile in conflictedFiles)
+        // Known version file - check out the branch version, we want to override it
+        // See https://github.com/dotnet/arcade-services/issues/4865
+        if (DependencyFileManager.CodeflowDependencyFiles.Any(f => f.Equals(filePath, StringComparison.OrdinalIgnoreCase)))
         {
-            // Known version file - check out the branch version, we want to override it
-            // See https://github.com/dotnet/arcade-services/issues/4865
-            if (DependencyFileManager.CodeflowDependencyFiles.Any(f => f.Equals(conflictedFile, StringComparison.OrdinalIgnoreCase)))
-            {
-                // Revert files so that we can resolve the conflicts
-                // We use the target branch version when we are flowing the first time (because we did not flow the version files yet)
-                // We use the head branch version when we are flowing again because it already has updates from previous flow
-                // plus it can contain additional changes from the PR
-                await repo.ResolveConflict(conflictedFile, ours: headBranchExisted);
-                continue;
-            }
-
-            // Unknown conflict, but can be conflicting with a crossing flow
-            // Check DetectCrossingFlow documentation for more details
-            if (crossingFlow != null)
-            {
-                if (await TryResolvingConflictWithCrossingFlow(
-                    mapping.Name,
-                    vmr,
-                    repo,
-                    conflictedFile,
-                    currentFlow,
-                    crossingFlow,
-                    cancellationToken))
-                {
-                    continue;
-                }
-            }
-
-            _logger.LogInformation("Failed to merge the branch {branchToMerge} into {headBranch} due to unresolvable conflict in {conflictedFile}",
-                branchToMerge,
-                headBranch,
-                conflictedFile);
-
-            await AbortMerge(repo);
-            return false;
+            // Revert files so that we can resolve the conflicts
+            // We use the target branch version when we are flowing the first time (because we did not flow the version files yet)
+            // We use the head branch version when we are flowing again because it already has updates from previous flow
+            // plus it can contain additional changes from the PR
+            await targetRepo.ResolveConflict(filePath, ours: headBranchExisted);
+            return true;
         }
 
-        _logger.LogInformation("Successfully auto-resolved all conflicts between {branchToMerge} and {headBranch}",
-            branchToMerge,
-            headBranch);
+        // Unknown conflict, but can be conflicting with a crossing flow
+        // Check DetectCrossingFlow documentation for more details
+        if (crossingFlow != null)
+        {
+            return await TryResolvingConflictWithCrossingFlow(codeflowOptions, vmr, targetRepo, filePath, crossingFlow, cancellationToken);
+        }
 
-        return true;
+        return false;
     }
 
     private async Task<bool> BackflowToolsets(
@@ -289,8 +186,6 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         string vmrComparisonSha)
     {
         bool hasUpdates = false;
-
-        var headBranchDependencies = await GetRepoDependencies(targetRepo, commit: null /* working tree */);
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
         // handle global.json
@@ -484,9 +379,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             ..allUpdates
                 .Select(update => new DependencyUpdate()
                 {
-                    From = headBranchDependencyDict.ContainsKey(update.Key)
-                        ? headBranchDependencyDict[update.Key]
-                        : (DependencyDetail)versionDetailsChanges.Additions[update.Key].Value!,
+                    From = headBranchDependencyDict.TryGetValue(update.Key, out DependencyDetail? value)
+                        ? value : (DependencyDetail)versionDetailsChanges.Additions[update.Key].Value!,
                     To = update.Value,
                 })
                 .Where(update =>
@@ -544,7 +438,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         }
 
         var result = new StringBuilder();
-        if (updatedDependencies.Any())
+        if (updatedDependencies.Count != 0)
         {
             result.AppendLine("Updated Dependencies:");
             foreach ((string versionBlurb, List<string> packageNames) in updatedDependencies)
@@ -553,7 +447,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             }
             result.AppendLine();
         }
-        if (addedDependencies.Any())
+        if (addedDependencies.Count != 0)
         {
             result.AppendLine("Added Dependencies:");
             foreach ((string versionBlurb, List<string> packageNames) in addedDependencies)
@@ -562,7 +456,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             }
             result.AppendLine();
         }
-        if (removedDependencies.Any())
+        if (removedDependencies.Count != 0)
         {
             result.AppendLine("Removed Dependencies:");
             foreach ((string versionBlurb, List<string> packageNames) in removedDependencies)

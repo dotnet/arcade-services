@@ -427,7 +427,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             _logger.LogInformation("NOT Merged: PR '{url}' failed policies {policies}",
                 pr.Url,
                 string.Join(Environment.NewLine, updatedResult.Results
-                    .Where(r => r.Status is not MergePolicyEvaluationStatus.DecisiveSuccess or MergePolicyEvaluationStatus.TransientSuccess)
+                    .Where(r => r.Status is not MergePolicyEvaluationStatus.DecisiveSuccess && r.Status is not MergePolicyEvaluationStatus.TransientSuccess)
                     .Select(r => $"{r.MergePolicyName} - {r.Title}: " + r.Message)));
 
             return MergePolicyCheckResult.FailedPolicies;
@@ -860,7 +860,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         // Get a remote factory for the target repo
         IRemote darc = await _remoteFactory.CreateRemoteAsync(targetRepository);
 
-        Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> repoDependencyUpdates = new();
+        Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> repoDependencyUpdates = [];
 
         // Get subscription to access excluded assets
         var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId)
@@ -974,7 +974,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             if (coherencyUpdates.Count != 0)
             {
-                repoDependencyUpdates[targetDirectory].CoherencyUpdates = coherencyUpdates.ToList();
+                repoDependencyUpdates[targetDirectory].CoherencyUpdates = [.. coherencyUpdates];
             }
 
             _logger.LogInformation("Finished getting Required Updates for {branch} of {targetRepository} on relative path {relativePath}",
@@ -1045,7 +1045,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         string targetBranch,
         TargetRepoDependencyUpdates targetRepositoryUpdates)
     {
-        Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> alteredUpdates = new();
+        Dictionary<UnixPath, TargetRepoDirectoryDependencyUpdates> alteredUpdates = [];
         foreach (var (targetDirectory, targetDictionaryRepositoryUpdates) in targetRepositoryUpdates.DirectoryUpdates)
         {
             List<DependencyDetail> targetBranchDeps = [.. await darcRemote.GetDependenciesAsync(targetRepository, targetBranch, relativeBasePath: targetDirectory)];
@@ -1120,11 +1120,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             pr.CoherencyCheckSuccessful,
             pr.CoherencyErrors,
             pr.RequiredUpdates,
-            pr.ContainedSubscriptions.Select(su => new SubscriptionUpdateSummary(
-                su.SubscriptionId,
-                su.BuildId,
-                su.SourceRepo,
-                su.CommitSha)).ToList(),
+            pr.ContainedSubscriptions
+                .Select(su => new SubscriptionUpdateSummary(
+                    su.SubscriptionId,
+                    su.BuildId,
+                    su.SourceRepo,
+                    su.CommitSha))
+                .ToList(),
             pr.HeadBranch,
             targetRepo,
             pr.CodeFlowDirection);
@@ -1181,6 +1183,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         string? previousSourceSha; // is null in some edge cases like onboarding a new repository
 
         bool enableRebase = await _featureFlagService.IsFeatureOnAsync(subscription.Id, FeatureFlag.EnableRebaseStrategy);
+
+        if (enableRebase)
+        {
+            _logger.LogInformation("Rebase strategy is enabled for subscription {subscriptionId}", subscription.Id);
+        }
 
         var codeFlowRes = await ExecuteCodeFlowAsync(
             pr,
@@ -1295,13 +1302,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         pullRequest.RequiredUpdates = MergeExistingWithIncomingUpdates(
             pullRequest.RequiredUpdates,
-            newDependencyUpdates
-                .Select(u => new DependencyUpdateSummary(u))
-                .ToList());
+            [.. newDependencyUpdates.Select(u => new DependencyUpdateSummary(u))]);
 
         var title = _pullRequestBuilder.GenerateCodeFlowPRTitle(
             subscription.TargetBranch,
-            pullRequest.ContainedSubscriptions.Select(s => s.SourceRepo).ToList());
+            [.. pullRequest.ContainedSubscriptions.Select(s => s.SourceRepo)]);
 
         var description = await _pullRequestBuilder.GenerateCodeFlowPRDescription(
             build,
@@ -1475,7 +1480,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         catch (PatchApplicationLeftConflictsException e) // only thrown when enableRebase is true
         {
             // We were unable to flow changes and user intervention will be required
-            _logger.LogInformation("Unable to flow changes due to conflicts in {files}", string.Concat(", ", e.ConflictedFiles));
+            _logger.LogInformation("Unable to flow changes due to conflicts in {files}", string.Join(", ", e.ConflictedFiles));
             return new CodeFlowResult(
                 HadUpdates: true,
                 RepoPath: e.RepoPath,
@@ -1524,10 +1529,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             }
 
             // We store it the new head branch SHA in Redis (without having to have to query the remote repo)
-            if (prInfo != null)
-            {
-                prInfo.HeadBranchSha = await _gitClient.GetShaForRefAsync(subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath, prHeadBranch);
-            }
+            prInfo?.HeadBranchSha = await _gitClient.GetShaForRefAsync(subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath, prHeadBranch);
 
             await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
         }

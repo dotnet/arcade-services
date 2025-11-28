@@ -87,7 +87,7 @@ internal class GetSubscriptionsOperation : Operation
                 }
 
                 IEnumerable<MergePolicy> mergePolicies = subscription.Policy.MergePolicies;
-                subscription.Policy.MergePolicies = mergePolicies.Union(repoMergePolicies).ToList();
+                subscription.Policy.MergePolicies = [.. mergePolicies.Union(repoMergePolicies)];
             }
         }
 

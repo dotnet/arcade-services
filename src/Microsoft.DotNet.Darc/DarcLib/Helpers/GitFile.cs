@@ -44,7 +44,7 @@ public class GitFile
         // since the writer knows the local repo/remote repo context.
         Content = content.Replace(Environment.NewLine, "\n");
         // Ensure it ends in a newline
-        if (!Content.EndsWith("\n"))
+        if (!Content.EndsWith('\n'))
         {
             Content = $"{Content}\n";
         }

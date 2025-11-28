@@ -3,42 +3,41 @@
 
 using System.ComponentModel.DataAnnotations;
 
-namespace ProductConstructionService.Api.v2020_02_20.Models
+namespace ProductConstructionService.Api.v2020_02_20.Models;
+
+/// <summary>
+/// Represents an entry in the source manifest for a VMR build
+/// </summary>
+public class SourceManifestEntry
 {
-    /// <summary>
-    /// Represents an entry in the source manifest for a VMR build
-    /// </summary>
-    public class SourceManifestEntry
+    public SourceManifestEntry(string path, string remoteUri, string commitSha, int? barId)
     {
-        public SourceManifestEntry(string path, string remoteUri, string commitSha, int? barId)
-        {
-            Path = path;
-            RemoteUri = remoteUri;
-            CommitSha = commitSha;
-            BarId = barId;
-        }
-
-        /// <summary>
-        /// Path where the component is located in the VMR
-        /// </summary>
-        [Required]
-        public string Path { get; set; }
-
-        /// <summary>
-        /// URI from which the component has been synchronized
-        /// </summary>
-        [Required]
-        public string RemoteUri { get; set; }
-
-        /// <summary>
-        /// Original commit SHA from which the component has been synchronized
-        /// </summary>
-        [Required]
-        public string CommitSha { get; set; }
-
-        /// <summary>
-        /// BAR ID of the build, if available
-        /// </summary>
-        public int? BarId { get; set; }
+        Path = path;
+        RemoteUri = remoteUri;
+        CommitSha = commitSha;
+        BarId = barId;
     }
+
+    /// <summary>
+    /// Path where the component is located in the VMR
+    /// </summary>
+    [Required]
+    public string Path { get; set; }
+
+    /// <summary>
+    /// URI from which the component has been synchronized
+    /// </summary>
+    [Required]
+    public string RemoteUri { get; set; }
+
+    /// <summary>
+    /// Original commit SHA from which the component has been synchronized
+    /// </summary>
+    [Required]
+    public string CommitSha { get; set; }
+
+    /// <summary>
+    /// BAR ID of the build, if available
+    /// </summary>
+    public int? BarId { get; set; }
 }

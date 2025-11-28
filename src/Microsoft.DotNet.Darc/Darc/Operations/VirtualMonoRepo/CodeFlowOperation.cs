@@ -24,8 +24,6 @@ internal abstract class CodeFlowOperation(
         ICodeFlowCommandLineOptions options,
         IVmrForwardFlower forwardFlower,
         IVmrBackFlower backFlower,
-        IBackflowConflictResolver backflowConflictResolver,
-        IForwardFlowConflictResolver forwardFlowConflictResolver,
         IVmrInfo vmrInfo,
         IVmrCloneManager vmrCloneManager,
         IVmrDependencyTracker dependencyTracker,
@@ -39,8 +37,6 @@ internal abstract class CodeFlowOperation(
     private readonly ICodeFlowCommandLineOptions _options = options;
     private readonly IVmrForwardFlower _forwardFlower = forwardFlower;
     private readonly IVmrBackFlower _backFlower = backFlower;
-    private readonly IBackflowConflictResolver _backflowConflictResolver = backflowConflictResolver;
-    private readonly IForwardFlowConflictResolver _forwardFlowConflictResolver = forwardFlowConflictResolver;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
     private readonly IVmrCloneManager _vmrCloneManager = vmrCloneManager;
     private readonly IVmrDependencyTracker _dependencyTracker = dependencyTracker;
@@ -53,39 +49,34 @@ internal abstract class CodeFlowOperation(
     protected async Task FlowCodeLocallyAsync(
         NativePath repoPath,
         bool isForwardFlow,
-        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         BarBuild build,
         Subscription? subscription,
         CancellationToken cancellationToken)
     {
-        // If subscription ID is provided, fetch subscription metadata and populate options
-        if (!string.IsNullOrEmpty(_options.SubscriptionId))
-        {
-            await PopulateOptionsFromSubscriptionAsync();
-        }
-
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         ILocalGitRepo productRepo = _localGitRepoFactory.Create(repoPath);
         ILocalGitRepo sourceRepo = isForwardFlow ? productRepo : vmr;
         ILocalGitRepo targetRepo = isForwardFlow ? vmr : productRepo;
 
-        string mappingName = await GetSourceMappingNameAsync(productRepo.Path);
+        Codeflow currentFlow = isForwardFlow
+            ? new ForwardFlow(_options.Ref ?? build.Commit, await targetRepo.GetShaForRefAsync())
+            : new Backflow(_options.Ref ?? build.Commit, await targetRepo.GetShaForRefAsync());
+
+        string mappingName = await GetSourceMappingNameAsync(productRepo.Path, currentFlow.RepoSha);
 
         await VerifyLocalRepositoriesAsync(productRepo);
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         _logger.LogInformation(
             "Flowing {sourceRepo}'s commit {sourceSha} to {targetRepo} at {targetDirectory}...",
             isForwardFlow ? mappingName : "VMR",
-            DarcLib.Commit.GetShortSha(_options.Ref ?? build.Commit),
+            DarcLib.Commit.GetShortSha(currentFlow.SourceSha),
             !isForwardFlow ? mappingName : "VMR",
             targetRepo.Path);
 
         // Tell the VMR clone manager about the local VMR
-        await _vmrCloneManager.RegisterVmrAsync(_vmrInfo.VmrPath);
-
-        Codeflow currentFlow = isForwardFlow
-            ? new ForwardFlow(_options.Ref ?? build.Commit, await targetRepo.GetShaForRefAsync())
-            : new Backflow(_options.Ref ?? build.Commit, await targetRepo.GetShaForRefAsync());
+        await _vmrCloneManager.RegisterCloneAsync(_vmrInfo.VmrPath);
 
         await _dependencyTracker.RefreshMetadataAsync();
 
@@ -109,6 +100,8 @@ internal abstract class CodeFlowOperation(
         IReadOnlyList<string> excludedAssets = string.IsNullOrEmpty(_options.ExcludedAssets)
             ? []
             : _options.ExcludedAssets.Split(';').ToList();
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         try
         {
@@ -157,7 +150,7 @@ internal abstract class CodeFlowOperation(
             // We need to make sure that working tree matches the staged changes
             await targetRepo.ExecuteGitCommand(["clean", "-xfd"], cancellationToken: cancellationToken);
 
-            IEnumerable<string> dirtyFiles = await targetRepo.GetDirtyFiles();
+            IEnumerable<string> dirtyFiles = await targetRepo.GetDirtyFilesAsync();
             dirtyFiles = dirtyFiles.Except(e.ConflictedFiles.Select(e => e.Path));
 
             // Reset only non-conflicted files
@@ -193,36 +186,6 @@ internal abstract class CodeFlowOperation(
             // Log but don't throw - we don't want to mask the original exception
             _logger.LogWarning(ex, "Failed to restore {repo} to original state", repo.Path);
         }
-    }
-
-    protected async Task<BarBuild> GetOrCreateBuildAsync(ILocalGitRepo sourceRepo, int buildId)
-    {
-        BarBuild build;
-        if (buildId == 0)
-        {
-            _options.Ref = await sourceRepo.GetShaForRefAsync(_options.Ref);
-            build = new(-1, DateTimeOffset.Now, 0, false, false, _options.Ref, [], [], [], [])
-            {
-                GitHubRepository = sourceRepo.Path,
-            };
-        }
-        else
-        {
-            build = await _barApiClient.GetBuildAsync(buildId);
-
-            try
-            {
-                _options.Ref = await sourceRepo.GetShaForRefAsync(build.Commit);
-            }
-            catch (ProcessFailedException)
-            {
-                throw new DarcException(
-                    $"The commit {build.Commit} associated with build {_options.Build} could not be found in {sourceRepo.Path}. " +
-                    "Please make sure you have the latest changes from the remote and that you are using the correct repository.");
-            }
-        }
-
-        return build;
     }
 
     protected async Task<bool> FlowForwardAsync(
@@ -296,9 +259,9 @@ internal abstract class CodeFlowOperation(
         }
     }
 
-    protected async Task<string> GetSourceMappingNameAsync(NativePath repoPath)
+    protected async Task<string> GetSourceMappingNameAsync(NativePath repoPath, string gitRef)
     {
-        var versionDetails = await _dependencyFileManager.ParseVersionDetailsXmlAsync(repoPath, DarcLib.Constants.HEAD);
+        var versionDetails = await _dependencyFileManager.ParseVersionDetailsXmlAsync(repoPath, gitRef);
 
         if (string.IsNullOrEmpty(versionDetails.Source?.Mapping))
         {
@@ -310,19 +273,13 @@ internal abstract class CodeFlowOperation(
         return versionDetails.Source.Mapping;
     }
 
-    /// <summary>
-    /// Fetch subscription metadata and populate command options based on subscription settings.
-    /// This allows the subscription to be simulated using the existing codeflow logic.
-    /// </summary>
-    private async Task PopulateOptionsFromSubscriptionAsync()
+    private async Task<BarBuild?> PopulateOptionsAndBuildFromSubscription()
     {
-        // Validate that subscription is not used with conflicting options
-        if (!string.IsNullOrEmpty(_options.Ref))
+        if (string.IsNullOrEmpty(_options.SubscriptionId))
         {
-            throw new DarcException("The --subscription parameter cannot be used with --ref. The subscription determines which commit to flow.");
+            return null;
         }
 
-        // Parse and validate subscription ID
         if (!Guid.TryParse(_options.SubscriptionId, out Guid subscriptionId))
         {
             throw new DarcException($"Invalid subscription ID '{_options.SubscriptionId}'. Please provide a valid GUID.");
@@ -361,7 +318,7 @@ internal abstract class CodeFlowOperation(
         }
 
         // Set excluded assets from subscription if not already set via command line
-        if (string.IsNullOrEmpty(_options.ExcludedAssets) && subscription.ExcludedAssets?.Any() == true)
+        if (string.IsNullOrEmpty(_options.ExcludedAssets) && subscription.ExcludedAssets?.Count > 0)
         {
             _options.ExcludedAssets = string.Join(";", subscription.ExcludedAssets);
             _logger.LogInformation("  Excluded assets: {excludedAssets}", _options.ExcludedAssets);
@@ -374,7 +331,7 @@ internal abstract class CodeFlowOperation(
         // If build ID is not provided, find the latest build from the source repository on the channel
         if (_options.Build == 0)
         {
-            var latestBuild = await _barApiClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
+            BarBuild latestBuild = await _barApiClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
             if (latestBuild is null)
             {
                 string channelName = subscription.Channel?.Name ?? "(unknown channel)";
@@ -383,15 +340,70 @@ internal abstract class CodeFlowOperation(
 
             _logger.LogInformation("  Latest build: {buildNumber} (BAR ID: {buildId})", latestBuild.AzureDevOpsBuildNumber, latestBuild.Id);
             _logger.LogInformation("  Build commit: {commit}", latestBuild.Commit);
-            _logger.LogInformation("");
+            _logger.LogInformation(string.Empty);
 
             // Set the build to use for the codeflow operation
             _options.Build = latestBuild.Id;
+            return latestBuild;
         }
         else
         {
             _logger.LogInformation("  Using provided build ID: {buildId}", _options.Build);
-            _logger.LogInformation("");
+            _logger.LogInformation(string.Empty);
+            return null;
         }
+    }
+
+    /// <summary>
+    /// Fetch subscription metadata and populate command options based on subscription settings.
+    /// This allows the subscription to be simulated using the existing codeflow logic.
+    /// </summary>
+    protected async Task<BarBuild> ParseOptionsAndGetBuildToFlowAsync(ILocalGitRepo sourceRepo)
+    {
+        // Validate that subscription is not used with conflicting options
+        if (!string.IsNullOrEmpty(_options.Ref) && !string.IsNullOrEmpty(_options.SubscriptionId))
+        {
+            throw new DarcException("The --subscription parameter cannot be used with --ref. The subscription determines which commit to flow.");
+        }
+
+        // Parse and validate subscription ID
+        BarBuild? build = await PopulateOptionsAndBuildFromSubscription();
+
+        if (_options.Build != 0 && build == null)
+        {
+            build = await _barApiClient.GetBuildAsync(_options.Build);
+        }
+
+        if (build == null)
+        {
+            _options.Ref = await sourceRepo.GetShaForRefAsync(_options.Ref);
+
+            _logger.LogInformation("Flowing {sha}...", DarcLib.Commit.GetShortSha(_options.Ref));
+
+            build = new(-1, DateTimeOffset.Now, 0, false, false, _options.Ref, [], [], [], [])
+            {
+                GitHubRepository = sourceRepo.Path,
+            };
+        }
+        else
+        {
+            try
+            {
+                _options.Ref = await sourceRepo.GetShaForRefAsync(build.Commit);
+
+                _logger.LogInformation("Flowing build {buildNumber} ({buildId}) of commit {sha}...",
+                    build.AzureDevOpsBuildNumber,
+                    build.Id,
+                    DarcLib.Commit.GetShortSha(_options.Ref));
+            }
+            catch (ProcessFailedException)
+            {
+                throw new DarcException(
+                    $"The commit {build.Commit} associated with build {_options.Build} could not be found in {sourceRepo.Path}. " +
+                    "Please make sure you have the latest changes from the remote and that you are using the correct repository.");
+            }
+        }
+
+        return build;
     }
 }

@@ -8,7 +8,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -694,5 +693,5 @@ public class DependencyFileManagerTests
             Times.Once);
     }
 
-    private string NormalizeLineEndings(string input) => input.Replace("\r\n", "\n").TrimEnd();
+    private static string NormalizeLineEndings(string input) => input.Replace("\r\n", "\n").TrimEnd();
 }

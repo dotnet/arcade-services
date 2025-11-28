@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -128,36 +129,23 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         await sourceRepo.FetchAllAsync([mapping.DefaultRemote, repoInfo.RemoteUri], cancellationToken);
 
         ForwardFlow currentFlow = new(build.Commit, lastFlows.LastFlow.VmrSha);
+        CodeflowOptions codeflowOptions = new(mapping, currentFlow, targetBranch, headBranch, build, excludedAssets, enableRebase, forceUpdate);
+
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
+        cancellationToken.ThrowIfCancellationRequested();
+
+        ExceptionDispatchInfo? rebaseException = null;
+
         bool hasChanges;
-
-        async Task<IReadOnlyCollection<UnixPath>> UpdateVersionFiles() =>
-            await _conflictResolver.TryMergingBranch(
-                mapping.Name,
-                vmr,
-                sourceRepo,
-                headBranch,
-                targetBranch,
-                currentFlow,
-                lastFlows,
-                enableRebase,
-                cancellationToken);
-
         try
         {
-            hasChanges = await FlowCodeAsync(
-                new CodeflowOptions(mapping, currentFlow, targetBranch, headBranch, build, excludedAssets, enableRebase, forceUpdate),
-                lastFlows,
-                sourceRepo,
-                headBranchExisted,
-                cancellationToken);
+            hasChanges = await FlowCodeAsync(codeflowOptions, lastFlows, sourceRepo, headBranchExisted, cancellationToken);
         }
-        catch (PatchApplicationLeftConflictsException) when (enableRebase)
+        catch (PatchApplicationLeftConflictsException e) when (enableRebase)
         {
-            // When we are rebasing and ended up with conflicts, we will still update version files
-            await UpdateVersionFiles();
-            throw;
+            rebaseException = ExceptionDispatchInfo.Capture(e);
+            hasChanges = true;
         }
 
         IReadOnlyCollection<UnixPath>? conflictedFiles = null;
@@ -165,18 +153,26 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         {
             // We try to merge the target branch so that we can potentially
             // resolve some expected conflicts in the version files
-            conflictedFiles = await UpdateVersionFiles();
+            conflictedFiles = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
+                codeflowOptions,
+                vmr,
+                sourceRepo,
+                lastFlows,
+                headBranchExisted,
+                cancellationToken);
+
+            await CommentIncludedPRs(sourceRepo, lastFlows.LastForwardFlow.RepoSha, build.Commit, mapping.DefaultRemote, cancellationToken);
+        }
+
+        if (conflictedFiles?.Count > 0)
+        {
+            rebaseException?.Throw();
         }
 
         // If we don't force the update, we'll set hasChanges to false when the updates are not meaningful
         if (conflictedFiles != null && !forceUpdate && hasChanges && !headBranchExisted)
         {
             hasChanges &= await _codeflowChangeAnalyzer.ForwardFlowHasMeaningfulChangesAsync(mapping.Name, headBranch, targetBranch);
-        }
-
-        if (hasChanges)
-        {
-            await CommentIncludedPRs(sourceRepo, lastFlows.LastForwardFlow.RepoSha, build.Commit, mapping.DefaultRemote, cancellationToken);
         }
 
         return new CodeFlowResult(

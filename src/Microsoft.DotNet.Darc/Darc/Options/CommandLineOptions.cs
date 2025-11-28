@@ -58,21 +58,16 @@ public abstract class CommandLineOptions : ICommandLineOptions
         HelpText = "Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.")]
     public DarcOutputType OutputFormat
     {
-        get
-        {
-            return _outputFormat;
-        }
+        get;
         set
         {
-            _outputFormat = value;
+            field = value;
             if (!IsOutputFormatSupported())
             {
-                throw new ArgumentException($"Output format {_outputFormat} is not supported by operation ${GetType().Name}");
+                throw new ArgumentException($"Output format {field} is not supported by operation ${GetType().Name}");
             }
         }
     }
-
-    private DarcOutputType _outputFormat;
 
     /// <summary>
     /// Designates that darc is run from a CI environment.
@@ -82,24 +77,6 @@ public abstract class CommandLineOptions : ICommandLineOptions
     public bool IsCi { get; set; }
 
     public abstract Operation GetOperation(ServiceProvider sp);
-
-    public IRemoteTokenProvider GetRemoteTokenProvider()
-        => new RemoteTokenProvider(GetAzdoTokenProvider(), GetGitHubTokenProvider());
-
-    public IAzureDevOpsTokenProvider GetAzdoTokenProvider()
-    {
-        var azdoOptions = new AzureDevOpsTokenProviderOptions
-        {
-            ["default"] = new AzureDevOpsCredentialResolverOptions
-            {
-                Token = AzureDevOpsPat,
-                DisableInteractiveAuth = IsCi,
-            }
-        };
-        return AzureDevOpsTokenProvider.FromStaticOptions(azdoOptions);
-    }
-
-    public IRemoteTokenProvider GetGitHubTokenProvider() => new ResolvedTokenProvider(GitHubPat);
 
     public void InitializeFromSettings(ILogger logger)
     {
@@ -138,7 +115,8 @@ public abstract class CommandLineOptions : ICommandLineOptions
         services.AddLogging(b => b
             .AddConsole(o => o.FormatterName = CompactConsoleLoggerFormatter.FormatterName)
             .AddConsoleFormatter<CompactConsoleLoggerFormatter, SimpleConsoleFormatterOptions>()
-            .SetMinimumLevel(level));
+            .SetMinimumLevel(level)
+            .AddFilter("Microsoft.DotNet.DarcLib.VirtualMonoRepo." + nameof(VmrPatchHandler), LogLevel.Warning));
 
         services.TryAddSingleton<IFileSystem, FileSystem>();
         services.TryAddSingleton<IRemoteFactory, RemoteFactory>();
@@ -164,16 +142,27 @@ public abstract class CommandLineOptions : ICommandLineOptions
             };
         });
         services.TryAddSingleton<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
-        services.TryAddSingleton(s =>
-            new AzureDevOpsClient(
-                s.GetRequiredService<IAzureDevOpsTokenProvider>(),
-                s.GetRequiredService<IProcessManager>(),
-                s.GetRequiredService<ILogger>())
-        );
-        services.TryAddSingleton<IAzureDevOpsClient>(s =>
-            s.GetRequiredService<AzureDevOpsClient>()
-        );
-        services.TryAddSingleton<IRemoteTokenProvider>(_ => new RemoteTokenProvider(AzureDevOpsPat, GitHubPat));
+        services.TryAddSingleton<IAzureDevOpsClient, AzureDevOpsClient>();
+        services.TryAddSingleton<IRemoteTokenProvider>(s => new RemoteTokenProvider(
+            s.GetRequiredKeyedService<IRemoteTokenProvider>("azdo"),
+            s.GetRequiredKeyedService<IRemoteTokenProvider>("github")));
+        services.TryAddKeyedSingleton<IRemoteTokenProvider>("github", (s, _) => s.GetRequiredService<GitHubCliTokenProvider>());
+        services.TryAddKeyedSingleton<IRemoteTokenProvider>("azdo", (s, _) =>
+        {
+            var azdoOptions = new AzureDevOpsTokenProviderOptions
+            {
+                ["default"] = new AzureDevOpsCredentialResolverOptions
+                {
+                    Token = AzureDevOpsPat,
+                    DisableInteractiveAuth = IsCi,
+                }
+            };
+            return AzureDevOpsTokenProvider.FromStaticOptions(azdoOptions);
+        });
+        services.TryAddSingleton(s => new GitHubCliTokenProvider(
+            s.GetRequiredService<IProcessManager>(),
+            s.GetRequiredService<ILogger<GitHubCliTokenProvider>>(),
+            GitHubPat));
         services.TryAddSingleton<ICommandLineOptions>(_ => this);
         // Add add an empty VmrInfo that won't actually be used in non VMR commands
         services.TryAddSingleton<ISourceMappingParser, SourceMappingParser>();
@@ -182,7 +171,7 @@ public abstract class CommandLineOptions : ICommandLineOptions
             return new VmrInfo(string.Empty, string.Empty);
         });
         services.TryAddSingleton<IRedisCacheClient, NoOpRedisClient>();
-        services.TryAddSingleton<ICommentCollector, CommentCollector>();
+        services.TryAddScoped<ICommentCollector, CommentCollector>();
 
         return services;
     }

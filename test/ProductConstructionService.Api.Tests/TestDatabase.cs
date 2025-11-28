@@ -36,6 +36,7 @@ public static class SharedData
 public class TestDatabase : IDisposable
 {
     private const string TestDatabasePrefix = "TFD_";
+    internal const string TestNamespace = "test-namespace";
     private readonly Lazy<Task<string>> _databaseName = new(
         InitializeDatabaseAsync,
         LazyThreadSafetyMode.ExecutionAndPublication);
@@ -82,7 +83,13 @@ public class TestDatabase : IDisposable
         });
 
         await using ServiceProvider provider = collection.BuildServiceProvider();
-        await provider.GetRequiredService<BuildAssetRegistryContext>().Database.MigrateAsync();
+        var dbContext = provider.GetRequiredService<BuildAssetRegistryContext>();
+        await dbContext.Database.MigrateAsync();
+        await dbContext.Namespaces.AddAsync(new Maestro.Data.Models.Namespace
+        {
+            Name = TestNamespace
+        });
+        await dbContext.SaveChangesAsync();
 
         return databaseName;
     }

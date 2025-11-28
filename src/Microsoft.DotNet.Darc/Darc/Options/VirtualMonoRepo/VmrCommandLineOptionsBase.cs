@@ -4,14 +4,11 @@
 using System;
 using System.IO;
 using CommandLine;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Operations;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging.Abstractions;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
@@ -23,39 +20,21 @@ internal abstract class VmrCommandLineOptionsBase<T> : CommandLineOptions<T> whe
 
     protected void RegisterVmrServices(IServiceCollection services, string? tmpPath)
     {
-        LocalSettings? localDarcSettings = null;
-
-        var gitHubToken = GitHubPat;
-        var azureDevOpsToken = AzureDevOpsPat;
-
-        // Read tokens from local settings if not provided
-        // We silence errors because the VMR synchronization often works with public repositories where tokens are not required
-        if (gitHubToken == null || azureDevOpsToken == null)
-        {
-            try
-            {
-                localDarcSettings = LocalSettings.GetSettings(this, NullLogger.Instance);
-            }
-            catch (DarcException)
-            {
-                // The VMR synchronization often works with public repositories where tokens are not required
-            }
-
-            gitHubToken ??= localDarcSettings?.GitHubToken;
-            azureDevOpsToken ??= localDarcSettings?.AzureDevOpsToken;
-        }
-
         if (tmpPath == null)
         {
-            tmpPath = new NativePath(Path.GetTempPath()) / Constants.DefaultDarcClonesDirectoryName;
-            Directory.CreateDirectory(tmpPath);
+            tmpPath = Environment.GetEnvironmentVariable("DARC_TMP_DIR");
+            if (tmpPath == null)
+            {
+                tmpPath = new NativePath(Path.GetTempPath()) / Constants.DefaultDarcClonesDirectoryName;
+                Directory.CreateDirectory(tmpPath);
+            }
         }
         else
         {
             tmpPath = Path.GetFullPath(tmpPath);
         }
 
-        services.AddSingleVmrSupport(GitLocation, VmrPath, tmpPath, gitHubToken, azureDevOpsToken);
+        services.AddCodeflow(tmpPath, VmrPath, GitLocation);
         services.TryAddTransient<IVmrScanner, VmrCloakedFileScanner>();
     }
 }

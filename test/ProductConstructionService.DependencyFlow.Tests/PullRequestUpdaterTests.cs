@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
-using System.Security.Policy;
 using AwesomeAssertions;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -57,7 +56,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         services.AddSingleton(_forwardFlower.Object);
         services.AddSingleton(_gitClient.Object);
 
-        CodeFlowResult codeFlowRes = new CodeFlowResult(true, [], new NativePath(VmrPath), []);
+        CodeFlowResult codeFlowRes = new(true, [], new NativePath(VmrPath), []);
         _forwardFlower.SetReturnsDefault(Task.FromResult(codeFlowRes));
         _backFlower.SetReturnsDefault(Task.FromResult(codeFlowRes));
         _gitClient.SetReturnsDefault(Task.CompletedTask);
@@ -66,7 +65,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         services.AddScoped<IBasicBarClient, SqlBarClient>();
         services.AddTransient<IPullRequestBuilder, PullRequestBuilder>();
-        services.AddSingleVmrSupport("git", VmrPath, TmpPath, null, null);
+        services.AddCodeflow(TmpPath, VmrPath);
     }
 
     protected override Task BeforeExecute(IServiceProvider context)

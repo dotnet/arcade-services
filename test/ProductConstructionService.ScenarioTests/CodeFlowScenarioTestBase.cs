@@ -99,12 +99,12 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
             files.FirstOrDefault(f => f.FileName.Contains("eng/common")).Should().BeNull();
 
             // Verify that the dependencies have the expected versions
-            var versionDetailsContent = (await GitHubApi.Repository.Content.GetAllContentsByRef(
+            IReadOnlyList<RepositoryContent> repositoryContents = await GitHubApi.Repository.Content.GetAllContentsByRef(
                 TestParameters.GitHubTestOrg,
                 targetRepoName,
                 VersionFiles.VersionDetailsXml,
-                pullRequest.Head.Ref)).FirstOrDefault()!.Content;
-            VersionDetails versionDetails = new VersionDetailsParser().ParseVersionDetailsXml(versionDetailsContent, includePinned: true);
+                pullRequest.Head.Ref);
+            VersionDetails versionDetails = new VersionDetailsParser().ParseVersionDetailsXml(repositoryContents[0].Content, includePinned: true);
             dependenciesToVerify.All(
                 dep => versionDetails.Dependencies.Any(d => d.Name == dep.Name && d.Version == dep.Version)).Should().BeTrue();
         }
@@ -209,7 +209,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
             await Task.Delay(TimeSpan.FromSeconds(5));
         }
 
-        throw new ScenarioTestException($"Comment containing '{partialComment}' was not found in the pull request.");
+        throw new ScenarioTestException($"Comment containing '{partialComment}' was not found in the pull request {pullRequest.HtmlUrl}.");
     }
 
     public static async Task CheckIfPullRequestCommentExists(
@@ -223,7 +223,9 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
 
         foreach (var expected in stringsExpectedInComment)
         {
-            allCommentBodies.Should().Contain(expected);
+            allCommentBodies.Should().Contain(
+                expected,
+                $"PR {pullRequest.HtmlUrl} should contain '{string.Join("', '", stringsExpectedInComment)}'");
         }
     }
 }

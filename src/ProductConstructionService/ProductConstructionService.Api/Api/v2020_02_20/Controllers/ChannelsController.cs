@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
-
+using Microsoft.Extensions.Options;
 using Build = Maestro.Data.Models.Build;
 using Channel = ProductConstructionService.Api.v2020_02_20.Models.Channel;
 
@@ -34,8 +34,9 @@ public class ChannelsController : v2018_07_16.Controllers.ChannelsController
 
     public ChannelsController(
         BuildAssetRegistryContext context,
-        IBasicBarClient barClient)
-        : base(context, barClient)
+        IBasicBarClient barClient,
+        IOptions<EnvironmentNamespaceOptions> environmentNamespaceOptions)
+        : base(context, barClient, environmentNamespaceOptions)
     {
         _context = context;
     }
@@ -155,10 +156,12 @@ public class ChannelsController : v2018_07_16.Controllers.ChannelsController
     [HandleDuplicateKeyRows("Could not create channel '{name}'. A channel with the specified name already exists.")]
     public override async Task<IActionResult> CreateChannel([Required] string name, [Required] string classification)
     {
+        var defaultNamespace = await _context.Namespaces.SingleAsync(n => n.Name == _environmentNamespaceOptions.Value.DefaultNamespaceName);
         var channelModel = new Maestro.Data.Models.Channel
         {
             Name = name,
-            Classification = classification
+            Classification = classification,
+            Namespace = defaultNamespace
         };
         await _context.Channels.AddAsync(channelModel);
         await _context.SaveChangesAsync();

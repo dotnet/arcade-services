@@ -160,18 +160,18 @@ public class UxManager
 
     public static ParsedCommand GetParsedCommand(string command)
     {
-        ParsedCommand parsedCommand = new ParsedCommand();
+        ParsedCommand parsedCommand = new();
 
         // If it's quoted then find the end of the quoted string.
         // If non quoted find a space or the end of the string.
         command = command.Trim();
-        if (command.StartsWith("'") || command.StartsWith("\""))
+        if (command.StartsWith('\'') || command.StartsWith('"'))
         {
             int start = 1;
-            int end = command.IndexOf("'", start);
+            int end = command.IndexOf('\'', start);
             if (end == -1)
             {
-                end = command.IndexOf("\"", start);
+                end = command.IndexOf('\"', start);
                 if (end == -1)
                 {
                     // Unterminated quoted string.  Use full command as file name
@@ -187,7 +187,7 @@ public class UxManager
         {
             // Find a space after the command name, if there are args, then parse them out,
             // otherwise just return the whole string as the filename.
-            int fileNameEnd = command.IndexOf(" ");
+            int fileNameEnd = command.IndexOf(' ');
             if (fileNameEnd != -1)
             {
                 parsedCommand.FileName = command.Substring(0, fileNameEnd);

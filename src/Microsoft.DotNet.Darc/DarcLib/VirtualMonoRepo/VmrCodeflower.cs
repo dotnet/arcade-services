@@ -332,8 +332,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         }
         catch (PatchApplicationFailedException e)
         {
-            _logger.LogInformation(e.Message);
-
             if (codeflowOptions.EnableRebase)
             {
                 // We need to recreate a previous flow so that we have something to rebase later
@@ -341,7 +339,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     codeflowOptions with
                     {
                         HeadBranch = workBranch!.WorkBranchName,
-                        TargetBranch = workBranch!.WorkBranchName,
                     },
                     productRepo,
                     lastFlows,

@@ -71,5 +71,8 @@ public static class MaestroAuthTestRepositoryExtensions
 
         private static string ReplaceDotnetWithMaestroAuthTest(string uri)
             => uri.Replace("github.com/dotnet/", "github.com/maestro-auth-test/");
+
+        public Task RegisterCloneAsync(NativePath localPath)
+            => ((IRepositoryCloneManager)_cloneManager).RegisterCloneAsync(localPath);
     }
 }

@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
@@ -430,11 +429,9 @@ public class BackflowConflictResolverTests
                 ForceUpdate: false),
             lastFlows,
             _localRepo.Object,
-            TargetBranch,
             headBranchExisted,
             cancellationToken);
 
-        mergeResult.ConflictedFiles.Should().BeEmpty();
         mergeResult.DependencyUpdates
             .Select(update => new ExpectedUpdate(
                 update.To.Name,

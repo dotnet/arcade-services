@@ -11,6 +11,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AwesomeAssertions;
+using Maestro.Common;
+using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.DotNet.DarcLib.Codeflow.Tests.Helpers;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
@@ -42,7 +44,7 @@ internal abstract class CodeFlowTestsBase
 
     private int _buildId = 100;
     private List<string> _lastFlowCollectedComments = [];
-    private readonly Dictionary<int, ProductConstructionService.Client.Models.Build> _builds = [];
+    private readonly Dictionary<int, Build> _builds = [];
 
     [SetUp]
     public async Task Setup()
@@ -95,10 +97,10 @@ internal abstract class CodeFlowTestsBase
 
     protected virtual IServiceCollection CreateServiceProvider() => new ServiceCollection()
         .AddLogging(b => b.AddConsole().AddFilter(l => l >= LogLevel.Debug))
-        .AddSingleVmrSupport("git", VmrPath, TmpPath, null, null)
+        .AddCodeflow(TmpPath, VmrPath)
         .AddSingleton(_basicBarClient.Object)
         .AddTransient<IRemoteFactory, RemoteFactory>()
-        .AddScoped<ICommentCollector, CommentCollector>();
+        .AddSingleton(Mock.Of<IRemoteTokenProvider>());
 
     protected static List<NativePath> GetExpectedFilesInVmr(
         NativePath vmrPath,
@@ -215,9 +217,10 @@ internal abstract class CodeFlowTestsBase
         string mappingName,
         NativePath repoPath,
         string branch,
-        ProductConstructionService.Client.Models.Build? buildToFlow = null,
+        Build? buildToFlow = null,
         IReadOnlyCollection<string>? excludedAssets = null,
         bool useLatestBuild = false,
+        bool enableRebase = false,
         bool forceUpdate = true)
     {
         using var scope = ServiceProvider.CreateScope();
@@ -228,16 +231,24 @@ internal abstract class CodeFlowTestsBase
             buildToFlow = await _basicBarClient.Object.GetBuildAsync(_buildId);
         }
 
-        var codeFlowResult = await codeflower.FlowBackAsync(
-            mappingName,
-            repoPath,
-            buildToFlow ?? await CreateNewVmrBuild([]),
-            excludedAssets,
-            "main",
-            branch,
-            enableRebase: false,
-            forceUpdate: forceUpdate,
-            cancellationToken: _cancellationToken.Token);
+        CodeFlowResult codeFlowResult;
+        try
+        {
+            codeFlowResult = await codeflower.FlowBackAsync(
+                mappingName,
+                repoPath,
+                buildToFlow ?? await CreateNewVmrBuild([]),
+                excludedAssets,
+                "main",
+                branch,
+                enableRebase,
+                forceUpdate,
+                cancellationToken: _cancellationToken.Token);
+        }
+        catch (PatchApplicationLeftConflictsException e)
+        {
+            codeFlowResult = new(true, e.ConflictedFiles, e.RepoPath, []);
+        }
 
         _lastFlowCollectedComments = scope.ServiceProvider.GetRequiredService<ICommentCollector>()
             .GetComments()
@@ -251,26 +262,35 @@ internal abstract class CodeFlowTestsBase
         string mappingName,
         NativePath repoPath,
         string branch,
-        ProductConstructionService.Client.Models.Build? buildToFlow = null,
+        Build? buildToFlow = null,
         IReadOnlyCollection<string>? excludedAssets = null,
+        bool enableRebase = false,
         bool forceUpdate = true)
     {
         using var scope = ServiceProvider.CreateScope();
         var codeflower = scope.ServiceProvider.GetRequiredService<IVmrForwardFlower>();
         var cloneManager = scope.ServiceProvider.GetRequiredService<IVmrCloneManager>();
-        await cloneManager.RegisterVmrAsync(VmrPath);
+        await cloneManager.RegisterCloneAsync(VmrPath);
 
-        var codeFlowResult = await codeflower.FlowForwardAsync(
-            mappingName,
-            repoPath,
-            buildToFlow ?? await CreateNewRepoBuild(repoPath, []),
-            excludedAssets,
-            "main",
-            branch,
-            VmrPath,
-            enableRebase: false,
-            forceUpdate,
-            cancellationToken: _cancellationToken.Token);
+        CodeFlowResult codeFlowResult;
+        try
+        {
+            codeFlowResult = await codeflower.FlowForwardAsync(
+                mappingName,
+                repoPath,
+                buildToFlow ?? await CreateNewRepoBuild(repoPath, []),
+                excludedAssets,
+                "main",
+                branch,
+                VmrPath,
+                enableRebase,
+                forceUpdate,
+                cancellationToken: _cancellationToken.Token);
+        }
+        catch (PatchApplicationLeftConflictsException e)
+        {
+            codeFlowResult = new(true, e.ConflictedFiles, e.RepoPath, []);
+        }
 
         _lastFlowCollectedComments = scope.ServiceProvider.GetRequiredService<ICommentCollector>()
             .GetComments()

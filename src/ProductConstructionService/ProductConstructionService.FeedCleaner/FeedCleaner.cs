@@ -79,7 +79,7 @@ public class FeedCleaner
                 }
             }
 
-            if (assetsToDeleteFromSymbolFeed.Any())
+            if (assetsToDeleteFromSymbolFeed.Count != 0)
             {
                 _logger.LogInformation("Attempting to delete {count} package versions from symbol feed {feedName} and update BAR.",
                     assetsToDeleteFromSymbolFeed.Count,

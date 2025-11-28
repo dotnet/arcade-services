@@ -597,17 +597,13 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
             // If a path is specified, navigate to that tree
             if (!string.IsNullOrEmpty(path))
             {
-                var pathParts = path.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+                var pathParts = path.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries);
                 var currentTree = rootTree;
 
                 foreach (var part in pathParts)
                 {
-                    var treeEntry = currentTree.FirstOrDefault(e => e.Name == part);
-
-                    if (treeEntry == null)
-                    {
-                        throw new DirectoryNotFoundException($"Path '{path}' not found in the repository.");
-                    }
+                    var treeEntry = currentTree.FirstOrDefault(e => e.Name == part)
+                        ?? throw new DirectoryNotFoundException($"Path '{path}' not found in the repository.");
 
                     if (treeEntry.TargetType != TreeEntryTargetType.Tree)
                     {

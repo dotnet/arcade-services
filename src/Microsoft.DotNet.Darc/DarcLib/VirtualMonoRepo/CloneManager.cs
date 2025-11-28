@@ -13,7 +13,15 @@ using Microsoft.Extensions.Logging;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public abstract class CloneManager
+public interface ICloneManager
+{
+    /// <summary>
+    /// Registers a known local location that contains a clone.
+    /// </summary>
+    Task RegisterCloneAsync(NativePath localPath);
+}
+
+public abstract class CloneManager : ICloneManager
 {
     // Map of URI => dir name
     protected readonly Dictionary<string, NativePath> _clones = [];
@@ -45,6 +53,24 @@ public abstract class CloneManager
         _telemetryRecorder = telemetryRecorder;
         _fileSystem = fileSystem;
         _logger = logger;
+    }
+
+    public async Task RegisterCloneAsync(NativePath localPath)
+    {
+        var remotes = await _localGitRepo.GetRemotesAsync(localPath);
+        var branch = await _localGitRepo.GetCheckedOutBranchAsync(localPath);
+
+        if (string.IsNullOrEmpty(branch))
+        {
+            throw new DarcException($"The provided path '{localPath}' does not appear to be a git repository.");
+        }
+
+        _clones[localPath] = localPath;
+
+        foreach (var remote in remotes)
+        {
+            _clones[remote.Uri] = localPath;
+        }
     }
 
     protected async Task<ILocalGitRepo> PrepareCloneInternalAsync(
@@ -117,7 +143,7 @@ public abstract class CloneManager
                 }
             }
 
-            if (!refsToVerify.Any())
+            if (refsToVerify.Count == 0)
             {
                 _logger.LogDebug("All requested refs ({refs}) found in {repo}", string.Join(", ", requestedRefs), path);
                 break;

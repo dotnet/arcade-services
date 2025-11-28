@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.Services.Utility;
@@ -53,7 +52,7 @@ public class SqlBarClient : ISqlBarClient
             sub.SourceDirectory,
             sub.TargetDirectory,
             sub.PullRequestFailureNotificationTags,
-            sub.ExcludedAssets.Select(s => s.Filter).ToList());
+            [.. sub.ExcludedAssets.Select(s => s.Filter)]);
     }
 
     public async Task<Subscription> GetSubscriptionAsync(string subscriptionId)

@@ -4,6 +4,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -15,21 +16,26 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class AddDependencyOperation : Operation
 {
     private readonly AddDependencyCommandLineOptions _options;
+    private readonly IRemoteTokenProvider _tokenProvider;
     private readonly ILogger<AddDependencyOperation> _logger;
 
     public AddDependencyOperation(
         AddDependencyCommandLineOptions options,
+        IRemoteTokenProvider tokenProvider,
         ILogger<AddDependencyOperation> logger)
     {
         _options = options;
+        _tokenProvider = tokenProvider;
         _logger = logger;
     }
 
     public override async Task<int> ExecuteAsync()
     {
-        DependencyType type = _options.Type.ToLower() == "toolset" ? DependencyType.Toolset : DependencyType.Product;
+        DependencyType type = _options.Type.Equals("toolset", StringComparison.CurrentCultureIgnoreCase)
+            ? DependencyType.Toolset
+            : DependencyType.Product;
 
-        var local = new Local(_options.GetRemoteTokenProvider(), _logger);
+        var local = new Local(_tokenProvider, _logger);
 
         var dependency = new DependencyDetail
         {

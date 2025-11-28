@@ -40,7 +40,7 @@ internal class FlowCommitOperation : Operation
 
     internal override async Task RunAsync()
     {
-        if (_options.Packages.Count() > 0 && _options.RealBuildId > 0)
+        if (_options.Packages.Any() && _options.RealBuildId > 0)
         {
             throw new ArgumentException("Cannot specify both --packages and --realBuildId options.");
         }

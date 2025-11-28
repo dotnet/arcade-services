@@ -3,7 +3,6 @@
 
 using System.Text;
 using AwesomeAssertions;
-using Maestro.Data;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;

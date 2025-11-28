@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -25,6 +26,7 @@ internal class UpdateDependenciesOperation : Operation
     private readonly ILogger<UpdateDependenciesOperation> _logger;
     private readonly IBarApiClient _barClient;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly IRemoteTokenProvider _remoteTokenProvider;
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IFileSystem _fileSystem;
@@ -33,6 +35,7 @@ internal class UpdateDependenciesOperation : Operation
         UpdateDependenciesCommandLineOptions options,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
+        IRemoteTokenProvider remoteTokenProvider,
         IGitRepoFactory gitRepoFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         ILogger<UpdateDependenciesOperation> logger,
@@ -42,6 +45,7 @@ internal class UpdateDependenciesOperation : Operation
         _logger = logger;
         _barClient = barClient;
         _remoteFactory = remoteFactory;
+        _remoteTokenProvider = remoteTokenProvider;
         _gitRepoFactory = gitRepoFactory;
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _fileSystem = fileSystem;
@@ -62,7 +66,7 @@ internal class UpdateDependenciesOperation : Operation
                 await PopulateOptionsFromSubscriptionAsync();
             }
 
-            var local = new Local(_options.GetRemoteTokenProvider(), _logger);
+            var local = new Local(_remoteTokenProvider, _logger);
             var excludedAssetsMatcher = _options.ExcludedAssets?.Split(';').GetAssetMatcher()
                 ?? new AssetMatcher(null);
             List<UnixPath> targetDirectories = ResolveTargetDirectories(local);
@@ -190,11 +194,11 @@ internal class UpdateDependenciesOperation : Operation
         // source repository.
         if (!string.IsNullOrEmpty(_options.SourceRepository))
         {
-            candidateDependenciesForUpdate = candidateDependenciesForUpdate.Where(
-                dependency => dependency.RepoUri.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase)).ToList();
+            candidateDependenciesForUpdate = [.. candidateDependenciesForUpdate.Where(
+                dependency => dependency.RepoUri.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase))];
         }
 
-        if (!candidateDependenciesForUpdate.Any())
+        if (candidateDependenciesForUpdate.Count == 0)
         {
             _logger.LogInformation("    Found no dependencies to update");
             return;
@@ -244,7 +248,7 @@ internal class UpdateDependenciesOperation : Operation
             throw new DarcException($"Failed to update coherent parent tied dependencies in {relativeBasePath}");
         }
 
-        if (!dependenciesToUpdate.Any())
+        if (dependenciesToUpdate.Count == 0)
         {
             _logger.LogWarning("Found no dependencies to update");
             return;
@@ -312,7 +316,7 @@ internal class UpdateDependenciesOperation : Operation
         IReadOnlyList<DependencyDetail> candidateDependenciesForUpdate,
         List<DependencyDetail> dependenciesToUpdate)
     {
-        DependencyDetail dependency = candidateDependenciesForUpdate.First();
+        DependencyDetail dependency = candidateDependenciesForUpdate[0];
         dependency.Version = _options.Version;
         dependenciesToUpdate.Add(dependency);
 
@@ -375,7 +379,7 @@ internal class UpdateDependenciesOperation : Operation
     }
 
     private async Task RunNonCoherencyUpdateForChannel(
-        ConcurrentDictionary<string, Task<ProductConstructionService.Client.Models.Build>> latestBuildTaskDictionary,
+        ConcurrentDictionary<string, Task<Build>> latestBuildTaskDictionary,
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> candidateDependenciesForUpdate,
         List<DependencyDetail> dependenciesToUpdate,
@@ -454,20 +458,20 @@ internal class UpdateDependenciesOperation : Operation
         {
             ManifestMetadata manifestMetedata = PackagesHelper.GetManifestMetadata(package);
 
-            if (dependencyVersionMap.ContainsKey(manifestMetedata.Id))
+            if (!dependencyVersionMap.TryGetValue(manifestMetedata.Id, out var oldVersion))
             {
-                string oldVersion = dependencyVersionMap[manifestMetedata.Id];
-
-                Console.WriteLine($"Updating '{manifestMetedata.Id}': '{oldVersion}' => '{manifestMetedata.Version.OriginalVersion}'");
-
-                updatedDependencies.Add(new DependencyDetail
-                {
-                    Commit = manifestMetedata.Repository.Commit,
-                    Name = manifestMetedata.Id,
-                    RepoUri = manifestMetedata.Repository.Url,
-                    Version = manifestMetedata.Version.OriginalVersion,
-                });
+                continue;
             }
+
+            Console.WriteLine($"Updating '{manifestMetedata.Id}': '{oldVersion}' => '{manifestMetedata.Version.OriginalVersion}'");
+
+            updatedDependencies.Add(new DependencyDetail
+            {
+                Commit = manifestMetedata.Repository.Commit,
+                Name = manifestMetedata.Id,
+                RepoUri = manifestMetedata.Repository.Url,
+                Version = manifestMetedata.Version.OriginalVersion,
+            });
         }
 
         return updatedDependencies;
@@ -543,7 +547,7 @@ internal class UpdateDependenciesOperation : Operation
             Console.WriteLine($"  Target directory: {subscription.TargetDirectory}");
         }
 
-        if (subscription.ExcludedAssets?.Any() == true)
+        if (subscription.ExcludedAssets?.Count > 0)
         {
             Console.WriteLine($"  Excluded assets: {string.Join(", ", subscription.ExcludedAssets)}");
         }
@@ -571,7 +575,7 @@ internal class UpdateDependenciesOperation : Operation
         _options.TargetDirectory = subscription.TargetDirectory;
 
         // Use subscription's excluded assets only if not provided via command line
-        if (string.IsNullOrEmpty(_options.ExcludedAssets) && subscription.ExcludedAssets?.Any() == true)
+        if (string.IsNullOrEmpty(_options.ExcludedAssets) && subscription.ExcludedAssets?.Count > 0)
         {
             _options.ExcludedAssets = string.Join(";", subscription.ExcludedAssets);
         }

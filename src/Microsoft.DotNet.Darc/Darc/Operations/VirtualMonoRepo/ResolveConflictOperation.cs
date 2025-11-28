@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -21,8 +22,6 @@ internal class ResolveConflictOperation(
         ResolveConflictCommandLineOptions options,
         IVmrForwardFlower forwardFlower,
         IVmrBackFlower backFlower,
-        IBackflowConflictResolver backflowConflictResolver,
-        IForwardFlowConflictResolver forwardFlowConflictResolver,
         IVmrInfo vmrInfo,
         IVmrCloneManager vmrCloneManager,
         IRepositoryCloneManager repositoryCloneManager,
@@ -30,10 +29,11 @@ internal class ResolveConflictOperation(
         IDependencyFileManager dependencyFileManager,
         ILocalGitRepoFactory localGitRepoFactory,
         IBarApiClient barApiClient,
+        IRemoteTokenProvider remoteTokenProvider,
         IFileSystem fileSystem,
         IProcessManager processManager,
         ILogger<ResolveConflictOperation> logger)
-    : CodeFlowOperation(options, forwardFlower, backFlower, backflowConflictResolver, forwardFlowConflictResolver, vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
+    : CodeFlowOperation(options, forwardFlower, backFlower, vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
 {
     private readonly ResolveConflictCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
@@ -41,6 +41,7 @@ internal class ResolveConflictOperation(
     private readonly IRepositoryCloneManager _repositoryCloneManager = repositoryCloneManager;
     private readonly IProcessManager _processManager = processManager;
     private readonly IBarApiClient _barClient = barApiClient;
+    private readonly IRemoteTokenProvider _remoteTokenProvider = remoteTokenProvider;
     private readonly ILogger<ResolveConflictOperation> _logger = logger;
     private readonly IFileSystem _fileSystem = fileSystem;
 
@@ -69,114 +70,45 @@ internal class ResolveConflictOperation(
         _logger.LogInformation("Fetching subscription {subscriptionId}...", _options.SubscriptionId);
         var subscription = await FetchCodeflowSubscriptionAsync(_options.SubscriptionId);
 
-        _logger.LogInformation("Fetching PR information...");
-        TrackedPullRequest pr = await _barClient.GetTrackedPullRequestBySubscriptionIdAsync(subscription.Id)
-            ?? throw new DarcException($"No open PR found for this subscription");
-        _logger.LogInformation("Found open PR: {prId}", pr.Url);
+        var pr = await FetchTrackedPrAsync(subscription.Id);
 
-        _logger.LogInformation("Fetching build to apply...");
-        var build = await _barClient.GetBuildAsync(pr.Updates.Last().BuildId);
-        _logger.LogInformation("Build {buildId} / {buildName} found: {buildUrl}", build.Id, build.AzureDevOpsBuildNumber, build.GetBuildLink());
+        var build = await FetchPrLastAppliedBuildAsync(pr);
 
-        NativePath repoPath;
-        ILocalGitRepo vmr;
+        (var _, var repo) = await CloneReposAndFetchBranchesAsync(
+            subscription,
+            build,
+            targetGitRepoPath,
+            pr.HeadBranch,
+            cancellationToken);
 
-        _logger.LogInformation("Fetching PR branch {branchName}...", pr.HeadBranch);
-
-        if (subscription.IsForwardFlow())
+        if (!subscription.IsForwardFlow())
         {
-            // Register/prepare VMR on the current directory
-            vmr = await _vmrCloneManager.PrepareVmrAsync(
-                targetGitRepoPath,
-                [subscription.TargetRepository],
-                [pr.HeadBranch],
-                pr.HeadBranch,
-                resetToRemote: false,
-                cancellationToken);
-
-            _logger.LogInformation("Cloning source repository {repoUrl} at commit {commit}...",
-                build.GetRepository(),
-                DarcLib.Commit.GetShortSha(build.Commit));
-
-            // Clone the source repo to a temp location
-            repoPath = (await _repositoryCloneManager.PrepareCloneAsync(
-                build.GetRepository(),
-                build.Commit,
-                cancellationToken: cancellationToken)).Path;
-        }
-        else
-        {
-            // Register/prepare target repo on the current directory
-            repoPath = targetGitRepoPath;
-            await _repositoryCloneManager.PrepareCloneAsync(
-                targetGitRepoPath,
-                [subscription.TargetRepository],
-                [pr.HeadBranch],
-                pr.HeadBranch,
-                resetToRemote: false,
-                cancellationToken);
-
-            _logger.LogInformation("Cloning VMR {repoUrl} at commit {commit}...",
-                build.GetRepository(),
-                DarcLib.Commit.GetShortSha(build.Commit));
-
-            // Clone VMR to a temp location
-            vmr = await _vmrCloneManager.PrepareVmrAsync(
-                [build.GetRepository()],
-                [build.Commit],
-                build.Commit,
-                resetToRemote: false,
-                cancellationToken);
+            await ValidateLocalRepo(subscription, repo.Path, subscription.SourceDirectory);
         }
 
-        string lastFlownSha = await GetLastFlownShaAsync(subscription, repoPath);
-        _vmrInfo.VmrPath = vmr.Path;
-
-        await ValidateLocalRepo(subscription, repoPath);
-
-        try
-        {
-            await FlowCodeLocallyAsync(
-                repoPath,
-                isForwardFlow: subscription.IsForwardFlow(),
-                additionalRemotes,
-                build,
-                subscription,
-                cancellationToken);
-        }
-        catch (PatchApplicationLeftConflictsException e)
-        when (e.ConflictedFiles != null && e.ConflictedFiles.Count != 0)
-        {
-            _logger.LogInformation("Codeflow has finished, and {conflictedFiles} conflicting file(s) have been" +
-                " left on the current branch.", e.ConflictedFiles.Count);
-            _logger.LogInformation("Please resolve the conflicts locally, commit and push your changes to unblock the codeflow PR.");
-
-            CreateCommitMessageFile(targetGitRepoPath, subscription, build, lastFlownSha, e.ConflictedFiles);
-
-            return;
-        }
-
-        _logger.LogInformation("Codeflow has finished and changes have been staged on the local branch. "
-            + "However, no conflicts were encountered.");
+        await ExecuteCodeflowAndPrepareCommitMessageAsync(
+            subscription,
+            build,
+            repo,
+            targetGitRepoPath,
+            additionalRemotes,
+            cancellationToken);
     }
 
-    private async Task ValidateLocalRepo(Subscription subscription, NativePath repoPath)
+    private async Task ValidateLocalRepo(Subscription subscription, NativePath repoPath, string mappingName)
     {
-        var mappingName = subscription.IsForwardFlow()
-            ? subscription.TargetDirectory
-            : subscription.SourceDirectory;
-
-        var local = new Local(_options.GetRemoteTokenProvider(), _logger, repoPath);
+        var local = new Local(_remoteTokenProvider, _logger, repoPath);
         var sourceDependency = await local.GetSourceDependencyAsync();
 
         if (string.IsNullOrEmpty(sourceDependency?.Mapping))
         {
-            throw new DarcException("The current working directory does not appear to be a repository managed by darc.");
+            throw new DarcException("The repository at the current working directory does not appear " +
+                "to be part of a VMR (Virtual MonoRepo).");
         }
 
         if (!sourceDependency.Mapping.Equals(mappingName))
         {
-            throw new DarcException("The current working directory does not match the subscription " +
+            throw new DarcException("The current working directory does not match the subscription's " +
                 $"source directory '{subscription.SourceDirectory}'.");
         }
     }
@@ -187,6 +119,8 @@ internal class ResolveConflictOperation(
         {
             throw new ArgumentException("Please specify a subscription id.");
         }
+
+        _logger.LogInformation("Fetching subscription {subscriptionId}...", _options.SubscriptionId);
 
         var subscription = await _barClient.GetSubscriptionAsync(subscriptionId)
             ?? throw new DarcException($"No subscription found with id `{subscriptionId}`.");
@@ -199,9 +133,32 @@ internal class ResolveConflictOperation(
         return subscription;
     }
 
-    private async Task<string> GetLastFlownShaAsync(Subscription subscription, NativePath repoPath)
+    private async Task<Build> FetchPrLastAppliedBuildAsync(TrackedPullRequest pr)
     {
-        var local = new Local(_options.GetRemoteTokenProvider(), _logger, repoPath);
+        _logger.LogInformation("Fetching build to apply...");
+
+        var build = await _barClient.GetBuildAsync(pr.Updates.Last().BuildId);
+
+        _logger.LogInformation("Build {buildId} / {buildName} found: {buildUrl}", build.Id, build.AzureDevOpsBuildNumber, build.GetBuildLink());
+
+        return build;
+    }
+
+    private async Task<TrackedPullRequest> FetchTrackedPrAsync(Guid subscriptionId)
+    {
+        _logger.LogInformation("Fetching PR information...");
+
+        TrackedPullRequest pr = await _barClient.GetTrackedPullRequestBySubscriptionIdAsync(subscriptionId)
+            ?? throw new DarcException($"No PR was found for this subscription, or the PR is  already closed.");
+
+        _logger.LogInformation("Found open PR: {prId}", pr.Url);
+
+        return pr;
+    }
+
+    private async Task<string> GetLastFlownShaAsync(Subscription subscription, NativePath localPath)
+    {
+        var local = new Local(_remoteTokenProvider, _logger, localPath);
 
         if (subscription.IsForwardFlow())
         {
@@ -213,6 +170,102 @@ internal class ResolveConflictOperation(
             var sourceDependency = await local.GetSourceDependencyAsync();
             return sourceDependency.Sha;
         }
+    }
+
+    private async Task<(ILocalGitRepo vmr, ILocalGitRepo repo)> CloneReposAndFetchBranchesAsync(
+        Subscription subscription,
+        Build build,
+        NativePath targetRepoPath,
+        string headBranch,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Fetching PR branch {branchName}...", headBranch);
+
+        ILocalGitRepo repo;
+        ILocalGitRepo vmr;
+
+        if (subscription.IsForwardFlow())
+        {
+            vmr = await _vmrCloneManager.PrepareVmrAsync(
+                targetRepoPath,
+                [subscription.TargetRepository],
+                [headBranch],
+                headBranch,
+                resetToRemote: false,
+                cancellationToken);
+
+            _logger.LogInformation("Cloning source repository {repoUrl} at commit {commit}...",
+                build.GetRepository(),
+                DarcLib.Commit.GetShortSha(build.Commit));
+
+            repo = await _repositoryCloneManager.PrepareCloneAsync(
+                build.GetRepository(),
+                build.Commit,
+                cancellationToken: cancellationToken);
+
+            _logger.LogInformation("Cloned {repoName} into {path}", subscription.TargetDirectory, repo.Path);
+        }
+        else
+        {
+            repo = await _repositoryCloneManager.PrepareCloneAsync(
+                targetRepoPath,
+                [subscription.TargetRepository],
+                [headBranch],
+                headBranch,
+                resetToRemote: false,
+                cancellationToken);
+
+            _logger.LogInformation("Cloning VMR {repoUrl} at commit {commit}...",
+                build.GetRepository(),
+                DarcLib.Commit.GetShortSha(build.Commit));
+
+            vmr = await _vmrCloneManager.PrepareVmrAsync(
+                [build.GetRepository()],
+                [build.Commit],
+                build.Commit,
+                resetToRemote: false,
+                cancellationToken);
+
+            _logger.LogInformation("Cloned the VMR into {path}", vmr.Path);
+        }
+
+        _vmrInfo.VmrPath = vmr.Path;
+        return (vmr, repo);
+    }
+
+    private async Task ExecuteCodeflowAndPrepareCommitMessageAsync(
+        Subscription subscription,
+        Build build,
+        ILocalGitRepo productRepo,
+        NativePath targetGitRepoPath,
+        IReadOnlyCollection<AdditionalRemote> additionalRemotes,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await FlowCodeLocallyAsync(
+                productRepo.Path,
+                isForwardFlow: subscription.IsForwardFlow(),
+                build: build,
+                subscription: subscription,
+                cancellationToken: cancellationToken);
+        }
+        catch (PatchApplicationLeftConflictsException e)
+        when (e.ConflictedFiles != null && e.ConflictedFiles.Count != 0)
+        {
+            _logger.LogInformation("Codeflow has finished, and {conflictedFiles} conflicting file(s) have been" +
+                " left on the current branch.", e.ConflictedFiles.Count);
+            _logger.LogInformation("Please resolve the conflicts locally, commit and push your changes to unblock the codeflow PR.");
+
+            string lastFlownSha = await GetLastFlownShaAsync(subscription, targetGitRepoPath);
+
+            CreateCommitMessageFile(targetGitRepoPath, subscription, build, lastFlownSha, e.ConflictedFiles);
+
+            return;
+        }
+
+        _logger.LogInformation("Codeflow has finished and changes have been staged on the local branch. "
+            + "However, no conflicts were encountered.");
     }
 
     private void CreateCommitMessageFile(

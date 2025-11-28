@@ -87,10 +87,7 @@ public abstract class PullRequestUpdaterId : UpdaterId
 
     public static PullRequestUpdaterId CreateUpdaterId(Subscription subscription)
     {
-        if (subscription == null)
-        {
-            throw new ArgumentNullException(nameof(subscription));
-        }
+        ArgumentNullException.ThrowIfNull(subscription);
 
         return subscription.PolicyObject.Batchable
             ? new BatchedPullRequestUpdaterId(subscription.TargetRepository, subscription.TargetBranch)

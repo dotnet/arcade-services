@@ -18,7 +18,7 @@ public class PullRequestCommentBuilderTests
 {
     private const string FakeOrgName = "orgname";
     private const string FakeRepoName = "reponame";
-    private List<ClientModels.Subscription> _fakeSubscriptions = GenerateFakeSubscriptionModels();
+    private readonly List<ClientModels.Subscription> _fakeSubscriptions = GenerateFakeSubscriptionModels();
 
     private readonly Mock<IRemoteFactory> _remoteFactoryMock = new();
     private readonly Mock<IBasicBarClient> _basicBarClientMock = new();
@@ -256,7 +256,7 @@ public class PullRequestCommentBuilderTests
             UpdaterId = "test-updater-id",
             SubscriptionId = forwardFlowSubscription.Id,
             BuildId = 12345,
-            SourceSha = "abc123",
+            SourceSha = "abcdefg123",
             SourceRepo = $"https://github.com/{FakeOrgName}/source-repo"
         };
 

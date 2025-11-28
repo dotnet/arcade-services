@@ -19,8 +19,6 @@ internal class BackflowOperation(
     IVmrInfo vmrInfo,
     IVmrForwardFlower forwardFlower,
     IVmrBackFlower backFlower,
-    IBackflowConflictResolver backflowConflictResolver,
-    IForwardFlowConflictResolver forwardFlowConflictResolver,
     IVmrCloneManager vmrCloneManager,
     IVmrDependencyTracker dependencyTracker,
     ILocalGitRepoFactory localGitRepoFactory,
@@ -29,7 +27,7 @@ internal class BackflowOperation(
     IProcessManager processManager,
     IFileSystem fileSystem,
     ILogger<BackflowOperation> logger)
-    : CodeFlowOperation(options, forwardFlower, backFlower, backflowConflictResolver, forwardFlowConflictResolver, vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
+    : CodeFlowOperation(options, forwardFlower, backFlower, vmrInfo, vmrCloneManager, dependencyTracker, dependencyFileManager, localGitRepoFactory, barApiClient, fileSystem, logger)
 {
     private readonly BackflowCommandLineOptions _options = options;
     private readonly IVmrInfo _vmrInfo = vmrInfo;
@@ -42,7 +40,6 @@ internal class BackflowOperation(
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        
         if (string.IsNullOrEmpty(targetDirectory))
         {
             throw new DarcException("Please specify path to a local repository to flow to");
@@ -54,15 +51,13 @@ internal class BackflowOperation(
         _vmrInfo.VmrPath = vmrPath;
 
         var vmr = _localGitRepoFactory.Create(vmrPath);
-
-        var build = await GetOrCreateBuildAsync(vmr, _options.Build);
+        var build = await ParseOptionsAndGetBuildToFlowAsync(vmr);
 
         await FlowCodeLocallyAsync(
             targetRepoPath,
             isForwardFlow: false,
-            additionalRemotes,
-            build,
+            build: build,
             subscription: null,
-            cancellationToken);
+            cancellationToken: cancellationToken);
     }
 }

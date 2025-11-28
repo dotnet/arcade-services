@@ -44,6 +44,8 @@ public class RepositoryBranch
         set => PolicyString = value == null ? null : JsonConvert.SerializeObject(value);
     }
 
+    public Namespace Namespace { get; set; }
+
     public class Policy
     {
         public List<MergePolicyDefinition> MergePolicies { get; set; }
@@ -101,11 +103,11 @@ public class RepositoryBranchUpdateHistory
     {
         get
         {
-            return GitHelpers.NormalizeBranchName(_branch);
+            return GitHelpers.NormalizeBranchName(field);
         }
         set
         {
-            _branch = GitHelpers.NormalizeBranchName(value);
+            field = GitHelpers.NormalizeBranchName(value);
         }
     }
 
@@ -134,6 +136,4 @@ public class RepositoryBranchUpdateHistory
     ///     The parameters to the called method.
     /// </summary>
     public string Arguments { get; set; }
-
-    private string _branch;
 }

@@ -32,6 +32,95 @@ public abstract class CodeFlowConflictResolver
         _logger = logger;
     }
 
+    protected abstract Task<bool> TryResolvingConflict(
+        CodeflowOptions codeflowOptions,
+        ILocalGitRepo vmr,
+        ILocalGitRepo productRepo,
+        UnixPath filePath,
+        Codeflow? crossingFlow,
+        bool headBranchExisted,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Tries to resolve well-known conflicts that can occur during a code flow operation.
+    /// The conflicts can happen when backward a forward flow PRs get merged out of order
+    /// and so called "crossing" flow occurs.
+    /// This can be shown on the following schema (the order of events is numbered):
+    /// 
+    ///     repo                   VMR
+    ///       O────────────────────►O
+    ///       │  2.                 │ 1.
+    ///       │   O◄────────────────O- - ┐
+    ///       │   │            4.   │
+    ///     3.O───┼────────────►O   │    │
+    ///       │   │             │   │
+    ///       │ ┌─┘             │   │    │
+    ///       │ │               │   │
+    ///     5.O◄┘               └──►O 6. │
+    ///       │                 7.  │    O (actual branch for 7. is based on top of 1.)
+    ///       |────────────────►O   │
+    ///       │                 └──►x 8.
+    ///       │                     │
+    ///
+    /// In this diagram, the flows 1->5 and 3->6 are crossing each other.
+    ///
+    /// The conflict arises in step 8. and is caused by the fact that:
+    ///   - When the forward flow PR branch is being opened in 7., the last sync (from the point of view of 5.) is from 1.
+    ///   - This means that the PR branch will be based on 1. (the real PR branch is the "actual 7.")
+    ///   - This means that when 6. merged, VMR's source-manifest.json got updated with the SHA of the 3.
+    ///   - So the source-manifest in 6. contains the SHA of 3.
+    ///   - The forward flow PR branch contains the SHA of 5.
+    ///   - So the source-manifest file conflicts on the SHA (3. vs 5.)
+    ///   - However, if only the version files are in conflict, we can try merging 6. into 7. and resolve the conflict.
+    ///   - This is because basically we know we want to set the version files to point at 5.
+    /// </summary>
+    protected async Task<IReadOnlyCollection<UnixPath>> TryMergingBranchAndResolvingConflicts(
+        CodeflowOptions codeflowOptions,
+        ILocalGitRepo vmr,
+        ILocalGitRepo productRepo,
+        LastFlows lastFlows,
+        bool headBranchExisted,
+        CancellationToken cancellationToken)
+    {
+        var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : productRepo;
+
+        IReadOnlyCollection<UnixPath> conflictedFiles = codeflowOptions.EnableRebase && (await targetRepo.GetStagedFilesAsync()).Count > 0
+            ? await targetRepo.GetConflictedFilesAsync(cancellationToken)
+            : await TryMergingBranch(targetRepo, codeflowOptions.HeadBranch, codeflowOptions.TargetBranch, cancellationToken);
+
+        if (conflictedFiles.Count != 0 && await TryResolvingConflicts(
+                codeflowOptions,
+                vmr,
+                productRepo,
+                conflictedFiles,
+                lastFlows.CrossingFlow,
+                headBranchExisted,
+                cancellationToken))
+        {
+            if (!codeflowOptions.EnableRebase)
+            {
+                conflictedFiles = [];
+                await targetRepo.CommitAsync(
+                    $"""
+                    Merge {codeflowOptions.TargetBranch} into {codeflowOptions.HeadBranch}
+                    Auto-resolved conflicts:
+                    - {string.Join(Environment.NewLine + "- ", conflictedFiles.Select(f => f.Path))}
+                    """,
+                    allowEmpty: true,
+                cancellationToken: CancellationToken.None);
+            }
+        }
+
+        if (codeflowOptions.EnableRebase)
+        {
+            return await targetRepo.GetConflictedFilesAsync(cancellationToken);
+        }
+        else
+        {
+            return conflictedFiles;
+        }
+    }
+
     protected async Task<IReadOnlyCollection<UnixPath>> TryMergingBranch(
         ILocalGitRepo repo,
         string headBranch,
@@ -83,52 +172,101 @@ public abstract class CodeFlowConflictResolver
         }
     }
 
+    protected async Task<bool> TryResolvingConflicts(
+        CodeflowOptions codeflowOptions,
+        ILocalGitRepo vmr,
+        ILocalGitRepo sourceRepo,
+        IReadOnlyCollection<UnixPath> conflictedFiles,
+        Codeflow? crossingFlow,
+        bool headBranchExisted,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Auto-resolving expected conflicts...");
+        int count = 0;
+        bool success = true;
+
+        foreach (var filePath in conflictedFiles)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                if (await TryResolvingConflict(codeflowOptions, vmr, sourceRepo, filePath, crossingFlow, headBranchExisted, cancellationToken))
+                {
+                    count++;
+                    continue;
+                }
+                else if (codeflowOptions.EnableRebase)
+                {
+                    // When we fail to resolve conflicts during a rebase, we are fine with keeping it
+                    success = false;
+                    continue;
+                }
+                else
+                {
+                    _logger.LogDebug("Conflict in {filePath} cannot be resolved automatically", filePath);
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Failed to resolve conflicts in {filePath}", filePath);
+            }
+
+            _logger.LogInformation("Failed to auto-resolve a conflict in {conflictedFile}", filePath);
+
+            await AbortMerge(codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : sourceRepo);
+            return false;
+        }
+
+        if (success)
+        {
+            _logger.LogInformation("Successfully auto-resolved {count} expected conflicts", count);
+        }
+
+        return success;
+    }
+
     /// <summary>
     /// If a recent crossing flow is detected, we can try to figure out if the changes that happened to it in the repo
     /// apply on top of the VMR file.
     /// </summary>
     /// <returns>True when auto-resolution succeeded</returns>
     protected async Task<bool> TryResolvingConflictWithCrossingFlow(
-        string mappingName,
+        CodeflowOptions codeflowOptions,
         ILocalGitRepo vmr,
         ILocalGitRepo repo,
         UnixPath conflictedFile,
-        Codeflow currentFlow,
         Codeflow crossingFlow,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Trying to auto-resolve a conflict in {filePath} based on a crossing flow...", conflictedFile);
+        _logger.LogDebug("Trying to auto-resolve a conflict in {filePath} based on a crossing flow...", conflictedFile);
 
-        bool isForwardFlow = currentFlow is ForwardFlow;
-
-        UnixPath vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(mappingName);
-        if (isForwardFlow && !conflictedFile.Path.StartsWith(vmrSourcesPath + '/'))
+        UnixPath vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name);
+        if (codeflowOptions.CurrentFlow.IsForwardFlow && !conflictedFile.Path.StartsWith(vmrSourcesPath + '/'))
         {
-            _logger.LogInformation("Conflict in {file} is not in the source repo, skipping auto-resolution", conflictedFile);
+            _logger.LogWarning("Conflict in {file} is not in the source repo, skipping auto-resolution", conflictedFile);
             return false;
         }
 
-        if (isForwardFlow)
-        {
-            await vmr.ResolveConflict(conflictedFile, ours: false);
-        }
-        else
-        {
-            await repo.ResolveConflict(conflictedFile, ours: false);
-        }
+        var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : repo;
 
-        var patchName = _vmrInfo.TmpPath / $"{mappingName}-{Guid.NewGuid()}.patch";
+        await targetRepo.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase /* rebase vs merge direction */);
+
+        var patchName = _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch";
         List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
             patchName,
-            isForwardFlow ? crossingFlow.RepoSha : crossingFlow.VmrSha,
-            isForwardFlow ? currentFlow.RepoSha : currentFlow.VmrSha,
-            isForwardFlow
+            codeflowOptions.CurrentFlow.IsForwardFlow
+                ? crossingFlow.RepoSha
+                : crossingFlow.VmrSha,
+            codeflowOptions.CurrentFlow.IsForwardFlow
+                ? codeflowOptions.CurrentFlow.RepoSha
+                : codeflowOptions.CurrentFlow.VmrSha,
+            codeflowOptions.CurrentFlow.IsForwardFlow
                 ? new UnixPath(conflictedFile.Path.Substring(vmrSourcesPath.Length + 1))
                 : conflictedFile,
             filters: null,
             relativePaths: true,
-            workingDir: isForwardFlow ? repo.Path : vmr.Path / vmrSourcesPath,
-            applicationPath: isForwardFlow ? vmrSourcesPath : null,
+            workingDir: codeflowOptions.CurrentFlow.IsForwardFlow ? repo.Path : vmr.Path / vmrSourcesPath,
+            applicationPath: codeflowOptions.CurrentFlow.IsForwardFlow ? vmrSourcesPath : null,
             ignoreLineEndings: true,
             cancellationToken);
 
@@ -152,18 +290,32 @@ public abstract class CodeFlowConflictResolver
         {
             await _patchHandler.ApplyPatch(
                 patches[0],
-                isForwardFlow ? vmr.Path : repo.Path,
+                targetRepo.Path,
                 removePatchAfter: true,
                 keepConflicts: false,
                 cancellationToken: cancellationToken);
-            _logger.LogInformation("Successfully auto-resolved a conflict in {filePath} based on a crossing flow", conflictedFile);
+            _logger.LogInformation("Successfully auto-resolved a conflict in {filePath}", conflictedFile);
+
+            if (codeflowOptions.EnableRebase)
+            {
+                // Stage the file for commit
+                await targetRepo.StageAsync([conflictedFile], CancellationToken.None);
+            }
+
             return true;
         }
         catch (PatchApplicationFailedException)
         {
             // If the patch failed, we cannot resolve the conflict automatically
             // We will just leave it as is and let the user resolve it manually
-            _logger.LogInformation("Failed to auto-resolve conflicts in {filePath} - conflicting changes detected", conflictedFile);
+            _logger.LogDebug("Failed to auto-resolve conflicts in {filePath} - conflicting changes detected", conflictedFile);
+
+            if (codeflowOptions.EnableRebase)
+            {
+                // Revert the file into the conflicted state for manual resolution
+                await targetRepo.ExecuteGitCommand(["checkout", "--conflict=merge", "--", conflictedFile], CancellationToken.None);
+            }
+
             return false;
         }
     }

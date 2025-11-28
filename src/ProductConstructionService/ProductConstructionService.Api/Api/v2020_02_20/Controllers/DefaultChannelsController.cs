@@ -10,8 +10,7 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
-
-using Channel = Maestro.Data.Models.Channel;
+using Microsoft.Extensions.Options;
 using ProductConstructionService.Api.v2020_02_20.Models;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
@@ -24,12 +23,13 @@ namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannelsController
 {
     private readonly BuildAssetRegistryContext _context;
+
     // Branch names can't possibly start with -, so we'll use this fact to guarantee the user 
     // wants to use a regex, and not direct matching.
     private const string RegexBranchPrefix = "-regex:";
 
-    public DefaultChannelsController(BuildAssetRegistryContext context)
-        : base(context)
+    public DefaultChannelsController(BuildAssetRegistryContext context, IOptions<EnvironmentNamespaceOptions> environmentNamespaceOptions)
+        : base(context, environmentNamespaceOptions)
     {
         _context = context;
     }
@@ -63,7 +63,7 @@ public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannels
             query = query.Where(dc => dc.Enabled == enabled.Value);
         }
 
-        List<DefaultChannel> results = query.AsEnumerable().Select(dc => new DefaultChannel(dc)).ToList();
+        List<DefaultChannel> results = [.. query.AsEnumerable().Select(dc => new DefaultChannel(dc))];
 
         if (!string.IsNullOrEmpty(branch))
         {
@@ -106,7 +106,7 @@ public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannels
     public async Task<IActionResult> Create([FromBody, Required] DefaultChannel.DefaultChannelCreateData data)
     {
         int channelId = data.ChannelId;
-        Channel? channel = await _context.Channels.FindAsync(channelId);
+        Maestro.Data.Models.Channel? channel = await _context.Channels.FindAsync(channelId);
         if (channel == null)
         {
             return NotFound(new ApiError($"The channel with id '{channelId}' was not found."));
@@ -128,12 +128,14 @@ public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannels
         }
         else
         {
+            var defaultNamespace = await _context.Namespaces.SingleAsync(n => n.Name == _environmentNamespaceOptions.Value.DefaultNamespaceName);
             defaultChannel = new Maestro.Data.Models.DefaultChannel
             {
                 Channel = channel,
                 Repository = data.Repository,
                 Branch = data.Branch,
-                Enabled = data.Enabled ?? true
+                Enabled = data.Enabled ?? true,
+                Namespace = defaultNamespace
             };
             await _context.DefaultChannels.AddAsync(defaultChannel);
             await _context.SaveChangesAsync();
@@ -188,7 +190,7 @@ public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannels
         if (update.ChannelId.HasValue)
         {
             int channelId = update.ChannelId.Value;
-            Channel? channel = await _context.Channels.FindAsync(channelId);
+            Maestro.Data.Models.Channel? channel = await _context.Channels.FindAsync(channelId);
             if (channel == null)
             {
                 return NotFound(new ApiError($"The channel with id '{channelId}' was not found."));

@@ -13,10 +13,6 @@ namespace Maestro.Data.Models;
 
 public class Subscription
 {
-    private string _sourceRepository;
-    private string _targetRepository;
-    private string _branch;
-
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public Guid Id { get; set; }
@@ -27,40 +23,20 @@ public class Subscription
 
     public string SourceRepository
     {
-        get
-        {
-            return AzureDevOpsClient.NormalizeUrl(_sourceRepository);
-        }
-
-        set
-        {
-            _sourceRepository = AzureDevOpsClient.NormalizeUrl(value);
-        }
+        get => AzureDevOpsClient.NormalizeUrl(field);
+        set => field = AzureDevOpsClient.NormalizeUrl(value);
     }
 
     public string TargetRepository
     {
-        get
-        {
-            return AzureDevOpsClient.NormalizeUrl(_targetRepository);
-        }
-
-        set
-        {
-            _targetRepository = AzureDevOpsClient.NormalizeUrl(value);
-        }
+        get => AzureDevOpsClient.NormalizeUrl(field);
+        set => field = AzureDevOpsClient.NormalizeUrl(value);
     }
 
     public string TargetBranch
     {
-        get
-        {
-            return GitHelpers.NormalizeBranchName(_branch);
-        }
-        set
-        {
-            _branch = GitHelpers.NormalizeBranchName(value);
-        }
+        get => GitHelpers.NormalizeBranchName(field);
+        set => field = GitHelpers.NormalizeBranchName(value);
     }
 
     [Column("Policy")]
@@ -105,4 +81,6 @@ public class Subscription
     public Build LastAppliedBuild { get; set; }
 
     public string PullRequestFailureNotificationTags { get; set; }
+
+    public Namespace Namespace { get; set; }
 }

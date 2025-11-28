@@ -3,16 +3,16 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Net;
-using ProductConstructionService.Api.v2018_07_16.Models;
 using Maestro.Data;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using ProductConstructionService.Api.v2018_07_16.Models;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
-
 using Channel = Maestro.Data.Models.Channel;
 
 namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
@@ -28,16 +28,20 @@ public class SubscriptionsController : ControllerBase
     private readonly IWorkItemProducerFactory _workItemProducerFactory;
     private readonly IGitHubInstallationIdResolver _installationIdResolver;
     private readonly ILogger<SubscriptionsController> _logger;
+    protected readonly IOptions<EnvironmentNamespaceOptions> _environmentNamespaceOptions;
+
 
     public SubscriptionsController(
         BuildAssetRegistryContext context,
         IWorkItemProducerFactory workItemProducerFactory,
         IGitHubInstallationIdResolver installationIdResolver,
+        IOptions<EnvironmentNamespaceOptions> environmentNamespaceOptions,
         ILogger<SubscriptionsController> logger)
     {
         _context = context;
         _workItemProducerFactory = workItemProducerFactory;
         _installationIdResolver = installationIdResolver;
+        _environmentNamespaceOptions = environmentNamespaceOptions;
         _logger = logger;
     }
 
@@ -75,7 +79,7 @@ public class SubscriptionsController : ControllerBase
             query = query.Where(sub => sub.Enabled == enabled.Value);
         }
 
-        List<Subscription> results = query.AsEnumerable().Select(sub => new Subscription(sub)).ToList();
+        List<Subscription> results = [.. query.AsEnumerable().Select(sub => new Subscription(sub))];
         return Ok(results);
     }
 
@@ -450,9 +454,11 @@ public class SubscriptionsController : ControllerBase
             }
         }
 
+        var defaultNamespace = await _context.Namespaces.SingleAsync(n => n.Name == _environmentNamespaceOptions.Value.DefaultNamespaceName);
         Maestro.Data.Models.Subscription subscriptionModel = subscription.ToDb();
         subscriptionModel.Channel = channel;
         subscriptionModel.Id = Guid.NewGuid();
+        subscriptionModel.Namespace = defaultNamespace;
 
         Maestro.Data.Models.Subscription? equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);
         if (equivalentSubscription != null)

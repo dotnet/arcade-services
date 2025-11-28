@@ -11,7 +11,7 @@ public class FlowGraph
 {
     public static FlowGraph Create(DependencyFlowGraph other)
     {
-        return new FlowGraph(other.Nodes.Select(FlowRef.Create).ToList(), other.Edges.Select(FlowEdge.Create).ToList());
+        return new FlowGraph([.. other.Nodes.Select(FlowRef.Create)], [.. other.Edges.Select(FlowEdge.Create)]);
     }
 
     public FlowGraph(List<FlowRef> flowRefs, List<FlowEdge> flowEdges)

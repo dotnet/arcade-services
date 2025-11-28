@@ -46,7 +46,7 @@ internal static class SubscriptionTriggerConfiguration
                     JsonExtensions.JsonValue(sub.PolicyString, "lax $.UpdateFrequency") == ((int)UpdateFrequency.EveryBuild).ToString())
                 .ToList();
 
-            if (!subscriptionsToUpdate.Any())
+            if (subscriptionsToUpdate.Count == 0)
             {
                 logger.LogInformation("No subscriptions to trigger for build {buildId}", entity.BuildId);
                 return;

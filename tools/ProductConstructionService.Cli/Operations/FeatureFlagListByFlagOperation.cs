@@ -12,15 +12,18 @@ internal class FeatureFlagListByFlagOperation : IOperation
     private readonly FeatureFlagListByFlagOptions _options;
     private readonly IProductConstructionServiceApi _client;
     private readonly ILogger<FeatureFlagListByFlagOperation> _logger;
+    private readonly ISubscriptionDescriptionHelper _subscriptionHelper;
 
     public FeatureFlagListByFlagOperation(
         FeatureFlagListByFlagOptions options,
         IProductConstructionServiceApi client,
-        ILogger<FeatureFlagListByFlagOperation> logger)
+        ILogger<FeatureFlagListByFlagOperation> logger,
+        ISubscriptionDescriptionHelper subscriptionHelper)
     {
         _options = options;
         _client = client;
         _logger = logger;
+        _subscriptionHelper = subscriptionHelper;
     }
 
     public async Task<int> RunAsync()
@@ -37,18 +40,21 @@ internal class FeatureFlagListByFlagOperation : IOperation
                 return 0;
             }
 
+            // Prefetch all subscription descriptions in parallel
+            await _subscriptionHelper.PrefetchSubscriptionDescriptionsAsync(response.Flags.Select(f => f.SubscriptionId));
+
             _logger.LogInformation("Subscriptions with feature flag '{FlagName}':", _options.FlagName);
 
             foreach (var flag in response.Flags.OrderBy(f => f.SubscriptionId))
             {
-                _logger.LogInformation("  Subscription: {SubscriptionId}", flag.SubscriptionId);
-                _logger.LogInformation("  Value: {Value}", flag.Value);
+                var subscriptionDescription = await _subscriptionHelper.GetSubscriptionDescriptionAsync(flag.SubscriptionId);
+                _logger.LogInformation("  {SubscriptionDescription}", subscriptionDescription);
+                _logger.LogInformation("    Value: {Value}", flag.Value);
                 
                 if (flag.CreatedAt.HasValue)
                 {
-                    _logger.LogInformation("  Created: {CreatedAt:yyyy-MM-dd HH:mm:ss} UTC", flag.CreatedAt.Value);
+                    _logger.LogInformation("    Created: {CreatedAt:yyyy-MM-dd HH:mm:ss} UTC", flag.CreatedAt.Value);
                 }
-
             }
 
             _logger.LogInformation("Total: {Total} subscriptions have this flag set", response.Total);

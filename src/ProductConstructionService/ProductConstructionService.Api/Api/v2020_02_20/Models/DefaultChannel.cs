@@ -15,7 +15,7 @@ public class DefaultChannel
         Id = other.Id;
         Repository = other.Repository;
         Branch = other.Branch;
-        Channel = other.Channel == null ? null : new Channel(other.Channel);
+        Channel = other.Channel == null ? null : new(other.Channel);
         Enabled = other.Enabled;
     }
 

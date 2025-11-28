@@ -47,24 +47,20 @@ public interface IForwardFlowConflictResolver
     ///   - This is because basically we know we want to set the version files to point at 5.
     /// </summary>
     /// <returns>Conflicted files (if any)</returns>
-    Task<IReadOnlyCollection<UnixPath>> TryMergingBranch(
-        string mappingName,
+    Task<IReadOnlyCollection<UnixPath>> TryMergingBranchAndUpdateDependencies(
+        CodeflowOptions codeflowOptions,
         ILocalGitRepo vmr,
         ILocalGitRepo sourceRepo,
-        string headBranch,
-        string branchToMerge,
-        ForwardFlow currentFlow,
         LastFlows lastFlows,
-        bool enableRebase,
+        bool headBranchExisted,
         CancellationToken cancellationToken);
 
     Task MergeDependenciesAsync(
-        string mappingName,
+        CodeflowOptions codeflowOptions,
         ILocalGitRepo sourceRepo,
         string targetBranch,
         string repoComparisonSha,
         string vmrComparisonSha,
-        ForwardFlow currentFlow,
         CancellationToken cancellationToken);
 }
 
@@ -104,65 +100,39 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         _versionDetailsParser = versionDetailsParser;
     }
 
-    public async Task<IReadOnlyCollection<UnixPath>> TryMergingBranch(
-        string mappingName,
+    public async Task<IReadOnlyCollection<UnixPath>> TryMergingBranchAndUpdateDependencies(
+        CodeflowOptions codeflowOptions,
         ILocalGitRepo vmr,
         ILocalGitRepo sourceRepo,
-        string headBranch,
-        string branchToMerge,
-        ForwardFlow currentFlow,
         LastFlows lastFlows,
-        bool enableRebase,
+        bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        var conflictedFiles = enableRebase
-            ? []
-            : await TryMergingBranch(vmr, headBranch, branchToMerge, cancellationToken);
-
-        if (conflictedFiles.Any() && await TryResolvingConflicts(
-            mappingName,
+        IReadOnlyCollection<UnixPath> conflictedFiles = await TryMergingBranchAndResolvingConflicts(
+            codeflowOptions,
             vmr,
             sourceRepo,
-            conflictedFiles,
-            currentFlow,
-            lastFlows.CrossingFlow,
-            cancellationToken))
-        {
-            _logger.LogInformation("Successfully resolved file conflicts between branches {headBranch} and {headBranch}",
-                branchToMerge,
-                headBranch);
-            try
-            {
-                conflictedFiles = [];
-                await vmr.CommitAsync(
-                    $"Merge branch {branchToMerge} into {headBranch}",
-                    allowEmpty: true,
-                    cancellationToken: CancellationToken.None);
-            }
-            catch (Exception e) when (e.Message.Contains("Your branch is ahead of"))
-            {
-                // There was no reason to merge, we're fast-forward ahead from the target branch
-            }
-        }     
+            lastFlows,
+            headBranchExisted,
+            cancellationToken);
 
         try
         {
             await MergeDependenciesAsync(
-                mappingName,
+                codeflowOptions,
                 sourceRepo,
-                headBranch,
+                codeflowOptions.HeadBranch,
                 lastFlows.LastForwardFlow.RepoSha,
                 // if there's a crossing flow, we need to make sure it doesn't bring in any downgrades https://github.com/dotnet/arcade-services/issues/5331
                 lastFlows.CrossingFlow != null
                     ? lastFlows.LastBackFlow!.VmrSha
                     : lastFlows.LastForwardFlow.VmrSha,
-                currentFlow,
                 cancellationToken);
 
-            if (!enableRebase)
+            if (!codeflowOptions.EnableRebase)
             {
                 await vmr.CommitAsync(
-                    $"Update dependencies after merging {branchToMerge} into {headBranch}",
+                    $"Update dependencies after merging {codeflowOptions.TargetBranch} into {codeflowOptions.HeadBranch}",
                     allowEmpty: true,
                     cancellationToken: CancellationToken.None);
             }
@@ -171,70 +141,35 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         {
             // We don't want to push this as there is some problem
             _logger.LogError(e, "Failed to update dependencies after merging {branchToMerge} into {headBranch} in {repoPath}",
-                branchToMerge,
-                headBranch,
+                codeflowOptions.TargetBranch,
+                codeflowOptions.HeadBranch,
                 vmr.Path);
             throw;
         }
 
-        return conflictedFiles;
-    }
-
-    private async Task<bool> TryResolvingConflicts(
-        string mappingName,
-        ILocalGitRepo vmr,
-        ILocalGitRepo sourceRepo,
-        IReadOnlyCollection<UnixPath> conflictedFiles,
-        ForwardFlow currentFlow,
-        Codeflow? crossingFlow,
-        CancellationToken cancellationToken)
-    {
-        foreach (var filePath in conflictedFiles)
+        if (codeflowOptions.EnableRebase)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            try
-            {
-                if (await TryResolvingConflict(
-                    mappingName,
-                    vmr,
-                    sourceRepo,
-                    filePath,
-                    currentFlow,
-                    crossingFlow,
-                    cancellationToken))
-                {
-                    continue;
-                }
-                else
-                {
-                    _logger.LogInformation("Conflict in {filePath} cannot be resolved automatically", filePath);
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "Failed to resolve conflicts in {filePath}", filePath);
-            }
-
-            await AbortMerge(vmr);
-            return false;
+            return await vmr.GetConflictedFilesAsync(cancellationToken);
         }
-
-        return true;
+        else
+        {
+            return conflictedFiles;
+        }
     }
 
-    private async Task<bool> TryResolvingConflict(
-        string mappingName,
+    protected override async Task<bool> TryResolvingConflict(
+        CodeflowOptions codeflowOptions,
         ILocalGitRepo vmr,
         ILocalGitRepo sourceRepo,
         UnixPath conflictedFile,
-        ForwardFlow currentFlow,
         Codeflow? crossingFlow,
+        bool headBranchExisted,
         CancellationToken cancellationToken)
     {
         // Known conflict in source-manifest.json
         if (string.Equals(conflictedFile, VmrInfo.DefaultRelativeSourceManifestPath, StringComparison.OrdinalIgnoreCase))
         {
-            await TryResolvingSourceManifestConflict(vmr, mappingName!, cancellationToken);
+            await TryResolvingSourceManifestConflict(vmr, codeflowOptions.Mapping.Name!, codeflowOptions.EnableRebase, cancellationToken);
             return true;
         }
 
@@ -242,27 +177,26 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         // Check DetectCrossingFlow documentation for more details
         if (crossingFlow != null)
         {
-            return await TryResolvingConflictWithCrossingFlow(
-                mappingName,
-                vmr,
-                sourceRepo,
-                conflictedFile,
-                currentFlow,
-                crossingFlow,
-                cancellationToken);
+            return await TryResolvingConflictWithCrossingFlow(codeflowOptions, vmr, sourceRepo, conflictedFile, crossingFlow, cancellationToken);
         }
 
         return false;
     }
 
-    private async Task TryResolvingSourceManifestConflict(ILocalGitRepo vmr, string mappingName, CancellationToken cancellationToken)
+    private async Task TryResolvingSourceManifestConflict(
+        ILocalGitRepo vmr,
+        string mappingName,
+        bool enableRebase,
+        CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Auto-resolving conflict in {file}", VmrInfo.DefaultRelativeSourceManifestPath);
+        _logger.LogDebug("Auto-resolving conflict in {file}", VmrInfo.DefaultRelativeSourceManifestPath);
 
         // We load the source manifest from the target branch and replace the
         // current mapping (and its submodules) with our branches' information
         var result = await vmr.RunGitCommandAsync(
-            ["show", "MERGE_HEAD:" + VmrInfo.DefaultRelativeSourceManifestPath],
+            // During merge: :2: is ours (current branch), :3: is theirs (branch being merged)
+            // During rebase: :2: is theirs (base branch), :3: is ours (commits being replayed)
+            ["show", (enableRebase ? ":3:" : ":2:") + VmrInfo.DefaultRelativeSourceManifestPath],
             cancellationToken);
 
         var theirSourceManifest = SourceManifest.FromJson(result.StandardOutput);
@@ -297,16 +231,15 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
     }
 
     public async Task MergeDependenciesAsync(
-        string mappingName,
+        CodeflowOptions codeflowOptions,
         ILocalGitRepo sourceRepo,
         string targetBranch,
         string repoComparisonSha,
         string vmrComparisonSha,
-        ForwardFlow currentFlow,
         CancellationToken cancellationToken)
     {
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        var relativeSourceMappingPath = VmrInfo.GetRelativeRepoSourcesPath(mappingName);
+        var relativeSourceMappingPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name);
 
         await _jsonFileMerger.MergeJsonsAsync(
             vmr,
@@ -316,13 +249,13 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             sourceRepo,
             VersionFiles.GlobalJson,
             repoComparisonSha,
-            currentFlow.RepoSha);
+            codeflowOptions.CurrentFlow.RepoSha);
 
         // and handle dotnet-tools.json if it exists
         bool dotnetToolsConfigExists =
             (await sourceRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, repoComparisonSha) != null) ||
             (await sourceRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, targetBranch) != null) ||
-            (await vmr.GetFileFromGitAsync(relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson, currentFlow.VmrSha) != null ||
+            (await vmr.GetFileFromGitAsync(relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson, codeflowOptions.CurrentFlow.VmrSha) != null ||
             (await vmr.GetFileFromGitAsync(relativeSourceMappingPath / VersionFiles.DotnetToolsConfigJson, vmrComparisonSha) != null));
 
         if (dotnetToolsConfigExists)
@@ -335,7 +268,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                 sourceRepo,
                 VersionFiles.DotnetToolsConfigJson,
                 repoComparisonSha,
-                currentFlow.RepoSha,
+                codeflowOptions.CurrentFlow.RepoSha,
                 allowMissingFiles: true);
         }
 
@@ -343,7 +276,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         // This can happen if a repo was initialized inside of the vmr when it didn't have this file
         bool versionDetailsPropsCreated = false;
         if (await _dependencyFileManager.VersionDetailsPropsExistsAsync(sourceRepo.Path, branch: null!)
-                && !await _dependencyFileManager.VersionDetailsPropsExistsAsync(vmr.Path, branch: null!, VmrInfo.GetRelativeRepoSourcesPath(mappingName)))
+                && !await _dependencyFileManager.VersionDetailsPropsExistsAsync(vmr.Path, branch: null!, VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name)))
         {
             _fileSystem.WriteToFile(vmr.Path / relativeSourceMappingPath / VersionFiles.VersionDetailsProps, string.Empty);
             versionDetailsPropsCreated = true;
@@ -357,13 +290,13 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             sourceRepo,
             VersionFiles.VersionDetailsXml,
             repoComparisonSha,
-            currentFlow.RepoSha,
-            mappingName);
+            codeflowOptions.CurrentFlow.RepoSha,
+            codeflowOptions.Mapping.Name);
 
         // Also flow the Source tag if it changed
         var repoVersionDetails = await _dependencyFileManager.ParseVersionDetailsXmlAsync(
             sourceRepo.Path,
-            currentFlow.RepoSha);
+            codeflowOptions.CurrentFlow.RepoSha);
         var vmrVersionDetails = await _dependencyFileManager.ParseVersionDetailsXmlAsync(
             vmr.Path,
             targetBranch,

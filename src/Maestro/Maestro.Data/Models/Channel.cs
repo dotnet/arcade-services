@@ -21,4 +21,6 @@ public class Channel
 
     public List<BuildChannel> BuildChannels { get; set; }
     public List<DefaultChannel> DefaultChannels { get; set; }
+
+    public Namespace Namespace { get; set; }
 }
