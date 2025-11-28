@@ -17,7 +17,7 @@ using Microsoft.Net.Http.Headers;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
-public static class VmrRegistrations
+public static class CodeflowExtensions
 {
     /// <summary>
     /// Registers classes required to perform VMR codeflow.
