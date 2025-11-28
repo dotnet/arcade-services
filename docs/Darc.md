@@ -115,56 +115,83 @@ on the command line. If this is the first global tool you've installed, you may
 need to first restart your command window.
 
 ```
-D:\repos\arcade> darc
-Microsoft.DotNet 1.1.0-beta.19081.1+270fa76db13d4c103a6dec2b03f1fd79730ff429
-c Microsoft Corporation. All rights reserved.
-ERROR(S):
-No verb selected.
-
-  add-channel                  Creates a new channel.
-
-  add-dependency               Add a new dependency to Version.Details.xml.
-
-  add-default-channel          Add a channel that a build of a branch+repository is automatically applied to.
-
-  add-subscription             Add a new subscription.
-
-  authenticate                 Stores the VSTS and GitHub tokens required for remote operations.
-
-  delete-channel               Deletes an existing channel.
-
-  delete-default-channel       Remove a default channel association.
-
-...
+darc --version
+Microsoft.DotNet.Darc 1.1.0-beta.24306.2
+© Microsoft Corporation. All rights reserved.
 ```
+
+If you get an error saying 'darc' is not recognized as an internal or external command, the tool may not be in your PATH. You can verify the installation by checking the global tools list:
+
+```
+dotnet tool list -g
+```
+
+You should see `microsoft.dotnet.darc` in the list. If it's there but still not accessible, you may need to restart your terminal or add the .NET tools directory to your PATH manually.
+
+**Alternative Installation Methods:**
+
+If the PowerShell script doesn't work for your environment, you can install darc directly using the .NET CLI:
+
+```
+dotnet tool install --global Microsoft.DotNet.Darc --add-source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json --prerelease
+```
+
+**DNX Alternative Installation:**
+
+For environments where the standard installation doesn't work, you can use DNX (dotnet execute) to run darc without a global installation:
+
+```
+dnx tool install Microsoft.DotNet.Darc --add-source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json --prerelease
+```
+
+After installation with DNX, you can run darc commands using:
+
+```
+dnx Microsoft.DotNet.Darc --help
+```
+
+Or create an alias in your shell profile for convenience:
+
+**PowerShell:**
+```powershell
+Set-Alias -Name darc -Value "dnx Microsoft.DotNet.Darc"
+```
+
+**Bash/Zsh:**
+```bash
+alias darc="dnx Microsoft.DotNet.Darc"
+```
+
+**Note:** DNX is useful in containerized environments or CI/CD scenarios where you want to avoid global tool installations but still need to use darc functionality.
 
 #### Step 2: Authentication:
 Darc talks to the Maestro API which requires authentication.
 Devs on the .NET team should have access to it through the "all FTE" security group. You can test this by running `darc get-channels` or by visiting [https://maestro.dot.net/](https://maestro.dot.net/).
 If you don't have access (because you are not part of the .NET team directly), request the access to https://coreidentity.microsoft.com/manage/Entitlement/entitlement/dotnetesmaes-z54r.
 
-#### Step 3: Set additional PATs for Azure DevOps and GitHub operations
+#### Step 3: Set additional PATs for Azure DevOps and GitHub operations (Optional)
+
+Darc can be run without authentication but will have very limited rate limits for GitHub operations.
 
 When executing most operations, the client needs to make some remote queries.
-These remote queries require authentication in most circumstances. There are 3
-PATs that may be used:
-- **[Required]** A GitHub PAT for downloading files from GitHub (e.g. `eng/Version.Details.xml` or
-  arcade script files. No scopes required but token must be [SSO enabled](https://docs.github.com/en/enterprise-cloud@latest/authentication/authenticating-with-saml-single-sign-on/authorizing-a-personal-access-token-for-use-with-saml-single-sign-on) for all organizations for which repositories `darc` will be used.
-- **[Optional]** An Azure DevOps PAT for downloading files from Azure DevOps. (e.g.
-  eng/Version.Details.xml). When not provided, local system credentials are used. Required scopes: Code-Read, Build-Read & Execute, Packaging Read.
-  The recommended way of generating the PAT is using the [PatGeneratorTool](https://dev.azure.com/dnceng/public/_artifacts/feed/dotnet-eng/NuGet/Microsoft.DncEng.PatGeneratorTool),
-  with the `dotnet pat-generator --scopes build_execute code --organizations dnceng devdiv --expires-in 180` command
-- *[DEPRECATED] A Build Asset Registry (BAR) password for interacting with Maestro++/BAR (e.g.
-  obtaining build information needed for a drop). This one is no longer needed and you can sign-in through browser when using darc.*
+These remote queries require authentication in most circumstances. There are several authentication options available:
 
-> [!NOTE]
->  [PatGeneratorTool](https://dev.azure.com/dnceng/public/_artifacts/feed/dotnet-eng/NuGet/Microsoft.DncEng.PatGeneratorTool) can be installed with the following command
-> ```
-> dotnet tool install --global Microsoft.DncEng.PatGeneratorTool --add-source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-eng/nuget/v3/index.json --prerelease
-> ```
+**GitHub Authentication Options:**
+- **[Recommended]** Use [GitHub CLI](https://cli.github.com/manual/) - Install it and sign in with `gh auth login`. Darc will automatically use the GitHub CLI token if available. No additional configuration needed.
+- **[Alternative]** Create a GitHub Personal Access Token (PAT) at https://github.com/settings/personal-access-tokens
+  - Choose `dotnet` as the resource owner
+  - Enable SSO for organizations where you need to access repositories (typically dotnet and microsoft)
+  - No scopes required but token must be [SSO enabled](https://docs.github.com/en/enterprise-cloud@latest/authentication/authenticating-with-saml-single-sign-on/authorizing-a-personal-access-token-for-use-with-saml-single-sign-on) for all organizations for which repositories `darc` will be used.
+- **[Not Recommended]** Leave empty but note that rate limits will be very low
 
-These tokens can either be passed on the command line using parameters (see [Parameters](#parameters)), or
-cached locally on the machine using the [`darc authenticate`](#authenticate) command.
+**Azure DevOps Authentication Options:**
+- **[Recommended]** Leave empty and darc will sign you in via a browser or device code auth flow
+- **[Alternative]** Create an Azure DevOps PAT with `Build.Execute` and `Code.Read` scopes
+- **[Alternative]** Use the [PatGeneratorTool](https://dev.azure.com/dnceng/public/_artifacts/feed/dotnet-eng/NuGet/Microsoft.DncEng.PatGeneratorTool)
+  - Run: `dotnet pat-generator --scopes build_execute code --organizations dnceng devdiv --expires-in 7`
+  - Token lasts 7 days
+
+These tokens can either be passed on the command line using parameters or cached locally on the machine using the [`darc authenticate`](#authenticate) command.
 
 After supplying your secrets, a simple `darc get-channels` operations should succeed.
 
