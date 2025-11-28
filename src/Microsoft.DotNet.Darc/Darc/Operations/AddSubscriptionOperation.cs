@@ -318,6 +318,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             }
 
             Subscription newSubscription = await _barClient.CreateSubscriptionAsync(
+                enabled,
                 channel,
                 sourceRepository,
                 targetRepository,

@@ -20,6 +20,7 @@ public interface IBarApiClient : IBasicBarClient
     /// <summary>
     ///     Create a new subscription.
     /// </summary>
+    /// <param name="enabled">Whether subscription is enabled (active) or not.</param>
     /// <param name="channelName">Name of source channel.</param>
     /// <param name="sourceRepo">Source repository URI.</param>
     /// <param name="targetRepo">Target repository URI.</param>
@@ -34,6 +35,7 @@ public interface IBarApiClient : IBasicBarClient
     /// <param name="excludedAssets">List of assets to exclude from the source-enabled code flow</param>
     /// <returns>Newly created subscription.</returns>
     Task<Subscription> CreateSubscriptionAsync(
+        bool enabled,
         string channelName,
         string sourceRepo,
         string targetRepo,

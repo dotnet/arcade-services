@@ -16,8 +16,6 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionYaml>
 {
     private readonly ILogger _logger;
 
-    public bool Enabled => bool.Parse(_data.Enabled);
-
     private UpdateSubscriptionPopUp(
         string path,
         bool forceCreation,
