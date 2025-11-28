@@ -1,6 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using Maestro.Common;
@@ -135,21 +137,37 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         AppendConflictedFileList(update, subscription, conflictedFiles, prHeadBranch, comment);
 
         comment.AppendLine();
+
+        // https://github.com/dotnet/arcade-services/issues/5443 - temporary hardcode the version to give repos time to get new arcade
+        var maestroVersion = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
+            .ProductVersion!
+            .Split('+')
+            .First();
+
         comment.AppendLine(
             $"""
             #### ℹ️ To resolve the conflict, please follow these steps:
             1. Clone the current repository
                 ```bash
                 git clone {subscription.TargetRepository}
+                cd {subscription.TargetRepository.Split('/', StringSplitOptions.RemoveEmptyEntries).Last()}
                 ```
-            2. `cd` to the cloned repository
-            3. Make sure your `darc` is [up-to-date](https://github.com/dotnet/arcade-services/blob/main/docs/Darc.md#setting-up-your-darc-client) and run
+            2. ~Make sure your `darc` is [up-to-date](https://github.com/dotnet/arcade-services/blob/main/docs/Darc.md#setting-up-your-darc-client) and run~
+                ⚠️ Temporarily please install and use the following darc version:
+                ```bash
+                # Linux / MacOS
+                ./eng/commong/darc-init.sh --darcversion {maestroVersion}
+                # or on Windows
+                .\eng\common\darc-init.ps1 -darcVersion {maestroVersion}
+                ```
+            3. Run from repo's git clone and follow the instructions provided by the command to resolve the conflict locally
                 ```bash
                 darc vmr resolve-conflict --subscription {subscription.Id}
                 ```
-            4. Follow the instructions provided by the command to resolve the conflict and push the update
-            5. This should apply the build `{update.BuildId}` with sources from `{update.SourceSha}`
-            6. Once the changes are pushed, the `Codeflow verification` check will turn green
+                This should apply the build `{update.BuildId}` with sources from `{GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha)}`
+            4. Commit & push the changes
+            5. Once pushed, the `Codeflow verification` check will turn green.  
+                If not, a new build might have flown into the PR and you might need to run the command above again.
             """);
 
         return comment.ToString();
