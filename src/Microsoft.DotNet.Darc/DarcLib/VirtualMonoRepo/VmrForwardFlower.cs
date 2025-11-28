@@ -153,7 +153,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         {
             // We try to merge the target branch so that we can potentially
             // resolve some expected conflicts in the version files
-            conflictedFiles = await _conflictResolver.TryMergingBranch(
+            conflictedFiles = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
                 codeflowOptions,
                 vmr,
                 sourceRepo,
