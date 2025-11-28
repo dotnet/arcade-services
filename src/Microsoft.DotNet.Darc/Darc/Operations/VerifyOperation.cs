@@ -3,6 +3,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
@@ -12,13 +13,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class VerifyOperation : Operation
 {
     private readonly VerifyCommandLineOptions _options;
+    private readonly IRemoteTokenProvider _remoteTokenProvider;
     private readonly ILogger<VerifyOperation> _logger;
 
     public VerifyOperation(
         VerifyCommandLineOptions options,
+        IRemoteTokenProvider remoteTokenProvider,
         ILogger<VerifyOperation> logger)
     {
         _options = options;
+        _remoteTokenProvider = remoteTokenProvider;
         _logger = logger;
     }
 
@@ -29,7 +33,7 @@ internal class VerifyOperation : Operation
     /// <returns>Process exit code.</returns>
     public override async Task<int> ExecuteAsync()
     {
-        var local = new Local(_options.GetRemoteTokenProvider(), _logger);
+        var local = new Local(_remoteTokenProvider, _logger);
 
         try
         {

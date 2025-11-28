@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -25,6 +26,7 @@ internal class UpdateDependenciesOperation : Operation
     private readonly ILogger<UpdateDependenciesOperation> _logger;
     private readonly IBarApiClient _barClient;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly IRemoteTokenProvider _remoteTokenProvider;
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
     private readonly IFileSystem _fileSystem;
@@ -33,6 +35,7 @@ internal class UpdateDependenciesOperation : Operation
         UpdateDependenciesCommandLineOptions options,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
+        IRemoteTokenProvider remoteTokenProvider,
         IGitRepoFactory gitRepoFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
         ILogger<UpdateDependenciesOperation> logger,
@@ -42,6 +45,7 @@ internal class UpdateDependenciesOperation : Operation
         _logger = logger;
         _barClient = barClient;
         _remoteFactory = remoteFactory;
+        _remoteTokenProvider = remoteTokenProvider;
         _gitRepoFactory = gitRepoFactory;
         _coherencyUpdateResolver = coherencyUpdateResolver;
         _fileSystem = fileSystem;
@@ -62,7 +66,7 @@ internal class UpdateDependenciesOperation : Operation
                 await PopulateOptionsFromSubscriptionAsync();
             }
 
-            var local = new Local(_options.GetRemoteTokenProvider(), _logger);
+            var local = new Local(_remoteTokenProvider, _logger);
             var excludedAssetsMatcher = _options.ExcludedAssets?.Split(';').GetAssetMatcher()
                 ?? new AssetMatcher(null);
             List<UnixPath> targetDirectories = ResolveTargetDirectories(local);

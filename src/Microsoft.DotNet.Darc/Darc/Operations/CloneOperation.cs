@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Maestro.Common;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
@@ -60,6 +61,7 @@ internal class CloneOperation : Operation
 {
     private readonly CloneCommandLineOptions _options;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly IRemoteTokenProvider _remoteTokenProvider;
     private readonly ILogger<CloneOperation> _logger;
 
     private const string GitDirRedirectPrefix = "gitdir: ";
@@ -67,10 +69,12 @@ internal class CloneOperation : Operation
     public CloneOperation(
         CloneCommandLineOptions options,
         IRemoteFactory remoteFactory,
+        IRemoteTokenProvider remoteTokenProvider,
         ILogger<CloneOperation> logger)
     {
         _options = options;
         _remoteFactory = remoteFactory;
+        _remoteTokenProvider = remoteTokenProvider;
         _logger = logger;
     }
 
@@ -85,7 +89,7 @@ internal class CloneOperation : Operation
 
             if (string.IsNullOrWhiteSpace(_options.RepoUri))
             {
-                var local = new Local(_options.GetRemoteTokenProvider(), _logger);
+                var local = new Local(_remoteTokenProvider, _logger);
                 IEnumerable<DependencyDetail>  rootDependencies = await local.GetDependenciesAsync();
                 IEnumerable<StrippedDependency> stripped = rootDependencies.Select(StrippedDependency.GetDependency);
                 foreach (StrippedDependency d in stripped)
@@ -237,7 +241,7 @@ internal class CloneOperation : Operation
         if (Directory.Exists(repoPath))
         {
             _logger.LogDebug($"Repo path {repoPath} already exists, assuming we cloned already and skipping");
-            local = new Local(_options.GetRemoteTokenProvider(), _logger, repoPath);
+            local = new Local(_remoteTokenProvider, _logger, repoPath);
         }
         else
         {
@@ -245,7 +249,7 @@ internal class CloneOperation : Operation
             Directory.CreateDirectory(repoPath);
             File.WriteAllText(Path.Combine(repoPath, ".git"), GetGitDirRedirectString(masterRepoGitDirPath));
             _logger.LogInformation($"Checking out {commit} in {repoPath}");
-            local = new Local(_options.GetRemoteTokenProvider(), _logger, repoPath);
+            local = new Local(_remoteTokenProvider, _logger, repoPath);
             local.Checkout(commit, true);
         }
 
@@ -262,7 +266,7 @@ internal class CloneOperation : Operation
         {
             await HandleMasterCopyWithDefaultGitDir(remoteFactory, repoUrl, masterGitRepoPath, masterRepoGitDirPath);
         }
-        var local = new Local(_options.GetRemoteTokenProvider(), _logger, masterGitRepoPath);
+        var local = new Local(_remoteTokenProvider, _logger, masterGitRepoPath);
         await local.AddRemoteIfMissingAsync(masterGitRepoPath, repoUrl);
     }
 
@@ -367,7 +371,7 @@ internal class CloneOperation : Operation
             _logger.LogDebug($"Master .gitdir exists and master folder {masterGitRepoPath} does not.  Creating master folder.");
             Directory.CreateDirectory(masterGitRepoPath);
             File.WriteAllText(Path.Combine(masterGitRepoPath, ".git"), gitDirRedirect);
-            var masterLocal = new Local(_options.GetRemoteTokenProvider(), _logger, masterGitRepoPath);
+            var masterLocal = new Local(_remoteTokenProvider, _logger, masterGitRepoPath);
             _logger.LogDebug($"Checking out default commit in {masterGitRepoPath}");
             masterLocal.Checkout(null, true);
         }

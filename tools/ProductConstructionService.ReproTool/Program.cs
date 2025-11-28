@@ -32,7 +32,7 @@ Parser.Default.ParseArguments(args, options)
         o.RegisterServices(services);
         services.AddSingleton<VmrDependencyResolver>();
 
-        services.AddMultiVmrSupport(Path.GetTempPath());
+        services.AddCodeflow(Path.GetTempPath());
 
         var provider = services.BuildServiceProvider();
 

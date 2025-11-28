@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
@@ -17,19 +18,22 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class GetDependenciesOperation : Operation
 {
     private readonly GetDependenciesCommandLineOptions _options;
+    private readonly IRemoteTokenProvider _remoteTokenProvider;
     private readonly ILogger<GetDependenciesOperation> _logger;
 
     public GetDependenciesOperation(
         GetDependenciesCommandLineOptions options,
+        IRemoteTokenProvider remoteTokenProvider,
         ILogger<GetDependenciesOperation> logger)
     {
         _options = options;
+        _remoteTokenProvider = remoteTokenProvider;
         _logger = logger;
     }
 
     public override async Task<int> ExecuteAsync()
     {
-        var local = new Local(_options.GetRemoteTokenProvider(), _logger);
+        var local = new Local(_remoteTokenProvider, _logger);
 
         try
         {
