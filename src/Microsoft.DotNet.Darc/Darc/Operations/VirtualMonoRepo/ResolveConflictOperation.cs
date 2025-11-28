@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Maestro.Common;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -28,6 +29,7 @@ internal class ResolveConflictOperation(
         IDependencyFileManager dependencyFileManager,
         ILocalGitRepoFactory localGitRepoFactory,
         IBarApiClient barApiClient,
+        IRemoteTokenProvider remoteTokenProvider,
         IFileSystem fileSystem,
         IProcessManager processManager,
         ILogger<ResolveConflictOperation> logger)
@@ -39,6 +41,7 @@ internal class ResolveConflictOperation(
     private readonly IRepositoryCloneManager _repositoryCloneManager = repositoryCloneManager;
     private readonly IProcessManager _processManager = processManager;
     private readonly IBarApiClient _barClient = barApiClient;
+    private readonly IRemoteTokenProvider _remoteTokenProvider = remoteTokenProvider;
     private readonly ILogger<ResolveConflictOperation> _logger = logger;
     private readonly IFileSystem _fileSystem = fileSystem;
 
@@ -94,7 +97,7 @@ internal class ResolveConflictOperation(
 
     private async Task ValidateLocalRepo(Subscription subscription, NativePath repoPath, string mappingName)
     {
-        var local = new Local(_options.GetRemoteTokenProvider(), _logger, repoPath);
+        var local = new Local(_remoteTokenProvider, _logger, repoPath);
         var sourceDependency = await local.GetSourceDependencyAsync();
 
         if (string.IsNullOrEmpty(sourceDependency?.Mapping))
@@ -155,7 +158,7 @@ internal class ResolveConflictOperation(
 
     private async Task<string> GetLastFlownShaAsync(Subscription subscription, NativePath localPath)
     {
-        var local = new Local(_options.GetRemoteTokenProvider(), _logger, localPath);
+        var local = new Local(_remoteTokenProvider, _logger, localPath);
 
         if (subscription.IsForwardFlow())
         {

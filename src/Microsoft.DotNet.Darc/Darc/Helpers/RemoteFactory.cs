@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Maestro.Common;
+using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -18,8 +19,12 @@ internal class RemoteFactory : IRemoteFactory
     private readonly ILoggerFactory _loggerFactory;
     private readonly ICommandLineOptions _options;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IAzureDevOpsTokenProvider _azdoTokenProvider;
+    private readonly IRemoteTokenProvider _githubTokenProvider;
 
     public RemoteFactory(
+        IAzureDevOpsTokenProvider azdoTokenProvider,
+        [FromKeyedServices("github")]IRemoteTokenProvider githubTokenProvider,
         ILoggerFactory loggerFactory,
         ICommandLineOptions options,
         IServiceProvider serviceProvider)
@@ -27,6 +32,8 @@ internal class RemoteFactory : IRemoteFactory
         _loggerFactory = loggerFactory;
         _options = options;
         _serviceProvider = serviceProvider;
+        _azdoTokenProvider = azdoTokenProvider;
+        _githubTokenProvider = githubTokenProvider;
     }
 
     public Task<IRemote> CreateRemoteAsync(string repoUrl)
@@ -51,7 +58,7 @@ internal class RemoteFactory : IRemoteFactory
         {
             GitRepoType.GitHub =>
                 new GitHubClient(
-                    options.GetGitHubTokenProvider(),
+                    _githubTokenProvider,
                     new ProcessManager(_loggerFactory.CreateLogger<IProcessManager>(), options.GitLocation),
                     _loggerFactory.CreateLogger<GitHubClient>(),
                     temporaryRepositoryRoot,
@@ -60,12 +67,12 @@ internal class RemoteFactory : IRemoteFactory
 
             GitRepoType.AzureDevOps =>
                 new AzureDevOpsClient(
-                    options.GetAzdoTokenProvider(),
+                    _azdoTokenProvider,
                     new ProcessManager(_loggerFactory.CreateLogger<IProcessManager>(), options.GitLocation),
                     _loggerFactory.CreateLogger<AzureDevOpsClient>(),
                     temporaryRepositoryRoot),
 
-            _ => throw new System.InvalidOperationException($"Cannot create a remote of type {repoType}"),
+            _ => throw new InvalidOperationException($"Cannot create a remote of type {repoType}"),
         };
     }
 }
