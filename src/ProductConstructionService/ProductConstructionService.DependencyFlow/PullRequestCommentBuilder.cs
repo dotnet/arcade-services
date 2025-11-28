@@ -164,7 +164,7 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
                 ```bash
                 darc vmr resolve-conflict --subscription {subscription.Id}
                 ```
-                This should apply the build `{update.BuildId}` with sources from `{GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha)}`
+                This should apply the build `{update.BuildId}` with sources from [`{Microsoft.DotNet.DarcLib.Commit.GetShortSha(update.SourceSha)}`]({GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha)})
             4. Commit & push the changes
             5. Once pushed, the `Codeflow verification` check will turn green.  
                 If not, a new build might have flown into the PR and you might need to run the command above again.
