@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Yaml;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -81,24 +80,5 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionYaml>
                   ExcludedAssets = excludedAssets,
               })
     {
-    }
-
-    protected override async Task<int> ParseAndValidateData(SubscriptionYaml data)
-    {
-        int result = await base.ParseAndValidateData(data);
-        if (result != Constants.SuccessCode)
-        {
-            return result;
-        }
-
-        if (!bool.TryParse(data.Enabled, out _))
-        {
-            _logger.LogError("Enabled is not a valid boolean value.");
-            return Constants.ErrorCode;
-        }
-
-        _data.Enabled = ParseSetting(data.Enabled, _data.Enabled, false)!;
-
-        return Constants.SuccessCode;
     }
 }

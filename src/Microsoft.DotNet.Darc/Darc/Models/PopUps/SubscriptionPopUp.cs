@@ -125,6 +125,14 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Sub
             return Constants.ErrorCode;
         }
 
+        _data.Enabled = ParseSetting(outputYamlData.Enabled, _data.Enabled, false);
+
+        if (!bool.TryParse(outputYamlData.Enabled, out bool _))
+        {
+            _logger.LogError("Batchable is not a valid boolean value.");
+            return Constants.ErrorCode;
+        }
+
         _data.MergePolicies = outputYamlData.MergePolicies;
 
         _data.Channel = ParseSetting(outputYamlData.Channel, _data.Channel, false);
