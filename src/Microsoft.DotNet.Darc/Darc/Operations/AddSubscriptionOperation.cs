@@ -152,7 +152,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             return Constants.ErrorCode;
         }
 
-        bool enabled = _options.Enabled != false; //if not pre-filled, default to true
+        bool enabled = _options.Enabled;
         string channel = _options.Channel;
         string sourceRepository = _options.SourceRepository;
         string targetRepository = _options.TargetRepository;
