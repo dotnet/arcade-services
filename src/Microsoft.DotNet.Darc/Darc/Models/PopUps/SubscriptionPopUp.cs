@@ -129,7 +129,7 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Sub
 
         if (!bool.TryParse(outputYamlData.Enabled, out bool _))
         {
-            _logger.LogError("Batchable is not a valid boolean value.");
+            _logger.LogError("Enabled is not a valid boolean value.");
             return Constants.ErrorCode;
         }
 
