@@ -15,7 +15,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps;
 internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
 {
     private readonly ILogger _logger;
-    private readonly RepositoryPoliciesYaml _yamlData;
+    private readonly BranchMergePoliciesYaml _yamlData;
     public string Repository => _yamlData.Repository;
     public string Branch => _yamlData.Branch;
     public List<MergePolicy> MergePolicies => MergePoliciesPopUpHelpers.ConvertMergePolicies(_yamlData.MergePolicies);
@@ -29,7 +29,7 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         : base(path)
     {
         _logger = logger;
-        _yamlData = new RepositoryPoliciesYaml
+        _yamlData = new BranchMergePoliciesYaml
         {
             Repository = GetCurrentSettingForDisplay(repository, "<required>", false),
             Branch = GetCurrentSettingForDisplay(branch, "<required>", false),
@@ -66,14 +66,14 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
 
     public override Task<int> ProcessContents(IList<Line> contents)
     {
-        RepositoryPoliciesYaml outputYamlData;
+        BranchMergePoliciesYaml outputYamlData;
 
         try
         {
             // Join the lines back into a string and deserialize as YAML.
             string yamlString = contents.Aggregate("", (current, line) => $"{current}{System.Environment.NewLine}{line.Text}");
             IDeserializer serializer = new DeserializerBuilder().Build();
-            outputYamlData = serializer.Deserialize<RepositoryPoliciesYaml>(yamlString);
+            outputYamlData = serializer.Deserialize<BranchMergePoliciesYaml>(yamlString);
         }
         catch (Exception e)
         {
