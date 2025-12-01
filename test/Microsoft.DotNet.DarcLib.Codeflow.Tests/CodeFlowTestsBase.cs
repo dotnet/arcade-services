@@ -452,8 +452,24 @@ internal abstract class CodeFlowTestsBase
         return build;
     }
 
-    protected static string GetTestBranchName([CallerMemberName] string testName = "", bool forwardFlow = true)
+    protected static string GetTestBranchName([CallerMemberName] string testName = "", bool forwardFlow = false)
     {
         return $"{(forwardFlow ? "forward" : "backward")}/{testName}/{Guid.NewGuid().ToString().Substring(0, 16)}";
+    }
+
+    protected async Task FinalizeBackFlow(bool enableRebase, string branchName)
+        => await FinalizeFlow(ProductRepoPath, enableRebase, branchName);
+
+    protected async Task FinalizeForwardFlow(bool enableRebase, string branchName)
+        => await FinalizeFlow(VmrPath, enableRebase, branchName);
+
+    private async Task FinalizeFlow(NativePath targetRepo, bool enableRebase, string branchName)
+    {
+        if (enableRebase)
+        {
+            await GitOperations.CommitAll(targetRepo, "Commit codeflow", allowEmpty: true);
+        }
+
+        await GitOperations.MergePrBranch(targetRepo, branchName);
     }
 }

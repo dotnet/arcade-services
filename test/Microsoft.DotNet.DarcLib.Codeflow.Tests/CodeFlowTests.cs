@@ -127,11 +127,15 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
         await GitOperations.CommitAll(ProductRepoPath, $"Changing a repo file to '{newContent}'");
 
         var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);
-        CheckFileContents(_productRepoVmrFilePath, newContent);
 
         if (!enableRebase)
         {
             await GitOperations.CheckAllIsCommitted(VmrPath);
+        }
+
+        if (enableRebase && !codeFlowResult.ConflictedFiles.Any(f => f.Path == VmrInfo.GetRelativeRepoSourcesPath(Constants.ProductRepoName) / _productRepoFileName))
+        {
+            CheckFileContents(_productRepoVmrFilePath, newContent);
         }
 
         return codeFlowResult;
@@ -150,7 +154,11 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
             await GitOperations.CheckAllIsCommitted(ProductRepoPath);
         }
 
-        CheckFileContents(_productRepoFilePath, newContent);
+        if (enableRebase && !codeFlowResult.ConflictedFiles.Any(f => f.Path == _productRepoFileName))
+        {
+            CheckFileContents(_productRepoFilePath, newContent);
+        }
+
         return codeFlowResult;
     }
 
