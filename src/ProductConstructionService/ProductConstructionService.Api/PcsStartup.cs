@@ -126,7 +126,7 @@ internal static class PcsStartup
         builder.AddMetricRecorder();
         builder.AddWorkItemQueues(azureCredential, waitForInitialization: true);
         builder.AddDependencyFlowProcessors();
-        builder.AddVmrRegistrations();
+        builder.AddCodeflow();
         builder.AddGitHubClientFactory(
             builder.Configuration[ConfigurationKeys.GitHubClientId],
             builder.Configuration[ConfigurationKeys.GitHubClientSecret]);

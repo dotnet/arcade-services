@@ -13,7 +13,7 @@ internal static class VmrConfiguration
     private const string VmrReadyHealthCheckName = "VmrReady";
     private const string VmrReadyHealthCheckTag = "vmrReady";
 
-    public static void AddVmrRegistrations(this WebApplicationBuilder builder)
+    public static void AddCodeflow(this WebApplicationBuilder builder)
     {
         string tmpPath = builder.Configuration.GetRequiredValue(TmpPathKey);
         builder.Services.AddCodeflow(tmpPath);
