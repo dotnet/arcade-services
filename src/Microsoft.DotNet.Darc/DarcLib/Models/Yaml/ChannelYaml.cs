@@ -1,0 +1,16 @@
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using YamlDotNet.Serialization;
+
+namespace Microsoft.DotNet.DarcLib.Models.Yaml;
+
+public class ChannelYaml
+{
+    [YamlMember(Alias = "Name", ApplyNamingConventions = false)]
+    public string Name { get; set; }
+
+    [YamlMember(Alias = "Classification", ApplyNamingConventions = false,
+        DefaultValuesHandling = DefaultValuesHandling.OmitNull | DefaultValuesHandling.OmitDefaults)]
+    public string Classification { get; set; }
+}

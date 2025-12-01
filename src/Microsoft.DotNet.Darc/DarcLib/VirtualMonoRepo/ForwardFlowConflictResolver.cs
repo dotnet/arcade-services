@@ -169,7 +169,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         // Known conflict in source-manifest.json
         if (string.Equals(conflictedFile, VmrInfo.DefaultRelativeSourceManifestPath, StringComparison.OrdinalIgnoreCase))
         {
-            await TryResolvingSourceManifestConflict(vmr, codeflowOptions.Mapping.Name!, codeflowOptions.EnableRebase, cancellationToken);
+            await TryResolvingSourceManifestConflict(vmr, codeflowOptions.Mapping.Name!, cancellationToken);
             return true;
         }
 
@@ -186,7 +186,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
     private async Task TryResolvingSourceManifestConflict(
         ILocalGitRepo vmr,
         string mappingName,
-        bool enableRebase,
         CancellationToken cancellationToken)
     {
         _logger.LogDebug("Auto-resolving conflict in {file}", VmrInfo.DefaultRelativeSourceManifestPath);
@@ -195,8 +194,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         // current mapping (and its submodules) with our branches' information
         var result = await vmr.RunGitCommandAsync(
             // During merge: :2: is ours (current branch), :3: is theirs (branch being merged)
-            // During rebase: :2: is theirs (base branch), :3: is ours (commits being replayed)
-            ["show", (enableRebase ? ":3:" : ":2:") + VmrInfo.DefaultRelativeSourceManifestPath],
+            ["show", ":3:" + VmrInfo.DefaultRelativeSourceManifestPath],
             cancellationToken);
 
         var theirSourceManifest = SourceManifest.FromJson(result.StandardOutput);
@@ -210,7 +208,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             updatedMapping.BarId);
 
         var theirAffectedSubmodules = theirSourceManifest.Submodules
-            .Where(s => s.Path.StartsWith(mappingName + "/"))
+            .Where(s => s.Path.StartsWith(mappingName + '/'))
             .ToList();
         foreach (var submodule in theirAffectedSubmodules)
         {
@@ -218,7 +216,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         }
 
         var ourAffectedSubmodules = ourSourceManifest.Submodules
-            .Where(s => s.Path.StartsWith(mappingName + "/"))
+            .Where(s => s.Path.StartsWith(mappingName + '/'))
             .ToList();
         foreach (var submodule in ourAffectedSubmodules)
         {

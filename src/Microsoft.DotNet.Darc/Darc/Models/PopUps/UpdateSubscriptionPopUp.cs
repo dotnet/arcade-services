@@ -4,17 +4,16 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.Yaml;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models.PopUps;
 
-internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionUpdateData>
+internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionYaml>
 {
     private readonly ILogger _logger;
-
-    public bool Enabled => bool.Parse(_data.Enabled);
 
     private UpdateSubscriptionPopUp(
         string path,
@@ -26,7 +25,7 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionUpdateDat
         IEnumerable<string> suggestedRepositories,
         IEnumerable<string> availableUpdateFrequencies,
         IEnumerable<string> availableMergePolicyHelp,
-        SubscriptionUpdateData data)
+        SubscriptionYaml data)
         : base(path, forceCreation, suggestedChannels, suggestedRepositories, availableUpdateFrequencies, availableMergePolicyHelp, logger, gitRepoFactory, data,
             header: [
                 new Line($"Use this form to update the values of subscription '{subscription.Id}'.", true),
@@ -64,7 +63,7 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionUpdateDat
         string targetDirectory,
         List<string> excludedAssets)
         : this(path, forceCreation, gitRepoFactory, logger, subscription, suggestedChannels, suggestedRepositories, availableUpdateFrequencies, availableMergePolicyHelp,
-              new SubscriptionUpdateData
+              new SubscriptionYaml
               {
                   Id = GetCurrentSettingForDisplay(subscription.Id.ToString(), subscription.Id.ToString(), false),
                   Channel = GetCurrentSettingForDisplay(subscription.Channel.Name, subscription.Channel.Name, false),
@@ -84,7 +83,7 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionUpdateDat
     {
     }
 
-    protected override async Task<int> ParseAndValidateData(SubscriptionUpdateData data)
+    protected override async Task<int> ParseAndValidateData(SubscriptionYaml data)
     {
         int result = await base.ParseAndValidateData(data);
         if (result != Constants.SuccessCode)
