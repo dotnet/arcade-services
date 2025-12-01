@@ -10,7 +10,6 @@ using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
 
 namespace Microsoft.DotNet.DarcLib.Codeflow.Tests.Helpers;
 
