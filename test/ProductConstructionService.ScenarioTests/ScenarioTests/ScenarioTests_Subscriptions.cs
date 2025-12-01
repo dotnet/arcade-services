@@ -157,6 +157,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                     - Name: Standard
                     Source Enabled: False
                     Excluded Assets: []
+                    Enabled: True
                     ";
 
                 await using AsyncDisposableValue<string> yamlSubscriptionId = await CreateSubscriptionAsync(yamlDefinition);
@@ -189,6 +190,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                     - Name: standard
                     Source Enabled: False
                     Excluded Assets: []
+                    Enabled: True
                     ";
 
                 await using AsyncDisposableValue<string> yamlSubscription2Id = await CreateSubscriptionAsync(yamlDefinition2);
@@ -229,6 +231,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                         - MySpecialCheck
                     Source Enabled: False
                     Excluded Assets: []
+                    Enabled: True
                     """;
 
                 Assert.ThrowsAsync<ScenarioTestException>(async () =>
