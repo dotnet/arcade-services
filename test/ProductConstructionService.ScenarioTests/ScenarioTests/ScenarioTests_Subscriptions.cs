@@ -147,7 +147,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                 TestContext.WriteLine("Testing YAML for darc add-subscription");
 
                 var yamlDefinition = $@"
-                    Id: c1f9e2d7-8a4b-4c3e-9f6d-2b5a7c8e0d1f
+                    Id: <id is set by the backend>
                     Channel: {channel1Name}
                     Source Repository URL: {repo1Uri}
                     Target Repository URL: {repo2Uri}
@@ -181,7 +181,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                 TestContext.WriteLine("Change casing of the various properties. Expecting no changes.");
 
                 var yamlDefinition2 = $@"
-                    Id: e4b8d2a1-6f3c-4e7b-9a8d-5c1f0b2e3d4f
+                    Id: <id is set by the backend>
                     Channel: {channel1Name}
                     Source Repository URL: {repo1Uri}
                     Target Repository URL: {repo2Uri}
@@ -214,7 +214,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                 TestContext.WriteLine("Attempt to add multiple of the same merge policy checks. Should fail.");
 
                 var yamlDefinition3 = $"""
-                    Id: d3f9c1a7-8b4e-4f12-9f3d-2e5b6c7a8d9f
+                    Id: <id is set by the backend>
                     Channel: {channel1Name}
                     Source Repository URL: {repo1Uri}
                     Target Repository URL: {repo2Uri}
