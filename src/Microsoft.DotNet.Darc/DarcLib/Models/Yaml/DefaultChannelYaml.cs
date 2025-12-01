@@ -5,7 +5,7 @@ using YamlDotNet.Serialization;
 
 namespace Microsoft.DotNet.DarcLib.Models.Yaml;
 
-public class DefaultChannel
+public class DefaultChannelYaml
 {
     [YamlMember(Alias = "Repository", ApplyNamingConventions = false)]
     public string Repository { get; set; }

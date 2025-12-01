@@ -6,7 +6,7 @@ using YamlDotNet.Serialization;
 
 namespace Microsoft.DotNet.DarcLib.Models.Yaml;
 
-public class RepositoryPoliciesYaml
+public class BranchMergePoliciesYaml
 {
     public const string RepoElement = "Repository URL";
     public const string BranchElement = "Branch";
