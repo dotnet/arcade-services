@@ -30,12 +30,16 @@ public static class CodeflowExtensions
         string? vmrPath = null,
         string gitLocation = "git")
     {
-        services.TryAddSingleton<IVmrInfo>(new VmrInfo(
+        services.TryAddScoped<IVmrInfo>(_ => new VmrInfo(
             vmrPath == null ? string.Empty : Path.GetFullPath(vmrPath),
             Path.GetFullPath(tmpPath)));
         services.TryAddScoped<ISourceManifest>(sp =>
         {
             var vmrInfo = sp.GetRequiredService<IVmrInfo>();
+            if (vmrInfo.VmrPath == string.Empty)
+            {
+                return new SourceManifest([], []);
+            }
             return SourceManifest.FromFile(vmrInfo.SourceManifestPath);
         });
 

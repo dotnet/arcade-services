@@ -1,30 +1,38 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using YamlDotNet.Serialization;
 
-namespace Microsoft.DotNet.Darc.Models.PopUps;
+namespace Microsoft.DotNet.DarcLib.Models.Yaml;
 
 /// <summary>
 /// Helper class for YAML encoding/decoding purposes.
 /// This is used so that we can have friendly alias names for elements.
 /// </summary>
-internal class SubscriptionData
+public class SubscriptionYaml
 {
+    public const string IdElement = "Id";
+    public const string EnabledElement = "Enabled";
+    public const string ChannelElement = "Channel";
     public const string SourceRepoElement = "Source Repository URL";
     public const string TargetRepoElement = "Target Repository URL";
+    public const string TargetBranchElement = "Target Branch";
+    public const string UpdateFrequencyElement = "Update Frequency";
+    public const string BatchableElement = "Batchable";
+    public const string ExcludedAssetsElement = "Excluded Assets";
+    public const string MergePolicyElement = "Merge Policies";
+    public const string FailureNotificationTagsElement = "Pull Request Failure Notification Tags";
     public const string SourceEnabledElement = "Source Enabled";
+    public const string SourceDirectoryElement = "Source Directory";
+    public const string TargetDirectoryElement = "Target Directory";
 
-    private const string ChannelElement = "Channel";
-    private const string TargetBranchElement = "Target Branch";
-    private const string UpdateFrequencyElement = "Update Frequency";
-    private const string MergePolicyElement = "Merge Policies";
-    private const string BatchableElement = "Batchable";
-    private const string FailureNotificationTagsElement = "Pull Request Failure Notification Tags";
-    private const string SourceDirectoryElement = "Source Directory";
-    private const string TargetDirectoryElement = "Target Directory";
-    private const string ExcludedAssetsElement = "Excluded Assets";
+    [YamlMember(Alias = IdElement, ApplyNamingConventions = false)]
+    public string Id { get; set; }
+
+    [YamlMember(Alias = EnabledElement, ApplyNamingConventions = false)]
+    public string Enabled { get; set; }
 
     [YamlMember(Alias = ChannelElement, ApplyNamingConventions = false)]
     public string Channel { get; set; }
@@ -48,7 +56,7 @@ internal class SubscriptionData
     public List<string> ExcludedAssets { get; set; }
 
     [YamlMember(Alias = MergePolicyElement, ApplyNamingConventions = false)]
-    public List<MergePolicyData> MergePolicies { get; set; }
+    public List<MergePolicyYaml> MergePolicies { get; set; }
 
     [YamlMember(Alias = FailureNotificationTagsElement, ApplyNamingConventions = false)]
     public string FailureNotificationTags { get; set; }

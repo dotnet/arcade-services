@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.MergePolicyEvaluation;
+using Microsoft.DotNet.DarcLib.Models.Yaml;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
@@ -55,7 +56,7 @@ public static class MergePoliciesPopUpHelpers
         return true;
     }
 
-    public static List<MergePolicy> ConvertMergePolicies(List<MergePolicyData> mergePolicies)
+    public static List<MergePolicy> ConvertMergePolicies(List<MergePolicyYaml> mergePolicies)
     {
         return mergePolicies?.Select(
                 d => 
@@ -70,10 +71,10 @@ public static class MergePoliciesPopUpHelpers
             .ToList();
     }
 
-    public static List<MergePolicyData> ConvertMergePolicies(IEnumerable<MergePolicy> value)
+    public static List<MergePolicyYaml> ConvertMergePolicies(IEnumerable<MergePolicy> value)
     {
         return value.Select(
-                d => new MergePolicyData
+                d => new MergePolicyYaml
                 {
                     Name = d.Name,
                     Properties = d.Properties != null ?

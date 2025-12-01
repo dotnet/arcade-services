@@ -45,7 +45,6 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrDependencyTracker _dependencyTracker;
-    private readonly ILocalGitClient _localGitRepo;
 
     public VmrCloneManager(
         IVmrInfo vmrInfo,
@@ -61,7 +60,6 @@ public class VmrCloneManager : CloneManager, IVmrCloneManager
     {
         _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
-        _localGitRepo = localGitRepo;
     }
 
     public async Task<ILocalGitRepo> PrepareVmrAsync(

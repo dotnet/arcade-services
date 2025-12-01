@@ -197,7 +197,7 @@ public class PullRequestCommentBuilderTests
             UpdaterId = "test-updater-id",
             SubscriptionId = forwardFlowSubscription.Id,
             BuildId = 12345,
-            SourceSha = "abc123",
+            SourceSha = "abcdef123",
             SourceRepo = $"https://github.com/{FakeOrgName}/source-repo"
         };
 
@@ -256,7 +256,7 @@ public class PullRequestCommentBuilderTests
             UpdaterId = "test-updater-id",
             SubscriptionId = forwardFlowSubscription.Id,
             BuildId = 12345,
-            SourceSha = "abcdefg123",
+            SourceSha = "abcdef123",
             SourceRepo = $"https://github.com/{FakeOrgName}/source-repo"
         };
 
@@ -305,7 +305,7 @@ public class PullRequestCommentBuilderTests
             UpdaterId = "test-updater-id",
             SubscriptionId = forwardFlowSubscription.Id,
             BuildId = 12345,
-            SourceSha = "abc123",
+            SourceSha = "abcdef123",
             SourceRepo = $"https://github.com/{FakeOrgName}/source-repo"
         };
 

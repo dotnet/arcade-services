@@ -243,6 +243,7 @@ public class BarApiClient : IBarApiClient
     /// <param name="excludedAssets">List of assets to exclude from the source-enabled code flow</param>
     /// <returns>Newly created subscription, if successful</returns>
     public Task<Subscription> CreateSubscriptionAsync(
+        bool enabled,
         string channelName,
         string sourceRepo,
         string targetRepo,
@@ -272,6 +273,7 @@ public class BarApiClient : IBarApiClient
             },
             failureNotificationTags)
         {
+            Enabled = enabled,
             SourceEnabled = sourceEnabled,
             SourceDirectory = sourceDirectory,
             TargetDirectory = targetDirectory,
