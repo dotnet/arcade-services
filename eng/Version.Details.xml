@@ -55,33 +55,33 @@
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="11.0.0-beta.25571.8">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="11.0.0-beta.25578.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>a8b9e73f56e84dcb4c7ed0f23f79b308b4f83a01</Sha>
+      <Sha>846929727a388f2b1fd3ccf21f67694f44b91b4d</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.SignTool" Version="11.0.0-beta.25571.8">
+    <Dependency Name="Microsoft.DotNet.SignTool" Version="11.0.0-beta.25578.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>a8b9e73f56e84dcb4c7ed0f23f79b308b4f83a01</Sha>
+      <Sha>846929727a388f2b1fd3ccf21f67694f44b91b4d</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.Build.Tasks.Feed" Version="11.0.0-beta.25571.8">
+    <Dependency Name="Microsoft.DotNet.Build.Tasks.Feed" Version="11.0.0-beta.25578.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>a8b9e73f56e84dcb4c7ed0f23f79b308b4f83a01</Sha>
+      <Sha>846929727a388f2b1fd3ccf21f67694f44b91b4d</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="11.0.0-beta.25571.8">
+    <Dependency Name="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="11.0.0-beta.25578.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>a8b9e73f56e84dcb4c7ed0f23f79b308b4f83a01</Sha>
+      <Sha>846929727a388f2b1fd3ccf21f67694f44b91b4d</Sha>
     </Dependency>
     <Dependency Name="Microsoft.DotNet.VersionTools" Version="8.0.0-beta.25555.2">
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>048a8c0ba5b72234301a3605c424ee9f9ff99772</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DncEng.SecretManager" Version="1.1.0-beta.25571.1">
+    <Dependency Name="Microsoft.DncEng.SecretManager" Version="1.1.0-beta.25576.1">
       <Uri>https://github.com/dotnet/dnceng</Uri>
-      <Sha>5e1d7810d4ce512c7e8b460b228fa3f9a77aa849</Sha>
+      <Sha>6b49135c494c814a01232e423244f14241cf09b4</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DncEng.Configuration.Bootstrap" Version="1.1.0-beta.25571.1">
+    <Dependency Name="Microsoft.DncEng.Configuration.Bootstrap" Version="1.1.0-beta.25576.1">
       <Uri>https://github.com/dotnet/dnceng</Uri>
-      <Sha>5e1d7810d4ce512c7e8b460b228fa3f9a77aa849</Sha>
+      <Sha>6b49135c494c814a01232e423244f14241cf09b4</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>
