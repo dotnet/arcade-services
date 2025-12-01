@@ -452,7 +452,7 @@ internal abstract class CodeFlowTestsBase
         return build;
     }
 
-    protected static string GetTestBranchName([CallerMemberName] string testName = "", bool forwardFlow = true)
+    protected static string GetTestBranchName([CallerMemberName] string testName = "", bool forwardFlow = false)
     {
         return $"{(forwardFlow ? "forward" : "backward")}/{testName}/{Guid.NewGuid().ToString().Substring(0, 16)}";
     }

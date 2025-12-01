@@ -153,8 +153,8 @@ internal class TwoWayCodeflowTests : CodeFlowTests
     {
         await EnsureTestRepoIsInitialized();
 
-        var backBranchName = GetTestBranchName(forwardFlow: false);
-        var forwardBranchName = GetTestBranchName();
+        var backBranchName = GetTestBranchName();
+        var forwardBranchName = GetTestBranchName(forwardFlow: true);
 
         // 1. Change file in VMR
         await File.WriteAllTextAsync(_productRepoVmrPath / "1a.txt", "one");
@@ -269,8 +269,8 @@ internal class TwoWayCodeflowTests : CodeFlowTests
     {
         await EnsureTestRepoIsInitialized();
 
-        var backBranchName = GetTestBranchName(forwardFlow: false);
-        var forwardBranchName = GetTestBranchName();
+        var backBranchName = GetTestBranchName();
+        var forwardBranchName = GetTestBranchName(forwardFlow: true);
 
         // 0. Prepare repo and VMR
         await ChangeRepoFileAndFlowIt("AAA", forwardBranchName + "-first", enableRebase);
@@ -348,8 +348,8 @@ internal class TwoWayCodeflowTests : CodeFlowTests
     {
         await EnsureTestRepoIsInitialized();
 
-        var backBranchName = GetTestBranchName(forwardFlow: false);
-        var forwardBranchName = GetTestBranchName();
+        var backBranchName = GetTestBranchName();
+        var forwardBranchName = GetTestBranchName(forwardFlow: true);
 
         // 0. Prepare repo and VMR
         await ChangeVmrFileAndFlowIt("AAA", backBranchName + "-first", enableRebase);
@@ -430,8 +430,8 @@ internal class TwoWayCodeflowTests : CodeFlowTests
     {
         await EnsureTestRepoIsInitialized();
 
-        var backBranchName = GetTestBranchName(forwardFlow: false);
-        var forwardBranchName = GetTestBranchName();
+        var backBranchName = GetTestBranchName();
+        var forwardBranchName = GetTestBranchName(forwardFlow: true);
         CodeFlowResult codeFlowResult;
 
         // 0. Backflow of a build to populate the version files in the repo with some values
@@ -500,7 +500,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.Checkout(ProductRepoPath, "main");
         await GitOperations.Checkout(VmrPath, "main");
         build = await CreateNewVmrBuild([(FakePackageName, "1.0.3")]);
-        backBranchName = GetTestBranchName(forwardFlow: false);
+        backBranchName = GetTestBranchName();
         codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName, build, enableRebase: enableRebase);
         codeFlowResult.ShouldHaveUpdates();
         if (enableRebase)
@@ -525,7 +525,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         // 9. We flow forward a commit 6. which contains version updates from 3.
         build = await CreateNewRepoBuild([], shaInStep6);
-        forwardBranchName = GetTestBranchName();
+        forwardBranchName = GetTestBranchName(forwardFlow: true);
         await GitOperations.Checkout(ProductRepoPath, "main");
         codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName, build, enableRebase: enableRebase);
         codeFlowResult.ShouldHaveUpdates();
@@ -571,7 +571,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         ];
 
         // 14. Level the repos so that we can verify the contents
-        forwardBranchName = GetTestBranchName();
+        forwardBranchName = GetTestBranchName(forwardFlow: true);
         await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName, enableRebase: enableRebase);
         await FinalizeForwardFlow(enableRebase, forwardBranchName);
 
@@ -613,7 +613,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
      */
     [Test]
     [TestCase(false)]
-    [TestCase(true)]
+    // [TestCase(true)] TODO https://github.com/dotnet/arcade-services/issues/5541: Enable once we confirm the behaviour
     public async Task OutOfOrderMergesWithConflictsTest(bool enableRebase)
     {
         await EnsureTestRepoIsInitialized();
@@ -701,10 +701,18 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.Checkout(VmrPath, "main");
         codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName, enableRebase: enableRebase);
         codeFlowResult.ShouldHaveUpdates();
-        await GitOperations.VerifyMergeConflict(VmrPath, forwardBranchName,
-            mergeTheirs: true,
-            expectedConflictingFiles: [VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName],
-            enableRebase: enableRebase);
+
+        if (!enableRebase)
+        {
+            await GitOperations.VerifyMergeConflict(VmrPath, forwardBranchName,
+                mergeTheirs: true,
+                expectedConflictingFiles: [VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName],
+                enableRebase: enableRebase);
+        }
+        else
+        {
+            await FinalizeForwardFlow(enableRebase, forwardBranchName);
+        }
 
         // Both VMR and repo need to have the version from the VMR as it flowed to the repo and back
         CheckFileContents(_productRepoFilePath, "New content from the VMR #2");

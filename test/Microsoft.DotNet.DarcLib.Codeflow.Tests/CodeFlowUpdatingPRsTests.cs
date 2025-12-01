@@ -163,7 +163,7 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
     {
         await EnsureTestRepoIsInitialized();
 
-        string forwardFlowBranch = GetTestBranchName();
+        string forwardFlowBranch = GetTestBranchName(forwardFlow: true);
 
         const string conflictingFileName = "Foo.txt";
 
