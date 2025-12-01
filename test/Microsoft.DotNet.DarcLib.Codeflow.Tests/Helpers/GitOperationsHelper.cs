@@ -24,14 +24,14 @@ internal class GitOperationsHelper
 
     public async Task CommitAll(NativePath repo, string commitMessage, bool allowEmpty = false)
     {
-        var result = await _processManager.ExecuteGit(repo, "add", "-A");
+        var result = await ExecuteGitCommand(repo, "add", "-A");
 
         if (!allowEmpty)
         {
             result.ThrowIfFailed($"No files to add in {repo}");
         }
 
-        result = await _processManager.ExecuteGit(repo, "commit", "-m", commitMessage);
+        result = await ExecuteGitCommand(repo, "commit", "-m", commitMessage);
         if (!allowEmpty)
         {
             result.ThrowIfFailed($"No changes to commit in {repo}");
@@ -45,44 +45,44 @@ internal class GitOperationsHelper
 
     public async Task InitialCommit(NativePath repo)
     {
-        await _processManager.ExecuteGit(repo, "init", "-b", "main");
+        await ExecuteGitCommand(repo, "init", "-b", "main");
         await ConfigureGit(repo);
         await CommitAll(repo, "Initial commit", allowEmpty: true);
     }
 
     public async Task<string> GetRepoLastCommit(NativePath repo)
     {
-        var log = await _processManager.ExecuteGit(repo, "log", "--format=format:%H");
+        var log = await ExecuteGitCommand(repo, "log", "--format=format:%H");
         return log.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).First();
     }
 
     public async Task<string> GetRepoLastCommitMessage(NativePath repo)
     {
-        var log = await _processManager.ExecuteGit(repo, "log", "--format=format:%s");
+        var log = await ExecuteGitCommand(repo, "log", "--format=format:%s");
         return log.StandardOutput.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).First();
     }
 
-    public async Task CheckAllIsCommitted(string repo)
+    public async Task CheckAllIsCommitted(NativePath repo)
     {
-        var gitStatus = await _processManager.ExecuteGit(repo, "status", "--porcelain");
+        var gitStatus = await ExecuteGitCommand(repo, "status", "--porcelain");
         gitStatus.StandardOutput.Should().BeEmpty();
     }
 
     public async Task Checkout(NativePath repo, string gitRef)
     {
-        var result = await _processManager.ExecuteGit(repo, "checkout", gitRef);
+        var result = await ExecuteGitCommand(repo, "checkout", gitRef);
         result.ThrowIfFailed($"Could not checkout {gitRef} in {repo}");
     }
 
     public async Task CreateBranch(NativePath repo, string branchName)
     {
-        var result = await _processManager.ExecuteGit(repo, "checkout", "-b", branchName);
+        var result = await ExecuteGitCommand(repo, "checkout", "-b", branchName);
         result.ThrowIfFailed($"Failed to create branch {branchName} in {repo}");
     }
 
     public async Task DeleteBranch(NativePath repo, string branch)
     {
-        var result = await _processManager.ExecuteGit(repo, "branch", "-D", branch);
+        var result = await ExecuteGitCommand(repo, "branch", "-D", branch);
         result.ThrowIfFailed($"Could not delete branch {branch} in {repo}");
     }
 
@@ -92,7 +92,7 @@ internal class GitOperationsHelper
         string submoduleUrl,
         string pathInRepo)
     {
-        await _processManager.ExecuteGit(
+        await ExecuteGitCommand(
             repo,
             "-c",
             "protocol.file.allow=always",
@@ -104,7 +104,7 @@ internal class GitOperationsHelper
             submoduleUrl,
             pathInRepo);
 
-        await _processManager.ExecuteGit(
+        await ExecuteGitCommand(
             repo,
             "submodule",
             "update",
@@ -124,25 +124,25 @@ internal class GitOperationsHelper
 
     public Task RemoveSubmodule(NativePath repo, string submoduleRelativePath)
     {
-        return _processManager.ExecuteGit(repo, "rm", "-f", submoduleRelativePath);
+        return ExecuteGitCommand(repo, "rm", "-f", submoduleRelativePath);
     }
 
     public Task PullMain(NativePath repo)
     {
-        return _processManager.ExecuteGit(repo, "pull", "origin", "main");
+        return ExecuteGitCommand(repo, "pull", "origin", "main");
     }
 
     public Task ChangeSubmoduleUrl(NativePath repo, LocalPath submodulePath, LocalPath newUrl)
     {
-        return _processManager.ExecuteGit(repo, "submodule", "set-url", submodulePath, newUrl);
+        return ExecuteGitCommand(repo, "submodule", "set-url", submodulePath, newUrl);
     }
 
     public async Task MergePrBranch(NativePath repo, string branch, string targetBranch = "main")
     {
-        var result = await _processManager.ExecuteGit(repo, "checkout", targetBranch);
+        var result = await ExecuteGitCommand(repo, "checkout", targetBranch);
         result.ThrowIfFailed($"Could not checkout main branch in {repo}");
 
-        result = await _processManager.ExecuteGit(repo, "merge", "--squash", branch);
+        result = await ExecuteGitCommand(repo, "merge", "--squash", branch);
         result.ThrowIfFailed($"Could not merge branch {branch} to {targetBranch} in {repo}");
 
         await CommitAll(repo, $"Merged branch {branch} into {targetBranch}");
@@ -150,13 +150,13 @@ internal class GitOperationsHelper
         // Sometimes the local repo has a remote pointing to itself (due to how we prepare clones in the tests)
         // So after deleting a branch, it would still see the dead branch of the remote (itself)
         // So we just make sure we fetch the remote data to prune the dead branch
-        await _processManager.ExecuteGit(repo, "fetch", "--all", "--prune");
+        await ExecuteGitCommand(repo, "fetch", "--all", "--prune");
     }
 
     public async Task ConfigureGit(NativePath repo)
     {
-        await _processManager.ExecuteGit(repo, "config", "user.email", DarcLib.Constants.DarcBotEmail);
-        await _processManager.ExecuteGit(repo, "config", "user.name", DarcLib.Constants.DarcBotName);
+        await ExecuteGitCommand(repo, "config", "user.email", DarcLib.Constants.DarcBotEmail);
+        await ExecuteGitCommand(repo, "config", "user.name", DarcLib.Constants.DarcBotName);
     }
 
     // mergeTheirs behaviour:
