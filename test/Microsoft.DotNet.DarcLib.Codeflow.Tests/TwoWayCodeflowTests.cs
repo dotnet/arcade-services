@@ -11,7 +11,6 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.VisualStudio.Services.TestManagement.TestPlanning.WebApi;
 using Moq;
 using NUnit.Framework;
 
