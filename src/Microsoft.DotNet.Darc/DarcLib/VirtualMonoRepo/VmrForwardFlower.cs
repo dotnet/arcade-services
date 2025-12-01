@@ -449,6 +449,9 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         CancellationToken cancellationToken)
     {
         var previousFlow = previousFlows.LastForwardFlow;
+        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+        await vmr.ResetWorkingTree();
+        await vmr.CheckoutAsync(targetBranch);
 
         for (int i = 1; i < depth; i++)
         {
@@ -472,7 +475,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         // Check out the VMR before the flows we want to recreate
         await _localGitClient.ResetWorkingTree(_vmrInfo.VmrPath);
-        var vmr = await _vmrCloneManager.PrepareVmrAsync(
+        vmr = await _vmrCloneManager.PrepareVmrAsync(
             [_vmrInfo.VmrUri],
             [previousFlow.VmrSha],
             previousFlow.VmrSha,

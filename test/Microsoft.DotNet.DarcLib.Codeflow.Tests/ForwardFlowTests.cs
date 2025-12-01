@@ -17,7 +17,6 @@ namespace Microsoft.DotNet.DarcLib.Codeflow.Tests;
 [TestFixture]
 internal class ForwardFlowTests : CodeFlowTests
 {
-
     [Test]
     [TestCase(false)]
     [TestCase(true)]
