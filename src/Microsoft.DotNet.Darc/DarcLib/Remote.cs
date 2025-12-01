@@ -453,7 +453,6 @@ public sealed class Remote : IRemote
         return await _remoteGitClient.GetPullRequestCommentsAsync(pullRequestUrl);
     }
 
-
     public async Task<SourceManifest> GetSourceManifestAsync(string vmrUri, string branchOrCommit)
     {
         var fileContent = await _remoteGitClient.GetFileContentsAsync(
@@ -502,10 +501,14 @@ public sealed class Remote : IRemote
         return await _remoteGitClient.GetGitTreeNames(path, repoUri, branch);
     }
 
-    public Task<List<Commit>> FetchLatestRepoCommitsAsync(string repoUrl, string branch, int maxCount = 100)
+    public Task<List<Commit>> FetchLatestRepoCommitsAsync(
+        string repoUrl,
+        string branch,
+        int maxCount = 100)
     {
         return _remoteGitClient.FetchLatestRepoCommitsAsync(repoUrl, branch, maxCount);
     }
+
     public Task<List<Commit>> FetchNewerRepoCommitsAsync(
         string repoUrl,
         string branch,
@@ -515,14 +518,17 @@ public sealed class Remote : IRemote
         return _remoteGitClient.FetchNewerRepoCommitsAsync(repoUrl, branch, commitSha, maxCount);
     }
 
-    public async Task<Tuple<string, string>> GetLastIncomingForwardflow(string vmrUrl, string commit)
+    public async Task<ForwardFlow> GetLastIncomingForwardFlowAsync(
+        string vmrUrl,
+        string commit)
     {
-        await Task.CompletedTask;
-        return null;
+        return await _remoteGitClient.GetLastIncomingForwardFlowAsync(vmrUrl, commit);
     }
-    public async Task<Tuple<string, string>> GetLastIncomingBackflow(string repoUrl, string commit)
+
+    public async Task<Backflow> GetLastIncomingBackflowAsync(
+        string repoUrl,
+        string commit)
     {
-        await Task.CompletedTask;
-        return null;
+        return await _remoteGitClient.GetLastIncomingBackflowAsync(repoUrl, commit);
     }
 }

@@ -453,6 +453,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             await remote.MergeDependencyPullRequestAsync(pr.Url, new MergePullRequestParameters());
 
+            //todo: add codeflow history synchronization here
+            //todo: we should be able to obtain the last flown sha & squashed PR sha here, and cache the codeflow
+            // without any github requests.
+
+            //todo: fire these in a new process - exceptions shouldn't affect main thread
             foreach (SubscriptionPullRequestUpdate subscription in pr.ContainedSubscriptions)
             {
                 await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.MergingPullRequest, subscription.SubscriptionId);

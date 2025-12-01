@@ -4,6 +4,7 @@
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -182,12 +183,12 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// <summary>
     /// Get the last forward flow that was merged onto the given VMR at the specified commit
     /// </summary>
-    Task<Tuple<string, string>?> GetLastIncomingForwardFlow(string vmrUrl, string branch, string commit);
+    Task<ForwardFlow> GetLastIncomingForwardFlowAsync(string vmrUrl, string commit);
 
     /// <summary>
     /// Get the last back flow that was merged onto the given repo at the specified commit
     /// </summary>
-    Task<Tuple<string, string>?> GetLastIncomingBackflow(string repoUrl, string commit);
+    Task<Backflow> GetLastIncomingBackflowAsync(string repoUrl, string commit);
 }
 
 #nullable disable

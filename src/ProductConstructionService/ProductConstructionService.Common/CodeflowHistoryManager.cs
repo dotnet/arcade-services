@@ -4,14 +4,21 @@
 using System.Text.Json;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
+using Pipelines.Sockets.Unofficial.Arenas;
 using StackExchange.Redis;
 
 namespace ProductConstructionService.Common;
 
 public interface ICodeflowHistoryManager
 {
-    Task<List<CodeflowGraphCommit>> GetCachedCodeflowHistoryAsync(string subscriptionId, int commitFetchCount);
-    Task<List<CodeflowGraphCommit>> FetchLatestCodeflowHistoryAsync(Subscription subscription, int commitFetchCount);
+    Task<IEnumerable<CodeflowGraphCommit>> GetCachedCodeflowHistoryAsync(
+        string subscriptionId,
+        int commitFetchCount);
+
+    Task<IEnumerable<CodeflowGraphCommit>> FetchLatestCodeflowHistoryAsync(
+        Subscription subscription,
+        int commitFetchCount);
 }
 
 public record CodeflowGraphCommit(
@@ -34,8 +41,7 @@ public class CodeflowHistoryManager(
     private const int MaxCommitFetchCount = 500;
     private const int MaxCommitsCached = 3000;
 
-
-    public async Task<List<CodeflowGraphCommit>> GetCachedCodeflowHistoryAsync(
+    public async Task<IEnumerable<CodeflowGraphCommit>> GetCachedCodeflowHistoryAsync(
         string subscriptionId,
         int commitFetchCount = 100)
     {
@@ -68,7 +74,7 @@ public class CodeflowHistoryManager(
             .OfType<CodeflowGraphCommit>()];
     }
 
-    public async Task<List<CodeflowGraphCommit>> FetchLatestCodeflowHistoryAsync(
+    public async Task<IEnumerable<CodeflowGraphCommit>> FetchLatestCodeflowHistoryAsync(
         Subscription subscription,
         int commitFetchCount = 100)
     {
@@ -83,19 +89,20 @@ public class CodeflowHistoryManager(
 
         if (newCommits.LastOrDefault()?.CommitSha == latestCachedCommit?.CommitSha)
         {
-            newCommits.RemoveAt(newCommits.Count - 1);
+            newCommits.RemoveLast();
         }
         else
         {
-            // there's a gap between the new and cached commits. clear the cache and start from scratch.
+            // the fetched commits do not connect to the cached commits
+            // we don't know how many commits are missing, so clear the cache and start over
             await ClearCodeflowCacheAsync(subscription.Id.ToString());
         }
 
         var graphCommits = await EnrichCommitsWithCodeflowDataAsync(
+            newCommits,
             subscription.TargetRepository,
             subscription.TargetBranch,
-            !string.IsNullOrEmpty(subscription.TargetDirectory),
-            newCommits);
+            !string.IsNullOrEmpty(subscription.TargetDirectory));
 
         await CacheCommitsAsync(subscription.Id.ToString(), graphCommits);
 
@@ -104,49 +111,46 @@ public class CodeflowHistoryManager(
             .Take(commitFetchCount)];
     }
 
-    private async Task<List<CodeflowGraphCommit>> EnrichCommitsWithCodeflowDataAsync(
+    private async Task<LinkedList<CodeflowGraphCommit>> EnrichCommitsWithCodeflowDataAsync(
+        LinkedList<CodeflowGraphCommit> commits,
         string repo,
         string branch,
-        bool isForwardFlow,
-        List<CodeflowGraphCommit> commits)
+        bool isForwardFlow)
     {
-        if (commits.Count == 0)
-        {
-            return [];
-        }
-
         var remote = await _remoteFactory.CreateRemoteAsync(repo);
 
-        var lastCommitSha = commits.First().CommitSha;
+        var current = commits.First;
 
-        var commitLookups = commits.ToDictionary(c => c.CommitSha, c => c);
-
-        while (true)
+        while (current != null)
         {
-            var lastFlow = isForwardFlow
-                ? await remote.GetLastVmrIncomingCodeflowAsync(branch, lastCommitSha)
-                : await remote.GetLastRepoIncomingCodeflowAsync(branch, lastCommitSha);
+            Codeflow lastFlow = isForwardFlow
+                ? await remote.GetLastIncomingForwardFlowAsync(branch, current.Value.CommitSha)
+                : await remote.GetLastIncomingBackflowAsync(branch, current.Value.CommitSha);
 
-            if (!commitLookups.Contains(lastFlow.TargetCommitSha))
-            {
-                // there are no more incoming codeflows within the commit range
+            var target = current;
+
+            while (target != null && target.Value.CommitSha != lastFlow.TargetSha)
+                target = target.Next;
+
+            if (target == null)
                 break;
-            }
 
-            commitLookups[lastFlow.TargetCommitSha].IncomingCodeflowSha = lastFlow.SourceCommitSha;
-            commitLookups.Remove(lastFlow.TargetCommitSha);
-            lastCommitSha = lastFlow.TargetCommitSha;
+            target.Value = target.Value with
+            {
+                IncomingCodeflowSha = lastFlow.SourceSha,
+            };
+
+            current = target.Next;
         }
-
         return commits;
     }
 
     private async Task CacheCommitsAsync(
         string subscriptionId,
-        List<CodeflowGraphCommit> commits,
+        IEnumerable<CodeflowGraphCommit> commits,
         int latestCachedCommitScore = 0)
     {
-        if (commits.Count == 0)
+        if (!commits.Any())
         {
             return;
         }
@@ -182,7 +186,7 @@ public class CodeflowHistoryManager(
         await cache.KeyDeleteAsync(GetSortedSetKey(subscriptionId));
     }
 
-    private async Task<List<CodeflowGraphCommit>> FetchNewCommits(
+    private async Task<LinkedList<CodeflowGraphCommit>> FetchNewCommits(
         string targetRepository,
         string targetBranch,
         string? latestCachedCommitSha)
@@ -195,12 +199,12 @@ public class CodeflowHistoryManager(
             latestCachedCommitSha,
             MaxCommitFetchCount);
 
-        return [.. newCommits
-            .Select(commit => new CodeflowGraphCommit(
+        return new LinkedList<CodeflowGraphCommit>(
+            newCommits.Select(commit => new CodeflowGraphCommit(
                 CommitSha: commit.Sha,
                 Author: commit.Author,
                 Description: commit.Message,
                 IncomingCodeflowSha: null,
-                redisScore: null))];
+                redisScore: null)));
     }
 }

@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
@@ -14,7 +13,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using LibGit2Sharp;
 using Maestro.Common;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -25,7 +23,6 @@ using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using Microsoft.TeamFoundation.TestManagement.WebApi;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
@@ -1559,7 +1556,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         return [.. allCommits.Take(maxCount)];
     }
 
-    public async Task<ForwardFlow?> GetLastIncomingForwardFlowAtCommitAsync(string vmrUrl, string mappingName, string commit)
+    public async Task<ForwardFlow> GetLastIncomingForwardFlowAtCommitAsync(string vmrUrl, string mappingName, string commit)
     {
         var content = await GetFileContentAtCommit(
             vmrUrl,
@@ -1590,7 +1587,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         return new ForwardFlow(lastForwardFlowRepoSha, lastForwardFlowVmrSha);
     }
 
-    public async Task<Backflow?> GetLastIncomingBackflowAtCommitAsync(string repoUrl, string commit)
+    public async Task<Backflow> GetLastIncomingBackflowAsync(string repoUrl, string commit)
     {
         var content = await GetFileContentAtCommit(
             repoUrl,
@@ -1598,22 +1595,19 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             VersionFiles.VersionDetailsXml);
 
         var lastBackflowVmrSha = VersionDetailsParser
-            .ParseVersionDetailsXml(content)?
+            .ParseVersionDetailsXml(content)
             .Source?
-            .Sha;
+            .Sha
+            ?? throw new ("Could not parse version details");
 
-        if (lastBackflowVmrSha == null)
-        {
-            return null;
-        }
-
+        // todo: we can skip this call if the last flown SHA is one that we already cached
         int lineNumber = content
             .Split(Environment.NewLine)
             .ToList()
             .FindIndex(line =>
                 line.Contains(VersionDetailsParser.SourceElementName) &&
                 line.Contains(lastBackflowVmrSha));
-        
+
         string lastBackflowRepoSha = await BlameLineAsync(
             repoUrl,
             commit,
