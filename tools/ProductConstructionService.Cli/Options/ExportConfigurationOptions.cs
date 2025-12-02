@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using CommandLine;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.Cli.Operations;
 
@@ -10,5 +11,14 @@ namespace ProductConstructionService.Cli.Options;
 [Verb("export-configuration", HelpText = "Export PCS subscription configuration into yaml")]
 internal class ExportConfigurationOptions : PcsStatusOptions
 {
-    public override IOperation GetOperation(IServiceProvider sp) => ActivatorUtilities.CreateInstance<ExportConfigurationOperation>(sp);
+    [Option("export-path", Required = true, HelpText = "The output path for the exported configuration files.")]
+    public required string ExportPath { get; init; }
+
+    public override Task<IServiceCollection> RegisterServices(IServiceCollection services)
+    {
+        services.AddSingleton<IFileSystem, FileSystem>();
+        return base.RegisterServices(services);
+    }
+
+    public override IOperation GetOperation(IServiceProvider sp) => ActivatorUtilities.CreateInstance<ExportConfigurationOperation>(sp, this);
 }
