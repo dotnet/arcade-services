@@ -174,6 +174,8 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         }
 
         // eng/common is always preferred from the source side
+        // In rebase mode: ours=true means keep the incoming changes (source)
+        // In merge mode: ours=false means prefer theirs (source being merged in)
         var engCommon = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping) / Constants.CommonScriptFilesPath;
         if (conflictedFile.Path.StartsWith(engCommon, StringComparison.InvariantCultureIgnoreCase))
         {
