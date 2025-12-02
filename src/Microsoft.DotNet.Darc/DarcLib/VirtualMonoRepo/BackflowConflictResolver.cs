@@ -151,20 +151,27 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         CodeflowOptions codeflowOptions,
         ILocalGitRepo vmr,
         ILocalGitRepo targetRepo,
-        UnixPath filePath,
+        UnixPath conflictedFile,
         Codeflow? crossingFlow,
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
         // Known version file - check out the branch version, we want to override it
         // See https://github.com/dotnet/arcade-services/issues/4865
-        if (DependencyFileManager.CodeflowDependencyFiles.Any(f => f.Equals(filePath, StringComparison.OrdinalIgnoreCase)))
+        if (DependencyFileManager.CodeflowDependencyFiles.Any(f => f.Equals(conflictedFile, StringComparison.OrdinalIgnoreCase)))
         {
             // Revert files so that we can resolve the conflicts
             // We use the target branch version when we are flowing the first time (because we did not flow the version files yet)
             // We use the head branch version when we are flowing again because it already has updates from previous flow
             // plus it can contain additional changes from the PR
-            await targetRepo.ResolveConflict(filePath, ours: headBranchExisted);
+            await targetRepo.ResolveConflict(conflictedFile, ours: headBranchExisted);
+            return true;
+        }
+
+        // eng/common is always preferred from the source side
+        if (conflictedFile.Path.StartsWith(Constants.CommonScriptFilesPath))
+        {
+            await targetRepo.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase /* rebase vs merge direction */);
             return true;
         }
 
@@ -172,7 +179,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         // Check DetectCrossingFlow documentation for more details
         if (crossingFlow != null)
         {
-            return await TryResolvingConflictWithCrossingFlow(codeflowOptions, vmr, targetRepo, filePath, crossingFlow, cancellationToken);
+            return await TryResolvingConflictWithCrossingFlow(codeflowOptions, vmr, targetRepo, conflictedFile, crossingFlow, cancellationToken);
         }
 
         return false;
