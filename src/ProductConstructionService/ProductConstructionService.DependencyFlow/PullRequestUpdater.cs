@@ -1456,36 +1456,21 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         CodeFlowResult codeFlowRes;
         try
         {
-            if (subscription.IsForwardFlow())
-            {
-                codeFlowRes = await _vmrForwardFlower.FlowForwardAsync(
+            codeFlowRes = subscription.IsForwardFlow()
+                ? await _vmrForwardFlower.FlowForwardAsync(
+                    subscription,
+                    build,
+                    prHeadBranch,
+                    enableRebase,
+                    forceUpdate,
+                    cancellationToken: default)
+                : await _vmrBackFlower.FlowBackAsync(
                     subscription,
                     build,
                     prHeadBranch,
                     enableRebase,
                     forceUpdate,
                     cancellationToken: default);
-            }
-            else
-            {
-                codeFlowRes = await _vmrBackFlower.FlowBackAsync(
-                    subscription,
-                    build,
-                    prHeadBranch,
-                    enableRebase,
-                    forceUpdate,
-                    cancellationToken: default);
-            }
-        }
-        catch (PatchApplicationLeftConflictsException e) // only thrown when enableRebase is true
-        {
-            // We were unable to flow changes and user intervention will be required
-            _logger.LogInformation("Unable to flow changes due to conflicts in {files}", string.Join(", ", e.ConflictedFiles));
-            return new CodeFlowResult(
-                HadUpdates: true,
-                RepoPath: e.RepoPath,
-                DependencyUpdates: [],
-                ConflictedFiles: e.ConflictedFiles);
         }
         catch (ConflictInPrBranchException conflictWithPrChanges)
         {
@@ -1513,6 +1498,12 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 build.Id,
                 subscription.Id);
             throw;
+        }
+
+        if (codeFlowRes.ConflictedFiles.Count > 0)
+        {
+            _logger.LogInformation("Unable to flow changes due to conflicts");
+            return codeFlowRes;
         }
 
         if (codeFlowRes.HadUpdates)

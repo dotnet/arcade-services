@@ -46,7 +46,7 @@ internal abstract class CodeFlowOperation(
     private readonly IFileSystem _fileSystem = fileSystem;
     private readonly ILogger<CodeFlowOperation> _logger = logger;
 
-    protected async Task FlowCodeLocallyAsync(
+    protected async Task<CodeFlowResult> FlowCodeLocallyAsync(
         NativePath repoPath,
         bool isForwardFlow,
         BarBuild build,
@@ -103,23 +103,19 @@ internal abstract class CodeFlowOperation(
 
         cancellationToken.ThrowIfCancellationRequested();
 
+        CodeFlowResult result;
         try
         {
-            bool hasChanges;
-            if (currentFlow is ForwardFlow)
-            {
-                hasChanges = await FlowForwardAsync(
+            result = currentFlow is ForwardFlow
+                ? await FlowForwardAsync(
                     productRepo,
                     build,
                     mapping,
                     currentTargetRepoBranch,
                     excludedAssets,
                     subscription?.TargetRepository,
-                    cancellationToken);
-            }
-            else
-            {
-                var result = await _backFlower.FlowBackAsync(
+                    cancellationToken)
+                : await _backFlower.FlowBackAsync(
                     mapping.Name,
                     productRepo.Path,
                     build,
@@ -129,29 +125,24 @@ internal abstract class CodeFlowOperation(
                     enableRebase: true,
                     forceUpdate: true,
                     cancellationToken);
-
-                hasChanges = result.HadUpdates;
-            }
-
-            if (!hasChanges)
-            {
-
-                if (!hasChanges)
-                {
-                    _logger.LogInformation("No changes to flow between the VMR and {repo}.", mapping.Name);
-                    return;
-                }
-
-                _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
-            }
         }
-        catch (PatchApplicationLeftConflictsException e)
+        finally
         {
+            // Restore source repo to its original state, even when exceptions occur
+            await RestoreRepoToOriginalStateAsync(sourceRepo, originalSourceRepoBranch, originalSourceRepoSha);
+        }
+
+        if (result.ConflictedFiles.Count > 0)
+        {
+            _logger.LogWarning(
+                "Conflicts occurred during the synchronization of {name}. Changes are staged and conflict left to be resolved in the working tree.",
+                mapping.Name);
+
             // We need to make sure that working tree matches the staged changes
             await targetRepo.ExecuteGitCommand(["clean", "-xfd"], cancellationToken: cancellationToken);
 
             IEnumerable<string> dirtyFiles = await targetRepo.GetDirtyFilesAsync();
-            dirtyFiles = dirtyFiles.Except(e.ConflictedFiles.Select(e => e.Path));
+            dirtyFiles = dirtyFiles.Except(result.ConflictedFiles.Select(e => e.Path));
 
             // Reset only non-conflicted files
             foreach (var file in dirtyFiles)
@@ -160,13 +151,19 @@ internal abstract class CodeFlowOperation(
                 await targetRepo.CheckoutAsync(file);
             }
 
-            throw;
+            return result;
         }
-        finally
+
+        if (!result.HadUpdates)
         {
-            // Restore source repo to its original state, even when exceptions occur
-            await RestoreRepoToOriginalStateAsync(sourceRepo, originalSourceRepoBranch, originalSourceRepoSha);
+            _logger.LogInformation("No changes to flow between the VMR and {repo}.", mapping.Name);
         }
+        else
+        {
+            _logger.LogInformation("Changes staged in {repoPath}", targetRepo.Path);
+        }
+
+        return result;
     }
 
     private async Task RestoreRepoToOriginalStateAsync(ILocalGitRepo repo, string originalBranch, string originalSha)
@@ -188,7 +185,7 @@ internal abstract class CodeFlowOperation(
         }
     }
 
-    protected async Task<bool> FlowForwardAsync(
+    protected async Task<CodeFlowResult> FlowForwardAsync(
         ILocalGitRepo productRepo,
         BarBuild build,
         SourceMapping mapping,
@@ -206,7 +203,7 @@ internal abstract class CodeFlowOperation(
 
         try
         {
-            CodeFlowResult result = await _forwardFlower.FlowForwardAsync(
+            return await _forwardFlower.FlowForwardAsync(
                 mapping.Name,
                 productRepo.Path,
                 build,
@@ -217,8 +214,6 @@ internal abstract class CodeFlowOperation(
                 enableRebase: true,
                 forceUpdate: true,
                 cancellationToken);
-
-            return result.HadUpdates;
         }
         finally
         {

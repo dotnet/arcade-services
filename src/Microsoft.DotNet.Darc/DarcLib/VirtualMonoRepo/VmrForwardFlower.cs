@@ -135,52 +135,39 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        ExceptionDispatchInfo? rebaseException = null;
-
-        bool hasChanges;
-        try
+        CodeFlowResult result = await FlowCodeAsync(codeflowOptions, lastFlows, sourceRepo, headBranchExisted, cancellationToken) with
         {
-            hasChanges = await FlowCodeAsync(codeflowOptions, lastFlows, sourceRepo, headBranchExisted, cancellationToken);
-        }
-        catch (PatchApplicationLeftConflictsException e) when (enableRebase)
-        {
-            rebaseException = ExceptionDispatchInfo.Capture(e);
-            hasChanges = true;
-        }
+            RepoPath = sourceRepo.Path
+        };
 
-        IReadOnlyCollection<UnixPath>? conflictedFiles = null;
-        if (hasChanges)
+        if (result.HadUpdates)
         {
             // We try to merge the target branch so that we can potentially
             // resolve some expected conflicts in the version files
-            conflictedFiles = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
-                codeflowOptions,
-                vmr,
-                sourceRepo,
-                lastFlows,
-                headBranchExisted,
-                cancellationToken);
+            result = result with
+            {
+                ConflictedFiles = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
+                    codeflowOptions,
+                    vmr,
+                    sourceRepo,
+                    lastFlows,
+                    headBranchExisted,
+                    cancellationToken)
+            };
 
             await CommentIncludedPRs(sourceRepo, lastFlows.LastForwardFlow.RepoSha, build.Commit, mapping.DefaultRemote, cancellationToken);
         }
 
-        if (conflictedFiles?.Count > 0 && rebaseException != null)
-        {
-            ((PatchApplicationLeftConflictsException)rebaseException.SourceException).ConflictedFiles = conflictedFiles;
-            rebaseException.Throw();
-        }
-
         // If we don't force the update, we'll set hasChanges to false when the updates are not meaningful
-        if (conflictedFiles != null && !forceUpdate && hasChanges && !headBranchExisted)
+        if (result.ConflictedFiles.Count == 0 && !forceUpdate && result.HadUpdates && !headBranchExisted)
         {
-            hasChanges &= await _codeflowChangeAnalyzer.ForwardFlowHasMeaningfulChangesAsync(mapping.Name, headBranch, targetBranch);
+            result = result with
+            {
+                HadUpdates = await _codeflowChangeAnalyzer.ForwardFlowHasMeaningfulChangesAsync(mapping.Name, headBranch, targetBranch)
+            };
         }
 
-        return new CodeFlowResult(
-            hasChanges,
-            conflictedFiles ?? [],
-            sourceRepo.Path,
-            DependencyUpdates: []);
+        return result;
     }
 
     /// <summary>
@@ -246,7 +233,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         }
     }
 
-    protected override async Task<bool> SameDirectionFlowAsync(
+    protected override async Task<CodeFlowResult> SameDirectionFlowAsync(
         CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
         ILocalGitRepo sourceRepo,
@@ -262,47 +249,42 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             workBranch = await _workBranchFactory.CreateWorkBranchAsync(vmr, codeflowOptions.CurrentFlow.GetBranchName(), codeflowOptions.HeadBranch);
         }
 
-        bool hadChanges = false;
-
-        await ApplyChangesWithRecreationFallbackAsync(
+        CodeFlowResult result = await ApplyChangesWithRecreationFallbackAsync(
             codeflowOptions,
             lastFlows,
             sourceRepo,
             headBranchExisted,
             workBranch,
             async keepConflicts =>
-            {
-                hadChanges = await _vmrUpdater.UpdateRepository(
+                await _vmrUpdater.UpdateRepository(
                     codeflowOptions.Mapping,
                     codeflowOptions.Build,
                     additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
                     resetToRemoteWhenCloningRepo: ShouldResetClones,
                     keepConflicts: keepConflicts,
-                    cancellationToken: cancellationToken);
-            },
+                    cancellationToken: cancellationToken),
             cancellationToken);
 
-        if (!hadChanges || workBranch == null)
-        {
-            return hadChanges;
-        }
-        else
+        if (result.HadUpdates && workBranch != null)
         {
             var commitMessage = (await vmr.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
 
-            await MergeWorkBranchAsync(
-                codeflowOptions,
-                vmr,
-                workBranch,
-                headBranchExisted,
-                commitMessage,
-                cancellationToken);
-
-            return true;
+            result = result with
+            {
+                ConflictedFiles = await MergeWorkBranchAsync(
+                    codeflowOptions,
+                    vmr,
+                    workBranch,
+                    headBranchExisted,
+                    commitMessage,
+                    cancellationToken)
+            };
         }
+
+        return result;
     }
 
-    protected override async Task<bool> OppositeDirectionFlowAsync(
+    protected override async Task<CodeFlowResult> OppositeDirectionFlowAsync(
         CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
         ILocalGitRepo sourceRepo,
@@ -334,13 +316,13 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             .. DependencyFileManager.CodeflowDependencyFiles.Select(VmrPatchHandler.GetExclusionRule),
         ];
 
-        var result = await _processManager.Execute(
-            _processManager.GitExecutable,
-            ["rm", "-r", "-q", "-f", "--", .. removalFilters],
-            workingDir: _vmrInfo.GetRepoSourcesPath(codeflowOptions.Mapping),
-            cancellationToken: cancellationToken);
-
-        result.ThrowIfFailed($"Failed to remove files from the VMR");
+        (await _processManager
+            .Execute(
+                _processManager.GitExecutable,
+                ["rm", "-r", "-q", "-f", "--", .. removalFilters],
+                workingDir: _vmrInfo.GetRepoSourcesPath(codeflowOptions.Mapping),
+                cancellationToken: cancellationToken))
+            .ThrowIfFailed($"Failed to remove files from the VMR");
 
         // Save the current sha we're flowing from before changing it to the zero commit
         var currentSha = _dependencyTracker.GetDependencyVersion(codeflowOptions.Mapping)?.Sha
@@ -355,7 +337,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             codeflowOptions.Build.AzureDevOpsBuildNumber,
             codeflowOptions.Build.Id));
 
-        bool hadChanges = await _vmrUpdater.UpdateRepository(
+        CodeFlowResult result = await _vmrUpdater.UpdateRepository(
             codeflowOptions.Mapping,
             codeflowOptions.Build,
             additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
@@ -364,20 +346,23 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             resetToRemoteWhenCloningRepo: ShouldResetClones,
             cancellationToken: cancellationToken);
 
-        if (hadChanges)
+        if (result.HadUpdates)
         {
             var commitMessage = (await vmr.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
 
-            await MergeWorkBranchAsync(
-                codeflowOptions,
-                vmr,
-                workBranch,
-                headBranchExisted,
-                commitMessage,
-                cancellationToken);
+            result = result with
+            {
+                ConflictedFiles = await MergeWorkBranchAsync(
+                    codeflowOptions,
+                    vmr,
+                    workBranch,
+                    headBranchExisted,
+                    commitMessage,
+                    cancellationToken)
+            };
         }
 
-        return hadChanges;
+        return result;
     }
 
     private async Task CommentIncludedPRs(

@@ -11,6 +11,7 @@ using Maestro.Common;
 using Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -240,31 +241,28 @@ internal class ResolveConflictOperation(
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            await FlowCodeLocallyAsync(
-                productRepo.Path,
-                isForwardFlow: subscription.IsForwardFlow(),
-                build: build,
-                subscription: subscription,
-                cancellationToken: cancellationToken);
-        }
-        catch (PatchApplicationLeftConflictsException e)
-        when (e.ConflictedFiles != null && e.ConflictedFiles.Count != 0)
+        CodeFlowResult result = await FlowCodeLocallyAsync(
+            productRepo.Path,
+            isForwardFlow: subscription.IsForwardFlow(),
+            build: build,
+            subscription: subscription,
+            cancellationToken: cancellationToken);
+
+        if (result.ConflictedFiles.Count > 0)
         {
             _logger.LogInformation("Codeflow has finished, and {conflictedFiles} conflicting file(s) have been" +
-                " left on the current branch.", e.ConflictedFiles.Count);
+                " left on the current branch.", result.ConflictedFiles.Count);
             _logger.LogInformation("Please resolve the conflicts locally, commit and push your changes to unblock the codeflow PR.");
 
             string lastFlownSha = await GetLastFlownShaAsync(subscription, targetGitRepoPath);
 
-            CreateCommitMessageFile(targetGitRepoPath, subscription, build, lastFlownSha, e.ConflictedFiles);
-
-            return;
+            CreateCommitMessageFile(targetGitRepoPath, subscription, build, lastFlownSha, result.ConflictedFiles);
         }
-
-        _logger.LogInformation(
-            "Codeflow has finished and changes have been staged on the local branch with no conflicts encountered.");
+        else
+        {
+            _logger.LogInformation(
+                "Codeflow has finished and changes have been staged on the local branch with no conflicts encountered.");
+        }
     }
 
     private void CreateCommitMessageFile(

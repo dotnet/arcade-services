@@ -89,7 +89,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// https://github.com/dotnet/dotnet/tree/main/docs/VMR-Full-Code-Flow.md#the-code-flow-algorithm
     /// </summary>
     /// <returns>True if there were changes to flow</returns>
-    public async Task<bool> FlowCodeAsync(
+    public async Task<CodeFlowResult> FlowCodeAsync(
         CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
         ILocalGitRepo repo,
@@ -100,7 +100,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         if (lastFlow.SourceSha == codeflowOptions.CurrentFlow.SourceSha)
         {
             _logger.LogInformation("No new commits to flow from {sourceRepo}", codeflowOptions.CurrentFlow is Backflow ? "VMR" : codeflowOptions.Mapping.Name);
-            return false;
+            return new CodeFlowResult(false, [], repo.Path, []);
         }
 
         if (lastFlow.IsBackflow != codeflowOptions.CurrentFlow.IsBackflow && headBranchExisted && !codeflowOptions.ForceUpdate)
@@ -116,11 +116,11 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             lastFlow.SourceSha,
             lastFlow.TargetSha);
 
-        bool hasChanges;
+        CodeFlowResult result;
         if (lastFlow.IsBackflow == codeflowOptions.CurrentFlow.IsBackflow)
         {
             _logger.LogInformation("Current flow is in the same direction");
-            hasChanges = await SameDirectionFlowAsync(
+            result = await SameDirectionFlowAsync(
                 codeflowOptions,
                 lastFlows,
                 repo,
@@ -130,7 +130,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         else
         {
             _logger.LogInformation("Current flow is in the opposite direction");
-            hasChanges = await OppositeDirectionFlowAsync(
+            result = await OppositeDirectionFlowAsync(
                 codeflowOptions,
                 lastFlows,
                 repo,
@@ -138,12 +138,12 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 cancellationToken);
         }
 
-        if (!hasChanges)
+        if (!result.HadUpdates)
         {
             _logger.LogInformation("Nothing to flow from {sourceRepo}", codeflowOptions.CurrentFlow is Backflow ? "VMR" : codeflowOptions.Mapping.Name);
         }
 
-        return hasChanges;
+        return result;
     }
 
     /// <summary>
@@ -154,7 +154,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// <param name="repo">Local git repo clone of the source repo</param>
     /// <param name="headBranchExisted">Did we just create the headbranch or are we updating an existing one?</param>
     /// <returns>True if there were changes to flow</returns>
-    protected abstract Task<bool> SameDirectionFlowAsync(
+    protected abstract Task<CodeFlowResult> SameDirectionFlowAsync(
         CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
         ILocalGitRepo repo,
@@ -168,7 +168,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// <param name="lastFlows">Last flows that happened for the given mapping</param>
     /// <param name="headBranchExisted">Did we just create the headbranch or are we updating an existing one?</param>
     /// <returns>True if there were changes to flow</returns>
-    protected abstract Task<bool> OppositeDirectionFlowAsync(
+    protected abstract Task<CodeFlowResult> OppositeDirectionFlowAsync(
         CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
         ILocalGitRepo sourceRepo,
@@ -317,7 +317,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// Attempts to apply code flow patches to the target branch. When conflicting, rebases to an older commit,
     /// recreates previous flows and applies the changes on top of that.
     /// </summary>
-    protected async Task ApplyChangesWithRecreationFallbackAsync(
+    protected async Task<CodeFlowResult> ApplyChangesWithRecreationFallbackAsync(
         CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
         ILocalGitRepo productRepo,
@@ -328,27 +328,22 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     {
         try
         {
-            await applyLatestChanges(enableRebase: false);
+            return await applyLatestChanges(enableRebase: false);
         }
         catch (PatchApplicationFailedException e)
         {
             if (codeflowOptions.EnableRebase)
             {
                 // We need to recreate a previous flow so that we have something to rebase later
-                await RecreatePreviousFlowsAndApplyChanges(
+                return await RecreatePreviousFlowsAndApplyChanges(
                     codeflowOptions with
                     {
                         HeadBranch = workBranch!.WorkBranchName,
                     },
                     productRepo,
                     lastFlows,
-                    async () => await applyLatestChanges(enableRebase: false),
+                    async (_) => await applyLatestChanges(enableRebase: false),
                     cancellationToken);
-
-                // Workaround for files that can be left behind after HandleRevertedFiles()
-                // It can be removed after we remove HandleRevertedFiles() and switch to rebase-only
-                // TODO (https://github.com/dotnet/arcade-services/issues/5363): Remove after switching to rebase-only
-                await productRepo.ResetWorkingTree();
             }
             else
             {
@@ -362,11 +357,11 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
                 // Otherwise, we have a conflicting change in the last backflow PR (before merging)
                 // The scenario is described here: https://github.com/dotnet/dotnet/tree/main/docs/VMR-Full-Code-Flow.md#conflicts
-                await RecreatePreviousFlowsAndApplyChanges(
+                return await RecreatePreviousFlowsAndApplyChanges(
                     codeflowOptions,
                     productRepo,
                     lastFlows,
-                    async () => await applyLatestChanges(enableRebase: false),
+                    async (_) => await applyLatestChanges(enableRebase: false),
                     cancellationToken);
             }
         }
@@ -377,11 +372,11 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// Iteratively rewinds through previous flows until it finds the one that introduced the conflict with the current changes.
     /// Then it creates a given branch there and applies the current changes on top of the recreated previous flows.
     /// </summary>
-    private async Task RecreatePreviousFlowsAndApplyChanges(
+    private async Task<CodeFlowResult> RecreatePreviousFlowsAndApplyChanges(
         CodeflowOptions codeflowOptions,
         ILocalGitRepo repo,
         LastFlows lastFlows,
-        Func<Task> reapplyChanges,
+        ApplyLatestChangesDelegate reapplyChanges,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Failed to flow changes because of a conflict. Rebasing onto an older commit and recreating previous flows..");
@@ -452,7 +447,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             // We apply the current changes on top again to check if they apply now
             try
             {
-                await reapplyChanges();
+                CodeFlowResult result = await reapplyChanges(enableRebase: false);
+
                 await HandleRevertedFiles(
                     codeflowOptions.Mapping,
                     repo,
@@ -465,18 +461,18 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     flowsToRecreate,
                     codeflowOptions.Build.Commit);
 
-                return;
+                // Workaround for files that can be left behind after HandleRevertedFiles()
+                // It can be removed after we remove HandleRevertedFiles() and switch to rebase-only
+                // TODO (https://github.com/dotnet/arcade-services/issues/5363): Remove after switching to rebase-only
+                await repo.ResetWorkingTree();
+
+                return result;
             }
             catch (Exception e) when (e is PatchApplicationFailedException || e is ConflictInPrBranchException)
             {
                 _logger.LogInformation("Recreated {count} flows but conflict with a previous flow still exists. Recreating deeper...", flowsToRecreate);
                 flowsToRecreate++;
                 continue;
-            }
-            catch (PatchApplicationLeftConflictsException)
-            {
-                // Expected when we're rebasing
-                throw;
             }
             catch (Exception e)
             {
@@ -671,7 +667,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         }
     }
 
-    protected virtual async Task MergeWorkBranchAsync(
+    protected virtual async Task<IReadOnlyCollection<UnixPath>> MergeWorkBranchAsync(
         CodeflowOptions codeflowOptions,
         ILocalGitRepo targetRepo,
         IWorkBranch workBranch,
@@ -681,13 +677,15 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     {
         if (codeflowOptions.EnableRebase)
         {
-            await workBranch.RebaseAsync(cancellationToken);
+            return await workBranch.RebaseAsync(cancellationToken);
         }
         else
         {
             try
             {
                 await workBranch.MergeBackAsync(commitMessage);
+                _logger.LogInformation("Branch {branch} with code changes is ready in {repoDir}", codeflowOptions.HeadBranch, targetRepo);
+                return [];
             }
             catch (WorkBranchInConflictException e) when (headBranchExisted)
             {
@@ -697,8 +695,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     codeflowOptions.TargetBranch);
             }
         }
-
-        _logger.LogInformation("Branch {branch} with code changes is ready in {repoDir}", codeflowOptions.HeadBranch, targetRepo);
     }
 
     protected abstract NativePath GetEngCommonPath(NativePath sourceRepo);
@@ -722,4 +718,5 @@ public record LastFlows(
 /// Delegate for applying latest changes with an option to enable rebase mode.
 /// </summary>
 /// <param name="enableRebase">When true, enables rebase mode for applying changes</param>
-public delegate Task ApplyLatestChangesDelegate(bool enableRebase);
+/// <returns>When enableRebase is true, returns a list of conflicting files</returns>
+public delegate Task<CodeFlowResult> ApplyLatestChangesDelegate(bool enableRebase);

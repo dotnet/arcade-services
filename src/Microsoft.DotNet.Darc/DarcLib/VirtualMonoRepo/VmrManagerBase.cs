@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
@@ -57,7 +58,7 @@ public abstract partial class VmrManagerBase
         _localGitRepoFactory = localGitRepoFactory;
     }
 
-    protected async Task UpdateRepoToRevisionAsync(
+    protected async Task<IReadOnlyCollection<UnixPath>> UpdateRepoToRevisionAsync(
         VmrDependencyUpdate update,
         ILocalGitRepo repoClone,
         string fromRevision,
@@ -79,7 +80,7 @@ public abstract partial class VmrManagerBase
             cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
-        await _patchHandler.ApplyPatches(
+        IReadOnlyCollection<UnixPath> conflicts = await _patchHandler.ApplyPatches(
             patches,
             _vmrInfo.VmrPath,
             removePatchAfter: true,
@@ -112,17 +113,22 @@ public abstract partial class VmrManagerBase
             await _credScanSuppressionsGenerator.UpdateCredScanSuppressions(cancellationToken);
         }
 
-        // Commit without adding files as they were added to index directly
-        await CommitAsync(commitMessage);
-
-        // TODO: Workaround for cases when we get CRLF problems on Windows
-        // We should figure out why restoring and reapplying VMR patches leaves working tree with EOL changes
-        // https://github.com/dotnet/arcade-services/issues/3277
-        if (restoreVmrPatches && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (conflicts.Count == 0)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, ".");
+            // Commit without adding files as they were added to index directly
+            await CommitAsync(commitMessage);
+
+            // TODO: Workaround for cases when we get CRLF problems on Windows
+            // We should figure out why restoring and reapplying VMR patches leaves working tree with EOL changes
+            // https://github.com/dotnet/arcade-services/issues/3277
+            if (restoreVmrPatches && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await _localGitClient.CheckoutAsync(_vmrInfo.VmrPath, ".");
+            }
         }
+
+        return conflicts;
     }
 
     protected virtual async Task CommitAsync(string commitMessage, (string Name, string Email)? author = null)
