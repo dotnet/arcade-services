@@ -14,7 +14,6 @@ namespace Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
 
 internal class RemoveRepoOperation : VmrOperationBase
 {
-    private readonly RemoveRepoCommandLineOptions _options;
     private readonly IVmrRemover _vmrRemover;
 
     public RemoveRepoOperation(
@@ -23,11 +22,10 @@ internal class RemoveRepoOperation : VmrOperationBase
         ILogger<RemoveRepoOperation> logger)
         : base(options, logger)
     {
-        _options = options;
         _vmrRemover = vmrRemover;
     }
 
-    protected override async Task ExecuteInternalAsync(
+    protected override async Task<bool> ExecuteInternalAsync(
         string repoName,
         string? targetRevision,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
@@ -41,5 +39,7 @@ internal class RemoveRepoOperation : VmrOperationBase
                 GenerateCodeOwners: false,
                 GenerateCredScanSuppressions: true),
             cancellationToken);
+
+        return true;
     }
 }

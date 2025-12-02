@@ -85,7 +85,7 @@ internal abstract class VmrOperationBase : Operation
         return success ? Constants.SuccessCode : Constants.ErrorCode;
     }
 
-    protected abstract Task ExecuteInternalAsync(
+    protected abstract Task<bool> ExecuteInternalAsync(
         string repoName,
         string? targetRevision,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
@@ -101,8 +101,7 @@ internal abstract class VmrOperationBase : Operation
         {
             try
             {
-                await ExecuteInternalAsync(repoName, targetRevision, additionalRemotes, cancellationToken);
-                return true;
+                return await ExecuteInternalAsync(repoName, targetRevision, additionalRemotes, cancellationToken);
             }
             catch (EmptySyncException e)
             {

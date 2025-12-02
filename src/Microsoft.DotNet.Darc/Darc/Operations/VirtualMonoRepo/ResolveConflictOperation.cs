@@ -60,7 +60,7 @@ internal class ResolveConflictOperation(
 
         """;
 
-    protected override async Task ExecuteInternalAsync(
+    protected override async Task<bool> ExecuteInternalAsync(
         string repoName,
         string? sourceDirectory,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
@@ -86,7 +86,7 @@ internal class ResolveConflictOperation(
             await ValidateLocalRepo(subscription, repo.Path, subscription.SourceDirectory);
         }
 
-        await ExecuteCodeflowAndPrepareCommitMessageAsync(
+        return await ExecuteCodeflowAndPrepareCommitMessageAsync(
             subscription,
             build,
             repo,
@@ -233,7 +233,7 @@ internal class ResolveConflictOperation(
         return (vmr, repo);
     }
 
-    private async Task ExecuteCodeflowAndPrepareCommitMessageAsync(
+    private async Task<bool> ExecuteCodeflowAndPrepareCommitMessageAsync(
         Subscription subscription,
         Build build,
         ILocalGitRepo productRepo,
@@ -263,6 +263,8 @@ internal class ResolveConflictOperation(
             _logger.LogInformation(
                 "Codeflow has finished and changes have been staged on the local branch with no conflicts encountered.");
         }
+
+        return true;
     }
 
     private void CreateCommitMessageFile(
