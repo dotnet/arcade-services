@@ -73,7 +73,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             enableRebase,
             cancellationToken);
 
-        var result = await FlowBackAsync(
+        CodeFlowResult result = await FlowBackAsync(
             new CodeflowOptions(
                 mapping,
                 new Backflow(build.Commit, lastFlows.LastFlow.RepoSha),
@@ -88,7 +88,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             headBranchExisted,
             cancellationToken);
 
-        if (result.HadUpdates && enableRebase)
+        if (result.HadUpdates && enableRebase && !result.HadConflicts)
         {
             var stagedFiles = await targetRepo.GetStagedFilesAsync();
             if (stagedFiles.Count > 0)
