@@ -69,12 +69,10 @@ Write-Host ""
 # Step 2: Pull latest changes from main
 Write-Host "Step 2: Pulling latest changes from main..." -ForegroundColor Yellow
 git fetch $remoteName main
-git checkout main
-git pull $remoteName main
 
 # Step 3: Determine the commit to rollout
 Write-Host "Step 3: Using HEAD of main" -ForegroundColor Yellow
-$commitSha = git rev-parse HEAD
+$commitSha = git rev-parse $remoteName/main
 
 Write-Host "Commit SHA: $commitSha" -ForegroundColor Green
 Write-Host ""
@@ -83,13 +81,37 @@ Write-Host ""
 Write-Host "Step 4: Creating branch '$branchName' from commit $commitSha..." -ForegroundColor Yellow
 git checkout -b $branchName $commitSha
 
-# Step 5: Push the branch to remote
-Write-Host "Step 5: Pushing branch '$branchName' to $remoteName..." -ForegroundColor Yellow
-git push -u $remoteName $branchName
+# Step 5: Determine fork remote (if exists) or use main remote
+Write-Host "Step 5: Determining fork remote for pushing..." -ForegroundColor Yellow
+$currentUser = gh api user --jq '.login'
+$forkRemote = $null
+
+# Check if there's a remote pointing to the user's fork
+foreach ($line in $remotes -split "`n") {
+    if ($line -match "^(\S+)\s+.*github\.com[:/]$currentUser/") {
+        $forkRemote = $matches[1]
+        break
+    }
+}
+
+if ($forkRemote) {
+    Write-Host "Found fork remote: $forkRemote" -ForegroundColor Green
+    $pushRemote = $forkRemote
+    $prHead = "$currentUser`:$branchName"
+} else {
+    Write-Host "No fork remote found, using $remoteName (will push directly)" -ForegroundColor Yellow
+    $pushRemote = $remoteName
+    $prHead = $branchName
+}
 Write-Host ""
 
-# Step 6: Read the rollout issue template
-Write-Host "Step 6: Reading rollout issue template..." -ForegroundColor Yellow
+# Step 6: Push the branch to the determined remote
+Write-Host "Step 6: Pushing branch '$branchName' to $pushRemote..." -ForegroundColor Yellow
+git push -u $pushRemote $branchName
+Write-Host ""
+
+# Step 7: Read the rollout issue template
+Write-Host "Step 7: Reading rollout issue template..." -ForegroundColor Yellow
 $templatePath = Join-Path $PSScriptRoot ".." ".github" "ISSUE_TEMPLATE" "rollout-issue.md"
 $issueBody = Get-Content $templatePath -Raw
 
@@ -97,8 +119,8 @@ $issueBody = Get-Content $templatePath -Raw
 $issueBody = $issueBody -replace '(?s)^---.*?---\s*', ''
 Write-Host ""
 
-# Step 7: Create the rollout issue with Rollout label
-Write-Host "Step 7: Creating rollout issue..." -ForegroundColor Yellow
+# Step 8: Create the rollout issue with Rollout label
+Write-Host "Step 8: Creating rollout issue..." -ForegroundColor Yellow
 $issueUrl = gh issue create --title "$issueTitle" --body "$issueBody" --label "Rollout" --repo $Repo
 Write-Host "Created issue: $issueUrl" -ForegroundColor Green
 
@@ -106,8 +128,8 @@ Write-Host "Created issue: $issueUrl" -ForegroundColor Green
 $issue = gh issue view $issueUrl --json id,number,url | ConvertFrom-Json
 Write-Host ""
 
-# Step 7: Assign issue to PCS project and FR area
-Write-Host "Step 8: Assigning issue to PCS project and FR area..." -ForegroundColor Yellow
+# Step 8: Assign issue to PCS project and FR area
+Write-Host "Step 9: Assigning issue to PCS project and FR area..." -ForegroundColor Yellow
 
 $pcsProjectId = 276
 $areaName = 'First Responder / Ops / Debt'
@@ -133,8 +155,8 @@ try {
 Write-Host "Note: Please manually assign the issue to the current sprint" -ForegroundColor Yellow
 Write-Host ""
 
-# Step 9: Create the PR
-Write-Host "Step 9: Creating PR from '$branchName' to 'production'..." -ForegroundColor Yellow
+# Step 10: Create the PR
+Write-Host "Step 10: Creating PR from '$branchName' to 'production'..." -ForegroundColor Yellow
 
 $prBody = @"
 #$($issue.number)
@@ -145,14 +167,14 @@ $prBody = @"
 - [ ] ⚠️ **DO NOT SQUASH** when merging - use merge commit
 "@
 
-$prUrl = gh pr create --base production --head $branchName --title "$prTitle" --body "$prBody" --repo $Repo
+$prUrl = gh pr create --base production --head $prHead --title "$prTitle" --body "$prBody" --repo $Repo
 Write-Host "Created PR: $prUrl" -ForegroundColor Green
 
 # Get PR number for auto-merge
 $prNumber = gh pr view $prUrl --json number --jq '.number'
 
-# Step 10: Enable auto-merge with merge commit strategy
-Write-Host "Step 10: Enabling auto-merge (merge commit) on PR..." -ForegroundColor Yellow
+# Step 11: Enable auto-merge with merge commit strategy
+Write-Host "Step 11: Enabling auto-merge (merge commit) on PR..." -ForegroundColor Yellow
 try {
     gh pr merge $prNumber --auto --merge --repo $Repo
     Write-Host "Auto-merge enabled (merge commit strategy)" -ForegroundColor Green
@@ -162,12 +184,13 @@ try {
 }
 Write-Host ""
 
-# Step 11: Summary
+# Step 12: Summary
 Write-Host "=== Rollout Preparation Complete ===" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Summary:" -ForegroundColor White
 Write-Host "  Date:        $Date" -ForegroundColor White
 Write-Host "  Branch:      $branchName" -ForegroundColor White
+Write-Host "  Pushed to:   $pushRemote" -ForegroundColor White
 Write-Host "  Commit:      $commitSha" -ForegroundColor White
 Write-Host "  Issue:       $issueUrl" -ForegroundColor White
 Write-Host "  PR:          $prUrl" -ForegroundColor White
