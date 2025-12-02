@@ -155,23 +155,6 @@ internal class ExportConfigurationOperation : IOperation
 
     private static string FormatYaml(string rawYaml)
     {
-        var lines = rawYaml.Split([Environment.NewLine], StringSplitOptions.None);
-        var modifiedLines = new List<string>();
-
-        for (int i = 0; i < lines.Length; i++)
-        {
-            var line = lines[i];
-
-            // If this line starts a new list item (starts with "- ") and it's not the first item,
-            // add an empty line before it
-            if (line.StartsWith("- ") && i > 0 && modifiedLines.Count > 0)
-            {
-                modifiedLines.Add(string.Empty);
-            }
-
-            modifiedLines.Add(line);
-        }
-
-        return string.Join(Environment.NewLine, modifiedLines);
+        return rawYaml.Replace("\n-", "\n\n-");
     }
 }
