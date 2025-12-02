@@ -169,6 +169,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         }
 
         // eng/common is always preferred from the source side
+        // In rebase mode: ours=true means keep the incoming changes (source)
+        // In merge mode: ours=false means prefer theirs (source being merged in)
         if (conflictedFile.Path.StartsWith(Constants.CommonScriptFilesPath))
         {
             await targetRepo.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase /* rebase vs merge direction */);
