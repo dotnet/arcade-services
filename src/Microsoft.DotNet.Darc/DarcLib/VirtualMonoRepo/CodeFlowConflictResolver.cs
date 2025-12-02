@@ -88,27 +88,26 @@ public abstract class CodeFlowConflictResolver
             ? await targetRepo.GetConflictedFilesAsync(cancellationToken)
             : await TryMergingBranch(targetRepo, codeflowOptions.HeadBranch, codeflowOptions.TargetBranch, cancellationToken);
 
-        if (conflictedFiles.Count != 0 && await TryResolvingConflicts(
+        if (conflictedFiles.Count != 0
+            && await TryResolvingConflicts(
                 codeflowOptions,
                 vmr,
                 productRepo,
                 conflictedFiles,
                 lastFlows.CrossingFlow,
                 headBranchExisted,
-                cancellationToken))
+                cancellationToken)
+            && !codeflowOptions.EnableRebase)
         {
-            if (!codeflowOptions.EnableRebase)
-            {
-                conflictedFiles = [];
-                await targetRepo.CommitAsync(
-                    $"""
-                    Merge {codeflowOptions.TargetBranch} into {codeflowOptions.HeadBranch}
-                    Auto-resolved conflicts:
-                    - {string.Join(Environment.NewLine + "- ", conflictedFiles.Select(f => f.Path))}
-                    """,
-                    allowEmpty: true,
-                cancellationToken: CancellationToken.None);
-            }
+            conflictedFiles = [];
+            await targetRepo.CommitAsync(
+                $"""
+                Merge {codeflowOptions.TargetBranch} into {codeflowOptions.HeadBranch}
+                Auto-resolved conflicts:
+                - {string.Join(Environment.NewLine + "- ", conflictedFiles.Select(f => f.Path))}
+                """,
+                allowEmpty: true,
+            cancellationToken: CancellationToken.None);
         }
 
         if (codeflowOptions.EnableRebase)
@@ -121,7 +120,7 @@ public abstract class CodeFlowConflictResolver
         }
     }
 
-    protected async Task<IReadOnlyCollection<UnixPath>> TryMergingBranch(
+    private async Task<IReadOnlyCollection<UnixPath>> TryMergingBranch(
         ILocalGitRepo repo,
         string headBranch,
         string branchToMerge,
@@ -172,7 +171,7 @@ public abstract class CodeFlowConflictResolver
         }
     }
 
-    protected async Task<bool> TryResolvingConflicts(
+    private async Task<bool> TryResolvingConflicts(
         CodeflowOptions codeflowOptions,
         ILocalGitRepo vmr,
         ILocalGitRepo sourceRepo,

@@ -1500,35 +1500,33 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             throw;
         }
 
-        if (codeFlowRes.ConflictedFiles.Count > 0)
+        if (codeFlowRes.ConflictedFiles.Count > 0 && enableRebase)
         {
-            _logger.LogInformation("Unable to flow changes due to conflicts");
+            _logger.LogInformation("Detected conflicts while rebasing new changes");
             return codeFlowRes;
-        }
-
-        if (codeFlowRes.HadUpdates)
-        {
-            _logger.LogInformation("Code changes for {subscriptionId} ready in local branch {branch}",
-                subscription.Id,
-                prHeadBranch);
-
-            using (var scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Push, subscription.TargetRepository))
-            {
-                var localTargetRepoPath = subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath;
-                await _gitClient.Push(localTargetRepoPath, prHeadBranch, subscription.TargetRepository);
-                scope.SetSuccess();
-            }
-
-            // We store it the new head branch SHA in Redis (without having to have to query the remote repo)
-            prInfo?.HeadBranchSha = await _gitClient.GetShaForRefAsync(subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath, prHeadBranch);
-
-            await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
         }
 
         if (!codeFlowRes.HadUpdates)
         {
             _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}", subscription.Id);
+            return codeFlowRes;
         }
+
+        _logger.LogInformation("Code changes for {subscriptionId} ready in local branch {branch}",
+            subscription.Id,
+            prHeadBranch);
+
+        using (var scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Push, subscription.TargetRepository))
+        {
+            var localTargetRepoPath = subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath;
+            await _gitClient.Push(localTargetRepoPath, prHeadBranch, subscription.TargetRepository);
+            scope.SetSuccess();
+        }
+
+        // We store it the new head branch SHA in Redis (without having to have to query the remote repo)
+        prInfo?.HeadBranchSha = await _gitClient.GetShaForRefAsync(subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath, prHeadBranch);
+
+        await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
         return codeFlowRes;
     }
