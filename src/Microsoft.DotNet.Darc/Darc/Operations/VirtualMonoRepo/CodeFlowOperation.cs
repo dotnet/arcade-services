@@ -132,7 +132,7 @@ internal abstract class CodeFlowOperation(
             await RestoreRepoToOriginalStateAsync(sourceRepo, originalSourceRepoBranch, originalSourceRepoSha);
         }
 
-        if (result.ConflictedFiles.Count > 0)
+        if (result.HadConflicts)
         {
             _logger.LogWarning(
                 "Conflicts occurred during the synchronization of {name}. Changes are staged and conflict left to be resolved in the working tree.",

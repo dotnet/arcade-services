@@ -60,6 +60,6 @@ internal class BackflowOperation(
             subscription: null,
             cancellationToken: cancellationToken);
 
-        return result.ConflictedFiles.Count == 0;
+        return !result.HadConflicts;
     }
 }

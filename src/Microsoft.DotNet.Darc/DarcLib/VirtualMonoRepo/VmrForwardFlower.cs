@@ -159,7 +159,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         }
 
         // If we don't force the update, we'll set hasChanges to false when the updates are not meaningful
-        if (result.ConflictedFiles.Count == 0 && !forceUpdate && result.HadUpdates && !headBranchExisted)
+        if (!result.HadConflicts && !forceUpdate && result.HadUpdates && !headBranchExisted)
         {
             result = result with
             {

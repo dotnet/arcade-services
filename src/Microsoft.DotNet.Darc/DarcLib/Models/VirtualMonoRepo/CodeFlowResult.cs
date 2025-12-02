@@ -12,4 +12,7 @@ public record CodeFlowResult(
     bool HadUpdates,
     IReadOnlyCollection<UnixPath> ConflictedFiles,
     NativePath RepoPath,
-    List<DependencyUpdate> DependencyUpdates);
+    List<DependencyUpdate> DependencyUpdates)
+{
+    public bool HadConflicts => ConflictedFiles.Count > 0;
+}

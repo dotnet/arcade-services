@@ -1227,7 +1227,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
 
         // Conflicts + rebase means we have to block the PR until a human resolves the conflicts manually
-        if (enableRebase && codeFlowRes.ConflictedFiles.Count > 0)
+        if (enableRebase && codeFlowRes.HadConflicts)
         {
             await RequestManualConflictResolutionAsync(
                 update,
@@ -1263,7 +1263,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 upstreamRepoDiffs);
         }
 
-        if (pr != null && codeFlowRes.ConflictedFiles.Count > 0 && !enableRebase)
+        if (pr != null && !enableRebase  && codeFlowRes.HadConflicts)
         {
             _commentCollector.AddComment(
                 PullRequestCommentBuilder.NotifyAboutMergeConflict(
@@ -1500,7 +1500,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             throw;
         }
 
-        if (codeFlowRes.ConflictedFiles.Count > 0 && enableRebase)
+        if (enableRebase && codeFlowRes.HadConflicts)
         {
             _logger.LogInformation("Detected conflicts while rebasing new changes");
             return codeFlowRes;

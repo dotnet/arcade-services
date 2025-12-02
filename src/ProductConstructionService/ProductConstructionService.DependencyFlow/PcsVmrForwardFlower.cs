@@ -90,7 +90,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             forceUpdate,
             cancellationToken);
 
-        if (result.HadUpdates && enableRebase)
+        if (enableRebase && result.HadUpdates && result.HadConflicts)
         {
             var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
             var stagedFiles = await vmr.GetStagedFilesAsync();

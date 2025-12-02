@@ -248,7 +248,7 @@ internal class ResolveConflictOperation(
             subscription: subscription,
             cancellationToken: cancellationToken);
 
-        if (result.ConflictedFiles.Count > 0)
+        if (result.HadConflicts)
         {
             _logger.LogInformation("Codeflow has finished, and {conflictedFiles} conflicting file(s) have been" +
                 " left on the current branch.", result.ConflictedFiles.Count);
