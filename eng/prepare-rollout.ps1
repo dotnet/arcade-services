@@ -147,9 +147,22 @@ $prBody = @"
 
 $prUrl = gh pr create --base production --head $branchName --title "$prTitle" --body "$prBody" --repo $Repo
 Write-Host "Created PR: $prUrl" -ForegroundColor Green
+
+# Get PR number for auto-merge
+$prNumber = gh pr view $prUrl --json number --jq '.number'
+
+# Step 10: Enable auto-merge with merge commit strategy
+Write-Host "Step 10: Enabling auto-merge (merge commit) on PR..." -ForegroundColor Yellow
+try {
+    gh pr merge $prNumber --auto --merge --repo $Repo
+    Write-Host "Auto-merge enabled (merge commit strategy)" -ForegroundColor Green
+} catch {
+    Write-Warning "Failed to enable auto-merge: $_"
+    Write-Warning "You may need to manually enable auto-merge on the PR"
+}
 Write-Host ""
 
-# Step 10: Summary
+# Step 11: Summary
 Write-Host "=== Rollout Preparation Complete ===" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Summary:" -ForegroundColor White
@@ -158,6 +171,7 @@ Write-Host "  Branch:      $branchName" -ForegroundColor White
 Write-Host "  Commit:      $commitSha" -ForegroundColor White
 Write-Host "  Issue:       $issueUrl" -ForegroundColor White
 Write-Host "  PR:          $prUrl" -ForegroundColor White
+Write-Host "  Auto-merge:  Enabled (merge commit)" -ForegroundColor White
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Yellow
 Write-Host "  1. Assign the issue to the current sprint (if not already done)" -ForegroundColor White
