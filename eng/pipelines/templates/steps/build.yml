@@ -4,13 +4,8 @@ parameters:
 - name: buildArgs
   type: string
   default: ''
-  
-steps:
-- task: NuGetToolInstaller@0
-  displayName: Install NuGet
-  inputs:
-    versionSpec: 6.11.x
 
+steps:
 - powershell: |
     Write-Host "##vso[task.setvariable variable=VersionPrefix]1.1.0"
   displayName: Set Package Version
