@@ -11,8 +11,8 @@ namespace ProductConstructionService.Cli.Options;
 [Verb("export-configuration", HelpText = "Export PCS subscription configuration into yaml")]
 internal class ExportConfigurationOptions : PcsStatusOptions
 {
-    [Option("export-path", Required = true, HelpText = "The output path for the exported configuration files.")]
-    public required string ExportPath { get; init; }
+    [Option("export-path", Required = false, HelpText = "The output path for the exported configuration files.")]
+    public required string ExportPath { get; set; } = Directory.GetCurrentDirectory();
 
     public override Task<IServiceCollection> RegisterServices(IServiceCollection services)
     {

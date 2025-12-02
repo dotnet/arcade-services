@@ -42,81 +42,92 @@ internal class ExportConfigurationOperation : IOperation
         return 0;
     }
 
+    private async Task ProcessAndWriteYamlGroups<TData, TYaml>(
+        NativePath exportPath,
+        Func<Task<IEnumerable<TData>>> fetchData,
+        Func<TData, TYaml> convertToYaml,
+        Func<TYaml, string> getFilePath,
+        string folderPath)
+    {
+        var data = await fetchData();
+        var yamlGroups = data
+            .Select(convertToYaml)
+            .Select(yaml => (filePath: getFilePath(yaml), yaml))
+            .GroupBy(t => t.filePath, t => t.yaml);
+
+        _fileSystem.CreateDirectory(exportPath / folderPath);
+        WriteGroupsToFiles(exportPath, yamlGroups.Cast<IGrouping<string, object>>());
+    }
+
     private async Task ExportSubscriptions(NativePath exportPath)
     {
-        var subscriptions = await _api.Subscriptions.ListSubscriptionsAsync();
-        var subscriptionYamlGroups = subscriptions
-            .Select(sub => new SubscriptionYaml
+        await ProcessAndWriteYamlGroups<Subscription, SubscriptionYaml>(
+            exportPath,
+            async () => await _api.Subscriptions.ListSubscriptionsAsync(),
+            sub => new SubscriptionYaml
             {
                 Id = sub.Id.ToString(),
                 Enabled = sub.Enabled.ToString(),
-                Channel = sub.Channel?.Name ?? string.Empty,
+                Channel = sub.Channel.Name,
                 SourceRepository = sub.SourceRepository,
                 TargetRepository = sub.TargetRepository,
                 TargetBranch = sub.TargetBranch,
-                UpdateFrequency = sub.Policy?.UpdateFrequency.ToString() ?? string.Empty,
-                Batchable = sub.Policy?.Batchable.ToString() ?? "False",
-                MergePolicies = ConvertMergePolicies(sub.Policy?.MergePolicies),
-                FailureNotificationTags = sub.PullRequestFailureNotificationTags ?? string.Empty,
+                UpdateFrequency = sub.Policy.UpdateFrequency.ToString(),
+                Batchable = sub.Policy.Batchable.ToString(),
+                MergePolicies = ConvertMergePolicies(sub.Policy.MergePolicies),
+                FailureNotificationTags = sub.PullRequestFailureNotificationTags,
                 SourceEnabled = sub.SourceEnabled.ToString(),
-                SourceDirectory = sub.SourceDirectory ?? string.Empty,
-                TargetDirectory = sub.TargetDirectory ?? string.Empty,
-                ExcludedAssets = sub.ExcludedAssets?.ToList() ?? [],
-            })
-            .Select(subYaml => (MaestroConfigHelper.GetDefaultSubscriptionFilePath(subYaml), subYaml))
-            .GroupBy(t => t.Item1, t => t.subYaml);
-
-        _fileSystem.CreateDirectory(exportPath / MaestroConfigHelper.SubscriptionFolderPath);
-        WriteGroupsToFiles(exportPath, subscriptionYamlGroups);
+                SourceDirectory = sub.SourceDirectory,
+                TargetDirectory = sub.TargetDirectory,
+                ExcludedAssets = sub.ExcludedAssets,
+            },
+            MaestroConfigHelper.GetDefaultSubscriptionFilePath,
+            MaestroConfigHelper.SubscriptionFolderPath);
     }
 
     private async Task ExportChannels(NativePath exportPath)
     {
-        var channels = await _api.Channels.ListChannelsAsync();
-        var channelYamlGroups = channels
-            .Select(channel => new ChannelYaml
+        await ProcessAndWriteYamlGroups<Channel, ChannelYaml>(
+            exportPath,
+            async () => await _api.Channels.ListChannelsAsync(),
+            channel => new ChannelYaml
             {
                 Name = channel.Name,
                 Classification = channel.Classification,
-            })
-            .Select(channelYaml => (MaestroConfigHelper.GetDefaultChannelFilePath(channelYaml), channelYaml))
-            .GroupBy(t => t.Item1, t => t.channelYaml);
-
-        _fileSystem.CreateDirectory(exportPath / MaestroConfigHelper.ChannelFolderPath);
-        WriteGroupsToFiles(exportPath, channelYamlGroups);
+            },
+            MaestroConfigHelper.GetDefaultChannelFilePath,
+            MaestroConfigHelper.ChannelFolderPath);
     }
 
     private async Task ExportDefaultChannels(NativePath exportPath)
     {
-        var defaultChannels = await _api.DefaultChannels.ListAsync();
-        var defaultChannelYamlGroups = defaultChannels
-            .Select(dc => new DefaultChannelYaml
+        await ProcessAndWriteYamlGroups<DefaultChannel, DefaultChannelYaml>(
+            exportPath,
+            async () => await _api.DefaultChannels.ListAsync(),
+            dc => new DefaultChannelYaml
             {
                 Repository = dc.Repository,
                 Branch = dc.Branch,
                 ChannelId = dc.Channel.Id,
                 Enabled = dc.Enabled,
-            })
-            .Select(dcYaml => (MaestroConfigHelper.GetDefaultDefaultChannelFilePath(dcYaml), dcYaml))
-            .GroupBy(t => t.Item1, t => t.dcYaml);
-        _fileSystem.CreateDirectory(exportPath / MaestroConfigHelper.DefaultChannelFolderPath);
-        WriteGroupsToFiles(exportPath, defaultChannelYamlGroups);
+            },
+            MaestroConfigHelper.GetDefaultDefaultChannelFilePath,
+            MaestroConfigHelper.DefaultChannelFolderPath);
     }
 
     private async Task ExportBranchMergePolicies(NativePath exportPath)
     {
-        var repoBranches = await _api.Repository.ListRepositoriesAsync();
-        var branchMergePolicyGroups = repoBranches
-            .Select(rb => new BranchMergePoliciesYaml
+        await ProcessAndWriteYamlGroups<RepositoryBranch, BranchMergePoliciesYaml>(
+            exportPath,
+            async () => await _api.Repository.ListRepositoriesAsync(),
+            rb => new BranchMergePoliciesYaml
             {
                 Repository = rb.Repository,
                 Branch = rb.Branch,
                 MergePolicies = ConvertMergePolicies(rb.MergePolicies),
-            })
-            .Select(bmpYaml => (MaestroConfigHelper.GetDefaultRepositoryBranchFilePath(bmpYaml), bmpYaml))
-            .GroupBy(t => t.Item1, t => t.bmpYaml);
-        _fileSystem.CreateDirectory(exportPath / MaestroConfigHelper.RepositoryBranchFolderPath);
-        WriteGroupsToFiles(exportPath, branchMergePolicyGroups);
+            },
+            MaestroConfigHelper.GetDefaultRepositoryBranchFilePath,
+            MaestroConfigHelper.RepositoryBranchFolderPath);
     }
 
     private void WriteGroupsToFiles(NativePath exportPath, IEnumerable<IGrouping<string, object>> groups)
