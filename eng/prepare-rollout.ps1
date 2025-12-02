@@ -8,11 +8,9 @@
 ###
 ### Parameters:
 ###   -d, --date <string> Date for the rollout in YYYY-MM-DD format (default: today)
-###   -c, --commit <string> Commit SHA to rollout (default: HEAD of main)
-###   -r, --repo <string> Repository name (default: dotnet/arcade-services)
 ###
 ### Example: .\prepare-rollout.ps1
-### Example: .\prepare-rollout.ps1 -d 2025-12-15 -c abc123def
+### Example: .\prepare-rollout.ps1 -d 2025-12-15
 
 [CmdletBinding(PositionalBinding=$false)]
 Param(
@@ -128,7 +126,7 @@ Write-Host "Created issue: $issueUrl" -ForegroundColor Green
 $issue = gh issue view $issueUrl --json id,number,url | ConvertFrom-Json
 Write-Host ""
 
-# Step 8: Assign issue to PCS project and FR area
+# Step 9: Assign issue to PCS project and FR area
 Write-Host "Step 9: Assigning issue to PCS project and FR area..." -ForegroundColor Yellow
 
 $pcsProjectId = 276
