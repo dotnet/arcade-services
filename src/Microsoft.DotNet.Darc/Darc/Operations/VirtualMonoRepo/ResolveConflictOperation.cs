@@ -67,7 +67,6 @@ internal class ResolveConflictOperation(
     {
         NativePath targetGitRepoPath = new(_processManager.FindGitRoot(Directory.GetCurrentDirectory()));
 
-        _logger.LogInformation("Fetching subscription {subscriptionId}...", _options.SubscriptionId);
         var subscription = await FetchCodeflowSubscriptionAsync(_options.SubscriptionId);
 
         var pr = await FetchTrackedPrAsync(subscription.Id);
