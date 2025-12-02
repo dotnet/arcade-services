@@ -35,4 +35,5 @@ Type[] GetOptions() =>
         typeof(FeatureFlagRemoveOptions),
         typeof(FeatureFlagListOptions),
         typeof(FeatureFlagAvailableOptions),
+        typeof(ExportConfigurationOptions),
     ];

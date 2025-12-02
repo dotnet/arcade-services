@@ -15,6 +15,8 @@
     <PackageReference Include="Microsoft.Azure.StackExchangeRedis" />
     <PackageReference Include="NRedisStack" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.DotNet.MaestroConfiguration.Client" />
+    <PackageReference Include="YamlDotNet" />
   </ItemGroup>
 
   <ItemGroup>
