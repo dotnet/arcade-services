@@ -263,8 +263,8 @@ internal class ResolveConflictOperation(
             return;
         }
 
-        _logger.LogInformation("Codeflow has finished and changes have been staged on the local branch. "
-            + "However, no conflicts were encountered.");
+        _logger.LogInformation(
+            "Codeflow has finished and changes have been staged on the local branch with no conflicts encountered.");
     }
 
     private void CreateCommitMessageFile(
