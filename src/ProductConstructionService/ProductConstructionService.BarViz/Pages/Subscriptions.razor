@@ -35,6 +35,10 @@
         --badge-fill-lowlight: #555;
         margin-left: 6px;
     }
+
+    #copy-all-ids-button {
+        top: -7px;
+    }
 </style>
 
 <PageTitle>Subscriptions – Maestro++</PageTitle>
@@ -52,10 +56,10 @@
                            HideTooltipOnCursorLeave="true"
                            Position=TooltipPosition.Bottom
                            Delay=100>
-                Copy IDs of all subscriptions currently in view (after filtering, across all pages)
+                Copy IDs of subscriptions in view (all pages)
             </FluentTooltip>
 
-            <FluentSpacer Width="10" />
+            <FluentSpacer Width="30" />
 
             <FluentSearch @bind-Value="@SearchFilter"
                           @bind-Value:after=HandleSearchInput
