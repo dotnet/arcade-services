@@ -7,9 +7,11 @@
 @using Microsoft.FluentUI.AspNetCore.Components.Extensions
 @using ProductConstructionService.BarViz.Code.Helpers
 @using ProductConstructionService.BarViz.Components
+@using TextCopy
 @inject NavigationManager NavManager
 @inject IProductConstructionServiceApi PcsApi
 @inject IDialogService DialogService
+@inject IClipboard Clipboard
 
 <style>
     .hover:not([row-type='header'],[row-type='sticky-header'],.loading-content-row):hover[b-upi3f9mbnn] {
@@ -39,6 +41,21 @@
 <GridViewTemplate Title="Subscriptions" ShowSkeleton="AllSubscriptions == null">
     <Header>
         <div style="float: right">
+            <FluentButton IconEnd="@(new Icons.Regular.Size16.Copy())"
+                          Appearance="Appearance.Outline"
+                          OnClick="@CopyAllSubscriptionIds"
+                          Title="Copy all subscription IDs"
+                          Id="copy-all-ids-button" />
+
+            <FluentTooltip Anchor="copy-all-ids-button"
+                           HideTooltipOnCursorLeave="true"
+                           Position=TooltipPosition.Bottom
+                           Delay=100>
+                Copy IDs of all subscriptions currently in view (after filtering, across all pages)
+            </FluentTooltip>
+
+            <FluentSpacer Width="10" />
+
             <FluentSearch @bind-Value="@SearchFilter"
                           @bind-Value:after=HandleSearchInput
                           Immediate="true"
@@ -261,6 +278,26 @@
         
         // Only expand if there's exactly one match
         return matches.Count == 1 ? matches[0] : filter;
+    }
+
+    async Task CopyAllSubscriptionIds()
+    {
+        if (FilteredSubscriptions == null)
+        {
+            return;
+        }
+
+        var subscriptionIds = FilteredSubscriptions
+            .Select(sub => sub.Id.ToString())
+            .ToList();
+
+        if (subscriptionIds.Count == 0)
+        {
+            return;
+        }
+
+        var idsText = string.Join(Environment.NewLine, subscriptionIds);
+        await Clipboard.SetTextAsync(idsText);
     }
 
     async Task ShowDetails(Subscription subscription)
