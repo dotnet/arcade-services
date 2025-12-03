@@ -3,8 +3,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using YamlDotNet.Serialization;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib.Models.Yaml;
 
 /// <summary>
@@ -29,44 +32,45 @@ public class SubscriptionYaml
     public const string TargetDirectoryElement = "Target Directory";
 
     [YamlMember(Alias = IdElement, ApplyNamingConventions = false)]
-    public string Id { get; set; }
+    public required Guid Id { get; init; }
 
+    [DefaultValue(true)]
     [YamlMember(Alias = EnabledElement, ApplyNamingConventions = false)]
-    public string Enabled { get; set; }
+    public bool Enabled { get; init; } = true;
 
     [YamlMember(Alias = ChannelElement, ApplyNamingConventions = false)]
-    public string Channel { get; set; }
+    public required string Channel { get; init; }
 
     [YamlMember(Alias = SourceRepoElement, ApplyNamingConventions = false)]
-    public string SourceRepository { get; set; }
+    public required string SourceRepository { get; init; }
 
     [YamlMember(Alias = TargetRepoElement, ApplyNamingConventions = false)]
-    public string TargetRepository { get; set; }
+    public required string TargetRepository { get; init; }
 
     [YamlMember(Alias = TargetBranchElement, ApplyNamingConventions = false)]
-    public string TargetBranch { get; set; }
+    public required string TargetBranch { get; init; }
 
     [YamlMember(Alias = UpdateFrequencyElement, ApplyNamingConventions = false)]
-    public string UpdateFrequency { get; set; }
+    public UpdateFrequency UpdateFrequency { get; init; } = UpdateFrequency.None;
 
     [YamlMember(Alias = BatchableElement, ApplyNamingConventions = false)]
-    public string Batchable { get; set; }
+    public bool Batchable { get; set; } = false;
 
     [YamlMember(Alias = ExcludedAssetsElement, ApplyNamingConventions = false)]
-    public List<string> ExcludedAssets { get; set; }
+    public List<string> ExcludedAssets { get; init; } = [];
 
     [YamlMember(Alias = MergePolicyElement, ApplyNamingConventions = false)]
-    public List<MergePolicyYaml> MergePolicies { get; set; }
+    public List<MergePolicyYaml> MergePolicies { get; init; } = [];
 
     [YamlMember(Alias = FailureNotificationTagsElement, ApplyNamingConventions = false)]
-    public string FailureNotificationTags { get; set; }
+    public string? FailureNotificationTags { get; set; }
 
     [YamlMember(Alias = SourceEnabledElement, ApplyNamingConventions = false)]
-    public string SourceEnabled { get; set; }
+    public bool SourceEnabled { get; set; } = false;
 
     [YamlMember(Alias = SourceDirectoryElement, ApplyNamingConventions = false)]
-    public string SourceDirectory { get; set; }
+    public string? SourceDirectory { get; set; }
 
     [YamlMember(Alias = TargetDirectoryElement, ApplyNamingConventions = false)]
-    public string TargetDirectory { get; set; }
+    public string? TargetDirectory { get; set; }
 }
