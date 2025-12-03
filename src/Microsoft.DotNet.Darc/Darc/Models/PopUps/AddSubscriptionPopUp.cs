@@ -3,21 +3,19 @@
 
 using System.Collections.Generic;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Models.Yaml;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models.PopUps;
 
-internal class AddSubscriptionPopUp : SubscriptionPopUp<SubscriptionYaml>
+internal class AddSubscriptionPopUp : SubscriptionPopUp<SubscriptionPopUpData>
 {
     public AddSubscriptionPopUp(
         string path,
         bool forceCreation,
         IGitRepoFactory gitRepoFactory,
         ILogger logger,
-        bool enabled,
         string channel,
         string sourceRepository,
         string targetRepository,
@@ -35,10 +33,8 @@ internal class AddSubscriptionPopUp : SubscriptionPopUp<SubscriptionYaml>
         string? targetDirectory,
         List<string> excludedAssets)
         : base(path, forceCreation, suggestedChannels, suggestedRepositories, availableUpdateFrequencies, availableMergePolicyHelp, logger, gitRepoFactory,
-            new SubscriptionYaml
+            new SubscriptionPopUpData
             {
-                Id = "<will be assigned upon creation>",
-                Enabled = GetCurrentSettingForDisplay(enabled.ToString(), enabled.ToString(), false),
                 Channel = GetCurrentSettingForDisplay(channel, "<required>", false),
                 SourceRepository = GetCurrentSettingForDisplay(sourceRepository, "<required>", false),
                 TargetRepository = GetCurrentSettingForDisplay(targetRepository, "<required>", false),
