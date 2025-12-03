@@ -34,7 +34,7 @@ public class SubscriptionYaml
 
     [DefaultValue("True")]
     [YamlMember(Alias = EnabledElement, ApplyNamingConventions = false)]
-    public string Enabled { get; set; }
+    public string Enabled { get; set; } = "True";
 
     [YamlMember(Alias = ChannelElement, ApplyNamingConventions = false)]
     public string Channel { get; set; }
@@ -53,20 +53,20 @@ public class SubscriptionYaml
 
     [DefaultValue("False")]
     [YamlMember(Alias = BatchableElement, ApplyNamingConventions = false)]
-    public string Batchable { get; set; }
+    public string Batchable { get; set; } = "False";
 
     [YamlMember(Alias = ExcludedAssetsElement, ApplyNamingConventions = false)]
-    public List<string> ExcludedAssets { get; set; }
+    public List<string> ExcludedAssets { get; set; } = [];
 
     [YamlMember(Alias = MergePolicyElement, ApplyNamingConventions = false)]
-    public List<MergePolicyYaml> MergePolicies { get; set; }
+    public List<MergePolicyYaml> MergePolicies { get; set; } = [];
 
     [YamlMember(Alias = FailureNotificationTagsElement, ApplyNamingConventions = false)]
     public string FailureNotificationTags { get; set; }
 
     [DefaultValue("False")]
     [YamlMember(Alias = SourceEnabledElement, ApplyNamingConventions = false)]
-    public string SourceEnabled { get; set; }
+    public string SourceEnabled { get; set; } = "False";
 
     [YamlMember(Alias = SourceDirectoryElement, ApplyNamingConventions = false)]
     public string SourceDirectory { get; set; }

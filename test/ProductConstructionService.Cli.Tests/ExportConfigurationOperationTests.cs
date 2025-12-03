@@ -3,6 +3,7 @@
 
 using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.Yaml;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using ProductConstructionService.Cli.Operations;
@@ -153,6 +154,27 @@ public class ExportConfigurationOperationTests
             """;
 
         writtenContent.Should().Be(expectedYaml);
+
+        // Deserialize back to SubscriptionYaml to verify round-trip
+        var deserializer = new DeserializerBuilder().Build();
+        var deserialized = deserializer.Deserialize<List<SubscriptionYaml>>(writtenContent!);
+
+        deserialized.Should().HaveCount(1);
+        var subscription = deserialized[0];
+        subscription.Id.Should().Be(TestSubscriptionId);
+        subscription.Enabled.Should().Be("False");
+        subscription.Channel.Should().Be("test-channel");
+        subscription.SourceRepository.Should().Be("https://github.com/test/repo");
+        subscription.TargetRepository.Should().Be("https://github.com/target/repo");
+        subscription.TargetBranch.Should().Be("main");
+        subscription.UpdateFrequency.Should().Be("EveryDay");
+        subscription.Batchable.Should().Be("False");
+        subscription.SourceEnabled.Should().Be("False");
+        subscription.SourceDirectory.Should().BeNull();
+        subscription.TargetDirectory.Should().BeNull();
+        subscription.FailureNotificationTags.Should().BeNull();
+        subscription.ExcludedAssets.Should().BeEmpty();
+        subscription.MergePolicies.Should().BeEmpty();
     }
 
     [Test]
