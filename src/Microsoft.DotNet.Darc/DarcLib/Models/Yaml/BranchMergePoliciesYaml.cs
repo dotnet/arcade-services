@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using YamlDotNet.Serialization;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib.Models.Yaml;
 
 public class BranchMergePoliciesYaml
@@ -13,11 +14,11 @@ public class BranchMergePoliciesYaml
     public const string MergePolicyElement = "Merge Policies";
 
     [YamlMember(Alias = BranchElement, ApplyNamingConventions = false)]
-    public string Branch { get; set; }
+    public required string Branch { get; init; }
 
     [YamlMember(Alias = RepoElement, ApplyNamingConventions = false)]
-    public string Repository { get; set; }
+    public required string Repository { get; init; }
 
     [YamlMember(Alias = MergePolicyElement, ApplyNamingConventions = false)]
-    public List<MergePolicyYaml> MergePolicies { get; set; }
+    public List<MergePolicyYaml> MergePolicies { get; set; } = []
 }
