@@ -290,16 +290,17 @@
 
         try
         {
-            var idsText = string.Join(Environment.NewLine, FilteredSubscriptions.Select(sub => sub.Id.ToString()));
+            var subscriptionIds = FilteredSubscriptions.Select(sub => sub.Id.ToString()).ToList();
 
-            if (string.IsNullOrEmpty(idsText))
+            if (subscriptionIds.Count == 0)
             {
                 ToastService.ShowWarning("No subscriptions to copy");
                 return;
             }
 
+            var idsText = string.Join(Environment.NewLine, subscriptionIds);
             await Clipboard.SetTextAsync(idsText);
-            ToastService.ShowSuccess($"Copied {FilteredSubscriptions.Count()} subscription ID(s) to clipboard");
+            ToastService.ShowSuccess($"Copied {subscriptionIds.Count} subscription ID(s) to clipboard");
         }
         catch (Exception ex)
         {
