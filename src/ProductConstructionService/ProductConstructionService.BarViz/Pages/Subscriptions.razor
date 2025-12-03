@@ -12,6 +12,7 @@
 @inject IProductConstructionServiceApi PcsApi
 @inject IDialogService DialogService
 @inject IClipboard Clipboard
+@inject IToastService ToastService
 
 <style>
     .hover:not([row-type='header'],[row-type='sticky-header'],.loading-content-row):hover[b-upi3f9mbnn] {
@@ -287,17 +288,23 @@
             return;
         }
 
-        var subscriptionIds = FilteredSubscriptions
-            .Select(sub => sub.Id.ToString())
-            .ToList();
-
-        if (subscriptionIds.Count == 0)
+        try
         {
-            return;
-        }
+            var idsText = string.Join(Environment.NewLine, FilteredSubscriptions.Select(sub => sub.Id.ToString()));
 
-        var idsText = string.Join(Environment.NewLine, subscriptionIds);
-        await Clipboard.SetTextAsync(idsText);
+            if (string.IsNullOrEmpty(idsText))
+            {
+                ToastService.ShowWarning("No subscriptions to copy");
+                return;
+            }
+
+            await Clipboard.SetTextAsync(idsText);
+            ToastService.ShowSuccess($"Copied {FilteredSubscriptions.Count()} subscription ID(s) to clipboard");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to copy subscription IDs: {ex.Message}");
+        }
     }
 
     async Task ShowDetails(Subscription subscription)
