@@ -21,6 +21,7 @@ internal class ExportConfigurationOperation : IOperation
 
     private static readonly ISerializer _yamlSerializer = new SerializerBuilder()
         .WithNamingConvention(NullNamingConvention.Instance)
+        .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitDefaults | DefaultValuesHandling.OmitEmptyCollections)
         .Build();
 
     public ExportConfigurationOperation(IProductConstructionServiceApi api, ExportConfigurationOptions options, IFileSystem fileSystem)

@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using YamlDotNet.Serialization;
 
 namespace Microsoft.DotNet.DarcLib.Models.Yaml;
@@ -31,6 +32,7 @@ public class SubscriptionYaml
     [YamlMember(Alias = IdElement, ApplyNamingConventions = false)]
     public string Id { get; set; }
 
+    [DefaultValue("True")]
     [YamlMember(Alias = EnabledElement, ApplyNamingConventions = false)]
     public string Enabled { get; set; }
 
@@ -49,6 +51,7 @@ public class SubscriptionYaml
     [YamlMember(Alias = UpdateFrequencyElement, ApplyNamingConventions = false)]
     public string UpdateFrequency { get; set; }
 
+    [DefaultValue("False")]
     [YamlMember(Alias = BatchableElement, ApplyNamingConventions = false)]
     public string Batchable { get; set; }
 
@@ -61,6 +64,7 @@ public class SubscriptionYaml
     [YamlMember(Alias = FailureNotificationTagsElement, ApplyNamingConventions = false)]
     public string FailureNotificationTags { get; set; }
 
+    [DefaultValue("False")]
     [YamlMember(Alias = SourceEnabledElement, ApplyNamingConventions = false)]
     public string SourceEnabled { get; set; }
 

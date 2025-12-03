@@ -87,7 +87,6 @@ public class ExportConfigurationOperationTests
         // Verify YAML content contains all subscription properties
         var expectedYaml = $"""
             - Id: {TestSubscriptionId}
-              Enabled: True
               Channel: test-channel
               Source Repository URL: https://github.com/test/repo
               Target Repository URL: https://github.com/target/repo
@@ -96,7 +95,6 @@ public class ExportConfigurationOperationTests
               Batchable: True
               Excluded Assets:
               - test-asset
-              Merge Policies: []
               Pull Request Failure Notification Tags: test-tag
               Source Enabled: True
               Source Directory: src
@@ -151,13 +149,6 @@ public class ExportConfigurationOperationTests
               Target Repository URL: https://github.com/target/repo
               Target Branch: main
               Update Frequency: EveryDay
-              Batchable: False
-              Excluded Assets: []
-              Merge Policies: []
-              Pull Request Failure Notification Tags: 
-              Source Enabled: False
-              Source Directory: 
-              Target Directory: 
 
             """;
 
