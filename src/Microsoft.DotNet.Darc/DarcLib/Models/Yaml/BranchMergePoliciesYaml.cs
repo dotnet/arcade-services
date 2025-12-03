@@ -20,5 +20,5 @@ public class BranchMergePoliciesYaml
     public required string Repository { get; init; }
 
     [YamlMember(Alias = MergePolicyElement, ApplyNamingConventions = false)]
-    public List<MergePolicyYaml> MergePolicies { get; set; } = []
+    public List<MergePolicyYaml> MergePolicies { get; set; } = [];
 }
