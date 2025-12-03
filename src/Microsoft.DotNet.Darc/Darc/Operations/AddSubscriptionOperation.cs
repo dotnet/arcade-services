@@ -180,7 +180,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 string.IsNullOrEmpty(targetRepository) ||
                 string.IsNullOrEmpty(targetBranch) ||
                 string.IsNullOrEmpty(updateFrequency) ||
-                !Constants.AvailableFrequencies.Contains(updateFrequency, StringComparer.OrdinalIgnoreCase))
+                !DarcLib.Constants.AvailableFrequencies.Contains(updateFrequency, StringComparer.OrdinalIgnoreCase))
             {
                 _logger.LogError($"Missing input parameters for the subscription. Please see command help or remove --quiet/-q for interactive mode");
                 return Constants.ErrorCode;
@@ -219,7 +219,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 mergePolicies,
                 (await suggestedChannels).Select(suggestedChannel => suggestedChannel.Name),
                 (await suggestedRepos).SelectMany(subscription => new List<string> { subscription.SourceRepository, subscription.TargetRepository }).ToHashSet(),
-                Constants.AvailableFrequencies,
+                DarcLib.Constants.AvailableFrequencies,
                 Constants.AvailableMergePolicyYamlHelp,
                 failureNotificationTags,
                 sourceEnabled,
