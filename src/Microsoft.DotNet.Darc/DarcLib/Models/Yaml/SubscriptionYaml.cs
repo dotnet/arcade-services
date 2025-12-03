@@ -34,7 +34,11 @@ public class SubscriptionYaml
 
     [DefaultValue("True")]
     [YamlMember(Alias = EnabledElement, ApplyNamingConventions = false)]
-    public string Enabled { get; set; } = "True";
+    public string Enabled
+    {
+        get => field;
+        set => field = NormalizeBool(value) ?? "True";
+    } = "True";
 
     [YamlMember(Alias = ChannelElement, ApplyNamingConventions = false)]
     public string Channel { get; set; }
@@ -48,12 +52,21 @@ public class SubscriptionYaml
     [YamlMember(Alias = TargetBranchElement, ApplyNamingConventions = false)]
     public string TargetBranch { get; set; }
 
+    [DefaultValue("none")]
     [YamlMember(Alias = UpdateFrequencyElement, ApplyNamingConventions = false)]
-    public string UpdateFrequency { get; set; }
+    public string UpdateFrequency
+    {
+        get => field;
+        set => field = NormalizeUpdateFrequency(value) ?? "none";
+    } = "none";
 
     [DefaultValue("False")]
     [YamlMember(Alias = BatchableElement, ApplyNamingConventions = false)]
-    public string Batchable { get; set; } = "False";
+    public string Batchable
+    {
+        get => field;
+        set => field = NormalizeBool(value) ?? "False";
+    } = "False";
 
     [YamlMember(Alias = ExcludedAssetsElement, ApplyNamingConventions = false)]
     public List<string> ExcludedAssets { get; set; } = [];
@@ -66,11 +79,43 @@ public class SubscriptionYaml
 
     [DefaultValue("False")]
     [YamlMember(Alias = SourceEnabledElement, ApplyNamingConventions = false)]
-    public string SourceEnabled { get; set; } = "False";
+    public string SourceEnabled
+    {
+        get => field;
+        set => field = NormalizeBool(value) ?? "False";
+    } = "False";
 
     [YamlMember(Alias = SourceDirectoryElement, ApplyNamingConventions = false)]
     public string SourceDirectory { get; set; }
 
     [YamlMember(Alias = TargetDirectoryElement, ApplyNamingConventions = false)]
     public string TargetDirectory { get; set; }
+
+    private static string NormalizeBool(string value)
+    {
+        if (string.Equals(value, "true", StringComparison.OrdinalIgnoreCase))
+            return "True";
+        if (string.Equals(value, "false", StringComparison.OrdinalIgnoreCase))
+            return "False";
+        throw new ArgumentException($"Invalid boolean value: '{value}'. Expected 'true' or 'false'.", nameof(value));
+    }
+
+    private static string NormalizeUpdateFrequency(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return value;
+
+        // Normalize to camelCase format (with lowercase "none")
+        return value.ToLowerInvariant() switch
+        {
+            "none" => "none",
+            "everyday" => "everyDay",
+            "everybuild" => "everyBuild",
+            "twicedaily" => "twiceDaily",
+            "everyweek" => "everyWeek",
+            "everytwoweeks" => "everyTwoWeeks",
+            "everymonth" => "everyMonth",
+            _ => throw new ArgumentException($"Invalid update frequency: '{value}'. Expected one of: none, everyDay, everyBuild, twiceDaily, everyWeek, everyTwoWeeks, everyMonth.", nameof(value))
+        };
+    }
 }

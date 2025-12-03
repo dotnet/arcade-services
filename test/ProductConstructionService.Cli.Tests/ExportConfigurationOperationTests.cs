@@ -92,7 +92,7 @@ public class ExportConfigurationOperationTests
               Source Repository URL: https://github.com/test/repo
               Target Repository URL: https://github.com/target/repo
               Target Branch: main
-              Update Frequency: EveryDay
+              Update Frequency: everyDay
               Batchable: True
               Excluded Assets:
               - test-asset
@@ -149,7 +149,7 @@ public class ExportConfigurationOperationTests
               Source Repository URL: https://github.com/test/repo
               Target Repository URL: https://github.com/target/repo
               Target Branch: main
-              Update Frequency: EveryDay
+              Update Frequency: everyDay
 
             """;
 
@@ -167,7 +167,7 @@ public class ExportConfigurationOperationTests
         subscription.SourceRepository.Should().Be("https://github.com/test/repo");
         subscription.TargetRepository.Should().Be("https://github.com/target/repo");
         subscription.TargetBranch.Should().Be("main");
-        subscription.UpdateFrequency.Should().Be("EveryDay");
+        subscription.UpdateFrequency.Should().Be("everyDay");
         subscription.Batchable.Should().Be("False");
         subscription.SourceEnabled.Should().Be("False");
         subscription.SourceDirectory.Should().BeNull();
