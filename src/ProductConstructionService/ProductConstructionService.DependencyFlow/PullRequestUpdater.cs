@@ -1263,7 +1263,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 upstreamRepoDiffs);
         }
 
-        if (pr != null && !enableRebase  && codeFlowRes.HadConflicts)
+        if (pr != null && !enableRebase && codeFlowRes.HadConflicts)
         {
             _commentCollector.AddComment(
                 PullRequestCommentBuilder.NotifyAboutMergeConflict(

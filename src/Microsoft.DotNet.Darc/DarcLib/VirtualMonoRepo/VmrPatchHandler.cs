@@ -212,7 +212,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// Applies a set of patches by applying all patches, preserving conflicts in the index.
     /// In case of failures, collects all conflicted files into a single exception.
     /// </summary>
-    /// <returns>When keepConflits is true, returns a list of conflicting files</returns>
+    /// <returns>When keepConflicts is true, returns a list of conflicting files</returns>
     public async Task<IReadOnlyCollection<UnixPath>> ApplyPatches(
         IEnumerable<VmrIngestionPatch> patches,
         NativePath targetDirectory,
@@ -242,7 +242,7 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// <summary>
     /// Applies a given patch file onto given mapping's subrepository.
     /// </summary>
-    /// <returns>When keepConflits is true, returns a list of conflicting files</returns>
+    /// <returns>When keepConflicts is true, returns a list of conflicting files</returns>
     public async Task<IReadOnlyCollection<UnixPath>> ApplyPatch(
         VmrIngestionPatch patch,
         NativePath targetDirectory,

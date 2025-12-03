@@ -99,7 +99,6 @@ public abstract class CodeFlowConflictResolver
                 cancellationToken)
             && !codeflowOptions.EnableRebase)
         {
-            conflictedFiles = [];
             await targetRepo.CommitAsync(
                 $"""
                 Merge {codeflowOptions.TargetBranch} into {codeflowOptions.HeadBranch}
@@ -108,6 +107,7 @@ public abstract class CodeFlowConflictResolver
                 """,
                 allowEmpty: true,
             cancellationToken: CancellationToken.None);
+            conflictedFiles = [];
         }
 
         if (codeflowOptions.EnableRebase)
