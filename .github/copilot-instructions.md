@@ -76,6 +76,7 @@ After making changes, validate by testing these workflows:
 - Follow the AAA (Arrange-Act-Assert) pattern for unit tests.
 - Prefer ILogger<T> over ILogger for better context in logs.
 - Services should be registered with appropriate lifetimes (singleton, scoped, transient).
+- When writing tests, use NUnit as the testing framework, Moq for mocking dependencies and AmazingAssertions for fluent assertions.
 
 ## Repository Structure
 - `docs/` - Documentation (DevGuide.md, scenarios.md)
