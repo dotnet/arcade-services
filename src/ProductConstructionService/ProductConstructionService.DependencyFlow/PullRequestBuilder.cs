@@ -361,10 +361,13 @@ internal class PullRequestBuilder : IPullRequestBuilder
 
     private static string GenerateDarcDiffHelpSection(BuildDTO build, string targetRepository, string headBranch) =>
         $"""
-        <!--
-            To diff the source repo and PR branch contents locally, run:
-            darc vmr diff --name-only {build.GetRepository()}:{build.Commit}..{targetRepository}:{headBranch}
-        -->
+        <details>
+        <summary>Diff the source with this PR branch</summary>
+
+        ```bash
+        darc vmr diff --name-only {build.GetRepository()}:{build.Commit}..{targetRepository}:{headBranch}
+        ```
+        </details>
         """;
 
     private async Task<string> GenerateCodeFlowDescriptionForSubscription(
