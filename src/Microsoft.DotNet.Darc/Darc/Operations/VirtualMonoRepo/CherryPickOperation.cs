@@ -117,12 +117,13 @@ internal class CherryPickOperation : Operation
 
         try
         {
-            await _patchHandler.ApplyPatches(patches, gitRoot, removePatchAfter: true, keepConflicts: true);
-        }
-        catch (PatchApplicationLeftConflictsException)
-        {
-            _logger.LogError("Conflicts were detected and changes (including conflicts) staged");
-            return Constants.ErrorCode;
+            var conflicts = await _patchHandler.ApplyPatches(patches, gitRoot, removePatchAfter: true, keepConflicts: true);
+
+            if (conflicts.Count > 0)
+            {
+                _logger.LogError("Conflicts were detected and changes (including conflicts) staged");
+                return Constants.ErrorCode;
+            }
         }
         finally
         {

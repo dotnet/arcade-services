@@ -231,24 +231,16 @@ internal abstract class CodeFlowTestsBase
             buildToFlow = await _basicBarClient.Object.GetBuildAsync(_buildId);
         }
 
-        CodeFlowResult codeFlowResult;
-        try
-        {
-            codeFlowResult = await codeflower.FlowBackAsync(
-                mappingName,
-                repoPath,
-                buildToFlow ?? await CreateNewVmrBuild([]),
-                excludedAssets,
-                "main",
-                branch,
-                enableRebase,
-                forceUpdate,
-                cancellationToken: _cancellationToken.Token);
-        }
-        catch (PatchApplicationLeftConflictsException e)
-        {
-            codeFlowResult = new(true, e.ConflictedFiles, e.RepoPath, []);
-        }
+        CodeFlowResult codeFlowResult = await codeflower.FlowBackAsync(
+            mappingName,
+            repoPath,
+            buildToFlow ?? await CreateNewVmrBuild([]),
+            excludedAssets,
+            "main",
+            branch,
+            enableRebase,
+            forceUpdate,
+            cancellationToken: _cancellationToken.Token);
 
         _lastFlowCollectedComments = scope.ServiceProvider.GetRequiredService<ICommentCollector>()
             .GetComments()
@@ -272,25 +264,17 @@ internal abstract class CodeFlowTestsBase
         var cloneManager = scope.ServiceProvider.GetRequiredService<IVmrCloneManager>();
         await cloneManager.RegisterCloneAsync(VmrPath);
 
-        CodeFlowResult codeFlowResult;
-        try
-        {
-            codeFlowResult = await codeflower.FlowForwardAsync(
-                mappingName,
-                repoPath,
-                buildToFlow ?? await CreateNewRepoBuild(repoPath, []),
-                excludedAssets,
-                "main",
-                branch,
-                VmrPath,
-                enableRebase,
-                forceUpdate,
-                cancellationToken: _cancellationToken.Token);
-        }
-        catch (PatchApplicationLeftConflictsException e)
-        {
-            codeFlowResult = new(true, e.ConflictedFiles, e.RepoPath, []);
-        }
+        CodeFlowResult codeFlowResult = await codeflower.FlowForwardAsync(
+            mappingName,
+            repoPath,
+            buildToFlow ?? await CreateNewRepoBuild(repoPath, []),
+            excludedAssets,
+            "main",
+            branch,
+            VmrPath,
+            enableRebase,
+            forceUpdate,
+            cancellationToken: _cancellationToken.Token);
 
         _lastFlowCollectedComments = scope.ServiceProvider.GetRequiredService<ICommentCollector>()
             .GetComments()

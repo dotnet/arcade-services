@@ -27,13 +27,6 @@ public class PatchApplicationFailedException(
             + Result;
 }
 
-public class PatchApplicationLeftConflictsException(IReadOnlyCollection<UnixPath> conflictedFiles, NativePath repoPath)
-    : DarcException("The patch left the repository in a conflicted state")
-{
-    public IReadOnlyCollection<UnixPath> ConflictedFiles { get; set; } = conflictedFiles;
-    public NativePath RepoPath { get; } = repoPath;
-}
-
 /// <summary>
 ///     Exception thrown when the service can't apply an update to the PR branch due to a conflict
 ///     between the source repo and a change that was made in the PR after it was opened.

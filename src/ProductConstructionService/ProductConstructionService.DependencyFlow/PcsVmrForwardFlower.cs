@@ -90,7 +90,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             forceUpdate,
             cancellationToken);
 
-        if (result.HadUpdates && enableRebase)
+        if (enableRebase && result.HadUpdates && !result.HadConflicts)
         {
             var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
             var stagedFiles = await vmr.GetStagedFilesAsync();
@@ -107,7 +107,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
     // During forward flow, we're targeting a specific remote VMR branch, so we should make sure our local branch is reset to it
     protected override bool ShouldResetVmr => true;
 
-    protected override async Task MergeWorkBranchAsync(
+    protected override async Task<IReadOnlyCollection<UnixPath>> MergeWorkBranchAsync(
         CodeflowOptions codeflowOptions,
         ILocalGitRepo targetRepo,
         IWorkBranch workBranch,
@@ -115,7 +115,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         string commitMessage,
         CancellationToken cancellationToken)
     {
-        await base.MergeWorkBranchAsync(
+        IReadOnlyCollection<UnixPath> conflicts = await base.MergeWorkBranchAsync(
             codeflowOptions,
             targetRepo,
             workBranch,
@@ -123,11 +123,13 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             commitMessage,
             cancellationToken);
 
-        if (codeflowOptions.EnableRebase)
+        if (codeflowOptions.EnableRebase && conflicts.Count == 0)
         {
             // When we do the rebase flow, we need only stage locally (in darc) after we rebase the work branch
             // In the service, we need to commit too so that we push the update to the PR
             await targetRepo.CommitAsync(commitMessage, allowEmpty: true, cancellationToken: cancellationToken);
         }
+
+        return conflicts;
     }
 }

@@ -73,7 +73,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             enableRebase,
             cancellationToken);
 
-        var result = await FlowBackAsync(
+        CodeFlowResult result = await FlowBackAsync(
             new CodeflowOptions(
                 mapping,
                 new Backflow(build.Commit, lastFlows.LastFlow.RepoSha),
@@ -88,7 +88,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             headBranchExisted,
             cancellationToken);
 
-        if (result.HadUpdates && enableRebase)
+        if (result.HadUpdates && enableRebase && !result.HadConflicts)
         {
             var stagedFiles = await targetRepo.GetStagedFilesAsync();
             if (stagedFiles.Count > 0)
@@ -107,7 +107,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
 
     protected override bool ShouldResetClones => true;
 
-    protected override async Task MergeWorkBranchAsync(
+    protected override async Task<IReadOnlyCollection<UnixPath>> MergeWorkBranchAsync(
         CodeflowOptions codeflowOptions,
         ILocalGitRepo targetRepo,
         IWorkBranch workBranch,
@@ -115,7 +115,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         string commitMessage,
         CancellationToken cancellationToken)
     {
-        await base.MergeWorkBranchAsync(
+        IReadOnlyCollection<UnixPath> conflicts = await base.MergeWorkBranchAsync(
             codeflowOptions,
             targetRepo,
             workBranch,
@@ -123,11 +123,13 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             commitMessage,
             cancellationToken);
 
-        if (codeflowOptions.EnableRebase)
+        if (codeflowOptions.EnableRebase && conflicts.Count == 0)
         {
             // When we do the rebase flow, we need only stage locally (in darc) after we rebase the work branch
             // In the service, we need to commit too so that we push the update to the PR
             await targetRepo.CommitAsync(commitMessage, allowEmpty: true, cancellationToken: cancellationToken);
         }
+
+        return conflicts;
     }
 }

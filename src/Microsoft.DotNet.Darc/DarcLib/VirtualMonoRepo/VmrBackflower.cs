@@ -133,22 +133,12 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        ExceptionDispatchInfo? rebaseException = null;
-        bool hasChanges;
-        try
-        {
-            hasChanges = await FlowCodeAsync(
-                codeflowOptions,
-                lastFlows,
-                targetRepo,
-                headBranchExisted,
-                cancellationToken);
-        }
-        catch (PatchApplicationLeftConflictsException e) when (codeflowOptions.EnableRebase)
-        {
-            rebaseException = ExceptionDispatchInfo.Capture(e);
-            hasChanges = true;
-        }
+        CodeFlowResult result = await FlowCodeAsync(
+            codeflowOptions,
+            lastFlows,
+            targetRepo,
+            headBranchExisted,
+            cancellationToken);
 
         VersionFileUpdateResult mergeResult = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
             codeflowOptions,
@@ -157,20 +147,15 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             headBranchExisted,
             cancellationToken);
 
-        if (mergeResult.ConflictedFiles.Count > 0 && rebaseException != null)
+        return result with
         {
-            ((PatchApplicationLeftConflictsException)rebaseException.SourceException).ConflictedFiles = mergeResult.ConflictedFiles;
-            rebaseException.Throw();
-        }
-
-        return new CodeFlowResult(
-            hasChanges || mergeResult.DependencyUpdates.Count > 0 || mergeResult.HasToolsetUpdates,
-            mergeResult.ConflictedFiles,
-            targetRepo.Path,
-            mergeResult.DependencyUpdates);
+            ConflictedFiles = mergeResult.ConflictedFiles,
+            DependencyUpdates = mergeResult.DependencyUpdates,
+            HadUpdates = result.HadUpdates || mergeResult.DependencyUpdates.Count > 0 || mergeResult.HasToolsetUpdates,
+        };
     }
 
-    protected override async Task<bool> SameDirectionFlowAsync(
+    protected override async Task<CodeFlowResult> SameDirectionFlowAsync(
         CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
         ILocalGitRepo targetRepo,
@@ -211,7 +196,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 }
             }
 
-            return false;
+            return new CodeFlowResult(false, [], targetRepo.Path, []);
         }
 
         _logger.LogDebug("Created {count} patch(es)", patches.Count);
@@ -227,7 +212,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 codeflowOptions.HeadBranch);
         }
 
-        await ApplyChangesWithRecreationFallbackAsync(
+        CodeFlowResult result = await ApplyChangesWithRecreationFallbackAsync(
             codeflowOptions,
             lastFlows,
             targetRepo,
@@ -235,12 +220,13 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             workBranch,
             async keepConflicts =>
             {
-                await _vmrPatchHandler.ApplyPatches(
+                var conflicts = await _vmrPatchHandler.ApplyPatches(
                     patches,
                     targetRepo.Path,
                     removePatchAfter: true,
                     keepConflicts: keepConflicts,
                     cancellationToken: cancellationToken);
+                return new CodeFlowResult(true, conflicts, targetRepo.Path, []);
             },
             cancellationToken);
 
@@ -248,19 +234,22 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             var commitMessage = await CommitBackflow(codeflowOptions.CurrentFlow, targetRepo, codeflowOptions.Build, cancellationToken);
 
-	        await MergeWorkBranchAsync(
-	            codeflowOptions,
-	            targetRepo,
-	            workBranch,
-	            headBranchExisted,
-	            commitMessage,
-	            cancellationToken);
+            result = result with
+            {
+                ConflictedFiles = await MergeWorkBranchAsync(
+                    codeflowOptions,
+                    targetRepo,
+                    workBranch,
+                    headBranchExisted,
+                    commitMessage,
+                    cancellationToken)
+            };
         }
 
-        return true;
+        return result;
     }
 
-    protected override async Task<bool> OppositeDirectionFlowAsync(
+    protected override async Task<CodeFlowResult> OppositeDirectionFlowAsync(
         CodeflowOptions codeflowOptions,
         LastFlows lastFlows,
         ILocalGitRepo targetRepo,
@@ -333,12 +322,12 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         {
             // When no changes happened, we disregard the work branch and return back to the target branch
             await targetRepo.CheckoutAsync(codeflowOptions.HeadBranch);
-            return false;
+            return new CodeFlowResult(false, [], targetRepo.Path, []);
         }
 
         var commitMessage = await CommitBackflow(codeflowOptions.CurrentFlow, targetRepo, codeflowOptions.Build, cancellationToken);
 
-        await MergeWorkBranchAsync(
+        var conflictedFiles = await MergeWorkBranchAsync(
             codeflowOptions,
             targetRepo,
             workBranch,
@@ -346,7 +335,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             commitMessage,
             cancellationToken);
 
-        return true;
+        return new CodeFlowResult(true, conflictedFiles, targetRepo.Path, []);
     }
 
     protected override async Task<Codeflow?> DetectCrossingFlow(

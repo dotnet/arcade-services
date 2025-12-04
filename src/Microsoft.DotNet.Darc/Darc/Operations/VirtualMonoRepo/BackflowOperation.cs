@@ -34,7 +34,7 @@ internal class BackflowOperation(
     private readonly IProcessManager _processManager = processManager;
     private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
 
-    protected override async Task ExecuteInternalAsync(
+    protected override async Task<bool> ExecuteInternalAsync(
         string repoName,
         string? targetDirectory,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
@@ -53,11 +53,13 @@ internal class BackflowOperation(
         var vmr = _localGitRepoFactory.Create(vmrPath);
         var build = await ParseOptionsAndGetBuildToFlowAsync(vmr);
 
-        await FlowCodeLocallyAsync(
+        var result = await FlowCodeLocallyAsync(
             targetRepoPath,
             isForwardFlow: false,
             build: build,
             subscription: null,
             cancellationToken: cancellationToken);
+
+        return !result.HadConflicts;
     }
 }
