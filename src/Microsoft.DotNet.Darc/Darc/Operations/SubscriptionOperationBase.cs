@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal abstract class SubscriptionOperationBase : Operation
+internal abstract class SubscriptionOperationBase : ConfigurationManagementOperation
 {
     protected readonly IBarApiClient _barClient;
     protected readonly ILogger _logger;
