@@ -8,7 +8,7 @@ using ProductConstructionService.Cli.Operations;
 namespace ProductConstructionService.Cli.Options;
 
 [Verb("feature-flag-list", HelpText = "List feature flags (optionally for a specific subscription)")]
-internal class FeatureFlagListOptions : PcsStatusOptions
+internal class FeatureFlagListOptions : PcsApiOptions
 {
     [Option("subscription-id", Required = false, HelpText = "Subscription ID (optional - if not provided, lists all flags)")]
     public string? SubscriptionId { get; init; }

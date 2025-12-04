@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using YamlDotNet.Serialization;
 
@@ -14,7 +15,7 @@ namespace Microsoft.DotNet.DarcLib.Models.Yaml;
 /// Helper class for YAML encoding/decoding purposes.
 /// This is used so that we can have friendly alias names for elements.
 /// </summary>
-public class SubscriptionYaml
+public class SubscriptionYaml : IComparable<SubscriptionYaml>
 {
     public const string IdElement = "Id";
     public const string EnabledElement = "Enabled";
@@ -73,4 +74,42 @@ public class SubscriptionYaml
 
     [YamlMember(Alias = TargetDirectoryElement, ApplyNamingConventions = false)]
     public string? TargetDirectory { get; set; }
+
+    public static SubscriptionYaml FromClientModel(Subscription subscription) => new()
+    {
+        Id = subscription.Id,
+        Enabled = subscription.Enabled,
+        Channel = subscription.Channel.Name,
+        SourceRepository = subscription.SourceRepository,
+        TargetRepository = subscription.TargetRepository,
+        TargetBranch = subscription.TargetBranch,
+        UpdateFrequency = subscription.Policy.UpdateFrequency,
+        Batchable = subscription.Policy.Batchable,
+        MergePolicies = MergePolicyYaml.FromClientModels(subscription.Policy.MergePolicies),
+        FailureNotificationTags = subscription.PullRequestFailureNotificationTags,
+        SourceEnabled = subscription.SourceEnabled,
+        SourceDirectory = subscription.SourceDirectory,
+        TargetDirectory = subscription.TargetDirectory,
+        ExcludedAssets = subscription.ExcludedAssets.ToList(),
+    };
+
+    /// <summary>
+    /// Compares subscriptions for sorting purposes.
+    /// Order: TargetBranch (main, master, release/*, internal/release/*, then alphabetically), Channel, SourceRepository, Id
+    /// </summary>
+    public int CompareTo(SubscriptionYaml? other)
+    {
+        if (other is null) return 1;
+
+        int result = BranchOrderComparer.Compare(TargetBranch, other.TargetBranch);
+        if (result != 0) return result;
+
+        result = string.Compare(Channel, other.Channel, StringComparison.OrdinalIgnoreCase);
+        if (result != 0) return result;
+
+        result = string.Compare(SourceRepository, other.SourceRepository, StringComparison.OrdinalIgnoreCase);
+        if (result != 0) return result;
+
+        return Id.CompareTo(other.Id);
+    }
 }

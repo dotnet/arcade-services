@@ -8,7 +8,7 @@ using ProductConstructionService.Cli.Operations;
 namespace ProductConstructionService.Cli.Options;
 
 [Verb("feature-flag-set", HelpText = "Set a feature flag for a subscription")]
-internal class FeatureFlagSetOptions : PcsStatusOptions
+internal class FeatureFlagSetOptions : PcsApiOptions
 {
     [Option("subscription-id", Required = true, HelpText = "Subscription ID")]
     public required string SubscriptionId { get; init; }
