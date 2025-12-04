@@ -48,11 +48,18 @@ internal class ExportConfigurationOperation : IOperation
         Func<Task<IEnumerable<TData>>> fetchData,
         Func<TData, TYaml> convertToYaml,
         Func<TYaml, string> getFilePath,
-        string folderPath)
+        string folderPath,
+        IComparer<TYaml> comparer)
     {
         var data = await fetchData();
-        var yamlGroups = data
-            .Select(convertToYaml)
+        var yamlItems = data.Select(convertToYaml);
+        
+        if (comparer != null)
+        {
+            yamlItems = yamlItems.Order(comparer);
+        }
+
+        var yamlGroups = yamlItems
             .Select(yaml => (filePath: getFilePath(yaml), yaml))
             .GroupBy(t => t.filePath, t => t.yaml);
 
@@ -83,7 +90,8 @@ internal class ExportConfigurationOperation : IOperation
                 ExcludedAssets = sub.ExcludedAssets,
             },
             MaestroConfigHelper.GetDefaultSubscriptionFilePath,
-            MaestroConfigHelper.SubscriptionFolderPath);
+            MaestroConfigHelper.SubscriptionFolderPath,
+            SubscriptionYaml.Comparer);
     }
 
     private async Task ExportChannels(NativePath exportPath)
@@ -97,7 +105,8 @@ internal class ExportConfigurationOperation : IOperation
                 Classification = channel.Classification,
             },
             MaestroConfigHelper.GetDefaultChannelFilePath,
-            MaestroConfigHelper.ChannelFolderPath);
+            MaestroConfigHelper.ChannelFolderPath,
+            ChannelYaml.Comparer);
     }
 
     private async Task ExportDefaultChannels(NativePath exportPath)
@@ -113,7 +122,8 @@ internal class ExportConfigurationOperation : IOperation
                 Enabled = dc.Enabled,
             },
             MaestroConfigHelper.GetDefaultDefaultChannelFilePath,
-            MaestroConfigHelper.DefaultChannelFolderPath);
+            MaestroConfigHelper.DefaultChannelFolderPath,
+            DefaultChannelYaml.Comparer);
     }
 
     private async Task ExportBranchMergePolicies(NativePath exportPath)
@@ -128,7 +138,8 @@ internal class ExportConfigurationOperation : IOperation
                 MergePolicies = ConvertMergePolicies(rb.MergePolicies),
             },
             MaestroConfigHelper.GetDefaultRepositoryBranchFilePath,
-            MaestroConfigHelper.RepositoryBranchFolderPath);
+            MaestroConfigHelper.RepositoryBranchFolderPath,
+            BranchMergePoliciesYaml.Comparer);
     }
 
     private void WriteGroupsToFiles(NativePath exportPath, IEnumerable<IGrouping<string, object>> groups)

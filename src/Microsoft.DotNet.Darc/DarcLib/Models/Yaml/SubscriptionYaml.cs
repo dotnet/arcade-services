@@ -14,7 +14,7 @@ namespace Microsoft.DotNet.DarcLib.Models.Yaml;
 /// Helper class for YAML encoding/decoding purposes.
 /// This is used so that we can have friendly alias names for elements.
 /// </summary>
-public class SubscriptionYaml
+public class SubscriptionYaml : IComparable<SubscriptionYaml>
 {
     public const string IdElement = "Id";
     public const string EnabledElement = "Enabled";
@@ -73,4 +73,26 @@ public class SubscriptionYaml
 
     [YamlMember(Alias = TargetDirectoryElement, ApplyNamingConventions = false)]
     public string? TargetDirectory { get; set; }
+
+    /// <summary>
+    /// Compares subscriptions for sorting purposes.
+    /// Order: Channel, SourceRepository, TargetBranch, Id
+    /// </summary>
+    public int CompareTo(SubscriptionYaml? other)
+    {
+        if (other is null) return 1;
+
+        int result = string.Compare(Channel, other.Channel, StringComparison.OrdinalIgnoreCase);
+        if (result != 0) return result;
+
+        result = string.Compare(SourceRepository, other.SourceRepository, StringComparison.OrdinalIgnoreCase);
+        if (result != 0) return result;
+
+        result = string.Compare(TargetBranch, other.TargetBranch, StringComparison.OrdinalIgnoreCase);
+        if (result != 0) return result;
+
+        return Id.CompareTo(other.Id);
+    }
+
+    public static IComparer<SubscriptionYaml> Comparer { get; } = Comparer<SubscriptionYaml>.Create((x, y) => x?.CompareTo(y) ?? (y is null ? 0 : -1));
 }
