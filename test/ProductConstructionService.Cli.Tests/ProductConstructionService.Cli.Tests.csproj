@@ -8,8 +8,6 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
-
-
   <ItemGroup>
     <Using Include="NUnit.Framework" />
     <Using Include="Moq" />
