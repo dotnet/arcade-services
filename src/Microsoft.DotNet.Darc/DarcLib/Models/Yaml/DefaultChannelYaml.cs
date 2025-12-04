@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using YamlDotNet.Serialization;
 
 #nullable enable
@@ -20,6 +21,14 @@ public class DefaultChannelYaml : IComparable<DefaultChannelYaml>
 
     [YamlMember(Alias = "Enabled", ApplyNamingConventions = false)]
     public required bool Enabled { get; init; }
+
+    public static DefaultChannelYaml FromClientModel(DefaultChannel defaultChannel) => new()
+    {
+        Repository = defaultChannel.Repository,
+        Branch = defaultChannel.Branch,
+        Channel = defaultChannel.Channel.Name,
+        Enabled = defaultChannel.Enabled,
+    };
 
     /// <summary>
     /// Compares default channels for sorting purposes.

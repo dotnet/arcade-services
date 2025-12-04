@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using YamlDotNet.Serialization;
 
 #nullable enable
@@ -22,6 +23,13 @@ public class BranchMergePoliciesYaml : IComparable<BranchMergePoliciesYaml>
 
     [YamlMember(Alias = MergePolicyElement, ApplyNamingConventions = false)]
     public List<MergePolicyYaml> MergePolicies { get; set; } = [];
+
+    public static BranchMergePoliciesYaml FromClientModel(RepositoryBranch repositoryBranch) => new()
+    {
+        Repository = repositoryBranch.Repository,
+        Branch = repositoryBranch.Branch,
+        MergePolicies = MergePolicyYaml.FromClientModels(repositoryBranch.MergePolicies),
+    };
 
     /// <summary>
     /// Compares repository branches for sorting purposes.

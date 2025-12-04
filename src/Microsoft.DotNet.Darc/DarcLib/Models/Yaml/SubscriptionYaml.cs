@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using YamlDotNet.Serialization;
 
@@ -73,6 +74,24 @@ public class SubscriptionYaml : IComparable<SubscriptionYaml>
 
     [YamlMember(Alias = TargetDirectoryElement, ApplyNamingConventions = false)]
     public string? TargetDirectory { get; set; }
+
+    public static SubscriptionYaml FromClientModel(Subscription subscription) => new()
+    {
+        Id = subscription.Id,
+        Enabled = subscription.Enabled,
+        Channel = subscription.Channel.Name,
+        SourceRepository = subscription.SourceRepository,
+        TargetRepository = subscription.TargetRepository,
+        TargetBranch = subscription.TargetBranch,
+        UpdateFrequency = subscription.Policy.UpdateFrequency,
+        Batchable = subscription.Policy.Batchable,
+        MergePolicies = MergePolicyYaml.FromClientModels(subscription.Policy.MergePolicies),
+        FailureNotificationTags = subscription.PullRequestFailureNotificationTags,
+        SourceEnabled = subscription.SourceEnabled,
+        SourceDirectory = subscription.SourceDirectory,
+        TargetDirectory = subscription.TargetDirectory,
+        ExcludedAssets = subscription.ExcludedAssets.ToList(),
+    };
 
     /// <summary>
     /// Compares subscriptions for sorting purposes.

@@ -5,8 +5,6 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Yaml;
 using Microsoft.DotNet.MaestroConfiguration.Client;
 using Microsoft.DotNet.ProductConstructionService.Client;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
-using Newtonsoft.Json.Linq;
 using ProductConstructionService.Cli.Options;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -66,23 +64,7 @@ internal class ExportConfigurationOperation : IOperation
         ProcessAndWriteYamlGroups(
             exportPath,
             subscriptions,
-            sub => new SubscriptionYaml
-            {
-                Id = sub.Id,
-                Enabled = sub.Enabled,
-                Channel = sub.Channel.Name,
-                SourceRepository = sub.SourceRepository,
-                TargetRepository = sub.TargetRepository,
-                TargetBranch = sub.TargetBranch,
-                UpdateFrequency = sub.Policy.UpdateFrequency,
-                Batchable = sub.Policy.Batchable,
-                MergePolicies = ConvertMergePolicies(sub.Policy.MergePolicies),
-                FailureNotificationTags = sub.PullRequestFailureNotificationTags,
-                SourceEnabled = sub.SourceEnabled,
-                SourceDirectory = sub.SourceDirectory,
-                TargetDirectory = sub.TargetDirectory,
-                ExcludedAssets = sub.ExcludedAssets,
-            },
+            SubscriptionYaml.FromClientModel,
             MaestroConfigHelper.GetDefaultSubscriptionFilePath,
             MaestroConfigHelper.SubscriptionFolderPath);
     }
@@ -93,11 +75,7 @@ internal class ExportConfigurationOperation : IOperation
         ProcessAndWriteYamlGroups(
             exportPath,
             channels,
-            channel => new ChannelYaml
-            {
-                Name = channel.Name,
-                Classification = channel.Classification,
-            },
+            ChannelYaml.FromClientModel,
             MaestroConfigHelper.GetDefaultChannelFilePath,
             MaestroConfigHelper.ChannelFolderPath);
     }
@@ -108,13 +86,7 @@ internal class ExportConfigurationOperation : IOperation
         ProcessAndWriteYamlGroups(
             exportPath,
             defaultChannels,
-            dc => new DefaultChannelYaml
-            {
-                Repository = dc.Repository,
-                Branch = dc.Branch,
-                Channel = dc.Channel.Name,
-                Enabled = dc.Enabled,
-            },
+            DefaultChannelYaml.FromClientModel,
             MaestroConfigHelper.GetDefaultDefaultChannelFilePath,
             MaestroConfigHelper.DefaultChannelFolderPath);
     }
@@ -126,12 +98,7 @@ internal class ExportConfigurationOperation : IOperation
         ProcessAndWriteYamlGroups(
             exportPath,
             repositoryBranches,
-            rb => new BranchMergePoliciesYaml
-            {
-                Repository = rb.Repository,
-                Branch = rb.Branch,
-                MergePolicies = ConvertMergePolicies(rb.MergePolicies),
-            },
+            BranchMergePoliciesYaml.FromClientModel,
             MaestroConfigHelper.GetDefaultRepositoryBranchFilePath,
             MaestroConfigHelper.RepositoryBranchFolderPath);
     }
@@ -147,28 +114,6 @@ internal class ExportConfigurationOperation : IOperation
             var rawYaml = _yamlSerializer.Serialize(configurationObjects);
             _fileSystem.WriteToFile(exportPath / filePath, FormatYaml(rawYaml));
         }
-    }
-
-    private static List<MergePolicyYaml> ConvertMergePolicies(IEnumerable<MergePolicy>? mergePolicies)
-    {
-        if (mergePolicies == null)
-        {
-            return [];
-        }
-
-        return mergePolicies.Select(policy => new MergePolicyYaml
-        {
-            Name = policy.Name,
-            Properties = policy.Properties != null
-                ? policy.Properties.ToDictionary(
-                    p => p.Key,
-                    p => p.Value.Type switch
-                    {
-                        JTokenType.Array => (object)p.Value.ToObject<List<object>>()!,
-                        _ => throw new NotImplementedException($"Unexpected property value type {p.Value.Type}")
-                    })
-                : []
-        }).ToList();
     }
 
     private static string FormatYaml(string rawYaml)

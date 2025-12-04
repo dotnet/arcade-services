@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using YamlDotNet.Serialization;
 
 #nullable enable
@@ -15,6 +16,12 @@ public class ChannelYaml : IComparable<ChannelYaml>
     [YamlMember(Alias = "Classification", ApplyNamingConventions = false,
         DefaultValuesHandling = DefaultValuesHandling.OmitNull | DefaultValuesHandling.OmitDefaults)]
     public required string Classification { get; init; }
+
+    public static ChannelYaml FromClientModel(Channel channel) => new()
+    {
+        Name = channel.Name,
+        Classification = channel.Classification,
+    };
 
     /// <summary>
     /// Compares channels for sorting purposes.
