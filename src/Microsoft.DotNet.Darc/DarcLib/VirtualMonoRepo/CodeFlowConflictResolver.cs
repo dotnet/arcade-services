@@ -304,7 +304,7 @@ public abstract class CodeFlowConflictResolver
         {
             // If the patch failed, we cannot resolve the conflict automatically
             // We will just leave it as is and let the user resolve it manually
-            _logger.LogInformation("Failed to auto-resolve conflicts in {filePath} - conflicting changes detected", conflictedFile);
+            _logger.LogInformation("Detected conflicts in {filePath}", conflictedFile);
 
             if (codeflowOptions.EnableRebase)
             {

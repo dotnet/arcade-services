@@ -690,30 +690,28 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         codeFlowResult.ShouldHaveUpdates();
 
         await GitOperations.VerifyMergeConflict(ProductRepoPath, backBranchName,
-            mergeTheirs: false,
+            mergeTheirs: true,
             expectedConflictingFiles: [_productRepoFileName],
             enableRebase: true);
 
         CheckFileContents(_productRepoFilePath, "New content from the individual repo #2");
         CheckFileContents(_productRepoVmrFilePath, "New content from the individual repo #2");
 
-        // Do a forward flow and verify
-        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardBranchName, enableRebase: true);
-        codeFlowResult.ShouldHaveUpdates();
-
-        await GitOperations.VerifyMergeConflict(VmrPath, forwardBranchName,
-            mergeTheirs: true,
-            expectedConflictingFiles: [VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName],
-            enableRebase: true);
-
-        CheckFileContents(_productRepoFilePath, "New content from the VMR #2");
-        CheckFileContents(_productRepoVmrFilePath, "New content from the VMR #2");
-
         // Reset to the SHAs before the conflict resolution
         await GitOperations.Checkout(ProductRepoPath, repoShaBefore);
         await GitOperations.Checkout(VmrPath, vmrShaBefore);
+
         await GitOperations.CreateBranch(ProductRepoPath, "main");
         await GitOperations.CreateBranch(VmrPath, "main");
+
+        // Do a forward flow and verify
+        codeFlowResult = await ChangeRepoFileAndFlowIt("New content from the individual repo #3", forwardBranchName, enableRebase: true);
+        codeFlowResult.ShouldHaveUpdates();
+
+        await FinalizeForwardFlow(true, forwardBranchName);
+
+        CheckFileContents(_productRepoFilePath, "New content from the individual repo #3");
+        CheckFileContents(_productRepoVmrFilePath, "New content from the individual repo #3");
 
         CheckFileContents(_productRepoVmrPath / "a.txt", aFileContent);
         CheckFileContents(_productRepoVmrPath / "b.txt", bFileContent);

@@ -76,7 +76,7 @@ internal class GitOperationsHelper
 
     public async Task CreateBranch(NativePath repo, string branchName)
     {
-        var result = await ExecuteGitCommand(repo, "checkout", "-b", branchName);
+        var result = await ExecuteGitCommand(repo, "checkout", "-B", branchName);
         result.ThrowIfFailed($"Failed to create branch {branchName} in {repo}");
     }
 
@@ -246,7 +246,7 @@ internal class GitOperationsHelper
         if (enableRebase)
         {
             await Checkout(repo, targetBranch);
-            await ExecuteGitCommand(repo, "merge", "--ff-only", branch);
+            await ExecuteGitCommand(repo, "merge", branch);
         }
 
         await DeleteBranch(repo, branch);
