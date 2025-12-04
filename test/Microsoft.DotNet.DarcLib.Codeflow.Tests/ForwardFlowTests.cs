@@ -531,10 +531,9 @@ internal class ForwardFlowTests : CodeFlowTests
         5. Forward flow again - this should handle reverts correctly even with conflicts
     */
     [Test]
-    [Ignore("Temporarily disabled to unblock rebase - https://github.com/dotnet/arcade-services/issues/5541")]
     public async Task ForwardFlowWithRevertsAndConflictsTest()
     {
-        const string branchName = nameof(ForwardFlowWithRevertsAndConflictsTest);
+        string branchName = GetTestBranchName();
 
         await EnsureTestRepoIsInitialized();
 
@@ -656,7 +655,7 @@ internal class ForwardFlowTests : CodeFlowTests
         File.Exists(_productRepoVmrPath / FileChangedAndPartiallyRevertedName).Should().BeTrue(
             "Partially reverted file should exist");
         (await File.ReadAllTextAsync(_productRepoVmrPath / FileChangedAndPartiallyRevertedName)).Should().Be(
-            PartialRevertChange2,
+            PartialRevertChange2 + Environment.NewLine,
             "Partially reverted file should have the second change");
 
         // FileInConflict should exist with the source repo's content (conflict resolved)
