@@ -920,7 +920,7 @@ function Get-GitCommits {
     # Convert the raw git log output into structured objects
     $commitObjects = @()
     foreach ($commit in $commits) {
-        $parts = $commit.Split(' ')
+        $parts = $commit.Trim().Split(' ')
         if ($parts.Count -ge 2) {
             # Store all parent SHAs in an array
             $parentShas = $parts[1..($parts.Count-1)]
@@ -1459,7 +1459,7 @@ try {
         vmrCommits = $vmrCommits
         repoCommits = $repoCommits
         vmrName = "VMR"
-        repoName = (Split-Path -Path $RepoPath -Leaf)
+        repoName = (Split-Path -Path $RepoPath -Leaf) -replace '-', ''
         crossRepoConnections = $crossRepoConnections
         collapseThreshold = $CollapseThreshold
         vmrRepoUrl = $vmrRepoUrl
