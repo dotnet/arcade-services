@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.DotNet.DarcLib.Models.Yaml;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
@@ -15,7 +14,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps;
 internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
 {
     private readonly ILogger _logger;
-    private readonly BranchMergePoliciesYaml _yamlData;
+    private readonly RepositoryPoliciesData _yamlData;
     public string Repository => _yamlData.Repository;
     public string Branch => _yamlData.Branch;
     public List<MergePolicy> MergePolicies => MergePoliciesPopUpHelpers.ConvertMergePolicies(_yamlData.MergePolicies);
@@ -29,7 +28,7 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         : base(path)
     {
         _logger = logger;
-        _yamlData = new BranchMergePoliciesYaml
+        _yamlData = new RepositoryPoliciesData
         {
             Repository = GetCurrentSettingForDisplay(repository, "<required>", false),
             Branch = GetCurrentSettingForDisplay(branch, "<required>", false),
@@ -66,14 +65,14 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
 
     public override Task<int> ProcessContents(IList<Line> contents)
     {
-        BranchMergePoliciesYaml outputYamlData;
+        RepositoryPoliciesData outputYamlData;
 
         try
         {
             // Join the lines back into a string and deserialize as YAML.
             string yamlString = contents.Aggregate("", (current, line) => $"{current}{System.Environment.NewLine}{line.Text}");
             IDeserializer serializer = new DeserializerBuilder().Build();
-            outputYamlData = serializer.Deserialize<BranchMergePoliciesYaml>(yamlString);
+            outputYamlData = serializer.Deserialize<RepositoryPoliciesData>(yamlString);
         }
         catch (Exception e)
         {
@@ -104,5 +103,21 @@ internal class SetRepositoryMergePoliciesPopUp : EditorPopUp
         }
 
         return Task.FromResult(Constants.SuccessCode);
+    }
+
+    private class RepositoryPoliciesData
+    {
+        public const string RepoElement = "Repository URL";
+        public const string BranchElement = "Branch";
+        public const string MergePolicyElement = "Merge Policies";
+
+        [YamlMember(Alias = BranchElement, ApplyNamingConventions = false)]
+        public string Branch { get; set; }
+
+        [YamlMember(Alias = RepoElement, ApplyNamingConventions = false)]
+        public string Repository { get; set; }
+
+        [YamlMember(Alias = MergePolicyElement, ApplyNamingConventions = false)]
+        public List<MergePolicyPopUpData> MergePolicies { get; set; }
     }
 }
