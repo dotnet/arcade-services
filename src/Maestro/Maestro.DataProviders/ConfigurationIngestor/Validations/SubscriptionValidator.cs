@@ -27,7 +27,6 @@ public static class SubscriptionValidator
         ArgumentNullException.ThrowIfNull(subscription.PolicyObject);
         ArgumentNullException.ThrowIfNull(subscription.PolicyObject.MergePolicies);
 
-
         List<string> mergePolicies = [.. subscription.PolicyObject.MergePolicies.Select(mp => mp.Name)];
 
         if (!subscription.SourceEnabled
@@ -42,13 +41,6 @@ public static class SubscriptionValidator
             throw new ArgumentException(
                 "Version Details Props merge policy cannot be combined with standard auto-merge policies. " +
                 "The Version Details Props policy is already included in standard auto-merge policies.");
-        }
-
-        if (subscription.PolicyObject?.UpdateFrequency == null ||
-            !Microsoft.DotNet.DarcLib.Constants.AvailableFrequencies.Contains(subscription.PolicyObject.UpdateFrequency.ToString(), StringComparer.OrdinalIgnoreCase))
-        {
-            throw new ArgumentException(
-                $"Update frequency must be one of: {string.Join(", ", Microsoft.DotNet.DarcLib.Constants.AvailableFrequencies)}");
         }
 
         if (subscription.PolicyObject.Batchable && subscription.SourceEnabled)
