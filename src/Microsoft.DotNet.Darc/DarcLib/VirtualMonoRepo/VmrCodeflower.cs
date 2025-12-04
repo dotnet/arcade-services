@@ -49,6 +49,16 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     private readonly ICommentCollector _commentCollector;
     private readonly ILogger<VmrCodeFlower> _logger;
 
+    public const string FileToBeRemovedContent =
+        $"""
+        PLEASE READ
+
+        Please remove this file during conflict resolution in your PR.
+        This file has been reverted (removed) in the source repository but the PR branch
+        does not have the file yet as it's based on an older commit. This means the file is
+        not getting removed in the PR due to the other conflicts.
+        """;
+
     private static readonly string CannotFlowAdditionalFlowsInPrMsg =
         """
         The source repository has received code changes from an opposite flow. Any additional codeflows into this PR may potentially result in lost changes.
@@ -450,9 +460,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 CodeFlowResult result = await reapplyChanges(enableRebase: false);
 
                 await HandleRevertedFiles(
-                    codeflowOptions.Mapping,
+                    codeflowOptions,
                     repo,
-                    codeflowOptions.CurrentFlow,
                     shaBeforeRecreation,
                     changedFilesAfterRecreation,
                     cancellationToken);
@@ -460,11 +469,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 _logger.LogInformation("Successfully recreated {count} flows and applied new changes from {sha}",
                     flowsToRecreate,
                     codeflowOptions.Build.Commit);
-
-                // Workaround for files that can be left behind after HandleRevertedFiles()
-                // It can be removed after we remove HandleRevertedFiles() and switch to rebase-only
-                // TODO (https://github.com/dotnet/arcade-services/issues/5363): Remove after switching to rebase-only
-                await repo.ResetWorkingTree();
 
                 return result;
             }
@@ -588,16 +592,15 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// This method detects such reverts and resets the file so they match the source repository.
     /// </summary>
     private async Task HandleRevertedFiles(
-        SourceMapping mapping,
+        CodeflowOptions codeflowOptions,
         ILocalGitRepo repo,
-        Codeflow currentFlow,
         string shaBeforeRecreation,
         IReadOnlyCollection<string> changedFilesAfterRecreation,
         CancellationToken cancellationToken)
     {
-        bool currentIsBackflow = currentFlow is Backflow;
+        bool currentIsBackflow = codeflowOptions.CurrentFlow is Backflow;
         var changedFilesAfterCurrentChanges = await GetChangesInHeadBranch(
-            mapping,
+            codeflowOptions.Mapping,
             repo,
             currentIsBackflow,
             shaBeforeRecreation,
@@ -617,7 +620,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         _logger.LogInformation("Reverted files detected after applying changes: {files}. Resetting the files to their current state.",
             string.Join(", ", revertedFiles));
 
-        UnixPath vmrPrefix = VmrInfo.GetRelativeRepoSourcesPath(mapping.Name);
+        UnixPath vmrPrefix = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name);
 
         var (sourceRepo, targetRepo) = (_localGitRepoFactory.Create(_vmrInfo.VmrPath), repo);
         if (!currentIsBackflow)
@@ -634,7 +637,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             }
 
             // Set the file to the current state in the source repo
-            var sourceContent = await sourceRepo.GetFileFromGitAsync(sourceFile, currentFlow.SourceSha);
+            var sourceContent = await sourceRepo.GetFileFromGitAsync(sourceFile, codeflowOptions.CurrentFlow.SourceSha);
             if (sourceContent is null)
             {
                 // If the file exists in the target repo, we can just remove it
@@ -651,19 +654,21 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 // The target branch will have the file in it and we need to make sure it will get removed in the PR
                 // Since the target branch and head branch will be in conflict anyway, we can leave a conflicting content
                 // in the file that will hint the user to remove the file during conflict resolution.
-                sourceContent =
-                    $"""
-                    PLEASE READ
-
-                    Please remove this file during conflict resolution in your PR.
-                    This file has been reverted (removed) in the {(currentIsBackflow ? "VMR" : "source repository")} but the PR branch
-                    does not have the file yet as it's based on an older commit. This means the file is
-                    not getting removed in the PR due to the other conflicts.
-                    """;
+                sourceContent = FileToBeRemovedContent;
             }
 
             _fileSystem.WriteToFile(targetRepo.Path / targetFile, sourceContent);
             await targetRepo.StageAsync([targetFile], cancellationToken);
+        }
+
+        var stagedFiles = await targetRepo.GetStagedFilesAsync();
+        if (stagedFiles.Count > 0)
+        {
+            await targetRepo.CommitAsync(
+                $"Revert changes to reverted files from {codeflowOptions.Build.Commit}",
+                allowEmpty: true,
+                cancellationToken: cancellationToken);
+            await repo.ResetWorkingTree();
         }
     }
 

@@ -177,6 +177,15 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             return true;
         }
 
+        var content = await _fileSystem.ReadAllTextAsync(vmr.Path / conflictedFile);
+        if (content?.Contains(VmrCodeFlower.FileToBeRemovedContent) ?? false)
+        {
+            _fileSystem.DeleteFile(vmr.Path / conflictedFile);
+            await vmr.StageAsync([conflictedFile], cancellationToken);
+            _logger.LogInformation("Successfully auto-resolved a conflict in {filePath} by removing the file", conflictedFile);
+            return true;
+        }
+
         // Unknown conflict, but can be conflicting with a crossing flow
         // Check DetectCrossingFlow documentation for more details
         if (crossingFlow != null)
