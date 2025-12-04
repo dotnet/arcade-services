@@ -183,12 +183,8 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             return true;
         }
 
-        var content = await _fileSystem.ReadAllTextAsync(vmr.Path / conflictedFile);
-        if (content?.Contains(VmrCodeFlower.FileToBeRemovedContent) ?? false)
+        if (codeflowOptions.EnableRebase && await TryRevertingAddedFile(vmr, conflictedFile, cancellationToken))
         {
-            _fileSystem.DeleteFile(vmr.Path / conflictedFile);
-            await vmr.StageAsync([conflictedFile], cancellationToken);
-            _logger.LogInformation("Successfully auto-resolved a conflict in {filePath} by removing the file", conflictedFile);
             return true;
         }
 

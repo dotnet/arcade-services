@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -177,12 +178,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             return true;
         }
 
-        var content = await _fileSystem.ReadAllTextAsync(vmr.Path / conflictedFile);
-        if (content?.Contains(VmrCodeFlower.FileToBeRemovedContent) ?? false)
+        if (codeflowOptions.EnableRebase && await TryRevertingAddedFile(targetRepo, conflictedFile, cancellationToken))
         {
-            _fileSystem.DeleteFile(vmr.Path / conflictedFile);
-            await vmr.StageAsync([conflictedFile], cancellationToken);
-            _logger.LogInformation("Successfully auto-resolved a conflict in {filePath} by removing the file", conflictedFile);
             return true;
         }
 

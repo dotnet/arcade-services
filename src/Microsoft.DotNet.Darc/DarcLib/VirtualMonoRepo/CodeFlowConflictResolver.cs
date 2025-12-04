@@ -212,7 +212,10 @@ public abstract class CodeFlowConflictResolver
 
             _logger.LogInformation("Failed to auto-resolve a conflict in {conflictedFile}", filePath);
 
-            await AbortMerge(codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : sourceRepo);
+            if (!codeflowOptions.EnableRebase)
+            {
+                await AbortMerge(codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : sourceRepo);
+            }
             return false;
         }
 
@@ -311,6 +314,32 @@ public abstract class CodeFlowConflictResolver
 
             return false;
         }
+    }
+
+    /// <summary>
+    /// If a file was added and then removed again in the original repo, it won't exist in the head branch,
+    /// so in case of a conflict + recreation, we cannot remove (if it does not exist).
+    /// In non-rebase flow, we stick custom content in the file - a message to indicate it should be removed.
+    /// In rebase, we can remove it after when we see this content. This method does just that.
+    /// </summary>
+    protected async Task<bool> TryRevertingAddedFile(ILocalGitRepo repo, UnixPath conflictedFile, CancellationToken cancellationToken)
+    {
+        var filePath = repo.Path / conflictedFile;
+        if (!_fileSystem.FileExists(filePath))
+        {
+            return false;
+        }
+
+        var content = await _fileSystem.ReadAllTextAsync(filePath);
+        if (content?.Contains(VmrCodeFlower.FileToBeRemovedContent) ?? false)
+        {
+            _fileSystem.DeleteFile(filePath);
+            await repo.StageAsync([conflictedFile], cancellationToken);
+            _logger.LogInformation("Successfully auto-resolved a conflict in {filePath} by removing the file", conflictedFile);
+            return true;
+        }
+
+        return false;
     }
 
     protected static async Task AbortMerge(ILocalGitRepo repo)

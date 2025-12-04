@@ -158,6 +158,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             ConflictedFiles = mergeResult.ConflictedFiles,
             DependencyUpdates = mergeResult.DependencyUpdates,
             HadUpdates = result.HadUpdates || mergeResult.DependencyUpdates.Count > 0 || mergeResult.HasToolsetUpdates,
+            RepoPath = targetRepo.Path,
         };
     }
 
