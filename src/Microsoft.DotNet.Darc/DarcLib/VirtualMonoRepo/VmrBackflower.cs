@@ -142,7 +142,13 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
 
         VersionFileUpdateResult mergeResult = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
             codeflowOptions,
-            lastFlows,
+            // When we recreated a previous flow, it becomes the crossing flow as it was another flow
+            // leading into the same target branch. This will help us identify gradual changes and iterate on them
+            codeflowOptions.EnableRebase && lastFlows.CrossingFlow == null && result.RecreatedPreviousFlows ? lastFlows with
+            {
+                CrossingFlow = lastFlows.LastBackFlow,
+            }
+            : lastFlows,
             targetRepo,
             headBranchExisted,
             cancellationToken);

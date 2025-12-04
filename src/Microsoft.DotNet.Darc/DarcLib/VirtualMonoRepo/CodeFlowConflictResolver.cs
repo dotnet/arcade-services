@@ -248,7 +248,7 @@ public abstract class CodeFlowConflictResolver
 
         var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : repo;
 
-        await targetRepo.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase /* rebase vs merge direction */);
+        await targetRepo.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase);
 
         var patchName = _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch";
         List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
@@ -295,19 +295,13 @@ public abstract class CodeFlowConflictResolver
                 cancellationToken: cancellationToken);
             _logger.LogInformation("Successfully auto-resolved a conflict in {filePath}", conflictedFile);
 
-            if (codeflowOptions.EnableRebase)
-            {
-                // Stage the file for commit
-                await targetRepo.StageAsync([conflictedFile], CancellationToken.None);
-            }
-
             return true;
         }
         catch (PatchApplicationFailedException)
         {
             // If the patch failed, we cannot resolve the conflict automatically
             // We will just leave it as is and let the user resolve it manually
-            _logger.LogDebug("Failed to auto-resolve conflicts in {filePath} - conflicting changes detected", conflictedFile);
+            _logger.LogInformation("Failed to auto-resolve conflicts in {filePath} - conflicting changes detected", conflictedFile);
 
             if (codeflowOptions.EnableRebase)
             {

@@ -470,7 +470,10 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     flowsToRecreate,
                     codeflowOptions.Build.Commit);
 
-                return result;
+                return result with
+                {
+                    RecreatedPreviousFlows = flowsToRecreate > 1,
+                };
             }
             catch (Exception e) when (e is PatchApplicationFailedException || e is ConflictInPrBranchException)
             {
