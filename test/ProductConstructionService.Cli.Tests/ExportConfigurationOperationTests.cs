@@ -93,11 +93,11 @@ public class ExportConfigurationOperationTests
               Target Repository URL: https://github.com/target/repo
               Target Branch: main
               Update Frequency: everyDay
-              Batchable: True
+              Batchable: true
               Excluded Assets:
               - test-asset
               Pull Request Failure Notification Tags: test-tag
-              Source Enabled: True
+              Source Enabled: true
               Source Directory: src
               Target Directory: target
 
@@ -144,7 +144,7 @@ public class ExportConfigurationOperationTests
         // Verify YAML content contains all subscription properties with minimal/empty values
         var expectedYaml = $"""
             - Id: {TestSubscriptionId}
-              Enabled: False
+              Enabled: false
               Channel: test-channel
               Source Repository URL: https://github.com/test/repo
               Target Repository URL: https://github.com/target/repo
@@ -161,15 +161,15 @@ public class ExportConfigurationOperationTests
 
         deserialized.Should().HaveCount(1);
         var subscription = deserialized[0];
-        subscription.Id.Should().Be(TestSubscriptionId);
-        subscription.Enabled.Should().Be("False");
+        subscription.Id.Should().Be(TestSubscriptionGuid);
+        subscription.Enabled.Should().BeFalse();
         subscription.Channel.Should().Be("test-channel");
         subscription.SourceRepository.Should().Be("https://github.com/test/repo");
         subscription.TargetRepository.Should().Be("https://github.com/target/repo");
         subscription.TargetBranch.Should().Be("main");
-        subscription.UpdateFrequency.Should().Be("everyDay");
-        subscription.Batchable.Should().Be("False");
-        subscription.SourceEnabled.Should().Be("False");
+        subscription.UpdateFrequency.Should().Be(UpdateFrequency.EveryDay);
+        subscription.Batchable.Should().BeFalse();
+        subscription.SourceEnabled.Should().BeFalse();
         subscription.SourceDirectory.Should().BeNull();
         subscription.TargetDirectory.Should().BeNull();
         subscription.FailureNotificationTags.Should().BeNull();
