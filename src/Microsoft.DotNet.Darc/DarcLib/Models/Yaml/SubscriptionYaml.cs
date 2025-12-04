@@ -95,20 +95,13 @@ public class SubscriptionYaml : IComparable<SubscriptionYaml>
 
     /// <summary>
     /// Compares subscriptions for sorting purposes.
-    /// Order: TargetBranch (with "main" always first), Channel, SourceRepository, Id
+    /// Order: TargetBranch (main, master, release/*, internal/release/*, then alphabetically), Channel, SourceRepository, Id
     /// </summary>
     public int CompareTo(SubscriptionYaml? other)
     {
         if (other is null) return 1;
 
-        // "main" should always come first
-        bool thisIsMain = string.Equals(TargetBranch, "main", StringComparison.OrdinalIgnoreCase);
-        bool otherIsMain = string.Equals(other.TargetBranch, "main", StringComparison.OrdinalIgnoreCase);
-
-        if (thisIsMain && !otherIsMain) return -1;
-        if (!thisIsMain && otherIsMain) return 1;
-
-        int result = string.Compare(TargetBranch, other.TargetBranch, StringComparison.OrdinalIgnoreCase);
+        int result = BranchOrderComparer.Compare(TargetBranch, other.TargetBranch);
         if (result != 0) return result;
 
         result = string.Compare(Channel, other.Channel, StringComparison.OrdinalIgnoreCase);

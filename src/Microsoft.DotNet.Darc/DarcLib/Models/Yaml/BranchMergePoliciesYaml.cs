@@ -33,19 +33,12 @@ public class BranchMergePoliciesYaml : IComparable<BranchMergePoliciesYaml>
 
     /// <summary>
     /// Compares repository branches for sorting purposes.
-    /// Order: Branch (with "main" always first)
+    /// Order: Branch (main, master, release/*, internal/release/*, then alphabetically)
     /// </summary>
     public int CompareTo(BranchMergePoliciesYaml? other)
     {
         if (other is null) return 1;
 
-        // "main" should always come first
-        bool thisIsMain = string.Equals(Branch, "main", StringComparison.OrdinalIgnoreCase);
-        bool otherIsMain = string.Equals(other.Branch, "main", StringComparison.OrdinalIgnoreCase);
-
-        if (thisIsMain && !otherIsMain) return -1;
-        if (!thisIsMain && otherIsMain) return 1;
-
-        return string.Compare(Branch, other.Branch, StringComparison.OrdinalIgnoreCase);
+        return BranchOrderComparer.Compare(Branch, other.Branch);
     }
 }

@@ -32,15 +32,15 @@ public class DefaultChannelYaml : IComparable<DefaultChannelYaml>
 
     /// <summary>
     /// Compares default channels for sorting purposes.
-    /// Order: Channel, Branch
+    /// Order: Branch (main, master, release/*, internal/release/*, then alphabetically), Channel
     /// </summary>
     public int CompareTo(DefaultChannelYaml? other)
     {
         if (other is null) return 1;
 
-        int result = string.Compare(Channel, other.Channel, StringComparison.OrdinalIgnoreCase);
+        int result = BranchOrderComparer.Compare(Branch, other.Branch);
         if (result != 0) return result;
 
-        return string.Compare(Branch, other.Branch, StringComparison.OrdinalIgnoreCase);
+        return string.Compare(Channel, other.Channel, StringComparison.OrdinalIgnoreCase);
     }
 }
