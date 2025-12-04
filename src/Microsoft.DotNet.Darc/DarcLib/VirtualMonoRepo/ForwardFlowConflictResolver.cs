@@ -173,6 +173,16 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             return true;
         }
 
+        // eng/common is always preferred from the source side
+        // In rebase mode: ours=true means keep the incoming changes (source)
+        // In merge mode: ours=false means prefer theirs (source being merged in)
+        var engCommon = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping) / Constants.CommonScriptFilesPath;
+        if (conflictedFile.Path.StartsWith(engCommon, StringComparison.InvariantCultureIgnoreCase))
+        {
+            await vmr.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase /* rebase vs merge direction */);
+            return true;
+        }
+
         // Unknown conflict, but can be conflicting with a crossing flow
         // Check DetectCrossingFlow documentation for more details
         if (crossingFlow != null)

@@ -30,7 +30,7 @@ public class PatchApplicationFailedException(
 public class PatchApplicationLeftConflictsException(IReadOnlyCollection<UnixPath> conflictedFiles, NativePath repoPath)
     : DarcException("The patch left the repository in a conflicted state")
 {
-    public IReadOnlyCollection<UnixPath> ConflictedFiles { get; } = conflictedFiles;
+    public IReadOnlyCollection<UnixPath> ConflictedFiles { get; set; } = conflictedFiles;
     public NativePath RepoPath { get; } = repoPath;
 }
 

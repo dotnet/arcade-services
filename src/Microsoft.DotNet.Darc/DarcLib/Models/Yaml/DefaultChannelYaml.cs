@@ -3,19 +3,20 @@
 
 using YamlDotNet.Serialization;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib.Models.Yaml;
 
 public class DefaultChannelYaml
 {
     [YamlMember(Alias = "Repository", ApplyNamingConventions = false)]
-    public string Repository { get; set; }
+    public required string Repository { get; init; }
 
     [YamlMember(Alias = "Branch", ApplyNamingConventions = false)]
-    public string Branch { get; set; }
+    public required string Branch { get; init; }
 
     [YamlMember(Alias = "ChannelId", ApplyNamingConventions = false)]
-    public int ChannelId { get; set; }
+    public required int ChannelId { get; init; }
 
     [YamlMember(Alias = "Enabled", ApplyNamingConventions = false)]
-    public bool Enabled { get; set; }
+    public required bool Enabled { get; init; }
 }

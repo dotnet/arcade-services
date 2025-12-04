@@ -4,8 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using YamlDotNet.Serialization;
 
+#nullable enable
 namespace Microsoft.DotNet.DarcLib.Models.Yaml;
 
 /// <summary>
@@ -30,92 +32,45 @@ public class SubscriptionYaml
     public const string TargetDirectoryElement = "Target Directory";
 
     [YamlMember(Alias = IdElement, ApplyNamingConventions = false)]
-    public string Id { get; set; }
+    public required Guid Id { get; init; }
 
-    [DefaultValue("True")]
+    [DefaultValue(true)]
     [YamlMember(Alias = EnabledElement, ApplyNamingConventions = false)]
-    public string Enabled
-    {
-        get => field;
-        set => field = NormalizeBool(value) ?? "True";
-    } = "True";
+    public bool Enabled { get; init; } = true;
 
     [YamlMember(Alias = ChannelElement, ApplyNamingConventions = false)]
-    public string Channel { get; set; }
+    public required string Channel { get; init; }
 
     [YamlMember(Alias = SourceRepoElement, ApplyNamingConventions = false)]
-    public string SourceRepository { get; set; }
+    public required string SourceRepository { get; init; }
 
     [YamlMember(Alias = TargetRepoElement, ApplyNamingConventions = false)]
-    public string TargetRepository { get; set; }
+    public required string TargetRepository { get; init; }
 
     [YamlMember(Alias = TargetBranchElement, ApplyNamingConventions = false)]
-    public string TargetBranch { get; set; }
+    public required string TargetBranch { get; init; }
 
-    [DefaultValue("none")]
     [YamlMember(Alias = UpdateFrequencyElement, ApplyNamingConventions = false)]
-    public string UpdateFrequency
-    {
-        get => field;
-        set => field = NormalizeUpdateFrequency(value) ?? "none";
-    } = "none";
+    public UpdateFrequency UpdateFrequency { get; init; } = UpdateFrequency.None;
 
-    [DefaultValue("False")]
     [YamlMember(Alias = BatchableElement, ApplyNamingConventions = false)]
-    public string Batchable
-    {
-        get => field;
-        set => field = NormalizeBool(value) ?? "False";
-    } = "False";
+    public bool Batchable { get; set; } = false;
 
     [YamlMember(Alias = ExcludedAssetsElement, ApplyNamingConventions = false)]
-    public List<string> ExcludedAssets { get; set; } = [];
+    public List<string> ExcludedAssets { get; init; } = [];
 
     [YamlMember(Alias = MergePolicyElement, ApplyNamingConventions = false)]
-    public List<MergePolicyYaml> MergePolicies { get; set; } = [];
+    public List<MergePolicyYaml> MergePolicies { get; init; } = [];
 
     [YamlMember(Alias = FailureNotificationTagsElement, ApplyNamingConventions = false)]
-    public string FailureNotificationTags { get; set; }
+    public string? FailureNotificationTags { get; set; }
 
-    [DefaultValue("False")]
     [YamlMember(Alias = SourceEnabledElement, ApplyNamingConventions = false)]
-    public string SourceEnabled
-    {
-        get => field;
-        set => field = NormalizeBool(value) ?? "False";
-    } = "False";
+    public bool SourceEnabled { get; set; } = false;
 
     [YamlMember(Alias = SourceDirectoryElement, ApplyNamingConventions = false)]
-    public string SourceDirectory { get; set; }
+    public string? SourceDirectory { get; set; }
 
     [YamlMember(Alias = TargetDirectoryElement, ApplyNamingConventions = false)]
-    public string TargetDirectory { get; set; }
-
-    private static string NormalizeBool(string value)
-    {
-        if (string.Equals(value, "true", StringComparison.OrdinalIgnoreCase))
-            return "True";
-        if (string.Equals(value, "false", StringComparison.OrdinalIgnoreCase))
-            return "False";
-        throw new ArgumentException($"Invalid boolean value: '{value}'. Expected 'true' or 'false'.", nameof(value));
-    }
-
-    private static string NormalizeUpdateFrequency(string value)
-    {
-        if (string.IsNullOrEmpty(value))
-            return value;
-
-        // Normalize to camelCase format (with lowercase "none")
-        return value.ToLowerInvariant() switch
-        {
-            "none" => "none",
-            "everyday" => "everyDay",
-            "everybuild" => "everyBuild",
-            "twicedaily" => "twiceDaily",
-            "everyweek" => "everyWeek",
-            "everytwoweeks" => "everyTwoWeeks",
-            "everymonth" => "everyMonth",
-            _ => throw new ArgumentException($"Invalid update frequency: '{value}'. Expected one of: none, everyDay, everyBuild, twiceDaily, everyWeek, everyTwoWeeks, everyMonth.", nameof(value))
-        };
-    }
+    public string? TargetDirectory { get; set; }
 }

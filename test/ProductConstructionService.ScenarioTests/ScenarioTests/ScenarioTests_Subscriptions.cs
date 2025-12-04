@@ -147,7 +147,6 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                 TestContext.WriteLine("Testing YAML for darc add-subscription");
 
                 var yamlDefinition = $@"
-                    Id: <id is set by the backend>
                     Channel: {channel1Name}
                     Source Repository URL: {repo1Uri}
                     Target Repository URL: {repo2Uri}
@@ -158,7 +157,6 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                     - Name: Standard
                     Source Enabled: False
                     Excluded Assets: []
-                    Enabled: True
                     ";
 
                 await using AsyncDisposableValue<string> yamlSubscriptionId = await CreateSubscriptionAsync(yamlDefinition);
@@ -181,7 +179,6 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                 TestContext.WriteLine("Change casing of the various properties. Expecting no changes.");
 
                 var yamlDefinition2 = $@"
-                    Id: <id is set by the backend>
                     Channel: {channel1Name}
                     Source Repository URL: {repo1Uri}
                     Target Repository URL: {repo2Uri}
@@ -192,7 +189,6 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                     - Name: standard
                     Source Enabled: False
                     Excluded Assets: []
-                    Enabled: True
                     ";
 
                 await using AsyncDisposableValue<string> yamlSubscription2Id = await CreateSubscriptionAsync(yamlDefinition2);
@@ -214,7 +210,6 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                 TestContext.WriteLine("Attempt to add multiple of the same merge policy checks. Should fail.");
 
                 var yamlDefinition3 = $"""
-                    Id: <id is set by the backend>
                     Channel: {channel1Name}
                     Source Repository URL: {repo1Uri}
                     Target Repository URL: {repo2Uri}
@@ -234,7 +229,6 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
                         - MySpecialCheck
                     Source Enabled: False
                     Excluded Assets: []
-                    Enabled: True
                     """;
 
                 Assert.ThrowsAsync<ScenarioTestException>(async () =>

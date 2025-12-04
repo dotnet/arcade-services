@@ -209,7 +209,6 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 _options.ForceCreation,
                 _gitRepoFactory,
                 _logger,
-                enabled,
                 channel,
                 sourceRepository,
                 targetRepository,
@@ -237,7 +236,6 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 return exitCode;
             }
 
-            enabled = addSubscriptionPopup.Enabled;
             channel = addSubscriptionPopup.Channel;
             sourceRepository = addSubscriptionPopup.SourceRepository;
             targetRepository = addSubscriptionPopup.TargetRepository;

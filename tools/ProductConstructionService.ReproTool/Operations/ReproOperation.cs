@@ -69,7 +69,9 @@ internal class ReproOperation(
             }
         }
 
-        var defaultChannel = (await prodBarClient.GetDefaultChannelsAsync(repository: subscription.SourceRepository, channel: subscription.Channel.Name)).First();
+        var defaultChannels = await prodBarClient.GetDefaultChannelsAsync(repository: subscription.SourceRepository, channel: subscription.Channel.Name);
+        var defaultChannel = defaultChannels.FirstOrDefault(c => c.Branch == "main" || c.Branch.StartsWith("release/"))
+            ?? defaultChannels.First();
 
         string vmrBranch, productRepoUri, productRepoBranch;
         var isForwardFlow = !string.IsNullOrEmpty(subscription.TargetDirectory);

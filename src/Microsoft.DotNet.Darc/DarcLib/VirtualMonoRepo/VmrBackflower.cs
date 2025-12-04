@@ -157,7 +157,11 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             headBranchExisted,
             cancellationToken);
 
-        rebaseException?.Throw();
+        if (mergeResult.ConflictedFiles.Count > 0 && rebaseException != null)
+        {
+            ((PatchApplicationLeftConflictsException)rebaseException.SourceException).ConflictedFiles = mergeResult.ConflictedFiles;
+            rebaseException.Throw();
+        }
 
         return new CodeFlowResult(
             hasChanges || mergeResult.DependencyUpdates.Count > 0 || mergeResult.HasToolsetUpdates,

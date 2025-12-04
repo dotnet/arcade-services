@@ -1,17 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-#nullable enable
 using System.Collections.Generic;
 using YamlDotNet.Serialization;
 
-namespace Microsoft.DotNet.DarcLib.Models.Yaml;
+namespace Microsoft.DotNet.Darc.Models.PopUps;
 
-public class MergePolicyYaml
+public class MergePolicyPopUpData
 {
     [YamlMember(Alias = "Name")]
-    public required string Name { get; init; }
-
+    public string Name { get; set; }
     [YamlMember(Alias = "Properties")]
-    public Dictionary<string, object> Properties { get; init; } = [];
+    public Dictionary<string, object> Properties { get; set; }
 }

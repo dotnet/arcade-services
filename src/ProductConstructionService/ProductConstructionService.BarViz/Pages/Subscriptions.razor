@@ -7,9 +7,12 @@
 @using Microsoft.FluentUI.AspNetCore.Components.Extensions
 @using ProductConstructionService.BarViz.Code.Helpers
 @using ProductConstructionService.BarViz.Components
+@using TextCopy
 @inject NavigationManager NavManager
 @inject IProductConstructionServiceApi PcsApi
 @inject IDialogService DialogService
+@inject IClipboard Clipboard
+@inject IToastService ToastService
 
 <style>
     .hover:not([row-type='header'],[row-type='sticky-header'],.loading-content-row):hover[b-upi3f9mbnn] {
@@ -32,6 +35,10 @@
         --badge-fill-lowlight: #555;
         margin-left: 6px;
     }
+
+    #copy-all-ids-button {
+        top: -9px;
+    }
 </style>
 
 <PageTitle>Subscriptions – Maestro++</PageTitle>
@@ -39,6 +46,21 @@
 <GridViewTemplate Title="Subscriptions" ShowSkeleton="AllSubscriptions == null">
     <Header>
         <div style="float: right">
+            <FluentButton IconEnd="@(new Icons.Regular.Size16.Copy())"
+                          Appearance="Appearance.Outline"
+                          OnClick="@CopyAllSubscriptionIds"
+                          Title="Copy all subscription IDs"
+                          Id="copy-all-ids-button" />
+
+            <FluentTooltip Anchor="copy-all-ids-button"
+                           HideTooltipOnCursorLeave="true"
+                           Position=TooltipPosition.Bottom
+                           Delay=100>
+                Copy IDs of subscriptions in view (all pages)
+            </FluentTooltip>
+
+            <FluentSpacer Width="30" />
+
             <FluentSearch @bind-Value="@SearchFilter"
                           @bind-Value:after=HandleSearchInput
                           Immediate="true"
@@ -263,6 +285,33 @@
         return matches.Count == 1 ? matches[0] : filter;
     }
 
+    async Task CopyAllSubscriptionIds()
+    {
+        if (FilteredSubscriptions == null)
+        {
+            return;
+        }
+
+        try
+        {
+            var subscriptionIds = FilteredSubscriptions.Select(sub => sub.Id.ToString()).ToList();
+
+            if (subscriptionIds.Count == 0)
+            {
+                ToastService.ShowWarning("No subscriptions to copy");
+                return;
+            }
+
+            var idsText = string.Join(Environment.NewLine, subscriptionIds);
+            await Clipboard.SetTextAsync(idsText);
+            ToastService.ShowSuccess($"Copied {subscriptionIds.Count} subscription ID(s) to clipboard");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to copy subscription IDs: {ex.Message}");
+        }
+    }
+
     async Task ShowDetails(Subscription subscription)
     {
         if (subscription == null) return;
@@ -274,8 +323,6 @@
             TrapFocus = true,
             Modal = true,
             PreventScroll = true,
-            PrimaryAction = null,
-            SecondaryAction = "Close",
         };
 
         await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(subscription, parameters);
