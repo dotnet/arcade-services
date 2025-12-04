@@ -18,6 +18,5 @@ public class ChannelValidator
         ArgumentNullException.ThrowIfNull(channel);
 
         ArgumentException.ThrowIfNullOrWhiteSpace(channel.Name, nameof(channel.Name));
-        ArgumentException.ThrowIfNullOrWhiteSpace(channel.Classification, nameof(channel.Classification));
     }
 }
