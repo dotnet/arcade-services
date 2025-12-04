@@ -43,35 +43,29 @@ internal class ExportConfigurationOperation : IOperation
         return 0;
     }
 
-    private async Task ProcessAndWriteYamlGroups<TData, TYaml>(
+    private void ProcessAndWriteYamlGroups<TData, TYaml>(
         NativePath exportPath,
-        Func<Task<IEnumerable<TData>>> fetchData,
+        IEnumerable<TData> data,
         Func<TData, TYaml> convertToYaml,
         Func<TYaml, string> getFilePath,
-        string folderPath,
-        IComparer<TYaml> comparer)
+        string folderPath)
+        where TYaml : IComparable<TYaml>
     {
-        var data = await fetchData();
-        var yamlItems = data.Select(convertToYaml);
-        
-        if (comparer != null)
-        {
-            yamlItems = yamlItems.Order(comparer);
-        }
-
-        var yamlGroups = yamlItems
+        var yamlGroups = data
+            .Select(convertToYaml)
             .Select(yaml => (filePath: getFilePath(yaml), yaml))
             .GroupBy(t => t.filePath, t => t.yaml);
 
         _fileSystem.CreateDirectory(exportPath / folderPath);
-        WriteGroupsToFiles(exportPath, yamlGroups.Cast<IGrouping<string, object>>());
+        WriteGroupsToFiles(exportPath, yamlGroups);
     }
 
     private async Task ExportSubscriptions(NativePath exportPath)
     {
-        await ProcessAndWriteYamlGroups<Subscription, SubscriptionYaml>(
+        var subscriptions = await _api.Subscriptions.ListSubscriptionsAsync();
+        ProcessAndWriteYamlGroups(
             exportPath,
-            async () => await _api.Subscriptions.ListSubscriptionsAsync(),
+            subscriptions,
             sub => new SubscriptionYaml
             {
                 Id = sub.Id,
@@ -90,30 +84,30 @@ internal class ExportConfigurationOperation : IOperation
                 ExcludedAssets = sub.ExcludedAssets,
             },
             MaestroConfigHelper.GetDefaultSubscriptionFilePath,
-            MaestroConfigHelper.SubscriptionFolderPath,
-            SubscriptionYaml.Comparer);
+            MaestroConfigHelper.SubscriptionFolderPath);
     }
 
     private async Task ExportChannels(NativePath exportPath)
     {
-        await ProcessAndWriteYamlGroups<Channel, ChannelYaml>(
+        var channels = await _api.Channels.ListChannelsAsync();
+        ProcessAndWriteYamlGroups(
             exportPath,
-            async () => await _api.Channels.ListChannelsAsync(),
+            channels,
             channel => new ChannelYaml
             {
                 Name = channel.Name,
                 Classification = channel.Classification,
             },
             MaestroConfigHelper.GetDefaultChannelFilePath,
-            MaestroConfigHelper.ChannelFolderPath,
-            ChannelYaml.Comparer);
+            MaestroConfigHelper.ChannelFolderPath);
     }
 
     private async Task ExportDefaultChannels(NativePath exportPath)
     {
-        await ProcessAndWriteYamlGroups<DefaultChannel, DefaultChannelYaml>(
+        var defaultChannels = await _api.DefaultChannels.ListAsync();
+        ProcessAndWriteYamlGroups(
             exportPath,
-            async () => await _api.DefaultChannels.ListAsync(),
+            defaultChannels,
             dc => new DefaultChannelYaml
             {
                 Repository = dc.Repository,
@@ -122,15 +116,16 @@ internal class ExportConfigurationOperation : IOperation
                 Enabled = dc.Enabled,
             },
             MaestroConfigHelper.GetDefaultDefaultChannelFilePath,
-            MaestroConfigHelper.DefaultChannelFolderPath,
-            DefaultChannelYaml.Comparer);
+            MaestroConfigHelper.DefaultChannelFolderPath);
     }
 
     private async Task ExportBranchMergePolicies(NativePath exportPath)
     {
-        await ProcessAndWriteYamlGroups<RepositoryBranch, BranchMergePoliciesYaml>(
+        var repositoryBranches = (await _api.Repository.ListRepositoriesAsync())
+            .Where(rb => rb.MergePolicies.Any());
+        ProcessAndWriteYamlGroups(
             exportPath,
-            async () => await _api.Repository.ListRepositoriesAsync(),
+            repositoryBranches,
             rb => new BranchMergePoliciesYaml
             {
                 Repository = rb.Repository,
@@ -138,16 +133,16 @@ internal class ExportConfigurationOperation : IOperation
                 MergePolicies = ConvertMergePolicies(rb.MergePolicies),
             },
             MaestroConfigHelper.GetDefaultRepositoryBranchFilePath,
-            MaestroConfigHelper.RepositoryBranchFolderPath,
-            BranchMergePoliciesYaml.Comparer);
+            MaestroConfigHelper.RepositoryBranchFolderPath);
     }
 
-    private void WriteGroupsToFiles(NativePath exportPath, IEnumerable<IGrouping<string, object>> groups)
+    private void WriteGroupsToFiles<TYaml>(NativePath exportPath, IEnumerable<IGrouping<string, TYaml>> groups)
+        where TYaml : IComparable<TYaml>
     {
         foreach (var group in groups)
         {
             var filePath = group.Key;
-            var configurationObjects = group.ToList();
+            var configurationObjects = group.Order().ToList();
             
             var rawYaml = _yamlSerializer.Serialize(configurationObjects);
             _fileSystem.WriteToFile(exportPath / filePath, FormatYaml(rawYaml));

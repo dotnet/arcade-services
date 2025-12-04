@@ -76,23 +76,28 @@ public class SubscriptionYaml : IComparable<SubscriptionYaml>
 
     /// <summary>
     /// Compares subscriptions for sorting purposes.
-    /// Order: Channel, SourceRepository, TargetBranch, Id
+    /// Order: TargetBranch (with "main" always first), Channel, SourceRepository, Id
     /// </summary>
     public int CompareTo(SubscriptionYaml? other)
     {
         if (other is null) return 1;
 
-        int result = string.Compare(Channel, other.Channel, StringComparison.OrdinalIgnoreCase);
+        // "main" should always come first
+        bool thisIsMain = string.Equals(TargetBranch, "main", StringComparison.OrdinalIgnoreCase);
+        bool otherIsMain = string.Equals(other.TargetBranch, "main", StringComparison.OrdinalIgnoreCase);
+
+        if (thisIsMain && !otherIsMain) return -1;
+        if (!thisIsMain && otherIsMain) return 1;
+
+        int result = string.Compare(TargetBranch, other.TargetBranch, StringComparison.OrdinalIgnoreCase);
+        if (result != 0) return result;
+
+        result = string.Compare(Channel, other.Channel, StringComparison.OrdinalIgnoreCase);
         if (result != 0) return result;
 
         result = string.Compare(SourceRepository, other.SourceRepository, StringComparison.OrdinalIgnoreCase);
         if (result != 0) return result;
 
-        result = string.Compare(TargetBranch, other.TargetBranch, StringComparison.OrdinalIgnoreCase);
-        if (result != 0) return result;
-
         return Id.CompareTo(other.Id);
     }
-
-    public static IComparer<SubscriptionYaml> Comparer { get; } = Comparer<SubscriptionYaml>.Create((x, y) => x?.CompareTo(y) ?? (y is null ? 0 : -1));
 }

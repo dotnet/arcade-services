@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Generic;
 using YamlDotNet.Serialization;
 
 #nullable enable
@@ -26,6 +25,4 @@ public class ChannelYaml : IComparable<ChannelYaml>
         if (other is null) return 1;
         return string.Compare(Name, other.Name, StringComparison.OrdinalIgnoreCase);
     }
-
-    public static IComparer<ChannelYaml> Comparer { get; } = Comparer<ChannelYaml>.Create((x, y) => x?.CompareTo(y) ?? (y is null ? 0 : -1));
 }
