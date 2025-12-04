@@ -209,7 +209,7 @@ function Create-GraphVizDiagram {
 
     # Add repo header node
     $diagram += "`n  // Right column nodes for $repoName repository with SHA labels and URLs`n"
-    $repoHeaderNodeId = ($repoName -replace '/','_') -replace '\\.','_' # Ensure valid ID
+    $repoHeaderNodeId = ($repoName -replace '/','_') -replace '\\.','_' -replace '-','_' # Ensure valid ID
     $diagram += "  $repoHeaderNodeId [label=`"$repoName`", fillcolor=lightyellow" # Added fillcolor
     if ($repoUrl) {
         $diagram += ", URL=`"$repoUrl`""
@@ -1459,7 +1459,7 @@ try {
         vmrCommits = $vmrCommits
         repoCommits = $repoCommits
         vmrName = "VMR"
-        repoName = (Split-Path -Path $RepoPath -Leaf) -replace '-', ''
+        repoName = (Split-Path -Path $RepoPath -Leaf)
         crossRepoConnections = $crossRepoConnections
         collapseThreshold = $CollapseThreshold
         vmrRepoUrl = $vmrRepoUrl
