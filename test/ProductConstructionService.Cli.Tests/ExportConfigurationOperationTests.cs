@@ -45,7 +45,7 @@ public class ExportConfigurationOperationTests
         { 
             ExportPath = "/test/export",
             IsCi = false,
-            pcsUri = "https://test.pcs.com"
+            PcsUri = "https://test.pcs.com"
         };
         _operation = new ExportConfigurationOperation(_mockApi.Object, _options, _mockFileSystem.Object);
     }
