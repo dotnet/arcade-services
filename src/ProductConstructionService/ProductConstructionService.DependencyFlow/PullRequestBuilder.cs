@@ -368,6 +368,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         darc vmr diff --name-only {build.GetRepository()}:{build.Commit}..{targetRepository}:{headBranch}
         ```
         </details>
+
         """;
 
     private async Task<string> GenerateCodeFlowDescriptionForSubscription(

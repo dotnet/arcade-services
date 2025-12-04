@@ -233,6 +233,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             darc vmr diff --name-only https://github.com/foo/foobar:abc1234567..https://github.com/maestro-auth-test/dnceng-vmr:pr-branch
             ```
             </details>
+
             [marker]: <> (End:Footer:CodeFlow PR)
             """);
 
@@ -314,6 +315,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             darc vmr diff --name-only https://github.com/foo/foobar:def888999222..https://github.com/maestro-auth-test/dnceng-vmr:pr-branch
             ```
             </details>
+
             [marker]: <> (End:Footer:CodeFlow PR)
             """);
     }
