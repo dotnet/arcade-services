@@ -14,8 +14,8 @@ public class DefaultChannelYaml
     [YamlMember(Alias = "Branch", ApplyNamingConventions = false)]
     public required string Branch { get; init; }
 
-    [YamlMember(Alias = "ChannelId", ApplyNamingConventions = false)]
-    public required int ChannelId { get; init; }
+    [YamlMember(Alias = "Channel", ApplyNamingConventions = false)]
+    public required string Channel { get; init; }
 
     [YamlMember(Alias = "Enabled", ApplyNamingConventions = false)]
     public required bool Enabled { get; init; }

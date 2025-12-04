@@ -109,7 +109,7 @@ internal class ExportConfigurationOperation : IOperation
             {
                 Repository = dc.Repository,
                 Branch = dc.Branch,
-                ChannelId = dc.Channel.Id,
+                Channel = dc.Channel.Name,
                 Enabled = dc.Enabled,
             },
             MaestroConfigHelper.GetDefaultDefaultChannelFilePath,
