@@ -600,19 +600,20 @@ internal class TwoWayCodeflowTests : CodeFlowTests
           O────────────────────►O   
           │  2.                 │   
           │   O◄────────────────O 1.
-          │   │            4.   │   
+          │   │           4a.   │   
         3.O───┼────────────►O   │   
+       4b.O───┼────────────►O4c.│   
           │   │             │   │   
           │ x─┘ 5.       7. x   │   
           │ │               │   │   
         6.O◄┘               └──►O 8.
           │                     │   
-          |────────────────────►O 9.
+        9.O◄────────────────────│
           │                     │   
      */
     [Test]
     [TestCase(false)]
-    // [TestCase(true)] TODO https://github.com/dotnet/arcade-services/issues/5541: Enable once we confirm the behaviour
+    [TestCase(true)]
     public async Task OutOfOrderMergesWithConflictsTest(bool enableRebase)
     {
         await EnsureTestRepoIsInitialized();
@@ -647,7 +648,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         }
 
         // 3. Change file in the repo
-        // 4. Open a forward flow PR
+        // 4a. Open a forward flow PR
         await GitOperations.Checkout(ProductRepoPath, "main");
         await File.WriteAllTextAsync(ProductRepoPath / "a.txt", aFileContent);
         await GitOperations.CommitAll(ProductRepoPath, aFileContent);
@@ -655,18 +656,18 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         codeFlowResult.ShouldHaveUpdates();
         if (enableRebase)
         {
-            // During rebase, we already have a conflict on top of main
+            // During rebase, we have a conflict we need to deal with (in non-rebase it waits in the PR branch)
             await GitOperations.ExecuteGitCommand(VmrPath, "checkout", "--theirs", _productRepoVmrFilePath);
-            await GitOperations.CommitAll(VmrPath, "Forward flow commit");
+            await GitOperations.CommitAll(VmrPath, "4b");
         }
 
-        // We make another commit in the repo and add it to the PR branch (this is not in the diagram above)
+        // 4b / 4c. We make another commit in the repo and add it to the PR branch
         await GitOperations.Checkout(ProductRepoPath, "main");
         codeFlowResult = await ChangeRepoFileAndFlowIt("New content from the individual repo #2", forwardBranchName, enableRebase);
         codeFlowResult.ShouldHaveUpdates();
         if (enableRebase)
         {
-            await GitOperations.CommitAll(VmrPath, "Forward flow commit");
+            await GitOperations.CommitAll(VmrPath, "4c");
         }
 
         // 5. The backflow PR is now in conflict - repo has the content from step 3 but VMR has the one from step 1
@@ -694,28 +695,21 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         CheckFileContents(_productRepoVmrFilePath, "New content from the individual repo #2");
 
-        // 9. We try to forward flow again so the VMR version of the file will flow back to the VMR
-        // While the VMR accepted the content from the repo but it will get overriden by the VMR content again
+        // 9. We resolved the files to something else in each repo so now we backflow to make the repos equal
         await GitOperations.Checkout(ProductRepoPath, "main");
         await GitOperations.Checkout(VmrPath, "main");
-        codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName, enableRebase: enableRebase);
+
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName, enableRebase: enableRebase);
         codeFlowResult.ShouldHaveUpdates();
 
-        if (!enableRebase)
-        {
-            await GitOperations.VerifyMergeConflict(VmrPath, forwardBranchName,
-                mergeTheirs: true,
-                expectedConflictingFiles: [VmrInfo.SourcesDir / Constants.ProductRepoName / _productRepoFileName],
-                enableRebase: enableRebase);
-        }
-        else
-        {
-            await FinalizeForwardFlow(enableRebase, forwardBranchName);
-        }
+        await GitOperations.VerifyMergeConflict(ProductRepoPath, backBranchName,
+            mergeTheirs: true,
+            expectedConflictingFiles: [_productRepoFileName],
+            enableRebase: enableRebase);
 
         // Both VMR and repo need to have the version from the VMR as it flowed to the repo and back
-        CheckFileContents(_productRepoFilePath, "New content from the VMR #2");
-        CheckFileContents(_productRepoVmrFilePath, "New content from the VMR #2");
+        CheckFileContents(_productRepoFilePath, "New content from the individual repo #2");
+        CheckFileContents(_productRepoVmrFilePath, "New content from the individual repo #2");
         CheckFileContents(_productRepoVmrPath / "a.txt", aFileContent);
         CheckFileContents(_productRepoVmrPath / "b.txt", bFileContent);
         CheckFileContents(ProductRepoPath / "a.txt", aFileContent);
