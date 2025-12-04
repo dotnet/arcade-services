@@ -10,12 +10,12 @@ internal class ConfigurationIngestor
 {
     public async Task<bool> TryIngestConfigurationAsync(ConfigurationData configurationData)
     {
-        PerformSimpleValidations(configurationData);
+        ValidateEntityFields(configurationData);
         await SaveConfigurationData(configurationData);
         return true;
     }
 
-    public static void PerformSimpleValidations(ConfigurationData newConfigurationData)
+    public static void ValidateEntityFields(ConfigurationData newConfigurationData)
     {
         foreach (var sub in newConfigurationData.Subscriptions)
         {
