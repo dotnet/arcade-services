@@ -11,6 +11,15 @@ namespace Maestro.DataProviders.ConfigurationIngestor.Validations;
 
 public static class SubscriptionValidator
 {
+    public static HashSet<string> StandardMergePolicies = [
+            MergePolicyConstants.AllCheckSuccessfulMergePolicyName,
+            MergePolicyConstants.NoRequestedChangesMergePolicyName,
+            MergePolicyConstants.DontAutomergeDowngradesPolicyName,
+            MergePolicyConstants.ValidateCoherencyMergePolicyName,
+            MergePolicyConstants.VersionDetailsPropsMergePolicyName,
+            MergePolicyConstants.CodeflowMergePolicyName,
+        ];
+
     /// <summary>
     /// Validates a subscription entity against business rules.
     /// </summary>
@@ -35,12 +44,12 @@ public static class SubscriptionValidator
             throw new ArgumentException("Only source-enabled subscriptions may have the Codeflow merge policy.");
         }
 
-        if (mergePolicies.Contains(MergePolicyConstants.VersionDetailsPropsMergePolicyName)
-            && mergePolicies.Contains(MergePolicyConstants.StandardMergePolicyName))
+        if (mergePolicies.Contains(MergePolicyConstants.StandardMergePolicyName)
+            && mergePolicies.Any(StandardMergePolicies.Contains))
         {
             throw new ArgumentException(
-                "Version Details Props merge policy cannot be combined with standard auto-merge policies. " +
-                "The Version Details Props policy is already included in standard auto-merge policies.");
+                "One or more of the following merge policies could not be added because it is already included "
+                + $"in the policy `{MergePolicyConstants.StandardMergePolicyName}`: {string.Join(", ", StandardMergePolicies)}.");
         }
 
         if (subscription.PolicyObject.Batchable && subscription.SourceEnabled)

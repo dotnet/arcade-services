@@ -35,12 +35,12 @@ public class BranchMergePolicyValidator
 
         var mergePolicies = branchMergePolicy.PolicyObject.MergePolicies.Select(mp => mp.Name);
 
-        if (mergePolicies.Contains(MergePolicyConstants.VersionDetailsPropsMergePolicyName)
-            && mergePolicies.Contains(MergePolicyConstants.StandardMergePolicyName))
+        if (mergePolicies.Contains(MergePolicyConstants.StandardMergePolicyName)
+            && mergePolicies.Any(SubscriptionValidator.StandardMergePolicies.Contains))
         {
             throw new ArgumentException(
-                "Version Details Props merge policy cannot be combined with standard auto-merge policies. " +
-                "The Version Details Props policy is already included in standard auto-merge policies.");
+                "One or more of the following merge policies could not be added because it is already included "
+                + $"in the standard merge policy: {string.Join(", ", SubscriptionValidator.StandardMergePolicies)}");
         }
     }
 }
