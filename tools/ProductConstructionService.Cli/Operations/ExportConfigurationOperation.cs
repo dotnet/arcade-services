@@ -136,9 +136,9 @@ internal class ExportConfigurationOperation : IOperation
         foreach (var group in groups)
         {
             var filePath = group.Key;
-            var subsInFile = group.ToList();
-
-            var rawYaml = _yamlSerializer.Serialize(subsInFile);
+            var configurationObjects = group.ToList();
+            
+            var rawYaml = _yamlSerializer.Serialize(configurationObjects);
             _fileSystem.WriteToFile(exportPath / filePath, FormatYaml(rawYaml));
         }
     }
