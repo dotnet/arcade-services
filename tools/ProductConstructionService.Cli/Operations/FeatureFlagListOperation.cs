@@ -101,27 +101,35 @@ internal class FeatureFlagListOperation : IOperation
             return (flowControl: false, value: 0);
         }
 
-        Console.WriteLine("All feature flags:");
+        Console.WriteLine("");
 
-        var groupedFlags = response.Flags.GroupBy(f => f.SubscriptionId).OrderBy(g => g.Key);
+        // Group by flag name and value combination
+        var groupedByFlagKeyValue = response.Flags
+            .GroupBy(f => (f.FlagName, f.Value))
+            .OrderBy(g => g.Key.FlagName)
+            .ThenBy(g => g.Key.Value);
 
         // Prefetch all subscription descriptions in parallel
-        await _subscriptionHelper.PrefetchSubscriptionDescriptionsAsync(groupedFlags.Select(g => g.Key));
+        var allSubscriptionIds = response.Flags.Select(f => f.SubscriptionId).Distinct();
+        await _subscriptionHelper.PrefetchSubscriptionDescriptionsAsync(allSubscriptionIds);
 
-        foreach (var group in groupedFlags)
+        foreach (var group in groupedByFlagKeyValue)
         {
-            var subscriptionDescription = await _subscriptionHelper.GetSubscriptionDescriptionAsync(group.Key);
-            Console.WriteLine("{0}:", subscriptionDescription);
+            Console.WriteLine("{0}: {1}", group.Key.FlagName, group.Key.Value);
 
-            foreach (var flag in group.OrderBy(f => f.FlagName))
+            foreach (var flag in group.OrderBy(f => f.SubscriptionId))
             {
-                Console.WriteLine("  {0}: {1}", flag.FlagName, flag.Value);
+                var subscriptionDescription = await _subscriptionHelper.GetSubscriptionDescriptionAsync(flag.SubscriptionId);
+                Console.WriteLine("  - {0}", subscriptionDescription);
             }
 
             Console.WriteLine("");
         }
 
-        Console.WriteLine("Total: {0} flags across {1} subscriptions", response.Total, groupedFlags.Count());
+        var uniqueSubscriptions = response.Flags.Select(f => f.SubscriptionId).Distinct().Count();
+        var uniqueCombinations = groupedByFlagKeyValue.Count();
+        Console.WriteLine("Total: {0} flags across {1} subscriptions ({2} unique key/value combinations)", 
+            response.Total, uniqueSubscriptions, uniqueCombinations);
         return (flowControl: true, value: 0);
     }
 }
