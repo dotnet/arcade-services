@@ -20,6 +20,16 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     bool AllowRetries { get; set; }
 
     /// <summary>
+    ///     Commit or update a set of files to a repo using the remote API without cloning the repository.
+    ///     This uses GitHub's Git Data API or Azure DevOps pushes API to create commits directly.
+    /// </summary>
+    /// <param name="filesToCommit">Files to commit</param>
+    /// <param name="repoUri">Remote repository URI</param>
+    /// <param name="branch">Branch to push to</param>
+    /// <param name="commitMessage">Commit message</param>
+    Task CommitFilesWithNoCloningAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage);
+
+    /// <summary>
     /// Delete a branch from a repository
     /// </summary>
     /// <param name="repoUri">Repository where the branch lives</param>

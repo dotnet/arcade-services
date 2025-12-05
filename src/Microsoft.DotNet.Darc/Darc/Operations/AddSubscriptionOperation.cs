@@ -404,6 +404,13 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             : MaestroConfigHelper.SubscriptionFolderPath / _options.ConfigurationFileName;
         var subscriptionsInFile = await FetchAndParseRemoteConfiguration<SubscriptionYaml>(newSubscriptionFilePath);
 
+        // If we have a branch that hasn't been ingested yet, we need to check for equivalent subscriptions in the file
+        var equivalentInFile = subscriptionsInFile.FirstOrDefault(s => s.IsEquivalentTo(subscriptionYaml));
+        if (equivalentInFile != null)
+        {
+            throw new ArgumentException($"Subscription {equivalentInFile.Id} with equivalent parameters already exists in '{newSubscriptionFilePath}'.");
+        }
+
         subscriptionsInFile.Add(subscriptionYaml);
         await WriteConfigurationDataAsync(
             newSubscriptionFilePath,

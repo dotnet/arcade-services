@@ -151,17 +151,26 @@ internal abstract class ConfigurationManagementOperation : Operation
     {
         string yamlContents = _yamlSerializer.Serialize(data).Replace("\n-", "\n\n-");
         GitFile fileToCommit = new(filePath, yamlContents);
-        await _configurationRepo.CommitFilesAsync(
-            [fileToCommit],
-            _options.ConfigurationRepository,
-            _options.ConfigurationBranch,
-            commitMessage);
 
         if (_configurationRepo.GetType() == typeof(LocalLibGit2Client))
         {
+            await _configurationRepo.CommitFilesAsync(
+                [fileToCommit],
+                _options.ConfigurationRepository,
+                _options.ConfigurationBranch,
+                commitMessage);
             var local = _localGitRepoFactory.Create(new NativePath(_options.ConfigurationRepository));
             await local.StageAsync(["."]);
             await local.CommitAsync(commitMessage, allowEmpty: false);
+        }
+        else
+        {
+            var remote = await _remoteFactory.CreateRemoteAsync(_options.ConfigurationRepository);
+            await remote.CommitUpdatesWithNoCloningAsync(
+                [fileToCommit],
+                _options.ConfigurationRepository,
+                _options.ConfigurationBranch,
+                commitMessage);
         }
     }
 
@@ -178,7 +187,7 @@ internal abstract class ConfigurationManagementOperation : Operation
             HeadBranch = _options.ConfigurationBranch,
             BaseBranch = _options.ConfigurationBaseBranch,
             Title = title,
-            Description = description,
+            Description = description ?? string.Empty,
         });
         var prId = pr.Url.Substring(pr.Url.LastIndexOf('/') + 1);
         var guiUri = $"{_options.ConfigurationRepository}/pullrequest/{prId}";

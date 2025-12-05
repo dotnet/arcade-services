@@ -21,7 +21,6 @@ internal interface IConfigurationManagementCommandLineOptions
 internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLineOptions<T>, IConfigurationManagementCommandLineOptions where T : Operation
 {
     private const string DefaultConfigurationRepository = "https://dev.azure.com/dnceng/internal/_git/maestro-configuration";
-    private const string DefaultBaseBranch = "production";
 
     [Option("configuration-repository", HelpText = "URI of the repository where configuration is stored in. Defaults to " + DefaultConfigurationRepository, Default = DefaultConfigurationRepository)]
     public string ConfigurationRepository { get; set; }
@@ -29,7 +28,7 @@ internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLi
     [Option("configuration-branch", HelpText = "Branch of the configuration repository to update or leave out if it should be created.", Required = false)]
     public string ConfigurationBranch { get; set; }
 
-    [Option("configuration-base-branch", HelpText = "Only applies when configuration branch is being created. Base branch to created the configuration branch off of. Defaults to " + DefaultBaseBranch, Required = false, Default = DefaultBaseBranch)]
+    [Option("configuration-base-branch", HelpText = "Only applies when configuration branch is being created. Base branch to created the configuration branch off of.", Required = false)]
     public string ConfigurationBaseBranch { get; set; }
 
     [Option("configuration-file-name", HelpText = "Override the default file name for the subscription configuration. Must be a file name only (no path), and will have .yml appended if not present.", Required = false)]
