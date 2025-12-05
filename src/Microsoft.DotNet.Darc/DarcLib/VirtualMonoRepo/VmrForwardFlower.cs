@@ -271,7 +271,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                     cancellationToken: cancellationToken),
             cancellationToken);
 
-        if (result.HadUpdates && workBranch != null)
+        if (workBranch != null)
         {
             var commitMessage = (await vmr.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
 

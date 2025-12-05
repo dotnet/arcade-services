@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
@@ -248,7 +247,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             },
             cancellationToken);
 
-        if (result.HadUpdates && workBranch != null)
+        if (workBranch != null)
         {
             var commitMessage = (await targetRepo.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
 
