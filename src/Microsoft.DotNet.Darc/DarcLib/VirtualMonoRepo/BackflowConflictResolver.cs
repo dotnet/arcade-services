@@ -104,7 +104,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             else if (lastFlows.CrossingFlow != null)
             {
                 repoComparisonSha = lastFlows.LastForwardFlow.RepoSha;
-                vmrComparisonSha = lastFlows.LastBackFlow!.VmrSha;
+                vmrComparisonSha = lastFlows.LastBackFlow?.VmrSha ?? lastFlows.LastForwardFlow.VmrSha;
             }
             else if (lastFlows.LastBackFlow != null)
             {
