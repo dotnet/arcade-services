@@ -11,7 +11,7 @@ internal interface IConfigurationManagementCommandLineOptions
     string ConfigurationBaseBranch { get; set; }
     string ConfigurationBranch { get; set; }
     string ConfigurationRepository { get; set; }
-    bool Quiet { get; set; }
+    string ConfigurationFileName { get; set; }
     bool NoPr { get; set; }
 }
 
@@ -20,7 +20,7 @@ internal interface IConfigurationManagementCommandLineOptions
 /// </summary>
 internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLineOptions<T>, IConfigurationManagementCommandLineOptions where T : Operation
 {
-    private const string DefaultConfigurationRepository = "https://dev.azure.com/dnceng/internal/_git/dotnet-maestro-configuration-test";
+    private const string DefaultConfigurationRepository = "https://dev.azure.com/dnceng/internal/_git/maestro-configuration";
     private const string DefaultBaseBranch = "production";
 
     [Option("configuration-repository", HelpText = "URI of the repository where configuration is stored in. Defaults to " + DefaultConfigurationRepository, Default = DefaultConfigurationRepository)]
@@ -32,9 +32,9 @@ internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLi
     [Option("configuration-base-branch", HelpText = "Only applies when configuration branch is being created. Base branch to created the configuration branch off of. Defaults to " + DefaultBaseBranch, Required = false, Default = DefaultBaseBranch)]
     public string ConfigurationBaseBranch { get; set; }
 
+    [Option("configuration-file-name", HelpText = "Override the default file name for the subscription configuration. Must be a file name only (no path), and will have .yml appended if not present.", Required = false)]
+    public string ConfigurationFileName { get; set; }
+
     [Option("no-pr", HelpText = "Do not open a PR against the configuration repository (pushes the configuration branch only)", Default = false)]
     public bool NoPr { get; set; }
-
-    [Option('q', "quiet", HelpText = "Non-interactive mode (requires all elements to be passed on the command line).")]
-    public bool Quiet { get; set; }
 }

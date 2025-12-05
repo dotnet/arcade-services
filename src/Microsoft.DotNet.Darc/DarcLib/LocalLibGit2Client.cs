@@ -639,4 +639,17 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
 
         return Task.FromResult(gitTreeItems);
     }
+
+    public async Task<bool> RepoExistsAsync(string repoPath)
+    {
+        try
+        {
+            var rootPath = await GetRootDirAsync(repoPath);
+            return rootPath == repoPath;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }
