@@ -233,13 +233,23 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                     removePatchAfter: true,
                     keepConflicts: keepConflicts,
                     cancellationToken: cancellationToken);
+
+                if (conflicts.Count == 0)
+                {
+                    await CommitBackflow(
+                        codeflowOptions.CurrentFlow,
+                        targetRepo,
+                        codeflowOptions.Build,
+                        cancellationToken);
+                }
+
                 return new CodeFlowResult(true, conflicts, targetRepo.Path, []);
             },
             cancellationToken);
 
-        if (workBranch != null)
+        if (result.HadUpdates && workBranch != null)
         {
-            var commitMessage = await CommitBackflow(codeflowOptions.CurrentFlow, targetRepo, codeflowOptions.Build, cancellationToken);
+            var commitMessage = (await targetRepo.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
 
             result = result with
             {
