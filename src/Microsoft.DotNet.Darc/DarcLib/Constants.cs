@@ -35,19 +35,4 @@ public class Constants
     public const string EngFolderName = "eng";
     public const string CommonScriptFilesPath = $"{EngFolderName}/common";
     public const string DefaultCommitAuthor = "dotnet-maestro[bot]";
-
-    /// <summary>
-    /// Available update frequencies for subscriptions.  Currently the enumeration values aren't available
-    /// through the generated API client.  When/if they ever are, this can be removed.
-    /// </summary>
-    public static readonly List<string> AvailableFrequencies =
-    [
-        "none",
-        "everyDay",
-        "everyBuild",
-        "twiceDaily",
-        "everyWeek",
-        "everyTwoWeeks",
-        "everyMonth",
-    ];
 }

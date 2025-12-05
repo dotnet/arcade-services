@@ -84,9 +84,9 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
             }
             if (_options.UpdateFrequency != null)
             {
-                if (!DarcLib.Constants.AvailableFrequencies.Contains(_options.UpdateFrequency, StringComparer.OrdinalIgnoreCase))
+                if (!Constants.AvailableFrequencies.Contains(_options.UpdateFrequency, StringComparer.OrdinalIgnoreCase))
                 {
-                    _logger.LogError($"Unknown update frequency '{_options.UpdateFrequency}'. Available options: {string.Join(',', DarcLib.Constants.AvailableFrequencies)}");
+                    _logger.LogError($"Unknown update frequency '{_options.UpdateFrequency}'. Available options: {string.Join(',', Constants.AvailableFrequencies)}");
                     return 1;
                 }
                 updateFrequency = _options.UpdateFrequency;
@@ -222,7 +222,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                 subscription,
                 (await suggestedChannels).Select(suggestedChannel => suggestedChannel.Name),
                 (await suggestedRepos).SelectMany(subs => new List<string> { subscription.SourceRepository, subscription.TargetRepository }).ToHashSet(),
-                DarcLib.Constants.AvailableFrequencies,
+                Constants.AvailableFrequencies,
                 Constants.AvailableMergePolicyYamlHelp,
                 subscription.PullRequestFailureNotificationTags ?? string.Empty,
                 sourceEnabled,

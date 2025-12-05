@@ -185,10 +185,10 @@ internal abstract class SubscriptionPopUp<TData> : EditorPopUp where TData : Sub
 
         _data.UpdateFrequency = ParseSetting(outputYamlData.UpdateFrequency, _data.UpdateFrequency, false);
         if (string.IsNullOrEmpty(_data.UpdateFrequency) ||
-            !DarcLib.Constants.AvailableFrequencies.Contains(_data.UpdateFrequency, StringComparer.OrdinalIgnoreCase))
+            !Constants.AvailableFrequencies.Contains(_data.UpdateFrequency, StringComparer.OrdinalIgnoreCase))
         {
             _logger.LogError($"Frequency should be provided and should be one of the following: " +
-                             $"'{string.Join("', '", DarcLib.Constants.AvailableFrequencies)}'");
+                             $"'{string.Join("', '", Constants.AvailableFrequencies)}'");
             return Constants.ErrorCode;
         }
 
