@@ -2,10 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Maestro.Common;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 
@@ -34,6 +36,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     private readonly IRepositoryCloneManager _cloneManager;
     private readonly ILogger<VmrUpdater> _logger;
     private readonly ISourceManifest _sourceManifest;
+    private readonly IVmrInfo _vmrInfo;
 
     public VmrUpdater(
         IVmrDependencyTracker dependencyTracker,
@@ -52,11 +55,12 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
     {
         _logger = logger;
         _sourceManifest = sourceManifest;
+        _vmrInfo = vmrInfo;
         _dependencyTracker = dependencyTracker;
         _cloneManager = cloneManager;
     }
 
-    public async Task<bool> UpdateRepository(
+    public async Task<CodeFlowResult> UpdateRepository(
         string mappingName,
         string? targetRevision,
         CodeFlowParameters codeFlowParameters,
@@ -78,23 +82,23 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
 
         try
         {
-            await UpdateRepositoryInternal(
+            var conflicts = await UpdateRepositoryInternal(
                 dependencyUpdate,
                 restoreVmrPatches: true,
                 codeFlowParameters,
                 resetToRemoteWhenCloningRepo,
                 keepConflicts,
                 cancellationToken);
-            return true;
+            return new CodeFlowResult(HadUpdates: true, conflicts, _vmrInfo.VmrPath, []);
         }
         catch (EmptySyncException e)
         {
             _logger.LogInformation(e.Message);
-            return false;
+            return new CodeFlowResult(HadUpdates: false, [], _vmrInfo.VmrPath, []);
         }
     }
 
-    private async Task UpdateRepositoryInternal(
+    private async Task<IReadOnlyCollection<UnixPath>> UpdateRepositoryInternal(
         VmrDependencyUpdate update,
         bool restoreVmrPatches,
         CodeFlowParameters codeFlowParameters,
@@ -157,7 +161,7 @@ public class VmrUpdater : VmrManagerBase, IVmrUpdater
             currentVersion.Sha,
             update.TargetRevision);
 
-        await UpdateRepoToRevisionAsync(
+        return await UpdateRepoToRevisionAsync(
             update,
             clone,
             currentVersion.Sha,

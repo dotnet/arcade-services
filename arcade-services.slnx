@@ -49,6 +49,7 @@
     <Project Path="test/Microsoft.DotNet.Maestro.Tasks.Tests/Microsoft.DotNet.Maestro.Tasks.Tests.csproj" />
     <Project Path="test/ProductConstructionService.Api.Tests/ProductConstructionService.Api.Tests.csproj" />
     <Project Path="test/ProductConstructionService.BarViz.Tests/ProductConstructionService.BarViz.Tests.csproj" />
+    <Project Path="test/ProductConstructionService.Cli.Tests/ProductConstructionService.Cli.Tests.csproj" />
     <Project Path="test/ProductConstructionService.DependencyFlow.Tests/ProductConstructionService.DependencyFlow.Tests.csproj" />
     <Project Path="test/ProductConstructionService.FeedCleaner.Tests/ProductConstructionService.FeedCleaner.Tests.csproj" />
     <Project Path="test/ProductConstructionService.ScenarioTests/ProductConstructionService.ScenarioTests.csproj" />

@@ -212,7 +212,8 @@ public class VmrPatchHandler : IVmrPatchHandler
     /// Applies a set of patches by applying all patches, preserving conflicts in the index.
     /// In case of failures, collects all conflicted files into a single exception.
     /// </summary>
-    public async Task ApplyPatches(
+    /// <returns>When keepConflicts is true, returns a list of conflicting files</returns>
+    public async Task<IReadOnlyCollection<UnixPath>> ApplyPatches(
         IEnumerable<VmrIngestionPatch> patches,
         NativePath targetDirectory,
         bool removePatchAfter,
@@ -226,32 +227,23 @@ public class VmrPatchHandler : IVmrPatchHandler
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            try
-            {
-                await ApplyPatch(
-                    patch,
-                    targetDirectory,
-                    removePatchAfter: removePatchAfter,
-                    keepConflicts: keepConflicts,
-                    reverseApply: reverseApply,
-                    cancellationToken);
-            }
-            catch (PatchApplicationLeftConflictsException e)
-            {
-                conflicts.AddRange(e.ConflictedFiles);
-            }
+            conflicts.AddRange(await ApplyPatch(
+                patch,
+                targetDirectory,
+                removePatchAfter: removePatchAfter,
+                keepConflicts: keepConflicts,
+                reverseApply: reverseApply,
+                cancellationToken));
         }
 
-        if (conflicts.Count > 0)
-        {
-            throw new PatchApplicationLeftConflictsException([..conflicts.Distinct()], targetDirectory);
-        }
+        return conflicts;
     }
 
     /// <summary>
     /// Applies a given patch file onto given mapping's subrepository.
     /// </summary>
-    public async Task ApplyPatch(
+    /// <returns>When keepConflicts is true, returns a list of conflicting files</returns>
+    public async Task<IReadOnlyCollection<UnixPath>> ApplyPatch(
         VmrIngestionPatch patch,
         NativePath targetDirectory,
         bool removePatchAfter,
@@ -262,14 +254,13 @@ public class VmrPatchHandler : IVmrPatchHandler
         var info = _fileSystem.GetFileInfo(patch.Path);
         if (!info.Exists)
         {
-            _logger.LogError("Failed to find a patch which was expected at {path}", patch.Path);
-            return;
+            throw new FileNotFoundException("Patch file not found", patch.Path);
         }
 
         if (info.Length == 0)
         {
             _logger.LogDebug("No changes in {patch}", patch.Path);
-            return;
+            return [];
         }
 
         _logger.LogInformation((reverseApply ? "Reverse-applying" : "Applying") + " patch {patchPath} to {path}...", patch.Path, patch.ApplicationPath ?? "root of the VMR");
@@ -319,6 +310,8 @@ public class VmrPatchHandler : IVmrPatchHandler
 
         args.Add(patch.Path);
 
+        IReadOnlyCollection<UnixPath> conflictedFiles = [];
+
         var result = await repo.ExecuteGitCommand([..args], cancellationToken);
         if (!result.Succeeded)
         {
@@ -329,7 +322,7 @@ public class VmrPatchHandler : IVmrPatchHandler
 
             // When we are applying and wish to keep conflicts in the working tree, we need to clean up a bit
             cancellationToken.ThrowIfCancellationRequested();
-            var conflictedFiles = await repo.GetConflictedFilesAsync(cancellationToken);
+            conflictedFiles = await repo.GetConflictedFilesAsync(cancellationToken);
             
             if (conflictedFiles.Count == 0)
             {
@@ -345,8 +338,6 @@ public class VmrPatchHandler : IVmrPatchHandler
                 var checkoutResult = await repo.ExecuteGitCommand(["checkout", "--merge", "--", file], CancellationToken.None);
                 checkoutResult.ThrowIfFailed($"Failed to set the conflicted state for {file} after patch application failed");
             }
-
-            throw new PatchApplicationLeftConflictsException(conflictedFiles, targetDirectory);
         }
 
         _logger.LogDebug("{output}", result.ToString());
@@ -364,6 +355,8 @@ public class VmrPatchHandler : IVmrPatchHandler
         }
 
         await _localGitClient.ResetWorkingTree(targetDirectory, patch.ApplicationPath);
+
+        return conflictedFiles;
     }
 
     /// <summary>

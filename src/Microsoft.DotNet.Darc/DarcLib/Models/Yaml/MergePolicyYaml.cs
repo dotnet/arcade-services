@@ -2,7 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 #nullable enable
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
+using Newtonsoft.Json.Linq;
 using YamlDotNet.Serialization;
 
 namespace Microsoft.DotNet.DarcLib.Models.Yaml;
@@ -14,4 +18,21 @@ public class MergePolicyYaml
 
     [YamlMember(Alias = "Properties")]
     public Dictionary<string, object> Properties { get; init; } = [];
+
+    public static MergePolicyYaml FromClientModel(MergePolicy policy) => new()
+    {
+        Name = policy.Name,
+        Properties = policy.Properties != null
+            ? policy.Properties.ToDictionary(
+                p => p.Key,
+                p => p.Value.Type switch
+                {
+                    JTokenType.Array => (object)p.Value.ToObject<List<object>>()!,
+                    _ => throw new NotImplementedException($"Unexpected property value type {p.Value.Type}")
+                })
+            : []
+    };
+
+    public static List<MergePolicyYaml> FromClientModels(IEnumerable<MergePolicy>? mergePolicies)
+        => mergePolicies?.Select(FromClientModel).ToList() ?? [];
 }

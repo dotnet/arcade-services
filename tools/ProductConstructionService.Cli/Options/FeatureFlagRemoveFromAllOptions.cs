@@ -8,7 +8,7 @@ using ProductConstructionService.Cli.Operations;
 namespace ProductConstructionService.Cli.Options;
 
 [Verb("feature-flag-remove-from-all", HelpText = "Remove a feature flag from all subscriptions (admin operation)")]
-internal class FeatureFlagRemoveFromAllOptions : PcsStatusOptions
+internal class FeatureFlagRemoveFromAllOptions : PcsApiOptions
 {
     [Option("flag", Required = true, HelpText = "Feature flag name to remove from all subscriptions")]
     public string FlagName { get; init; } = string.Empty;
