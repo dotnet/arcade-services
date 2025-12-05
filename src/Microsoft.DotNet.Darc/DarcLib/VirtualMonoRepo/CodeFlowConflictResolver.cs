@@ -249,20 +249,16 @@ public abstract class CodeFlowConflictResolver
             return false;
         }
 
-        var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : repo;
-
-        await targetRepo.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase);
-
         var patchName = _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch";
         List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
             patchName,
-            codeflowOptions.CurrentFlow.IsForwardFlow
+            sha1: codeflowOptions.CurrentFlow.IsForwardFlow
                 ? crossingFlow.RepoSha
                 : crossingFlow.VmrSha,
-            codeflowOptions.CurrentFlow.IsForwardFlow
+            sha2: codeflowOptions.CurrentFlow.IsForwardFlow
                 ? codeflowOptions.CurrentFlow.RepoSha
                 : codeflowOptions.CurrentFlow.VmrSha,
-            codeflowOptions.CurrentFlow.IsForwardFlow
+            path: codeflowOptions.CurrentFlow.IsForwardFlow
                 ? new UnixPath(conflictedFile.Path.Substring(vmrSourcesPath.Length + 1))
                 : conflictedFile,
             filters: null,
@@ -288,6 +284,17 @@ public abstract class CodeFlowConflictResolver
             throw new InvalidOperationException("Cannot auto-resolve conflicts for files over 1GB in size");
         }
 
+        // If the file did not have any changes in the crossing flow but just conflicts with some older flow,
+        // we are unable to resolve this.
+        if (_fileSystem.GetFileInfo(patches.First().Path).Length == 0)
+        {
+            _logger.LogInformation("Detected conflicts in {filePath}", conflictedFile);
+            return false;
+        }
+
+        var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : repo;
+        await targetRepo.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase);
+
         try
         {
             await _patchHandler.ApplyPatch(
@@ -296,7 +303,7 @@ public abstract class CodeFlowConflictResolver
                 removePatchAfter: true,
                 keepConflicts: false,
                 cancellationToken: cancellationToken);
-            _logger.LogInformation("Successfully auto-resolved a conflict in {filePath}", conflictedFile);
+            _logger.LogDebug("Successfully auto-resolved a conflict in {filePath}", conflictedFile);
 
             return true;
         }
