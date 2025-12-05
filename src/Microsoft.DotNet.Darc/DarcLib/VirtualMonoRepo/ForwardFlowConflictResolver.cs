@@ -339,9 +339,65 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             await vmr.StageAsync([relativeSourceMappingPath / VersionFiles.VersionDetailsProps], cancellationToken);
         }
 
+        // Recompute NuGet.config feeds based on the current dependencies in Version.Details.xml
+        // This ensures that source-flow PRs don't remove feeds that are still required by dependencies
+        await UpdateNugetConfigFeedsAsync(vmr, relativeSourceMappingPath, cancellationToken);
+
         if (!await vmr.HasWorkingTreeChangesAsync() && !await vmr.HasStagedChangesAsync())
         {
             _logger.LogInformation("No changes to dependencies in this forward flow update");
         }
+    }
+
+    /// <summary>
+    /// Updates NuGet.config with feeds required by the current dependencies in Version.Details.xml.
+    /// This ensures that source-flow PRs don't remove feeds that are still needed.
+    /// </summary>
+    private async Task UpdateNugetConfigFeedsAsync(
+        ILocalGitRepo vmr,
+        UnixPath relativeSourceMappingPath,
+        CancellationToken cancellationToken)
+    {
+        // Read the current Version.Details.xml to get all dependencies
+        var versionDetailsXml = await _dependencyFileManager.ReadVersionDetailsXmlAsync(vmr.Path, null!, relativeSourceMappingPath);
+        var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsXml);
+
+        // Build the asset location mapping from all dependencies
+        var assetLocationMap = new Dictionary<string, HashSet<string>>();
+        foreach (var dependency in versionDetails.Dependencies)
+        {
+            if (!assetLocationMap.TryGetValue(dependency.Name, out HashSet<string>? value))
+            {
+                value = [];
+                assetLocationMap[dependency.Name] = value;
+            }
+
+            if (dependency.Locations != null)
+            {
+                value.UnionWith(dependency.Locations);
+            }
+        }
+
+        // Flatten the locations and split into groups
+        var managedFeeds = _dependencyFileManager.FlattenLocationsAndSplitIntoGroups(assetLocationMap);
+
+        // Read the current NuGet.config
+        (string nugetConfigName, XmlDocument nugetConfig) = await _dependencyFileManager.ReadNugetConfigAsync(
+            vmr.Path,
+            null!, // reads working tree
+            relativeSourceMappingPath);
+
+        // Update package sources based on the managed feeds
+        var updatedNugetConfig = _dependencyFileManager.UpdatePackageSources(nugetConfig, managedFeeds);
+
+        // Write the updated NuGet.config back
+        _fileSystem.WriteToFile(
+            vmr.Path / relativeSourceMappingPath / nugetConfigName,
+            GitFile.GetIndentedXmlBody(updatedNugetConfig));
+
+        // Stage the NuGet.config file
+        await vmr.StageAsync([relativeSourceMappingPath / nugetConfigName], cancellationToken);
+
+        _logger.LogInformation("Updated NuGet.config feeds based on Version.Details.xml dependencies");
     }
 }
