@@ -234,6 +234,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                     keepConflicts: keepConflicts,
                     cancellationToken: cancellationToken);
 
+                // We need to commit because we are on the working branch
                 if (conflicts.Count == 0)
                 {
                     await CommitBackflow(
