@@ -212,7 +212,10 @@ public abstract class CodeFlowConflictResolver
 
             _logger.LogInformation("Failed to auto-resolve a conflict in {conflictedFile}", filePath);
 
-            await AbortMerge(codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : sourceRepo);
+            if (!codeflowOptions.EnableRebase)
+            {
+                await AbortMerge(codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : sourceRepo);
+            }
             return false;
         }
 
@@ -246,20 +249,16 @@ public abstract class CodeFlowConflictResolver
             return false;
         }
 
-        var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : repo;
-
-        await targetRepo.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase /* rebase vs merge direction */);
-
         var patchName = _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch";
         List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
             patchName,
-            codeflowOptions.CurrentFlow.IsForwardFlow
+            sha1: codeflowOptions.CurrentFlow.IsForwardFlow
                 ? crossingFlow.RepoSha
                 : crossingFlow.VmrSha,
-            codeflowOptions.CurrentFlow.IsForwardFlow
+            sha2: codeflowOptions.CurrentFlow.IsForwardFlow
                 ? codeflowOptions.CurrentFlow.RepoSha
                 : codeflowOptions.CurrentFlow.VmrSha,
-            codeflowOptions.CurrentFlow.IsForwardFlow
+            path: codeflowOptions.CurrentFlow.IsForwardFlow
                 ? new UnixPath(conflictedFile.Path.Substring(vmrSourcesPath.Length + 1))
                 : conflictedFile,
             filters: null,
@@ -285,6 +284,17 @@ public abstract class CodeFlowConflictResolver
             throw new InvalidOperationException("Cannot auto-resolve conflicts for files over 1GB in size");
         }
 
+        // If the file did not have any changes in the crossing flow but just conflicts with some older flow,
+        // we are unable to resolve this.
+        if (_fileSystem.GetFileInfo(patches.First().Path).Length == 0)
+        {
+            _logger.LogInformation("Detected conflicts in {filePath}", conflictedFile);
+            return false;
+        }
+
+        var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : repo;
+        await targetRepo.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase);
+
         try
         {
             await _patchHandler.ApplyPatch(
@@ -293,13 +303,7 @@ public abstract class CodeFlowConflictResolver
                 removePatchAfter: true,
                 keepConflicts: false,
                 cancellationToken: cancellationToken);
-            _logger.LogInformation("Successfully auto-resolved a conflict in {filePath}", conflictedFile);
-
-            if (codeflowOptions.EnableRebase)
-            {
-                // Stage the file for commit
-                await targetRepo.StageAsync([conflictedFile], CancellationToken.None);
-            }
+            _logger.LogDebug("Successfully auto-resolved a conflict in {filePath}", conflictedFile);
 
             return true;
         }
@@ -307,7 +311,7 @@ public abstract class CodeFlowConflictResolver
         {
             // If the patch failed, we cannot resolve the conflict automatically
             // We will just leave it as is and let the user resolve it manually
-            _logger.LogDebug("Failed to auto-resolve conflicts in {filePath} - conflicting changes detected", conflictedFile);
+            _logger.LogInformation("Detected conflicts in {filePath}", conflictedFile);
 
             if (codeflowOptions.EnableRebase)
             {
@@ -317,6 +321,32 @@ public abstract class CodeFlowConflictResolver
 
             return false;
         }
+    }
+
+    /// <summary>
+    /// If a file was added and then removed again in the original repo, it won't exist in the head branch,
+    /// so in case of a conflict + recreation, we cannot remove (if it does not exist).
+    /// In non-rebase flow, we stick custom content in the file - a message to indicate it should be removed.
+    /// In rebase, we can remove it after when we see this content. This method does just that.
+    /// </summary>
+    protected async Task<bool> TryRevertingAddedFile(ILocalGitRepo repo, UnixPath conflictedFile, CancellationToken cancellationToken)
+    {
+        var filePath = repo.Path / conflictedFile;
+        if (!_fileSystem.FileExists(filePath))
+        {
+            return false;
+        }
+
+        var content = await _fileSystem.ReadAllTextAsync(filePath);
+        if (content?.Contains(VmrCodeFlower.FileToBeRemovedContent) ?? false)
+        {
+            _fileSystem.DeleteFile(filePath);
+            await repo.StageAsync([conflictedFile], cancellationToken);
+            _logger.LogInformation("Successfully auto-resolved a conflict in {filePath} by removing the file", conflictedFile);
+            return true;
+        }
+
+        return false;
     }
 
     protected static async Task AbortMerge(ILocalGitRepo repo)

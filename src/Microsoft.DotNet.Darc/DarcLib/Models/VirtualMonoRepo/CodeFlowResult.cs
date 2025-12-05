@@ -15,4 +15,6 @@ public record CodeFlowResult(
     List<DependencyUpdate> DependencyUpdates)
 {
     public bool HadConflicts => ConflictedFiles.Count > 0;
+
+    public bool RecreatedPreviousFlows { get; init; }
 }

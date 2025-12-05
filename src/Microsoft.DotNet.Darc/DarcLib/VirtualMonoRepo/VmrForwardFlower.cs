@@ -150,7 +150,13 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                     codeflowOptions,
                     vmr,
                     sourceRepo,
-                    lastFlows,
+                    // When we recreated a previous flow, it becomes the crossing flow as it was another flow
+                    // leading into the same target branch. This will help us identify gradual changes and iterate on them
+                    codeflowOptions.EnableRebase && lastFlows.CrossingFlow == null && result.RecreatedPreviousFlows ? lastFlows with
+                    {
+                        CrossingFlow = lastFlows.LastForwardFlow,
+                    }
+                    : lastFlows,
                     headBranchExisted,
                     cancellationToken)
             };
@@ -265,7 +271,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                     cancellationToken: cancellationToken),
             cancellationToken);
 
-        if (result.HadUpdates && workBranch != null)
+        if (workBranch != null)
         {
             var commitMessage = (await vmr.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
 
