@@ -8,8 +8,13 @@ using YamlDotNet.Serialization;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Models.Yaml;
 
-public class DefaultChannelYaml : IComparable<DefaultChannelYaml>
+public class DefaultChannelYaml :
+    IComparable<DefaultChannelYaml>,
+    IExternallySyncedEntity<(string Repository, string Branch, string Channel)>
 {
+    public (string Repository, string Branch, string Channel) UniqueId =>
+        (Repository, Branch, Channel);
+
     [YamlMember(Alias = "Repository", ApplyNamingConventions = false)]
     public required string Repository { get; init; }
 
@@ -21,6 +26,9 @@ public class DefaultChannelYaml : IComparable<DefaultChannelYaml>
 
     [YamlMember(Alias = "Enabled", ApplyNamingConventions = false)]
     public required bool Enabled { get; init; }
+
+    [YamlIgnore]
+    public int Id { get; set; } // This field is required for ingestion logic. Not represented in YAML.
 
     public static DefaultChannelYaml FromClientModel(DefaultChannel defaultChannel) => new()
     {

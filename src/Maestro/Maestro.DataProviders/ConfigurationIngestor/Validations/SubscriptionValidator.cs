@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Maestro.MergePolicyEvaluation;
-using Maestro.Data.Models;
+using Microsoft.DotNet.DarcLib.Models.Yaml;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestor.Validations;
@@ -22,22 +22,33 @@ public static class SubscriptionValidator
         ];
 
     /// <summary>
-    /// Validates a subscription entity against business rules.
+    /// Validates a collection of Subscription entities against business rules.
     /// </summary>
-    /// <param name="subscription">The subscription to validate</param>
+    /// <param name="subscriptions">The subscription collection to validate</param>
     /// <exception cref="ArgumentException">Thrown when validation fails</exception>
+    public static void ValidateSubscriptions(
+        IEnumerable<SubscriptionYaml> subscriptions)
+    {
+        EntityValidator.ValidateEntityUniqueness(subscriptions);
+
+        foreach (var subscription in subscriptions)
+        {
+            ValidateSubscription(subscription);
+        }
+    }
+
     public static void ValidateSubscription(
-        Subscription subscription)
+        SubscriptionYaml subscription)
     {
         ArgumentNullException.ThrowIfNull(subscription);
-        ArgumentException.ThrowIfNullOrWhiteSpace(subscription.Channel.Name);
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(subscription.Channel);
         ArgumentException.ThrowIfNullOrWhiteSpace(subscription.SourceRepository);
         ArgumentException.ThrowIfNullOrWhiteSpace(subscription.TargetRepository);
         ArgumentException.ThrowIfNullOrWhiteSpace(subscription.TargetBranch);
-        ArgumentNullException.ThrowIfNull(subscription.PolicyObject);
-        ArgumentNullException.ThrowIfNull(subscription.PolicyObject.MergePolicies);
+        ArgumentNullException.ThrowIfNull(subscription.MergePolicies);
 
-        List<string> mergePolicies = [.. subscription.PolicyObject.MergePolicies.Select(mp => mp.Name)];
+        List<string> mergePolicies = [.. subscription.MergePolicies.Select(mp => mp.Name)];
 
         if (!subscription.SourceEnabled
             && mergePolicies.Contains(MergePolicyConstants.CodeflowMergePolicyName))
@@ -53,12 +64,12 @@ public static class SubscriptionValidator
                 + $"in the policy `{MergePolicyConstants.StandardMergePolicyName}`: {string.Join(", ", StandardMergePolicies)}.");
         }
 
-        if (subscription.PolicyObject.Batchable && subscription.SourceEnabled)
+        if (subscription.Batchable && subscription.SourceEnabled)
         {
             throw new ArgumentException("Batched codeflow subscriptions are not supported.");
         }
 
-        if (subscription.PolicyObject.Batchable && mergePolicies.Count > 0)
+        if (subscription.Batchable && mergePolicies.Count > 0)
         {
             throw new ArgumentException(
                 "Batchable subscriptions cannot be combined with merge policies. " +

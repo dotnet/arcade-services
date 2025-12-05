@@ -2,7 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using Maestro.Data.Models;
+using System.Collections.Generic;
+using Microsoft.DotNet.DarcLib.Models.Yaml;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestor.Validations;
@@ -10,11 +11,22 @@ namespace Maestro.DataProviders.ConfigurationIngestor.Validations;
 public class DefaultChannelValidator
 {
     /// <summary>
-    /// Validates a DefaultChannel entity against business rules.
+    /// Validates a collection of DefaultChannels entities against business rules.
     /// </summary>
-    /// <param name="defaultChannel">The DefaultChannel to validate</param>
+    /// <param name="defaultChannels">The DefaultChannel collection to validate</param>
     /// <exception cref="ArgumentException">Thrown when validation fails</exception>
-    public static void ValidateDefaultChannel(DefaultChannel defaultChannel)
+    public static void ValidateDefaultChannels(
+        IEnumerable<DefaultChannelYaml> defaultChannels)
+    {
+        EntityValidator.ValidateEntityUniqueness(defaultChannels);
+
+        foreach (var defaultChannel in defaultChannels)
+        {
+            ValidateDefaultChannel(defaultChannel);
+        }
+    }
+
+    public static void ValidateDefaultChannel(DefaultChannelYaml defaultChannel)
     {
         ArgumentNullException.ThrowIfNull(defaultChannel);
 

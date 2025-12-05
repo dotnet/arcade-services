@@ -1,14 +1,14 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Maestro.Data.Models;
+using Microsoft.DotNet.DarcLib.Models.Yaml;
 using System.Collections.Generic;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestor;
 
 public record ConfigurationData(
-    IEnumerable<Subscription> Subscriptions,
-    IEnumerable<Channel> Channels,
-    IEnumerable<DefaultChannel> DefaultChannels,
-    IEnumerable<RepositoryBranch> BranchMergePolicies);
+    IEnumerable<SubscriptionYaml> Subscriptions,
+    IEnumerable<ChannelYaml> Channels,
+    IEnumerable<DefaultChannelYaml> DefaultChannels,
+    IEnumerable<BranchMergePoliciesYaml> BranchMergePolicies);

@@ -9,8 +9,10 @@ namespace Maestro.DataProviders.ConfigurationIngestor;
 public interface IConfigurationIngestor
 {
     /// <summary>
-    /// Attempts to ingest the current configuration and indicates whether the operation was successful.
+    ///  Ingests a configuration on a given namespace, validating and persisting its data.
     /// </summary>
-    /// <returns>true if the configuration was ingested successfully, false if it failed due to bad data </returns>
-    Task<bool> TryIngestConfigurationAsync(ConfigurationData configurationData);
+    /// <returns>A record of the entity changes applied during ingestion.</returns>
+    Task<ConfigurationDataUpdate> IngestConfigurationAsync(
+        ConfigurationData configurationData,
+        string configurationNamespace);
 }
