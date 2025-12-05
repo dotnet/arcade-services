@@ -22,14 +22,26 @@ public static class SubscriptionValidator
         ];
 
     /// <summary>
-    /// Validates a subscription entity against business rules.
+    /// Validates a collection of Subscription entities against business rules.
     /// </summary>
-    /// <param name="subscription">The subscription to validate</param>
+    /// <param name="subscriptions">The subscription collection to validate</param>
     /// <exception cref="ArgumentException">Thrown when validation fails</exception>
+    public static void ValidateSubscriptions(
+        IEnumerable<Subscription> subscriptions)
+    {
+        EntityValidator.ValidateEntityUniqueness(subscriptions);
+
+        foreach (Subscription subscription in subscriptions)
+        {
+            ValidateSubscription(subscription);
+        }
+    }
+
     public static void ValidateSubscription(
         Subscription subscription)
     {
         ArgumentNullException.ThrowIfNull(subscription);
+
         ArgumentException.ThrowIfNullOrWhiteSpace(subscription.Channel.Name);
         ArgumentException.ThrowIfNullOrWhiteSpace(subscription.SourceRepository);
         ArgumentException.ThrowIfNullOrWhiteSpace(subscription.TargetRepository);

@@ -1,17 +1,22 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq;
+using System.Threading.Tasks;
 using Maestro.Data;
+using Maestro.Data.Models;
+using Maestro.DataProviders.ConfigurationIngestor;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.Kusto;
+using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Data;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Octokit;
 
 namespace Maestro.DataProviders;
 
@@ -514,5 +519,271 @@ public class SqlBarClient : ISqlBarClient
             _context.Entry(existingSubscriptionUpdate).CurrentValues.SetValues(subscriptionUpdate);
         }
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<ConfigurationData> FetchExistingConfigurationDataAsync(string configurationNamespace)
+    {
+        var subscriptionsFetch = _context.Subscriptions
+            .Where(sub => sub.Namespace.Name == configurationNamespace)
+            .ToListAsync();
+
+        var channelsFetch = _context.Channels
+            .Where(c => c.Namespace.Name == configurationNamespace)
+            .ToListAsync();
+
+        var defaultChannelsFetch = _context.DefaultChannels
+            .Where(dc => dc.Namespace.Name == configurationNamespace)
+            .ToListAsync();
+
+        var repositoryBranchesFetch = _context.RepositoryBranches
+            .Where(rb => rb.Namespace.Name == configurationNamespace)
+            .ToListAsync();
+
+        await Task.WhenAll(subscriptionsFetch, channelsFetch, defaultChannelsFetch, repositoryBranchesFetch);
+
+        return new ConfigurationData(
+            subscriptionsFetch.Result,
+            channelsFetch.Result,
+            defaultChannelsFetch.Result,
+            repositoryBranchesFetch.Result);
+    }
+
+    public async Task CreateSubscriptionsAsync(IEnumerable<Data.Models.Subscription> subscriptionsToCreate, bool andSaveContext = true)
+    {
+        foreach (var subscription in subscriptionsToCreate)
+        {
+            await CreateSubscriptionAsync(subscription, false);
+        }
+        if (andSaveContext)
+        {
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task CreateSubscriptionAsync(Data.Models.Subscription subscription, bool andSaveContext = true)
+    {
+        await ValidateSubscriptionConflicts(subscription);
+
+        _context.Subscriptions.Add(subscription);
+
+        if (andSaveContext)
+        {
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task UpdateSubscriptionsAsync(IEnumerable<Data.Models.Subscription> subscriptionsToUpdate, bool andSaveContext = true)
+    {
+        foreach (var subscription in subscriptionsToUpdate)
+        {
+            await UpdateSubscriptionAsync(subscription, false);
+        }
+        if (andSaveContext)
+        {
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task UpdateSubscriptionAsync(Data.Models.Subscription subscription, bool andSaveContext = true)
+    {
+        //todo check if it's better to remove .AsNoTracking() because we might already have tracked entities here
+        var existingSubscription = await _context.Subscriptions
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Id == subscription.Id);
+
+        List<string> illegalFieldChanges = [];
+
+        if (subscription.TargetBranch != existingSubscription.TargetBranch)
+        {
+            illegalFieldChanges.Add("TargetBranch");
+        }
+
+        if (subscription.TargetRepository != existingSubscription.TargetRepository)
+        {
+            illegalFieldChanges.Add("TargetRepository");
+        }
+
+        if (subscription.SourceRepository != existingSubscription.SourceRepository)
+        {
+            illegalFieldChanges.Add("SourceRepository");
+        }
+
+        if (subscription.PolicyObject.Batchable != existingSubscription.PolicyObject.Batchable)
+        {
+            illegalFieldChanges.Add("Batchable");
+        }
+
+        if (illegalFieldChanges.Count > 0)
+        {
+            throw new ArgumentException($"Subscription update failed for subscription {subscription.Id} because there was an " +
+                $"attempt to modify the following immutable fields: {subscription.Id}: {string.Join(", ", illegalFieldChanges)}");
+        }
+
+        existingSubscription.SourceRepository = existingSubscription.SourceRepository;
+        existingSubscription.TargetRepository = existingSubscription.TargetRepository;
+        existingSubscription.Enabled = existingSubscription.Enabled;
+        existingSubscription.SourceEnabled = existingSubscription.SourceEnabled;
+        existingSubscription.SourceDirectory = existingSubscription.SourceDirectory;
+        existingSubscription.TargetDirectory = existingSubscription.TargetDirectory;
+        existingSubscription.PolicyObject = existingSubscription.PolicyObject;
+        existingSubscription.PullRequestFailureNotificationTags = existingSubscription.PullRequestFailureNotificationTags;
+        existingSubscription.Channel = subscription.Channel;
+        // todo: Excluded assets need an ID (?)
+
+        _context.Subscriptions.Update(existingSubscription);
+    }
+
+    public async Task DeleteSubscriptionsAsync(
+        IEnumerable<Data.Models.Subscription> subscriptionsToDelete, bool andSaveContext = true)
+    {
+        var subscriptionLookups = subscriptionsToDelete.ToDictionary(s => s.Id);
+
+        _context.SubscriptionUpdates.RemoveRange(
+            _context.SubscriptionUpdates
+            .Where(s => subscriptionLookups.ContainsKey(s.SubscriptionId)));
+
+        _context.Subscriptions.RemoveRange(
+            subscriptionLookups.Values
+            .Where(s => subscriptionLookups.ContainsKey(s.Id)));
+
+        if (andSaveContext)
+        {
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task UpdateChannelsAsync(IEnumerable<Data.Models.Channel> channelsToUpdate, bool andSaveContext = true)
+    {
+        foreach (var channel in channelsToUpdate)
+        {
+            await UpdateChannelAsync(channel, false);
+        }
+
+        if (andSaveContext)
+        {
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task UpdateChannelAsync(Data.Models.Channel channel, bool andSaveContext = true)
+    {
+        var existingChannel = await _context.Channels
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.UniqueId == channel.UniqueId);
+
+        existingChannel.Classification = channel.Classification;
+        _context.Channels.Update(existingChannel);
+
+        if (andSaveContext)
+        {
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task UpdateDefaultChannelsAsync(IEnumerable<Data.Models.DefaultChannel> defaultChannels, bool andSaveContext = true)
+    {
+        foreach (var defaultChannel in defaultChannels)
+        {
+            await UpdateDefaultChannelAsync(defaultChannel, false);
+        }
+        if (andSaveContext)
+        {
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task UpdateDefaultChannelAsync(Data.Models.DefaultChannel defaultChannel, bool andSaveContext = true)
+    {
+        var existingDefaultChannel = await _context.DefaultChannels
+            .AsNoTracking()
+            .FirstOrDefaultAsync(dc => dc.Id == defaultChannel.Id);
+
+        List<string> illegalFieldChanges = [];
+
+        if (defaultChannel.ChannelId != existingDefaultChannel.ChannelId)
+        {
+            illegalFieldChanges.Add("ChannelId");
+        }
+
+        if (illegalFieldChanges.Count > 0)
+        {
+            throw new ArgumentException($"Subscription update failed for subscription {subscription.Id} because there was an " +
+                $"attempt to modify the following immutable fields: {subscription.Id}: {string.Join(", ", illegalFieldChanges)}");
+        }
+
+        defaultChannel.Enabled = defaultChannel.Enabled;
+        _context.DefaultChannels.Update(defaultChannel);
+    }
+
+    private async Task ValidateSubscriptionConflicts(
+        Data.Models.Subscription subscription)
+    {
+        if (subscription.SourceEnabled)
+        {
+            await ValidateConflictingCodeflowSubscriptions(subscription);
+        }
+        else
+        {
+            await ValidateConflictingDependencySubscriptions(subscription);
+        }
+    }
+    private async Task ValidateConflictingDependencySubscriptions(Data.Models.Subscription subscription)
+    {
+            var equivalentSub = await _context.Subscriptions.FirstOrDefaultAsync(sub =>
+                sub.SourceRepository == subscription.SourceRepository
+                    && sub.ChannelId == subscription.Channel.Id
+                    && sub.TargetRepository == subscription.TargetRepository
+                    && sub.TargetBranch == subscription.TargetBranch
+                    && sub.SourceEnabled == subscription.SourceEnabled
+                    && sub.SourceDirectory == subscription.SourceDirectory
+                    && sub.TargetDirectory == subscription.TargetDirectory
+                    && sub.Id != subscription.Id);
+
+        if (equivalentSub != null)
+        {
+            throw new ArgumentException($"Could not create or update subscription with id `{subscription.Id}`. "
+                + $"There already exists a subscription that performs the same update. (`{equivalentSub.Id}`).");
+        }
+
+    }
+
+    private async Task ValidateConflictingCodeflowSubscriptions(
+        Data.Models.Subscription subscription)
+    {
+        if (!string.IsNullOrEmpty(subscription.TargetDirectory))
+        {
+            var equivalentFlow = await _context.Subscriptions.FirstOrDefaultAsync(s =>
+                s.SourceEnabled == true
+                    && !string.IsNullOrEmpty(s.TargetDirectory)
+                    && s.TargetRepository == subscription.TargetRepository
+                    && s.TargetBranch == subscription.TargetBranch
+                    && s.TargetDirectory == subscription.TargetDirectory
+                    && s.Id != subscription.Id);
+
+            if (equivalentFlow != null)
+            {
+                throw new ArgumentException(
+                $"A forward flow subscription '{equivalentFlow.Id}' already exists for the same VMR repository, branch, and target directory. "
+                + "Only one forward flow subscription is allowed per VMR repository, branch, and target directory combination.");
+            }
+        }
+
+        else if (!string.IsNullOrEmpty(subscription.SourceDirectory))
+        {
+            var equivalentFlow = await _context.Subscriptions.FirstOrDefaultAsync(s =>
+                s.SourceEnabled == true
+                    && !string.IsNullOrEmpty(s.SourceDirectory)
+                    && s.SourceRepository == subscription.SourceRepository
+                    && s.TargetBranch == subscription.TargetBranch
+                    && s.SourceDirectory == subscription.SourceDirectory
+                    && s.Id != subscription.Id);
+
+            if (equivalentFlow != null)
+            {
+                throw new ArgumentException(
+                    $"A backflow subscription '{equivalentFlow.Id}' already exists for the same target repository and branch. " +
+                    "Only one backflow subscription is allowed per target repository and branch combination.");
+            }
+        }
     }
 }
