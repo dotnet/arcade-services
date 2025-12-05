@@ -3,9 +3,10 @@
 
 using System.Threading.Tasks;
 
+#nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestor;
 
-internal interface IConfigurationIngestor
+public interface IConfigurationIngestor
 {
     /// <summary>
     /// Attempts to ingest the current configuration and indicates whether the operation was successful.

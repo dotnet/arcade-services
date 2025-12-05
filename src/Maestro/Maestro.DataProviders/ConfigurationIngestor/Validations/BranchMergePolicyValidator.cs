@@ -6,6 +6,7 @@ using System.Linq;
 using Maestro.Data.Models;
 using Maestro.MergePolicyEvaluation;
 
+#nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestor.Validations;
 
 public class BranchMergePolicyValidator

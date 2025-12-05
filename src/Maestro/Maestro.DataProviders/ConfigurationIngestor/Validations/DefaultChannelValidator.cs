@@ -4,6 +4,7 @@
 using System;
 using Maestro.Data.Models;
 
+#nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestor.Validations;
 
 public class DefaultChannelValidator

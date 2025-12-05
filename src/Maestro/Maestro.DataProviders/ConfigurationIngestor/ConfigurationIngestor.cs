@@ -4,9 +4,10 @@
 using System.Threading.Tasks;
 using Maestro.DataProviders.ConfigurationIngestor.Validations;
 
+#nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestor;
 
-internal class ConfigurationIngestor
+public class ConfigurationIngestor
 {
     public async Task<bool> TryIngestConfigurationAsync(ConfigurationData configurationData)
     {

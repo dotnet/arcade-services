@@ -7,6 +7,7 @@ using System.Linq;
 using Maestro.MergePolicyEvaluation;
 using Maestro.Data.Models;
 
+#nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestor.Validations;
 
 public static class SubscriptionValidator

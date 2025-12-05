@@ -4,6 +4,7 @@
 using System;
 using Maestro.Data.Models;
 
+#nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestor.Validations;
 
 public class ChannelValidator
@@ -17,6 +18,7 @@ public class ChannelValidator
     {
         ArgumentNullException.ThrowIfNull(channel);
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(channel.Name, nameof(channel.Name));
+        ArgumentException.ThrowIfNullOrWhiteSpace(channel.Name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(channel.Classification);
     }
 }
