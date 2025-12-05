@@ -359,7 +359,10 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         CancellationToken cancellationToken)
     {
         // Read the current Version.Details.xml to get all dependencies
-        var versionDetailsXml = await _dependencyFileManager.ReadVersionDetailsXmlAsync(vmr.Path, null!, relativeSourceMappingPath);
+        var versionDetailsXml = await _dependencyFileManager.ReadVersionDetailsXmlAsync(
+            vmr.Path,
+            branch: null!, // reads the working tree
+            relativeSourceMappingPath);
         var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsXml);
 
         // Build the asset location mapping from all dependencies
@@ -384,7 +387,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         // Read the current NuGet.config
         (string nugetConfigName, XmlDocument nugetConfig) = await _dependencyFileManager.ReadNugetConfigAsync(
             vmr.Path,
-            null!, // reads working tree
+            branch: null!, // reads the working tree
             relativeSourceMappingPath);
 
         // Update package sources based on the managed feeds
