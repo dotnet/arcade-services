@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Maestro.Data.Models;
 using Maestro.MergePolicyEvaluation;
@@ -11,6 +12,17 @@ namespace Maestro.DataProviders.ConfigurationIngestor.Validations;
 
 public class BranchMergePolicyValidator
 {
+    public static void ValidateBranchMergePolicies(
+        IEnumerable<RepositoryBranch> branchMergePolicies)
+    {
+        EntityValidator.ValidateEntityUniqueness(branchMergePolicies);
+
+        foreach (RepositoryBranch branchMergePolicy in branchMergePolicies)
+        {
+            ValidateBranchMergePolicies(branchMergePolicy);
+        }
+    }
+
     /// <summary>
     /// Validates a RepositoryBranch entity against business rules.
     /// </summary>

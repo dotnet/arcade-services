@@ -11,7 +11,7 @@ using Newtonsoft.Json;
 
 namespace Maestro.Data.Models;
 
-public class Subscription
+public class Subscription : ExternallySyncedEntity<Guid>
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -83,4 +83,6 @@ public class Subscription
     public string PullRequestFailureNotificationTags { get; set; }
 
     public Namespace Namespace { get; set; }
+
+    public Guid UniqueId => Id;
 }

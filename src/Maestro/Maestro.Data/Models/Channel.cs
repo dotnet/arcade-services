@@ -7,7 +7,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Maestro.Data.Models;
 
-public class Channel
+public class Channel : ExternallySyncedEntity<string>
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -23,4 +23,6 @@ public class Channel
     public List<DefaultChannel> DefaultChannels { get; set; }
 
     public Namespace Namespace { get; set; }
+
+    public string UniqueId => Name;
 }

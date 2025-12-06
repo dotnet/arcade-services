@@ -24,7 +24,7 @@ public class Repository
     public List<RepositoryBranch> Branches { get; set; }
 }
 
-public class RepositoryBranch
+public class RepositoryBranch : ExternallySyncedEntity<(string RepositoryName, string BranchName)>
 {
     [MaxLength(Repository.RepositoryNameLength)]
     public string RepositoryName { get; set; }
@@ -45,6 +45,10 @@ public class RepositoryBranch
     }
 
     public Namespace Namespace { get; set; }
+
+    // RepositoryBranch does not have a simple id, it uses a composite key.
+    public (string RepositoryName, string BranchName) UniqueId
+        => (RepositoryName, BranchName);
 
     public class Policy
     {

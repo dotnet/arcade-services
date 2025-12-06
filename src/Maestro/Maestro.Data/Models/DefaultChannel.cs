@@ -8,7 +8,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Maestro.Data.Models;
 
-public class DefaultChannel
+public class DefaultChannel : ExternallySyncedEntity<(string, string, int)>
 {
     public int Id { get; set; }
 
@@ -38,4 +38,6 @@ public class DefaultChannel
     public Channel Channel { get; set; }
 
     public Namespace Namespace { get; set; }
+
+    public (string, string, int) UniqueId => (Repository, Branch, ChannelId);
 }
