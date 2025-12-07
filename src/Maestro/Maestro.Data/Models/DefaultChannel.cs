@@ -39,5 +39,5 @@ public class DefaultChannel : ExternallySyncedEntity<(string, string, int)>
 
     public Namespace Namespace { get; set; }
 
-    public (string, string, int) UniqueId => (Repository, Branch, ChannelId);
+    public (string Repository, string Branch, int ChannelId) UniqueId => (Repository, Branch, ChannelId);
 }
