@@ -156,10 +156,10 @@ internal abstract class ConfigurationManagementOperation : Operation
         string commitMessage)
     {
         string yamlContents = _yamlSerializer.Serialize(data).Replace("\n-", "\n\n-");
-        GitFile fileToCommit = new(filePath, yamlContents);
 
         if (_configurationRepo.Value is LocalLibGit2Client)
         {
+            GitFile fileToCommit = new(new NativePath(_options.ConfigurationRepository) / filePath, yamlContents);
             await _configurationRepo.Value.CommitFilesAsync(
                 [fileToCommit],
                 _options.ConfigurationRepository,
@@ -171,6 +171,7 @@ internal abstract class ConfigurationManagementOperation : Operation
         }
         else
         {
+            GitFile fileToCommit = new(filePath, yamlContents);
             var remote = await _remoteFactory.CreateRemoteAsync(_options.ConfigurationRepository);
             await remote.CommitUpdatesWithNoCloningAsync(
                 [fileToCommit],
