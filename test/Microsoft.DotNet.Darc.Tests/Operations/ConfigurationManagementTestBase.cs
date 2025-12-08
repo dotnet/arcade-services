@@ -70,7 +70,7 @@ public abstract class ConfigurationManagementTestBase
         await SetupLocalGitRepoAsync();
         SetupBarClientMock();
         SetupRemoteMocks();
-        SetupGitRepoFactory();
+        SetupRepoFactories();
     }
 
     [TearDown]
@@ -88,11 +88,9 @@ public abstract class ConfigurationManagementTestBase
     /// </summary>
     private async Task SetupLocalGitRepoAsync()
     {
-        // Create temp directory
         ConfigurationRepoPath = Path.Combine(Path.GetTempPath(), $"darc-test-config-{Guid.NewGuid():N}");
         Directory.CreateDirectory(ConfigurationRepoPath);
 
-        // Set up git client and process manager
         ProcessManager = new ProcessManager(NullLogger.Instance, "git");
         GitClient = new LocalLibGit2Client(
             new RemoteTokenProvider(),
@@ -113,12 +111,8 @@ public abstract class ConfigurationManagementTestBase
         await GitClient.CommitAsync(ConfigurationRepoPath, "Initial commit", allowEmpty: false, author: null);
     }
 
-    /// <summary>
-    /// Sets up the git repo factory to return real LocalLibGit2Client for local paths.
-    /// </summary>
-    private void SetupGitRepoFactory()
+    private void SetupRepoFactories()
     {
-        // Create the real GitRepoFactory - it will create LocalLibGit2Client for local paths
         GitRepoFactory = new GitRepoFactory(
             new RemoteTokenProvider(),
             Mock.Of<IAzureDevOpsTokenProvider>(),
@@ -128,7 +122,6 @@ public abstract class ConfigurationManagementTestBase
             NullLoggerFactory.Instance,
             temporaryPath: null!);
 
-        // Create the real LocalGitRepoFactory
         var localGitClient = new LocalGitClient(
             new RemoteTokenProvider(),
             new NoTelemetryRecorder(),
@@ -138,15 +131,10 @@ public abstract class ConfigurationManagementTestBase
         LocalGitRepoFactory = new LocalGitRepoFactory(localGitClient, ProcessManager);
     }
 
-    /// <summary>
-    /// Sets up the BAR API client mock with default behavior.
-    /// Override to customize for specific tests.
-    /// </summary>
     protected virtual void SetupBarClientMock()
     {
         BarClientMock = new Mock<IBarApiClient>();
 
-        // Default: no existing subscriptions
         BarClientMock
             .Setup(x => x.GetSubscriptionsAsync(
                 It.IsAny<string?>(),
@@ -158,39 +146,28 @@ public abstract class ConfigurationManagementTestBase
             .ReturnsAsync([]);
     }
 
-    /// <summary>
-    /// Sets up the remote factory mocks for repository verification (source/target repos).
-    /// These are mocked because we're only testing local configuration repo operations.
-    /// </summary>
     protected virtual void SetupRemoteMocks()
     {
         RemoteMock = new Mock<IRemote>();
         RemoteFactoryMock = new Mock<IRemoteFactory>();
 
-        // Setup factory to return our mock
         RemoteFactoryMock
             .Setup(x => x.CreateRemoteAsync(It.IsAny<string>()))
             .ReturnsAsync(RemoteMock.Object);
 
-        // Default: repository exists
         RemoteMock
             .Setup(x => x.RepositoryExistsAsync(It.IsAny<string>()))
             .ReturnsAsync(true);
 
-        // Default: branch exists (GetLatestCommitAsync is used for source-enabled verification)
         RemoteMock
             .Setup(x => x.GetLatestCommitAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync("abc123");
 
-        // Default: dependencies exist (GetDependenciesAsync is used for branch verification)
         RemoteMock
             .Setup(x => x.GetDependenciesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<UnixPath?>()))
             .ReturnsAsync(Array.Empty<DependencyDetail>());
     }
 
-    /// <summary>
-    /// Configures the mock to simulate that a channel exists with the given name.
-    /// </summary>
     protected void SetupChannel(string channelName, int channelId = 1)
     {
         BarClientMock
@@ -215,54 +192,12 @@ public abstract class ConfigurationManagementTestBase
         await GitClient.CommitAsync(ConfigurationRepoPath, $"Add {relativePath}", allowEmpty: false, author: null);
     }
 
-    /// <summary>
-    /// Reads file content from the configuration repository.
-    /// </summary>
-    protected async Task<string?> ReadFileFromConfigRepoAsync(string relativePath, string? branch = null)
-    {
-        branch ??= DefaultBranch;
-
-        // Switch to the branch if needed
-        var currentBranch = await GetCurrentBranchAsync();
-        if (currentBranch != branch)
-        {
-            await ProcessManager.ExecuteGit(ConfigurationRepoPath, ["checkout", branch]);
-        }
-
-        var fullPath = Path.Combine(ConfigurationRepoPath, relativePath);
-        if (!File.Exists(fullPath))
-        {
-            // Switch back if we changed
-            if (currentBranch != branch)
-            {
-                await ProcessManager.ExecuteGit(ConfigurationRepoPath, ["checkout", currentBranch]);
-            }
-            return null;
-        }
-
-        var content = await File.ReadAllTextAsync(fullPath);
-
-        // Switch back if we changed
-        if (currentBranch != branch)
-        {
-            await ProcessManager.ExecuteGit(ConfigurationRepoPath, ["checkout", currentBranch]);
-        }
-
-        return content;
-    }
-
-    /// <summary>
-    /// Gets the current branch name.
-    /// </summary>
     protected async Task<string> GetCurrentBranchAsync()
     {
         var result = await ProcessManager.ExecuteGit(ConfigurationRepoPath, ["rev-parse", "--abbrev-ref", "HEAD"]);
         return result.StandardOutput.Trim();
     }
 
-    /// <summary>
-    /// Gets list of branches in the configuration repository.
-    /// </summary>
     protected async Task<List<string>> GetBranchesAsync()
     {
         var result = await ProcessManager.ExecuteGit(ConfigurationRepoPath, ["branch", "--list", "--format=%(refname:short)"]);
@@ -274,18 +209,6 @@ public abstract class ConfigurationManagementTestBase
         return branches;
     }
 
-    /// <summary>
-    /// Checks if a branch exists in the configuration repository.
-    /// </summary>
-    protected async Task<bool> BranchExistsAsync(string branchName)
-    {
-        var branches = await GetBranchesAsync();
-        return branches.Contains(branchName);
-    }
-
-    /// <summary>
-    /// Cleans up the temporary repository.
-    /// </summary>
     private void CleanupTempRepo()
     {
         if (string.IsNullOrEmpty(ConfigurationRepoPath))
