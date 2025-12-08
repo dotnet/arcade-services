@@ -142,6 +142,15 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         if (result.HadUpdates)
         {
+            LastFlows lastFlowsAfterRecreation = lastFlows;
+            if (codeflowOptions.EnableRebase && lastFlows.CrossingFlow == null && result.RecreatedPreviousFlows)
+            {
+                lastFlowsAfterRecreation = lastFlows with
+                {
+                    CrossingFlow = lastFlows.LastForwardFlow,
+                };
+            }
+
             // We try to merge the target branch so that we can potentially
             // resolve some expected conflicts in the version files
             result = result with
@@ -150,13 +159,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                     codeflowOptions,
                     vmr,
                     sourceRepo,
-                    // When we recreated a previous flow, it becomes the crossing flow as it was another flow
-                    // leading into the same target branch. This will help us identify gradual changes and iterate on them
-                    codeflowOptions.EnableRebase && lastFlows.CrossingFlow == null && result.RecreatedPreviousFlows ? lastFlows with
-                    {
-                        CrossingFlow = lastFlows.LastForwardFlow,
-                    }
-                    : lastFlows,
+                    lastFlowsAfterRecreation,
                     headBranchExisted,
                     cancellationToken)
             };
