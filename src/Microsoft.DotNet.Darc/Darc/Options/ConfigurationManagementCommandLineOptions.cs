@@ -31,7 +31,7 @@ internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLi
     [Option("configuration-base-branch", HelpText = "Only applies when configuration branch is being created. Base branch to created the configuration branch off of.", Required = false)]
     public string ConfigurationBaseBranch { get; set; }
 
-    [Option("configuration-file-name", HelpText = "Override the default file name for the subscription configuration. Must be a file name only (no path), and will have .yml appended if not present.", Required = false)]
+    [Option("configuration-file-name", HelpText = "Optional override of the target file the configuration will be stored in, e.g. net-11-preview-3.yml", Required = false)]
     public string ConfigurationFileName { get; set; }
 
     [Option("no-pr", HelpText = "Do not open a PR against the configuration repository (pushes the configuration branch only)", Default = false)]
