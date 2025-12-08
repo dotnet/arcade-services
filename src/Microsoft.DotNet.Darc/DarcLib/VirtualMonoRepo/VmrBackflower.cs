@@ -275,7 +275,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     {
         // If the target branch did not exist, checkout the last synchronization point
         // Otherwise, check out the last flow's commit in the PR branch
-        await targetRepo.CheckoutAsync(headBranchExisted && !codeflowOptions.EnableRebase
+        await targetRepo.CheckoutAsync(headBranchExisted
             ? lastFlows.LastBackFlow!.RepoSha
             : lastFlows.LastFlow.RepoSha);
 

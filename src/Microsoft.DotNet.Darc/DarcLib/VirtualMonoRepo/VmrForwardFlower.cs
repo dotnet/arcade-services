@@ -300,7 +300,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         // If the target branch did not exist, checkout the last synchronization point
         // Otherwise, check out the last flow's commit in the PR branch
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        await vmr.CheckoutAsync(headBranchExisted && !codeflowOptions.EnableRebase
+        await vmr.CheckoutAsync(headBranchExisted
             ? lastFlows.LastForwardFlow.VmrSha
             : lastFlows.LastFlow.VmrSha);
 
