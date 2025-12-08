@@ -20,11 +20,11 @@ internal abstract class ConfigurationManagementOperation : Operation
     private const string UseConfigRepositoryEnvVar = "DARC_USE_CONFIGURATION_REPOSITORY";
 
     private readonly IConfigurationManagementCommandLineOptions _options;
+    private readonly ILocalGitRepoFactory _localGitRepoFactory;
+    private readonly Lazy<IGitRepo> _configurationRepo;
     protected readonly IRemoteFactory _remoteFactory;
     protected readonly ILogger _logger;
     protected readonly IGitRepoFactory _gitRepoFactory;
-    private readonly ILocalGitRepoFactory _localGitRepoFactory;
-    private readonly IGitRepo _configurationRepo;
 
     private static readonly ISerializer _yamlSerializer = new SerializerBuilder()
         .WithNamingConvention(NullNamingConvention.Instance)
@@ -48,7 +48,7 @@ internal abstract class ConfigurationManagementOperation : Operation
         _gitRepoFactory = gitRepoFactory;
         _localGitRepoFactory = localGitRepoFactory;
 
-        _configurationRepo = gitRepoFactory.CreateClient(_options.ConfigurationRepository);
+        _configurationRepo = new Lazy<IGitRepo>(() => gitRepoFactory.CreateClient(_options.ConfigurationRepository));
     }
 
     protected static bool ShouldUseConfigurationRepository()
@@ -60,7 +60,7 @@ internal abstract class ConfigurationManagementOperation : Operation
     // Validates that the configuration repository parameters are correct
     protected async Task ValidateConfigurationRepositoryParametersAsync()
     {
-        if (!await _configurationRepo.RepoExistsAsync(_options.ConfigurationRepository))
+        if (!await _configurationRepo.Value.RepoExistsAsync(_options.ConfigurationRepository))
         {
             throw new ArgumentException($"The configuration repository '{_options.ConfigurationRepository}' is not a valid git repository.");
         }
@@ -72,20 +72,16 @@ internal abstract class ConfigurationManagementOperation : Operation
             throw new ArgumentException($"Exactly one of configuration branch and configuration base branch must be specified");
         }
 
-        if (configurationBranchProvided)
+        if (configurationBranchProvided
+            && !await _configurationRepo.Value.DoesBranchExistAsync(_options.ConfigurationRepository, _options.ConfigurationBranch))
         {
-            if (!await _configurationRepo.DoesBranchExistAsync(_options.ConfigurationRepository, _options.ConfigurationBranch))
-            {
-                throw new ArgumentException($"The configuration branch '{_options.ConfigurationBranch}' does not exist in the repository '{_options.ConfigurationRepository}'.");
-            }
+            throw new ArgumentException($"The configuration branch '{_options.ConfigurationBranch}' does not exist in the repository '{_options.ConfigurationRepository}'.");
         }
 
-        if (configurationBaseBranchProvided)
+        if (configurationBaseBranchProvided
+            && !await _configurationRepo.Value.DoesBranchExistAsync(_options.ConfigurationRepository, _options.ConfigurationBaseBranch))
         {
-            if (!await _configurationRepo.DoesBranchExistAsync(_options.ConfigurationRepository, _options.ConfigurationBaseBranch))
-            {
-                throw new ArgumentException($"The configuration base branch '{_options.ConfigurationBaseBranch}' does not exist in the repository '{_options.ConfigurationRepository}'.");
-            }
+            throw new ArgumentException($"The configuration base branch '{_options.ConfigurationBaseBranch}' does not exist in the repository '{_options.ConfigurationRepository}'.");
         }
 
         if (string.IsNullOrEmpty(_options.ConfigurationBaseBranch) && !_options.NoPr)
@@ -130,7 +126,7 @@ internal abstract class ConfigurationManagementOperation : Operation
     protected async Task<string> CreateConfigurationBranchAsync()
     {
         var branch = $"darc/{_options.ConfigurationBaseBranch}-{Guid.NewGuid().ToString().Substring(0, 8)}";
-        await _configurationRepo.CreateBranchAsync(
+        await _configurationRepo.Value.CreateBranchAsync(
             _options.ConfigurationRepository,
             branch,
             _options.ConfigurationBaseBranch);
@@ -142,7 +138,7 @@ internal abstract class ConfigurationManagementOperation : Operation
         string fileContents;
         try
         {
-            fileContents = await _configurationRepo.GetFileContentsAsync(
+            fileContents = await _configurationRepo.Value.GetFileContentsAsync(
                 filePath,
                 _options.ConfigurationRepository,
                 _options.ConfigurationBranch);
@@ -162,9 +158,9 @@ internal abstract class ConfigurationManagementOperation : Operation
         string yamlContents = _yamlSerializer.Serialize(data).Replace("\n-", "\n\n-");
         GitFile fileToCommit = new(filePath, yamlContents);
 
-        if (_configurationRepo.GetType() == typeof(LocalLibGit2Client))
+        if (_configurationRepo.Value is LocalLibGit2Client)
         {
-            await _configurationRepo.CommitFilesAsync(
+            await _configurationRepo.Value.CommitFilesAsync(
                 [fileToCommit],
                 _options.ConfigurationRepository,
                 _options.ConfigurationBranch,
@@ -188,7 +184,7 @@ internal abstract class ConfigurationManagementOperation : Operation
         string title,
         string? description = null)
     {
-        if (_configurationRepo.GetType() == typeof(LocalLibGit2Client))
+        if (_configurationRepo.Value is LocalLibGit2Client)
         {
             throw new InvalidOperationException("Cannot create pull request when using local git repository. Specify a remote repository as the configuration repository");
         }

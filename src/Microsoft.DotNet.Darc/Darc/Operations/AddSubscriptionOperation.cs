@@ -422,7 +422,11 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             await CreatePullRequest(
                 $"Add new subscription ({subscriptionYaml.Channel}) {subscriptionYaml.SourceRepository} => {subscriptionYaml.TargetRepository} ({subscriptionYaml.TargetBranch})");
         }
-
+        else
+        {
+            Console.WriteLine("Successfully added subscription with id '{0}' to branch '{1}'",
+                subscriptionYaml.Id, _options.ConfigurationBranch);
+        }
     }
 
     private async Task<string> FindEquivalentSubscriptionAsync(SubscriptionYaml subscriptionYaml)
@@ -430,7 +434,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         var channel = await _barClient.GetChannelAsync(subscriptionYaml.Channel);
         if (channel == null)
         {
-            throw new Exception($"Channel '{subscriptionYaml.Channel}' does not exist.");
+            throw new ArgumentException($"Channel '{subscriptionYaml.Channel}' does not exist.");
         }
 
         var equivalentSub = (await _barClient.GetSubscriptionsAsync(
@@ -442,6 +446,6 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 targetDirectory: subscriptionYaml.TargetDirectory))
             .FirstOrDefault(s => s.TargetBranch == subscriptionYaml.TargetBranch);
 
-        return equivalentSub?.Id.ToString() ?? null;
+        return equivalentSub?.Id.ToString();
     }
 }
