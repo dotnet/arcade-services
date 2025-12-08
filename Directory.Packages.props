@@ -2,7 +2,7 @@
 <Project>
   <PropertyGroup>
     <AspNetCoreVersion>10.0.0</AspNetCoreVersion>
-    <AspireVersion>13.0.0</AspireVersion>
+    <AspireVersion>13.0.2</AspireVersion>
     <MicrosoftBuildVersion>18.0.2</MicrosoftBuildVersion>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
@@ -56,7 +56,7 @@
     <PackageVersion Include="Microsoft.DotNet.MaestroConfiguration.Client" Version="$(MicrosoftDotNetMaestroConfigurationClientVersion)" />
     <PackageVersion Include="Microsoft.DotNet.Services.Utility" Version="$(MicrosoftDotNetServicesUtilityVersion)" />
     <PackageVersion Include="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="$(MicrosoftDotNetSwaggerGeneratorMSBuildVersion)" />
-    <PackageVersion Include="Microsoft.DotNet.VersionTools" Version="$(MicrosoftDotNetVersionToolsVersion)" />
+    <PackageVersion Include="Microsoft.DotNet.VersionTools" Version="10.0.0-beta.25201.3" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(AspNetCoreVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="$(AspNetCoreVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(AspNetCoreVersion)" />
@@ -79,7 +79,7 @@
     <PackageVersion Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.13.1" />
     <PackageVersion Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.13.1" />
     <PackageVersion Include="Microsoft.Identity.Web" Version="4.0.1" />
-    <PackageVersion Include="Microsoft.TeamFoundationServer.Client" Version="20.262.0-preview" />
+    <PackageVersion Include="Microsoft.TeamFoundationServer.Client" Version="20.264.0-preview" />
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
     <PackageVersion Include="Moq" Version="4.18.4" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
@@ -102,7 +102,6 @@
     <PackageVersion Include="TextCopy" Version="6.2.1" />
     <PackageVersion Include="Verify.NUnit" Version="25.0.2" />
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />
-
     <!-- Pinned to clear a CG alert (this package comes via Microsoft.TeamFoundationServer.Client -->
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.0" />
   </ItemGroup>
