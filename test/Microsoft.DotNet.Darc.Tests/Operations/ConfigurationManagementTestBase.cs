@@ -37,7 +37,6 @@ public abstract class ConfigurationManagementTestBase
     protected LocalLibGit2Client GitClient = null!;
     protected IProcessManager ProcessManager = null!;
     protected IGitRepoFactory GitRepoFactory = null!;
-    protected ILocalGitRepoFactory LocalGitRepoFactory = null!;
 
     /// <summary>
     /// Path to the temporary configuration repository.
@@ -118,14 +117,6 @@ public abstract class ConfigurationManagementTestBase
     {
         // Create a factory that returns real LocalLibGit2Client for local paths
         GitRepoFactory = new TestGitRepoFactory(GitClient);
-        LocalGitRepoFactory = new LocalGitRepoFactory(
-            new LocalGitClient(
-                new RemoteTokenProvider(),
-                new NoTelemetryRecorder(),
-                ProcessManager,
-                new FileSystem(),
-                NullLogger.Instance),
-            ProcessManager);
     }
 
     /// <summary>
