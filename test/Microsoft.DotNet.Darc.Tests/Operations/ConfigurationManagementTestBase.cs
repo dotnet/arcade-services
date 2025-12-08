@@ -12,7 +12,9 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.Yaml;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Maestro.Common.AzureDevOpsTokens;
 using Moq;
 using NUnit.Framework;
 using YamlDotNet.Serialization;
@@ -37,6 +39,7 @@ public abstract class ConfigurationManagementTestBase
     protected LocalLibGit2Client GitClient = null!;
     protected IProcessManager ProcessManager = null!;
     protected IGitRepoFactory GitRepoFactory = null!;
+    protected ILocalGitRepoFactory LocalGitRepoFactory = null!;
 
     /// <summary>
     /// Path to the temporary configuration repository.
@@ -115,8 +118,24 @@ public abstract class ConfigurationManagementTestBase
     /// </summary>
     private void SetupGitRepoFactory()
     {
-        // Create a factory that returns real LocalLibGit2Client for local paths
-        GitRepoFactory = new TestGitRepoFactory(GitClient);
+        // Create the real GitRepoFactory - it will create LocalLibGit2Client for local paths
+        GitRepoFactory = new GitRepoFactory(
+            new RemoteTokenProvider(),
+            Mock.Of<IAzureDevOpsTokenProvider>(),
+            new NoTelemetryRecorder(),
+            ProcessManager,
+            new FileSystem(),
+            NullLoggerFactory.Instance,
+            temporaryPath: null!);
+
+        // Create the real LocalGitRepoFactory
+        var localGitClient = new LocalGitClient(
+            new RemoteTokenProvider(),
+            new NoTelemetryRecorder(),
+            ProcessManager,
+            new FileSystem(),
+            NullLogger.Instance);
+        LocalGitRepoFactory = new LocalGitRepoFactory(localGitClient, ProcessManager);
     }
 
     /// <summary>
@@ -287,30 +306,6 @@ public abstract class ConfigurationManagementTestBase
         catch
         {
             // Ignore cleanup errors
-        }
-    }
-
-    /// <summary>
-    /// A git repo factory that returns LocalLibGit2Client for local paths.
-    /// </summary>
-    private class TestGitRepoFactory : IGitRepoFactory
-    {
-        private readonly LocalLibGit2Client _gitClient;
-
-        public TestGitRepoFactory(LocalLibGit2Client gitClient)
-        {
-            _gitClient = gitClient;
-        }
-
-        public IGitRepo CreateClient(string repoUri)
-        {
-            // For local paths, return the real LocalLibGit2Client
-            if (Directory.Exists(repoUri) || repoUri.StartsWith("/") || (repoUri.Length > 1 && repoUri[1] == ':'))
-            {
-                return _gitClient;
-            }
-
-            throw new ArgumentException($"TestGitRepoFactory only supports local paths, got: {repoUri}");
         }
     }
 }
