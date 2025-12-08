@@ -367,7 +367,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
 
         return await repo.IsAncestorCommit(ff.RepoSha, lastBackFlow.RepoSha)
-            ? lastForwardFlow
+            ? lastBackFlow
             : null;
     }
 
