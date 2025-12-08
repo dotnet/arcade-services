@@ -249,22 +249,33 @@ public abstract class CodeFlowConflictResolver
             return false;
         }
 
+        // Create patch for the file represent only the most current flow
+        string fromSha, toSha;
+        if (codeflowOptions.CurrentFlow.IsForwardFlow)
+        {
+            (fromSha, toSha) = (crossingFlow.RepoSha, codeflowOptions.CurrentFlow.RepoSha);
+        }
+        else
+        {
+            (fromSha, toSha) = (crossingFlow.VmrSha, codeflowOptions.CurrentFlow.VmrSha);
+        }
+
         var patchName = _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch";
         List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
             patchName,
-            sha1: codeflowOptions.CurrentFlow.IsForwardFlow
-                ? crossingFlow.RepoSha
-                : crossingFlow.VmrSha,
-            sha2: codeflowOptions.CurrentFlow.IsForwardFlow
-                ? codeflowOptions.CurrentFlow.RepoSha
-                : codeflowOptions.CurrentFlow.VmrSha,
+            fromSha,
+            toSha,
             path: codeflowOptions.CurrentFlow.IsForwardFlow
                 ? new UnixPath(conflictedFile.Path.Substring(vmrSourcesPath.Length + 1))
                 : conflictedFile,
             filters: null,
             relativePaths: true,
-            workingDir: codeflowOptions.CurrentFlow.IsForwardFlow ? repo.Path : vmr.Path / vmrSourcesPath,
-            applicationPath: codeflowOptions.CurrentFlow.IsForwardFlow ? vmrSourcesPath : null,
+            workingDir: codeflowOptions.CurrentFlow.IsForwardFlow
+                ? repo.Path
+                : vmr.Path / vmrSourcesPath,
+            applicationPath: codeflowOptions.CurrentFlow.IsForwardFlow
+                ? vmrSourcesPath
+                : null,
             ignoreLineEndings: true,
             cancellationToken);
 
