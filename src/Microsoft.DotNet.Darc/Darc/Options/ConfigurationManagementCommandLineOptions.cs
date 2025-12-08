@@ -34,6 +34,6 @@ internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLi
     [Option("configuration-file-name", HelpText = "Optional override of the target file the configuration will be stored in, e.g. net-11-preview-3.yml", Required = false)]
     public string ConfigurationFileName { get; set; }
 
-    [Option("no-pr", HelpText = "Do not open a PR against the configuration repository (pushes the configuration branch only)", Default = false)]
+    [Option("no-pr", HelpText = "Do not open a PR against the configuration repository (push the configuration branch only).", Default = false)]
     public bool NoPr { get; set; }
 }
