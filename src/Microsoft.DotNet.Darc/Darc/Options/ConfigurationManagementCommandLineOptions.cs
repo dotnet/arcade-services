@@ -25,7 +25,7 @@ internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLi
     [Option("configuration-repository", HelpText = "URI of the repository where configuration is stored in. Defaults to " + DefaultConfigurationRepository, Default = DefaultConfigurationRepository)]
     public string ConfigurationRepository { get; set; }
 
-    [Option("configuration-branch", HelpText = "Branch of the configuration repository to update or leave out if it should be created.", Required = false)]
+    [Option("configuration-branch", HelpText = "Branch of the configuration repository to make the change on. Leave null to create a new one.", Required = false)]
     public string ConfigurationBranch { get; set; }
 
     [Option("configuration-base-branch", HelpText = "Only applies when configuration branch is being created. Base branch to created the configuration branch off of.", Required = false)]
