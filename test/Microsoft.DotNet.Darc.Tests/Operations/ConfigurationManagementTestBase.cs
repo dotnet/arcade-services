@@ -293,17 +293,9 @@ public abstract class ConfigurationManagementTestBase
             }
             Directory.Delete(ConfigurationRepoPath, true);
         }
-        catch (DirectoryNotFoundException)
+        catch
         {
-            // Already gone, that's fine
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Sometimes git locks files, ignore
-        }
-        catch (IOException)
-        {
-            // Sometimes files are in use, ignore
+            // Ignore cleanup errors
         }
     }
 
