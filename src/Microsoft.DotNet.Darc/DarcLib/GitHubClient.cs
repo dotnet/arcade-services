@@ -1166,12 +1166,6 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         var currentCommit = await client.Git.Commit.Get(owner, repo, currentCommitSha);
         var baseTreeSha = currentCommit.Tree.Sha;
 
-        // Create tree items for each file
-        // Git file modes:
-        // 100644 - regular file (non-executable)
-        // 100755 - executable file
-        // 120000 - symbolic link
-        // 040000 - subdirectory (tree)
         var treeItems = new List<NewTreeItem>();
         foreach (var file in filesToCommit)
         {
@@ -1181,7 +1175,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                 treeItems.Add(new NewTreeItem
                 {
                     Path = file.FilePath,
-                    Mode = "100644",
+                    Mode = file.Mode,
                     Type = TreeType.Blob,
                     Sha = null
                 });
@@ -1198,7 +1192,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
                 treeItems.Add(new NewTreeItem
                 {
                     Path = file.FilePath,
-                    Mode = file.Mode ?? "100644",
+                    Mode = file.Mode,
                     Type = TreeType.Blob,
                     Sha = blobResult.Sha
                 });

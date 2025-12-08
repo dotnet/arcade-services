@@ -1008,17 +1008,12 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     ///     Commit or update a set of files to a repo using the Azure DevOps Git API without cloning.
     ///     This uses the pushes API to create commits directly.
     /// </summary>
-    /// <param name="filesToCommit">Files to commit</param>
-    /// <param name="repoUri">Remote repository URI</param>
-    /// <param name="branch">Branch to push to</param>
-    /// <param name="commitMessage">Commit message</param>
     public async Task CommitFilesWithNoCloningAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
     {
         (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
 
         _logger.LogInformation("Committing {count} files to {repoUri} branch {branch} via API", filesToCommit.Count, repoUri, branch);
 
-        // Get the current commit SHA for the branch
         var oldCommitSha = await GetLastCommitShaAsync(accountName, projectName, repoName, branch);
 
         // Build the changes for the push
@@ -1057,7 +1052,6 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             changes.Add(change);
         }
 
-        // Create the push
         var push = new GitPush
         {
             RefUpdates =

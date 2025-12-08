@@ -88,6 +88,11 @@ internal abstract class ConfigurationManagementOperation : Operation
             }
         }
 
+        if (string.IsNullOrEmpty(_options.ConfigurationBaseBranch) && !_options.NoPr)
+        {
+            throw new ArgumentException("If a PR is to be opened, a configuration base branch must be specified");
+        }
+
         if (!string.IsNullOrEmpty(_options.ConfigurationFileName))
         {
             if (_options.ConfigurationFileName != Path.GetFileName(_options.ConfigurationFileName))
@@ -111,8 +116,10 @@ internal abstract class ConfigurationManagementOperation : Operation
         }
     }
 
-    // Gets the working configuration branch, creating it if necessary
-    protected async Task SetWorkingConfigurationBranchAsync()
+    /// <summary>
+    /// Ensures that a configuration working branch exists, creating one if necessary.
+    /// </summary>
+    protected async Task EnsureConfigurationWorkingBranchAsync()
     {
         if (string.IsNullOrEmpty(_options.ConfigurationBranch))
         {
@@ -147,7 +154,10 @@ internal abstract class ConfigurationManagementOperation : Operation
         }
     }
 
-    protected async Task WriteConfigurationDataAsync(string filePath, IEnumerable<object> data, string commitMessage)
+    protected async Task WriteConfigurationDataAsync(
+        string filePath,
+        IEnumerable<object> data,
+        string commitMessage)
     {
         string yamlContents = _yamlSerializer.Serialize(data).Replace("\n-", "\n\n-");
         GitFile fileToCommit = new(filePath, yamlContents);
@@ -174,12 +184,19 @@ internal abstract class ConfigurationManagementOperation : Operation
         }
     }
 
-    protected async Task CreatePullRequest(string title, string? description = null)
+    protected async Task CreatePullRequest(
+        string title,
+        string? description = null)
     {
         if (_configurationRepo.GetType() == typeof(LocalLibGit2Client))
         {
             throw new InvalidOperationException("Cannot create pull request when using local git repository. Specify a remote repository as the configuration repository");
         }
+        if (string.IsNullOrEmpty(_options.ConfigurationBaseBranch))
+        {
+            throw new InvalidOperationException("Cannot create pull request without a configuration base branch specified");
+        }
+
         Console.WriteLine("Creating pull request from {0} to {1}...", _options.ConfigurationBranch, _options.ConfigurationBaseBranch);
         var remote = await _remoteFactory.CreateRemoteAsync(_options.ConfigurationRepository);
         var pr = await remote.CreatePullRequestAsync(_options.ConfigurationRepository, new PullRequest()

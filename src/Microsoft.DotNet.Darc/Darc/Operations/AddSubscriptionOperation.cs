@@ -397,12 +397,12 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             throw new ArgumentException($"Subscription {equivalentSubscriptionId} with equivalent parameters already exists.");
         }
 
-        await SetWorkingConfigurationBranchAsync();
+        await EnsureConfigurationWorkingBranchAsync();
 
         var newSubscriptionFilePath = string.IsNullOrEmpty(_options.ConfigurationFileName)
             ? MaestroConfigHelper.GetDefaultSubscriptionFilePath(subscriptionYaml)
             : MaestroConfigHelper.SubscriptionFolderPath / _options.ConfigurationFileName;
-        var subscriptionsInFile = await FetchAndParseRemoteConfiguration<SubscriptionYaml>(newSubscriptionFilePath);
+        List<SubscriptionYaml> subscriptionsInFile = await FetchAndParseRemoteConfiguration<SubscriptionYaml>(newSubscriptionFilePath);
 
         // If we have a branch that hasn't been ingested yet, we need to check for equivalent subscriptions in the file
         var equivalentInFile = subscriptionsInFile.FirstOrDefault(s => s.IsEquivalentTo(subscriptionYaml));
@@ -419,7 +419,8 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
 
         if (!_options.NoPr)
         {
-            await CreatePullRequest($"Add new subscription ({subscriptionYaml.Channel}) {subscriptionYaml.SourceRepository} => {subscriptionYaml.TargetRepository} ({subscriptionYaml.TargetBranch})");
+            await CreatePullRequest(
+                $"Add new subscription ({subscriptionYaml.Channel}) {subscriptionYaml.SourceRepository} => {subscriptionYaml.TargetRepository} ({subscriptionYaml.TargetBranch})");
         }
 
     }
