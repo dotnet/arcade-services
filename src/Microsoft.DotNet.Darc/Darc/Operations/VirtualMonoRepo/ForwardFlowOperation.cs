@@ -36,7 +36,7 @@ internal class ForwardFlowOperation(
     private readonly ILocalGitRepoFactory _localGitRepoFactory = localGitRepoFactory;
     private readonly IProcessManager _processManager = processManager;
 
-    protected override async Task ExecuteInternalAsync(
+    protected override async Task<bool> ExecuteInternalAsync(
         string repoName,
         string? sourceDirectory,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
@@ -56,11 +56,13 @@ internal class ForwardFlowOperation(
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        await FlowCodeLocallyAsync(
+        var result = await FlowCodeLocallyAsync(
             sourceRepoPath,
             isForwardFlow: true,
             build: build,
             subscription: null,
             cancellationToken: cancellationToken);
+
+        return !result.HadConflicts;
     }
 }

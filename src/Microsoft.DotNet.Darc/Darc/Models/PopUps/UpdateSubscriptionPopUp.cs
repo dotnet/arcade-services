@@ -2,17 +2,19 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Models.Yaml;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace Microsoft.DotNet.Darc.Models.PopUps;
 
-internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionYaml>
+internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionUpdatePopUpData>
 {
     private readonly ILogger _logger;
+
+    public bool Enabled => bool.Parse(_data.Enabled);
 
     private UpdateSubscriptionPopUp(
         string path,
@@ -24,7 +26,7 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionYaml>
         IEnumerable<string> suggestedRepositories,
         IEnumerable<string> availableUpdateFrequencies,
         IEnumerable<string> availableMergePolicyHelp,
-        SubscriptionYaml data)
+        SubscriptionUpdatePopUpData data)
         : base(path, forceCreation, suggestedChannels, suggestedRepositories, availableUpdateFrequencies, availableMergePolicyHelp, logger, gitRepoFactory, data,
             header: [
                 new Line($"Use this form to update the values of subscription '{subscription.Id}'.", true),
@@ -62,7 +64,7 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionYaml>
         string targetDirectory,
         List<string> excludedAssets)
         : this(path, forceCreation, gitRepoFactory, logger, subscription, suggestedChannels, suggestedRepositories, availableUpdateFrequencies, availableMergePolicyHelp,
-              new SubscriptionYaml
+              new SubscriptionUpdatePopUpData
               {
                   Id = GetCurrentSettingForDisplay(subscription.Id.ToString(), subscription.Id.ToString(), false),
                   Channel = GetCurrentSettingForDisplay(subscription.Channel.Name, subscription.Channel.Name, false),
@@ -80,5 +82,24 @@ internal class UpdateSubscriptionPopUp : SubscriptionPopUp<SubscriptionYaml>
                   ExcludedAssets = excludedAssets,
               })
     {
+    }
+
+    protected override async Task<int> ParseAndValidateData(SubscriptionUpdatePopUpData data)
+    {
+        int result = await base.ParseAndValidateData(data);
+        if (result != Constants.SuccessCode)
+        {
+            return result;
+        }
+
+        if (!bool.TryParse(data.Enabled, out _))
+        {
+            _logger.LogError("Enabled is not a valid boolean value.");
+            return Constants.ErrorCode;
+        }
+
+        _data.Enabled = ParseSetting(data.Enabled, _data.Enabled, false)!;
+
+        return Constants.SuccessCode;
     }
 }

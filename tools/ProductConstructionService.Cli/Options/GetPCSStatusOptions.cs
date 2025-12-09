@@ -8,7 +8,7 @@ using ProductConstructionService.Cli.Operations;
 namespace ProductConstructionService.Cli.Options;
 
 [Verb("get-status", HelpText = "Get PCS status")]
-internal class GetPcsStatusOptions : PcsStatusOptions
+internal class GetPcsStatusOptions : PcsApiOptions
 {
     public override IOperation GetOperation(IServiceProvider sp) => ActivatorUtilities.CreateInstance<GetPcsStatusOperation>(sp);
 }

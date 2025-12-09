@@ -1227,7 +1227,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
 
         // Conflicts + rebase means we have to block the PR until a human resolves the conflicts manually
-        if (enableRebase && codeFlowRes.ConflictedFiles.Count > 0)
+        if (enableRebase && codeFlowRes.HadConflicts)
         {
             await RequestManualConflictResolutionAsync(
                 update,
@@ -1263,7 +1263,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 upstreamRepoDiffs);
         }
 
-        if (pr != null && codeFlowRes.ConflictedFiles.Count > 0 && !enableRebase)
+        if (pr != null && !enableRebase && codeFlowRes.HadConflicts)
         {
             _commentCollector.AddComment(
                 PullRequestCommentBuilder.NotifyAboutMergeConflict(
@@ -1456,36 +1456,21 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         CodeFlowResult codeFlowRes;
         try
         {
-            if (subscription.IsForwardFlow())
-            {
-                codeFlowRes = await _vmrForwardFlower.FlowForwardAsync(
+            codeFlowRes = subscription.IsForwardFlow()
+                ? await _vmrForwardFlower.FlowForwardAsync(
+                    subscription,
+                    build,
+                    prHeadBranch,
+                    enableRebase,
+                    forceUpdate,
+                    cancellationToken: default)
+                : await _vmrBackFlower.FlowBackAsync(
                     subscription,
                     build,
                     prHeadBranch,
                     enableRebase,
                     forceUpdate,
                     cancellationToken: default);
-            }
-            else
-            {
-                codeFlowRes = await _vmrBackFlower.FlowBackAsync(
-                    subscription,
-                    build,
-                    prHeadBranch,
-                    enableRebase,
-                    forceUpdate,
-                    cancellationToken: default);
-            }
-        }
-        catch (PatchApplicationLeftConflictsException e) // only thrown when enableRebase is true
-        {
-            // We were unable to flow changes and user intervention will be required
-            _logger.LogInformation("Unable to flow changes due to conflicts in {files}", string.Join(", ", e.ConflictedFiles));
-            return new CodeFlowResult(
-                HadUpdates: true,
-                RepoPath: e.RepoPath,
-                DependencyUpdates: [],
-                ConflictedFiles: e.ConflictedFiles);
         }
         catch (ConflictInPrBranchException conflictWithPrChanges)
         {
@@ -1515,29 +1500,33 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             throw;
         }
 
-        if (codeFlowRes.HadUpdates)
+        if (enableRebase && codeFlowRes.HadConflicts)
         {
-            _logger.LogInformation("Code changes for {subscriptionId} ready in local branch {branch}",
-                subscription.Id,
-                prHeadBranch);
-
-            using (var scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Push, subscription.TargetRepository))
-            {
-                var localTargetRepoPath = subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath;
-                await _gitClient.Push(localTargetRepoPath, prHeadBranch, subscription.TargetRepository);
-                scope.SetSuccess();
-            }
-
-            // We store it the new head branch SHA in Redis (without having to have to query the remote repo)
-            prInfo?.HeadBranchSha = await _gitClient.GetShaForRefAsync(subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath, prHeadBranch);
-
-            await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
+            _logger.LogInformation("Detected conflicts while rebasing new changes");
+            return codeFlowRes;
         }
 
         if (!codeFlowRes.HadUpdates)
         {
             _logger.LogInformation("There were no code-flow updates for subscription {subscriptionId}", subscription.Id);
+            return codeFlowRes;
         }
+
+        _logger.LogInformation("Code changes for {subscriptionId} ready in local branch {branch}",
+            subscription.Id,
+            prHeadBranch);
+
+        using (var scope = _telemetryRecorder.RecordGitOperation(TrackedGitOperation.Push, subscription.TargetRepository))
+        {
+            var localTargetRepoPath = subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath;
+            await _gitClient.Push(localTargetRepoPath, prHeadBranch, subscription.TargetRepository);
+            scope.SetSuccess();
+        }
+
+        // We store it the new head branch SHA in Redis (without having to have to query the remote repo)
+        prInfo?.HeadBranchSha = await _gitClient.GetShaForRefAsync(subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowRes.RepoPath, prHeadBranch);
+
+        await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
         return codeFlowRes;
     }

@@ -209,7 +209,7 @@ function Create-GraphVizDiagram {
 
     # Add repo header node
     $diagram += "`n  // Right column nodes for $repoName repository with SHA labels and URLs`n"
-    $repoHeaderNodeId = ($repoName -replace '/','_') -replace '\\.','_' # Ensure valid ID
+    $repoHeaderNodeId = ($repoName -replace '/','_') -replace '\\.','_' -replace '-','_' # Ensure valid ID
     $diagram += "  $repoHeaderNodeId [label=`"$repoName`", fillcolor=lightyellow" # Added fillcolor
     if ($repoUrl) {
         $diagram += ", URL=`"$repoUrl`""
@@ -920,7 +920,7 @@ function Get-GitCommits {
     # Convert the raw git log output into structured objects
     $commitObjects = @()
     foreach ($commit in $commits) {
-        $parts = $commit.Split(' ')
+        $parts = $commit.Trim().Split(' ')
         if ($parts.Count -ge 2) {
             # Store all parent SHAs in an array
             $parentShas = $parts[1..($parts.Count-1)]

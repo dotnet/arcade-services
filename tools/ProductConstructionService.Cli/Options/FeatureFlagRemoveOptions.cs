@@ -8,7 +8,7 @@ using ProductConstructionService.Cli.Operations;
 namespace ProductConstructionService.Cli.Options;
 
 [Verb("feature-flag-remove", HelpText = "Remove a feature flag for a subscription")]
-internal class FeatureFlagRemoveOptions : PcsStatusOptions
+internal class FeatureFlagRemoveOptions : PcsApiOptions
 {
     [Option("subscription-id", Required = true, HelpText = "Subscription ID")]
     public required string SubscriptionId { get; init; }

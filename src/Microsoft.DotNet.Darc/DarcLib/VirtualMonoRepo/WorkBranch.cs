@@ -20,8 +20,7 @@ public interface IWorkBranch
     /// <summary>
     /// Performs a custom "squash rebase" where it takes a diff from the work branch and applies it on top of the original branch.
     /// </summary>
-    /// <param name="keepConflicts">Either leave conflict markers in place or fail to apply the changes completely</param>
-    Task RebaseAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<UnixPath>> RebaseAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Name of the original branch where the work branch was created from.
@@ -100,7 +99,7 @@ public class WorkBranch(
         await _repo.DeleteBranchAsync(WorkBranchName);
     }
 
-    public async Task RebaseAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyCollection<UnixPath>> RebaseAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Rebasing {branchName} onto {mainBranch}...", WorkBranchName, OriginalBranchName);
 
@@ -112,9 +111,10 @@ public class WorkBranch(
             var result = await _repo.ExecuteGitCommand(["merge", "--squash", WorkBranchName], cancellationToken);
             if (!result.Succeeded)
             {
-                IReadOnlyCollection<UnixPath> conflictedFiles = await _repo.GetConflictedFilesAsync(CancellationToken.None);
-                throw new PatchApplicationLeftConflictsException(conflictedFiles, _repo.Path);
+                return await _repo.GetConflictedFilesAsync(CancellationToken.None);
             }
+
+            return [];
         }
         finally
         {

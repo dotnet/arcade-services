@@ -19,7 +19,7 @@ public interface IVmrUpdater
     /// <param name="resetToRemoteWhenCloningRepo">Whether to reset local clone to remote state when cloning the repo</param>
     /// <param name="keepConflicts">Preserve file changes with conflict markers when conflicts occur</param>
     /// <returns>True if the repository was updated, false if it was already up to date</returns>
-    Task<bool> UpdateRepository(
+    Task<CodeFlowResult> UpdateRepository(
         string mappingName,
         string? targetRevision,
         CodeFlowParameters codeFlowParameters,

@@ -226,10 +226,14 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - https://github.com/foo/boz/compare/oldSha234...newSha678
             - https://github.com/foo/baz/compare/oldSha345...newSha567
 
-            <!--
-                To diff the source repo and PR branch contents locally, run:
-                darc vmr diff --name-only https://github.com/foo/foobar:abc1234567..https://github.com/maestro-auth-test/dnceng-vmr:pr-branch
-            -->
+            <details>
+            <summary>Diff the source with this PR branch</summary>
+
+            ```bash
+            darc vmr diff --name-only https://github.com/foo/foobar:abc1234567..https://github.com/maestro-auth-test/dnceng-vmr:pr-branch
+            ```
+            </details>
+
             [marker]: <> (End:Footer:CodeFlow PR)
             """);
 
@@ -304,10 +308,14 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
             - https://github.com/foo/boz/compare/oldSha234...newSha678
             - https://github.com/foo/baz/compare/oldSha345...newSha567
   
-            <!--
-                To diff the source repo and PR branch contents locally, run:
-                darc vmr diff --name-only https://github.com/foo/foobar:def888999222..https://github.com/maestro-auth-test/dnceng-vmr:pr-branch
-            -->
+            <details>
+            <summary>Diff the source with this PR branch</summary>
+
+            ```bash
+            darc vmr diff --name-only https://github.com/foo/foobar:def888999222..https://github.com/maestro-auth-test/dnceng-vmr:pr-branch
+            ```
+            </details>
+
             [marker]: <> (End:Footer:CodeFlow PR)
             """);
     }

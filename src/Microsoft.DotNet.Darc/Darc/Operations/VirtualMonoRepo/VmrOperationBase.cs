@@ -85,7 +85,7 @@ internal abstract class VmrOperationBase : Operation
         return success ? Constants.SuccessCode : Constants.ErrorCode;
     }
 
-    protected abstract Task ExecuteInternalAsync(
+    protected abstract Task<bool> ExecuteInternalAsync(
         string repoName,
         string? targetRevision,
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
@@ -101,21 +101,12 @@ internal abstract class VmrOperationBase : Operation
         {
             try
             {
-                await ExecuteInternalAsync(repoName, targetRevision, additionalRemotes, cancellationToken);
-                return true;
+                return await ExecuteInternalAsync(repoName, targetRevision, additionalRemotes, cancellationToken);
             }
             catch (EmptySyncException e)
             {
                 _logger.LogInformation("{message}", e.Message);
                 return true;
-            }
-            catch (PatchApplicationLeftConflictsException e)
-            {
-                _logger.LogWarning(
-                    "Conflicts occurred during the synchronization of {name}. Changes are staged and conflict left to be resolved in the working tree.",
-                    repoName);
-                _logger.LogDebug("{exception}", e);
-                return false;
             }
             catch (Exception e)
             {

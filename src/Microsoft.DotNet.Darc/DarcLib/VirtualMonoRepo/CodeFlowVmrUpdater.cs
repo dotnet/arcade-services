@@ -29,7 +29,7 @@ public interface ICodeFlowVmrUpdater
     /// <param name="additionalFileExclusions">List of files we don't want to update</param>
     /// <param name="resetToRemoteWhenCloningRepo">Weather or not to reset the branch to remote during cloning. Should be set to false when cloning a specific sha</param>
     /// <param name="keepConflicts">Preserve file changes with conflict markers when conflicts occur</param>
-    Task<bool> UpdateRepository(
+    Task<CodeFlowResult> UpdateRepository(
         SourceMapping mapping,
         Build build,
         string[]? additionalFileExclusions = null,
@@ -86,7 +86,7 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
         _cloneManager = cloneManager;
     }
 
-    public async Task<bool> UpdateRepository(
+    public async Task<CodeFlowResult> UpdateRepository(
         SourceMapping mapping,
         Build build,
         string[]? additionalFileExclusions = null,
@@ -106,7 +106,7 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
             _logger.LogInformation("Repository {mappingName} is already at {targetRevision}",
                 mapping.Name,
                 build.Commit);
-            return false;
+            return new CodeFlowResult(false, [], _vmrInfo.VmrPath, []);
         }
 
         var update = new VmrDependencyUpdate(
@@ -158,7 +158,7 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
 
         try
         {
-            await UpdateRepoToRevisionAsync(
+            var conflicts = await UpdateRepoToRevisionAsync(
                 update,
                 clone,
                 currentVersion.Sha,
@@ -173,12 +173,12 @@ public class CodeFlowVmrUpdater : VmrManagerBase, ICodeFlowVmrUpdater
                 additionalFileExclusions,
                 cancellationToken);
 
-            return true;
+            return new CodeFlowResult(HadUpdates: true, conflicts, _vmrInfo.VmrPath, []);
         }
         catch (EmptySyncException e)
         {
             _logger.LogInformation(e.Message);
-            return false;
+            return new CodeFlowResult(false, [], _vmrInfo.VmrPath, []);
         }
     }
 }

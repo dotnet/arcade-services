@@ -12,7 +12,7 @@ namespace Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 
 public interface IVmrPatchHandler
 {
-    Task ApplyPatch(
+    Task<IReadOnlyCollection<UnixPath>> ApplyPatch(
         VmrIngestionPatch patch,
         NativePath targetDirectory,
         bool removePatchAfter,
@@ -20,7 +20,7 @@ public interface IVmrPatchHandler
         bool reverseApply = false,
         CancellationToken cancellationToken = default);
 
-    Task ApplyPatches(
+    Task<IReadOnlyCollection<UnixPath>> ApplyPatches(
         IEnumerable<VmrIngestionPatch> patches,
         NativePath targetDirectory,
         bool removePatchAfter,
