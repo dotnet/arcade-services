@@ -17,8 +17,6 @@ namespace Microsoft.DotNet.Darc.Operations;
 
 internal abstract class ConfigurationManagementOperation : Operation
 {
-    private const string UseConfigRepositoryEnvVar = "DARC_USE_CONFIGURATION_REPOSITORY";
-
     private readonly IConfigurationManagementCommandLineOptions _options;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly Lazy<IGitRepo> _configurationRepo;
@@ -51,12 +49,6 @@ internal abstract class ConfigurationManagementOperation : Operation
         _configurationRepo = new Lazy<IGitRepo>(() => gitRepoFactory.CreateClient(_options.ConfigurationRepository));
     }
 
-    protected static bool ShouldUseConfigurationRepository()
-    {
-        var val = Environment.GetEnvironmentVariable(UseConfigRepositoryEnvVar);
-        return !string.IsNullOrEmpty(val) && bool.Parse(val);
-    }
-
     // Validates that the configuration repository parameters are correct
     protected async Task ValidateConfigurationRepositoryParametersAsync()
     {
@@ -65,50 +57,9 @@ internal abstract class ConfigurationManagementOperation : Operation
             throw new ArgumentException($"The configuration repository '{_options.ConfigurationRepository}' is not a valid git repository.");
         }
 
-        bool configurationBranchProvided = !string.IsNullOrEmpty(_options.ConfigurationBranch);
-        bool configurationBaseBranchProvided = !string.IsNullOrEmpty(_options.ConfigurationBaseBranch);
-        if (configurationBranchProvided == configurationBaseBranchProvided)
-        {
-            throw new ArgumentException($"Exactly one of configuration branch and configuration base branch must be specified");
-        }
-
-        if (configurationBranchProvided
-            && !await _configurationRepo.Value.DoesBranchExistAsync(_options.ConfigurationRepository, _options.ConfigurationBranch))
-        {
-            throw new ArgumentException($"The configuration branch '{_options.ConfigurationBranch}' does not exist in the repository '{_options.ConfigurationRepository}'.");
-        }
-
-        if (configurationBaseBranchProvided
-            && !await _configurationRepo.Value.DoesBranchExistAsync(_options.ConfigurationRepository, _options.ConfigurationBaseBranch))
+        if (!await _configurationRepo.Value.DoesBranchExistAsync(_options.ConfigurationRepository, _options.ConfigurationBaseBranch))
         {
             throw new ArgumentException($"The configuration base branch '{_options.ConfigurationBaseBranch}' does not exist in the repository '{_options.ConfigurationRepository}'.");
-        }
-
-        if (string.IsNullOrEmpty(_options.ConfigurationBaseBranch) && !_options.NoPr)
-        {
-            throw new ArgumentException("If a PR is to be opened, a configuration base branch must be specified");
-        }
-
-        if (!string.IsNullOrEmpty(_options.ConfigurationFileName))
-        {
-            if (_options.ConfigurationFileName != Path.GetFileName(_options.ConfigurationFileName))
-            {
-                throw new ArgumentException($"The configuration file name '{_options.ConfigurationFileName}' must be a file name only, not a path.");
-            }
-
-            if (!_options.ConfigurationFileName.EndsWith(".yml", StringComparison.OrdinalIgnoreCase))
-            {
-                var extension = Path.GetExtension(_options.ConfigurationFileName);
-                if (!string.IsNullOrEmpty(extension))
-                {
-                    _logger.LogWarning("Replacing file extension '{Extension}' with '.yml'", extension);
-                    _options.ConfigurationFileName = Path.ChangeExtension(_options.ConfigurationFileName, ".yml");
-                }
-                else
-                {
-                    _options.ConfigurationFileName += ".yml";
-                }
-            }
         }
     }
 
@@ -119,18 +70,23 @@ internal abstract class ConfigurationManagementOperation : Operation
     {
         if (string.IsNullOrEmpty(_options.ConfigurationBranch))
         {
-            _options.ConfigurationBranch = await CreateConfigurationBranchAsync();
+            var branch = $"darc/{_options.ConfigurationBaseBranch}-{Guid.NewGuid().ToString().Substring(0, 8)}";
+            await _configurationRepo.Value.CreateBranchAsync(
+                _options.ConfigurationRepository,
+                branch,
+                _options.ConfigurationBaseBranch);
+            _options.ConfigurationBranch = branch;
         }
-    }
-
-    protected async Task<string> CreateConfigurationBranchAsync()
-    {
-        var branch = $"darc/{_options.ConfigurationBaseBranch}-{Guid.NewGuid().ToString().Substring(0, 8)}";
-        await _configurationRepo.Value.CreateBranchAsync(
-            _options.ConfigurationRepository,
-            branch,
-            _options.ConfigurationBaseBranch);
-        return branch;
+        else
+        {
+            if (!await _configurationRepo.Value.DoesBranchExistAsync(_options.ConfigurationRepository, _options.ConfigurationBranch))
+            {
+                await _configurationRepo.Value.CreateBranchAsync(
+                    _options.ConfigurationRepository,
+                    _options.ConfigurationBranch,
+                    _options.ConfigurationBaseBranch);
+            }
+        }
     }
 
     protected async Task<List<TData>> FetchAndParseRemoteConfiguration<TData>(string filePath)

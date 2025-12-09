@@ -319,7 +319,7 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
             ConfigurationRepository = ConfigurationRepoPath,
             ConfigurationBranch = configurationBranch!,
             ConfigurationBaseBranch = configurationBaseBranch!,
-            ConfigurationFileName = configurationFileName!,
+            ConfigurationFilePath = configurationFileName!,
             NoPr = noPr,
             Quiet = true,
             NoTriggerOnCreate = true,

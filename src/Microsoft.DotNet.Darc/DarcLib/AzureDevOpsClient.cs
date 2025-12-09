@@ -1022,7 +1022,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         {
             var change = new GitChange
             {
-                Item = new GitItem { Path = "/" + file.FilePath.Replace("\\", "/") }
+                Item = new GitItem { Path = UnixPath.Empty / file.FilePath }
             };
 
             if (file.Operation == GitFileOperation.Delete)

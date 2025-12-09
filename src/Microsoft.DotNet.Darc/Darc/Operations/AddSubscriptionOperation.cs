@@ -11,6 +11,7 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Yaml;
 using Microsoft.DotNet.MaestroConfiguration.Client;
 using Microsoft.DotNet.ProductConstructionService.Client;
@@ -315,7 +316,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 }
             }
 
-            if (ShouldUseConfigurationRepository())
+            if (_options.ShouldUseConfigurationRepository)
             {
                 await ValidateConfigurationRepositoryParametersAsync();
 
@@ -399,9 +400,9 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
 
         await EnsureConfigurationWorkingBranchAsync();
 
-        var newSubscriptionFilePath = string.IsNullOrEmpty(_options.ConfigurationFileName)
+        var newSubscriptionFilePath = string.IsNullOrEmpty(_options.ConfigurationFilePath)
             ? MaestroConfigHelper.GetDefaultSubscriptionFilePath(subscriptionYaml)
-            : MaestroConfigHelper.SubscriptionFolderPath / _options.ConfigurationFileName;
+            : new UnixPath(_options.ConfigurationFilePath);
         List<SubscriptionYaml> subscriptionsInFile = await FetchAndParseRemoteConfiguration<SubscriptionYaml>(newSubscriptionFilePath);
 
         // If we have a branch that hasn't been ingested yet, we need to check for equivalent subscriptions in the file
