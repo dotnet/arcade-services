@@ -31,7 +31,7 @@ internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLi
     [Option("configuration-branch", HelpText = "Branch of the configuration repository to make the change on. Leave null to create a new one.", Required = false)]
     public string ConfigurationBranch { get; set; }
 
-    [Option("configuration-base-branch", HelpText = "Base branch to create the configuration branch off of. Defaults to production", Default = DefaultConfigurationBaseBranch, Required = false)]
+    [Option("configuration-base-branch", HelpText = "Base branch to create the configuration branch off of (if it doesn't exist yet). Defaults to production", Default = DefaultConfigurationBaseBranch, Required = false)]
     public string ConfigurationBaseBranch { get; set; }
 
     [Option("configuration-file", HelpText = "Optional override of the target file the configuration will be stored in, e.g. configuration/channels/net-11-preview-3.yml", Required = false)]
