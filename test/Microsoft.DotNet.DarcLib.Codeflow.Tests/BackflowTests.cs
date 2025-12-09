@@ -843,19 +843,24 @@ internal class BackflowTests : CodeFlowTests
 
         await EnsureTestRepoIsInitialized();
 
-        // Flow to repo and back to populate well (eng/common, the <Source /> tag..)
-        var codeflowResult = await ChangeVmrFileAndFlowIt("Initial content", branchName);
-        codeflowResult.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(ProductRepoPath, branchName);
-
-        codeflowResult = await ChangeRepoFileAndFlowIt("Initial content in repo", branchName);
-        codeflowResult.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, branchName);
-
         const string FileAddedAndRemovedName = "FileAddedAndRemoved.txt";
         const string FileRemovedAndAddedName = "FileRemovedAndAdded.txt";
         const string FileChangedAndPartiallyRevertedName = "FileChangedAndPartiallyReverted.txt";
         const string FileInConflictName = "FileInConflict.txt";
+
+        const string PartialRevertOriginal =
+            """
+            One
+            Two
+            Three
+            Four
+            Five
+            Six
+            Seven
+            Eight
+            Nine
+            Ten
+            """;
 
         const string PartialRevertChange1 =
             """
@@ -889,6 +894,19 @@ internal class BackflowTests : CodeFlowTests
         const string OriginalFileRemovedAndAddedContent = "Original content that will be removed and re-added";
         const string ConflictingContentInRepo = "Causing a conflict by a change in the target";
         const string ConflictingContentInVmr = "Causing a conflict by a change in the source VMR";
+
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / FileChangedAndPartiallyRevertedName, PartialRevertOriginal);
+        await GitOperations.CommitAll(ProductRepoPath, "Set up file for partial revert");
+
+        // Flow to repo and back to populate well (eng/common, the <Source /> tag..)
+        var codeflowResult = await ChangeVmrFileAndFlowIt("Initial content", branchName);
+        codeflowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(ProductRepoPath, branchName);
+
+        codeflowResult = await ChangeRepoFileAndFlowIt("Initial content in repo", branchName);
+        codeflowResult.ShouldHaveUpdates();
+        await GitOperations.MergePrBranch(VmrPath, branchName);
 
         // Setup: Create initial file state
         await File.WriteAllTextAsync(_productRepoVmrPath / FileRemovedAndAddedName, OriginalFileRemovedAndAddedContent);
