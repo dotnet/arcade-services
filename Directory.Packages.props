@@ -104,5 +104,8 @@
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />
     <!-- Pinned to clear a CG alert (this package comes via Microsoft.TeamFoundationServer.Client -->
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.0" />
+    <!-- Pinned to clear a CG alert (this package comes via Microsoft.DotNet.Kusto but didn't get updated there yet) -->
+    <PackageVersion Include="Microsoft.Azure.Kusto.Data" Version="14.0.3" />
+    <PackageVersion Include="Microsoft.Azure.Kusto.Ingest" Version="14.0.3" />
   </ItemGroup>
 </Project>
