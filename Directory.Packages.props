@@ -56,7 +56,7 @@
     <PackageVersion Include="Microsoft.DotNet.MaestroConfiguration.Client" Version="$(MicrosoftDotNetMaestroConfigurationClientVersion)" />
     <PackageVersion Include="Microsoft.DotNet.Services.Utility" Version="$(MicrosoftDotNetServicesUtilityVersion)" />
     <PackageVersion Include="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="$(MicrosoftDotNetSwaggerGeneratorMSBuildVersion)" />
-    <PackageVersion Include="Microsoft.DotNet.VersionTools" Version="10.0.0-beta.25201.3" />
+    <PackageVersion Include="Microsoft.DotNet.VersionTools" Version="$(MicrosoftDotNetVersionToolsVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="$(AspNetCoreVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="$(AspNetCoreVersion)" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(AspNetCoreVersion)" />
