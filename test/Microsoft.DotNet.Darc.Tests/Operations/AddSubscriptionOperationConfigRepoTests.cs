@@ -51,7 +51,7 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
 
         SetupChannel(expectedSubscription.Channel);
 
-        var options = CreateAddSubscriptionOptions(expectedSubscription, configurationBranch: DefaultBranch);
+        var options = CreateAddSubscriptionOptions(expectedSubscription, configurationBranch: GetTestBranch());
         var operation = CreateOperation(options);
 
         // Act
@@ -102,7 +102,6 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
 
         var options = CreateAddSubscriptionOptions(
             expectedSubscription,
-            configurationBaseBranch: DefaultBranch,
             noPr: true);
 
         var operation = CreateOperation(options);
@@ -157,7 +156,7 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
         };
 
         const string existingSubscriptionId = "12345678-1234-1234-1234-123456789012";
-        const string configFileName = "target-repo.yml";
+        const string configFileName = "dotnet-target-repo.yml";
 
         // Create existing subscription file at the expected location
         var existingContent = $"""
@@ -175,8 +174,7 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
 
         var options = CreateAddSubscriptionOptions(
             expectedSubscription,
-            configurationBranch: DefaultBranch,
-            configurationFileName: configFileName);
+            configurationBranch: GetTestBranch());
 
         var operation = CreateOperation(options);
 
@@ -243,7 +241,7 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
                 It.IsAny<string?>()))
             .ReturnsAsync([existingSubscription]);
 
-        var options = CreateAddSubscriptionOptions(expectedSubscription, configurationBranch: DefaultBranch);
+        var options = CreateAddSubscriptionOptions(expectedSubscription, configurationBranch: GetTestBranch());
         var operation = CreateOperation(options);
 
         // Act
@@ -276,7 +274,7 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
 
         SetupChannel(expectedSubscription.Channel);
 
-        var options = CreateAddSubscriptionOptions(expectedSubscription, configurationBranch: DefaultBranch);
+        var options = CreateAddSubscriptionOptions(expectedSubscription, configurationBranch: GetTestBranch());
         var operation = CreateOperation(options);
 
         // Act
@@ -305,8 +303,8 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
     private AddSubscriptionCommandLineOptions CreateAddSubscriptionOptions(
         SubscriptionYaml subscription,
         string? configurationBranch = null,
-        string? configurationBaseBranch = null,
-        string? configurationFileName = null,
+        string configurationBaseBranch = DefaultBranch,
+        string? configurationFilePath = null,
         bool noPr = true)
     {
         return new AddSubscriptionCommandLineOptions
@@ -317,15 +315,15 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
             TargetBranch = subscription.TargetBranch,
             UpdateFrequency = subscription.UpdateFrequency.ToString(),
             ConfigurationRepository = ConfigurationRepoPath,
-            ConfigurationBranch = configurationBranch!,
-            ConfigurationBaseBranch = configurationBaseBranch!,
-            ConfigurationFilePath = configurationFileName!,
+            ConfigurationBranch = configurationBranch,
+            ConfigurationBaseBranch = configurationBaseBranch,
+            ConfigurationFilePath = configurationFilePath,
             NoPr = noPr,
             Quiet = true,
             NoTriggerOnCreate = true,
             SourceEnabled = subscription.SourceEnabled,
-            SourceDirectory = subscription.SourceDirectory!,
-            TargetDirectory = subscription.TargetDirectory!,
+            SourceDirectory = subscription.SourceDirectory,
+            TargetDirectory = subscription.TargetDirectory,
             Enabled = subscription.Enabled,
             IgnoreChecks = []
         };

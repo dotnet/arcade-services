@@ -49,7 +49,7 @@ public abstract class ConfigurationManagementTestBase
     /// <summary>
     /// The default branch name in the configuration repository.
     /// </summary>
-    protected const string DefaultBranch = "main";
+    protected const string DefaultBranch = "production";
 
     /// <summary>
     /// YAML deserializer for reading configuration files.
@@ -167,6 +167,8 @@ public abstract class ConfigurationManagementTestBase
             .Setup(x => x.GetDependenciesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<UnixPath?>()))
             .ReturnsAsync(Array.Empty<DependencyDetail>());
     }
+
+    protected string GetTestBranch() => $"test-branch-{Guid.NewGuid()}";
 
     protected void SetupChannel(string channelName, int channelId = 1)
     {
