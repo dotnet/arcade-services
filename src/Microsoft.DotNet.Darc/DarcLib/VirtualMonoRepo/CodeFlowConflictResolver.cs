@@ -295,16 +295,13 @@ public abstract class CodeFlowConflictResolver
             throw new InvalidOperationException("Cannot auto-resolve conflicts for files over 1GB in size");
         }
 
-        // If the file did not have any changes in the crossing flow but just conflicts with some older flow,
-        // we are unable to resolve this.
-        if (_fileSystem.GetFileInfo(patches.First().Path).Length == 0)
-        {
-            _logger.LogInformation("Detected conflicts in {filePath}", conflictedFile);
-            return false;
-        }
-
         var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : repo;
         await targetRepo.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase);
+
+        if (_fileSystem.GetFileInfo(patches.First().Path).Length == 0)
+        {
+            return true;
+        }
 
         try
         {
