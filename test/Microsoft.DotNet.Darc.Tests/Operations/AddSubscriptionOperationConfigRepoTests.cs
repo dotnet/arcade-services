@@ -300,6 +300,57 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
         actualSubscription.UpdateFrequency.Should().Be(expectedSubscription.UpdateFrequency);
     }
 
+    [Test]
+    public async Task AddSubscriptionOperation_WithConfigRepo_FailsWhenEquivalentSubscriptionExistsInYamlFile()
+    {
+        // Arrange - Define the subscription we want to add
+        var subscriptionToAdd = new SubscriptionYaml
+        {
+            Id = Guid.NewGuid(),
+            Channel = "test-channel",
+            SourceRepository = "https://github.com/dotnet/source-repo",
+            TargetRepository = "https://github.com/dotnet/target-repo",
+            TargetBranch = "main",
+            UpdateFrequency = UpdateFrequency.EveryDay,
+            Enabled = true
+        };
+
+        const string existingSubscriptionId = "12345678-1234-1234-1234-123456789012";
+        const string configFileName = "dotnet-target-repo.yml";
+
+        // Create existing subscription file with an equivalent subscription (same source, target, branch, channel)
+        var existingContent = $"""
+            - Id: {existingSubscriptionId}
+              Channel: {subscriptionToAdd.Channel}
+              Source Repository URL: {subscriptionToAdd.SourceRepository}
+              Target Repository URL: {subscriptionToAdd.TargetRepository}
+              Target Branch: {subscriptionToAdd.TargetBranch}
+              Update Frequency: EveryDay
+            """;
+        var configFilePath = MaestroConfigHelper.SubscriptionFolderPath / configFileName;
+        await CreateFileInConfigRepoAsync(configFilePath.ToString(), existingContent);
+
+        SetupChannel(subscriptionToAdd.Channel);
+
+        var options = CreateAddSubscriptionOptions(
+            subscriptionToAdd,
+            configurationBranch: GetTestBranch());
+
+        var operation = CreateOperation(options);
+
+        // Act
+        int result = await operation.ExecuteAsync();
+
+        // Assert
+        result.Should().Be(Constants.ErrorCode);
+
+        // Verify the file still only contains the original subscription
+        var fullPath = Path.Combine(ConfigurationRepoPath, configFilePath.ToString());
+        var subscriptions = await DeserializeSubscriptionsAsync(fullPath);
+        subscriptions.Should().HaveCount(1);
+        subscriptions[0].Id.Should().Be(Guid.Parse(existingSubscriptionId));
+    }
+
     private AddSubscriptionCommandLineOptions CreateAddSubscriptionOptions(
         SubscriptionYaml subscription,
         string? configurationBranch = null,
