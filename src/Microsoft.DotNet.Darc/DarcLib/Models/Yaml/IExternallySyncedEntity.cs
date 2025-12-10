@@ -6,7 +6,7 @@ namespace Microsoft.DotNet.DarcLib.Models.Yaml;
 
 /// <summary>
 /// Defines an entity that is ingested from an external source and synchronized into the system.
-/// Requires a unique identifier to match existing entites with ingested ones.
+/// Requires a unique identifier to match existing entities with ingested ones.
 /// </summary>
 /// <typeparam name="TId">The type of the unique identifier for the entity. Must be a non-nullable type.</typeparam>
 public interface IExternallySyncedEntity<TId> where TId : notnull
