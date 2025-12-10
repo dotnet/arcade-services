@@ -68,6 +68,9 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
         result.ShouldHaveUpdates();
         if (enableRebase)
         {
+            // TODO: https://github.com/dotnet/arcade-services/issues/5541
+            //       There should not be a conflict with the file that was changed in the PR branch.
+            //       But the opposite direction makes it so because of how it applies changes.
             await GitOperations.VerifyMergeConflict(
                 VmrPath,
                 forwardFlowBranch,
@@ -140,6 +143,9 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
 
         if (enableRebase)
         {
+            // TODO: https://github.com/dotnet/arcade-services/issues/5541
+            //       There should not be a conflict with the file that was changed in the PR branch.
+            //       But the opposite direction makes it so because of how it applies changes.
             await GitOperations.VerifyMergeConflict(
                 ProductRepoPath,
                 backflowBranch,

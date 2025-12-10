@@ -300,6 +300,9 @@ public abstract class CodeFlowConflictResolver
         if (_fileSystem.GetFileInfo(patches.First().Path).Length == 0)
         {
             _logger.LogInformation("Detected conflicts in {filePath}", conflictedFile);
+
+            // TODO: https://github.com/dotnet/arcade-services/issues/
+            //       See the TODOs in the CodeFlowUpdatingPRsTests tests to understand the problem here.
             return false;
         }
 
