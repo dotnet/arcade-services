@@ -647,7 +647,7 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
             await GetRootDirAsync(repoPath);
             return true;
         }
-        catch
+        catch (ProcessFailedException)
         {
             return false;
         }

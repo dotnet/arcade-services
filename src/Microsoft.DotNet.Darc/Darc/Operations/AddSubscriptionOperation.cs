@@ -349,13 +349,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 }
 
                 await _configRepoManager.AddSubsciptionAsync(
-                    new ConfigurationRepositoryOperationParameters
-                    {
-                        RepositoryUri = _options.ConfigurationRepository,
-                        ConfigurationBaseBranch = _options.ConfigurationBaseBranch,
-                        ConfigurationBranch = _options.ConfigurationBranch,
-                        DontOpenPr = _options.NoPr,
-                    },
+                    _options.ToConfigurationRepositoryOperationParameters(),
                     subscriptionYaml,
                     _options.ConfigurationFilePath);
             }

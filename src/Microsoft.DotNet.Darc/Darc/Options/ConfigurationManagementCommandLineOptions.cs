@@ -55,4 +55,16 @@ internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLi
         services.AddSingleton<ConfigurationRepositoryManager>();
         return base.RegisterServices(services);
     }
+
+    public ConfigurationRepositoryOperationParameters ToConfigurationRepositoryOperationParameters()
+    {
+        return new ConfigurationRepositoryOperationParameters
+        {
+            RepositoryUri = ConfigurationRepository,
+            ConfigurationBranch = ConfigurationBranch,
+            ConfigurationBaseBranch = ConfigurationBaseBranch,
+            DontOpenPr = NoPr,
+            ConfigurationFilePath = ConfigurationFilePath,
+        }; 
+    }
 }

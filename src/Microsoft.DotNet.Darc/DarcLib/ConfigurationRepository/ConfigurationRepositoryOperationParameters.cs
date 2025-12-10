@@ -11,4 +11,5 @@ public class ConfigurationRepositoryOperationParameters
     public required string ConfigurationBaseBranch { get; init; }
     public string? ConfigurationBranch { get; set; }
     public required bool DontOpenPr { get; init; }
+    public string? ConfigurationFilePath { get; init; }
 }

@@ -45,17 +45,16 @@ public class ConfigurationRepositoryManager
 
     public async Task AddSubsciptionAsync(
         ConfigurationRepositoryOperationParameters parameters,
-        SubscriptionYaml subscription,
-        string? overrideFilePath = null)
+        SubscriptionYaml subscription)
     {
         IGitRepo gitRepo = _gitRepoFactory.CreateClient(parameters.RepositoryUri);
 
         await ValidateConfigurationRepositoryParametersAsync(gitRepo, parameters);
         await PrepareConfigurationBranchAsync(gitRepo, parameters);
 
-        var newSubscriptionFilePath = string.IsNullOrEmpty(overrideFilePath)
+        var newSubscriptionFilePath = string.IsNullOrEmpty(parameters.ConfigurationFilePath)
             ? MaestroConfigHelper.GetDefaultSubscriptionFilePath(subscription)
-            : new UnixPath(overrideFilePath);
+            : new UnixPath(parameters.ConfigurationFilePath);
 
         var subscriptionsInFile = await FetchAndParseRemoteConfiguration<SubscriptionYaml>(gitRepo, parameters, newSubscriptionFilePath);
 
