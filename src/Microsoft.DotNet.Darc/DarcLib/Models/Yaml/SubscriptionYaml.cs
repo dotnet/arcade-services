@@ -31,6 +31,8 @@ public class SubscriptionYaml : IComparable<SubscriptionYaml>, IExternallySynced
     public const string SourceEnabledElement = "Source Enabled";
     public const string SourceDirectoryElement = "Source Directory";
     public const string TargetDirectoryElement = "Target Directory";
+
+    [YamlIgnore]
     public Guid UniqueId => Id;
 
     [YamlMember(Alias = IdElement, ApplyNamingConventions = false)]

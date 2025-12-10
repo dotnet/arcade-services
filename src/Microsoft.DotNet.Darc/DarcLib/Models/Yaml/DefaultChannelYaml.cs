@@ -12,6 +12,7 @@ public class DefaultChannelYaml :
     IComparable<DefaultChannelYaml>,
     IExternallySyncedEntity<(string Repository, string Branch, string Channel)>
 {
+    [YamlIgnore]
     public (string Repository, string Branch, string Channel) UniqueId =>
         (Repository, Branch, Channel);
 
