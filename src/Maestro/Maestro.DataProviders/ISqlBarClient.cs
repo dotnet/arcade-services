@@ -24,7 +24,7 @@ public interface ISqlBarClient : IBasicBarClient
 
     Task UpdateSubscriptionsAsync(IEnumerable<Subscription> subscription, bool andSaveContext = true);
 
-    Task DeleteSubscriptionsAsync(IEnumerable<Subscription> subsriptions, bool andSaveContext = true);
+    Task DeleteSubscriptionsAsync(IEnumerable<Subscription> subscriptions, bool andSaveContext = true);
 
     #endregion Configuration Data ingestion
 }
