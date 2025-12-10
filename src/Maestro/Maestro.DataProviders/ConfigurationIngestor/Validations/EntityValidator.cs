@@ -12,11 +12,17 @@ internal class EntityValidator
 {
     internal static void ValidateEntityUniqueness<T>(IEnumerable<IExternallySyncedEntity<T>> entities)
     {
+        if (!entities.Any())
+        {
+            return;
+        }
+
         var uniqueIds = entities.Select(e => e.UniqueId).ToHashSet();
 
         if (uniqueIds.Count != entities.Count())
         {
-            throw new ArgumentException($"{typeof(T).Name} collection contains duplicate Ids.");
+            throw new ArgumentException($"{entities.GetType().GetGenericArguments()[0].Name} collection "
+            + "contains duplicate Ids.");
         }
     }
 }
