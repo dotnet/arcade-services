@@ -635,7 +635,7 @@ public class SqlBarClient : ISqlBarClient
         if (illegalFieldChanges.Count > 0)
         {
             throw new ArgumentException($"Subscription update failed for subscription {subscription.Id} because there was an " +
-                $"attempt to modify the following immutable fields: {subscription.Id}: {string.Join(", ", illegalFieldChanges)}");
+                $"attempt to modify the following immutable fields: {string.Join(", ", illegalFieldChanges)}");
         }
 
         existingSubscription.SourceRepository = existingSubscription.SourceRepository;
