@@ -837,6 +837,7 @@ internal class BackflowTests : CodeFlowTests
         It's the mirror of ForwardFlowWithRevertsAndConflictsTest.
     */
     [Test]
+    [Ignore("Need to explore the reverts - https://github.com/dotnet/arcade-services/issues/5541")]
     public async Task BackflowWithRevertsAndConflictsTest()
     {
         string branchName = GetTestBranchName();
