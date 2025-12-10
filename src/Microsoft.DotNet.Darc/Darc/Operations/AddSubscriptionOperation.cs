@@ -416,17 +416,16 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         await WriteConfigurationDataAsync(
             newSubscriptionFilePath,
             subscriptionsInFile.Order(),
-            $"Added new subscription to '{newSubscriptionFilePath}'");
+            $"Add new subscription ({subscriptionYaml.Channel}) {subscriptionYaml.SourceRepository} => {subscriptionYaml.TargetRepository} ({subscriptionYaml.TargetBranch})");
 
         if (!_options.NoPr)
         {
-            await CreatePullRequest(
-                $"Add new subscription ({subscriptionYaml.Channel}) {subscriptionYaml.SourceRepository} => {subscriptionYaml.TargetRepository} ({subscriptionYaml.TargetBranch})");
+            await CreatePullRequest("Update Maestro configuration");
         }
         else
         {
-            Console.WriteLine("Successfully added subscription with id '{0}' to branch '{1}'",
-                subscriptionYaml.Id, _options.ConfigurationBranch);
+            Console.WriteLine("Successfully added subscription with id '{0}' to branch '{1}' of the configuration repository {2}",
+                subscriptionYaml.Id, _options.ConfigurationBranch, _options.ConfigurationRepository);
         }
     }
 

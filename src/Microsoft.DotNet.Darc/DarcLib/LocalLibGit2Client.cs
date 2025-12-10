@@ -644,11 +644,8 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
     {
         try
         {
-            var rootPath = await GetRootDirAsync(repoPath);
-            // Normalize paths for comparison - git may return forward slashes on Windows
-            var normalizedRoot = Path.GetFullPath(rootPath);
-            var normalizedInput = Path.GetFullPath(repoPath);
-            return string.Equals(normalizedRoot, normalizedInput, StringComparison.OrdinalIgnoreCase);
+            await GetRootDirAsync(repoPath);
+            return true;
         }
         catch
         {
