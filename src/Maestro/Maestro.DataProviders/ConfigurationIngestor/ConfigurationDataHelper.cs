@@ -139,6 +139,8 @@ internal class ConfigurationDataHelper
             Channel = existingChannel,
             Repository = defaultChannel.Repository,
             Namespace = namespaceEntity,
+            Branch = defaultChannel.Branch,
+            Enabled = defaultChannel.Enabled,
         };
 
         if (existingDefaultChannel is not null)
