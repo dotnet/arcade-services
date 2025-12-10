@@ -350,8 +350,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
 
                 await _configRepoManager.AddSubsciptionAsync(
                     _options.ToConfigurationRepositoryOperationParameters(),
-                    subscriptionYaml,
-                    _options.ConfigurationFilePath);
+                    subscriptionYaml);
             }
             else
             {
