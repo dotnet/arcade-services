@@ -587,7 +587,7 @@ public class SqlBarClient : ISqlBarClient
                 subscription.Id,
                 out Data.Models.Subscription existingSubscription);
 
-            if (existingSubscriptions == null)
+            if (existingSubscription == null)
             {
                 throw new InvalidOperationException($"Failed to update subscription with id {subscription.Id} "
                     + "because the subscription could not be found in the database.");
