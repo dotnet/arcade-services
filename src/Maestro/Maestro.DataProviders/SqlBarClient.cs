@@ -640,12 +640,12 @@ public class SqlBarClient : ISqlBarClient
 
         existingSubscription.SourceRepository = existingSubscription.SourceRepository;
         existingSubscription.TargetRepository = existingSubscription.TargetRepository;
-        existingSubscription.Enabled = existingSubscription.Enabled;
-        existingSubscription.SourceEnabled = existingSubscription.SourceEnabled;
-        existingSubscription.SourceDirectory = existingSubscription.SourceDirectory;
-        existingSubscription.TargetDirectory = existingSubscription.TargetDirectory;
-        existingSubscription.PolicyObject = existingSubscription.PolicyObject;
-        existingSubscription.PullRequestFailureNotificationTags = existingSubscription.PullRequestFailureNotificationTags;
+        existingSubscription.Enabled = subscription.Enabled;
+        existingSubscription.SourceEnabled = subscription.SourceEnabled;
+        existingSubscription.SourceDirectory = subscription.SourceDirectory;
+        existingSubscription.TargetDirectory = subscription.TargetDirectory;
+        existingSubscription.PolicyObject = subscription.PolicyObject;
+        existingSubscription.PullRequestFailureNotificationTags = subscription.PullRequestFailureNotificationTags;
         existingSubscription.Channel = subscription.Channel;
         // todo: Excluded assets need an ID (?)
 
