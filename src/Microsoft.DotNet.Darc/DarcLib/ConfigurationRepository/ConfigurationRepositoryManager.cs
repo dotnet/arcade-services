@@ -51,7 +51,7 @@ public class ConfigurationRepositoryManager
         IGitRepo gitRepo = _gitRepoFactory.CreateClient(parameters.RepositoryUri);
 
         await ValidateConfigurationRepositoryParametersAsync(gitRepo, parameters);
-        await EnsureConfigurationWorkingBranchAsync(gitRepo, parameters);
+        await PrepareConfigurationBranchAsync(gitRepo, parameters);
 
         var newSubscriptionFilePath = string.IsNullOrEmpty(overrideFilePath)
             ? MaestroConfigHelper.GetDefaultSubscriptionFilePath(subscription)
@@ -136,7 +136,7 @@ public class ConfigurationRepositoryManager
     /// <summary>
     /// Ensures that a configuration working branch exists, creating one if necessary.
     /// </summary>
-    private static async Task EnsureConfigurationWorkingBranchAsync(
+    private static async Task PrepareConfigurationBranchAsync(
         IGitRepo gitRepo,
         ConfigurationRepositoryOperationParameters operationParameters)
     {
