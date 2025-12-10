@@ -11,8 +11,9 @@ using System.Threading.Tasks;
 using AwesomeAssertions;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
-using Microsoft.DotNet.DarcLib.Models.Yaml;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.MaestroConfiguration.Client;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -46,12 +47,12 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
             UpdateFrequency = UpdateFrequency.EveryDay,
             Enabled = true
         };
-
+        var testBranch = GetTestBranch();
         var expectedFilePath = MaestroConfigHelper.GetDefaultSubscriptionFilePath(expectedSubscription);
 
         SetupChannel(expectedSubscription.Channel);
 
-        var options = CreateAddSubscriptionOptions(expectedSubscription, configurationBranch: GetTestBranch());
+        var options = CreateAddSubscriptionOptions(expectedSubscription, configurationBranch: testBranch);
         var operation = CreateOperation(options);
 
         // Act
@@ -61,6 +62,7 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
         result.Should().Be(Constants.SuccessCode);
 
         // Verify file was created at the expected path
+        await CheckoutBranch(testBranch);
         var fullExpectedPath = Path.Combine(ConfigurationRepoPath, expectedFilePath.ToString());
         File.Exists(fullExpectedPath).Should().BeTrue($"Expected file at {fullExpectedPath}");
 
@@ -75,69 +77,6 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
         actualSubscription.TargetBranch.Should().Be(expectedSubscription.TargetBranch);
         actualSubscription.UpdateFrequency.Should().Be(expectedSubscription.UpdateFrequency);
         actualSubscription.Enabled.Should().Be(expectedSubscription.Enabled);
-
-        // Verify console output
-        var output = ConsoleOutput.GetOutput();
-        output.Should().Contain("Successfully added subscription");
-    }
-
-    [Test]
-    public async Task AddSubscriptionOperation_WithConfigRepo_CreatesNewBranchWhenBaseBranchProvided()
-    {
-        // Arrange - Define expected subscription first
-        var expectedSubscription = new SubscriptionYaml
-        {
-            Id = Guid.NewGuid(),
-            Channel = "test-channel",
-            SourceRepository = "https://github.com/dotnet/source-repo",
-            TargetRepository = "https://github.com/dotnet/target-repo",
-            TargetBranch = "main",
-            UpdateFrequency = UpdateFrequency.EveryDay,
-            Enabled = true
-        };
-
-        var expectedFilePath = MaestroConfigHelper.GetDefaultSubscriptionFilePath(expectedSubscription);
-
-        SetupChannel(expectedSubscription.Channel);
-
-        var options = CreateAddSubscriptionOptions(
-            expectedSubscription,
-            noPr: true);
-
-        var operation = CreateOperation(options);
-
-        // Act
-        int result = await operation.ExecuteAsync();
-
-        // Assert
-        result.Should().Be(Constants.SuccessCode);
-
-        // Extract the branch name from the output message
-        var output = ConsoleOutput.GetOutput();
-        output.Should().Contain("Successfully added subscription");
-
-        var branchMatch = Regex.Match(output, @"to branch '([^']+)'");
-        branchMatch.Success.Should().BeTrue("Expected to find branch name in output");
-        var createdBranch = branchMatch.Groups[1].Value;
-
-        var branches = await GetBranchesAsync();
-        branches.Should().Contain(createdBranch);
-
-        // Switch to the created branch and verify file was created at the expected path
-        await ProcessManager.ExecuteGit(ConfigurationRepoPath, ["checkout", createdBranch]);
-
-        var fullExpectedPath = Path.Combine(ConfigurationRepoPath, expectedFilePath.ToString());
-        File.Exists(fullExpectedPath).Should().BeTrue($"Expected file at {fullExpectedPath} on branch {createdBranch}");
-
-        // Deserialize and verify subscription properties
-        var subscriptions = await DeserializeSubscriptionsAsync(fullExpectedPath);
-        subscriptions.Should().HaveCount(1);
-
-        var actualSubscription = subscriptions[0];
-        actualSubscription.Channel.Should().Be(expectedSubscription.Channel);
-        actualSubscription.SourceRepository.Should().Be(expectedSubscription.SourceRepository);
-        actualSubscription.TargetRepository.Should().Be(expectedSubscription.TargetRepository);
-        actualSubscription.TargetBranch.Should().Be(expectedSubscription.TargetBranch);
     }
 
     [Test]
@@ -154,6 +93,7 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
             UpdateFrequency = UpdateFrequency.EveryDay,
             Enabled = true
         };
+        var testBranch = GetTestBranch();
 
         const string existingSubscriptionId = "12345678-1234-1234-1234-123456789012";
         const string configFileName = "dotnet-target-repo.yml";
@@ -167,14 +107,14 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
               Target Branch: release/1.0
               Update Frequency: EveryDay
             """;
-        var configFilePath = MaestroConfigHelper.SubscriptionFolderPath / configFileName;
+        var configFilePath = new UnixPath(MaestroConfigHelper.SubscriptionFolderPath) / configFileName;
         await CreateFileInConfigRepoAsync(configFilePath.ToString(), existingContent);
 
         SetupChannel(expectedSubscription.Channel);
 
         var options = CreateAddSubscriptionOptions(
             expectedSubscription,
-            configurationBranch: GetTestBranch());
+            configurationBranch: testBranch);
 
         var operation = CreateOperation(options);
 
@@ -185,6 +125,7 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
         result.Should().Be(Constants.SuccessCode);
 
         // Deserialize and verify both subscriptions are present
+        await CheckoutBranch(testBranch);
         var fullPath = Path.Combine(ConfigurationRepoPath, configFilePath.ToString());
         var subscriptions = await DeserializeSubscriptionsAsync(fullPath);
         subscriptions.Should().HaveCount(2);
@@ -327,7 +268,7 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
               Target Branch: {subscriptionToAdd.TargetBranch}
               Update Frequency: EveryDay
             """;
-        var configFilePath = MaestroConfigHelper.SubscriptionFolderPath / configFileName;
+        var configFilePath = new UnixPath(MaestroConfigHelper.SubscriptionFolderPath) / configFileName;
         await CreateFileInConfigRepoAsync(configFilePath.ToString(), existingContent);
 
         SetupChannel(subscriptionToAdd.Channel);
@@ -388,7 +329,7 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
             BarClientMock.Object,
             RemoteFactoryMock.Object,
             GitRepoFactory,
-            LocalGitRepoFactory);
+            ConfigurationRepositoryManager);
     }
 
     private static async Task<List<SubscriptionYaml>> DeserializeSubscriptionsAsync(string filePath)

@@ -11,14 +11,13 @@ using Microsoft.DotNet.Darc.Tests.Helpers;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.DarcLib.Models.Yaml;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Maestro.Common.AzureDevOpsTokens;
 using Moq;
 using NUnit.Framework;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
+using Microsoft.DotNet.DarcLib.ConfigurationRepository;
 
 namespace Microsoft.DotNet.Darc.Tests.Operations;
 
@@ -40,6 +39,8 @@ public abstract class ConfigurationManagementTestBase
     protected IProcessManager ProcessManager = null!;
     protected IGitRepoFactory GitRepoFactory = null!;
     protected ILocalGitRepoFactory LocalGitRepoFactory = null!;
+    // TODO switch to an interface
+    protected ConfigurationRepositoryManager ConfigurationRepositoryManager = null!;
 
     /// <summary>
     /// Path to the temporary configuration repository.
@@ -71,6 +72,12 @@ public abstract class ConfigurationManagementTestBase
         SetupBarClientMock();
         SetupRemoteMocks();
         SetupRepoFactories();
+
+        ConfigurationRepositoryManager = new ConfigurationRepositoryManager(
+            LocalGitRepoFactory,
+            RemoteFactoryMock.Object,
+            GitRepoFactory,
+            NullLogger<ConfigurationRepositoryManager>.Instance);
     }
 
     [TearDown]
@@ -209,6 +216,11 @@ public abstract class ConfigurationManagementTestBase
             branches.Add(line.Trim());
         }
         return branches;
+    }
+
+    protected async Task CheckoutBranch(string branch)
+    {
+        await ProcessManager.ExecuteGit(ConfigurationRepoPath, ["checkout", branch]);
     }
 
     private void CleanupTempRepo()

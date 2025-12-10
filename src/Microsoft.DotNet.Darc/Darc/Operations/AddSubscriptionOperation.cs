@@ -11,9 +11,8 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models.Yaml;
-using Microsoft.DotNet.MaestroConfiguration.Client;
+using Microsoft.DotNet.DarcLib.ConfigurationRepository;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.Services.Utility;
@@ -25,6 +24,10 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class AddSubscriptionOperation : SubscriptionOperationBase
 {
     private readonly AddSubscriptionCommandLineOptions _options;
+    private readonly IGitRepoFactory _gitRepoFactory;
+    private readonly IRemoteFactory _remoteFactory;
+    // TODO switch to an interface
+    private readonly ConfigurationRepositoryManager _configRepoManager;
 
     public AddSubscriptionOperation(
         AddSubscriptionCommandLineOptions options,
@@ -32,10 +35,13 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
         IGitRepoFactory gitRepoFactory,
-        ILocalGitRepoFactory localGitRepoFactory)
-        : base(barClient, options, gitRepoFactory, localGitRepoFactory, remoteFactory, logger)
+        ConfigurationRepositoryManager configRepoManager)
+        : base(barClient, logger)
     {
         _options = options;
+        _configRepoManager = configRepoManager;
+        _gitRepoFactory = gitRepoFactory;
+        _remoteFactory = remoteFactory; 
     }
 
     /// <summary>
@@ -318,8 +324,6 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
 
             if (_options.ShouldUseConfigurationRepository)
             {
-                await ValidateConfigurationRepositoryParametersAsync();
-
                 SubscriptionYaml subscriptionYaml = new()
                 {
                     Id = Guid.NewGuid(),
@@ -337,7 +341,23 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                     TargetDirectory = targetDirectory,
                     ExcludedAssets = excludedAssets
                 };
-                await AddSubscriptionToRemoteConfigAsync(subscriptionYaml);
+
+                var equivalentSubscriptionId = await FindEquivalentSubscriptionAsync(subscriptionYaml);
+                if (equivalentSubscriptionId != null)
+                {
+                    throw new ArgumentException($"Subscription {equivalentSubscriptionId} with equivalent parameters already exists.");
+                }
+
+                await _configRepoManager.AddSubsciptionAsync(
+                    new ConfigurationRepositoryOperationParameters
+                    {
+                        RepositoryUri = _options.ConfigurationRepository,
+                        ConfigurationBaseBranch = _options.ConfigurationBaseBranch,
+                        ConfigurationBranch = _options.ConfigurationBranch,
+                        DontOpenPr = _options.NoPr,
+                    },
+                    subscriptionYaml,
+                    _options.ConfigurationFilePath);
             }
             else
             {
@@ -386,46 +406,6 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         {
             _logger.LogError(e, $"Failed to create subscription.");
             return Constants.ErrorCode;
-        }
-    }
-
-    private async Task AddSubscriptionToRemoteConfigAsync(SubscriptionYaml subscriptionYaml)
-    {
-        var equivalentSubscriptionId = await FindEquivalentSubscriptionAsync(subscriptionYaml);
-
-        if (equivalentSubscriptionId != null)
-        {
-            throw new ArgumentException($"Subscription {equivalentSubscriptionId} with equivalent parameters already exists.");
-        }
-
-        await EnsureConfigurationWorkingBranchAsync();
-
-        var newSubscriptionFilePath = string.IsNullOrEmpty(_options.ConfigurationFilePath)
-            ? MaestroConfigHelper.GetDefaultSubscriptionFilePath(subscriptionYaml)
-            : new UnixPath(_options.ConfigurationFilePath);
-        List<SubscriptionYaml> subscriptionsInFile = await FetchAndParseRemoteConfiguration<SubscriptionYaml>(newSubscriptionFilePath);
-
-        // If we have a branch that hasn't been ingested yet, we need to check for equivalent subscriptions in the file
-        var equivalentInFile = subscriptionsInFile.FirstOrDefault(s => s.IsEquivalentTo(subscriptionYaml));
-        if (equivalentInFile != null)
-        {
-            throw new ArgumentException($"Subscription {equivalentInFile.Id} with equivalent parameters already exists in '{newSubscriptionFilePath}'.");
-        }
-
-        subscriptionsInFile.Add(subscriptionYaml);
-        await WriteConfigurationDataAsync(
-            newSubscriptionFilePath,
-            subscriptionsInFile.Order(),
-            $"Add new subscription ({subscriptionYaml.Channel}) {subscriptionYaml.SourceRepository} => {subscriptionYaml.TargetRepository} ({subscriptionYaml.TargetBranch})");
-
-        if (!_options.NoPr)
-        {
-            await CreatePullRequest("Update Maestro configuration");
-        }
-        else
-        {
-            Console.WriteLine("Successfully added subscription with id '{0}' to branch '{1}' of the configuration repository {2}",
-                subscriptionYaml.Id, _options.ConfigurationBranch, _options.ConfigurationRepository);
         }
     }
 

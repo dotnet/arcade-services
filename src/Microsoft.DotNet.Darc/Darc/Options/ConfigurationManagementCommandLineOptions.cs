@@ -4,6 +4,8 @@
 using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using Microsoft.DotNet.DarcLib.ConfigurationRepository;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options;
 
@@ -42,4 +44,15 @@ internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLi
 
     public bool ShouldUseConfigurationRepository { get; }
         = bool.TryParse(Environment.GetEnvironmentVariable(UseConfigRepositoryEnvVar), out var result) && result;
+
+    public override IServiceCollection RegisterServices(IServiceCollection services)
+    {
+        if (!Verbose && !Debug)
+        {
+            // Force verbose output for these commands
+            Verbose = true;
+        }
+        services.AddSingleton<ConfigurationRepositoryManager>();
+        return base.RegisterServices(services);
+    }
 }

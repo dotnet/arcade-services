@@ -10,20 +10,16 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
-internal abstract class SubscriptionOperationBase : ConfigurationManagementOperation
+internal abstract class SubscriptionOperationBase : Operation
 {
     protected readonly IBarApiClient _barClient;
+    protected readonly ILogger _logger;
 
     protected SubscriptionOperationBase(
-        IBarApiClient barClient,
-        IConfigurationManagementCommandLineOptions options,
-        IGitRepoFactory gitRepoFactory,
-        ILocalGitRepoFactory localGitRepoFactory,
-        IRemoteFactory remoteFactory,
-        ILogger logger)
-        : base(options, gitRepoFactory, localGitRepoFactory, remoteFactory, logger)
+        IBarApiClient barClient, ILogger logger)
     {
         _barClient = barClient;
+        _logger = logger;
     }
 
     /// <summary>

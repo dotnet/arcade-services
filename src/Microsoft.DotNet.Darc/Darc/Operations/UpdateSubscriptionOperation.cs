@@ -21,16 +21,16 @@ namespace Microsoft.DotNet.Darc.Operations;
 internal class UpdateSubscriptionOperation : SubscriptionOperationBase
 {
     private readonly UpdateSubscriptionCommandLineOptions _options;
+    private readonly IGitRepoFactory _gitRepoFactory;
 
     public UpdateSubscriptionOperation(
         UpdateSubscriptionCommandLineOptions options,
         IBarApiClient barClient,
         IGitRepoFactory gitRepoFactory,
-        ILocalGitRepoFactory localGitRepoFactory,
-        IRemoteFactory remoteFactory,
-        ILogger<UpdateSubscriptionOperation> logger) : base(barClient, options, gitRepoFactory, localGitRepoFactory, remoteFactory, logger)
+        ILogger<UpdateSubscriptionOperation> logger) : base(barClient, logger)
     {
         _options = options;
+        _gitRepoFactory = gitRepoFactory;
     }
 
     /// <summary>
