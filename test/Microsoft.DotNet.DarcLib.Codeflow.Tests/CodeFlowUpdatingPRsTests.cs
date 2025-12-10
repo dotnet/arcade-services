@@ -4,7 +4,6 @@
 using System.IO;
 using System.Threading.Tasks;
 using AwesomeAssertions;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using NUnit.Framework;
 
@@ -69,7 +68,12 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
         result.ShouldHaveUpdates();
         if (enableRebase)
         {
-            await GitOperations.CommitAll(VmrPath, "Forward flow update", allowEmpty: true);
+            await GitOperations.VerifyMergeConflict(
+                VmrPath,
+                forwardFlowBranch,
+                [VmrInfo.GetRelativeRepoSourcesPath(Constants.ProductRepoName) / "repo.txt"],
+                mergeTheirs: false,
+                enableRebase: enableRebase);
         }
 
         // Check that the changes in the PR branch are preserved
@@ -133,9 +137,15 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
         // 5. Flow the changes from the VMR into the product repo PR
         result = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranch, enableRebase: enableRebase);
         result.ShouldHaveUpdates();
+
         if (enableRebase)
         {
-            await GitOperations.CommitAll(ProductRepoPath, "Backflow update", allowEmpty: true);
+            await GitOperations.VerifyMergeConflict(
+                ProductRepoPath,
+                backflowBranch,
+                ["vmr.txt"],
+                mergeTheirs: false,
+                enableRebase: enableRebase);
         }
 
         // Check that the changes in the PR branch are preserved
