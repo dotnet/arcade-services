@@ -4,7 +4,7 @@
 using System.Threading.Tasks;
 
 #nullable enable
-namespace Maestro.DataProviders.ConfigurationIngestor;
+namespace Maestro.DataProviders.ConfigurationIngestion;
 
 public interface IConfigurationIngestor
 {

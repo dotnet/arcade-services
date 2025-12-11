@@ -5,7 +5,7 @@ using Microsoft.DotNet.DarcLib.Models.Yaml;
 using System.Collections.Generic;
 
 #nullable enable
-namespace Maestro.DataProviders.ConfigurationIngestor;
+namespace Maestro.DataProviders.ConfigurationIngestion;
 
 public record ConfigurationData(
     IEnumerable<SubscriptionYaml> Subscriptions,

@@ -6,7 +6,7 @@ using System.Linq;
 using System.Collections.Generic;
 using Microsoft.DotNet.DarcLib.Models.Yaml;
 
-namespace Maestro.DataProviders.ConfigurationIngestor.Validations;
+namespace Maestro.DataProviders.ConfigurationIngestion.Validations;
 
 internal class EntityValidator
 {

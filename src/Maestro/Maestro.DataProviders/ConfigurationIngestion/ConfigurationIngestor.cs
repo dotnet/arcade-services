@@ -1,18 +1,19 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Maestro.Data;
 using Maestro.Data.Models;
-using Maestro.DataProviders.ConfigurationIngestor.Validations;
+using Maestro.DataProviders.ConfigurationIngestion.Validations;
 using Microsoft.DotNet.DarcLib.Models.Yaml;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.EntityFrameworkCore;
 
 #nullable enable
-namespace Maestro.DataProviders.ConfigurationIngestor;
+namespace Maestro.DataProviders.ConfigurationIngestion;
 
 public class ConfigurationIngestor(
     BuildAssetRegistryContext context,
@@ -52,14 +53,14 @@ public class ConfigurationIngestor(
     public async Task SaveConfigurationData(ConfigurationDataUpdate configurationDataUpdate, Namespace namespaceEntity)
     {
         // Deletions
-        DeleteSubscriptions(configurationDataUpdate.Subscriptions.Removals);
-        DeleteDefaultChannels(configurationDataUpdate.DefaultChannels.Removals);
-        DeleteRepositoryBranches(configurationDataUpdate.RepositoryBranches.Removals);
-        DeleteChannels(configurationDataUpdate.Channels.Removals);
+        await DeleteSubscriptions([.. configurationDataUpdate.Subscriptions.Removals.Select(sub => sub.Id)]);
+        await DeleteDefaultChannels(configurationDataUpdate.DefaultChannels.Removals);
+        await DeleteRepositoryBranches(configurationDataUpdate.RepositoryBranches.Removals);
+        await DeleteChannels(configurationDataUpdate.Channels.Removals);
 
-        // Channels must be updated first due to entity relationships
         var existingChannels = _context.Channels.ToDictionary(c => c.Name);
 
+        // Channels must be updated first due to entity relationships
         CreateChannels(
             configurationDataUpdate.Channels.Creations,
             namespaceEntity);
@@ -69,7 +70,10 @@ public class ConfigurationIngestor(
             [.. existingChannels.Values],
             namespaceEntity);
 
-        existingChannels = _context.Channels.ToDictionary(c => c.Name);
+        // We fetch the channels again including newly created ones
+        existingChannels = _context.Channels
+            .Local
+            .ToDictionary(c => c.Name);
 
         // Update the rest of the entities
         await CreateSubscriptions(
@@ -91,7 +95,7 @@ public class ConfigurationIngestor(
             configurationDataUpdate.DefaultChannels.Updates,
             namespaceEntity);
 
-        CreateBranchRepositories(
+        await CreateBranchRepositories(
             configurationDataUpdate.RepositoryBranches.Creations,
             namespaceEntity);
 
@@ -190,13 +194,13 @@ public class ConfigurationIngestor(
         await _sqlBarClient.UpdateSubscriptionsAsync(subscriptionDaos, false);
     }
 
-    private void DeleteSubscriptions(IEnumerable<SubscriptionYaml> subscriptions)
+    private async Task DeleteSubscriptions(IEnumerable<Guid> subscriptionsIds)
     {
-        var subscriptionIdRemovals = subscriptions
-            .Select(sub => new Subscription { Id = sub.Id })
-            .ToList();
+        var subscriptionRemovals = await _context.Subscriptions
+            .Where(sub => subscriptionsIds.Contains(sub.Id))
+            .ToListAsync();
 
-        _context.Subscriptions.RemoveRange(subscriptionIdRemovals);
+        _context.Subscriptions.RemoveRange(subscriptionRemovals);
     }
 
     private void CreateChannels(
@@ -214,23 +218,25 @@ public class ConfigurationIngestor(
         List<Channel> dbChannels,
         Namespace namespaceEntity)
     {
-        var externalChannelsByName = externalChannels.ToDictionary(c => c.Name);
+        var dbChannelsByName = dbChannels.ToDictionary(c => c.Name);
 
-        foreach (var channel in dbChannels)
+        foreach (var channel in externalChannels)
         {
-            externalChannelsByName.TryGetValue(channel.Name, out ChannelYaml? externalChannel);
+            dbChannelsByName.TryGetValue(channel.Name, out Channel? dbChannel);
 
-            channel.Classification = externalChannel!.Classification;
+            dbChannel!.Classification = channel.Classification;
 
-            _context.Channels.Update(channel);
+            _context.Channels.Update(dbChannel);
         }
     }
 
-    private void DeleteChannels(IEnumerable<ChannelYaml> channels)
+    private async Task DeleteChannels(IEnumerable<ChannelYaml> channels)
     {
-        var channelRemovals = channels
-            .Select(ch => new Channel { Name = ch.Name })
-            .ToList();
+        var channelNames = channels.Select(c => c.Name);
+
+        var channelRemovals = await _context.Channels
+            .Where(channel => channelNames.Contains(channel.Name))
+            .ToListAsync();
 
         _context.Channels.RemoveRange(channelRemovals);
     }
@@ -270,16 +276,18 @@ public class ConfigurationIngestor(
         }
     }
 
-    private void DeleteDefaultChannels(IEnumerable<DefaultChannelYaml> defaultChannels)
+    private async Task DeleteDefaultChannels(IEnumerable<DefaultChannelYaml> defaultChannels)
     {
-        var defaultChannelRemovals = defaultChannels
-            .Select(dc => new DefaultChannel { Id = dc.Id })
-            .ToList();
+        var defaultChannelIds = defaultChannels.Select(dc => dc.Id);
+
+        var defaultChannelRemovals = await _context.DefaultChannels
+            .Where(dc => defaultChannelIds.Contains(dc.Id))
+            .ToListAsync();
 
         _context.DefaultChannels.RemoveRange(defaultChannelRemovals);
     }
 
-    private void CreateBranchRepositories(
+    private async Task CreateBranchRepositories(
         IEnumerable<BranchMergePoliciesYaml> branchMergePolicies,
         Namespace namespaceEntity)
     {
@@ -312,15 +320,21 @@ public class ConfigurationIngestor(
         }
     }
     
-    private void DeleteRepositoryBranches(IEnumerable<BranchMergePoliciesYaml> branchMergePolicies)
+    private async Task DeleteRepositoryBranches(IEnumerable<BranchMergePoliciesYaml> branchMergePolicies)
     {
-        var branchRemovals = branchMergePolicies
-            .Select(bmp => new RepositoryBranch
+        var branchRemovals = new List<RepositoryBranch>();
+
+        var dbRepositoryBranches = await _context.RepositoryBranches
+            .ToDictionaryAsync(rb => rb.RepositoryName + "|" + rb.BranchName);
+
+        foreach(var bmp in branchMergePolicies)
+        {
+            dbRepositoryBranches.TryGetValue(bmp.Repository + "|" + bmp.Branch, out RepositoryBranch? dbRepositoryBranch);
+            if (dbRepositoryBranch != null)
             {
-                Repository = new Repository { RepositoryName = bmp.Repository },
-                BranchName = bmp.Branch,
-            })
-            .ToList();
+                branchRemovals.Add(dbRepositoryBranch);
+            }
+        }
 
         _context.RepositoryBranches.RemoveRange(branchRemovals);
     }

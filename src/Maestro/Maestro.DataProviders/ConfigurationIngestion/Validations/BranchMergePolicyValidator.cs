@@ -8,7 +8,7 @@ using Microsoft.DotNet.DarcLib.Models.Yaml;
 using Maestro.MergePolicyEvaluation;
 
 #nullable enable
-namespace Maestro.DataProviders.ConfigurationIngestor.Validations;
+namespace Maestro.DataProviders.ConfigurationIngestion.Validations;
 
 public class BranchMergePolicyValidator
 {

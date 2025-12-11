@@ -10,7 +10,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 #nullable enable
-namespace Maestro.DataProviders.ConfigurationIngestor;
+namespace Maestro.DataProviders.ConfigurationIngestion;
 
 internal class ConfigurationDataHelper
 {
@@ -61,7 +61,7 @@ internal class ConfigurationDataHelper
             .Where(e => !externalEntitiesById.ContainsKey(e.UniqueId))];
 
         IEnumerable<T> updates = [.. externalEntitiesById.Values
-                 .Where(e => dbEntitiesById.ContainsKey(e.UniqueId))];
+            .Where(e => dbEntitiesById.ContainsKey(e.UniqueId))];
 
         return new EntityChanges<T>(creations, updates, removals);
     }

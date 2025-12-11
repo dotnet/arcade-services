@@ -4,7 +4,7 @@
 using System.Collections.Generic;
 using Microsoft.DotNet.DarcLib.Models.Yaml;
 
-namespace Maestro.DataProviders.ConfigurationIngestor;
+namespace Maestro.DataProviders.ConfigurationIngestion;
 
 public record ConfigurationDataUpdate(
     EntityChanges<SubscriptionYaml> Subscriptions,

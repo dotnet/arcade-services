@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using Microsoft.DotNet.DarcLib.Models.Yaml;
 
 #nullable enable
-namespace Maestro.DataProviders.ConfigurationIngestor.Validations;
+namespace Maestro.DataProviders.ConfigurationIngestion.Validations;
 
 public class DefaultChannelValidator
 {
