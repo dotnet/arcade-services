@@ -189,39 +189,45 @@ public abstract class CodeFlowConflictResolver
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                if (await TryResolvingConflict(codeflowOptions, vmr, sourceRepo, filePath, crossingFlow, headBranchExisted, cancellationToken))
+                if (!await TryResolvingConflict(codeflowOptions, vmr, sourceRepo, filePath, crossingFlow, headBranchExisted, cancellationToken))
                 {
-                    count++;
-                    continue;
+                    _logger.LogInformation("Failed to auto-resolve a conflict in {conflictedFile}", filePath);
+
+                    if (!codeflowOptions.EnableRebase)
+                    {
+                        _logger.LogDebug("Conflict in {filePath} cannot be resolved automatically", filePath);
+                        await AbortMerge(codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : sourceRepo);
+                        return false;
+                    }
+                    else
+                    {
+                        // When we fail to resolve conflicts during a rebase, we are fine with keeping it
+                        success = false;
+                        continue;
+                    }
                 }
-                else if (codeflowOptions.EnableRebase)
-                {
-                    // When we fail to resolve conflicts during a rebase, we are fine with keeping it
-                    success = false;
-                    continue;
-                }
-                else
-                {
-                    _logger.LogDebug("Conflict in {filePath} cannot be resolved automatically", filePath);
-                }
+
+                count++;
             }
             catch (Exception e)
             {
                 _logger.LogError(e, "Failed to resolve conflicts in {filePath}", filePath);
-            }
 
-            _logger.LogInformation("Failed to auto-resolve a conflict in {conflictedFile}", filePath);
-
-            if (!codeflowOptions.EnableRebase)
-            {
-                await AbortMerge(codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : sourceRepo);
+                if (!codeflowOptions.EnableRebase)
+                {
+                    await AbortMerge(codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : sourceRepo);
+                }
+                return false;
             }
-            return false;
         }
 
         if (success)
         {
             _logger.LogInformation("Successfully auto-resolved {count} expected conflicts", count);
+        }
+        else
+        {
+            _logger.LogInformation("Auto-resolved {count} expected conflicts, some remain unresolved", count);
         }
 
         return success;
