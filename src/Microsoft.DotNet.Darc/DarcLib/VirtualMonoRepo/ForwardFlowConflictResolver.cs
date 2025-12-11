@@ -183,7 +183,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             return true;
         }
 
-        if (codeflowOptions.EnableRebase && await TryRevertingAddedFile(vmr, conflictedFile, cancellationToken))
+        if (codeflowOptions.EnableRebase && await TryDeletingFileMarkedForDeletion(vmr, conflictedFile, cancellationToken))
         {
             return true;
         }

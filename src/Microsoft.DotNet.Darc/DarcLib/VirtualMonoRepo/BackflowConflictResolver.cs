@@ -177,7 +177,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             return true;
         }
 
-        if (codeflowOptions.EnableRebase && await TryRevertingAddedFile(targetRepo, conflictedFile, cancellationToken))
+        if (codeflowOptions.EnableRebase && await TryDeletingFileMarkedForDeletion(targetRepo, conflictedFile, cancellationToken))
         {
             return true;
         }

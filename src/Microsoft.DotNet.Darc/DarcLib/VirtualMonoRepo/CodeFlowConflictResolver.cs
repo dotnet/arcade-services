@@ -344,7 +344,7 @@ public abstract class CodeFlowConflictResolver
     /// In non-rebase flow, we stick custom content in the file - a message to indicate it should be removed.
     /// In rebase, we can remove it after when we see this content. This method does just that.
     /// </summary>
-    protected async Task<bool> TryRevertingAddedFile(ILocalGitRepo repo, UnixPath conflictedFile, CancellationToken cancellationToken)
+    protected async Task<bool> TryDeletingFileMarkedForDeletion(ILocalGitRepo repo, UnixPath conflictedFile, CancellationToken cancellationToken)
     {
         var filePath = repo.Path / conflictedFile;
         if (!_fileSystem.FileExists(filePath))
