@@ -17,7 +17,9 @@ using Moq;
 using NUnit.Framework;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
-using Microsoft.DotNet.DarcLib.ConfigurationRepository;
+using Microsoft.DotNet.MaestroConfiguration.Client;
+using GitRepoFactory = Microsoft.DotNet.DarcLib.GitRepoFactory;
+using IGitRepoFactory = Microsoft.DotNet.DarcLib.IGitRepoFactory;
 
 namespace Microsoft.DotNet.Darc.Tests.Operations;
 
@@ -39,8 +41,9 @@ public abstract class ConfigurationManagementTestBase
     protected IProcessManager ProcessManager = null!;
     protected IGitRepoFactory GitRepoFactory = null!;
     protected ILocalGitRepoFactory LocalGitRepoFactory = null!;
-    // TODO switch to an interface
-    protected ConfigurationRepositoryManager ConfigurationRepositoryManager = null!;
+    protected MaestroConfiguration.Client.IGitRepoFactory ConfigurationRepositoryGitRepoFactory = null!;
+    protected IConfigurationRepositoryManager ConfigurationRepositoryManager = null!;
+    
 
     /// <summary>
     /// Path to the temporary configuration repository.
@@ -73,11 +76,13 @@ public abstract class ConfigurationManagementTestBase
         SetupRemoteMocks();
         SetupRepoFactories();
 
-        ConfigurationRepositoryManager = new ConfigurationRepositoryManager(
-            LocalGitRepoFactory,
-            RemoteFactoryMock.Object,
+        ConfigurationRepositoryGitRepoFactory = new DarcLib.ConfigurationRepository.GitRepoFactory(
             GitRepoFactory,
-            NullLogger<ConfigurationRepositoryManager>.Instance);
+            LocalGitRepoFactory,
+            RemoteFactoryMock.Object);
+        ConfigurationRepositoryManager = new ConfigurationRepositoryManager(
+            ConfigurationRepositoryGitRepoFactory,
+            NullLogger<IConfigurationRepositoryManager>.Instance);
     }
 
     [TearDown]

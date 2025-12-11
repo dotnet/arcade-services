@@ -5,6 +5,7 @@ using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.DarcLib.ConfigurationRepository;
+using Microsoft.DotNet.MaestroConfiguration.Client;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Darc.Options;
@@ -52,7 +53,8 @@ internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLi
             // Force verbose output for these commands
             Verbose = true;
         }
-        services.AddSingleton<ConfigurationRepositoryManager>();
+        services.AddSingleton<IGitRepoFactory, DarcLib.ConfigurationRepository.GitRepoFactory>();
+        services.AddSingleton<IConfigurationRepositoryManager, ConfigurationRepositoryManager>();
         return base.RegisterServices(services);
     }
 

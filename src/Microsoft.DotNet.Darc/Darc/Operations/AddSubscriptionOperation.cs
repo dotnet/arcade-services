@@ -11,13 +11,13 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.ConfigurationRepository;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
+using IConfigurationRepositoryManager = Microsoft.DotNet.MaestroConfiguration.Client.IConfigurationRepositoryManager;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -26,8 +26,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
     private readonly AddSubscriptionCommandLineOptions _options;
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly IRemoteFactory _remoteFactory;
-    // TODO switch to an interface
-    private readonly ConfigurationRepositoryManager _configRepoManager;
+    private readonly IConfigurationRepositoryManager _configRepoManager;
 
     public AddSubscriptionOperation(
         AddSubscriptionCommandLineOptions options,
@@ -35,7 +34,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
         IGitRepoFactory gitRepoFactory,
-        ConfigurationRepositoryManager configRepoManager)
+        IConfigurationRepositoryManager configRepoManager)
         : base(barClient, logger)
     {
         _options = options;
@@ -348,7 +347,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                     throw new ArgumentException($"Subscription {equivalentSubscriptionId} with equivalent parameters already exists.");
                 }
 
-                await _configRepoManager.AddSubsciptionAsync(
+                await _configRepoManager.AddSubscriptionAsync(
                     _options.ToConfigurationRepositoryOperationParameters(),
                     subscriptionYaml);
             }

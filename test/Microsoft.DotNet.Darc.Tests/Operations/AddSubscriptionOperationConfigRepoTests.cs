@@ -48,7 +48,7 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
             Enabled = true
         };
         var testBranch = GetTestBranch();
-        var expectedFilePath = MaestroConfigHelper.GetDefaultSubscriptionFilePath(expectedSubscription);
+        var expectedFilePath = ConfigFilePathResolver.GetDefaultSubscriptionFilePath(expectedSubscription);
 
         SetupChannel(expectedSubscription.Channel);
 
@@ -107,7 +107,7 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
               Target Branch: release/1.0
               Update Frequency: EveryDay
             """;
-        var configFilePath = new UnixPath(MaestroConfigHelper.SubscriptionFolderPath) / configFileName;
+        var configFilePath = new UnixPath(ConfigFilePathResolver.SubscriptionFolderPath) / configFileName;
         await CreateFileInConfigRepoAsync(configFilePath.ToString(), existingContent);
 
         SetupChannel(expectedSubscription.Channel);
@@ -211,7 +211,7 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
             Enabled = true
         };
 
-        var expectedFilePath = MaestroConfigHelper.GetDefaultSubscriptionFilePath(expectedSubscription);
+        var expectedFilePath = ConfigFilePathResolver.GetDefaultSubscriptionFilePath(expectedSubscription);
 
         SetupChannel(expectedSubscription.Channel);
 
@@ -268,7 +268,7 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
               Target Branch: {subscriptionToAdd.TargetBranch}
               Update Frequency: EveryDay
             """;
-        var configFilePath = new UnixPath(MaestroConfigHelper.SubscriptionFolderPath) / configFileName;
+        var configFilePath = new UnixPath(ConfigFilePathResolver.SubscriptionFolderPath) / configFileName;
         await CreateFileInConfigRepoAsync(configFilePath.ToString(), existingContent);
 
         SetupChannel(subscriptionToAdd.Channel);
