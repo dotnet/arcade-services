@@ -105,7 +105,7 @@ internal class MergeBandsOperation : Operation
             _logger.LogWarning("Failed to clean src: {error}", cleanResult.StandardError);
         }
 
-        _logger.LogInformation("Branch {branch} merged to working tree", _options.SourceBranch);
+        _logger.LogInformation("Source branch {sourceBranch} merged into working tree", sourceBranch: _options.SourceBranch);
         _logger.LogInformation(string.Empty);
         _logger.LogInformation("Next steps:");
         _logger.LogInformation("  1. Review the changes with: git status");
