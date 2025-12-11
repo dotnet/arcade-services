@@ -3,6 +3,7 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
@@ -11,4 +12,6 @@ internal class MergeBandsCommandLineOptions : VmrCommandLineOptionsBase<MergeBan
 {
     [Value(0, Required = true, HelpText = "The branch name to merge from (e.g., release/10.0.1xx)")]
     public string SourceBranch { get; set; } = string.Empty;
+
+    protected override LogLevel DefaultLogVerbosity => LogLevel.Information;
 }
