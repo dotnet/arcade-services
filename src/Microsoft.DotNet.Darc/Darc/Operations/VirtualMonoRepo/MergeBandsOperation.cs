@@ -66,9 +66,9 @@ internal class MergeBandsOperation : Operation
         _logger.LogInformation("Target branch (current): {targetBranch}", targetBranch);
         _logger.LogInformation("Source branch to merge: {sourceBranch}", _options.SourceBranch);
 
-        // Step 1: Merge the source branch
+        // Step 1: Merge the source branch without committing
         _logger.LogInformation("Merging {sourceBranch} into {targetBranch}...", _options.SourceBranch, targetBranch);
-        var mergeResult = await _processManager.ExecuteGit(vmrPath, "merge", _options.SourceBranch);
+        var mergeResult = await _processManager.ExecuteGit(vmrPath, "merge", "--no-commit", _options.SourceBranch);
         if (mergeResult.ExitCode != 0)
         {
             _logger.LogError("Failed to merge {sourceBranch}: {error}", _options.SourceBranch, mergeResult.StandardError);

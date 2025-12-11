@@ -56,7 +56,7 @@ public class MergeBandsOperationTests
         _processManagerMock.Setup(pm => pm.ExecuteGit(vmrPath, "branch", "--show-current"))
             .ReturnsAsync(new ProcessExecutionResult { ExitCode = 0, StandardOutput = targetBranch });
 
-        _processManagerMock.Setup(pm => pm.ExecuteGit(vmrPath, "merge", sourceBranch))
+        _processManagerMock.Setup(pm => pm.ExecuteGit(vmrPath, "merge", "--no-commit", sourceBranch))
             .ReturnsAsync(new ProcessExecutionResult { ExitCode = 0 });
 
         _processManagerMock.Setup(pm => pm.ExecuteGit(vmrPath, "reset", "--", "src"))
@@ -81,7 +81,7 @@ public class MergeBandsOperationTests
 
         // Verify all the git commands were called
         _processManagerMock.Verify(pm => pm.ExecuteGit(vmrPath, "branch", "--show-current"), Times.Once);
-        _processManagerMock.Verify(pm => pm.ExecuteGit(vmrPath, "merge", sourceBranch), Times.Once);
+        _processManagerMock.Verify(pm => pm.ExecuteGit(vmrPath, "merge", "--no-commit", sourceBranch), Times.Once);
         _processManagerMock.Verify(pm => pm.ExecuteGit(vmrPath, "reset", "--", "src"), Times.Once);
         _processManagerMock.Verify(pm => pm.ExecuteGit(vmrPath, "clean", "-fdx", "--", "src"), Times.Once);
     }
@@ -99,7 +99,7 @@ public class MergeBandsOperationTests
         _processManagerMock.Setup(pm => pm.ExecuteGit(vmrPath, "branch", "--show-current"))
             .ReturnsAsync(new ProcessExecutionResult { ExitCode = 0, StandardOutput = targetBranch });
 
-        _processManagerMock.Setup(pm => pm.ExecuteGit(vmrPath, "merge", sourceBranch))
+        _processManagerMock.Setup(pm => pm.ExecuteGit(vmrPath, "merge", "--no-commit", sourceBranch))
             .ReturnsAsync(new ProcessExecutionResult { ExitCode = 1, StandardError = "Merge conflict" });
 
         MergeBandsCommandLineOptions options = new()
