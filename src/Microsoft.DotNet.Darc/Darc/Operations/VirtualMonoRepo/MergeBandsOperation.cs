@@ -80,17 +80,14 @@ internal class MergeBandsOperation : Operation
         }
 
         // Step 3: Checkout files from target branch
-        var filesToCheckout = new[]
-        {
+        string[] filesToCheckout =
+        [
             "src",
-            "eng/common",
-            "eng/Version.Details.props",
-            "eng/Version.Details.xml",
-            "eng/Version.props",
-            "global.json"
-        };
+            DarcLib.Constants.CommonScriptFilesPath,
+            ..DependencyFileManager.NonCodeflowDependencyFiles,
+        ];
 
-        _logger.LogInformation("Checking out files from {targetBranch}...", targetBranch);
+        _logger.LogInformation("Reverting changes in version files...");
         foreach (var file in filesToCheckout)
         {
             var checkoutResult = await _processManager.ExecuteGit(vmrPath, "checkout", targetBranch, "--", file);
