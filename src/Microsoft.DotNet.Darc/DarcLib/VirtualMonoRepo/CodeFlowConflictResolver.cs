@@ -339,7 +339,7 @@ public abstract class CodeFlowConflictResolver
     }
 
     /// <summary>
-    /// If a file was added and then removed again in the original repo, it won't exist in the head branch,
+    /// If a file was added and then removed again in the original repo, it won't exist in the PR branch,
     /// so in case of a conflict + recreation, we cannot remove it (if it does not exist).
     /// In non-rebase flow, we stick custom content in the file - a message to indicate it should be removed.
     /// In rebase, we can remove it after when we see this content. This method does just that.
