@@ -668,7 +668,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         if (stagedFiles.Count > 0)
         {
             await targetRepo.CommitAsync(
-                $"Revert changes to reverted files from {codeflowOptions.Build.Commit}",
+                $"Fix undesired regressions that happened due to incremental codeflows at commit `{codeflowOptions.Build.Commit}`",
                 allowEmpty: true,
                 cancellationToken: cancellationToken);
             await repo.ResetWorkingTree();
