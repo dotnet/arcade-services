@@ -541,13 +541,13 @@ public class SqlBarClient : ISqlBarClient
         var existingSubscriptions = await _context.Subscriptions.ToListAsync();
 
         var existingSubscriptionHashes = new HashSet<string>(
-            existingSubscriptions.Select(SubscriptionComparisonHash));
+            existingSubscriptions.Select(SubscriptionComparisonKey));
 
         var newSubscriptionHashes = new HashSet<string>();
 
         foreach (var subscription in subscriptionsToCreate)
         {
-            string subscriptionHash = SubscriptionComparisonHash(subscription);
+            string subscriptionHash = SubscriptionComparisonKey(subscription);
             if (existingSubscriptionHashes.Contains(subscriptionHash))
             {
                 throw new EntityConflictException($"Could not create subscription with id `{subscription.Id}`. "
@@ -562,7 +562,7 @@ public class SqlBarClient : ISqlBarClient
 
             _context.Subscriptions.Add(subscription);
 
-            newSubscriptionHashes.Add(SubscriptionComparisonHash(subscription));
+            newSubscriptionHashes.Add(SubscriptionComparisonKey(subscription));
         }
 
         if (andSaveContext)
@@ -677,10 +677,10 @@ public class SqlBarClient : ISqlBarClient
     }
 
     /// <summary>
-    /// Generates a hash string representing the key attributes of a subscription for comparison purposes.
+    /// Generates key representing the functional attributes of a subscription for comparison purposes.
     /// If two subscriptions produce the same hash, they are considered functionally equivalent
     /// </summary>
-    private static string SubscriptionComparisonHash(Data.Models.Subscription subscription)
+    private static string SubscriptionComparisonKey(Data.Models.Subscription subscription)
     {
         if (subscription.SourceEnabled)
         {
