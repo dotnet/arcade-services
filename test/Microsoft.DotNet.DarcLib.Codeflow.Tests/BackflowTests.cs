@@ -123,7 +123,6 @@ internal class BackflowTests : CodeFlowTests
             branchName,
             [
                 ..Enumerable.Range(1, 3).Select(i => $"conflicting_file_{i}.txt"),
-                "file.txt",
             ],
             mergeTheirs: true,
             enableRebase: enableRebase);

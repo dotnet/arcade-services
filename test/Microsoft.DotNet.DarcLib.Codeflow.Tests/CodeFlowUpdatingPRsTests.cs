@@ -68,15 +68,7 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
         result.ShouldHaveUpdates();
         if (enableRebase)
         {
-            // TODO: https://github.com/dotnet/arcade-services/issues/5541
-            //       There should not be a conflict with the file that was changed in the PR branch.
-            //       But the opposite direction makes it so because of how it applies changes.
-            await GitOperations.VerifyMergeConflict(
-                VmrPath,
-                forwardFlowBranch,
-                [VmrInfo.GetRelativeRepoSourcesPath(Constants.ProductRepoName) / "repo.txt"],
-                mergeTheirs: false,
-                enableRebase: enableRebase);
+            await GitOperations.CommitAll(VmrPath, "Forward flow update", allowEmpty: true);
         }
 
         // Check that the changes in the PR branch are preserved
@@ -143,15 +135,7 @@ internal class CodeFlowUpdatingPRsTests : CodeFlowTests
 
         if (enableRebase)
         {
-            // TODO: https://github.com/dotnet/arcade-services/issues/5541
-            //       There should not be a conflict with the file that was changed in the PR branch.
-            //       But the opposite direction makes it so because of how it applies changes.
-            await GitOperations.VerifyMergeConflict(
-                ProductRepoPath,
-                backflowBranch,
-                ["vmr.txt"],
-                mergeTheirs: false,
-                enableRebase: enableRebase);
+            await GitOperations.CommitAll(ProductRepoPath, "Backflow update", allowEmpty: true);
         }
 
         // Check that the changes in the PR branch are preserved

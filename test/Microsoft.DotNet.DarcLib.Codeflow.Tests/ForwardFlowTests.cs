@@ -113,7 +113,6 @@ internal class ForwardFlowTests : CodeFlowTests
             branchName,
             [
                 ..Enumerable.Range(1, 3).Select(i => VmrInfo.SourcesDir / Constants.ProductRepoName / $"conflicting_file_{i}.txt"),
-                VmrInfo.SourcesDir / Constants.ProductRepoName / "file.txt",
             ],
             mergeTheirs: true,
             enableRebase: enableRebase);
