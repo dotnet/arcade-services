@@ -105,17 +105,20 @@ internal class MergeBandsOperation : Operation
             _logger.LogWarning("Failed to clean src: {error}", cleanResult.StandardError);
         }
 
-        _logger.LogInformation("Source branch {sourceBranch} merged into working tree", sourceBranch: _options.SourceBranch);
-        _logger.LogInformation(string.Empty);
-        _logger.LogInformation("Next steps:");
-        _logger.LogInformation("  1. Review the changes with: git status");
-        _logger.LogInformation("  2. Review the diff with: git diff");
-        _logger.LogInformation("  3. Resolve any conflicts");
-        _logger.LogInformation("  4. Commit the changes if they look correct");
-        _logger.LogInformation("  5. Push the changes to your branch");
-        _logger.LogInformation("  6. Open a pull request");
-        _logger.LogInformation("  7. Merge (do NOT squash) the pull request");
-
+        _logger.LogInformation(
+            """
+            Source branch {sourceBranch} merged into working tree
+            
+            Next steps:
+              1. Review the changes with: git status
+              2. Review the diff with: git diff
+              3. Resolve any conflicts
+              4. Commit the changes if they look correct
+              5. Push the changes to your branch
+              6. Open a pull request
+              7. Merge (do NOT squash) the pull request
+            """,
+            _options.SourceBranch);
         return Constants.SuccessCode;
     }
 }
