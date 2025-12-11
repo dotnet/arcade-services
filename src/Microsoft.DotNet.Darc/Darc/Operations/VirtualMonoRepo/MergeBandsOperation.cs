@@ -108,15 +108,16 @@ internal class MergeBandsOperation : Operation
             _logger.LogWarning("Failed to clean src: {error}", cleanResult.StandardError);
         }
 
-        _logger.LogInformation("Merge-bands operation completed successfully.");
-        _logger.LogInformation("");
+        _logger.LogInformation("Branch {branch} merged to working tree", _options.SourceBranch);
+        _logger.LogInformation(string.Empty);
         _logger.LogInformation("Next steps:");
         _logger.LogInformation("  1. Review the changes with: git status");
         _logger.LogInformation("  2. Review the diff with: git diff");
-        _logger.LogInformation("  3. Commit the changes if they look correct");
-        _logger.LogInformation("  4. Push the changes to your branch");
-        _logger.LogInformation("  5. Open a pull request");
-        _logger.LogInformation("  6. Merge (do NOT squash) the pull request");
+        _logger.LogInformation("  3. Resolve any conflicts");
+        _logger.LogInformation("  4. Commit the changes if they look correct");
+        _logger.LogInformation("  5. Push the changes to your branch");
+        _logger.LogInformation("  6. Open a pull request");
+        _logger.LogInformation("  7. Merge (do NOT squash) the pull request");
 
         return Constants.SuccessCode;
     }
