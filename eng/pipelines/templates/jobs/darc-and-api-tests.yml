@@ -17,7 +17,7 @@ jobs:
   steps:
   - powershell: |
       try {
-        $response = Invoke-WebRequest "$(PcsTestEndpoint)/api/channels?api-version=2020-02-20"
+        $response = Invoke-WebRequest "$(PcsTestEndpoint)/api/channels?api-version=2020-02-20" -UseBasicParsing
         $statusCode = $response.StatusCode
       }
       catch {
