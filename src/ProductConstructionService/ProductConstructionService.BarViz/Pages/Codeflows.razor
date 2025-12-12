@@ -258,7 +258,7 @@
                 // Make the main branch go first
                 return defaultChannels
                     .OrderByDescending(c => c.Branch == "main")
-                    .ThenBy(c => c.Branch)
+                    .ThenByDescending(c => c.Branch)
                     .ToList();
             }
         }
