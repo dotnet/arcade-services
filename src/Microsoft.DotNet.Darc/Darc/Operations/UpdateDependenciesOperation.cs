@@ -272,7 +272,7 @@ internal class UpdateDependenciesOperation : Operation
     {
         if (_options.NoCoherencyUpdates)
         {
-            Console.WriteLine("    Skipping coherency updates due to --no-coherency-updates option.");
+            _logger.LogInformation("    Skipping coherency updates due to --no-coherency-updates option.");
             return Constants.SuccessCode;
         }
 
