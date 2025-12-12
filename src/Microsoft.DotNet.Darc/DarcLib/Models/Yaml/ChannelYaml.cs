@@ -8,8 +8,11 @@ using YamlDotNet.Serialization;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Models.Yaml;
 
-public class ChannelYaml : IComparable<ChannelYaml>
+public class ChannelYaml : IComparable<ChannelYaml>, IExternallySyncedEntity<string>
 {
+    [YamlIgnore]
+    public string UniqueId => Name;
+
     [YamlMember(Alias = "Name", ApplyNamingConventions = false)]
     public required string Name { get; init; }
 

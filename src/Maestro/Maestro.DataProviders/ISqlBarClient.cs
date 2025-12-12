@@ -2,10 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 
 namespace Maestro.DataProviders;
+
 public interface ISqlBarClient : IBasicBarClient
 {
     /// <summary>
@@ -14,4 +17,14 @@ public interface ISqlBarClient : IBasicBarClient
     Task RegisterSubscriptionUpdate(
         Guid subscriptionId,
         string updateMessage);
+
+    #region Configuration Data ingestion
+
+    Task CreateSubscriptionsAsync(IEnumerable<Subscription> subscriptions, bool andSaveContext = true);
+
+    Task UpdateSubscriptionsAsync(IEnumerable<Subscription> subscription, bool andSaveContext = true);
+
+    Task DeleteSubscriptionsAsync(IEnumerable<Subscription> subscriptions, bool andSaveContext = true);
+
+    #endregion Configuration Data ingestion
 }

@@ -9,11 +9,16 @@ using YamlDotNet.Serialization;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Models.Yaml;
 
-public class BranchMergePoliciesYaml : IComparable<BranchMergePoliciesYaml>
+public class BranchMergePoliciesYaml :
+    IComparable<BranchMergePoliciesYaml>,
+    IExternallySyncedEntity<(string Repository, string Branch)>
 {
     public const string RepoElement = "Repository URL";
     public const string BranchElement = "Branch";
     public const string MergePolicyElement = "Merge Policies";
+
+    [YamlIgnore]
+    public (string Repository, string Branch) UniqueId => (Repository, Branch);
 
     [YamlMember(Alias = BranchElement, ApplyNamingConventions = false)]
     public required string Branch { get; init; }
