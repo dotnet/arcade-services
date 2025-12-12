@@ -10,8 +10,7 @@ using YamlDotNet.Serialization;
 namespace Microsoft.DotNet.DarcLib.Models.Yaml;
 
 public class BranchMergePoliciesYaml :
-    IComparable<BranchMergePoliciesYaml>,
-    IExternallySyncedEntity<(string Repository, string Branch)>
+    IComparable<BranchMergePoliciesYaml>
 {
     public const string RepoElement = "Repository URL";
     public const string BranchElement = "Branch";

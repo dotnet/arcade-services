@@ -4,16 +4,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.DotNet.DarcLib.Models.Yaml;
 using Maestro.MergePolicyEvaluation;
+using Maestro.DataProviders.ConfigurationIngestion.Helpers;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion.Validations;
 
-public class BranchMergePolicyValidator
+internal class BranchMergePolicyValidator
 {
-    public static void ValidateBranchMergePolicies(
-        IEnumerable<BranchMergePoliciesYaml> branchMergePolicies)
+    internal static void ValidateBranchMergePolicies(
+        IEnumerable<IngestedBranchMergePolicies> branchMergePolicies)
     {
         EntityValidator.ValidateEntityUniqueness(branchMergePolicies);
 
@@ -28,25 +28,25 @@ public class BranchMergePolicyValidator
     /// </summary>
     /// <param name="branchMergePolicy">The RepositoryBranch to validate</param>
     /// <exception cref="ArgumentException">Thrown when validation fails</exception>
-    public static void ValidateBranchMergePolicies(BranchMergePoliciesYaml branchMergePolicy)
+    internal static void ValidateBranchMergePolicies(IngestedBranchMergePolicies branchMergePolicy)
     {
         ArgumentNullException.ThrowIfNull(branchMergePolicy);
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(branchMergePolicy.Repository);
-        ArgumentException.ThrowIfNullOrWhiteSpace(branchMergePolicy.Branch);
-        ArgumentNullException.ThrowIfNull(branchMergePolicy.MergePolicies);
+        ArgumentException.ThrowIfNullOrWhiteSpace(branchMergePolicy.Values.Repository);
+        ArgumentException.ThrowIfNullOrWhiteSpace(branchMergePolicy.Values.Branch);
+        ArgumentNullException.ThrowIfNull(branchMergePolicy.Values.MergePolicies);
 
-        if (branchMergePolicy.Repository.Length > Data.Models.Repository.RepositoryNameLength)
+        if (branchMergePolicy.Values.Repository.Length > Data.Models.Repository.RepositoryNameLength)
         {
             throw new ArgumentException($"Repository name cannot be longer than {Data.Models.Repository.RepositoryNameLength}.");
         }
 
-        if (branchMergePolicy.Branch.Length > Data.Models.Repository.BranchNameLength)
+        if (branchMergePolicy.Values.Branch.Length > Data.Models.Repository.BranchNameLength)
         {
             throw new ArgumentException($"Branch name cannot be longer than {Data.Models.Repository.BranchNameLength}.");
         }
 
-        var mergePolicies = branchMergePolicy.MergePolicies.Select(mp => mp.Name);
+        var mergePolicies = branchMergePolicy.Values.MergePolicies.Select(mp => mp.Name);
 
         if (mergePolicies.Contains(MergePolicyConstants.StandardMergePolicyName)
             && mergePolicies.Any(SubscriptionValidator.StandardMergePolicies.Contains))

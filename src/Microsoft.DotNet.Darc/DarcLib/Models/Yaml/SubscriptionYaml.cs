@@ -15,7 +15,7 @@ namespace Microsoft.DotNet.DarcLib.Models.Yaml;
 /// Helper class for YAML encoding/decoding purposes.
 /// This is used so that we can have friendly alias names for elements.
 /// </summary>
-public class SubscriptionYaml : IComparable<SubscriptionYaml>, IExternallySyncedEntity<Guid>
+public class SubscriptionYaml : IComparable<SubscriptionYaml>
 {
     public const string IdElement = "Id";
     public const string EnabledElement = "Enabled";
@@ -32,8 +32,6 @@ public class SubscriptionYaml : IComparable<SubscriptionYaml>, IExternallySynced
     public const string SourceDirectoryElement = "Source Directory";
     public const string TargetDirectoryElement = "Target Directory";
 
-    [YamlIgnore]
-    public Guid UniqueId => Id;
 
     [YamlMember(Alias = IdElement, ApplyNamingConventions = false)]
     public required Guid Id { get; init; }

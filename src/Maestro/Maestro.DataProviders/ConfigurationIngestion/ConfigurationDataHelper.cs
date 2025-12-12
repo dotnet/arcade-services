@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Maestro.Data.Models;
+using Maestro.DataProviders.ConfigurationIngestion.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Yaml;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -18,23 +19,23 @@ internal class ConfigurationDataHelper
     ConfigurationData configurationData,
     ConfigurationData existingConfigurationData)
     {
-        EntityChanges<SubscriptionYaml> subscriptionChanges =
-            ComputeUpdatesForEntity<SubscriptionYaml, Guid>(
+        EntityChanges<IngestedSubscription> subscriptionChanges =
+            ComputeUpdatesForEntity<IngestedSubscription, Guid>(
                 existingConfigurationData.Subscriptions,
                 configurationData.Subscriptions);
 
-        EntityChanges<ChannelYaml> channelChanges =
-            ComputeUpdatesForEntity<ChannelYaml, string>(
+        EntityChanges<IngestedChannel> channelChanges =
+            ComputeUpdatesForEntity<IngestedChannel, string>(
                 existingConfigurationData.Channels,
                 configurationData.Channels);
 
-        EntityChanges<DefaultChannelYaml> defaultChannelChanges =
-            ComputeUpdatesForEntity<DefaultChannelYaml, (string, string, string)>(
+        EntityChanges<IngestedDefaultChannel> defaultChannelChanges =
+            ComputeUpdatesForEntity<IngestedDefaultChannel, (string, string, string)>(
                 existingConfigurationData.DefaultChannels,
                 configurationData.DefaultChannels);
 
-        EntityChanges<BranchMergePoliciesYaml> branchMergePolicyChanges =
-            ComputeUpdatesForEntity<BranchMergePoliciesYaml, (string, string)>(
+        EntityChanges<IngestedBranchMergePolicies> branchMergePolicyChanges =
+            ComputeUpdatesForEntity<IngestedBranchMergePolicies, (string, string)>(
                 existingConfigurationData.BranchMergePolicies,
                 configurationData.BranchMergePolicies);
 
@@ -66,70 +67,70 @@ internal class ConfigurationDataHelper
         return new EntityChanges<T>(creations, updates, removals);
     }
 
-    internal static Subscription ConvertSubscriptionYamlToDao(
-        SubscriptionYaml subscription,
+    internal static Subscription ConvertIngestedSubscriptionToDao(
+        IngestedSubscription subscription,
         Namespace namespaceEntity,
         Dictionary<string, Channel> existingChannelsByName)
     {
-        existingChannelsByName.TryGetValue(subscription.Channel, out Channel? existingChannel);
+        existingChannelsByName.TryGetValue(subscription.Values.Channel, out Channel? existingChannel);
 
         if (existingChannel is null)
         {
             //todo find the right exception type
             throw new InvalidOperationException(
-                $"Channel '{subscription.Channel}' not found for subscription creation.");
+                $"Channel '{subscription.Values.Channel}' not found for subscription creation.");
         }
 
         return new Subscription
         {
-            Id = subscription.Id,
+            Id = subscription.Values.Id,
             ChannelId = existingChannel.Id,
             Channel = existingChannel,
-            SourceRepository = subscription.SourceRepository,
-            TargetRepository = subscription.TargetRepository,
-            TargetBranch = subscription.TargetBranch,
+            SourceRepository = subscription.Values.SourceRepository,
+            TargetRepository = subscription.Values.TargetRepository,
+            TargetBranch = subscription.Values.TargetBranch,
             PolicyObject = new SubscriptionPolicy
             {
-                UpdateFrequency = (UpdateFrequency)(int)subscription.UpdateFrequency,
-                Batchable = subscription.Batchable,
-                MergePolicies = [.. subscription.MergePolicies.Select(ConvertMergePolicyYamlToDao)],
+                UpdateFrequency = (UpdateFrequency)(int)subscription.Values.UpdateFrequency,
+                Batchable = subscription.Values.Batchable,
+                MergePolicies = [.. subscription.Values.MergePolicies.Select(ConvertMergePolicyYamlToDao)],
             },
-            Enabled = subscription.Enabled,
-            SourceEnabled = subscription.SourceEnabled,
-            SourceDirectory = subscription.SourceDirectory,
-            TargetDirectory = subscription.TargetDirectory,
-            PullRequestFailureNotificationTags = subscription.FailureNotificationTags,
-            ExcludedAssets = subscription.ExcludedAssets == null ? [] : [.. subscription.ExcludedAssets.Select(asset => new AssetFilter() { Filter = asset })],
+            Enabled = subscription.Values.Enabled,
+            SourceEnabled = subscription.Values.SourceEnabled,
+            SourceDirectory = subscription.Values.SourceDirectory,
+            TargetDirectory = subscription.Values.TargetDirectory,
+            PullRequestFailureNotificationTags = subscription.Values.FailureNotificationTags,
+            ExcludedAssets = subscription.Values.ExcludedAssets == null ? [] : [.. subscription.Values.ExcludedAssets.Select(asset => new AssetFilter() { Filter = asset })],
             Namespace = namespaceEntity,
         };
     }
 
-    internal static Channel ConvertChannelYamlToDao(
-        ChannelYaml channel,
+    internal static Channel ConvertIngestedChannelToDao(
+        IngestedChannel channel,
         Namespace namespaceEntity)
         =>  new()
         {
-            Name = channel.Name,
-            Classification = channel.Classification,
+            Name = channel.Values.Name,
+            Classification = channel.Values.Classification,
             Namespace = namespaceEntity,
         };
 
-    internal static DefaultChannel ConvertDefaultChannelYamlToDao(
-        DefaultChannelYaml defaultChannel,
+    internal static DefaultChannel ConvertIngestedDefaultChannelToDao(
+        IngestedDefaultChannel defaultChannel,
         Namespace namespaceEntity,
         Dictionary<string, Channel> existingChannelsByName,
-        Dictionary<(string, string, string), DefaultChannelYaml>? existingDefaultChannels)
+        Dictionary<(string, string, string), IngestedDefaultChannel>? existingDefaultChannels)
     {
-        existingChannelsByName.TryGetValue(defaultChannel.Channel, out Channel? existingChannel);
+        existingChannelsByName.TryGetValue(defaultChannel.Values.Channel, out Channel? existingChannel);
 
         if (existingChannel is null)
         {
             //todo find the right exception type
             throw new InvalidOperationException(
-                $"Channel '{defaultChannel.Channel}' not found for default channel creation.");
+                $"Channel '{defaultChannel.Values.Channel}' not found for default channel creation.");
         }
 
-        DefaultChannelYaml? existingDefaultChannel = null;
+        IngestedDefaultChannel? existingDefaultChannel = null;
 
         existingDefaultChannels?.TryGetValue(defaultChannel.UniqueId, out existingDefaultChannel);
 
@@ -137,33 +138,33 @@ internal class ConfigurationDataHelper
         {
             ChannelId = existingChannel.Id,
             Channel = existingChannel,
-            Repository = defaultChannel.Repository,
+            Repository = defaultChannel.Values.Repository,
             Namespace = namespaceEntity,
-            Branch = defaultChannel.Branch,
-            Enabled = defaultChannel.Enabled,
+            Branch = defaultChannel.Values.Branch,
+            Enabled = defaultChannel.Values.Enabled,
         };
 
         if (existingDefaultChannel is not null)
         {
-            defaultChannelDao.Id = existingDefaultChannel.Id;
+            defaultChannelDao.Id = existingDefaultChannel.DbId;
         }
 
         return defaultChannelDao;
     }
 
-    internal static RepositoryBranch ConvertBranchMergePoliciesYamlToDao(
-        BranchMergePoliciesYaml branchMergePolicies,
+    internal static RepositoryBranch ConvertIngestedBranchMergePoliciesToDao(
+        IngestedBranchMergePolicies branchMergePolicies,
         Namespace namespaceEntity)
     {
         var policyObject = new RepositoryBranch.Policy
         {
-            MergePolicies = [.. branchMergePolicies.MergePolicies.Select(ConvertMergePolicyYamlToDao)],
+            MergePolicies = [.. branchMergePolicies.Values.MergePolicies.Select(ConvertMergePolicyYamlToDao)],
         };
 
         var branchMergePolicyDao = new RepositoryBranch
         {
-            RepositoryName = branchMergePolicies.Repository,
-            BranchName = branchMergePolicies.Branch,
+            RepositoryName = branchMergePolicies.Values.Repository,
+            BranchName = branchMergePolicies.Values.Branch,
             PolicyString = JsonConvert.SerializeObject(policyObject),
             Namespace = namespaceEntity,
         };

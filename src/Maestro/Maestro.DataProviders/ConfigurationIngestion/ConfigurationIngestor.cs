@@ -5,10 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib.Models.Yaml;
 using Maestro.Data;
 using Maestro.Data.Models;
+using Maestro.DataProviders.ConfigurationIngestion.Helpers;
 using Maestro.DataProviders.ConfigurationIngestion.Validations;
-using Microsoft.DotNet.DarcLib.Models.Yaml;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.EntityFrameworkCore;
 
@@ -53,7 +54,7 @@ public class ConfigurationIngestor(
     public async Task SaveConfigurationData(ConfigurationDataUpdate configurationDataUpdate, Namespace namespaceEntity)
     {
         // Deletions
-        await DeleteSubscriptions([.. configurationDataUpdate.Subscriptions.Removals.Select(sub => sub.Id)]);
+        await DeleteSubscriptions([.. configurationDataUpdate.Subscriptions.Removals.Select(sub => sub.Values.Id)]);
         await DeleteDefaultChannels(configurationDataUpdate.DefaultChannels.Removals);
         await DeleteRepositoryBranches(configurationDataUpdate.RepositoryBranches.Removals);
         await DeleteChannels(configurationDataUpdate.Channels.Removals);
@@ -112,12 +113,14 @@ public class ConfigurationIngestor(
             .Where(sub => sub.Namespace == namespaceEntity)
             .Select(sub => SqlBarClient.ToClientModelSubscription(sub))
             .Select(clientSub => SubscriptionYaml.FromClientModel(clientSub))
+            .Select(yamlSub => new IngestedSubscription(yamlSub))
             .ToListAsync();
 
         var channels = await _context.Channels
             .Where(c => c.Namespace == namespaceEntity)
             .Select(channel => SqlBarClient.ToClientModelChannel(channel))
             .Select(clientChannel => ChannelYaml.FromClientModel(clientChannel))
+            .Select(yamlChannel => new IngestedChannel(yamlChannel))
             .ToListAsync();
 
         var defaultChannels = _context.DefaultChannels
@@ -130,15 +133,17 @@ public class ConfigurationIngestor(
             .AsEnumerable()
             .Select(x =>
             {
-                var yaml = DefaultChannelYaml.FromClientModel(x.ClientModel);
-                yaml.Id = x.DaoId; // Assign the DAO ID to the YAML object for ingestion purposes
-                return yaml;
+                var yamlDc = DefaultChannelYaml.FromClientModel(x.ClientModel);
+                var ingestedDc = new IngestedDefaultChannel(yamlDc);
+                ingestedDc.DbId = x.DaoId; // Assign the DAO ID to the YAML object for ingestion purposes
+                return ingestedDc;
             });
 
         var branchMergePolicies = await _context.RepositoryBranches
             .Where(rb => rb.Namespace == namespaceEntity)
             .Select(rb => SqlBarClient.ToClientModelRepositoryBranch(rb))
             .Select(clientRb => BranchMergePoliciesYaml.FromClientModel(clientRb))
+            .Select(rbYaml => new IngestedBranchMergePolicies(rbYaml))
             .ToListAsync();
 
         return new ConfigurationData(
@@ -167,12 +172,12 @@ public class ConfigurationIngestor(
     }
 
     private async Task CreateSubscriptions(
-        IEnumerable<SubscriptionYaml> subscriptions,
+        IEnumerable<IngestedSubscription> subscriptions,
         Namespace namespaceEntity,
         Dictionary<string, Channel> existingChannelsByName)
     {
         List<Subscription> subscriptionDaos = [.. subscriptions
-            .Select(sub => ConfigurationDataHelper.ConvertSubscriptionYamlToDao(
+            .Select(sub => ConfigurationDataHelper.ConvertIngestedSubscriptionToDao(
                 sub,
                 namespaceEntity,
                 existingChannelsByName))];
@@ -181,12 +186,12 @@ public class ConfigurationIngestor(
     }
 
     private async Task UpdateSubscriptions(
-        IEnumerable<SubscriptionYaml> subscriptions,
+        IEnumerable<IngestedSubscription> subscriptions,
         Namespace namespaceEntity,
         Dictionary<string, Channel> existingChannelsByName)
     {
         List<Subscription> subscriptionDaos = [.. subscriptions
-            .Select(sub => ConfigurationDataHelper.ConvertSubscriptionYamlToDao(
+            .Select(sub => ConfigurationDataHelper.ConvertIngestedSubscriptionToDao(
                 sub,
                 namespaceEntity,
                 existingChannelsByName))];
@@ -204,17 +209,17 @@ public class ConfigurationIngestor(
     }
 
     private void CreateChannels(
-        IEnumerable<ChannelYaml> channels,
+        IEnumerable<IngestedChannel> channels,
         Namespace namespaceEntity)
     {
         List<Channel> channelDaos = [.. channels
-            .Select(ch => ConfigurationDataHelper.ConvertChannelYamlToDao(ch, namespaceEntity))];
+            .Select(ch => ConfigurationDataHelper.ConvertIngestedChannelToDao(ch, namespaceEntity))];
 
         _context.Channels.AddRange(channelDaos);
     }
 
     private void UpdateChannels(
-        IEnumerable<ChannelYaml> externalChannels,
+        IEnumerable<IngestedChannel> externalChannels,
         List<Channel> dbChannels,
         Namespace namespaceEntity)
     {
@@ -222,17 +227,17 @@ public class ConfigurationIngestor(
 
         foreach (var channel in externalChannels)
         {
-            dbChannelsByName.TryGetValue(channel.Name, out Channel? dbChannel);
+            dbChannelsByName.TryGetValue(channel.Values.Name, out Channel? dbChannel);
 
-            dbChannel!.Classification = channel.Classification;
+            dbChannel!.Classification = channel.Values.Classification;
 
             _context.Channels.Update(dbChannel);
         }
     }
 
-    private async Task DeleteChannels(IEnumerable<ChannelYaml> channels)
+    private async Task DeleteChannels(IEnumerable<IngestedChannel> channels)
     {
-        var channelNames = channels.Select(c => c.Name);
+        var channelNames = channels.Select(c => c.Values.Name);
 
         var channelRemovals = await _context.Channels
             .Where(channel => channelNames.Contains(channel.Name))
@@ -242,12 +247,12 @@ public class ConfigurationIngestor(
     }
 
     private void CreateDefaultChannels(
-        IEnumerable<DefaultChannelYaml> defaultChannels,
+        IEnumerable<IngestedDefaultChannel> defaultChannels,
         Namespace namespaceEntity,
         Dictionary<string, Channel> dbChannelsByName)
     {
         List<DefaultChannel> defaultChannelDaos = [.. defaultChannels
-            .Select(dc => ConfigurationDataHelper.ConvertDefaultChannelYamlToDao(
+            .Select(dc => ConfigurationDataHelper.ConvertIngestedDefaultChannelToDao(
                 dc,
                 namespaceEntity,
                 dbChannelsByName,
@@ -257,28 +262,29 @@ public class ConfigurationIngestor(
     }
 
     private async Task UpdateDefaultChannels(
-        IEnumerable<DefaultChannelYaml> externalDefaultChannels,
+        IEnumerable<IngestedDefaultChannel> externalDefaultChannels,
         Namespace namespaceEntity)
     {
-        var dcLookups = externalDefaultChannels.ToDictionary(dc => dc.Id);
+        var dcLookups = externalDefaultChannels.ToDictionary(dc => dc.DbId);
 
         var dbDefaultChannels = await _context.DefaultChannels
             .Where(dc => dcLookups.Keys.Contains(dc.Id))
             .ToListAsync();
 
+        //todo wrong loop
         foreach (var dbDefaultChannel in dbDefaultChannels)
         {
-            dcLookups.TryGetValue(dbDefaultChannel.Id, out DefaultChannelYaml? defaultChannel);
+            dcLookups.TryGetValue(dbDefaultChannel.Id, out IngestedDefaultChannel? defaultChannel);
 
-            dbDefaultChannel.Enabled = defaultChannel!.Enabled;
+            dbDefaultChannel.Enabled = defaultChannel!.Values.Enabled;
 
             _context.DefaultChannels.Update(dbDefaultChannel);
         }
     }
 
-    private async Task DeleteDefaultChannels(IEnumerable<DefaultChannelYaml> defaultChannels)
+    private async Task DeleteDefaultChannels(IEnumerable<IngestedDefaultChannel> defaultChannels)
     {
-        var defaultChannelIds = defaultChannels.Select(dc => dc.Id);
+        var defaultChannelIds = defaultChannels.Select(dc => dc.DbId);
 
         var defaultChannelRemovals = await _context.DefaultChannels
             .Where(dc => defaultChannelIds.Contains(dc.Id))
@@ -288,11 +294,11 @@ public class ConfigurationIngestor(
     }
 
     private async Task CreateBranchRepositories(
-        IEnumerable<BranchMergePoliciesYaml> branchMergePolicies,
+        IEnumerable<IngestedBranchMergePolicies> branchMergePolicies,
         Namespace namespaceEntity)
     {
         List<RepositoryBranch> branchMergePolicyDaos = [.. branchMergePolicies
-            .Select(bmp => ConfigurationDataHelper.ConvertBranchMergePoliciesYamlToDao(
+            .Select(bmp => ConfigurationDataHelper.ConvertIngestedBranchMergePoliciesToDao(
                 bmp,
                 namespaceEntity))];
 
@@ -300,7 +306,7 @@ public class ConfigurationIngestor(
     }
 
     private async Task UpdateRepositoryBranches(
-        IEnumerable<BranchMergePoliciesYaml> branchMergePolicies,
+        IEnumerable<IngestedBranchMergePolicies> branchMergePolicies,
         Namespace namespaceEntity)
     {
         var dbRepositoryBranches = await _context.RepositoryBranches
@@ -309,10 +315,10 @@ public class ConfigurationIngestor(
 
         foreach (var bmp in branchMergePolicies)
         {
-            dbRepositoryBranches.TryGetValue((bmp.Repository, bmp.Branch), out RepositoryBranch? dbRepositoryBranch);
+            dbRepositoryBranches.TryGetValue((bmp.Values.Repository, bmp.Values.Branch), out RepositoryBranch? dbRepositoryBranch);
 
             var externalBranchMergePoliciesDao =
-                ConfigurationDataHelper.ConvertBranchMergePoliciesYamlToDao(bmp, namespaceEntity);
+                ConfigurationDataHelper.ConvertIngestedBranchMergePoliciesToDao(bmp, namespaceEntity);
 
             dbRepositoryBranch!.PolicyString = externalBranchMergePoliciesDao.PolicyString;
 
@@ -320,7 +326,7 @@ public class ConfigurationIngestor(
         }
     }
     
-    private async Task DeleteRepositoryBranches(IEnumerable<BranchMergePoliciesYaml> branchMergePolicies)
+    private async Task DeleteRepositoryBranches(IEnumerable<IngestedBranchMergePolicies> branchMergePolicies)
     {
         var branchRemovals = new List<RepositoryBranch>();
 
@@ -329,7 +335,7 @@ public class ConfigurationIngestor(
 
         foreach(var bmp in branchMergePolicies)
         {
-            dbRepositoryBranches.TryGetValue(bmp.Repository + "|" + bmp.Branch, out RepositoryBranch? dbRepositoryBranch);
+            dbRepositoryBranches.TryGetValue(bmp.Values.Repository + "|" + bmp.Values.Branch, out RepositoryBranch? dbRepositoryBranch);
             if (dbRepositoryBranch != null)
             {
                 branchRemovals.Add(dbRepositoryBranch);

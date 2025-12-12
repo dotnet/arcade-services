@@ -2,7 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 #nullable enable
-namespace Microsoft.DotNet.DarcLib.Models.Yaml;
+using Maestro.DataProviders.ConfigurationIngestion.Helpers;
+
+namespace Maestro.DataProviders.ConfigurationIngestion.Helpers;
 
 /// <summary>
 /// Defines an entity that is ingested from an external source and synchronized into the system.
@@ -11,5 +13,5 @@ namespace Microsoft.DotNet.DarcLib.Models.Yaml;
 /// <typeparam name="TId">The type of the unique identifier for the entity. Must be a non-nullable type.</typeparam>
 public interface IExternallySyncedEntity<TId> where TId : notnull
 {
-    public TId UniqueId { get; }
+    TId UniqueId { get; }
 }

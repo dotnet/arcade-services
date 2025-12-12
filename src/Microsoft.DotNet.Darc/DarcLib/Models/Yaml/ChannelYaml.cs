@@ -8,7 +8,7 @@ using YamlDotNet.Serialization;
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Models.Yaml;
 
-public class ChannelYaml : IComparable<ChannelYaml>, IExternallySyncedEntity<string>
+public class ChannelYaml : IComparable<ChannelYaml>
 {
     [YamlIgnore]
     public string UniqueId => Name;
