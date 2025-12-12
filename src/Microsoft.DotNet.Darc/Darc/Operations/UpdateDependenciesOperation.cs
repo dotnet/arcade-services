@@ -521,11 +521,6 @@ internal class UpdateDependenciesOperation : Operation
             throw new DarcException("The --subscription parameter cannot be used with --coherency-only.");
         }
 
-        if (_options.NoCoherencyUpdates)
-        {
-            throw new DarcException("The --subscription parameter cannot be used with --no-coherency-updates.");
-        }
-
         if (!string.IsNullOrEmpty(_options.TargetDirectory))
         {
             throw new DarcException("The --subscription parameter cannot be used with --target-directory. The subscription already specifies a target directory.");
