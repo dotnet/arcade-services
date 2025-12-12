@@ -142,6 +142,15 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         if (result.HadUpdates)
         {
+            LastFlows lastFlowsAfterRecreation = lastFlows;
+            if (codeflowOptions.EnableRebase && lastFlows.CrossingFlow == null && result.RecreatedPreviousFlows)
+            {
+                lastFlowsAfterRecreation = lastFlows with
+                {
+                    CrossingFlow = lastFlows.LastForwardFlow,
+                };
+            }
+
             // We try to merge the target branch so that we can potentially
             // resolve some expected conflicts in the version files
             result = result with
@@ -150,7 +159,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                     codeflowOptions,
                     vmr,
                     sourceRepo,
-                    lastFlows,
+                    lastFlowsAfterRecreation,
                     headBranchExisted,
                     cancellationToken)
             };
@@ -265,7 +274,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                     cancellationToken: cancellationToken),
             cancellationToken);
 
-        if (result.HadUpdates && workBranch != null)
+        if (workBranch != null)
         {
             var commitMessage = (await vmr.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
 

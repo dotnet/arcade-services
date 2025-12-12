@@ -1079,7 +1079,7 @@ function Find-BackFlows {
 
         $blamedCommit = $null
         if ($lineNumber) {
-            $blameOutput = git -C $repoPath blame -lL "$lineNumber,$lineNumber" "$currentCommit" -- "$filePath" 2>$null
+            $blameOutput = git -C $repoPath blame --first-parent -lL "$lineNumber,$lineNumber" "$currentCommit" -- "$filePath" 2>$null
             if ($blameOutput -match '^([0-9a-f]+)') {
                 $blamedCommit = $matches[1]
             }
@@ -1334,7 +1334,7 @@ function Get-BlameInfoForRepoInSourceManifest {
         }
 
         # Run git blame to find who changed this specific line
-        $blameOutput = git -C $vmrPath blame -lL "$lineNumber,$lineNumber" "$commitSHA" -- "$filePath" 2>$null
+        $blameOutput = git -C $vmrPath blame --first-parent -lL "$lineNumber,$lineNumber" "$commitSHA" -- "$filePath" 2>$null
         if (-not $blameOutput) {
             Write-Verbose "Could not get blame information for line $lineNumber in commit $shortSHA"
             return $null
