@@ -451,7 +451,7 @@ This feature:
 - Respects the subscription's target directory and excluded assets filters
 - Works with `--dry-run` to preview changes without modifying files
 
-**Note**: The `--subscription` parameter cannot be used with `--channel`, `--id`, `--packages-folder`, `--name`/`--version`, `--source-repo`, or `--coherency-only` as these would conflict with the subscription's own settings.
+**Note**: The `--subscription` parameter cannot be used with `--channel`, `--id`, `--packages-folder`, `--name`/`--version`, `--source-repo`, `--coherency-only`, or `--no-coherency-updates` as these would conflict with the subscription's own settings.
 
 ### Removing dependencies from a repository
 
@@ -689,6 +689,29 @@ PS D:\enlistments\extensions\eng> cat .\Version.Details.xml
   </ToolsetDependencies>
 </Dependencies>
 ```
+
+#### Disabling coherency updates
+
+In some scenarios, you may want to update dependencies from a specific build without performing
+coherency updates. This is useful when:
+
+- You want to test a specific set of dependencies without automatic coherency adjustments
+- You need to update only the direct dependencies from a particular build
+- You're working with incremental updates and want precise control over what gets updated
+
+The `--no-coherency-updates` option allows you to skip coherency updates and only update
+dependencies from the given build or channel:
+
+```
+# Update dependencies from a specific build without coherency updates
+PS C:\enlistments\runtime> darc update-dependencies --id 123456 --no-coherency-updates
+
+# Update dependencies from a channel without coherency updates
+PS C:\enlistments\runtime> darc update-dependencies --channel ".NET 9 Dev" --no-coherency-updates
+```
+
+**Note**: The `--no-coherency-updates` and `--coherency-only` options are mutually exclusive and
+cannot be used together.
 
 ### Version.Details.props and the SkipProperty attribute
 
