@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -122,6 +123,27 @@ public class ForwardFlowConflictResolverTests
         dependencyFileManagerMock.Setup(m => m.ReadVersionDetailsXmlAsync(
                 vmrPath, It.IsAny<string>(), It.IsAny<UnixPath>()))
             .ReturnsAsync(doc);
+        
+        // Setup for NuGet.config feed update
+        var nugetConfigDoc = new XmlDocument();
+        nugetConfigDoc.LoadXml(@"<configuration><packageSources></packageSources></configuration>");
+        dependencyFileManagerMock.Setup(m => m.ReadNugetConfigAsync(
+                vmrPath, It.IsAny<string>(), It.IsAny<UnixPath>()))
+            .ReturnsAsync(("NuGet.config", nugetConfigDoc));
+        dependencyFileManagerMock.Setup(m => m.FlattenLocationsAndSplitIntoGroups(
+                It.IsAny<Dictionary<string, HashSet<string>>>()))
+            .Returns(new Dictionary<string, HashSet<string>>());
+        dependencyFileManagerMock.Setup(m => m.UpdatePackageSources(
+                It.IsAny<XmlDocument>(), It.IsAny<Dictionary<string, HashSet<string>>>()))
+            .Returns(nugetConfigDoc);
+        
+        // Setup version details parser to return an empty version details
+        versionDetailsParserMock.Setup(m => m.ParseVersionDetailsXml(
+                It.IsAny<XmlDocument>(),
+                It.IsAny<bool>()))
+            .Returns(new VersionDetails([], null));
+        
+        var fileSystemMock = new Mock<IFileSystem>();
 
         ForwardFlowConflictResolver resolver = new(
             new Mock<IVmrInfo>().Object,
@@ -132,7 +154,7 @@ public class ForwardFlowConflictResolverTests
             jsonMergerMock.Object,
             versionDetailsFileMergerMock.Object,
             versionDetailsParserMock.Object,
-            new Mock<IFileSystem>().Object,
+            fileSystemMock.Object,
             NullLogger<ForwardFlowConflictResolver>.Instance);
 
         await resolver.MergeDependenciesAsync(
@@ -184,6 +206,17 @@ public class ForwardFlowConflictResolverTests
         dependencyFileManagerMock.Verify(m => m.UpdateVersionDetailsXmlSourceTag(
                 It.IsAny<XmlDocument>(),
                 newSourceDependency),
+            Times.Once);
+        
+        // Verify that NuGet.config feeds are recomputed based on Version.Details.xml
+        dependencyFileManagerMock.Verify(m => m.ReadNugetConfigAsync(
+                vmrPath, null!, It.IsAny<UnixPath>()),
+            Times.Once);
+        dependencyFileManagerMock.Verify(m => m.FlattenLocationsAndSplitIntoGroups(
+                It.IsAny<Dictionary<string, HashSet<string>>>()),
+            Times.Once);
+        dependencyFileManagerMock.Verify(m => m.UpdatePackageSources(
+                It.IsAny<XmlDocument>(), It.IsAny<Dictionary<string, HashSet<string>>>()),
             Times.Once);
     }
 }
