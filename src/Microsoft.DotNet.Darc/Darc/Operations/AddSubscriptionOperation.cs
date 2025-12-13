@@ -11,30 +11,36 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
+using IConfigurationRepositoryManager = Microsoft.DotNet.MaestroConfiguration.Client.IConfigurationRepositoryManager;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
 internal class AddSubscriptionOperation : SubscriptionOperationBase
 {
     private readonly AddSubscriptionCommandLineOptions _options;
-    private readonly IRemoteFactory _remoteFactory;
     private readonly IGitRepoFactory _gitRepoFactory;
+    private readonly IRemoteFactory _remoteFactory;
+    private readonly IConfigurationRepositoryManager _configRepoManager;
 
     public AddSubscriptionOperation(
         AddSubscriptionCommandLineOptions options,
         ILogger<AddSubscriptionOperation> logger,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
-        IGitRepoFactory gitRepoFactory) : base(barClient, logger)
+        IGitRepoFactory gitRepoFactory,
+        IConfigurationRepositoryManager configRepoManager)
+        : base(barClient, logger)
     {
         _options = options;
-        _remoteFactory = remoteFactory;
+        _configRepoManager = configRepoManager;
         _gitRepoFactory = gitRepoFactory;
+        _remoteFactory = remoteFactory; 
     }
 
     /// <summary>
@@ -315,34 +321,66 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 }
             }
 
-            Subscription newSubscription = await _barClient.CreateSubscriptionAsync(
-                enabled,
-                channel,
-                sourceRepository,
-                targetRepository,
-                targetBranch,
-                updateFrequency,
-                batchable,
-                mergePolicies, 
-                failureNotificationTags,
-                sourceEnabled,
-                sourceDirectory,
-                targetDirectory,
-                excludedAssets);
-
-            Console.WriteLine($"Successfully created new subscription with id '{newSubscription.Id}'.");
-
-            // Prompt the user to trigger the subscription unless they have explicitly disallowed it
-            if (!_options.NoTriggerOnCreate)
+            if (_options.ShouldUseConfigurationRepository)
             {
-                bool triggerAutomatically = _options.TriggerOnCreate || UxHelpers.PromptForYesNo("Trigger this subscription immediately?");
-                if (triggerAutomatically)
+                SubscriptionYaml subscriptionYaml = new()
                 {
-                    await _barClient.TriggerSubscriptionAsync(newSubscription.Id);
-                    Console.WriteLine($"Subscription '{newSubscription.Id}' triggered.");
+                    Id = Guid.NewGuid(),
+                    Enabled = enabled,
+                    Channel = channel,
+                    SourceRepository = sourceRepository,
+                    TargetRepository = targetRepository,
+                    TargetBranch = targetBranch,
+                    UpdateFrequency = (UpdateFrequency)Enum.Parse(typeof(UpdateFrequency), updateFrequency, ignoreCase: true),
+                    Batchable = batchable,
+                    MergePolicies = MergePolicyYaml.FromClientModels(mergePolicies),
+                    FailureNotificationTags = failureNotificationTags,
+                    SourceEnabled = sourceEnabled,
+                    SourceDirectory = sourceDirectory,
+                    TargetDirectory = targetDirectory,
+                    ExcludedAssets = excludedAssets
+                };
+
+                var equivalentSubscriptionId = await FindEquivalentSubscriptionAsync(subscriptionYaml);
+                if (equivalentSubscriptionId != null)
+                {
+                    throw new ArgumentException($"Subscription {equivalentSubscriptionId} with equivalent parameters already exists.");
+                }
+
+                await _configRepoManager.AddSubscriptionAsync(
+                    _options.ToConfigurationRepositoryOperationParameters(),
+                    subscriptionYaml);
+            }
+            else
+            {
+                Subscription newSubscription = await _barClient.CreateSubscriptionAsync(
+                    enabled,
+                    channel,
+                    sourceRepository,
+                    targetRepository,
+                    targetBranch,
+                    updateFrequency,
+                    batchable,
+                    mergePolicies,
+                    failureNotificationTags,
+                    sourceEnabled,
+                    sourceDirectory,
+                    targetDirectory,
+                    excludedAssets);
+
+                Console.WriteLine($"Successfully created new subscription with id '{newSubscription.Id}'.");
+
+                // Prompt the user to trigger the subscription unless they have explicitly disallowed it
+                if (!_options.NoTriggerOnCreate)
+                {
+                    bool triggerAutomatically = _options.TriggerOnCreate || UxHelpers.PromptForYesNo("Trigger this subscription immediately?");
+                    if (triggerAutomatically)
+                    {
+                        await _barClient.TriggerSubscriptionAsync(newSubscription.Id);
+                        Console.WriteLine($"Subscription '{newSubscription.Id}' triggered.");
+                    }
                 }
             }
-
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)
@@ -361,5 +399,25 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             _logger.LogError(e, $"Failed to create subscription.");
             return Constants.ErrorCode;
         }
+    }
+
+    private async Task<string> FindEquivalentSubscriptionAsync(SubscriptionYaml subscriptionYaml)
+    {
+        var channel = await _barClient.GetChannelAsync(subscriptionYaml.Channel);
+        if (channel == null)
+        {
+            throw new ArgumentException($"Channel '{subscriptionYaml.Channel}' does not exist.");
+        }
+
+        var equivalentSub = (await _barClient.GetSubscriptionsAsync(
+                sourceRepo: subscriptionYaml.SourceRepository,
+                channelId: channel.Id,
+                targetRepo: subscriptionYaml.TargetRepository,
+                sourceEnabled: subscriptionYaml.SourceEnabled,
+                sourceDirectory: subscriptionYaml.SourceDirectory,
+                targetDirectory: subscriptionYaml.TargetDirectory))
+            .FirstOrDefault(s => s.TargetBranch == subscriptionYaml.TargetBranch);
+
+        return equivalentSub?.Id.ToString();
     }
 }

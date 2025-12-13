@@ -7,7 +7,7 @@ using Microsoft.DotNet.Darc.Operations;
 
 namespace Microsoft.DotNet.Darc.Options;
 
-internal abstract class SubscriptionCommandLineOptions<T> : CommandLineOptions<T> where T : Operation
+internal abstract class SubscriptionCommandLineOptions<T> : ConfigurationManagementCommandLineOptions<T> where T : Operation
 {
     [Option("update-frequency", HelpText = "Frequency of updates. Valid values are: 'none', 'everyDay', 'everyBuild', 'twiceDaily', 'everyWeek', 'everyTwoWeeks', or 'everyMonth'.")]
     public string UpdateFrequency { get; set; }

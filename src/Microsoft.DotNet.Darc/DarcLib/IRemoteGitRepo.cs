@@ -20,19 +20,14 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     bool AllowRetries { get; set; }
 
     /// <summary>
-    /// Checks that a repository exists
+    ///     Commit or update a set of files to a repo using the remote API without cloning the repository.
+    ///     This uses GitHub's Git Data API or Azure DevOps pushes API to create commits directly.
     /// </summary>
-    /// <param name="repoUri">Repository uri</param>
-    /// <returns>True if the repository exists, false otherwise.</returns>
-    Task<bool> RepoExistsAsync(string repoUri);
-
-    /// <summary>
-    /// Create a new branch in a repository
-    /// </summary>
-    /// <param name="repoUri">Repo to create a branch in</param>
-    /// <param name="newBranch">New branch name</param>
-    /// <param name="baseBranch">Base of new branch</param>
-    Task CreateBranchAsync(string repoUri, string newBranch, string baseBranch);
+    /// <param name="filesToCommit">Files to commit</param>
+    /// <param name="repoUri">Remote repository URI</param>
+    /// <param name="branch">Branch to push to</param>
+    /// <param name="commitMessage">Commit message</param>
+    Task CommitFilesWithNoCloningAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage);
 
     /// <summary>
     /// Delete a branch from a repository
@@ -153,13 +148,6 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// <param name="pullRequestUri"></param>
     /// <returns>Async task</returns>
     Task DeletePullRequestBranchAsync(string pullRequestUri);
-
-    /// <summary>
-    ///     Finds out whether a branch exists in the target repo.
-    /// </summary>
-    /// <param name="repoUri">Repository to find the branch in</param>
-    /// <param name="branch">Branch to find</param>
-    Task<bool> DoesBranchExistAsync(string repoUri, string branch);
 
     /// <summary>
     ///    Comment on an existing pull request

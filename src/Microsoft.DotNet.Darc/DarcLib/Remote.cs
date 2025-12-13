@@ -163,6 +163,13 @@ public sealed class Remote : IRemote
         string message) =>
             await _remoteGitClient.CommitFilesAsync(filesToCommit, repoUri, branch, message);
 
+    public async Task CommitUpdatesWithNoCloningAsync(
+        List<GitFile> filesToCommit,
+        string repoUri,
+        string branch,
+        string message) =>
+            await _remoteGitClient.CommitFilesWithNoCloningAsync(filesToCommit, repoUri, branch, message);
+
     /// <summary>
     ///     Commit a set of updated dependencies to a repository
     /// </summary>

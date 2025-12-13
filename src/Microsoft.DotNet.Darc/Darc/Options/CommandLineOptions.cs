@@ -120,6 +120,8 @@ public abstract class CommandLineOptions : ICommandLineOptions
 
         services.TryAddSingleton<IFileSystem, FileSystem>();
         services.TryAddSingleton<IRemoteFactory, RemoteFactory>();
+        services.TryAddSingleton<ILocalGitRepoFactory, LocalGitRepoFactory>();
+        services.TryAddTransient<ILocalGitClient, LocalGitClient>();
         services.TryAddSingleton<IVersionDetailsParser, VersionDetailsParser>();
         services.TryAddSingleton<IAssetLocationResolver, AssetLocationResolver>();
         services.TryAddTransient<IProcessManager>(sp => new ProcessManager(sp.GetRequiredService<ILogger<ProcessManager>>(), GitLocation));
