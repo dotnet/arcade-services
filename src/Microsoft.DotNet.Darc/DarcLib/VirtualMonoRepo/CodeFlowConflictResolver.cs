@@ -368,6 +368,7 @@ public abstract class CodeFlowConflictResolver
 
     /// <summary>
     /// Tries to reverse apply the latest flow to detect partial reverts and fix them using the crossing flow.
+    /// If the current flow does not apply in reverse, it means some changes were lost (a revert happened).
     /// </summary>
     protected async Task DetectAndFixPartialReverts(
         CodeflowOptions codeflowOptions,
@@ -382,7 +383,7 @@ public abstract class CodeFlowConflictResolver
             return;
         }
 
-        // Create patch representing the portion of the current flow since the last crossing flow (so just the "revert" part)
+        // Create patch representing the current flow (minus the recreated previous flows)
         var (fromSha, toSha) = codeflowOptions.CurrentFlow.IsForwardFlow
             ? (lastFlows.CrossingFlow.RepoSha, codeflowOptions.CurrentFlow.RepoSha)
             : (lastFlows.CrossingFlow.VmrSha, codeflowOptions.CurrentFlow.VmrSha);
