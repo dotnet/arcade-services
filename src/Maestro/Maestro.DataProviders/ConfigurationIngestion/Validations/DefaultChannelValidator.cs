@@ -9,14 +9,14 @@ using Microsoft.DotNet.DarcLib.Models.Yaml;
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion.Validations;
 
-public class DefaultChannelValidator
+internal class DefaultChannelValidator
 {
     /// <summary>
     /// Validates a collection of DefaultChannels entities against business rules.
     /// </summary>
     /// <param name="defaultChannels">The DefaultChannel collection to validate</param>
     /// <exception cref="ArgumentException">Thrown when validation fails</exception>
-    public static void ValidateDefaultChannels(
+    internal static void ValidateDefaultChannels(
         IEnumerable<IngestedDefaultChannel> defaultChannels)
     {
         EntityValidator.ValidateEntityUniqueness(defaultChannels);
@@ -27,7 +27,7 @@ public class DefaultChannelValidator
         }
     }
 
-    public static void ValidateDefaultChannel(IngestedDefaultChannel defaultChannel)
+    internal static void ValidateDefaultChannel(IngestedDefaultChannel defaultChannel)
     {
         ArgumentNullException.ThrowIfNull(defaultChannel);
 

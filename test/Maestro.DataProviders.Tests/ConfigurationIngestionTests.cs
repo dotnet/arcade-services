@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders.ConfigurationIngestion;
+using Maestro.DataProviders.ConfigurationIngestion.Helpers;
 using Microsoft.Data.SqlClient;
 using Microsoft.DotNet.DarcLib.Models.Yaml;
 using Microsoft.EntityFrameworkCore;
@@ -120,11 +121,11 @@ public class ConfigurationIngestorTests
         await _context.Channels.AddAsync(existingChannel);
         await _context.SaveChangesAsync();
 
-        var updatedChannelYaml = new ChannelYaml
+        var updatedChannelYaml = new IngestedChannel(new ChannelYaml
         {
             Name = "Test Channel",
             Classification = "production",
-        };
+        });
 
         var configData = new ConfigurationData(
             [],
@@ -169,7 +170,7 @@ public class ConfigurationIngestorTests
         await _context.Subscriptions.AddAsync(existingSubscription);
         await _context.SaveChangesAsync();
 
-        var updatedSubscriptionYaml = new SubscriptionYaml
+        var updatedSubscription = new IngestedSubscription(new SubscriptionYaml
         {
             Id = subscriptionId,
             Channel = ".NET 8",
@@ -178,27 +179,18 @@ public class ConfigurationIngestorTests
             TargetBranch = "main",
             Enabled = false, // Changed from true to false
             UpdateFrequency = Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryBuild,
-        };
+        });
 
         var configData = new ConfigurationData(
-            [updatedSubscriptionYaml],
-            [new ChannelYaml { Name = ".NET 8", Classification = "release" }],
+            [updatedSubscription],
+            [new IngestedChannel( new ChannelYaml { Name = ".NET 8", Classification = "release" })],
             [],
             []);
 
         // Act
         var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
 
-
-        // Assert
-        /*
-         * Assert.That(result.Subscriptions.Updates.Count(), Is.EqualTo(1));
-        _sqlBarClient.Verify(
-            x => x.UpdateSubscriptionsAsync(
-                It.Is<IEnumerable<Subscription>>(subs => subs.Count() == 1 && !subs.First().Enabled),
-                false),
-            Times.Once);
-        */
+         Assert.That(result.Subscriptions.Updates.Count(), Is.EqualTo(1));
     }
 
     [Test]
@@ -220,19 +212,18 @@ public class ConfigurationIngestorTests
         await _context.DefaultChannels.AddAsync(defaultChannel);
         await _context.SaveChangesAsync();
 
-        var updatedDefaultChannelYaml = new DefaultChannelYaml
+        var updatedDefaultChannel = new IngestedDefaultChannel(new DefaultChannelYaml
         {
-            Id = 1,
             Repository = "https://github.com/dotnet/runtime",
             Branch = "main",
             Channel = ".NET 8",
             Enabled = false, // Changed from true to false
-        };
+        });
 
         var configData = new ConfigurationData(
             [],
-            [new ChannelYaml { Name = ".NET 8", Classification = "release" }],
-            [updatedDefaultChannelYaml],
+            [new IngestedChannel(new ChannelYaml { Name = ".NET 8", Classification = "release" })],
+            [updatedDefaultChannel],
             []);
 
         // Act
@@ -261,7 +252,7 @@ public class ConfigurationIngestorTests
         await _context.RepositoryBranches.AddAsync(existingBranch);
         await _context.SaveChangesAsync();
 
-        var updatedBranchYaml = new BranchMergePoliciesYaml
+        var updatedBranchYaml = new IngestedBranchMergePolicies(new BranchMergePoliciesYaml
         {
             Repository = "https://github.com/dotnet/runtime",
             Branch = "main",
@@ -270,7 +261,7 @@ public class ConfigurationIngestorTests
                 new MergePolicyYaml { Name = "AllChecksSuccessful" },
                 new MergePolicyYaml { Name = "RequireReviews" },
             ],
-        };
+        });
 
         var configData = new ConfigurationData(
             [],
@@ -339,7 +330,7 @@ public class ConfigurationIngestorTests
 
         var configData = new ConfigurationData(
             [],
-            [new ChannelYaml { Name = ".NET 8", Classification = "release" }],
+            [new IngestedChannel(new ChannelYaml { Name = ".NET 8", Classification = "release" })],
             [],
             []);
 
@@ -374,7 +365,7 @@ public class ConfigurationIngestorTests
 
         var configData = new ConfigurationData(
             [],
-            [new ChannelYaml { Name = ".NET 8", Classification = "release" }],
+            [new IngestedChannel(new ChannelYaml { Name = ".NET 8", Classification = "release" })],
             [],
             []);
 
@@ -437,9 +428,9 @@ public class ConfigurationIngestorTests
         var configData = new ConfigurationData(
             [],
             [
-                new ChannelYaml { Name = "Existing Channel", Classification = "dev" }, // No change
-                new ChannelYaml { Name = "Channel To Update", Classification = "production" }, // Update
-                new ChannelYaml { Name = "New Channel", Classification = "test" }, // Create
+                new IngestedChannel(new ChannelYaml { Name = "Existing Channel", Classification = "dev" }), // No change
+                new IngestedChannel(new ChannelYaml { Name = "Channel To Update", Classification = "production" }), // Update
+                new IngestedChannel(new ChannelYaml { Name = "New Channel", Classification = "test" }), // Create
                 // "Channel To Delete" is not included - will be deleted
             ],
             [],
@@ -490,7 +481,7 @@ public class ConfigurationIngestorTests
         var newSubscriptionId = Guid.NewGuid();
         var configData = new ConfigurationData(
             [
-                new SubscriptionYaml
+                new IngestedSubscription(new SubscriptionYaml
                 {
                     Id = newSubscriptionId,
                     Channel = ".NET 8",
@@ -498,28 +489,28 @@ public class ConfigurationIngestorTests
                     TargetRepository = "https://github.com/dotnet/aspnetcore",
                     TargetBranch = "main",
                     Enabled = true,
-                },
+                }),
             ],
             [
-                new ChannelYaml { Name = ".NET 8", Classification = "release" },
-                new ChannelYaml { Name = ".NET 9", Classification = "preview" },
+                new IngestedChannel(new ChannelYaml { Name = ".NET 8", Classification = "release" }),
+                new IngestedChannel(new ChannelYaml { Name = ".NET 9", Classification = "preview" }),
             ],
             [
-                new DefaultChannelYaml
+                new IngestedDefaultChannel(new DefaultChannelYaml
                 {
                     Repository = "https://github.com/dotnet/runtime",
                     Branch = "main",
                     Channel = ".NET 8",
                     Enabled = true,
-                },
+                }),
             ],
             [
-                new BranchMergePoliciesYaml
+                new IngestedBranchMergePolicies(new BranchMergePoliciesYaml
                 {
                     Repository = "https://github.com/dotnet/runtime",
                     Branch = "main",
                     MergePolicies = [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
-                },
+                }),
             ]);
 
         // Act
@@ -572,13 +563,13 @@ public class ConfigurationIngestorTests
 
         var configData1 = new ConfigurationData(
             [],
-            [new ChannelYaml { Name = "Channel 1", Classification = "dev" }],
+            [new IngestedChannel(new ChannelYaml { Name = "Channel 1", Classification = "dev" })],
             [],
             []);
 
         var configData2 = new ConfigurationData(
             [],
-            [new ChannelYaml { Name = "Channel 2", Classification = "release" }],
+            [new IngestedChannel(new ChannelYaml { Name = "Channel 2", Classification = "release" })],
             [],
             []);
 
@@ -714,13 +705,13 @@ public class ConfigurationIngestorTests
 
     private static ConfigurationData CreateBasicConfigurationData()
     {
-        var channelYaml = new ChannelYaml
+        var channelYaml = new IngestedChannel(new ChannelYaml
         {
             Name = ".NET 8",
             Classification = "release",
-        };
+        });
 
-        var subscriptionYaml = new SubscriptionYaml
+        var subscriptionYaml = new IngestedSubscription(new SubscriptionYaml
         {
             Id = Guid.NewGuid(),
             Channel = ".NET 8",
@@ -728,22 +719,22 @@ public class ConfigurationIngestorTests
             TargetRepository = "https://github.com/dotnet/aspnetcore",
             TargetBranch = "main",
             Enabled = true,
-        };
+        });
 
-        var defaultChannelYaml = new DefaultChannelYaml
+        var defaultChannelYaml = new IngestedDefaultChannel(new DefaultChannelYaml
         {
             Repository = "https://github.com/dotnet/runtime",
             Branch = "main",
             Channel = ".NET 8",
             Enabled = true,
-        };
+        });
 
-        var branchMergePoliciesYaml = new BranchMergePoliciesYaml
+        var branchMergePoliciesYaml = new IngestedBranchMergePolicies(new BranchMergePoliciesYaml
         {
             Repository = "https://github.com/dotnet/runtime2",
             Branch = "main",
             MergePolicies = [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
-        };
+        });
 
         return new ConfigurationData(
             [subscriptionYaml],

@@ -10,9 +10,9 @@ using Maestro.DataProviders.ConfigurationIngestion.Helpers;
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion.Validations;
 
-internal class BranchMergePolicyValidator
+public class BranchMergePolicyValidator
 {
-    internal static void ValidateBranchMergePolicies(
+    public static void ValidateBranchMergePolicies(
         IEnumerable<IngestedBranchMergePolicies> branchMergePolicies)
     {
         EntityValidator.ValidateEntityUniqueness(branchMergePolicies);
@@ -28,7 +28,7 @@ internal class BranchMergePolicyValidator
     /// </summary>
     /// <param name="branchMergePolicy">The RepositoryBranch to validate</param>
     /// <exception cref="ArgumentException">Thrown when validation fails</exception>
-    internal static void ValidateBranchMergePolicies(IngestedBranchMergePolicies branchMergePolicy)
+    public static void ValidateBranchMergePolicies(IngestedBranchMergePolicies branchMergePolicy)
     {
         ArgumentNullException.ThrowIfNull(branchMergePolicy);
 

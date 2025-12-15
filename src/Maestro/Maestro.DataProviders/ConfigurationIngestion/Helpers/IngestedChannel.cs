@@ -9,9 +9,9 @@ namespace Maestro.DataProviders.ConfigurationIngestion.Helpers;
 
 public class IngestedChannel : IExternallySyncedEntity<string>
 {
-    internal IngestedChannel(ChannelYaml values) => Values = values;
+    public IngestedChannel(ChannelYaml values) => Values = values;
 
     public string UniqueId => Values.Name;
 
-    internal ChannelYaml Values { init; get; }
+    public ChannelYaml Values { init; get; }
 }

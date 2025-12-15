@@ -622,11 +622,6 @@ public class SqlBarClient : ISqlBarClient
             illegalFieldChanges.Add("TargetRepository");
         }
 
-        if (subscription.SourceRepository != existingSubscription.SourceRepository)
-        {
-            illegalFieldChanges.Add("SourceRepository");
-        }
-
         if (subscription.PolicyObject.Batchable != existingSubscription.PolicyObject.Batchable)
         {
             illegalFieldChanges.Add("Batchable");
@@ -638,8 +633,14 @@ public class SqlBarClient : ISqlBarClient
                 $"attempt to modify the following immutable fields: {string.Join(", ", illegalFieldChanges)}");
         }
 
-        existingSubscription.SourceRepository = existingSubscription.SourceRepository;
-        existingSubscription.TargetRepository = existingSubscription.TargetRepository;
+        var updatedExcludedAssets = existingSubscription.ExcludedAssets
+            .Concat(subscription.ExcludedAssets)
+            .GroupBy(p => p.Filter, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .ToList();
+
+        existingSubscription.SourceRepository = subscription.SourceRepository;
+        existingSubscription.TargetRepository = subscription.TargetRepository;
         existingSubscription.Enabled = subscription.Enabled;
         existingSubscription.SourceEnabled = subscription.SourceEnabled;
         existingSubscription.SourceDirectory = subscription.SourceDirectory;
@@ -647,7 +648,7 @@ public class SqlBarClient : ISqlBarClient
         existingSubscription.PolicyObject = subscription.PolicyObject;
         existingSubscription.PullRequestFailureNotificationTags = subscription.PullRequestFailureNotificationTags;
         existingSubscription.Channel = subscription.Channel;
-        // todo: Excluded assets need an ID (?)
+        existingSubscription.ExcludedAssets = updatedExcludedAssets;
 
         _context.Subscriptions.Update(existingSubscription);
 

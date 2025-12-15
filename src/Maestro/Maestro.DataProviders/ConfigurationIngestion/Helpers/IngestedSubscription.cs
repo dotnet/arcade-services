@@ -9,9 +9,9 @@ namespace Maestro.DataProviders.ConfigurationIngestion.Helpers;
 
 public class IngestedSubscription : IExternallySyncedEntity<Guid>
 {
-    internal IngestedSubscription(SubscriptionYaml values) => Values = values;
+    public IngestedSubscription(SubscriptionYaml values) => Values = values;
 
     public Guid UniqueId => Values.Id;
 
-    internal SubscriptionYaml Values { init; get; }
+    public SubscriptionYaml Values { init; get; }
 }

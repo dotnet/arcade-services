@@ -8,9 +8,9 @@ namespace Maestro.DataProviders.ConfigurationIngestion.Helpers;
 
 public class IngestedBranchMergePolicies : IExternallySyncedEntity<(string Repository, string Branch)>
 {
-    internal IngestedBranchMergePolicies(BranchMergePoliciesYaml values) => Values = values;
+    public IngestedBranchMergePolicies(BranchMergePoliciesYaml values) => Values = values;
 
     public (string, string) UniqueId => (Values.Repository, Values.Branch);
 
-    internal BranchMergePoliciesYaml Values { init; get; }
+    public BranchMergePoliciesYaml Values { init; get; }
 }

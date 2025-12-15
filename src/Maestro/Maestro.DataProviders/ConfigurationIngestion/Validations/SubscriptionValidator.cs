@@ -6,14 +6,13 @@ using System.Collections.Generic;
 using System.Linq;
 using Maestro.DataProviders.ConfigurationIngestion.Helpers;
 using Maestro.MergePolicyEvaluation;
-using Microsoft.DotNet.DarcLib.Models.Yaml;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion.Validations;
 
-public static class SubscriptionValidator
+internal static class SubscriptionValidator
 {
-    public static HashSet<string> StandardMergePolicies = [
+    internal static HashSet<string> StandardMergePolicies = [
             MergePolicyConstants.AllCheckSuccessfulMergePolicyName,
             MergePolicyConstants.NoRequestedChangesMergePolicyName,
             MergePolicyConstants.DontAutomergeDowngradesPolicyName,
@@ -27,7 +26,7 @@ public static class SubscriptionValidator
     /// </summary>
     /// <param name="subscriptions">The subscription collection to validate</param>
     /// <exception cref="ArgumentException">Thrown when validation fails</exception>
-    public static void ValidateSubscriptions(
+    internal static void ValidateSubscriptions(
         IEnumerable<IngestedSubscription> subscriptions)
     {
         EntityValidator.ValidateEntityUniqueness(subscriptions);
@@ -38,7 +37,7 @@ public static class SubscriptionValidator
         }
     }
 
-    public static void ValidateSubscription(
+    internal static void ValidateSubscription(
         IngestedSubscription subscription)
     {
         ArgumentNullException.ThrowIfNull(subscription);

@@ -16,8 +16,8 @@ namespace Maestro.DataProviders.ConfigurationIngestion;
 internal class ConfigurationDataHelper
 {
     internal static ConfigurationDataUpdate ComputeEntityUpdates(
-    ConfigurationData configurationData,
-    ConfigurationData existingConfigurationData)
+        ConfigurationData configurationData,
+        ConfigurationData existingConfigurationData)
     {
         EntityChanges<IngestedSubscription> subscriptionChanges =
             ComputeUpdatesForEntity<IngestedSubscription, Guid>(
@@ -143,11 +143,6 @@ internal class ConfigurationDataHelper
             Branch = defaultChannel.Values.Branch,
             Enabled = defaultChannel.Values.Enabled,
         };
-
-        if (existingDefaultChannel is not null)
-        {
-            defaultChannelDao.Id = existingDefaultChannel.DbId;
-        }
 
         return defaultChannelDao;
     }
