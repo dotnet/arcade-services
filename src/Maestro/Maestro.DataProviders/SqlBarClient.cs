@@ -536,7 +536,9 @@ public class SqlBarClient : ISqlBarClient
         await _context.SaveChangesAsync();
     }
 
-    public async Task CreateSubscriptionsAsync(IEnumerable<Data.Models.Subscription> subscriptionsToCreate, bool andSaveContext = true)
+    public async Task CreateSubscriptionsAsync(
+        IEnumerable<Data.Models.Subscription> subscriptionsToCreate,
+        bool andSaveContext = true)
     {
         var existingSubscriptions = await _context.Subscriptions.ToListAsync();
 
@@ -633,11 +635,9 @@ public class SqlBarClient : ISqlBarClient
                 $"attempt to modify the following immutable fields: {string.Join(", ", illegalFieldChanges)}");
         }
 
-        var updatedExcludedAssets = existingSubscription.ExcludedAssets
-            .Concat(subscription.ExcludedAssets)
-            .GroupBy(p => p.Filter, StringComparer.OrdinalIgnoreCase)
-            .Select(g => g.First())
-            .ToList();
+        var updatedFilters = ComputeUpdatedFilters(
+            existingSubscription.ExcludedAssets,
+            subscription.ExcludedAssets);
 
         existingSubscription.SourceRepository = subscription.SourceRepository;
         existingSubscription.TargetRepository = subscription.TargetRepository;
@@ -648,7 +648,7 @@ public class SqlBarClient : ISqlBarClient
         existingSubscription.PolicyObject = subscription.PolicyObject;
         existingSubscription.PullRequestFailureNotificationTags = subscription.PullRequestFailureNotificationTags;
         existingSubscription.Channel = subscription.Channel;
-        existingSubscription.ExcludedAssets = updatedExcludedAssets;
+        existingSubscription.ExcludedAssets = updatedFilters;
 
         _context.Subscriptions.Update(existingSubscription);
 
@@ -675,6 +675,30 @@ public class SqlBarClient : ISqlBarClient
         {
             await _context.SaveChangesAsync();
         }
+    }
+
+    private static List<Data.Models.AssetFilter> ComputeUpdatedFilters(
+        IEnumerable<Data.Models.AssetFilter> existingFilters,
+        IEnumerable<Data.Models.AssetFilter> incomingFilters)
+    {
+        List<Data.Models.AssetFilter> result = [];
+
+        var existingFilterLookups = existingFilters
+            .ToDictionary(a => a.Filter, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var asset in incomingFilters)
+        {
+            if (existingFilterLookups.TryGetValue(asset.Filter, out var existingAsset))
+            {
+                result.Add(existingAsset);
+            }
+            else
+            {
+                result.Add(asset);
+            }
+        }
+
+        return result;
     }
 
     /// <summary>

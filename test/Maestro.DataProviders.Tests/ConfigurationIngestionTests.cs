@@ -183,14 +183,280 @@ public class ConfigurationIngestorTests
 
         var configData = new ConfigurationData(
             [updatedSubscription],
-            [new IngestedChannel( new ChannelYaml { Name = ".NET 8", Classification = "release" })],
+            [new IngestedChannel(new ChannelYaml { Name = ".NET 8", Classification = "release" })],
             [],
             []);
 
         // Act
         var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
 
-         Assert.That(result.Subscriptions.Updates.Count(), Is.EqualTo(1));
+        Assert.That(result.Subscriptions.Updates.Count(), Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task IngestConfigurationAsync_UpdateSubscriptionExcludedAssets_AddsNewAssetFilters()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+        var channel = CreateChannel(".NET 8", "release", namespaceEntity);
+        await _context.Channels.AddAsync(channel);
+        await _context.SaveChangesAsync();
+
+        var subscriptionId = Guid.NewGuid();
+        var existingSubscription = CreateSubscription(
+            subscriptionId,
+            channel,
+            "https://github.com/dotnet/runtime",
+            "https://github.com/dotnet/aspnetcore",
+            "main",
+            enabled: true,
+            namespaceEntity,
+            excludedAssets:
+            [
+                new AssetFilter { Filter = "Microsoft.NET.Sdk" },
+            ]);
+
+        await _context.Subscriptions.AddAsync(existingSubscription);
+        await _context.SaveChangesAsync();
+
+        var updatedSubscription = new IngestedSubscription(new SubscriptionYaml
+        {
+            Id = subscriptionId,
+            Channel = ".NET 8",
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = "https://github.com/dotnet/aspnetcore",
+            TargetBranch = "main",
+            Enabled = true,
+            ExcludedAssets =
+            [
+                "Microsoft.NET.Sdk",
+                "Microsoft.AspNetCore.*",
+                "System.Text.Json",
+            ],
+        });
+
+        var configData = new ConfigurationData(
+            [updatedSubscription],
+            [new IngestedChannel(new ChannelYaml { Name = ".NET 8", Classification = "release" })],
+            [],
+            []);
+
+        // Act
+        var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+
+        // Assert
+        Assert.That(result.Subscriptions.Updates.Count(), Is.EqualTo(1));
+
+        var updated = await _context.Subscriptions
+            .Include(s => s.ExcludedAssets)
+            .FirstOrDefaultAsync(s => s.Id == subscriptionId);
+
+        Assert.That(updated, Is.Not.Null);
+        Assert.That(updated!.ExcludedAssets, Has.Count.EqualTo(3));
+        Assert.That(updated.ExcludedAssets.Any(a => a.Filter == "Microsoft.NET.Sdk"), Is.True);
+        Assert.That(updated.ExcludedAssets.Any(a => a.Filter == "Microsoft.AspNetCore.*"), Is.True);
+        Assert.That(updated.ExcludedAssets.Any(a => a.Filter == "System.Text.Json"), Is.True);
+    }
+
+    [Test]
+    public async Task IngestConfigurationAsync_UpdateSubscriptionExcludedAssets_RemovesAssetFilters()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+        var channel = CreateChannel(".NET 8", "release", namespaceEntity);
+        await _context.Channels.AddAsync(channel);
+        await _context.SaveChangesAsync();
+
+        var subscriptionId = Guid.NewGuid();
+        var existingSubscription = CreateSubscription(
+            subscriptionId,
+            channel,
+            "https://github.com/dotnet/runtime",
+            "https://github.com/dotnet/aspnetcore",
+            "main",
+            enabled: true,
+            namespaceEntity,
+            excludedAssets:
+            [
+                new AssetFilter { Filter = "Microsoft.NET.Sdk" },
+                new AssetFilter { Filter = "Microsoft.AspNetCore.*" },
+                new AssetFilter { Filter = "System.Text.Json" },
+            ]);
+
+        await _context.Subscriptions.AddAsync(existingSubscription);
+        await _context.SaveChangesAsync();
+
+        var updatedSubscription = new IngestedSubscription(new SubscriptionYaml
+        {
+            Id = subscriptionId,
+            Channel = ".NET 8",
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = "https://github.com/dotnet/aspnetcore",
+            TargetBranch = "main",
+            Enabled = true,
+            ExcludedAssets =
+            [
+                "Microsoft.NET.Sdk"
+            ],
+        });
+
+        var configData = new ConfigurationData(
+            [updatedSubscription],
+            [new IngestedChannel(new ChannelYaml { Name = ".NET 8", Classification = "release" })],
+            [],
+            []);
+
+        // Act
+        var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+
+        // Assert
+        Assert.That(result.Subscriptions.Updates.Count(), Is.EqualTo(1));
+
+        var updated = await _context.Subscriptions
+            .Include(s => s.ExcludedAssets)
+            .FirstOrDefaultAsync(s => s.Id == subscriptionId);
+
+        Assert.That(updated, Is.Not.Null);
+        Assert.That(updated!.ExcludedAssets, Has.Count.EqualTo(1));
+        Assert.That(updated.ExcludedAssets.First().Filter, Is.EqualTo("Microsoft.NET.Sdk"));
+    }
+
+    [Test]
+    public async Task IngestConfigurationAsync_UpdateSubscriptionExcludedAssets_ClearsAllAssetFilters()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+        var channel = CreateChannel(".NET 8", "release", namespaceEntity);
+        await _context.Channels.AddAsync(channel);
+        await _context.SaveChangesAsync();
+
+        var subscriptionId = Guid.NewGuid();
+        var existingSubscription = CreateSubscription(
+            subscriptionId,
+            channel,
+            "https://github.com/dotnet/runtime",
+            "https://github.com/dotnet/aspnetcore",
+            "main",
+            enabled: true,
+            namespaceEntity,
+            excludedAssets:
+            [
+                new AssetFilter { Filter = "Microsoft.NET.Sdk" },
+                new AssetFilter { Filter = "Microsoft.AspNetCore.*" },
+            ]);
+
+        await _context.Subscriptions.AddAsync(existingSubscription);
+        await _context.SaveChangesAsync();
+
+        var updatedSubscription = new IngestedSubscription(new SubscriptionYaml
+        {
+            Id = subscriptionId,
+            Channel = ".NET 8",
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = "https://github.com/dotnet/aspnetcore",
+            TargetBranch = "main",
+            Enabled = true,
+            ExcludedAssets = [],
+        });
+
+        var configData = new ConfigurationData(
+            [updatedSubscription],
+            [new IngestedChannel(new ChannelYaml { Name = ".NET 8", Classification = "release" })],
+            [],
+            []);
+
+        // Act
+        var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+
+        // Assert
+        Assert.That(result.Subscriptions.Updates.Count(), Is.EqualTo(1));
+
+        var updated = await _context.Subscriptions
+            .Include(s => s.ExcludedAssets)
+            .FirstOrDefaultAsync(s => s.Id == subscriptionId);
+
+        Assert.That(updated, Is.Not.Null);
+        Assert.That(updated!.ExcludedAssets, Is.Empty);
+    }
+
+    [Test]
+    public async Task IngestConfigurationAsync_UpdateSubscriptionExcludedAssets_ComplexUpdate()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+        var channel = CreateChannel(".NET 8", "release", namespaceEntity);
+        await _context.Channels.AddAsync(channel);
+        await _context.SaveChangesAsync();
+
+        var subscriptionId = Guid.NewGuid();
+        var existingSubscription = CreateSubscription(
+            subscriptionId,
+            channel,
+            "https://github.com/dotnet/runtime",
+            "https://github.com/dotnet/aspnetcore",
+            "main",
+            enabled: true,
+            namespaceEntity,
+            excludedAssets:
+            [
+                new AssetFilter { Filter = "ToKeep.Package" },
+                new AssetFilter { Filter = "ToRemove.Package" },
+                new AssetFilter { Filter = "ToModify.Package" },
+            ]);
+
+        await _context.Subscriptions.AddAsync(existingSubscription);
+        await _context.SaveChangesAsync();
+
+        var updatedSubscription = new IngestedSubscription(new SubscriptionYaml
+        {
+            Id = subscriptionId,
+            Channel = ".NET 8",
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = "https://github.com/dotnet/aspnetcore",
+            TargetBranch = "main",
+            Enabled = true,
+            ExcludedAssets =
+            [
+                "ToKeep.Package",
+                "ToModify.Package",
+                "NewPackage.*"
+                // ToRemove.Package is removed
+            ],
+        });
+
+        var configData = new ConfigurationData(
+            [updatedSubscription],
+            [new IngestedChannel(new ChannelYaml { Name = ".NET 8", Classification = "release" })],
+            [],
+            []);
+
+        // Act
+        var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+
+        // Assert
+        Assert.That(result.Subscriptions.Updates.Count(), Is.EqualTo(1));
+
+        var updated = await _context.Subscriptions
+            .Include(s => s.ExcludedAssets)
+            .FirstOrDefaultAsync(s => s.Id == subscriptionId);
+
+        Assert.That(updated, Is.Not.Null);
+        Assert.That(updated!.ExcludedAssets, Has.Count.EqualTo(3));
+
+        // Verify ToKeep.Package is unchanged
+        var toKeep = updated.ExcludedAssets.FirstOrDefault(a => a.Filter == "ToKeep.Package");
+        Assert.That(toKeep, Is.Not.Null);
+
+        // Verify ToModify.Package has updated NonShipping flag
+        var toModify = updated.ExcludedAssets.FirstOrDefault(a => a.Filter == "ToModify.Package");
+        Assert.That(toModify, Is.Not.Null);
+
+        // Verify NewPackage.* was added
+        var newPackage = updated.ExcludedAssets.FirstOrDefault(a => a.Filter == "NewPackage.*");
+        Assert.That(newPackage, Is.Not.Null);
+
+        // Verify ToRemove.Package was removed
+        Assert.That(updated.ExcludedAssets.Any(a => a.Filter == "ToRemove.Package"), Is.False);
     }
 
     [Test]
@@ -634,7 +900,8 @@ public class ConfigurationIngestorTests
         string targetRepo,
         string targetBranch,
         bool enabled,
-        Namespace namespaceEntity)
+        Namespace namespaceEntity,
+        List<AssetFilter>? excludedAssets = null)
         => new()
         {
             Id = id,
@@ -651,7 +918,7 @@ public class ConfigurationIngestorTests
                 MergePolicies = [],
             },
             Namespace = namespaceEntity,
-            ExcludedAssets = [],
+            ExcludedAssets = excludedAssets ?? [],
         };
 
     private static DefaultChannel CreateDefaultChannel(
