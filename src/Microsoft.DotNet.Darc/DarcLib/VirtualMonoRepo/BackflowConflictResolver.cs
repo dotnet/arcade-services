@@ -104,7 +104,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             else if (lastFlows.CrossingFlow != null)
             {
                 repoComparisonSha = lastFlows.LastForwardFlow.RepoSha;
-                vmrComparisonSha = lastFlows.LastBackFlow!.VmrSha;
+                vmrComparisonSha = lastFlows.LastBackFlow?.VmrSha ?? lastFlows.LastForwardFlow.VmrSha;
             }
             else if (lastFlows.LastBackFlow != null)
             {
@@ -174,6 +174,11 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         if (conflictedFile.Path.StartsWith(Constants.CommonScriptFilesPath, StringComparison.InvariantCultureIgnoreCase))
         {
             await targetRepo.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase /* rebase vs merge direction */);
+            return true;
+        }
+
+        if (codeflowOptions.EnableRebase && await TryDeletingFileMarkedForDeletion(targetRepo, conflictedFile, cancellationToken))
+        {
             return true;
         }
 

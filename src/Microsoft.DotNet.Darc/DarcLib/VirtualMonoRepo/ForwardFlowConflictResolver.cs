@@ -125,7 +125,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                 lastFlows.LastForwardFlow.RepoSha,
                 // if there's a crossing flow, we need to make sure it doesn't bring in any downgrades https://github.com/dotnet/arcade-services/issues/5331
                 lastFlows.CrossingFlow != null
-                    ? lastFlows.LastBackFlow!.VmrSha
+                    ? lastFlows.LastBackFlow?.VmrSha ?? lastFlows.LastForwardFlow.VmrSha
                     : lastFlows.LastForwardFlow.VmrSha,
                 cancellationToken);
 
@@ -180,6 +180,11 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         if (conflictedFile.Path.StartsWith(engCommon, StringComparison.InvariantCultureIgnoreCase))
         {
             await vmr.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase /* rebase vs merge direction */);
+            return true;
+        }
+
+        if (codeflowOptions.EnableRebase && await TryDeletingFileMarkedForDeletion(vmr, conflictedFile, cancellationToken))
+        {
             return true;
         }
 

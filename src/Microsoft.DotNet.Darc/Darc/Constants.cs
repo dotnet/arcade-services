@@ -18,21 +18,6 @@ public class Constants
     public static readonly string DarcDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".darc");
 
     /// <summary>
-    /// Available update frequencies for subscriptions.  Currently the enumeration values aren't available
-    /// through the generated API client.  When/if they ever are, this can be removed.
-    /// </summary>
-    public static readonly List<string> AvailableFrequencies =
-    [
-        "none",
-        "everyDay",
-        "everyBuild",
-        "twiceDaily",
-        "everyWeek",
-        "everyTwoWeeks",
-        "everyMonth",
-    ];
-
-    /// <summary>
     /// This maybe should be implemented in the API in the future, help info for the available merge policies.  For now,
     /// this is just generic help for available merge policies
     /// </summary>
@@ -104,5 +89,20 @@ public class Constants
         $"{MergePolicyConstants.VersionDetailsPropsMergePolicyName} - If Version.Details.props validation fails, it will not be merged.",
         "YAML format:",
         $"- Name: {MergePolicyConstants.VersionDetailsPropsMergePolicyName}",
+    ];
+
+    /// <summary>
+    /// Available update frequencies for subscriptions.  Currently the enumeration values aren't available
+    /// through the generated API client.  When/if they ever are, this can be removed.
+    /// </summary>
+    public static readonly List<string> AvailableFrequencies =
+    [
+        "none",
+        "everyDay",
+        "everyBuild",
+        "twiceDaily",
+        "everyWeek",
+        "everyTwoWeeks",
+        "everyMonth",
     ];
 }

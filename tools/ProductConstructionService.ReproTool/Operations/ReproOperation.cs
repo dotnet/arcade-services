@@ -140,13 +140,14 @@ internal class ReproOperation(
             sourceEnabled: true,
             sourceDirectory: subscription.SourceDirectory,
             targetDirectory: subscription.TargetDirectory,
+            excludedAssets: subscription.ExcludedAssets,
             skipCleanup: options.SkipCleanup);
 
         await darcProcessManager.AddBuildToChannelAsync(testBuild.Id, channelName, options.SkipCleanup);
 
         await CopyFeatureFlagsAsync(subscription.Id, Guid.Parse(testSubscription.Value));
 
-        await TriggerSubscriptionAsync(testSubscription.Value);
+        await TriggerSubscriptionAsync(testSubscription.Value, testBuild.Id, force: options.Force);
 
         if (options.SkipCleanup)
         {
@@ -213,7 +214,7 @@ internal class ReproOperation(
 
         await CopyFeatureFlagsAsync(subscription.Id, Guid.Parse(testSubscription.Value));
 
-        await TriggerSubscriptionAsync(testSubscription.Value);
+        await TriggerSubscriptionAsync(testSubscription.Value, testBuild.Id, force: options.Force);
 
         logger.LogInformation("Code flow successfully recreated. Press enter to finish and cleanup");
         Console.ReadLine();
