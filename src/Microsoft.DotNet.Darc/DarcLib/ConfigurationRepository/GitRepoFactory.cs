@@ -23,7 +23,7 @@ public class GitRepoFactory : MaestroConfiguration.Client.IGitRepoFactory
         _remoteFactory = remoteFactory;
     }
 
-    public async Task<MaestroConfiguration.Client.IGitRepo> CreateConfigurationRepoAsync(string repoUri)
+    public async Task<MaestroConfiguration.Client.IGitRepo> CreateClient(string repoUri)
     {
         var gitRepo = _gitRepoFactory.CreateClient(repoUri);
         return GitRepoUrlUtils.ParseTypeFromUri(repoUri) switch
