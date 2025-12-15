@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +8,7 @@ using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Newtonsoft.Json.Linq;
 using YamlDotNet.Serialization;
 
-namespace Microsoft.DotNet.DarcLib.Models.Yaml;
+namespace Microsoft.DotNet.MaestroConfiguration.Client.Models;
 
 public class MergePolicyYaml
 {

@@ -1146,6 +1146,79 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     }
 
     /// <summary>
+    ///     Commit or update a set of files to a repo using the GitHub Git Data API without cloning.
+    ///     This creates blobs, a tree, a commit, and updates the branch reference directly via API.
+    /// </summary>
+    /// <param name="filesToCommit">Files to commit</param>
+    /// <param name="repoUri">Remote repository URI</param>
+    /// <param name="branch">Branch to push to</param>
+    /// <param name="commitMessage">Commit message</param>
+    public async Task CommitFilesWithNoCloningAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
+    {
+        (string owner, string repo) = ParseRepoUri(repoUri);
+        var client = GetClient(owner, repo);
+
+        _logger.LogInformation("Committing {count} files to {repoUri} branch {branch} via API", filesToCommit.Count, repoUri, branch);
+
+        var branchRef = await client.Git.Reference.Get(owner, repo, $"heads/{branch}");
+        var currentCommitSha = branchRef.Object.Sha;
+
+        var currentCommit = await client.Git.Commit.Get(owner, repo, currentCommitSha);
+        var baseTreeSha = currentCommit.Tree.Sha;
+
+        var treeItems = new List<NewTreeItem>();
+        foreach (var file in filesToCommit)
+        {
+            if (file.Operation == GitFileOperation.Delete)
+            {
+                // For deletions, we add a null sha which removes the file
+                treeItems.Add(new NewTreeItem
+                {
+                    Path = file.FilePath,
+                    Mode = file.Mode,
+                    Type = TreeType.Blob,
+                    Sha = null
+                });
+            }
+            else
+            {
+                var blob = new NewBlob
+                {
+                    Content = file.Content,
+                    Encoding = file.ContentEncoding == ContentEncoding.Base64 ? EncodingType.Base64 : EncodingType.Utf8
+                };
+                var blobResult = await client.Git.Blob.Create(owner, repo, blob);
+
+                treeItems.Add(new NewTreeItem
+                {
+                    Path = file.FilePath,
+                    Mode = file.Mode,
+                    Type = TreeType.Blob,
+                    Sha = blobResult.Sha
+                });
+            }
+        }
+
+        var newTree = new NewTree { BaseTree = baseTreeSha };
+        foreach (var item in treeItems)
+        {
+            newTree.Tree.Add(item);
+        }
+        var treeResult = await client.Git.Tree.Create(owner, repo, newTree);
+
+        var newCommit = new NewCommit(commitMessage, treeResult.Sha, currentCommitSha)
+        {
+            Author = new Committer(Constants.DarcBotName, Constants.DarcBotEmail, DateTimeOffset.UtcNow)
+        };
+        var commitResult = await client.Git.Commit.Create(owner, repo, newCommit);
+
+        // Update the branch reference to point to the new commit
+        await client.Git.Reference.Update(owner, repo, $"heads/{branch}", new ReferenceUpdate(commitResult.Sha));
+
+        _logger.LogInformation("Successfully committed {count} files to {repoUri} branch {branch}", filesToCommit.Count, repoUri, branch);
+    }
+
+    /// <summary>
     ///     Diff two commits in a repository and return information about them.
     /// </summary>
     /// <param name="repoUri">Repository uri</param>

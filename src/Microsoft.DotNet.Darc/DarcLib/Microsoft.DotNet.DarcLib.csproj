@@ -27,6 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\MaestroConfiguration\src\Microsoft.DotNet.MaestroConfiguration.Client\Microsoft.DotNet.MaestroConfiguration.Client.csproj" />
     <ProjectReference Include="..\..\Maestro\Maestro.MergePolicyEvaluation\Maestro.MergePolicyEvaluation.csproj" />
     <ProjectReference Include="..\..\ProductConstructionService\Microsoft.DotNet.ProductConstructionService.Client\Microsoft.DotNet.ProductConstructionService.Client.csproj" />
   </ItemGroup>

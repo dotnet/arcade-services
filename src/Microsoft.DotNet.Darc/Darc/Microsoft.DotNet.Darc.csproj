@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework></TargetFramework>
@@ -14,6 +14,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\MaestroConfiguration\src\Microsoft.DotNet.MaestroConfiguration.Client\Microsoft.DotNet.MaestroConfiguration.Client.csproj" />
     <ProjectReference Include="..\..\Maestro\Maestro.Common\Maestro.Common.csproj" />
     <ProjectReference Include="..\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
   </ItemGroup>

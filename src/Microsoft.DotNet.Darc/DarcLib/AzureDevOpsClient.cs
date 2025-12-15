@@ -1005,6 +1005,81 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             "dn-bot@microsoft.com");
 
     /// <summary>
+    ///     Commit or update a set of files to a repo using the Azure DevOps Git API without cloning.
+    ///     This uses the pushes API to create commits directly.
+    /// </summary>
+    public async Task CommitFilesWithNoCloningAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
+    {
+        (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
+
+        _logger.LogInformation("Committing {count} files to {repoUri} branch {branch} via API", filesToCommit.Count, repoUri, branch);
+
+        var oldCommitSha = await GetLastCommitShaAsync(accountName, projectName, repoName, branch);
+
+        // Build the changes for the push
+        var changes = new List<GitChange>();
+        foreach (var file in filesToCommit)
+        {
+            var change = new GitChange
+            {
+                Item = new GitItem { Path = UnixPath.Empty / file.FilePath }
+            };
+
+            if (file.Operation == GitFileOperation.Delete)
+            {
+                change.ChangeType = VersionControlChangeType.Delete;
+            }
+            else
+            {
+                // Check if file exists to determine add vs edit
+                try
+                {
+                    await GetFileContentsAsync(file.FilePath, repoUri, branch);
+                    change.ChangeType = VersionControlChangeType.Edit;
+                }
+                catch (DependencyFileNotFoundException)
+                {
+                    change.ChangeType = VersionControlChangeType.Add;
+                }
+
+                change.NewContent = new ItemContent
+                {
+                    Content = file.Content,
+                    ContentType = file.ContentEncoding == ContentEncoding.Base64 ? ItemContentType.Base64Encoded : ItemContentType.RawText
+                };
+            }
+
+            changes.Add(change);
+        }
+
+        var push = new GitPush
+        {
+            RefUpdates =
+            [
+                new GitRefUpdate
+                {
+                    Name = $"refs/heads/{branch}",
+                    OldObjectId = oldCommitSha
+                }
+            ],
+            Commits =
+            [
+                new GitCommitRef
+                {
+                    Comment = commitMessage,
+                    Changes = changes
+                }
+            ]
+        };
+
+        using VssConnection connection = CreateVssConnection(accountName);
+        using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
+        await client.CreatePushAsync(push, projectName, repoName);
+
+        _logger.LogInformation("Successfully committed {count} files to {repoUri} branch {branch}", filesToCommit.Count, repoUri, branch);
+    }
+
+    /// <summary>
     ///   If the release pipeline doesn't have an artifact source a new one is added.
     ///   If the pipeline has a single artifact source the artifact definition is adjusted as needed.
     ///   If the pipeline has more than one source an error is thrown.
