@@ -372,6 +372,9 @@ public abstract class CodeFlowConflictResolver
         result.ThrowIfFailed("Failed to abort a merge when resolving version file conflicts");
     }
 
+    /// <summary>
+    /// Tries to reverse apply the latest flow to detect partial reverts and fix them using the crossing flow.
+    /// </summary>
     protected async Task DetectAndFixPartialReverts(
         CodeflowOptions codeflowOptions,
         ILocalGitRepo vmr,
@@ -461,13 +464,18 @@ public abstract class CodeFlowConflictResolver
                 (await targetRepo.ExecuteGitCommand(["checkout", codeflowOptions.TargetBranch, revertedFile], cancellationToken))
                     .ThrowIfFailed($"Failed to check out {revertedFile} from branch {codeflowOptions.TargetBranch}");
 
-                await TryResolvingConflictWithCrossingFlow(
-                    codeflowOptions,
-                    vmr,
-                    productRepo,
-                    revertedFile,
-                    lastFlows.CrossingFlow,
-                    cancellationToken);
+                if (!await TryResolvingConflictWithCrossingFlow(
+                        codeflowOptions,
+                        vmr,
+                        productRepo,
+                        revertedFile,
+                        lastFlows.CrossingFlow,
+                        cancellationToken))
+                {
+                    _logger.LogWarning("Failed to auto-resolve a conflict in {file} while fixing a partial revert",
+                        revertedFile);
+                    await targetRepo.ExecuteGitCommand(["checkout", codeflowOptions.HeadBranch, revertedFile], cancellationToken);
+                }
             }
         }
     }
