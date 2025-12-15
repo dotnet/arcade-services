@@ -118,8 +118,7 @@ internal class ConfigurationDataHelper
     internal static DefaultChannel ConvertIngestedDefaultChannelToDao(
         IngestedDefaultChannel defaultChannel,
         Namespace namespaceEntity,
-        Dictionary<string, Channel> existingChannelsByName,
-        Dictionary<(string, string, string), IngestedDefaultChannel>? existingDefaultChannels)
+        Dictionary<string, Channel> existingChannelsByName)
     {
         existingChannelsByName.TryGetValue(defaultChannel.Values.Channel, out Channel? existingChannel);
 
@@ -129,10 +128,6 @@ internal class ConfigurationDataHelper
             throw new InvalidOperationException(
                 $"Channel '{defaultChannel.Values.Channel}' not found for default channel creation.");
         }
-
-        IngestedDefaultChannel? existingDefaultChannel = null;
-
-        existingDefaultChannels?.TryGetValue(defaultChannel.UniqueId, out existingDefaultChannel);
 
         var defaultChannelDao = new DefaultChannel
         {

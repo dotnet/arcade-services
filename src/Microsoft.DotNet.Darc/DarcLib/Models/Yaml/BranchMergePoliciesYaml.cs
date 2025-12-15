@@ -16,9 +16,6 @@ public class BranchMergePoliciesYaml :
     public const string BranchElement = "Branch";
     public const string MergePolicyElement = "Merge Policies";
 
-    [YamlIgnore]
-    public (string Repository, string Branch) UniqueId => (Repository, Branch);
-
     [YamlMember(Alias = BranchElement, ApplyNamingConventions = false)]
     public required string Branch { get; init; }
 

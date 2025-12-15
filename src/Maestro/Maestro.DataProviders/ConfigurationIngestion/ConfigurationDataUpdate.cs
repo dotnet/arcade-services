@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using Maestro.DataProviders.ConfigurationIngestion.Helpers;
 
+#nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion;
 
 public record ConfigurationDataUpdate(

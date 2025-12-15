@@ -32,7 +32,6 @@ public class SubscriptionYaml : IComparable<SubscriptionYaml>
     public const string SourceDirectoryElement = "Source Directory";
     public const string TargetDirectoryElement = "Target Directory";
 
-
     [YamlMember(Alias = IdElement, ApplyNamingConventions = false)]
     public required Guid Id { get; init; }
 

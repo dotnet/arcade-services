@@ -11,9 +11,6 @@ namespace Microsoft.DotNet.DarcLib.Models.Yaml;
 public class DefaultChannelYaml :
     IComparable<DefaultChannelYaml>
 {
-    [YamlIgnore]
-    public (string Repository, string Branch, string Channel) UniqueId =>
-        (Repository, Branch, Channel);
 
     [YamlMember(Alias = "Repository", ApplyNamingConventions = false)]
     public required string Repository { get; init; }

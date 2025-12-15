@@ -573,6 +573,36 @@ public class ConfigurationIngestorTests
         Assert.That(channels, Is.Empty);
     }
 
+
+    [Test]
+    public async Task IngestConfigurationAsync_RemoveChannel_FailToAddSubscription()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+        var channel = CreateChannel("Old Channel", "dev", namespaceEntity);
+        await _context.Channels.AddAsync(channel);
+        await _context.SaveChangesAsync();
+
+        var subscription = 
+        new IngestedSubscription(new SubscriptionYaml
+                {
+                    Id = new Guid(),
+                    Channel = "Old channel",
+                    SourceRepository = "https://github.com/dotnet/runtime",
+                    TargetRepository = "https://github.com/dotnet/aspnetcore",
+                    TargetBranch = "main",
+                    Enabled = true,
+                });
+
+        var configData = new ConfigurationData([subscription], [], [], []);
+
+
+        Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        {
+            var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+        });
+    }
+
     [Test]
     public async Task IngestConfigurationAsync_RemoveSubscription_DeletesSubscription()
     {
