@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
@@ -140,9 +139,20 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             headBranchExisted,
             cancellationToken);
 
+        // When we recreated a previous flow, it becomes the crossing flow as it was another flow
+        // leading into the same target branch. This will help us identify gradual changes and iterate on them
+        LastFlows lastFlowsAfterRecreation = lastFlows;
+        if (codeflowOptions.EnableRebase && lastFlows.CrossingFlow == null && result.RecreatedPreviousFlows)
+        {
+            lastFlowsAfterRecreation = lastFlows with
+            {
+                CrossingFlow = lastFlows.LastBackFlow,
+            };
+        }
+
         VersionFileUpdateResult mergeResult = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
             codeflowOptions,
-            lastFlows,
+            lastFlowsAfterRecreation,
             targetRepo,
             headBranchExisted,
             cancellationToken);
@@ -152,6 +162,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             ConflictedFiles = mergeResult.ConflictedFiles,
             DependencyUpdates = mergeResult.DependencyUpdates,
             HadUpdates = result.HadUpdates || mergeResult.DependencyUpdates.Count > 0 || mergeResult.HasToolsetUpdates,
+            RepoPath = targetRepo.Path,
         };
     }
 
@@ -226,13 +237,24 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                     removePatchAfter: true,
                     keepConflicts: keepConflicts,
                     cancellationToken: cancellationToken);
+
+                // We need to commit because we are on the working branch
+                if (conflicts.Count == 0)
+                {
+                    await CommitBackflow(
+                        codeflowOptions.CurrentFlow,
+                        targetRepo,
+                        codeflowOptions.Build,
+                        cancellationToken);
+                }
+
                 return new CodeFlowResult(true, conflicts, targetRepo.Path, []);
             },
             cancellationToken);
 
         if (workBranch != null)
         {
-            var commitMessage = await CommitBackflow(codeflowOptions.CurrentFlow, targetRepo, codeflowOptions.Build, cancellationToken);
+            var commitMessage = (await targetRepo.RunGitCommandAsync(["log", "-1", "--pretty=%B"], cancellationToken)).StandardOutput;
 
             result = result with
             {
@@ -350,7 +372,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
 
         return await repo.IsAncestorCommit(ff.RepoSha, lastBackFlow.RepoSha)
-            ? lastForwardFlow
+            ? lastBackFlow
             : null;
     }
 

@@ -22,6 +22,9 @@ internal class ReproOptions : Options
     [Option("skip-cleanup", HelpText = "Don't delete the created resources if they're needed for further testing. This includes the channel, subscription and PR branches. False by default", Required = false)]
     public bool SkipCleanup { get; init; } = false;
 
+    [Option("force", HelpText = "Force-trigger the subscription", Required = false)]
+    public bool Force { get; init; } = false;
+
     internal override Operation GetOperation(IServiceProvider sp)
         => ActivatorUtilities.CreateInstance<ReproOperation>(sp, this);
 }

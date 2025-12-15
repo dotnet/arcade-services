@@ -654,4 +654,16 @@ public class LocalGitClient : ILocalGitClient
 
         return [.. result.GetOutputLines().Select(f => new UnixPath(f))];
     }
+
+    public async Task<bool> DoesBranchExistAsync(string repoUri, string branch)
+    {
+        var result = await _processManager.ExecuteGit(repoUri, "rev-parse", "--verify", branch);
+        return result.Succeeded;
+    }
+
+    public async Task CreateBranchAsync(string repoUri, string newBranch, string baseBranch)
+    {
+        await CheckoutAsync(repoUri, baseBranch);
+        await CreateBranchAsync(repoUri, newBranch);
+    }
 }

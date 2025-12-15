@@ -60,6 +60,12 @@ internal class UpdateDependenciesOperation : Operation
     {
         try
         {
+            // Validate mutually exclusive options
+            if (_options.CoherencyOnly && _options.NoCoherencyUpdates)
+            {
+                throw new ArgumentException("The --coherency-only and --no-coherency-updates options cannot be used together.");
+            }
+
             // If subscription ID is provided, fetch subscription metadata and populate options
             if (!string.IsNullOrEmpty(_options.SubscriptionId))
             {
@@ -264,6 +270,12 @@ internal class UpdateDependenciesOperation : Operation
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> dependenciesToUpdate)
     {
+        if (_options.NoCoherencyUpdates)
+        {
+            _logger.LogInformation("    Skipping coherency updates due to --no-coherency-updates option.");
+            return Constants.SuccessCode;
+        }
+
         Console.WriteLine("    Checking for coherency updates...");
 
         List<DependencyUpdate> coherencyUpdates = null;

@@ -4,6 +4,10 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Folder Name="/MaestroConfiguration/">
+    <Project Path="src/MaestroConfiguration/src/Microsoft.DotNet.MaestroConfiguration.Client/Microsoft.DotNet.MaestroConfiguration.Client.csproj" />
+    <Project Path="src/MaestroConfiguration/test/Microsoft.DotNet.MaestroConfiguration.Client.Tests/Microsoft.DotNet.MaestroConfiguration.Client.Tests.csproj" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
     <File Path="azure-pipelines.yml" />
