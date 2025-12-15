@@ -287,7 +287,7 @@ public class VmrPatchHandler : IVmrPatchHandler
         {
             // Apply diff to index right away, not the working tree
             // This is faster when we don't care about the working tree
-            // Additionally works around the fact that "git apply" failes with "already exists in working directory"
+            // Additionally works around the fact that "git apply" fails with "already exists in working directory"
             // This happens only when case sensitive renames happened in the history
             // More details: https://lore.kernel.org/git/YqEiPf%2FJR%2FMEc3C%2F@camp.crustytoothpaste.net/t/
             args.Add("--cached");
