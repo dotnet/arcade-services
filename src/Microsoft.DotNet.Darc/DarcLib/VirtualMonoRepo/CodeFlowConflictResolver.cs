@@ -390,14 +390,9 @@ public abstract class CodeFlowConflictResolver
 
         // Create patch for the file represent only the most current flow
         string fromSha, toSha;
-        if (codeflowOptions.CurrentFlow.IsForwardFlow)
-        {
-            (fromSha, toSha) = (lastFlows.CrossingFlow.RepoSha, codeflowOptions.CurrentFlow.RepoSha);
-        }
-        else
-        {
-            (fromSha, toSha) = (lastFlows.CrossingFlow.VmrSha, codeflowOptions.CurrentFlow.VmrSha);
-        }
+        (fromSha, toSha) = codeflowOptions.CurrentFlow.IsForwardFlow
+            ? (lastFlows.CrossingFlow.RepoSha, codeflowOptions.CurrentFlow.RepoSha)
+            : (lastFlows.CrossingFlow.VmrSha, codeflowOptions.CurrentFlow.VmrSha);
 
         var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : productRepo;
         var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
