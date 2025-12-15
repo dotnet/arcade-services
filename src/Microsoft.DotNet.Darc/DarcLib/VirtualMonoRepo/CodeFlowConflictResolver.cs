@@ -440,7 +440,7 @@ public abstract class CodeFlowConflictResolver
 
             if (revertedFiles.Count == 0)
             {
-                _logger.LogWarning("Failed to detect reverted files from patch application failure");
+                _logger.LogError(e, "Failed to detect reverted files from patch application failure");
                 _logger.LogDebug(e.Result.ToString());
                 return;
             }
@@ -461,7 +461,7 @@ public abstract class CodeFlowConflictResolver
                         lastFlows.CrossingFlow,
                         cancellationToken))
                 {
-                    _logger.LogWarning("Failed to auto-resolve a conflict in {file} while fixing a partial revert",
+                    _logger.LogError("Failed to auto-resolve a conflict in {file} while fixing a partial revert",
                         revertedFile);
                     await targetRepo.ExecuteGitCommand(["checkout", codeflowOptions.HeadBranch, revertedFile], cancellationToken);
                 }
