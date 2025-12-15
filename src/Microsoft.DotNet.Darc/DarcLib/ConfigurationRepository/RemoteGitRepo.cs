@@ -46,7 +46,7 @@ public class RemoteGitRepo : MaestroConfiguration.Client.IGitRepo
     }
 
     public async Task DeleteFileAsync(string repositoryUri, string branch, string filePath, string commitMessage)
-        => await _gitRepo.CommitFilesAsync(
+        => await _remote.CommitUpdatesWithNoCloningAsync(
             [new Helpers.GitFile(filePath, string.Empty, ContentEncoding.Utf8, operation: GitFileOperation.Delete)],
             repositoryUri,
             branch,
@@ -71,6 +71,9 @@ public class RemoteGitRepo : MaestroConfiguration.Client.IGitRepo
         => (await _remote.GetFilesAtCommitAsync(repositoryUri, await _remote.GetLatestCommitAsync(repositoryUri, branch), path))
                 .Select(f => new MaestroConfiguration.Client.GitFile(f.FilePath, f.Content))
                 .ToList();
+
+    public async Task<List<string>> ListBlobsAsync(string repositoryUri, string branch, string path)
+        => await _remote.ListFilesAtCommitAsync(repositoryUri, await _remote.GetLatestCommitAsync(repositoryUri, branch), path);
 
     public async Task<bool> RepoExistsAsync(string repositoryUri)
         => await _gitRepo.RepoExistsAsync(repositoryUri);

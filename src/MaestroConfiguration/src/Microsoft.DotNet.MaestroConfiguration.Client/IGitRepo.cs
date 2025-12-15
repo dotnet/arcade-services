@@ -63,4 +63,7 @@ public interface IGitRepo
 
     Task<List<GitFile>> GetFilesContentAsync(string repositoryUri, string branch, string path);
 
+    Task DeleteFileAsync(string repositoryUri, string branch, string filePath, string commitMessage);
+
+    Task <List<string>> ListBlobsAsync(string repositoryUri, string branch, string path);
 }

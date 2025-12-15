@@ -1491,4 +1491,26 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             HeadBranchSha = pr.Head.Sha,
         };
     }
+
+    public async Task<List<string>> ListFilesAtCommitAsync(string repoUri, string commit, string path)
+    {
+        path = path.Replace('\\', '/');
+        path = path.TrimStart('/').TrimEnd('/');
+        if (path.StartsWith("./"))
+        {
+            path = path.Substring(2);
+        }
+
+        (string owner, string repo) = ParseRepoUri(repoUri);
+
+        var client = GetClient(owner, repo);
+
+        // Get the tree for the specified path (non-recursive, just immediate children)
+        TreeResponse tree = await GetTreeForPathAsync(owner, repo, commit, path);
+
+        return tree.Tree
+            .Where(item => item.Type == TreeType.Blob)
+            .Select(item => $"{path}/{item.Path}".TrimStart('/'))
+            .ToList();
+    }
 }

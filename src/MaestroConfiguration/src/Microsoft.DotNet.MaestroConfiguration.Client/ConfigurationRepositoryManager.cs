@@ -76,7 +76,6 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
                 parameters.RepositoryUri,
                 workingBranch,
                 parameters.ConfigurationBaseBranch,
-                newSubscriptionFilePath,
                 "Updating Maestro configuration");
         }
         else
@@ -86,7 +85,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         }
     }
 
-    public async Task DeleteSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, Guid subscriptionId)
+    public async Task DeleteSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml subscription)
     {
         IGitRepo configurationRepo = await _configurationRepoFactory.CreateClient(parameters.RepositoryUri);
 
@@ -97,12 +96,11 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         List<SubscriptionYaml> subscriptionsInFile;
         if (string.IsNullOrEmpty(parameters.ConfigurationFilePath))
         {
-            (subscriptionFilePath, subscriptionsInFile) = await FindAndParseConfigurationFile<SubscriptionYaml>(
+            (subscriptionFilePath, subscriptionsInFile) = await FindAndParseConfigurationFile(
                 configurationRepo,
                 parameters.RepositoryUri,
                 workingBranch,
-                ConfigFilePathResolver.SubscriptionFolderPath,
-                subscriptionId.ToString());
+                subscription);
         }
         else
         {
@@ -114,12 +112,12 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
                 subscriptionFilePath);
         }
 
-        var subscriptionsWithoutDeleted = subscriptionsInFile.Where(s => s.Id != subscriptionId).ToList();
+        var subscriptionsWithoutDeleted = subscriptionsInFile.Where(s => s.Id != subscription.Id).ToList();
 
         if (subscriptionsInFile.Count == subscriptionsWithoutDeleted.Count)
         {
             _logger.LogWarning("Found no subscription with id {id} to delete in file {file} of repo {repo} on branch {branch}",
-                subscriptionId,
+                subscription.Id,
                 subscriptionFilePath,
                 parameters.RepositoryUri,
                 parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch);
@@ -130,8 +128,24 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             parameters.RepositoryUri,
             workingBranch,
             subscriptionFilePath,
-            subscriptionsWithoutDeleted.Order(),
-            $"Delete subscription {subscriptionId}");
+            subscriptionsWithoutDeleted,
+            $"Delete subscription {subscription.Id}");
+
+        if (!parameters.DontOpenPr)
+        {
+            // Open a pull request for the new subscription
+            await CreatePullRequest(
+                configurationRepo,
+                parameters.RepositoryUri,
+                workingBranch,
+                parameters.ConfigurationBaseBranch,
+                "Updating Maestro configuration");
+        }
+        else
+        {
+            _logger.LogInformation("Successfully deleted subscription with id '{0}' from branch '{1}' of the configuration repository {2}",
+                subscription.Id, parameters.ConfigurationBranch, parameters.RepositoryUri);
+        }
     }
 
 
@@ -160,8 +174,15 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         string commitMessage)
         where T : IYamlModel
     {
-        string yamlContent = _yamlSerializer.Serialize(YamlModelSorter.Sort(data)).Replace("\n-", "\n\n-");
-        await gitRepo.CommitFilesAsync(repositoryUri, workingBranch, [new GitFile(filePath, yamlContent)], commitMessage);
+        if (!data.Any())
+        {
+            await gitRepo.DeleteFileAsync(repositoryUri, workingBranch, filePath, commitMessage);
+        }
+        else
+        {
+            string yamlContent = _yamlSerializer.Serialize(data).Replace("\n-", "\n\n-");
+            await gitRepo.CommitFilesAsync(repositoryUri, workingBranch, [new GitFile(filePath, yamlContent)], commitMessage);
+        }
     }
 
     /// <summary>
@@ -243,78 +264,83 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         IGitRepo gitRepo,
         string repositoryUri,
         string workingBranch,
-        string searchPath,
-        IYamlModel searchObject)
+        T searchObject)
         where T : IYamlModel
     {
-        ArgumentException.ThrowIfNullOrEmpty(searchPath);
-        if (searchObject is not T)
+        // Try the default file first before searching all files
+        var result = await TryFindInDefaultFileAsync<T>(gitRepo, repositoryUri, workingBranch, searchObject);
+        if (result.HasValue)
         {
-            throw new ArgumentException("Search object must be of the same type as the requested configuration data.");
+            return result.Value;
         }
 
-        string filePath;
-        List<T> fileContent;
-        bool fileFound = false;
-        // we'll try the default file first
+        // If not in the default file, search all files in the folder for that yaml type
+        _logger.LogInformation("Couldn't file configuration object at the default location. Searching all files in folder... this might take a few minutes");
+        return await SearchAllFilesInFolderAsync(gitRepo, repositoryUri, workingBranch, searchObject);
+    }
+
+    private async Task<(string FilePath, List<T> Content)?> TryFindInDefaultFileAsync<T>(
+        IGitRepo gitRepo,
+        string repositoryUri,
+        string workingBranch,
+        T searchObject)
+        where T : IYamlModel
+    {
         var defaultFilePath = ConfigFilePathResolver.GetDefaultFilePath(searchObject);
+
         try
         {
-            var defaultFileContents = await gitRepo.GetFileContentsAsync(
-                repositoryUri,
-                workingBranch,
-                defaultFilePath);
+            var defaultFileContents = await gitRepo.GetFileContentsAsync(repositoryUri, workingBranch, defaultFilePath);
             var deserializedYamls = _yamlDeserializer.Deserialize<List<T>>(defaultFileContents);
-            if (ContainsYamlModel(deserializedYamls, (T)searchObject))
+
+            if (ContainsYamlModel(deserializedYamls, searchObject))
             {
-                fileFound = true;
-                filePath = defaultFilePath;
-                fileContent = deserializedYamls;
+                return (defaultFilePath, deserializedYamls);
             }
         }
         catch (FileNotFoundInRepoException)
         {
-            fileFound = false;
+            // Default file doesn't exist
         }
 
-        // if not in the default file, we'll search all files in the folder for that yaml type
-        if (!fileFound)
+        return null;
+    }
+
+    private async Task<(string FilePath, List<T> Content)> SearchAllFilesInFolderAsync<T>(
+        IGitRepo gitRepo,
+        string repositoryUri,
+        string workingBranch,
+        T searchObject)
+        where T : IYamlModel
+    {
+        var folderPath = ConfigFilePathResolver.GetDefaultFileFolder(searchObject);
+        var searchKey = YamlModelUniqueKeys.GetUniqueKey(searchObject);
+
+        // Get list of all files in the folder
+        var filePaths = await gitRepo.ListBlobsAsync(repositoryUri, workingBranch, folderPath);
+
+        // Search each file one by one for the object
+        foreach (var filePath in filePaths)
         {
-            var defaultPath = ConfigFilePathResolver.GetDefaultFileFolder(searchObject);
-            var fileContents = await gitRepo.GetFilesContentAsync(
-                repositoryUri,
-                workingBranch,
-                defaultPath);
-
-            var filesContainingObject = fileContents
-                .Select(f => (f.Path, yamlList: _yamlDeserializer.Deserialize<List<T>>(f.Content)))
-                .Where(f => ContainsYamlModel(f.yamlList, (T)searchObject))
-                .ToList();
-
-            var searchKey = YamlModelUniqueKeys.GetUniqueKey(searchObject);
-            if (filesContainingObject.Count == 0)
+            try
             {
-                throw new ArgumentException($"No object with id {searchKey} was found on branch {workingBranch}");
+                var fileContent = await gitRepo.GetFileContentsAsync(repositoryUri, workingBranch, filePath);
+                var deserializedYamls = _yamlDeserializer.Deserialize<List<T>>(fileContent);
+
+                if (ContainsYamlModel(deserializedYamls, searchObject))
+                {
+                    _logger.LogInformation("Search string {0} found in {1}", searchKey, filePath);
+                    return (filePath, deserializedYamls);
+                }
             }
-            else if (filesContainingObject.Count > 1)
+            catch (FileNotFoundInRepoException)
             {
-                throw new InvalidOperationException($"Found more than one file on branch {workingBranch} containing objects with id {searchKey}");
+                // File was listed but couldn't be read, skip it
+                continue;
             }
-
-            var fileToReturn = filesContainingObject.Single();
-            filePath = fileToReturn.Path;
-            fileContent = fileToReturn.yamlList;
-            _logger.LogInformation("Search string {0} found in {1}", searchKey, filePath);
-            fileFound = true;
         }
 
-        if (fileFound)
-        {
-            return (filePath, fileContent);
-        }
-        else
-        {
-            throw new InvalidOperationException("Unexpected error in searching for configuration file.");
+        throw new ArgumentException($"No object with id {searchKey} was found on branch {workingBranch}");
     }
 
     private static bool ContainsYamlModel<T>(IReadOnlyCollection<T> yamlModels, T searchObject)

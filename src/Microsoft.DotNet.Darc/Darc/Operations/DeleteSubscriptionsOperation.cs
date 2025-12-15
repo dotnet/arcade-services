@@ -10,6 +10,7 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.MaestroConfiguration.Client;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -80,7 +81,7 @@ internal class DeleteSubscriptionsOperation : Operation
                 {
                     await _configRepositoryManager.DeleteSubscriptionAsync(
                         _options.ToConfigurationRepositoryOperationParameters(),
-                        subscription.Id);
+                        SubscriptionYaml.FromClientModel(subscription));
                 }
             }
             else

@@ -77,10 +77,10 @@ public static class ConfigFilePathResolver
     /// </summary>
     public static string GetDefaultFileFolder(IYamlModel model) => model switch
     {
-        SubscriptionYaml subscription => GetDefaultSubscriptionFilePath(subscription),
-        DefaultChannelYaml defaultChannel => GetDefaultDefaultChannelFilePath(defaultChannel),
-        ChannelYaml channel => GetDefaultChannelFilePath(channel),
-        BranchMergePoliciesYaml branchMergePolicies => GetDefaultRepositoryBranchFilePath(branchMergePolicies),
+        SubscriptionYaml subscription => SubscriptionFolderPath,
+        DefaultChannelYaml defaultChannel => DefaultChannelFolderPath,
+        ChannelYaml channel => ChannelFolderPath,
+        BranchMergePoliciesYaml branchMergePolicies => RepositoryBranchFolderPath,
         _ => throw new ArgumentException($"No path resolver registered for type {model.GetType().Name}", nameof(model))
     };
 }
