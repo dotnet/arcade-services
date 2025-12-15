@@ -9,7 +9,7 @@ using System.Collections.Generic;
 namespace Maestro.DataProviders.ConfigurationIngestion;
 
 public record ConfigurationData(
-    IEnumerable<IngestedSubscription> Subscriptions,
-    IEnumerable<IngestedChannel> Channels,
-    IEnumerable<IngestedDefaultChannel> DefaultChannels,
-    IEnumerable<IngestedBranchMergePolicies> BranchMergePolicies);
+    IReadOnlyCollection<IngestedSubscription> Subscriptions,
+    IReadOnlyCollection<IngestedChannel> Channels,
+    IReadOnlyCollection<IngestedDefaultChannel> DefaultChannels,
+    IReadOnlyCollection<IngestedBranchMergePolicies> BranchMergePolicies);

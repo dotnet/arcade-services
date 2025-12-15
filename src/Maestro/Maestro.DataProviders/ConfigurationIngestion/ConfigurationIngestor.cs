@@ -54,7 +54,7 @@ public class ConfigurationIngestor(
     private async Task SaveConfigurationData(ConfigurationDataUpdate configurationDataUpdate, Namespace namespaceEntity)
     {
         // Deletions
-        await DeleteSubscriptions([.. configurationDataUpdate.Subscriptions.Removals.Select(sub => sub.Values.Id)]);
+        await DeleteSubscriptions(configurationDataUpdate.Subscriptions.Removals);
         await DeleteDefaultChannels(
             configurationDataUpdate.DefaultChannels.Removals,
             namespaceEntity);
@@ -206,13 +206,15 @@ public class ConfigurationIngestor(
         await _sqlBarClient.UpdateSubscriptionsAsync(subscriptionDaos, false);
     }
 
-    private async Task DeleteSubscriptions(IEnumerable<Guid> subscriptionsIds)
+    private async Task DeleteSubscriptions(IEnumerable<IngestedSubscription> subscriptionRemovals)
     {
-        var subscriptionRemovals = await _context.Subscriptions
-            .Where(sub => subscriptionsIds.Contains(sub.Id))
+        var subscriptionIds = subscriptionRemovals.Select(sub => sub.Values.Id).ToList();
+
+        var subscriptionDaos = await _context.Subscriptions
+            .Where(sub => subscriptionIds.Contains(sub.Id))
             .ToListAsync();
 
-        _context.Subscriptions.RemoveRange(subscriptionRemovals);
+        _context.Subscriptions.RemoveRange(subscriptionDaos);
     }
 
     private void CreateChannels(

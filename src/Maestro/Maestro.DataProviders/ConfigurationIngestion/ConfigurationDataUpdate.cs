@@ -13,6 +13,6 @@ public record ConfigurationDataUpdate(
     EntityChanges<IngestedBranchMergePolicies> RepositoryBranches);
 
 public record EntityChanges<T>(
-    IEnumerable<T> Creations,
-    IEnumerable<T> Updates,
-    IEnumerable<T> Removals) where T: class;
+    IReadOnlyCollection<T> Creations,
+    IReadOnlyCollection<T> Updates,
+    IReadOnlyCollection<T> Removals) where T: class;

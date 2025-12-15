@@ -16,7 +16,7 @@ public class ChannelValidator
     /// <param name="channels">The Channel collection to validate</param>
     /// <exception cref="ArgumentException">Thrown when validation fails</exception>
     public static void ValidateChannels(
-        IEnumerable<IngestedChannel> channels)
+        IReadOnlyCollection<IngestedChannel> channels)
     {
         EntityValidator.ValidateEntityUniqueness(channels);
 

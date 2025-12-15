@@ -47,21 +47,21 @@ internal class ConfigurationDataHelper
     }
 
     internal static EntityChanges<T> ComputeUpdatesForEntity<T, TId>(
-    IEnumerable<T> dbEntities,
-    IEnumerable<T> externalEntities)
+    IReadOnlyCollection<T> dbEntities,
+    IReadOnlyCollection<T> externalEntities)
         where T : class, IExternallySyncedEntity<TId>
         where TId : notnull
     {
         var dbEntitiesById = dbEntities.ToDictionary(e => e.UniqueId);
         var externalEntitiesById = externalEntities.ToDictionary(e => e.UniqueId);
 
-        IEnumerable<T> creations = [.. externalEntitiesById.Values
+        List<T> creations = [.. externalEntitiesById.Values
             .Where(e => !dbEntitiesById.ContainsKey(e.UniqueId))];
 
-        IEnumerable<T> removals = [.. dbEntitiesById.Values
+        List<T> removals = [.. dbEntitiesById.Values
             .Where(e => !externalEntitiesById.ContainsKey(e.UniqueId))];
 
-        IEnumerable<T> updates = [.. externalEntitiesById.Values
+        List<T> updates = [.. externalEntitiesById.Values
             .Where(e => dbEntitiesById.ContainsKey(e.UniqueId))];
 
         return new EntityChanges<T>(creations, updates, removals);

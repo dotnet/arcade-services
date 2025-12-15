@@ -13,7 +13,7 @@ namespace Maestro.DataProviders.ConfigurationIngestion.Validations;
 public class BranchMergePolicyValidator
 {
     public static void ValidateBranchMergePolicies(
-        IEnumerable<IngestedBranchMergePolicies> branchMergePolicies)
+        IReadOnlyCollection<IngestedBranchMergePolicies> branchMergePolicies)
     {
         EntityValidator.ValidateEntityUniqueness(branchMergePolicies);
 

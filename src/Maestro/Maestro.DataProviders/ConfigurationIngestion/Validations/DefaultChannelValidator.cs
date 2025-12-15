@@ -17,7 +17,7 @@ internal class DefaultChannelValidator
     /// <param name="defaultChannels">The DefaultChannel collection to validate</param>
     /// <exception cref="ArgumentException">Thrown when validation fails</exception>
     internal static void ValidateDefaultChannels(
-        IEnumerable<IngestedDefaultChannel> defaultChannels)
+        IReadOnlyCollection<IngestedDefaultChannel> defaultChannels)
     {
         EntityValidator.ValidateEntityUniqueness(defaultChannels);
 
