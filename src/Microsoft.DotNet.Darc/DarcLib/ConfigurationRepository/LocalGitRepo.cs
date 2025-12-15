@@ -35,8 +35,16 @@ public class LocalGitRepo : MaestroConfiguration.Client.IGitRepo
     public Task<string> CreatePullRequestAsync(string repositoryUri, string headBranch, string baseBranch, string prTitle, string prDescription = null)
         => throw new InvalidOperationException("Cannot create pull request when using local git repository.");
 
+    public async Task DeleteFileAsync(string repositoryUri, string branch, string filePath, string commitMessage)
+        => await _gitRepo.CommitFilesAsync(
+            [new Helpers.GitFile(filePath, string.Empty, ContentEncoding.Utf8, operation: GitFileOperation.Delete)],
+            repositoryUri,
+            branch,
+            commitMessage);
+
     public async Task<bool> DoesBranchExistAsync(string repositoryUri, string branchName)
         => await _gitRepo.DoesBranchExistAsync(repositoryUri, branchName);
+
 
     public async Task<string> GetFileContentsAsync(string repositoryUri, string branch, string filePath)
     {
@@ -48,6 +56,25 @@ public class LocalGitRepo : MaestroConfiguration.Client.IGitRepo
         {
             throw new FileNotFoundInRepoException(repositoryUri, branch, filePath);
         }
+    }
+
+    public async Task<List<MaestroConfiguration.Client.GitFile>> GetFilesContentAsync(string repositoryUri, string branch, string path)
+    {
+        var filePaths = (await _localGitRepo.ExecuteGitCommand(["ls-tree", "-r", "--format=%(objecttype) %(path)", branch, path]))
+            .GetOutputLines()
+            .Select(line => line.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            .Where(parts => parts[0] == "blob")
+            .Select(parts => parts[1])
+            .ToList();
+
+        var gitFiles = new List<MaestroConfiguration.Client.GitFile>();
+        foreach (var fileName in filePaths)
+        {
+            var content = await GetFileContentsAsync(repositoryUri, branch, fileName);
+            gitFiles.Add(new MaestroConfiguration.Client.GitFile(fileName, content));
+        }
+
+        return gitFiles;
     }
 
     public async Task<bool> RepoExistsAsync(string repositoryUri)

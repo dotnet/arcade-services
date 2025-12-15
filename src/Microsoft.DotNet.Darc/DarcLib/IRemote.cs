@@ -109,6 +109,15 @@ public interface IRemote
     Task<List<GitFile>> GetCommonScriptFilesAsync(string repoUri, string commit, LocalPath relativeBasePath = null);
 
     /// <summary>
+    /// Retreive files from a remote source
+    /// </summary>
+    /// <param name="repoUri">URI of repo containing script files</param>
+    /// <param name="commit">Commit to get files at</param>
+    /// <param name="path">Path to get files from</param>
+    /// <returns>List of files</returns>
+    Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path);
+
+    /// <summary>
     ///     Create a new branch in the specified repository.
     /// </summary>
     /// <param name="repoUri">Repository to create a branch in</param>

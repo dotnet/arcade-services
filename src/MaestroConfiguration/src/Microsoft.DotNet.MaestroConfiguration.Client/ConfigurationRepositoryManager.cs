@@ -86,6 +86,56 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         }
     }
 
+    public async Task DeleteSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, Guid subscriptionId)
+    {
+        IGitRepo configurationRepo = await _configurationRepoFactory.CreateClient(parameters.RepositoryUri);
+
+        await ValidateConfigurationRepositoryParametersAsync(configurationRepo, parameters);
+        var workingBranch = await PrepareConfigurationBranchAsync(configurationRepo, parameters);
+
+        string subscriptionFilePath;
+        List<SubscriptionYaml> subscriptionsInFile;
+        if (string.IsNullOrEmpty(parameters.ConfigurationFilePath))
+        {
+            (subscriptionFilePath, subscriptionsInFile) = await FindAndParseConfigurationFile<SubscriptionYaml>(
+                configurationRepo,
+                parameters.RepositoryUri,
+                workingBranch,
+                ConfigFilePathResolver.SubscriptionFolderPath,
+                subscriptionId.ToString());
+        }
+        else
+        {
+            subscriptionFilePath = parameters.ConfigurationFilePath;
+            subscriptionsInFile = await FetchAndParseRemoteConfiguration<SubscriptionYaml>(
+                configurationRepo,
+                parameters.RepositoryUri,
+                workingBranch,
+                subscriptionFilePath);
+        }
+
+        var subscriptionsWithoutDeleted = subscriptionsInFile.Where(s => s.Id != subscriptionId).ToList();
+
+        if (subscriptionsInFile.Count == subscriptionsWithoutDeleted.Count)
+        {
+            _logger.LogWarning("Found no subscription with id {id} to delete in file {file} of repo {repo} on branch {branch}",
+                subscriptionId,
+                subscriptionFilePath,
+                parameters.RepositoryUri,
+                parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch);
+        }
+
+        await CommitConfigurationDataAsync(
+            configurationRepo,
+            parameters.RepositoryUri,
+            workingBranch,
+            subscriptionFilePath,
+            subscriptionsWithoutDeleted.Order(),
+            $"Delete subscription {subscriptionId}");
+    }
+
+
+    #region helper methods
     private static async Task ValidateConfigurationRepositoryParametersAsync(
         IGitRepo gitRepo,
         ConfigurationRepositoryOperationParameters operationParameters)
@@ -189,6 +239,88 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         _logger.LogInformation("Created pull request at {0}", guiUri);
     }
 
-    public Task DeleteSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, Guid subscriptionId) => throw new NotImplementedException();
+    private async Task<(string, List<T>)> FindAndParseConfigurationFile<T>(
+        IGitRepo gitRepo,
+        string repositoryUri,
+        string workingBranch,
+        string searchPath,
+        IYamlModel searchObject)
+        where T : IYamlModel
+    {
+        ArgumentException.ThrowIfNullOrEmpty(searchPath);
+        if (searchObject is not T)
+        {
+            throw new ArgumentException("Search object must be of the same type as the requested configuration data.");
+        }
+
+        string filePath;
+        List<T> fileContent;
+        bool fileFound = false;
+        // we'll try the default file first
+        var defaultFilePath = ConfigFilePathResolver.GetDefaultFilePath(searchObject);
+        try
+        {
+            var defaultFileContents = await gitRepo.GetFileContentsAsync(
+                repositoryUri,
+                workingBranch,
+                defaultFilePath);
+            var deserializedYamls = _yamlDeserializer.Deserialize<List<T>>(defaultFileContents);
+            if (ContainsYamlModel(deserializedYamls, (T)searchObject))
+            {
+                fileFound = true;
+                filePath = defaultFilePath;
+                fileContent = deserializedYamls;
+            }
+        }
+        catch (FileNotFoundInRepoException)
+        {
+            fileFound = false;
+        }
+
+        // if not in the default file, we'll search all files in the folder for that yaml type
+        if (!fileFound)
+        {
+            var defaultPath = ConfigFilePathResolver.GetDefaultFileFolder(searchObject);
+            var fileContents = await gitRepo.GetFilesContentAsync(
+                repositoryUri,
+                workingBranch,
+                defaultPath);
+
+            var filesContainingObject = fileContents
+                .Select(f => (f.Path, yamlList: _yamlDeserializer.Deserialize<List<T>>(f.Content)))
+                .Where(f => ContainsYamlModel(f.yamlList, (T)searchObject))
+                .ToList();
+
+            var searchKey = YamlModelUniqueKeys.GetUniqueKey(searchObject);
+            if (filesContainingObject.Count == 0)
+            {
+                throw new ArgumentException($"No object with id {searchKey} was found on branch {workingBranch}");
+            }
+            else if (filesContainingObject.Count > 1)
+            {
+                throw new InvalidOperationException($"Found more than one file on branch {workingBranch} containing objects with id {searchKey}");
+            }
+
+            var fileToReturn = filesContainingObject.Single();
+            filePath = fileToReturn.Path;
+            fileContent = fileToReturn.yamlList;
+            _logger.LogInformation("Search string {0} found in {1}", searchKey, filePath);
+            fileFound = true;
+        }
+
+        if (fileFound)
+        {
+            return (filePath, fileContent);
+        }
+        else
+        {
+            throw new InvalidOperationException("Unexpected error in searching for configuration file.");
+    }
+
+    private static bool ContainsYamlModel<T>(IReadOnlyCollection<T> yamlModels, T searchObject)
+        where T : IYamlModel
+        => yamlModels.Any(y => YamlModelUniqueKeys.GetUniqueKey(y) == YamlModelUniqueKeys.GetUniqueKey(searchObject));
+    #endregion
+
     public Task UpdateSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml updatedSubscription) => throw new NotImplementedException();
 }

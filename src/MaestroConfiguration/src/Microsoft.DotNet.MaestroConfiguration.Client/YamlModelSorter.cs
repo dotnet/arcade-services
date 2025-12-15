@@ -4,8 +4,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 
-namespace Microsoft.DotNet.MaestroConfiguration.Client.Models;
+namespace Microsoft.DotNet.MaestroConfiguration.Client;
 
 /// <summary>
 /// Provides comparers for sorting YAML models.
