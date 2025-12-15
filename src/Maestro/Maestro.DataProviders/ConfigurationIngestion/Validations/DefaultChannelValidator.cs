@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using Maestro.DataProviders.ConfigurationIngestion.Helpers;
-using Microsoft.DotNet.DarcLib.Models.Yaml;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion.Validations;

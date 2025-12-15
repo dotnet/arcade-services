@@ -8,7 +8,6 @@ namespace Microsoft.DotNet.MaestroConfiguration.Client.Models;
 
 public class DefaultChannelYaml : IYamlModel
 {
-
     [YamlMember(Alias = "Repository", ApplyNamingConventions = false)]
     public required string Repository { get; init; }
 

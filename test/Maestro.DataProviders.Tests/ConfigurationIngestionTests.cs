@@ -11,7 +11,7 @@ using Maestro.Data.Models;
 using Maestro.DataProviders.ConfigurationIngestion;
 using Maestro.DataProviders.ConfigurationIngestion.Helpers;
 using Microsoft.Data.SqlClient;
-using Microsoft.DotNet.DarcLib.Models.Yaml;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.EntityFrameworkCore;
 using NUnit.Framework;
 
@@ -586,7 +586,7 @@ public class ConfigurationIngestorTests
         var subscription = 
         new IngestedSubscription(new SubscriptionYaml
                 {
-                    Id = new Guid(),
+                    Id = Guid.NewGuid(),
                     Channel = "Old channel",
                     SourceRepository = "https://github.com/dotnet/runtime",
                     TargetRepository = "https://github.com/dotnet/aspnetcore",
@@ -601,6 +601,60 @@ public class ConfigurationIngestorTests
         {
             var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
         });
+    }
+
+    [Test]
+    public async Task IngestConfigurationAsync_UpdateChannel_FailToUpdateName()
+    {
+        var namespaceEntity = await CreateNamespace();
+        var channel = CreateChannel("Old Channel", "dev", namespaceEntity);
+
+        var id = Guid.NewGuid();
+
+        var subscription = CreateSubscription(
+            id,
+            channel,
+            "https://github.com/dotnet/runtime",
+            "https://github.com/dotnet/aspnetcore",
+            "main",
+            enabled: true,
+            namespaceEntity);
+
+        await _context.Channels.AddAsync(channel);
+        await _context.Subscriptions.AddAsync(subscription);
+        await _context.SaveChangesAsync();
+
+        var updatedChannelYaml = new IngestedChannel(new ChannelYaml
+        {
+            Name = "New Channel",
+            Classification = "production",
+        });
+
+        var subscriptionYaml = new IngestedSubscription(new SubscriptionYaml
+        {
+            Id = id,
+            Channel = "New Channel",
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = "https://github.com/dotnet/aspnetcore",
+            TargetBranch = "main",
+            Enabled = true,
+        });
+
+        var configData = new ConfigurationData(
+            [subscriptionYaml],
+            [updatedChannelYaml],
+            [],
+            []);
+
+        // Assert
+        // Channel names are immutable.
+        // During ingestion, the channel name update results in channel removal + creation.
+        // This should fail because the channel is still referenced by the existing subscription in the DB.
+        Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        {
+            var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+        });
+
     }
 
     [Test]
@@ -757,7 +811,7 @@ public class ConfigurationIngestorTests
 
         // Setup existing state
         var existingChannel = CreateChannel(".NET 8", "release", namespaceEntity);
-        var oldChannel = CreateChannel("Old Channel", "dev", namespaceEntity);
+        var oldChannel = CreateChannel(".NET 9", "dev", namespaceEntity);
         await _context.Channels.AddRangeAsync(existingChannel, oldChannel);
         await _context.SaveChangesAsync();
 
@@ -813,9 +867,7 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
 
         // Assert
-        Assert.That(result.Channels.Creations.Count(), Is.EqualTo(1)); // .NET 9
-        Assert.That(result.Channels.Updates.Count(), Is.EqualTo(1)); // .NET 8
-        Assert.That(result.Channels.Removals.Count(), Is.EqualTo(1)); // Old Channel
+        Assert.That(result.Channels.Updates.Count(), Is.EqualTo(2)); // .NET 8
 
         Assert.That(result.Subscriptions.Creations.Count(), Is.EqualTo(1));
         Assert.That(result.Subscriptions.Removals.Count(), Is.EqualTo(1));

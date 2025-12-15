@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.DotNet.DarcLib.Models.Yaml;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders.ConfigurationIngestion.Helpers;
@@ -61,7 +61,9 @@ public class ConfigurationIngestor(
         await DeleteRepositoryBranches(
             configurationDataUpdate.RepositoryBranches.Removals,
             namespaceEntity);
-        await DeleteChannels(configurationDataUpdate.Channels.Removals);
+        await DeleteChannels(configurationDataUpdate.Channels.Removals,
+            configurationDataUpdate.Subscriptions.Creations,
+            configurationDataUpdate.Subscriptions.Updates);
 
         var existingChannels = _context.Channels.ToDictionary(c => c.Name);
 
@@ -244,13 +246,29 @@ public class ConfigurationIngestor(
         }
     }
 
-    private async Task DeleteChannels(IEnumerable<IngestedChannel> removedChannels)
+    private async Task DeleteChannels(
+        IEnumerable<IngestedChannel> removedChannels,
+        IEnumerable<IngestedSubscription> addedSubscriptions,
+        IEnumerable<IngestedSubscription> updatedSubscriptions)
     {
+
         var channelNames = removedChannels.Select(c => c.Values.Name);
 
         var channelRemovals = await _context.Channels
             .Where(channel => channelNames.Contains(channel.Name))
             .ToListAsync();
+
+        var channelRemovalIds = channelRemovals.Select(c => c.Id);
+
+        var linkedSubscriptions = await _context.Subscriptions
+            .Where(s => channelRemovalIds.Contains(s.ChannelId))
+            .ToListAsync();
+
+        if (linkedSubscriptions.Any())
+        {
+            throw new InvalidOperationException(
+                $"Cannot delete or update channels because the following subscriptions still reference old channel names: {string.Join(", ", linkedSubscriptions.Select(s => s.Id))}");
+        }
 
         _context.Channels.RemoveRange(channelRemovals);
     }
@@ -264,8 +282,7 @@ public class ConfigurationIngestor(
             .Select(dc => ConfigurationDataHelper.ConvertIngestedDefaultChannelToDao(
                 dc,
                 namespaceEntity,
-                dbChannelsByName,
-                null))];
+                dbChannelsByName))];
 
         _context.DefaultChannels.AddRange(defaultChannelDaos);
     }

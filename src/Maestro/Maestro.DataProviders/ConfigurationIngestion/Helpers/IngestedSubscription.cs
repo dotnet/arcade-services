@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using Microsoft.DotNet.DarcLib.Models.Yaml;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion.Helpers;

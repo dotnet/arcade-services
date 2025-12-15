@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Maestro.Data.Models;
 using Maestro.DataProviders.ConfigurationIngestion.Helpers;
-using Microsoft.DotNet.DarcLib.Models.Yaml;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -120,26 +120,24 @@ internal class ConfigurationDataHelper
         Namespace namespaceEntity,
         Dictionary<string, Channel> existingChannelsByName)
     {
-        existingChannelsByName.TryGetValue(defaultChannel.Values.Channel, out Channel? existingChannel);
-
-        if (existingChannel is null)
+        if (existingChannelsByName.TryGetValue(defaultChannel.Values.Channel, out Channel? existingChannel))
+        {
+            return new DefaultChannel
+            {
+                ChannelId = existingChannel.Id,
+                Channel = existingChannel,
+                Repository = defaultChannel.Values.Repository,
+                Namespace = namespaceEntity,
+                Branch = defaultChannel.Values.Branch,
+                Enabled = defaultChannel.Values.Enabled,
+            };
+        }
+        else
         {
             //todo find the right exception type
             throw new InvalidOperationException(
                 $"Channel '{defaultChannel.Values.Channel}' not found for default channel creation.");
         }
-
-        var defaultChannelDao = new DefaultChannel
-        {
-            ChannelId = existingChannel.Id,
-            Channel = existingChannel,
-            Repository = defaultChannel.Values.Repository,
-            Namespace = namespaceEntity,
-            Branch = defaultChannel.Values.Branch,
-            Enabled = defaultChannel.Values.Enabled,
-        };
-
-        return defaultChannelDao;
     }
 
     internal static RepositoryBranch ConvertIngestedBranchMergePoliciesToDao(
