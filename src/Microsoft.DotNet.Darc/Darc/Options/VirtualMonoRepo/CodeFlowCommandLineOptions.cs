@@ -4,8 +4,7 @@
 using System.Collections.Generic;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
@@ -47,14 +46,5 @@ internal abstract class CodeFlowCommandLineOptions<T>
 
     public abstract IEnumerable<string> Repositories { get; }
 
-    public override IServiceCollection RegisterServices(IServiceCollection services)
-    {
-        if (!Verbose && !Debug)
-        {
-            // Force verbose output for these commands
-            Verbose = true;
-        }
-
-        return base.RegisterServices(services);
-    }
+    protected override LogLevel DefaultLogVerbosity => LogLevel.Information;
 }

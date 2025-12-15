@@ -158,5 +158,6 @@ internal static class Program
         typeof(GetRepoVersionCommandLineOptions),
         typeof(VmrPushCommandLineOptions),
         typeof(VmrDiffOptions),
+        typeof(MergeBandsCommandLineOptions),
     ];
 }
