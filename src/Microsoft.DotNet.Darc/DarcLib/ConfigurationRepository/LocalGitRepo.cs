@@ -60,12 +60,7 @@ public class LocalGitRepo : MaestroConfiguration.Client.IGitRepo
 
     public async Task<List<MaestroConfiguration.Client.GitFile>> GetFilesContentAsync(string repositoryUri, string branch, string path)
     {
-        var filePaths = (await _localGitRepo.ExecuteGitCommand(["ls-tree", "-r", "--format=%(objecttype) %(path)", branch, path]))
-            .GetOutputLines()
-            .Select(line => line.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-            .Where(parts => parts[0] == "blob")
-            .Select(parts => parts[1])
-            .ToList();
+        var filePaths = await LsTreeBlobsAsync(repositoryUri, branch, path, recursive: true);
 
         var gitFiles = new List<MaestroConfiguration.Client.GitFile>();
         foreach (var fileName in filePaths)
@@ -75,6 +70,26 @@ public class LocalGitRepo : MaestroConfiguration.Client.IGitRepo
         }
 
         return gitFiles;
+    }
+
+    public async Task<List<string>> ListBlobsAsync(string repositoryUri, string branch, string path)
+        => await LsTreeBlobsAsync(repositoryUri, branch, path, recursive: false);
+
+    private async Task<List<string>> LsTreeBlobsAsync(string repositoryUri, string branch, string path, bool recursive)
+    {
+        var args = new List<string> { "ls-tree", "--format=%(objecttype) %(path)" };
+        if (recursive)
+        {
+            args.Add("-r");
+        }
+        args.Add(branch);
+        args.Add(path);
+        return (await _localGitRepo.ExecuteGitCommand(args.ToArray()))
+            .GetOutputLines()
+            .Select(line => line.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            .Where(parts => parts[0] == "blob")
+            .Select(parts => parts[1])
+            .ToList();
     }
 
     public async Task<bool> RepoExistsAsync(string repositoryUri)

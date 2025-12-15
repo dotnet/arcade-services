@@ -73,9 +73,7 @@ public class SubscriptionYamlUniqueKey : IUniqueKeyExtractor<SubscriptionYaml>
 {
     public string GetUniqueKey(SubscriptionYaml model)
     {
-        // TODO: Implement unique key extraction
-        // Example: return $"{model.SourceRepository}|{model.TargetBranch}|{model.Channel}";
-        throw new NotImplementedException();
+        return model.Id.ToString();
     }
 }
 
