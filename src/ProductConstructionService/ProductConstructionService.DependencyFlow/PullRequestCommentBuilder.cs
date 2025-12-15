@@ -152,13 +152,13 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
                 git clone {subscription.TargetRepository}
                 cd {subscription.TargetRepository.Split('/', StringSplitOptions.RemoveEmptyEntries).Last()}
                 ```
-            2. Make sure your `darc` is [up-to-date](https://github.com/dotnet/arcade-services/blob/main/docs/Darc.md#setting-up-your-darc-client)
-                *(version {maestroVersion} or higher)*
+            2. ~Make sure your `darc` is [up-to-date](https://github.com/dotnet/arcade-services/blob/main/docs/Darc.md#setting-up-your-darc-client) and run~
+                ⚠️ Temporarily please install and use the following darc version:
                 ```bash
                 # Linux / MacOS
-                ./eng/common/darc-init.sh
+                ./eng/common/darc-init.sh --darcversion {maestroVersion}
                 # or on Windows
-                .\eng\common\darc-init.ps1
+                .\eng\common\darc-init.ps1 -darcVersion {maestroVersion}
                 ```
             3. Run from repo's git clone and follow the instructions provided by the command to resolve the conflict locally
                 ```bash
