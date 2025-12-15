@@ -164,8 +164,8 @@ public class VmrPatchHandlerTests
         VerifyGitCall(
             [
                 "apply",
-                "--cached",
                 "--ignore-space-change",
+                "--cached",
                 "--directory",
                 RepoVmrPath,
                 patch.Path,

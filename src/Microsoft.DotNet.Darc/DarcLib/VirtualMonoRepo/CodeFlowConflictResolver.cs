@@ -256,15 +256,9 @@ public abstract class CodeFlowConflictResolver
         }
 
         // Create patch for the file represent only the most current flow
-        string fromSha, toSha;
-        if (codeflowOptions.CurrentFlow.IsForwardFlow)
-        {
-            (fromSha, toSha) = (crossingFlow.RepoSha, codeflowOptions.CurrentFlow.RepoSha);
-        }
-        else
-        {
-            (fromSha, toSha) = (crossingFlow.VmrSha, codeflowOptions.CurrentFlow.VmrSha);
-        }
+        var (fromSha, toSha) = codeflowOptions.CurrentFlow.IsForwardFlow
+            ? (crossingFlow.RepoSha, codeflowOptions.CurrentFlow.RepoSha)
+            : (crossingFlow.VmrSha, codeflowOptions.CurrentFlow.VmrSha);
 
         var patchName = _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch";
         List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
@@ -389,8 +383,7 @@ public abstract class CodeFlowConflictResolver
         }
 
         // Create patch for the file represent only the most current flow
-        string fromSha, toSha;
-        (fromSha, toSha) = codeflowOptions.CurrentFlow.IsForwardFlow
+        var (fromSha, toSha) = codeflowOptions.CurrentFlow.IsForwardFlow
             ? (lastFlows.CrossingFlow.RepoSha, codeflowOptions.CurrentFlow.RepoSha)
             : (lastFlows.CrossingFlow.VmrSha, codeflowOptions.CurrentFlow.VmrSha);
 
