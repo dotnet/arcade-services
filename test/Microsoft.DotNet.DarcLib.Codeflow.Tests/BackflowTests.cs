@@ -977,10 +977,9 @@ internal class BackflowTests : CodeFlowTests
         File.Exists(ProductRepoPath / FileChangedAndPartiallyRevertedName).Should().BeTrue(
             "Partially reverted file should exist");
 
-        // TODO: https://github.com/dotnet/arcade-services/issues/5541 Partial reverts still not working fully
-        //(await File.ReadAllTextAsync(ProductRepoPath / FileChangedAndPartiallyRevertedName)).Should().Be(
-        //    PartialRevertChange2 + Environment.NewLine,
-        //    "Partially reverted file should have the second change");
+        (await File.ReadAllTextAsync(ProductRepoPath / FileChangedAndPartiallyRevertedName)).Should().Be(
+            PartialRevertChange2 + Environment.NewLine,
+            "Partially reverted file should have the second change");
 
         // FileInConflict should exist with the VMR's content (conflict resolved)
         File.Exists(ProductRepoPath / FileInConflictName).Should().BeTrue(
