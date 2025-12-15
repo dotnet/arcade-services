@@ -363,6 +363,4 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             _logger.LogInformation("No changes to dependencies in this forward flow update");
         }
     }
-
-    protected override IEnumerable<string> GetPatchExclusions(SourceMapping mapping) => [];
 }

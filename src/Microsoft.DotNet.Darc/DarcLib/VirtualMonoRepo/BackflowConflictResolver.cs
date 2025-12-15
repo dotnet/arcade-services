@@ -516,6 +516,9 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             ? new VersionDetails([], null)
             : _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: false);
 
-    protected override IEnumerable<string> GetPatchExclusions(SourceMapping mapping)
-        => VmrBackFlower.GetPatchExclusions(_sourceManifest, mapping);
+    protected override IEnumerable<string> GetPatchExclusions(SourceMapping mapping) =>
+    [
+        .. base.GetPatchExclusions(mapping),
+        .. VmrBackFlower.GetPatchExclusions(_sourceManifest, mapping)
+    ];
 }

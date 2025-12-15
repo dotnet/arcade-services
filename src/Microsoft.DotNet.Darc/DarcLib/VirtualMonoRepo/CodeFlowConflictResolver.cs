@@ -248,8 +248,8 @@ public abstract class CodeFlowConflictResolver
     {
         _logger.LogDebug("Trying to auto-resolve a conflict in {filePath} based on a crossing flow...", conflictedFile);
 
-        UnixPath vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name);
-        if (codeflowOptions.CurrentFlow.IsForwardFlow && !conflictedFile.Path.StartsWith(vmrSourcesPath + '/'))
+        UnixPath vmrRepoPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name);
+        if (codeflowOptions.CurrentFlow.IsForwardFlow && !conflictedFile.Path.StartsWith(vmrRepoPath + '/'))
         {
             _logger.LogWarning("Conflict in {file} is not in the source repo, skipping auto-resolution", conflictedFile);
             return false;
@@ -266,15 +266,15 @@ public abstract class CodeFlowConflictResolver
             fromSha,
             toSha,
             path: codeflowOptions.CurrentFlow.IsForwardFlow
-                ? new UnixPath(conflictedFile.Path.Substring(vmrSourcesPath.Length + 1))
+                ? new UnixPath(conflictedFile.Path.Substring(vmrRepoPath.Length + 1))
                 : conflictedFile,
             filters: null,
             relativePaths: true,
             workingDir: codeflowOptions.CurrentFlow.IsForwardFlow
                 ? repo.Path
-                : vmr.Path / vmrSourcesPath,
+                : vmr.Path / vmrRepoPath,
             applicationPath: codeflowOptions.CurrentFlow.IsForwardFlow
-                ? vmrSourcesPath
+                ? vmrRepoPath
                 : null,
             ignoreLineEndings: true,
             cancellationToken);
@@ -382,7 +382,7 @@ public abstract class CodeFlowConflictResolver
             return;
         }
 
-        // Create patch for the file represent only the most current flow
+        // Create patch representing the portion of the current flow since the last crossing flow (so just the "revert" part)
         var (fromSha, toSha) = codeflowOptions.CurrentFlow.IsForwardFlow
             ? (lastFlows.CrossingFlow.RepoSha, codeflowOptions.CurrentFlow.RepoSha)
             : (lastFlows.CrossingFlow.VmrSha, codeflowOptions.CurrentFlow.VmrSha);
@@ -390,22 +390,22 @@ public abstract class CodeFlowConflictResolver
         var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : productRepo;
         var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
 
-        // We create the patch representing the current flow (minus the conflicted files)
+        // We create the patch minus the version, conflicted and cloaked files
+        IReadOnlyCollection<string> excludedFiles =
+        [
+            .. conflictedFiles.Select(conflictedFile => VmrPatchHandler.GetExclusionRule(codeflowOptions.CurrentFlow.IsForwardFlow
+                ? new UnixPath(conflictedFile.Path.Substring(vmrSourcesPath.Length + 1))
+                : conflictedFile)),
+            .. GetPatchExclusions(codeflowOptions.Mapping),
+        ];
+
         List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
             _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch",
             fromSha,
             toSha,
             path: null,
             filters:
-            [
-                .. conflictedFiles.Select(conflictedFile => VmrPatchHandler.GetExclusionRule(codeflowOptions.CurrentFlow.IsForwardFlow
-                    ? new UnixPath(conflictedFile.Path.Substring(vmrSourcesPath.Length + 1))
-                    : conflictedFile)),
-                .. codeflowOptions.Mapping.Include.Select(VmrPatchHandler.GetInclusionRule),
-                .. codeflowOptions.Mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule),
-                .. DependencyFileManager.CodeflowDependencyFiles.Select(VmrPatchHandler.GetExclusionRule),
-                .. GetPatchExclusions(codeflowOptions.Mapping),
-            ],
+            excludedFiles,
             relativePaths: true,
             workingDir: codeflowOptions.CurrentFlow.IsForwardFlow
                 ? productRepo.Path
@@ -468,5 +468,10 @@ public abstract class CodeFlowConflictResolver
         }
     }
 
-    protected abstract IEnumerable<string> GetPatchExclusions(SourceMapping mapping);
+    protected virtual IEnumerable<string> GetPatchExclusions(SourceMapping mapping) =>
+    [
+        .. mapping.Include.Select(VmrPatchHandler.GetInclusionRule),
+        .. mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule),
+        .. DependencyFileManager.CodeflowDependencyFiles.Select(VmrPatchHandler.GetExclusionRule),
+    ];
 }
