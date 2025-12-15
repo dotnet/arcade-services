@@ -3,14 +3,12 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Net;
-using System.Reflection;
 using Maestro.Data;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.v2018_07_16.Models;
 
@@ -87,7 +85,7 @@ public class AssetsController : ControllerBase
         // version. The informational version has a "+<sha>" appended to the end for official builds
         // We don't want this, so eliminate it. The primary use of this is to install the darc version
         // corresponding to the maestro++ version.
-        AssemblyInformationalVersionAttribute? informationalVersionAttribute =
+        /*AssemblyInformationalVersionAttribute? informationalVersionAttribute =
             typeof(IRemote).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
         var version = informationalVersionAttribute?.InformationalVersion!;
         var lastPlus = version.LastIndexOf('+');
@@ -95,7 +93,9 @@ public class AssetsController : ControllerBase
         {
             version = version.Substring(0, lastPlus);
         }
-        return Ok(version);
+        return Ok(version);*/
+        // https://github.com/dotnet/arcade-services/issues/5443 - temporary hardcode the version to give repos time to get new arcade
+        return Ok("1.1.0-beta.25522.2");
     }
 
     /// <summary>
