@@ -371,4 +371,106 @@ public abstract class CodeFlowConflictResolver
         var result = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
         result.ThrowIfFailed("Failed to abort a merge when resolving version file conflicts");
     }
+
+    protected async Task DetectAndFixPartialReverts(
+        CodeflowOptions codeflowOptions,
+        ILocalGitRepo vmr,
+        ILocalGitRepo productRepo,
+        IReadOnlyCollection<UnixPath> conflictedFiles,
+        LastFlows lastFlows,
+        CancellationToken cancellationToken)
+    {
+        if (lastFlows.CrossingFlow == null)
+        {
+            return;
+        }
+
+        // Create patch for the file represent only the most current flow
+        string fromSha, toSha;
+        if (codeflowOptions.CurrentFlow.IsForwardFlow)
+        {
+            (fromSha, toSha) = (lastFlows.CrossingFlow.RepoSha, codeflowOptions.CurrentFlow.RepoSha);
+        }
+        else
+        {
+            (fromSha, toSha) = (lastFlows.CrossingFlow.VmrSha, codeflowOptions.CurrentFlow.VmrSha);
+        }
+
+        var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : productRepo;
+        var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
+
+        // We create the patch representing the current flow (minus the conflicted files)
+        List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
+            _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch",
+            fromSha,
+            toSha,
+            path: null,
+            filters:
+            [
+                .. conflictedFiles.Select(conflictedFile => VmrPatchHandler.GetExclusionRule(codeflowOptions.CurrentFlow.IsForwardFlow
+                    ? new UnixPath(conflictedFile.Path.Substring(vmrSourcesPath.Length + 1))
+                    : conflictedFile)),
+                .. codeflowOptions.Mapping.Include.Select(VmrPatchHandler.GetInclusionRule),
+                .. codeflowOptions.Mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule),
+                .. DependencyFileManager.CodeflowDependencyFiles.Select(VmrPatchHandler.GetExclusionRule),
+                .. GetPatchExclusions(codeflowOptions.Mapping),
+            ],
+            relativePaths: true,
+            workingDir: codeflowOptions.CurrentFlow.IsForwardFlow
+                ? productRepo.Path
+                : _vmrInfo.GetRepoSourcesPath(codeflowOptions.Mapping),
+            applicationPath: codeflowOptions.CurrentFlow.IsForwardFlow
+                ? vmrSourcesPath
+                : null,
+            ignoreLineEndings: true,
+            cancellationToken);
+
+        // We try to reverse-apply the current changes - if we fail, it means there is a missing change
+        try
+        {
+            await _patchHandler.ApplyPatches(
+                patches,
+                targetRepo.Path,
+                removePatchAfter: false,
+                keepConflicts: false,
+                reverseApply: true,
+                applyToIndex: false,
+                cancellationToken);
+        }
+        catch (PatchApplicationFailedException e)
+        {
+            List<UnixPath> revertedFiles = e.Result.StandardError
+                .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+                .Where(line => line.StartsWith("error:")
+                    && line.EndsWith(": patch does not apply"))
+                .Select(line => new UnixPath(line.Substring(7, line.Length - 29).Trim()))
+                .ToList();
+
+            if (revertedFiles.Count == 0)
+            {
+                _logger.LogWarning("Failed to detect reverted files from patch application failure");
+                _logger.LogDebug(e.Result.ToString());
+                return;
+            }
+
+            foreach (var revertedFile in revertedFiles)
+            {
+                _logger.LogInformation("Detected a revert in {file}. Fixing using a crossing flow...",
+                    revertedFile);
+
+                (await targetRepo.ExecuteGitCommand(["checkout", codeflowOptions.TargetBranch, revertedFile], cancellationToken))
+                    .ThrowIfFailed($"Failed to check out {revertedFile} from branch {codeflowOptions.TargetBranch}");
+
+                await TryResolvingConflictWithCrossingFlow(
+                    codeflowOptions,
+                    vmr,
+                    productRepo,
+                    revertedFile,
+                    lastFlows.CrossingFlow,
+                    cancellationToken);
+            }
+        }
+    }
+
+    protected abstract IEnumerable<string> GetPatchExclusions(SourceMapping mapping);
 }
