@@ -88,13 +88,13 @@ internal class ConfigurationDataHelper
         var dbIds = dbEntities.Select(e => e.UniqueId).ToHashSet();
         var externalIds = externalEntities.Select(e => e.UniqueId).ToHashSet();
 
-        List<T> creations = [.. externalEntities
+        IReadOnlyCollection<T> creations = [.. externalEntities
             .Where(e => !dbIds.Contains(e.UniqueId))];
 
-        List<T> removals = [.. dbEntities
+        IReadOnlyCollection<T> removals = [.. dbEntities
             .Where(e => !externalIds.Contains(e.UniqueId))];
 
-        List<T> updates = [.. externalEntities
+        IReadOnlyCollection<T> updates = [.. externalEntities
             .Where(e => dbIds.Contains(e.UniqueId))];
 
         return new EntityChanges<T>(creations, updates, removals);
