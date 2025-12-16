@@ -76,6 +76,11 @@ public abstract class CommandLineOptions : ICommandLineOptions
     [Option("ci", HelpText = "Designates that darc is run from a CI environment with some features disabled (e.g. interactive browser sign-in to Maestro)")]
     public bool IsCi { get; set; }
 
+    /// <summary>
+    /// Default log verbosity
+    /// </summary>
+    protected virtual LogLevel DefaultLogVerbosity => LogLevel.Warning;
+
     public abstract Operation GetOperation(ServiceProvider sp);
 
     public void InitializeFromSettings(ILogger logger)
@@ -101,7 +106,7 @@ public abstract class CommandLineOptions : ICommandLineOptions
         // Because the internal logging in DarcLib tends to be chatty and non-useful,
         // we remap the --verbose switch onto 'info', --debug onto highest level, and the
         // default level onto warning
-        LogLevel level = LogLevel.Warning;
+        LogLevel level;
         if (Debug)
         {
             level = LogLevel.Debug;
@@ -109,6 +114,10 @@ public abstract class CommandLineOptions : ICommandLineOptions
         else if (Verbose)
         {
             level = LogLevel.Information;
+        }
+        else
+        {
+            level = DefaultLogVerbosity;
         }
 
         services ??= new ServiceCollection();
@@ -120,6 +129,8 @@ public abstract class CommandLineOptions : ICommandLineOptions
 
         services.TryAddSingleton<IFileSystem, FileSystem>();
         services.TryAddSingleton<IRemoteFactory, RemoteFactory>();
+        services.TryAddSingleton<ILocalGitRepoFactory, LocalGitRepoFactory>();
+        services.TryAddTransient<ILocalGitClient, LocalGitClient>();
         services.TryAddSingleton<IVersionDetailsParser, VersionDetailsParser>();
         services.TryAddSingleton<IAssetLocationResolver, AssetLocationResolver>();
         services.TryAddTransient<IProcessManager>(sp => new ProcessManager(sp.GetRequiredService<ILogger<ProcessManager>>(), GitLocation));

@@ -53,7 +53,6 @@
     <PackageVersion Include="Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen" Version="$(MicrosoftDotNetInternalTestingDependencyInjectionCodeGenVersion)" />
     <PackageVersion Include="Microsoft.DotNet.Internal.Testing.Utility" Version="$(MicrosoftDotNetInternalTestingUtilityVersion)" />
     <PackageVersion Include="Microsoft.DotNet.Kusto" Version="$(MicrosoftDotNetKustoVersion)" />
-    <PackageVersion Include="Microsoft.DotNet.MaestroConfiguration.Client" Version="$(MicrosoftDotNetMaestroConfigurationClientVersion)" />
     <PackageVersion Include="Microsoft.DotNet.Services.Utility" Version="$(MicrosoftDotNetServicesUtilityVersion)" />
     <PackageVersion Include="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="$(MicrosoftDotNetSwaggerGeneratorMSBuildVersion)" />
     <PackageVersion Include="Microsoft.DotNet.VersionTools" Version="$(MicrosoftDotNetVersionToolsVersion)" />
@@ -107,5 +106,8 @@
     <!-- Pinned to clear a CG alert (this package comes via Microsoft.DotNet.Kusto but didn't get updated there yet) -->
     <PackageVersion Include="Microsoft.Azure.Kusto.Data" Version="14.0.3" />
     <PackageVersion Include="Microsoft.Azure.Kusto.Ingest" Version="14.0.3" />
+    <!-- remove once the MaestrConfiguration.Client has been moved back to it's own repo -->
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
   </ItemGroup>
 </Project>

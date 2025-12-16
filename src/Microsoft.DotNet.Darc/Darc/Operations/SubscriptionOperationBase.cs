@@ -4,6 +4,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
 
@@ -14,7 +15,8 @@ internal abstract class SubscriptionOperationBase : Operation
     protected readonly IBarApiClient _barClient;
     protected readonly ILogger _logger;
 
-    protected SubscriptionOperationBase(IBarApiClient barClient, ILogger logger)
+    protected SubscriptionOperationBase(
+        IBarApiClient barClient, ILogger logger)
     {
         _barClient = barClient;
         _logger = logger;

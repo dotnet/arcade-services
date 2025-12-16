@@ -145,6 +145,7 @@ public class BackflowConflictResolverTests
 
         _conflictResolver = new(
             _vmrInfo.Object,
+            new SourceManifest([new RepositoryRecord(MappingName, "https://github/repo1", "abcdef", -1)], []),
             _patchHandler.Object,
             _libGit2Client.Object,
             _localGitRepoFactory.Object,

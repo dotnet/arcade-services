@@ -21,6 +21,10 @@ COPY ["src/Maestro/Maestro.MergePolicyEvaluation/Maestro.MergePolicyEvaluation.c
 WORKDIR /src
 COPY ["src/Microsoft.DotNet.Darc/DarcLib/Microsoft.DotNet.DarcLib.csproj", "./Microsoft.DotNet.Darc/DarcLib/"]
 
+# Remove when removing Maestro Configuration from the repo
+WORKDIR /src/MaestroConfiguration
+COPY ["src/MaestroConfiguration/src/Microsoft.DotNet.MaestroConfiguration.Client/Microsoft.DotNet.MaestroConfiguration.Client.csproj", "./src/Microsoft.DotNet.MaestroConfiguration.Client/"]
+
 WORKDIR /src/ProductConstructionService
 COPY ["src/ProductConstructionService/ProductConstructionService.Api/ProductConstructionService.Api.csproj", "./ProductConstructionService.Api/"]
 COPY ["src/ProductConstructionService/ProductConstructionService.BarViz/ProductConstructionService.BarViz.csproj", "./ProductConstructionService.BarViz/"]
@@ -46,6 +50,10 @@ COPY ["src/Maestro/Maestro.MergePolicyEvaluation", "./Maestro.MergePolicyEvaluat
 
 WORKDIR /src
 COPY ["src/Microsoft.DotNet.Darc/DarcLib", "./Microsoft.DotNet.Darc/DarcLib"]
+
+# Remove when removing Maestro Configuration from the repo
+WORKDIR /src/MaestroConfiguration
+COPY ["src/MaestroConfiguration/src/Microsoft.DotNet.MaestroConfiguration.Client", "./src/Microsoft.DotNet.MaestroConfiguration.Client/"]
 
 WORKDIR /src/ProductConstructionService
 COPY ["src/ProductConstructionService", "."]

@@ -8,14 +8,13 @@ using System.Linq;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using YamlDotNet.Serialization;
 
-#nullable enable
-namespace Microsoft.DotNet.DarcLib.Models.Yaml;
+namespace Microsoft.DotNet.MaestroConfiguration.Client.Models;
 
 /// <summary>
 /// Helper class for YAML encoding/decoding purposes.
 /// This is used so that we can have friendly alias names for elements.
 /// </summary>
-public class SubscriptionYaml : IComparable<SubscriptionYaml>
+public class SubscriptionYaml : IYamlModel
 {
     public const string IdElement = "Id";
     public const string EnabledElement = "Enabled";
@@ -94,22 +93,18 @@ public class SubscriptionYaml : IComparable<SubscriptionYaml>
     };
 
     /// <summary>
-    /// Compares subscriptions for sorting purposes.
-    /// Order: TargetBranch (main, master, release/*, internal/release/*, then alphabetically), Channel, SourceRepository, Id
+    /// Checks if two subscriptions are equivalent (same source, channel, target, and directories).
     /// </summary>
-    public int CompareTo(SubscriptionYaml? other)
+    public bool IsEquivalentTo(SubscriptionYaml other)
     {
-        if (other is null) return 1;
+        if (other is null) return false;
 
-        int result = BranchOrderComparer.Compare(TargetBranch, other.TargetBranch);
-        if (result != 0) return result;
-
-        result = string.Compare(Channel, other.Channel, StringComparison.OrdinalIgnoreCase);
-        if (result != 0) return result;
-
-        result = string.Compare(SourceRepository, other.SourceRepository, StringComparison.OrdinalIgnoreCase);
-        if (result != 0) return result;
-
-        return Id.CompareTo(other.Id);
+        return string.Equals(SourceRepository, other.SourceRepository, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(Channel, other.Channel, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(TargetRepository, other.TargetRepository, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(TargetBranch, other.TargetBranch, StringComparison.OrdinalIgnoreCase) &&
+               SourceEnabled == other.SourceEnabled &&
+               string.Equals(SourceDirectory, other.SourceDirectory, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(TargetDirectory, other.TargetDirectory, StringComparison.OrdinalIgnoreCase);
     }
 }

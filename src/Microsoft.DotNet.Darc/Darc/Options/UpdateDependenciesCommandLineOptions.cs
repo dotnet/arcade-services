@@ -40,6 +40,9 @@ internal class UpdateDependenciesCommandLineOptions : CommandLineOptions<UpdateD
     [Option("coherency-only", HelpText = "Only do coherency updates.")]
     public bool CoherencyOnly { get; set; }
 
+    [Option("no-coherency-updates", HelpText = "Skip coherency updates and only update dependencies from the given build.")]
+    public bool NoCoherencyUpdates { get; set; }
+
     [Option("target-directory", HelpText = "In source enabled subs: Name of the VMR target directory which are the repository sources synchronized to." +
         " In dependency flow subscriptions: Comma separated list of paths ('.' or '/' for repo root) where the dependency updates are applied." +
         " These paths support globbing, but only at the end of the path, e.g src/*")]

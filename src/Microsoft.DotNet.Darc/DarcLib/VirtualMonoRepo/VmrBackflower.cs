@@ -182,7 +182,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             lastFlownSha,
             codeflowOptions.CurrentFlow.VmrSha,
             path: null,
-            filters: GetPatchExclusions(codeflowOptions.Mapping),
+            filters: GetPatchExclusions(_sourceManifest, codeflowOptions.Mapping),
             relativePaths: true,
             workingDir: _vmrInfo.GetRepoSourcesPath(codeflowOptions.Mapping),
             applicationPath: null,
@@ -290,7 +290,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             codeflowOptions.HeadBranch);
 
         // We leave the inlined submodules in the VMR
-        var exclusions = GetPatchExclusions(codeflowOptions.Mapping);
+        var exclusions = GetPatchExclusions(_sourceManifest, codeflowOptions.Mapping);
         var patchName = GetPatchName(codeflowOptions.Mapping, lastFlows, codeflowOptions.CurrentFlow);
 
         List<VmrIngestionPatch> patches = await _vmrPatchHandler.CreatePatches(
@@ -470,10 +470,10 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
     }
 
-    private IReadOnlyCollection<string> GetPatchExclusions(SourceMapping mapping)
+    internal static IReadOnlyCollection<string> GetPatchExclusions(ISourceManifest sourceManifest, SourceMapping mapping)
     {
         // Exclude all submodules that belong to the mapping
-        var exclusions = _sourceManifest.Submodules
+        var exclusions = sourceManifest.Submodules
             .Where(s => s.Path.StartsWith(mapping.Name + '/'))
             .Select(s => s.Path.Substring(mapping.Name.Length + 1));
 

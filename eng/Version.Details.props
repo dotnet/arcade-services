@@ -20,16 +20,14 @@ This file should be imported by eng/Versions.props
     <MicrosoftDotNetKustoPackageVersion>1.1.0-beta.25608.1</MicrosoftDotNetKustoPackageVersion>
     <MicrosoftDotNetServicesUtilityPackageVersion>1.1.0-beta.25608.1</MicrosoftDotNetServicesUtilityPackageVersion>
     <!-- dotnet/arcade dependencies -->
-    <MicrosoftDotNetArcadeSdkPackageVersion>11.0.0-beta.25605.2</MicrosoftDotNetArcadeSdkPackageVersion>
-    <MicrosoftDotNetBuildTasksFeedPackageVersion>11.0.0-beta.25605.2</MicrosoftDotNetBuildTasksFeedPackageVersion>
-    <MicrosoftDotNetSignToolPackageVersion>11.0.0-beta.25605.2</MicrosoftDotNetSignToolPackageVersion>
-    <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>11.0.0-beta.25605.2</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
+    <MicrosoftDotNetArcadeSdkPackageVersion>11.0.0-beta.25612.6</MicrosoftDotNetArcadeSdkPackageVersion>
+    <MicrosoftDotNetBuildTasksFeedPackageVersion>11.0.0-beta.25612.6</MicrosoftDotNetBuildTasksFeedPackageVersion>
+    <MicrosoftDotNetSignToolPackageVersion>11.0.0-beta.25612.6</MicrosoftDotNetSignToolPackageVersion>
+    <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>11.0.0-beta.25612.6</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
     <MicrosoftDotNetVersionToolsPackageVersion>8.0.0-beta.25555.2</MicrosoftDotNetVersionToolsPackageVersion>
     <!-- dotnet/dnceng dependencies -->
-    <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.25576.1</MicrosoftDncEngConfigurationBootstrapPackageVersion>
-    <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.25576.1</MicrosoftDncEngSecretManagerPackageVersion>
-    <!-- _git/maestro-configuration dependencies -->
-    <MicrosoftDotNetMaestroConfigurationClientPackageVersion>0.0.99-beta.25604.1</MicrosoftDotNetMaestroConfigurationClientPackageVersion>
+    <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.25608.3</MicrosoftDncEngConfigurationBootstrapPackageVersion>
+    <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.25608.3</MicrosoftDncEngSecretManagerPackageVersion>
   </PropertyGroup>
   <!--Property group for alternate package version names-->
   <PropertyGroup>
@@ -56,7 +54,5 @@ This file should be imported by eng/Versions.props
     <!-- dotnet/dnceng dependencies -->
     <MicrosoftDncEngConfigurationBootstrapVersion>$(MicrosoftDncEngConfigurationBootstrapPackageVersion)</MicrosoftDncEngConfigurationBootstrapVersion>
     <MicrosoftDncEngSecretManagerVersion>$(MicrosoftDncEngSecretManagerPackageVersion)</MicrosoftDncEngSecretManagerVersion>
-    <!-- _git/maestro-configuration dependencies -->
-    <MicrosoftDotNetMaestroConfigurationClientVersion>$(MicrosoftDotNetMaestroConfigurationClientPackageVersion)</MicrosoftDotNetMaestroConfigurationClientVersion>
   </PropertyGroup>
 </Project>

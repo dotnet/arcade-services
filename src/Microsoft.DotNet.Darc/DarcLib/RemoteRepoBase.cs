@@ -184,7 +184,6 @@ public class RemoteRepoBase : GitRepoCloner
     ///     Execute a git command
     /// </summary>
     /// <param name="arguments">Arguments to git</param>
-    /// <param name="logger">Logger</param>
     /// <param name="workingDirectory">Working directory</param>
     /// <param name="secretToMask">Mask this secret when calling the logger.</param>
     private async Task ExecuteGitCommand(string[] arguments, string workingDirectory, string secretToMask = null)

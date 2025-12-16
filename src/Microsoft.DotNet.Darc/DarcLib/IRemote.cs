@@ -166,6 +166,12 @@ public interface IRemote
         string branch,
         string message);
 
+    Task CommitUpdatesWithNoCloningAsync(
+        List<GitFile> filesToCommit,
+        string repoUri,
+        string branch,
+        string message);
+
     /// <summary>
     ///     Diff two commits in a repository and return information about them.
     /// </summary>

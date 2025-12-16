@@ -1,17 +1,14 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
-using System.Linq;
 using AwesomeAssertions;
-using Microsoft.DotNet.DarcLib.Models.Yaml;
-using NUnit.Framework;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 
-namespace Microsoft.DotNet.DarcLib.Tests.Models.Yaml;
+namespace Microsoft.DotNet.MaestroConfiguration.Client.Tests;
 
 public class BranchOrderComparerTests
 {
-    [Test]
+    [Fact]
     public void BranchMergePolicies_SortsByBranchPriority()
     {
         // Arrange - Create branch merge policies with branches in random order
@@ -28,7 +25,7 @@ public class BranchOrderComparerTests
         ];
 
         // Act - Sort using the IComparable implementation
-        var sorted = unsortedPolicies.Order().ToList();
+        var sorted = YamlModelSorter.Sort(unsortedPolicies).ToList();
 
         // Assert - Verify order: main, master, release/*, internal/release/*, then alphabetically
         sorted[0].Branch.Should().Be("main");
