@@ -34,7 +34,7 @@ public class RemoteGitRepo : MaestroConfiguration.Client.IGitRepo
     {
         var pr = await _remote.CreatePullRequestAsync(
             repositoryUri,
-            new PullRequest
+            new Models.PullRequest
             {
                 BaseBranch = baseBranch,
                 HeadBranch = headBranch,
