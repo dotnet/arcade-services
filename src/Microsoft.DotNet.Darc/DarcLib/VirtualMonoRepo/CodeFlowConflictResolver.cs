@@ -431,40 +431,60 @@ public abstract class CodeFlowConflictResolver
         }
         catch (PatchApplicationFailedException e)
         {
-            List<UnixPath> revertedFiles = e.Result.StandardError
+            var revertedFiles = e.Result.StandardError
                 .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
-                .Where(line => line.StartsWith("error:")
-                    && line.EndsWith(": patch does not apply"))
-                .Select(line => new UnixPath(line.Substring(7, line.Length - 29).Trim()))
-                .ToList();
+                .Where(line => line.StartsWith("error:") && line.EndsWith(": patch does not apply"))
+                .Select(line => new UnixPath(line.Substring(7, line.Length - 29).Trim()));
 
-            if (revertedFiles.Count == 0)
+            if (revertedFiles.Any())
             {
                 _logger.LogError(e, "Failed to detect reverted files from patch application failure");
                 _logger.LogDebug(e.Result.ToString());
                 return;
             }
 
-            foreach (var revertedFile in revertedFiles)
+            await FixRevertedFiles(
+                codeflowOptions,
+                vmr,
+                productRepo,
+                lastFlows.CrossingFlow,
+                revertedFiles,
+                cancellationToken);
+        }
+    }
+
+    private async Task FixRevertedFiles(
+        CodeflowOptions codeflowOptions,
+        ILocalGitRepo vmr,
+        ILocalGitRepo productRepo,
+        Codeflow crossingFlow,
+        IEnumerable<UnixPath> revertedFiles,
+        CancellationToken cancellationToken)
+    {
+        var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : productRepo;
+
+        foreach (var revertedFile in revertedFiles)
+        {
+            _logger.LogInformation("Detected a revert in {file}. Fixing using a crossing flow...",
+                revertedFile);
+
+            string contentBefore = await _fileSystem.ReadAllTextAsync(targetRepo.Path / revertedFile);
+
+            (await targetRepo.ExecuteGitCommand(["checkout", codeflowOptions.TargetBranch, revertedFile], cancellationToken))
+                .ThrowIfFailed($"Failed to check out {revertedFile} from branch {codeflowOptions.TargetBranch}");
+
+            if (!await TryResolvingConflictWithCrossingFlow(
+                codeflowOptions,
+                vmr,
+                productRepo,
+                revertedFile,
+                crossingFlow,
+                cancellationToken))
             {
-                _logger.LogInformation("Detected a revert in {file}. Fixing using a crossing flow...",
+                _logger.LogError("Failed to auto-resolve a conflict in {file} while fixing a partial revert",
                     revertedFile);
-
-                (await targetRepo.ExecuteGitCommand(["checkout", codeflowOptions.TargetBranch, revertedFile], cancellationToken))
-                    .ThrowIfFailed($"Failed to check out {revertedFile} from branch {codeflowOptions.TargetBranch}");
-
-                if (!await TryResolvingConflictWithCrossingFlow(
-                        codeflowOptions,
-                        vmr,
-                        productRepo,
-                        revertedFile,
-                        lastFlows.CrossingFlow,
-                        cancellationToken))
-                {
-                    _logger.LogError("Failed to auto-resolve a conflict in {file} while fixing a partial revert",
-                        revertedFile);
-                    await targetRepo.ExecuteGitCommand(["checkout", codeflowOptions.HeadBranch, revertedFile], cancellationToken);
-                }
+                _fileSystem.WriteToFile(targetRepo.Path / revertedFile, contentBefore);
+                await targetRepo.StageAsync([revertedFile], cancellationToken);
             }
         }
     }
