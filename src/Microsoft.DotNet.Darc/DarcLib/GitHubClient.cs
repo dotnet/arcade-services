@@ -1462,42 +1462,41 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         where T : class, IGithubEtagResource
     {
         var cachedResource = await _cache.TryGetAsync<T>(resourceKey);
-        string? entityTag = cachedResource?.Etag;
+
         var headers = new Dictionary<string, string>
         {
             { "Accept", "application/vnd.github.v3+json" },
         };
-        if (entityTag != null)
+
+        if (cachedResource?.Etag != null)
         {
-            headers.Add("If-None-Match", entityTag);
+            headers.Add("If-None-Match", cachedResource.Etag);
         }
+
         var response = await client.Connection.Get<K>(resourceUri, headers);
-        if (response.HttpResponse.StatusCode == HttpStatusCode.NotModified && cachedResource != null)
+
+        if (response.HttpResponse.StatusCode == HttpStatusCode.NotModified)
         {
             // TODO: Add telemetry for cache hits to measure the impact of this optimization.
-            return cachedResource;
+            return cachedResource!;
         }
-        else
+        else if (response.HttpResponse.StatusCode == HttpStatusCode.OK)
         {
-            if (response.HttpResponse.StatusCode == HttpStatusCode.OK)
-            {
-                string? etag = response.HttpResponse.Headers
-                    .FirstOrDefault(h => h.Key.Equals("Etag", StringComparison.OrdinalIgnoreCase))
-                    .Value;
+            var resource = resourceConverter(response.Body);
 
-                var resource = resourceConverter(response.Body);
+            string? responseEtag = response.HttpResponse.Headers
+                .FirstOrDefault(h => h.Key.Equals("Etag", StringComparison.OrdinalIgnoreCase))
+                .Value;
 
-                if (etag != null)
-                {
-                    resource.Etag = etag;
-                    await _cache.TrySetAsync<T>(resourceKey, resource);
-                }
-                return resource;
-            }
-            else
+            if (!string.IsNullOrEmpty(responseEtag))
             {
-                throw new DarcException($"Failed to get {typeof(T).Name} from GitHub. Status code: {response.HttpResponse.StatusCode}");
+                resource.Etag = responseEtag;
+                await _cache.TrySetAsync(resourceKey, resource);
             }
+
+            return resource;
         }
+
+        throw new DarcException($"Failed to GET Github resource at URI {resourceUri}. Status code: {response.HttpResponse.StatusCode}");
     }
 }
