@@ -344,9 +344,9 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         throw new ArgumentException($"No object with id {searchKey} was found on branch {workingBranch}");
     }
 
-    private static bool ContainsYamlModel<T>(IReadOnlyCollection<T> yamlModels, T searchObject)
+    private static bool ContainsYamlModel<T>(IReadOnlyCollection<T> yamlModels, string objectKey)
         where T : IYamlModel
-        => yamlModels.Any(y => YamlModelUniqueKeys.GetUniqueKey(y) == YamlModelUniqueKeys.GetUniqueKey(searchObject));
+        => yamlModels.Any(y => YamlModelUniqueKeys.GetUniqueKey(y) == objectKey);
     #endregion
 
     public Task UpdateSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml updatedSubscription) => throw new NotImplementedException();

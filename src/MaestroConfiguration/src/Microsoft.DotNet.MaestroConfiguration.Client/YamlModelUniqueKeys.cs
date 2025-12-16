@@ -12,7 +12,7 @@ namespace Microsoft.DotNet.MaestroConfiguration.Client;
 /// </summary>
 public static class YamlModelUniqueKeys
 {
-    private static readonly Dictionary<Type, object> _keyExtractors = new()
+    private static readonly IReadOnlyDictionary<Type, object> _keyExtractors = new Dictionary<Type, object>()
     {
         { typeof(SubscriptionYaml), new SubscriptionYamlUniqueKey() },
         { typeof(DefaultChannelYaml), new DefaultChannelYamlUniqueKey() },
@@ -72,9 +72,7 @@ public interface IUniqueKeyExtractor<in T> where T : IYamlModel
 public class SubscriptionYamlUniqueKey : IUniqueKeyExtractor<SubscriptionYaml>
 {
     public string GetUniqueKey(SubscriptionYaml model)
-    {
-        return model.Id.ToString();
-    }
+        => model.Id.ToString();
 }
 
 /// <summary>
@@ -83,11 +81,7 @@ public class SubscriptionYamlUniqueKey : IUniqueKeyExtractor<SubscriptionYaml>
 public class DefaultChannelYamlUniqueKey : IUniqueKeyExtractor<DefaultChannelYaml>
 {
     public string GetUniqueKey(DefaultChannelYaml model)
-    {
-        // TODO: Implement unique key extraction
-        // Example: return $"{model.Repository}|{model.Branch}";
-        throw new NotImplementedException();
-    }
+        => $"{model.Repository}|{model.Branch}|{model.Channel}";
 }
 
 /// <summary>
@@ -96,11 +90,7 @@ public class DefaultChannelYamlUniqueKey : IUniqueKeyExtractor<DefaultChannelYam
 public class ChannelYamlUniqueKey : IUniqueKeyExtractor<ChannelYaml>
 {
     public string GetUniqueKey(ChannelYaml model)
-    {
-        // TODO: Implement unique key extraction
-        // Example: return model.Name;
-        throw new NotImplementedException();
-    }
+     => model.Name;
 }
 
 /// <summary>
@@ -109,9 +99,5 @@ public class ChannelYamlUniqueKey : IUniqueKeyExtractor<ChannelYaml>
 public class BranchMergePoliciesYamlUniqueKey : IUniqueKeyExtractor<BranchMergePoliciesYaml>
 {
     public string GetUniqueKey(BranchMergePoliciesYaml model)
-    {
-        // TODO: Implement unique key extraction
-        // Example: return model.Branch;
-        throw new NotImplementedException();
-    }
+        => $"{model.Repository}|{model.Branch}";
 }
