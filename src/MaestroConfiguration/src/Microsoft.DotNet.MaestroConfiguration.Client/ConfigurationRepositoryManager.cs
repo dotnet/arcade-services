@@ -180,7 +180,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         }
         else
         {
-            string yamlContent = _yamlSerializer.Serialize(data).Replace("\n-", "\n\n-");
+            string yamlContent = _yamlSerializer.Serialize(YamlModelSorter.Sort(data)).Replace("\n-", "\n\n-");
             await gitRepo.CommitFilesAsync(repositoryUri, workingBranch, [new GitFile(filePath, yamlContent)], commitMessage);
         }
     }
