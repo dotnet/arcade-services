@@ -68,6 +68,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
 {
     private readonly IVmrInfo _vmrInfo;
     private readonly ISourceManifest _sourceManifest;
+    private readonly IVmrPatchHandler _patchHandler;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<ForwardFlowConflictResolver> _logger;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
@@ -91,6 +92,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
+        _patchHandler = patchHandler;
         _fileSystem = fileSystem;
         _logger = logger;
         _localGitRepoFactory = localGitRepoFactory;
@@ -115,6 +117,17 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             lastFlows,
             headBranchExisted,
             cancellationToken);
+
+        if (codeflowOptions.EnableRebase)
+        {
+            await DetectAndFixPartialReverts(
+                codeflowOptions,
+                vmr,
+                sourceRepo,
+                conflictedFiles,
+                lastFlows,
+                cancellationToken);
+        }
 
         try
         {

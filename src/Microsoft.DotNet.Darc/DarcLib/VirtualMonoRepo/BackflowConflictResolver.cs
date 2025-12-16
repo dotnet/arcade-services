@@ -36,6 +36,7 @@ public interface IBackflowConflictResolver
 public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConflictResolver
 {
     private readonly IVmrInfo _vmrInfo;
+    private readonly ISourceManifest _sourceManifest;
     private readonly ILocalLibGit2Client _libGit2Client;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
@@ -49,6 +50,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
     public BackflowConflictResolver(
         IVmrInfo vmrInfo,
+        ISourceManifest sourceManifest,
         IVmrPatchHandler patchHandler,
         ILocalLibGit2Client libGit2Client,
         ILocalGitRepoFactory localGitRepoFactory,
@@ -63,6 +65,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         : base(vmrInfo, patchHandler, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
+        _sourceManifest = sourceManifest;
         _libGit2Client = libGit2Client;
         _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
@@ -91,6 +94,17 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             lastFlows,
             headBranchExisted,
             cancellationToken);
+
+        if (codeflowOptions.EnableRebase)
+        {
+            await DetectAndFixPartialReverts(
+                codeflowOptions,
+                vmr,
+                targetRepo,
+                conflictedFiles,
+                lastFlows,
+                cancellationToken);
+        }
 
         try
         {
@@ -501,4 +515,10 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         => content == null
             ? new VersionDetails([], null)
             : _versionDetailsParser.ParseVersionDetailsXml(content, includePinned: false);
+
+    protected override IEnumerable<string> GetPatchExclusions(SourceMapping mapping) =>
+    [
+        .. base.GetPatchExclusions(mapping),
+        .. VmrBackFlower.GetPatchExclusions(_sourceManifest, mapping)
+    ];
 }
