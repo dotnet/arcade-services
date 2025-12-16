@@ -80,22 +80,22 @@ internal class ConfigurationDataHelper
     }
 
     internal static EntityChanges<T> ComputeUpdatesForEntity<T, TId>(
-    IReadOnlyCollection<T> dbEntities,
-    IReadOnlyCollection<T> externalEntities)
+        IReadOnlyCollection<T> dbEntities,
+        IReadOnlyCollection<T> externalEntities)
         where T : class, IExternallySyncedEntity<TId>
         where TId : notnull
     {
-        var dbEntitiesById = dbEntities.ToDictionary(e => e.UniqueId);
-        var externalEntitiesById = externalEntities.ToDictionary(e => e.UniqueId);
+        var dbIds = dbEntities.Select(e => e.UniqueId).ToHashSet();
+        var externalIds = externalEntities.Select(e => e.UniqueId).ToHashSet();
 
-        List<T> creations = [.. externalEntitiesById.Values
-            .Where(e => !dbEntitiesById.ContainsKey(e.UniqueId))];
+        List<T> creations = [.. externalEntities
+            .Where(e => !dbIds.Contains(e.UniqueId))];
 
-        List<T> removals = [.. dbEntitiesById.Values
-            .Where(e => !externalEntitiesById.ContainsKey(e.UniqueId))];
+        List<T> removals = [.. dbEntities
+            .Where(e => !externalIds.Contains(e.UniqueId))];
 
-        List<T> updates = [.. externalEntitiesById.Values
-            .Where(e => dbEntitiesById.ContainsKey(e.UniqueId))];
+        List<T> updates = [.. externalEntities
+            .Where(e => dbIds.Contains(e.UniqueId))];
 
         return new EntityChanges<T>(creations, updates, removals);
     }
