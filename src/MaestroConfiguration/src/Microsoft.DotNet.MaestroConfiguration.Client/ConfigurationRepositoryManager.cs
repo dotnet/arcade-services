@@ -100,7 +100,8 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
                 configurationRepo,
                 parameters.RepositoryUri,
                 workingBranch,
-                subscription);
+                subscription,
+                YamlModelUniqueKeys.GetSubscriptionKey);
         }
         else
         {
@@ -260,16 +261,18 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         _logger.LogInformation("Created pull request at {0}", guiUri);
     }
 
-    private async Task<(string, List<T>)> FindAndParseConfigurationFile<T>(
+    private async Task<(string, List<T>)> FindAndParseConfigurationFile<T, TKey>(
         IGitRepo gitRepo,
         string repositoryUri,
         string workingBranch,
-        T searchObject)
+        T searchObject,
+        Func<T, TKey> getUniqueKey)
         where T : IYamlModel
+        where TKey : IEquatable<TKey>
     {
         // Try the default file first before searching all files
         _logger.LogInformation("No configuration file path provided. Trying default location first...");
-        var result = await TryFindInDefaultFileAsync<T>(gitRepo, repositoryUri, workingBranch, searchObject);
+        var result = await TryFindInDefaultFileAsync(gitRepo, repositoryUri, workingBranch, searchObject, getUniqueKey);
         if (result.HasValue)
         {
             return result.Value;
@@ -277,24 +280,27 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
 
         // If not in the default file, search all files in the folder for that yaml type
         _logger.LogInformation("Couldn't find configuration object at the default location. Searching all files in folder... this might take a few minutes");
-        return await SearchAllFilesInFolderAsync(gitRepo, repositoryUri, workingBranch, searchObject);
+        return await SearchAllFilesInFolderAsync(gitRepo, repositoryUri, workingBranch, searchObject, getUniqueKey);
     }
 
-    private async Task<(string FilePath, List<T> Content)?> TryFindInDefaultFileAsync<T>(
+    private async Task<(string FilePath, List<T> Content)?> TryFindInDefaultFileAsync<T, TKey>(
         IGitRepo gitRepo,
         string repositoryUri,
         string workingBranch,
-        T searchObject)
+        T searchObject,
+        Func<T, TKey> getUniqueKey)
         where T : IYamlModel
+        where TKey : IEquatable<TKey>
     {
         var defaultFilePath = ConfigFilePathResolver.GetDefaultFilePath(searchObject);
+        var searchKey = getUniqueKey(searchObject);
 
         try
         {
             var defaultFileContents = await gitRepo.GetFileContentsAsync(repositoryUri, workingBranch, defaultFilePath);
             var deserializedYamls = _yamlDeserializer.Deserialize<List<T>>(defaultFileContents);
 
-            if (ContainsYamlModel(deserializedYamls, YamlModelUniqueKeys.GetUniqueKey(searchObject)))
+            if (deserializedYamls.Any(y => searchKey.Equals(getUniqueKey(y))))
             {
                 return (defaultFilePath, deserializedYamls);
             }
@@ -307,15 +313,17 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         return null;
     }
 
-    private async Task<(string FilePath, List<T> Content)> SearchAllFilesInFolderAsync<T>(
+    private async Task<(string FilePath, List<T> Content)> SearchAllFilesInFolderAsync<T, TKey>(
         IGitRepo gitRepo,
         string repositoryUri,
         string workingBranch,
-        T searchObject)
+        T searchObject,
+        Func<T, TKey> getUniqueKey)
         where T : IYamlModel
+        where TKey : IEquatable<TKey>
     {
         var folderPath = ConfigFilePathResolver.GetDefaultFileFolder(searchObject);
-        var searchKey = YamlModelUniqueKeys.GetUniqueKey(searchObject);
+        var searchKey = getUniqueKey(searchObject);
 
         // Get list of all files in the folder
         var filePaths = await gitRepo.ListBlobsAsync(repositoryUri, workingBranch, folderPath);
@@ -328,9 +336,9 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
                 var fileContent = await gitRepo.GetFileContentsAsync(repositoryUri, workingBranch, filePath);
                 var deserializedYamls = _yamlDeserializer.Deserialize<List<T>>(fileContent);
 
-                if (ContainsYamlModel(deserializedYamls, searchKey))
+                if (deserializedYamls.Any(y => searchKey.Equals(getUniqueKey(y))))
                 {
-                    _logger.LogInformation("Search string {0} found in {1}", searchKey, filePath);
+                    _logger.LogInformation("Object with key {0} found in {1}", searchKey, filePath);
                     return (filePath, deserializedYamls);
                 }
             }
@@ -341,12 +349,8 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             }
         }
 
-        throw new ArgumentException($"No object with id {searchKey} was found on branch {workingBranch}");
+        throw new ArgumentException($"No object with key {searchKey} was found on branch {workingBranch}");
     }
-
-    private static bool ContainsYamlModel<T>(IReadOnlyCollection<T> yamlModels, string objectKey)
-        where T : IYamlModel
-        => yamlModels.Any(y => YamlModelUniqueKeys.GetUniqueKey(y) == objectKey);
     #endregion
 
     public Task UpdateSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml updatedSubscription) => throw new NotImplementedException();
