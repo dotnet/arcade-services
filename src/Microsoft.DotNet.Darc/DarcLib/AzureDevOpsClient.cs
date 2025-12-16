@@ -337,26 +337,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             throw new NotImplementedException("Expected that source and target ref names returned from pull request API include refs/heads");
         }
 
-<<<<<<< HEAD
         return ToDarcLibPullRequest(pr);
-=======
-        return new PullRequest
-        {
-            Title = pr.Title,
-            Description = pr.Description,
-            BaseBranch = pr.TargetRefName.Substring(RefsHeadsPrefix.Length),
-            HeadBranch = pr.SourceRefName.Substring(RefsHeadsPrefix.Length),
-            Status = pr.Status switch
-            {
-                PullRequestStatus.Active => PrStatus.Open,
-                PullRequestStatus.Completed => PrStatus.Merged,
-                PullRequestStatus.Abandoned => PrStatus.Closed,
-                _ => PrStatus.None,
-            },
-            UpdatedAt = DateTimeOffset.UtcNow,
-            HeadBranchCommitSha = pr.LastMergeSourceCommit.CommitId,
-        };
->>>>>>> 560a1c71f ([BUGFIX] Azdo client fetches wrong branch's SHA)
     }
 
     /// <summary>
