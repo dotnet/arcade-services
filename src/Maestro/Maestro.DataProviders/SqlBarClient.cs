@@ -585,11 +585,9 @@ public class SqlBarClient : ISqlBarClient
 
         foreach (var subscription in subscriptions)
         {
-            existingSubscriptions.TryGetValue(
+            if (!existingSubscriptions.TryGetValue(
                 subscription.Id,
-                out Data.Models.Subscription existingSubscription);
-
-            if (existingSubscription == null)
+                out Data.Models.Subscription existingSubscription))
             {
                 throw new InvalidOperationException($"Failed to update subscription with id {subscription.Id} "
                     + "because the subscription could not be found in the database.");

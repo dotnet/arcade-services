@@ -105,11 +105,8 @@ internal class ConfigurationDataHelper
         Namespace namespaceEntity,
         Dictionary<string, Channel> existingChannelsByName)
     {
-        existingChannelsByName.TryGetValue(subscription.Values.Channel, out Channel? existingChannel);
-
-        if (existingChannel is null)
+        if (!existingChannelsByName.TryGetValue(subscription.Values.Channel, out Channel? existingChannel))
         {
-            //todo find the right exception type
             throw new InvalidOperationException(
                 $"Channel '{subscription.Values.Channel}' not found for subscription creation.");
         }
@@ -167,7 +164,6 @@ internal class ConfigurationDataHelper
         }
         else
         {
-            //todo find the right exception type
             throw new InvalidOperationException(
                 $"Channel '{defaultChannel.Values.Channel}' not found for default channel creation.");
         }

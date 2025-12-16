@@ -197,8 +197,7 @@ internal class ConfigurationIngestor(
 
         foreach (var channel in updatedChannels)
         {
-            dbChannelsByName.TryGetValue(channel.Values.Name, out Channel? dbChannel);
-
+            var dbChannel = dbChannelsByName[channel.Values.Name];
             dbChannel!.Classification = channel.Values.Classification;
 
             _context.Channels.Update(dbChannel);
@@ -335,8 +334,7 @@ internal class ConfigurationIngestor(
 
         foreach (var bmp in removedBRanchMergePolicies)
         {
-            dbRepositoryBranches.TryGetValue(bmp.Values.Repository + "|" + bmp.Values.Branch, out RepositoryBranch? dbRepositoryBranch);
-            if (dbRepositoryBranch != null)
+            if (dbRepositoryBranches.TryGetValue(bmp.Values.Repository + "|" + bmp.Values.Branch, out RepositoryBranch? dbRepositoryBranch))
             {
                 branchRemovals.Add(dbRepositoryBranch);
             }
