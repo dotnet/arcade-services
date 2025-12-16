@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -37,7 +38,7 @@ public class LocalGitRepo : MaestroConfiguration.Client.IGitRepo
 
     public async Task DeleteFileAsync(string repositoryUri, string branch, string filePath, string commitMessage)
         => await _gitRepo.CommitFilesAsync(
-            [new Helpers.GitFile(filePath, string.Empty, ContentEncoding.Utf8, operation: GitFileOperation.Delete)],
+            [new Helpers.GitFile(new UnixPath(repositoryUri) / filePath, string.Empty, ContentEncoding.Utf8, operation: GitFileOperation.Delete)],
             repositoryUri,
             branch,
             commitMessage);
@@ -83,7 +84,7 @@ public class LocalGitRepo : MaestroConfiguration.Client.IGitRepo
             args.Add("-r");
         }
         args.Add(branch);
-        args.Add(path);
+        args.Add(path + Path.DirectorySeparatorChar);
         return (await _localGitRepo.ExecuteGitCommand(args.ToArray()))
             .GetOutputLines()
             .Select(line => line.Split(' ', StringSplitOptions.RemoveEmptyEntries))

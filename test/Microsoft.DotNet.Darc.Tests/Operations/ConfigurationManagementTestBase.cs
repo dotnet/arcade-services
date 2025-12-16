@@ -11,6 +11,7 @@ using Microsoft.DotNet.Darc.Tests.Helpers;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Maestro.Common.AzureDevOpsTokens;
 using Moq;
@@ -226,6 +227,15 @@ public abstract class ConfigurationManagementTestBase
     protected async Task CheckoutBranch(string branch)
     {
         await ProcessManager.ExecuteGit(ConfigurationRepoPath, ["checkout", branch]);
+    }
+
+    /// <summary>
+    /// Deserializes a YAML file containing a list of subscriptions.
+    /// </summary>
+    protected static async Task<List<SubscriptionYaml>> DeserializeSubscriptionsAsync(string filePath)
+    {
+        var content = await File.ReadAllTextAsync(filePath);
+        return YamlDeserializer.Deserialize<List<SubscriptionYaml>>(content) ?? [];
     }
 
     private void CleanupTempRepo()

@@ -268,6 +268,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         where T : IYamlModel
     {
         // Try the default file first before searching all files
+        _logger.LogInformation("No configuration file path provided. Trying default location first...");
         var result = await TryFindInDefaultFileAsync<T>(gitRepo, repositoryUri, workingBranch, searchObject);
         if (result.HasValue)
         {
