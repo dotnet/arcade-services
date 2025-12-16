@@ -1,11 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+#nullable enable
+
 using System;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.MaestroConfiguration.Client;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -18,14 +23,17 @@ internal class AddChannelOperation : Operation
     private readonly AddChannelCommandLineOptions _options;
     private readonly ILogger<AddChannelOperation> _logger;
     private readonly IBarApiClient _barClient;
+    private readonly IConfigurationRepositoryManager _configRepoManager;
 
     public AddChannelOperation(
         AddChannelCommandLineOptions options,
         IBarApiClient barClient,
+        IConfigurationRepositoryManager configRepoManager,
         ILogger<AddChannelOperation> logger)
     {
         _options = options;
         _barClient = barClient;
+        _configRepoManager = configRepoManager;
         _logger = logger;
     }
 
@@ -45,24 +53,49 @@ internal class AddChannelOperation : Operation
                 return Constants.ErrorCode;
             }
 
-            Channel newChannelInfo = await _barClient.CreateChannelAsync(_options.Name, _options.Classification);
-            switch (_options.OutputFormat)
+            if (_options.ShouldUseConfigurationRepository)
             {
-                case DarcOutputType.json:
-                    Console.WriteLine(JsonConvert.SerializeObject(
-                        new
-                        {
-                            id = newChannelInfo.Id,
-                            name = newChannelInfo.Name,
-                            classification = newChannelInfo.Classification
-                        },
-                        Formatting.Indented));
-                    break;
-                case DarcOutputType.text:
-                    Console.WriteLine($"Successfully created new channel with name '{_options.Name}' and id {newChannelInfo.Id}.");
-                    break;
-                default:
-                    throw new NotImplementedException($"Output type {_options.OutputFormat} not supported by add-channel");
+                ChannelYaml channelYaml = new()
+                {
+                    Name = _options.Name,
+                    Classification = _options.Classification
+                };
+
+                // Check if channel already exists in the API
+                var existingChannel = await FindExistingChannelAsync(channelYaml.Name);
+                if (existingChannel != null)
+                {
+                    _logger.LogError($"An existing channel with name '{_options.Name}' already exists");
+                    return Constants.ErrorCode;
+                }
+
+                await _configRepoManager.AddChannelAsync(
+                    _options.ToConfigurationRepositoryOperationParameters(),
+                    channelYaml);
+
+                Console.WriteLine($"Successfully created new channel with name '{_options.Name}'.");
+            }
+            else
+            {
+                Channel newChannelInfo = await _barClient.CreateChannelAsync(_options.Name, _options.Classification);
+                switch (_options.OutputFormat)
+                {
+                    case DarcOutputType.json:
+                        Console.WriteLine(JsonConvert.SerializeObject(
+                            new
+                            {
+                                id = newChannelInfo.Id,
+                                name = newChannelInfo.Name,
+                                classification = newChannelInfo.Classification
+                            },
+                            Formatting.Indented));
+                        break;
+                    case DarcOutputType.text:
+                        Console.WriteLine($"Successfully created new channel with name '{_options.Name}' and id {newChannelInfo.Id}.");
+                        break;
+                    default:
+                        throw new NotImplementedException($"Output type {_options.OutputFormat} not supported by add-channel");
+                }
             }
 
             return Constants.SuccessCode;
@@ -82,5 +115,11 @@ internal class AddChannelOperation : Operation
             _logger.LogError(e, "Error: Failed to create new channel.");
             return Constants.ErrorCode;
         }
+    }
+
+    private async Task<Channel?> FindExistingChannelAsync(string channelName)
+    {
+        var channels = await _barClient.GetChannelsAsync();
+        return channels.FirstOrDefault(c => string.Equals(c.Name, channelName, StringComparison.OrdinalIgnoreCase));
     }
 }

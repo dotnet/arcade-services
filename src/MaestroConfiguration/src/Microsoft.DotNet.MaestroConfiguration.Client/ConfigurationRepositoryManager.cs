@@ -151,6 +151,58 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         }
     }
 
+    public async Task AddChannelAsync(ConfigurationRepositoryOperationParameters parameters, ChannelYaml channel)
+    {
+        IGitRepo configurationRepo = await _configurationRepoFactory.CreateClient(parameters.RepositoryUri);
+
+        await ValidateConfigurationRepositoryParametersAsync(configurationRepo, parameters);
+        var workingBranch = await PrepareConfigurationBranchAsync(configurationRepo, parameters);
+
+        var newChannelFilePath = string.IsNullOrEmpty(parameters.ConfigurationFilePath)
+            ? ConfigFilePathResolver.GetDefaultChannelFilePath(channel)
+            : parameters.ConfigurationFilePath;
+        _logger.LogInformation("Adding new channel to file {0}", newChannelFilePath);
+
+        var channelsInFile = await FetchAndParseRemoteConfiguration<ChannelYaml>(
+            configurationRepo,
+            parameters.RepositoryUri,
+            workingBranch,
+            newChannelFilePath);
+
+        // If we have a branch that hasn't been ingested yet, we need to check for equivalent channels in the file
+        var equivalentInFile = channelsInFile.FirstOrDefault(c => string.Equals(c.Name, channel.Name, StringComparison.OrdinalIgnoreCase));
+        if (equivalentInFile != null)
+        {
+            throw new ArgumentException($"Channel '{equivalentInFile.Name}' already exists in '{newChannelFilePath}'.");
+        }
+
+        channelsInFile.Add(channel);
+        await CommitConfigurationDataAsync(
+            configurationRepo,
+            parameters.RepositoryUri,
+            workingBranch,
+            newChannelFilePath,
+            channelsInFile,
+            new ChannelYamlComparer(),
+            $"Add new channel '{channel.Name}' with classification '{channel.Classification}'");
+
+        if (!parameters.DontOpenPr)
+        {
+            // Open a pull request for the new channel
+            await CreatePullRequest(
+                configurationRepo,
+                parameters.RepositoryUri,
+                workingBranch,
+                parameters.ConfigurationBaseBranch,
+                "Updating Maestro configuration");
+        }
+        else
+        {
+            _logger.LogInformation("Successfully added channel '{0}' to branch '{1}' of the configuration repository {2}",
+                channel.Name, parameters.ConfigurationBranch, parameters.RepositoryUri);
+        }
+    }
+
 
     #region helper methods
     private static async Task ValidateConfigurationRepositoryParametersAsync(
