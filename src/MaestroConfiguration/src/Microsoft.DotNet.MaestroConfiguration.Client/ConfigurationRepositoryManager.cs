@@ -166,7 +166,8 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
                 configurationRepo,
                 parameters.RepositoryUri,
                 workingBranch,
-                updatedSubscription);
+                updatedSubscription,
+                YamlModelUniqueKeys.GetSubscriptionKey);
         }
         else
         {
@@ -195,6 +196,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             workingBranch,
             subscriptionFilePath,
             subscriptionsInFile,
+            new SubscriptionYamlComparer(),
             $"Update subscription {updatedSubscription.Id}");
 
         if (!parameters.DontOpenPr)

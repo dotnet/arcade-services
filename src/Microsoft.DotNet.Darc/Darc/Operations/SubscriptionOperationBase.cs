@@ -4,7 +4,6 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.MaestroConfiguration.Client;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
@@ -116,7 +115,7 @@ internal abstract class SubscriptionOperationBase : Operation
                 targetDirectory: subscriptionYaml.TargetDirectory))
             .FirstOrDefault(s => s.TargetBranch == subscriptionYaml.TargetBranch);
 
-        if (equivalentSub?.Id != null)
+        if (equivalentSub?.Id != null && equivalentSub.Id != subscriptionYaml.Id)
         {
             throw new ArgumentException($"An equivalent subscription '{equivalentSub.Id}' already exists.");
         }
