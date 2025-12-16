@@ -11,10 +11,12 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
+using IConfigurationRepositoryManager = Microsoft.DotNet.MaestroConfiguration.Client.IConfigurationRepositoryManager;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
@@ -26,8 +28,9 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
     public UpdateSubscriptionOperation(
         UpdateSubscriptionCommandLineOptions options,
         IBarApiClient barClient,
-        IGitRepoFactory gitRepoFactory,
-        ILogger<UpdateSubscriptionOperation> logger) : base(barClient, logger)
+        DarcLib.IGitRepoFactory gitRepoFactory,
+        IConfigurationRepositoryManager configurationRepositoryManager,
+        ILogger<UpdateSubscriptionOperation> logger) : base(barClient, configurationRepositoryManager, logger)
     {
         _options = options;
         _gitRepoFactory = gitRepoFactory;
@@ -280,8 +283,6 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
             }
         }
 
-
-
         try
         {
             var subscriptionToUpdate = new SubscriptionUpdate
@@ -321,33 +322,62 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                 }
             }
 
-            var updatedSubscription = await _barClient.UpdateSubscriptionAsync(
-                _options.Id,
-                subscriptionToUpdate);
-
-            Console.WriteLine($"Successfully updated subscription with id '{updatedSubscription.Id}'.");
-
-            // Determine whether the subscription should be triggered.
-            if (!_options.NoTriggerOnUpdate)
+            if (_options.ShouldUseConfigurationRepository)
             {
-                bool triggerAutomatically = _options.TriggerOnUpdate;
-                // Determine whether we should prompt if the user hasn't explicitly
-                // said one way or another. We shouldn't prompt if nothing changes or
-                // if non-interesting options have changed
-                if (!triggerAutomatically &&
-                    ((subscriptionToUpdate.ChannelName != subscription.Channel.Name) ||
-                     (subscriptionToUpdate.SourceRepository != subscription.SourceRepository) ||
-                     (subscriptionToUpdate.Enabled.Value && !subscription.Enabled) ||
-                     (subscriptionToUpdate.Policy.UpdateFrequency != UpdateFrequency.None && subscriptionToUpdate.Policy.UpdateFrequency !=
-                         subscription.Policy.UpdateFrequency)))
+                // We created an updated Yaml subscription, keeping immutable fields from the existing subscription.
+                SubscriptionYaml updatedSubscriptionYaml = new()
                 {
-                    triggerAutomatically = UxHelpers.PromptForYesNo("Trigger this subscription immediately?");
-                }
+                    Id = subscription.Id,
+                    Enabled = subscriptionToUpdate.Enabled ?? false,
+                    Channel = subscriptionToUpdate.ChannelName,
+                    SourceRepository = subscriptionToUpdate.SourceRepository,
+                    TargetRepository = subscription.TargetRepository,
+                    TargetBranch = subscription.TargetBranch,
+                    UpdateFrequency = subscriptionToUpdate.Policy.UpdateFrequency,
+                    Batchable = subscriptionToUpdate.Policy.Batchable,
+                    MergePolicies = MergePolicyYaml.FromClientModels(subscriptionToUpdate.Policy.MergePolicies),
+                    FailureNotificationTags = subscriptionToUpdate.PullRequestFailureNotificationTags,
+                    SourceEnabled = subscription.SourceEnabled,
+                    SourceDirectory = subscriptionToUpdate.SourceDirectory,
+                    TargetDirectory = subscriptionToUpdate.TargetDirectory,
+                    ExcludedAssets = subscriptionToUpdate.ExcludedAssets
+                };
 
-                if (triggerAutomatically)
+                await ValidateNoEquivalentSubscription(updatedSubscriptionYaml);
+                await _configurationRepositoryManager.UpdateSubscriptionAsync(
+                    _options.ToConfigurationRepositoryOperationParameters(),
+                    updatedSubscriptionYaml);
+            }
+            else
+            {
+                var updatedSubscription = await _barClient.UpdateSubscriptionAsync(
+                    _options.Id,
+                    subscriptionToUpdate);
+
+                Console.WriteLine($"Successfully updated subscription with id '{updatedSubscription.Id}'.");
+
+                // Determine whether the subscription should be triggered.
+                if (!_options.NoTriggerOnUpdate)
                 {
-                    await _barClient.TriggerSubscriptionAsync(updatedSubscription.Id);
-                    Console.WriteLine($"Subscription '{updatedSubscription.Id}' triggered.");
+                    bool triggerAutomatically = _options.TriggerOnUpdate;
+                    // Determine whether we should prompt if the user hasn't explicitly
+                    // said one way or another. We shouldn't prompt if nothing changes or
+                    // if non-interesting options have changed
+                    if (!triggerAutomatically &&
+                        ((subscriptionToUpdate.ChannelName != subscription.Channel.Name) ||
+                         (subscriptionToUpdate.SourceRepository != subscription.SourceRepository) ||
+                         (subscriptionToUpdate.Enabled.Value && !subscription.Enabled) ||
+                         (subscriptionToUpdate.Policy.UpdateFrequency != UpdateFrequency.None && subscriptionToUpdate.Policy.UpdateFrequency !=
+                             subscription.Policy.UpdateFrequency)))
+                    {
+                        triggerAutomatically = UxHelpers.PromptForYesNo("Trigger this subscription immediately?");
+                    }
+
+                    if (triggerAutomatically)
+                    {
+                        await _barClient.TriggerSubscriptionAsync(updatedSubscription.Id);
+                        Console.WriteLine($"Subscription '{updatedSubscription.Id}' triggered.");
+                    }
                 }
             }
 

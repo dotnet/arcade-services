@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -118,11 +120,9 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
 
         if (subscriptionsInFile.Count == subscriptionsWithoutDeleted.Count)
         {
-            _logger.LogWarning("Found no subscription with id {id} to delete in file {file} of repo {repo} on branch {branch}",
-                subscription.Id,
-                subscriptionFilePath,
-                parameters.RepositoryUri,
-                parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch);
+            throw new ArgumentException(
+                $"Found no subscription with id {subscription.Id} to delete in file {subscriptionFilePath} " +
+                $"of repo {parameters.RepositoryUri} on branch {parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch}");
         }
 
         await CommitConfigurationDataAsync(
@@ -148,6 +148,69 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         {
             _logger.LogInformation("Successfully deleted subscription with id '{0}' from branch '{1}' of the configuration repository {2}",
                 subscription.Id, parameters.ConfigurationBranch, parameters.RepositoryUri);
+        }
+    }
+
+    public async Task UpdateSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml updatedSubscription)
+    {
+        var configurationRepo = await _configurationRepoFactory.CreateClient(parameters.RepositoryUri);
+
+        await ValidateConfigurationRepositoryParametersAsync(configurationRepo, parameters);
+        var workingBranch = await PrepareConfigurationBranchAsync(configurationRepo, parameters);
+
+        string subscriptionFilePath;
+        List<SubscriptionYaml> subscriptionsInFile;
+        if (string.IsNullOrEmpty(parameters.ConfigurationFilePath))
+        {
+            (subscriptionFilePath, subscriptionsInFile) = await FindAndParseConfigurationFile(
+                configurationRepo,
+                parameters.RepositoryUri,
+                workingBranch,
+                updatedSubscription);
+        }
+        else
+        {
+            subscriptionFilePath = parameters.ConfigurationFilePath;
+            subscriptionsInFile = await FetchAndParseRemoteConfiguration<SubscriptionYaml>(
+                configurationRepo,
+                parameters.RepositoryUri,
+                workingBranch,
+                subscriptionFilePath);
+        }
+
+        // delete the old subscription (with the same id) and add the updated one
+        var existingSubscription = subscriptionsInFile.FirstOrDefault(s => s.Id == updatedSubscription.Id);
+        if (existingSubscription == null)
+        {
+            throw new ArgumentException(
+                $"No existing subscription with id {updatedSubscription.Id} found in file {subscriptionFilePath} " +
+                $"of repo {parameters.RepositoryUri} on branch {parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch}");
+        }
+        subscriptionsInFile.Remove(existingSubscription);
+        subscriptionsInFile.Add(updatedSubscription);
+
+        await CommitConfigurationDataAsync(
+            configurationRepo,
+            parameters.RepositoryUri,
+            workingBranch,
+            subscriptionFilePath,
+            subscriptionsInFile,
+            $"Update subscription {updatedSubscription.Id}");
+
+        if (!parameters.DontOpenPr)
+        {
+            // Open a pull request for the new subscription
+            await CreatePullRequest(
+                configurationRepo,
+                parameters.RepositoryUri,
+                workingBranch,
+                parameters.ConfigurationBaseBranch,
+                "Updating Maestro configuration");
+        }
+        else
+        {
+            _logger.LogInformation("Successfully updated subscription with id '{0}' on branch '{1}' of the configuration repository {2}",
+                updatedSubscription.Id, parameters.ConfigurationBranch, parameters.RepositoryUri);
         }
     }
 
@@ -355,6 +418,4 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         throw new ArgumentException($"No object with key {searchKey} was found on branch {workingBranch}");
     }
     #endregion
-
-    public Task UpdateSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml updatedSubscription) => throw new NotImplementedException();
 }
