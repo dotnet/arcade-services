@@ -15,6 +15,39 @@ namespace Maestro.DataProviders.ConfigurationIngestion;
 
 internal class ConfigurationDataHelper
 {
+    internal static ConfigurationData CreateConfigurationDataObject(Namespace namespaceEntity)
+    {
+        var convertedSubscriptions = namespaceEntity.Subscriptions
+            .Select(sub => SqlBarClient.ToClientModelSubscription(sub))
+            .Select(SubscriptionYaml.FromClientModel)
+            .Select(yamlSub => new IngestedSubscription(yamlSub))
+            .ToList();
+
+        var convertedChannels = namespaceEntity.Channels
+            .Select(channel => SqlBarClient.ToClientModelChannel(channel))
+            .Select(ChannelYaml.FromClientModel)
+            .Select(yamlChannel => new IngestedChannel(yamlChannel))
+            .ToList();
+
+        var convertedDefaultChannels = namespaceEntity.DefaultChannels
+            .Select(dc => SqlBarClient.ToClientModelDefaultChannel(dc))
+            .Select(DefaultChannelYaml.FromClientModel)
+            .Select(yamlDc => new IngestedDefaultChannel(yamlDc))
+            .ToList();
+
+        var convertedBranchMergePolicies = namespaceEntity.RepositoryBranches
+            .Select(rb => SqlBarClient.ToClientModelRepositoryBranch(rb))
+            .Select(BranchMergePoliciesYaml.FromClientModel)
+            .Select(rbYaml => new IngestedBranchMergePolicies(rbYaml))
+            .ToList();
+
+        return new ConfigurationData(
+            convertedSubscriptions,
+            convertedChannels,
+            convertedDefaultChannels,
+            convertedBranchMergePolicies);
+    }
+
     internal static ConfigurationDataUpdate ComputeEntityUpdates(
         ConfigurationData configurationData,
         ConfigurationData existingConfigurationData)

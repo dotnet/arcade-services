@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders.ConfigurationIngestion.Helpers;
@@ -16,7 +15,7 @@ using Microsoft.EntityFrameworkCore;
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion;
 
-public class ConfigurationIngestor(
+internal class ConfigurationIngestor(
     BuildAssetRegistryContext context,
     ISqlBarClient sqlBarClient) : IConfigurationIngestor
 {
@@ -32,7 +31,7 @@ public class ConfigurationIngestor(
         var namespaceEntity = await FetchOrCreateNamespace(configurationNamespace);
 
         var existingConfigurationData =
-            await FetchExistingConfigurationDataAsync(namespaceEntity);
+            ConfigurationDataHelper.CreateConfigurationDataObject(namespaceEntity);
 
         var configurationDataUpdate = ConfigurationDataHelper.ComputeEntityUpdates(
             configurationData,
@@ -113,65 +112,25 @@ public class ConfigurationIngestor(
         await _context.SaveChangesAsync();
     }
 
-    private async Task<ConfigurationData> FetchExistingConfigurationDataAsync(Namespace namespaceEntity)
-    {
-        var subscriptionDaos = await _context.Subscriptions
-            .Where(sub => sub.Namespace == namespaceEntity)
-            .ToListAsync();
-
-        var convertedSubscriptions = subscriptionDaos
-            .Select(sub => SqlBarClient.ToClientModelSubscription(sub))
-            .Select(SubscriptionYaml.FromClientModel)
-            .Select(yamlSub => new IngestedSubscription(yamlSub))
-            .ToList();
-
-        var channelDaos = await _context.Channels
-            .Where(c => c.Namespace == namespaceEntity)
-            .ToListAsync();
-
-        var convertedChannels = channelDaos
-            .Select(channel => SqlBarClient.ToClientModelChannel(channel))
-            .Select(ChannelYaml.FromClientModel)
-            .Select(yamlChannel => new IngestedChannel(yamlChannel))
-            .ToList();
-
-        var defaultChannelDaos = await _context.DefaultChannels
-            .Where(dc => dc.Namespace == namespaceEntity)
-            .ToListAsync();
-
-        var convertedDefaultChannels = defaultChannelDaos
-            .Select(dc => SqlBarClient.ToClientModelDefaultChannel(dc))
-            .Select(DefaultChannelYaml.FromClientModel)
-            .Select(yamlDc => new IngestedDefaultChannel(yamlDc))
-            .ToList();
-
-        var branchMergePolicieDaos = await _context.RepositoryBranches
-            .Where(rb => rb.Namespace == namespaceEntity)
-            .ToListAsync();
-
-        var convertedBranchMergePolicies = branchMergePolicieDaos
-            .Select(rb => SqlBarClient.ToClientModelRepositoryBranch(rb))
-            .Select(BranchMergePoliciesYaml.FromClientModel)
-            .Select(rbYaml => new IngestedBranchMergePolicies(rbYaml))
-            .ToList();
-
-        return new ConfigurationData(
-            convertedSubscriptions,
-            convertedChannels,
-            convertedDefaultChannels,
-            convertedBranchMergePolicies);
-    }
-
     private async Task<Namespace> FetchOrCreateNamespace(string configurationNamespace)
     {
         var namespaceEntity = await _context.Namespaces
-            .FirstOrDefaultAsync(ns => ns.Name == configurationNamespace);
+            .Include(ns => ns.Subscriptions)
+            .Include(ns => ns.Channels)
+            .Include(ns => ns.DefaultChannels)
+            .Include(ns => ns.RepositoryBranches)
+            .Where(ns => ns.Name == configurationNamespace)
+            .FirstOrDefaultAsync();
 
         if (namespaceEntity is null)
         {
             namespaceEntity = new Namespace
             {
                 Name = configurationNamespace,
+                Subscriptions = [],
+                Channels = [],
+                DefaultChannels = [],
+                RepositoryBranches = [],
             };
             _context.Namespaces.Add(namespaceEntity);
             await _context.SaveChangesAsync();

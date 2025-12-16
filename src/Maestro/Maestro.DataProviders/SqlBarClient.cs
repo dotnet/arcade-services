@@ -726,6 +726,7 @@ public class SqlBarClient : ISqlBarClient
                     subscription.ChannelId.ToString(),
                     subscription.SourceRepository,
                     subscription.TargetBranch,
+                    subscription.TargetRepository,
                     subscription.TargetDirectory,
                     subscription.SourceEnabled.ToString(),
             });
