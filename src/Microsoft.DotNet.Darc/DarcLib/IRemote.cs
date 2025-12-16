@@ -109,7 +109,7 @@ public interface IRemote
     Task<List<GitFile>> GetCommonScriptFilesAsync(string repoUri, string commit, LocalPath relativeBasePath = null);
 
     /// <summary>
-    /// Retreive files from a remote source
+    /// Retrieve files from a remote source
     /// </summary>
     /// <param name="repoUri">URI of repo containing script files</param>
     /// <param name="commit">Commit to get files at</param>
