@@ -436,7 +436,7 @@ public abstract class CodeFlowConflictResolver
                 .Where(line => line.StartsWith("error:") && line.EndsWith(": patch does not apply"))
                 .Select(line => new UnixPath(line.Substring(7, line.Length - 29).Trim()));
 
-            if (revertedFiles.Any())
+            if (!revertedFiles.Any())
             {
                 _logger.LogError(e, "Failed to detect reverted files from patch application failure");
                 _logger.LogDebug(e.Result.ToString());
