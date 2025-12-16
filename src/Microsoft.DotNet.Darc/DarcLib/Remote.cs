@@ -443,6 +443,12 @@ public sealed class Remote : IRemote
         return files;
     }
 
+    public async Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path)
+        => await _remoteGitClient.GetFilesAtCommitAsync(repoUri, commit, path);
+
+    public async Task<List<string>> ListFilesAtCommitAsync(string repoUri, string commit, string path)
+        => await _remoteGitClient.ListFilesAtCommitAsync(repoUri, commit, path);
+
     public async Task CommentPullRequestAsync(string pullRequestUri, string comment)
     {
         await _remoteGitClient.CommentPullRequestAsync(pullRequestUri, comment);

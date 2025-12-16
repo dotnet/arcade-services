@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -35,8 +36,16 @@ public class LocalGitRepo : MaestroConfiguration.Client.IGitRepo
     public Task<string> CreatePullRequestAsync(string repositoryUri, string headBranch, string baseBranch, string prTitle, string prDescription = null)
         => throw new InvalidOperationException("Cannot create pull request when using local git repository.");
 
+    public async Task DeleteFileAsync(string repositoryUri, string branch, string filePath, string commitMessage)
+        => await _gitRepo.CommitFilesAsync(
+            [new Helpers.GitFile(new UnixPath(repositoryUri) / filePath, string.Empty, ContentEncoding.Utf8, operation: GitFileOperation.Delete)],
+            repositoryUri,
+            branch,
+            commitMessage);
+
     public async Task<bool> DoesBranchExistAsync(string repositoryUri, string branchName)
         => await _gitRepo.DoesBranchExistAsync(repositoryUri, branchName);
+
 
     public async Task<string> GetFileContentsAsync(string repositoryUri, string branch, string filePath)
     {
@@ -48,6 +57,40 @@ public class LocalGitRepo : MaestroConfiguration.Client.IGitRepo
         {
             throw new FileNotFoundInRepoException(repositoryUri, branch, filePath);
         }
+    }
+
+    public async Task<List<MaestroConfiguration.Client.GitFile>> GetFilesContentAsync(string repositoryUri, string branch, string path)
+    {
+        var filePaths = await LsTreeBlobsAsync(repositoryUri, branch, path, recursive: true);
+
+        var gitFiles = new List<MaestroConfiguration.Client.GitFile>();
+        foreach (var fileName in filePaths)
+        {
+            var content = await GetFileContentsAsync(repositoryUri, branch, fileName);
+            gitFiles.Add(new MaestroConfiguration.Client.GitFile(fileName, content));
+        }
+
+        return gitFiles;
+    }
+
+    public async Task<List<string>> ListBlobsAsync(string repositoryUri, string branch, string path)
+        => await LsTreeBlobsAsync(repositoryUri, branch, path, recursive: false);
+
+    private async Task<List<string>> LsTreeBlobsAsync(string repositoryUri, string branch, string path, bool recursive)
+    {
+        var args = new List<string> { "ls-tree", "--format=%(objecttype) %(path)" };
+        if (recursive)
+        {
+            args.Add("-r");
+        }
+        args.Add(branch);
+        args.Add(path + Path.DirectorySeparatorChar);
+        return (await _localGitRepo.ExecuteGitCommand(args.ToArray()))
+            .GetOutputLines()
+            .Select(line => line.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            .Where(parts => parts[0] == "blob")
+            .Select(parts => parts[1])
+            .ToList();
     }
 
     public async Task<bool> RepoExistsAsync(string repositoryUri)

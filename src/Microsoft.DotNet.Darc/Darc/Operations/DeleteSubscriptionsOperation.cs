@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.MaestroConfiguration.Client;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -19,14 +21,17 @@ internal class DeleteSubscriptionsOperation : Operation
 {
     private readonly IBarApiClient _barClient;
     private readonly DeleteSubscriptionsCommandLineOptions _options;
+    private readonly IConfigurationRepositoryManager _configRepositoryManager;
     private readonly ILogger<DeleteSubscriptionsOperation> _logger;
     public DeleteSubscriptionsOperation(
         DeleteSubscriptionsCommandLineOptions options,
         IBarApiClient barClient,
+        IConfigurationRepositoryManager configRepositoryManager,
         ILogger<DeleteSubscriptionsOperation> logger)
     {
         _options = options;
         _barClient = barClient;
+        _configRepositoryManager = configRepositoryManager;
         _logger = logger;
     }
 
@@ -70,31 +75,43 @@ internal class DeleteSubscriptionsOperation : Operation
                 subscriptionsToDelete.AddRange(subscriptions);
             }
 
-            if (!noConfirm)
+            if (_options.ShouldUseConfigurationRepository)
             {
-                // Print out the list of subscriptions about to be triggered.
-                Console.WriteLine($"Will delete the following {subscriptionsToDelete.Count} subscriptions...");
-                foreach (var subscription in subscriptionsToDelete)
+                foreach (Subscription subscription in subscriptionsToDelete)
                 {
-                    Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
-                }
-
-                if (!UxHelpers.PromptForYesNo("Continue?"))
-                {
-                    Console.WriteLine($"No subscriptions deleted, exiting.");
-                    return Constants.ErrorCode;
+                    await _configRepositoryManager.DeleteSubscriptionAsync(
+                        _options.ToConfigurationRepositoryOperationParameters(),
+                        SubscriptionYaml.FromClientModel(subscription));
                 }
             }
-
-            Console.Write($"Deleting {subscriptionsToDelete.Count} subscriptions...{(noConfirm ? Environment.NewLine : "")}");
-            foreach (var subscription in subscriptionsToDelete)
+            else
             {
-                // If noConfirm was passed, print out the subscriptions as we go
-                if (noConfirm)
+                if (!noConfirm)
                 {
-                    Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
+                    // Print out the list of subscriptions about to be triggered.
+                    Console.WriteLine($"Will delete the following {subscriptionsToDelete.Count} subscriptions...");
+                    foreach (var subscription in subscriptionsToDelete)
+                    {
+                        Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
+                    }
+
+                    if (!UxHelpers.PromptForYesNo("Continue?"))
+                    {
+                        Console.WriteLine($"No subscriptions deleted, exiting.");
+                        return Constants.ErrorCode;
+                    }
                 }
-                await _barClient.DeleteSubscriptionAsync(subscription.Id);
+
+                Console.Write($"Deleting {subscriptionsToDelete.Count} subscriptions...{(noConfirm ? Environment.NewLine : "")}");
+                foreach (var subscription in subscriptionsToDelete)
+                {
+                    // If noConfirm was passed, print out the subscriptions as we go
+                    if (noConfirm)
+                    {
+                        Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
+                    }
+                    await _barClient.DeleteSubscriptionAsync(subscription.Id);
+                } 
             }
             Console.WriteLine("done");
 
