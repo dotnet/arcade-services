@@ -3,41 +3,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 
 namespace Microsoft.DotNet.MaestroConfiguration.Client;
-
-/// <summary>
-/// Provides comparers for sorting YAML models.
-/// </summary>
-public static class YamlModelSorter
-{
-    private static readonly Dictionary<Type, object> _comparers = new()
-    {
-        { typeof(SubscriptionYaml), new SubscriptionYamlComparer() },
-        { typeof(DefaultChannelYaml), new DefaultChannelYamlComparer() },
-        { typeof(ChannelYaml), new ChannelYamlComparer() },
-        { typeof(BranchMergePoliciesYaml), new BranchMergePoliciesYamlComparer() },
-    };
-
-    /// <summary>
-    /// Returns a sorted collection of YAML models using the appropriate comparer for the type.
-    /// The comparer is inferred from the collection's element type.
-    /// </summary>
-    /// <typeparam name="T">The type of YAML model.</typeparam>
-    /// <param name="source">The collection to sort.</param>
-    /// <returns>A sorted enumerable of the models.</returns>
-    public static IOrderedEnumerable<T> Sort<T>(IEnumerable<T> source) where T : IYamlModel
-    {
-        if (_comparers.TryGetValue(typeof(T), out var comparer))
-        {
-            return source.OrderBy(x => x, (IComparer<T>)comparer);
-        }
-
-        throw new InvalidOperationException($"No comparer registered for type {typeof(T).Name}");
-    }
-}
 
 /// <summary>
 /// Comparer for <see cref="SubscriptionYaml"/> instances.

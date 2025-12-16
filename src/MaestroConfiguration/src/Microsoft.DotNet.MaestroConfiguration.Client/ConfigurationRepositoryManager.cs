@@ -66,7 +66,8 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             workingBranch,
             newSubscriptionFilePath,
             subscriptionsInFile,
-            $"Add new subscription ({subscription.Channel}) {subscription.SourceRepository} => {subscription.TargetRepository} ({subscription.TargetBranch})");
+            new SubscriptionYamlComparer(),
+            $"Add new subscription ({subscription.Channel}) {subscription.SourceRepository} => {subscription.TargetRepository} ({subscription.TargetBranch})");;
 
         if (!parameters.DontOpenPr)
         {
@@ -130,6 +131,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             workingBranch,
             subscriptionFilePath,
             subscriptionsWithoutDeleted,
+            new SubscriptionYamlComparer(),
             $"Delete subscription {subscription.Id}");
 
         if (!parameters.DontOpenPr)
@@ -172,6 +174,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         string workingBranch,
         string filePath,
         IEnumerable<T> data,
+        IComparer<T> comparer,
         string commitMessage)
         where T : IYamlModel
     {
@@ -181,7 +184,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         }
         else
         {
-            string yamlContent = _yamlSerializer.Serialize(YamlModelSorter.Sort(data)).Replace("\n-", "\n\n-");
+            string yamlContent = _yamlSerializer.Serialize(data.OrderBy(x => x, comparer)).Replace("\n-", "\n\n-");
             await gitRepo.CommitFilesAsync(repositoryUri, workingBranch, [new GitFile(filePath, yamlContent)], commitMessage);
         }
     }
