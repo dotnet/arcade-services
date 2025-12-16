@@ -101,7 +101,7 @@ internal class ConfigurationIngestor(
             configurationDataUpdate.DefaultChannels.Updates,
             namespaceEntity);
 
-        await CreateBranchRepositories(
+        CreateBranchRepositories(
             configurationDataUpdate.RepositoryBranches.Creations,
             namespaceEntity);
 
@@ -290,7 +290,7 @@ internal class ConfigurationIngestor(
         _context.DefaultChannels.RemoveRange(defaultChannelRemovals);
     }
 
-    private async Task CreateBranchRepositories(
+    private void CreateBranchRepositories(
         IEnumerable<IngestedBranchMergePolicies> newBranchMergePolicies,
         Namespace namespaceEntity)
     {
