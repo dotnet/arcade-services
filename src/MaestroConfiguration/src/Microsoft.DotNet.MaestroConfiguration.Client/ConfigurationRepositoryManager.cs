@@ -294,7 +294,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             var defaultFileContents = await gitRepo.GetFileContentsAsync(repositoryUri, workingBranch, defaultFilePath);
             var deserializedYamls = _yamlDeserializer.Deserialize<List<T>>(defaultFileContents);
 
-            if (ContainsYamlModel(deserializedYamls, searchObject))
+            if (ContainsYamlModel(deserializedYamls, YamlModelUniqueKeys.GetUniqueKey(searchObject)))
             {
                 return (defaultFilePath, deserializedYamls);
             }
@@ -328,7 +328,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
                 var fileContent = await gitRepo.GetFileContentsAsync(repositoryUri, workingBranch, filePath);
                 var deserializedYamls = _yamlDeserializer.Deserialize<List<T>>(fileContent);
 
-                if (ContainsYamlModel(deserializedYamls, searchObject))
+                if (ContainsYamlModel(deserializedYamls, searchKey))
                 {
                     _logger.LogInformation("Search string {0} found in {1}", searchKey, filePath);
                     return (filePath, deserializedYamls);
