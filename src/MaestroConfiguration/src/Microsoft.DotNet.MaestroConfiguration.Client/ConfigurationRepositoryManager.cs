@@ -275,7 +275,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         }
 
         // If not in the default file, search all files in the folder for that yaml type
-        _logger.LogInformation("Couldn't file configuration object at the default location. Searching all files in folder... this might take a few minutes");
+        _logger.LogInformation("Couldn't find configuration object at the default location. Searching all files in folder... this might take a few minutes");
         return await SearchAllFilesInFolderAsync(gitRepo, repositoryUri, workingBranch, searchObject);
     }
 
