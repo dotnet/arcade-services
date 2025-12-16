@@ -709,6 +709,8 @@ public class SqlBarClient : ISqlBarClient
     {
         if (subscription.SourceEnabled)
         {
+            // For source-enabled subs, the channel doesn't matter - we can only have one flow
+            // between a product repo and a VMR directory on a given branch
             return string.Join(
                 "|", new string[] {
                     subscription.SourceRepository,
