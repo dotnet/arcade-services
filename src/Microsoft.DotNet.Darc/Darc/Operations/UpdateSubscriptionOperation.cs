@@ -328,7 +328,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                 SubscriptionYaml updatedSubscriptionYaml = new()
                 {
                     Id = subscription.Id,
-                    Enabled = subscriptionToUpdate.Enabled ?? false,
+                    Enabled = subscriptionToUpdate.Enabled ?? subscription.Enabled,
                     Channel = subscriptionToUpdate.ChannelName,
                     SourceRepository = subscriptionToUpdate.SourceRepository,
                     TargetRepository = subscription.TargetRepository,
