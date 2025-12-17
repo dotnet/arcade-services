@@ -179,7 +179,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
                 subscriptionFilePath);
         }
 
-        // delete the old subscription (with the same id) and add the updated one
+        // replace the old subscription (with the same id) with the the updated one
         var existingSubscription = subscriptionsInFile.FirstOrDefault(s => s.Id == updatedSubscription.Id);
         if (existingSubscription == null)
         {
