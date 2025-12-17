@@ -26,7 +26,6 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
     private readonly AddSubscriptionCommandLineOptions _options;
     private readonly IGitRepoFactory _gitRepoFactory;
     private readonly IRemoteFactory _remoteFactory;
-    private readonly IConfigurationRepositoryManager _configRepoManager;
 
     public AddSubscriptionOperation(
         AddSubscriptionCommandLineOptions options,
@@ -35,10 +34,9 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         IRemoteFactory remoteFactory,
         IGitRepoFactory gitRepoFactory,
         IConfigurationRepositoryManager configRepoManager)
-        : base(barClient, logger)
+        : base(barClient, configRepoManager, logger)
     {
         _options = options;
-        _configRepoManager = configRepoManager;
         _gitRepoFactory = gitRepoFactory;
         _remoteFactory = remoteFactory; 
     }
@@ -341,13 +339,9 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                     ExcludedAssets = excludedAssets
                 };
 
-                var equivalentSubscriptionId = await FindEquivalentSubscriptionAsync(subscriptionYaml);
-                if (equivalentSubscriptionId != null)
-                {
-                    throw new ArgumentException($"Subscription {equivalentSubscriptionId} with equivalent parameters already exists.");
-                }
+                await ValidateNoEquivalentSubscription(subscriptionYaml);
 
-                await _configRepoManager.AddSubscriptionAsync(
+                await _configurationRepositoryManager.AddSubscriptionAsync(
                     _options.ToConfigurationRepositoryOperationParameters(),
                     subscriptionYaml);
             }
@@ -399,25 +393,5 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             _logger.LogError(e, $"Failed to create subscription.");
             return Constants.ErrorCode;
         }
-    }
-
-    private async Task<string> FindEquivalentSubscriptionAsync(SubscriptionYaml subscriptionYaml)
-    {
-        var channel = await _barClient.GetChannelAsync(subscriptionYaml.Channel);
-        if (channel == null)
-        {
-            throw new ArgumentException($"Channel '{subscriptionYaml.Channel}' does not exist.");
-        }
-
-        var equivalentSub = (await _barClient.GetSubscriptionsAsync(
-                sourceRepo: subscriptionYaml.SourceRepository,
-                channelId: channel.Id,
-                targetRepo: subscriptionYaml.TargetRepository,
-                sourceEnabled: subscriptionYaml.SourceEnabled,
-                sourceDirectory: subscriptionYaml.SourceDirectory,
-                targetDirectory: subscriptionYaml.TargetDirectory))
-            .FirstOrDefault(s => s.TargetBranch == subscriptionYaml.TargetBranch);
-
-        return equivalentSub?.Id.ToString();
     }
 }
