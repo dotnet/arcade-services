@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -35,12 +37,68 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
     }
 
     public async Task AddSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml subscription)
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            subscription,
+            AddSubscriptionInternalAsync,
+            $"Successfully added subscription with id '{subscription.Id}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+
+    public async Task DeleteSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml subscription)
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            subscription,
+            DeleteSubscriptionInternalAsync,
+            $"Successfully deleted subscription with id '{subscription.Id}' from branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+
+    public async Task UpdateSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml updatedSubscription)
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            updatedSubscription,
+            UpdateSubscriptionInternalAsync,
+            $"Successfully updated subscription with id '{updatedSubscription.Id}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+
+    public async Task AddChannelAsync(ConfigurationRepositoryOperationParameters parameters, ChannelYaml channel)
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            channel,
+            AddChannelInternalAsync,
+            $"Successfully added channel '{channel.Name}' to branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+
+    private async Task PerformConfigurationRepositoryOperationInternal<T>(
+        ConfigurationRepositoryOperationParameters parameters,
+        T yamlModel,
+        Func<ConfigurationRepositoryOperationParameters, IGitRepo, string, T, Task> operation,
+        string noPrOperationMessage)
+        where T : IYamlModel
     {
-        IGitRepo configurationRepo = await _configurationRepoFactory.CreateClient(parameters.RepositoryUri);
+        var configurationRepo = await _configurationRepoFactory.CreateClient(parameters.RepositoryUri);
 
         await ValidateConfigurationRepositoryParametersAsync(configurationRepo, parameters);
         var workingBranch = await PrepareConfigurationBranchAsync(configurationRepo, parameters);
 
+        await operation(parameters, configurationRepo, workingBranch, yamlModel);
+
+        if (!parameters.DontOpenPr)
+        {
+            await CreatePullRequest(
+                configurationRepo,
+                parameters.RepositoryUri,
+                workingBranch,
+                parameters.ConfigurationBaseBranch,
+                "Updating Maestro configuration");
+        }
+        else
+        {
+            _logger.LogInformation("{message}", noPrOperationMessage);
+        }
+    }
+
+    private async Task AddSubscriptionInternalAsync(
+        ConfigurationRepositoryOperationParameters parameters,
+        IGitRepo configurationRepo,
+        string workingBranch,
+        SubscriptionYaml subscription)
+    {
         var newSubscriptionFilePath = string.IsNullOrEmpty(parameters.ConfigurationFilePath)
             ? ConfigFilePathResolver.GetDefaultSubscriptionFilePath(subscription)
             : parameters.ConfigurationFilePath;
@@ -67,32 +125,15 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             newSubscriptionFilePath,
             subscriptionsInFile,
             new SubscriptionYamlComparer(),
-            $"Add new subscription ({subscription.Channel}) {subscription.SourceRepository} => {subscription.TargetRepository} ({subscription.TargetBranch})");;
-
-        if (!parameters.DontOpenPr)
-        {
-            // Open a pull request for the new subscription
-            await CreatePullRequest(
-                configurationRepo,
-                parameters.RepositoryUri,
-                workingBranch,
-                parameters.ConfigurationBaseBranch,
-                "Updating Maestro configuration");
-        }
-        else
-        {
-            _logger.LogInformation("Successfully added subscription with id '{0}' to branch '{1}' of the configuration repository {2}",
-                subscription.Id, parameters.ConfigurationBranch, parameters.RepositoryUri);
-        }
+            $"Add new subscription ({subscription.Channel}) {subscription.SourceRepository} => {subscription.TargetRepository} ({subscription.TargetBranch})"); ;
     }
 
-    public async Task DeleteSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml subscription)
+    private async Task DeleteSubscriptionInternalAsync(
+        ConfigurationRepositoryOperationParameters parameters,
+        IGitRepo configurationRepo,
+        string workingBranch,
+        SubscriptionYaml subscription)
     {
-        IGitRepo configurationRepo = await _configurationRepoFactory.CreateClient(parameters.RepositoryUri);
-
-        await ValidateConfigurationRepositoryParametersAsync(configurationRepo, parameters);
-        var workingBranch = await PrepareConfigurationBranchAsync(configurationRepo, parameters);
-
         string subscriptionFilePath;
         List<SubscriptionYaml> subscriptionsInFile;
         if (string.IsNullOrEmpty(parameters.ConfigurationFilePath))
@@ -118,11 +159,9 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
 
         if (subscriptionsInFile.Count == subscriptionsWithoutDeleted.Count)
         {
-            _logger.LogWarning("Found no subscription with id {id} to delete in file {file} of repo {repo} on branch {branch}",
-                subscription.Id,
-                subscriptionFilePath,
-                parameters.RepositoryUri,
-                parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch);
+            throw new ArgumentException(
+                $"Found no subscription with id {subscription.Id} to delete in file {subscriptionFilePath} " +
+                $"of repo {parameters.RepositoryUri} on branch {parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch}");
         }
 
         await CommitConfigurationDataAsync(
@@ -133,31 +172,62 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             subscriptionsWithoutDeleted,
             new SubscriptionYamlComparer(),
             $"Delete subscription {subscription.Id}");
+    }
 
-        if (!parameters.DontOpenPr)
+    private async Task UpdateSubscriptionInternalAsync(
+        ConfigurationRepositoryOperationParameters parameters,
+        IGitRepo configurationRepo,
+        string workingBranch,
+        SubscriptionYaml updatedSubscription)
+    {
+        string subscriptionFilePath;
+        List<SubscriptionYaml> subscriptionsInFile;
+        if (string.IsNullOrEmpty(parameters.ConfigurationFilePath))
         {
-            // Open a pull request for the new subscription
-            await CreatePullRequest(
+            (subscriptionFilePath, subscriptionsInFile) = await FindAndParseConfigurationFile(
                 configurationRepo,
                 parameters.RepositoryUri,
                 workingBranch,
-                parameters.ConfigurationBaseBranch,
-                "Updating Maestro configuration");
+                updatedSubscription,
+                YamlModelUniqueKeys.GetSubscriptionKey);
         }
         else
         {
-            _logger.LogInformation("Successfully deleted subscription with id '{0}' from branch '{1}' of the configuration repository {2}",
-                subscription.Id, parameters.ConfigurationBranch, parameters.RepositoryUri);
+            subscriptionFilePath = parameters.ConfigurationFilePath;
+            subscriptionsInFile = await FetchAndParseRemoteConfiguration<SubscriptionYaml>(
+                configurationRepo,
+                parameters.RepositoryUri,
+                workingBranch,
+                subscriptionFilePath);
         }
+
+        // replace the old subscription (with the same id) with the the updated one
+        var existingSubscription = subscriptionsInFile.FirstOrDefault(s => s.Id == updatedSubscription.Id);
+        if (existingSubscription == null)
+        {
+            throw new ArgumentException(
+                $"No existing subscription with id {updatedSubscription.Id} found in file {subscriptionFilePath} " +
+                $"of repo {parameters.RepositoryUri} on branch {parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch}");
+        }
+        var index = subscriptionsInFile.IndexOf(existingSubscription);
+        subscriptionsInFile[index] = updatedSubscription;
+
+        await CommitConfigurationDataAsync(
+            configurationRepo,
+            parameters.RepositoryUri,
+            workingBranch,
+            subscriptionFilePath,
+            subscriptionsInFile,
+            new SubscriptionYamlComparer(),
+            $"Update subscription {updatedSubscription.Id}");
     }
 
-    public async Task AddChannelAsync(ConfigurationRepositoryOperationParameters parameters, ChannelYaml channel)
+    private async Task AddChannelInternalAsync(
+        ConfigurationRepositoryOperationParameters parameters,
+        IGitRepo configurationRepo,
+        string workingBranch,
+        ChannelYaml channel)
     {
-        IGitRepo configurationRepo = await _configurationRepoFactory.CreateClient(parameters.RepositoryUri);
-
-        await ValidateConfigurationRepositoryParametersAsync(configurationRepo, parameters);
-        var workingBranch = await PrepareConfigurationBranchAsync(configurationRepo, parameters);
-
         var newChannelFilePath = string.IsNullOrEmpty(parameters.ConfigurationFilePath)
             ? ConfigFilePathResolver.GetDefaultChannelFilePath(channel)
             : parameters.ConfigurationFilePath;
@@ -169,7 +239,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             workingBranch,
             newChannelFilePath);
 
-        // If we have a branch that hasn't been ingested yet, we need to check for equivalent channels in the file
+        // Check for duplicate channels in the file
         var equivalentInFile = channelsInFile.FirstOrDefault(c => string.Equals(c.Name, channel.Name, StringComparison.OrdinalIgnoreCase));
         if (equivalentInFile != null)
         {
@@ -185,24 +255,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             channelsInFile,
             new ChannelYamlComparer(),
             $"Add new channel '{channel.Name}' with classification '{channel.Classification}'");
-
-        if (!parameters.DontOpenPr)
-        {
-            // Open a pull request for the new channel
-            await CreatePullRequest(
-                configurationRepo,
-                parameters.RepositoryUri,
-                workingBranch,
-                parameters.ConfigurationBaseBranch,
-                "Updating Maestro configuration");
-        }
-        else
-        {
-            _logger.LogInformation("Successfully added channel '{0}' to branch '{1}' of the configuration repository {2}",
-                channel.Name, parameters.ConfigurationBranch, parameters.RepositoryUri);
-        }
     }
-
 
     #region helper methods
     private static async Task ValidateConfigurationRepositoryParametersAsync(
@@ -407,6 +460,4 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         throw new ArgumentException($"No object with key {searchKey} was found on branch {workingBranch}");
     }
     #endregion
-
-    public Task UpdateSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml updatedSubscription) => throw new NotImplementedException();
 }

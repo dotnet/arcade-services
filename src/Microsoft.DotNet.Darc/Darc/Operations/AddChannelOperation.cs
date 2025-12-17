@@ -55,19 +55,18 @@ internal class AddChannelOperation : Operation
 
             if (_options.ShouldUseConfigurationRepository)
             {
+                // Check if channel already exists in the API before constructing the YAML model
+                var existingChannel = await FindExistingChannelAsync(_options.Name);
+                if (existingChannel != null)
+                {
+                    throw new ArgumentException($"An existing channel with name '{_options.Name}' already exists");
+                }
+
                 ChannelYaml channelYaml = new()
                 {
                     Name = _options.Name,
                     Classification = _options.Classification
                 };
-
-                // Check if channel already exists in the API
-                var existingChannel = await FindExistingChannelAsync(channelYaml.Name);
-                if (existingChannel != null)
-                {
-                    _logger.LogError($"An existing channel with name '{_options.Name}' already exists");
-                    return Constants.ErrorCode;
-                }
 
                 await _configRepoManager.AddChannelAsync(
                     _options.ToConfigurationRepositoryOperationParameters(),
