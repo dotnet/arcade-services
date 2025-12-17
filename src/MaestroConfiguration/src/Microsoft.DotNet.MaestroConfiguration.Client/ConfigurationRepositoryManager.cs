@@ -125,7 +125,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             newSubscriptionFilePath,
             subscriptionsInFile,
             new SubscriptionYamlComparer(),
-            $"Add new subscription ({subscription.Channel}) {subscription.SourceRepository} => {subscription.TargetRepository} ({subscription.TargetBranch})"); ;
+            $"Add new subscription ({subscription.Channel}) {subscription.SourceRepository} => {subscription.TargetRepository} ({subscription.TargetBranch})");
     }
 
     private async Task DeleteSubscriptionInternalAsync(
@@ -239,7 +239,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             workingBranch,
             newChannelFilePath);
 
-        // Check for duplicate channels in the file
+        // Check for equivalent channels in the file (case-insensitive name comparison)
         var equivalentInFile = channelsInFile.FirstOrDefault(c => string.Equals(c.Name, channel.Name, StringComparison.OrdinalIgnoreCase));
         if (equivalentInFile != null)
         {
