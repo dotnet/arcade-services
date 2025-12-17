@@ -7,7 +7,7 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("add-channel", HelpText = "Creates a new channel.")]
-internal class AddChannelCommandLineOptions : CommandLineOptions<AddChannelOperation>
+internal class AddChannelCommandLineOptions : ConfigurationManagementCommandLineOptions<AddChannelOperation>
 {
     [Option('n', "name", Required = true, HelpText = "Name of channel to create.")]
     public string Name { get; set; }

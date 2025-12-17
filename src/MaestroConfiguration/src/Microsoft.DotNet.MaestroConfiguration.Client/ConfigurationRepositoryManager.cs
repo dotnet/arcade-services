@@ -57,6 +57,13 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             UpdateSubscriptionInternalAsync,
             $"Successfully updated subscription with id '{updatedSubscription.Id}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
 
+    public async Task AddChannelAsync(ConfigurationRepositoryOperationParameters parameters, ChannelYaml channel)
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            channel,
+            AddChannelInternalAsync,
+            $"Successfully added channel '{channel.Name}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+
     private async Task PerformConfigurationRepositoryOperationInternal<T>(
         ConfigurationRepositoryOperationParameters parameters,
         T yamlModel,
@@ -213,6 +220,41 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             subscriptionsInFile,
             new SubscriptionYamlComparer(),
             $"Update subscription {updatedSubscription.Id}");
+    }
+
+    private async Task AddChannelInternalAsync(
+        ConfigurationRepositoryOperationParameters parameters,
+        IGitRepo configurationRepo,
+        string workingBranch,
+        ChannelYaml channel)
+    {
+        var newChannelFilePath = string.IsNullOrEmpty(parameters.ConfigurationFilePath)
+            ? ConfigFilePathResolver.GetDefaultChannelFilePath(channel)
+            : parameters.ConfigurationFilePath;
+        _logger.LogInformation("Adding new channel to file {0}", newChannelFilePath);
+
+        var channelsInFile = await FetchAndParseRemoteConfiguration<ChannelYaml>(
+            configurationRepo,
+            parameters.RepositoryUri,
+            workingBranch,
+            newChannelFilePath);
+
+        // Check for duplicate channel with the same name in the file
+        var equivalentInFile = channelsInFile.FirstOrDefault(c => string.Equals(c.Name, channel.Name, StringComparison.OrdinalIgnoreCase));
+        if (equivalentInFile != null)
+        {
+            throw new ArgumentException($"Channel with name '{equivalentInFile.Name}' already exists in '{newChannelFilePath}'.");
+        }
+
+        channelsInFile.Add(channel);
+        await CommitConfigurationDataAsync(
+            configurationRepo,
+            parameters.RepositoryUri,
+            workingBranch,
+            newChannelFilePath,
+            channelsInFile,
+            new ChannelYamlComparer(),
+            $"Add new channel '{channel.Name}'");
     }
 
     #region helper methods
