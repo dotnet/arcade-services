@@ -187,8 +187,8 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
                 $"No existing subscription with id {updatedSubscription.Id} found in file {subscriptionFilePath} " +
                 $"of repo {parameters.RepositoryUri} on branch {parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch}");
         }
-        subscriptionsInFile.Remove(existingSubscription);
-        subscriptionsInFile.Add(updatedSubscription);
+        var index = subscriptionsInFile.IndexOf(existingSubscription);
+        subscriptionsInFile[index] = updatedSubscription;
 
         await CommitConfigurationDataAsync(
             configurationRepo,
