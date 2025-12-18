@@ -1,19 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders.ConfigurationIngestion;
-using Microsoft.Data.SqlClient;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using NUnit.Framework;
+using ProductConstructionService.Api.Tests;
 
 #nullable enable
 namespace Maestro.DataProviders.Tests;
@@ -24,12 +18,13 @@ public class ConfigurationIngestorTests
     private TestDatabase _testDatabase = null!;
     private BuildAssetRegistryContext _context = null!;
     private IConfigurationIngestor _ingestor = null!;
-    private const string TestNamespace = "test-namespace";
+    private string _testNamespace = string.Empty;
 
     [SetUp]
     public async Task SetUp()
     {
-        _testDatabase = new TestDatabase();
+        _testNamespace = "test-namespace-" + Guid.NewGuid();
+        _testDatabase = new TestDatabase("TestDB_Ingestion_" + TestContext.CurrentContext.Test.MethodName);
         var connectionString = await _testDatabase.GetConnectionString();
 
         var options = new DbContextOptionsBuilder<BuildAssetRegistryContext>()
@@ -72,7 +67,7 @@ public class ConfigurationIngestorTests
         var configData = CreateBasicConfigurationData();
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
         Assert.That(result.Channels.Creations.Count, Is.EqualTo(1));
@@ -103,14 +98,14 @@ public class ConfigurationIngestorTests
         var configData = CreateBasicConfigurationData();
 
         // Act
-        await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+        await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
         var namespaceEntity = await _context.Namespaces
-            .FirstOrDefaultAsync(ns => ns.Name == TestNamespace);
+            .FirstOrDefaultAsync(ns => ns.Name == _testNamespace);
 
         Assert.That(namespaceEntity, Is.Not.Null);
-        Assert.That(namespaceEntity!.Name, Is.EqualTo(TestNamespace));
+        Assert.That(namespaceEntity!.Name, Is.EqualTo(_testNamespace));
     }
 
     #endregion
@@ -139,7 +134,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
         Assert.That(result.Channels.Updates.Count, Is.EqualTo(1));
@@ -193,7 +188,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         Assert.That(result.Subscriptions.Updates.Count, Is.EqualTo(1));
     }
@@ -247,7 +242,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
         Assert.That(result.Subscriptions.Updates.Count, Is.EqualTo(1));
@@ -312,7 +307,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
         Assert.That(result.Subscriptions.Updates.Count, Is.EqualTo(1));
@@ -371,7 +366,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
         Assert.That(result.Subscriptions.Updates.Count, Is.EqualTo(1));
@@ -436,7 +431,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
         Assert.That(result.Subscriptions.Updates.Count, Is.EqualTo(1));
@@ -498,7 +493,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
         Assert.That(result.DefaultChannels.Updates.Count, Is.EqualTo(1));
@@ -541,7 +536,7 @@ public class ConfigurationIngestorTests
             [updatedBranchYaml]);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
         Assert.That(result.RepositoryBranches.Updates.Count, Is.EqualTo(1));
@@ -569,7 +564,7 @@ public class ConfigurationIngestorTests
         var configData = new ConfigurationData([], [], [], []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
         Assert.That(result.Channels.Removals.Count, Is.EqualTo(1));
@@ -588,7 +583,7 @@ public class ConfigurationIngestorTests
         await _context.Channels.AddAsync(channel);
         await _context.SaveChangesAsync();
 
-        var subscription = 
+        var subscription =
         new SubscriptionYaml
         {
             Id = Guid.NewGuid(),
@@ -603,7 +598,7 @@ public class ConfigurationIngestorTests
 
         Assert.ThrowsAsync<InvalidOperationException>(async () =>
         {
-            var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+            var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
         });
     }
 
@@ -656,7 +651,7 @@ public class ConfigurationIngestorTests
         // This should fail because the channel is still referenced by the existing subscription in the DB.
         Assert.ThrowsAsync<InvalidOperationException>(async () =>
         {
-            var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+            var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
         });
     }
 
@@ -688,7 +683,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
         Assert.That(result.Subscriptions.Removals.Count, Is.EqualTo(1));
@@ -723,7 +718,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
         Assert.That(result.DefaultChannels.Removals.Count, Is.EqualTo(1));
@@ -750,7 +745,7 @@ public class ConfigurationIngestorTests
         var configData = new ConfigurationData([], [], [], []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
         Assert.That(result.RepositoryBranches.Removals.Count, Is.EqualTo(1));
@@ -790,7 +785,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
         Assert.That(result.Channels.Creations.Count, Is.EqualTo(1));
@@ -867,7 +862,7 @@ public class ConfigurationIngestorTests
             ]);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
         Assert.That(result.Channels.Updates.Count, Is.EqualTo(2)); // .NET 8
@@ -891,14 +886,14 @@ public class ConfigurationIngestorTests
     public async Task IngestConfigurationAsync_ExistingNamespace_ReusesNamespace()
     {
         // Arrange
-        var existingNamespace = new Namespace { Name = TestNamespace };
+        var existingNamespace = new Namespace { Name = _testNamespace };
         await _context.Namespaces.AddAsync(existingNamespace);
         await _context.SaveChangesAsync();
 
         var configData = CreateBasicConfigurationData();
 
         // Act
-        await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
+        await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
         var namespaces = await _context.Namespaces.ToListAsync();
@@ -951,7 +946,7 @@ public class ConfigurationIngestorTests
 
     private async Task<Namespace> CreateNamespace()
     {
-        var namespaceEntity = new Namespace { Name = TestNamespace };
+        var namespaceEntity = new Namespace { Name = _testNamespace };
         await _context.Namespaces.AddAsync(namespaceEntity);
         await _context.SaveChangesAsync();
         return namespaceEntity;
@@ -1098,60 +1093,4 @@ public class ConfigurationIngestorTests
     }
 
     #endregion
-
-    private class TestDatabase : IDisposable
-    {
-        private const string TestDatabasePrefix = "TFD_ConfigurationIngestor_";
-        private readonly Lazy<Task<string>> _databaseName = new(
-            InitializeDatabaseAsync,
-            LazyThreadSafetyMode.ExecutionAndPublication);
-
-        public void Dispose()
-        {
-            using var connection = new SqlConnection(BuildAssetRegistryContextFactory.GetConnectionString("master"));
-            connection.Open();
-            DropTestDatabase(connection, _databaseName.Value.GetAwaiter().GetResult()).GetAwaiter().GetResult();
-            GC.SuppressFinalize(this);
-        }
-
-        public async Task<string> GetConnectionString() => BuildAssetRegistryContextFactory.GetConnectionString(await _databaseName.Value);
-
-        private static async Task<string> InitializeDatabaseAsync()
-        {
-            string databaseName = TestDatabasePrefix + $"{DateTime.Now:yyyyMMddHHmmss}_{Guid.NewGuid():N}";
-
-            await using (var connection = new SqlConnection(BuildAssetRegistryContextFactory.GetConnectionString("master")))
-            {
-                await connection.OpenAsync();
-                await using (SqlCommand createCommand = connection.CreateCommand())
-                {
-                    createCommand.CommandText = $"CREATE DATABASE {databaseName}";
-                    await createCommand.ExecuteNonQueryAsync();
-                }
-            }
-
-            var options = new DbContextOptionsBuilder<BuildAssetRegistryContext>()
-                .UseSqlServer(BuildAssetRegistryContextFactory.GetConnectionString(databaseName))
-                .Options;
-
-            await using var dbContext = new BuildAssetRegistryContext(options);
-            await dbContext.Database.MigrateAsync();
-
-            return databaseName;
-        }
-
-        private static async Task DropTestDatabase(SqlConnection connection, string databaseName)
-        {
-            try
-            {
-                await using SqlCommand command = connection.CreateCommand();
-                command.CommandText = $"ALTER DATABASE {databaseName} SET single_user with rollback immediate; DROP DATABASE {databaseName}";
-                await command.ExecuteNonQueryAsync();
-            }
-            catch
-            {
-                // Ignore errors during cleanup
-            }
-        }
-    }
 }
