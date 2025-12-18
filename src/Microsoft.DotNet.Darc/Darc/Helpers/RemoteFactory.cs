@@ -21,12 +21,14 @@ internal class RemoteFactory : IRemoteFactory
     private readonly IServiceProvider _serviceProvider;
     private readonly IAzureDevOpsTokenProvider _azdoTokenProvider;
     private readonly IRemoteTokenProvider _githubTokenProvider;
+    private readonly IVersionDetailsParser _versionDetailsParser;
 
     public RemoteFactory(
         IAzureDevOpsTokenProvider azdoTokenProvider,
         [FromKeyedServices("github")]IRemoteTokenProvider githubTokenProvider,
         ILoggerFactory loggerFactory,
         ICommandLineOptions options,
+        IVersionDetailsParser versionDetailsParser,
         IServiceProvider serviceProvider)
     {
         _loggerFactory = loggerFactory;
@@ -34,6 +36,7 @@ internal class RemoteFactory : IRemoteFactory
         _serviceProvider = serviceProvider;
         _azdoTokenProvider = azdoTokenProvider;
         _githubTokenProvider = githubTokenProvider;
+        _versionDetailsParser = versionDetailsParser;
     }
 
     public Task<IRemote> CreateRemoteAsync(string repoUrl)
@@ -62,6 +65,7 @@ internal class RemoteFactory : IRemoteFactory
                     new ProcessManager(_loggerFactory.CreateLogger<IProcessManager>(), options.GitLocation),
                     _loggerFactory.CreateLogger<GitHubClient>(),
                     temporaryRepositoryRoot,
+                    _versionDetailsParser,
                     // Caching not in use for Darc local client.
                     null),
 

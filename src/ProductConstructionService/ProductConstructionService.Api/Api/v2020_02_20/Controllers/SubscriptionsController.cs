@@ -4,6 +4,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Net;
 using Maestro.Data;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;

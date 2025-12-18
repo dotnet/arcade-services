@@ -77,7 +77,7 @@ public class VersionDetailsParser : IVersionDetailsParser
         return new VersionDetails(dependencies, vmrCodeflow);
     }
 
-    private List<DependencyDetail> ParseDependencyDetails(XmlNodeList dependencies)
+    private static List<DependencyDetail> ParseDependencyDetails(XmlNodeList dependencies)
     {
         List<DependencyDetail> dependencyDetails = [];
 

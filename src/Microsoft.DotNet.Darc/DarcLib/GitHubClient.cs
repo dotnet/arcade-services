@@ -1497,6 +1497,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             UpdatedAt = pr.UpdatedAt,
             HeadBranchSha = pr.Head.Sha,
         };
+    }
+
     public Task<List<Commit>> FetchLatestRepoCommitsAsync(string repoUrl, string branch, int maxCount)
         => throw new NotImplementedException();
 
@@ -1682,6 +1684,5 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         (string owner, string repo) = ParseRepoUri(repoUrl);
         var file = await GetClient(repoUrl).Repository.Content.GetAllContentsByRef(owner, repo, filePath, commit);
         return Encoding.UTF8.GetString(Convert.FromBase64String(file[0].Content));
->>>>>>> 0973d0ff2 (Codeflow graphs WIP)
     }
 }
