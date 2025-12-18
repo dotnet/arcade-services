@@ -10,7 +10,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.Api.Tests;
 
-#nullable enable
 namespace Maestro.DataProviders.Tests;
 
 [TestFixture]
@@ -25,6 +24,9 @@ public class ConfigurationIngestorTests
     public async Task SetUp()
     {
         _testNamespace = "test-namespace-" + Guid.NewGuid();
+
+        // TODO: This still creates a whole DB per test which is super slow
+        //       We should only create the DB per test suite via a OneTimeSetUp and OneTimeTearDown
         _testDatabase = new TestDatabase("TestDB_Ingestion_" + TestContext.CurrentContext.Test.MethodName);
         var connectionString = await _testDatabase.GetConnectionString();
 
