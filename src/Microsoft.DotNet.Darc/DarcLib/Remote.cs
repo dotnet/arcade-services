@@ -520,9 +520,10 @@ public sealed class Remote : IRemote
 
     public async Task<ForwardFlow> GetLastIncomingForwardFlowAsync(
         string vmrUrl,
+        string mappingName,
         string commit)
     {
-        return await _remoteGitClient.GetLastIncomingForwardFlowAsync(vmrUrl, commit);
+        return await _remoteGitClient.GetLastIncomingForwardFlowAsync(vmrUrl, mappingName, commit);
     }
 
     public async Task<Backflow> GetLastIncomingBackflowAsync(

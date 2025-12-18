@@ -10,10 +10,10 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using ProductConstructionService.Common;
 using ProductConstructionService.Api.Controllers.Models;
 using ProductConstructionService.Api.v2018_07_16.Models;
 using Microsoft.DotNet.DarcLib;
+using ProductConstructionService.Common.CodeflowHistory;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 using Channel = Maestro.Data.Models.Channel;
@@ -118,7 +118,7 @@ public class SubscriptionsController : ControllerBase
     [ValidateModelState]
     public virtual async Task<IActionResult> GetCodeflowHistory(Guid id)
     {
-        return await GetCodeflowHistoryCore(id);
+        return await GetCodeflowHistoryCore(id, false);
     }
 
     /// <summary>
@@ -173,7 +173,7 @@ public class SubscriptionsController : ControllerBase
         return Accepted(new Subscription(subscription));
     }
 
-    protected async Task<IActionResult> GetCodeflowHistoryCore(Guid id, bool fetchNewChanges)
+    protected async Task<IActionResult> GetCodeflowHistoryCore(Guid id, bool fetchNewChanges = false)
     {
         var subscription = await _context.Subscriptions
             .Include(sub => sub.LastAppliedBuild)
@@ -199,14 +199,14 @@ public class SubscriptionsController : ControllerBase
 
         bool isForwardFlow = !string.IsNullOrEmpty(subscription.TargetDirectory);
 
-        CodeflowHistory? cachedFlows;
-        CodeflowHistory? oppositeCachedFlows;
+        IReadOnlyCollection<CodeflowGraphCommit>? cachedFlows;
+        IReadOnlyCollection<CodeflowGraphCommit>? oppositeCachedFlows;
 
-        cachedFlows = await _codeflowHistoryManager.FetchLatestCodeflowHistoryAsync(id);
+        cachedFlows = await _codeflowHistoryManager.FetchLatestCodeflowHistoryAsync(subscription);
 
-        oppositeCachedFlows = await _codeflowHistoryManager.FetchLatestCodeflowHistoryAsync(
-            oppositeDirectionSubscription?.Id);
-
+        oppositeCachedFlows = oppositeDirectionSubscription != null
+            ? await _codeflowHistoryManager.FetchLatestCodeflowHistoryAsync(oppositeDirectionSubscription)
+            : [];
 
         var lastCommit = subscription.LastAppliedBuild.Commit;
 
@@ -229,9 +229,9 @@ public class SubscriptionsController : ControllerBase
 
     private static bool IsCodeflowHistoryOutdated(
         SubscriptionDAO? subscription,
-        CodeflowHistory? cachedFlows)
+        IReadOnlyCollection<CodeflowGraphCommit>? cachedFlows)
     {
-        string? lastCachedCodeflow = cachedFlows?.Codeflows.LastOrDefault()?.SourceCommitSha;
+        string? lastCachedCodeflow = cachedFlows?.LastOrDefault()?.SourceRepoFlowSha;
         string? lastAppliedCommit = subscription?.LastAppliedBuild?.Commit;
         return !string.Equals(lastCachedCodeflow, lastAppliedCommit, StringComparison.Ordinal);
     }

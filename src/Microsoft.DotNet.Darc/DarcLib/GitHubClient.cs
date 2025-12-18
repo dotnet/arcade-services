@@ -27,7 +27,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Octokit;
-using static System.Net.WebRequestMethods;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib;
@@ -52,6 +51,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     private readonly string _userAgent = $"DarcLib-{DarcLibVersion}";
     private IGitHubClient? _lazyClient = null;
     private readonly Dictionary<(string, string, string?), string> _gitRefCommitCache;
+    private readonly IVersionDetailsParser _versionDetailsParser;
 
     static GitHubClient()
     {
@@ -64,9 +64,10 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     public GitHubClient(
         IRemoteTokenProvider remoteTokenProvider,
         IProcessManager processManager,
+        IVersionDetailsParser versionDetailsParser,
         ILogger logger,
         IMemoryCache? cache)
-        : this(remoteTokenProvider, processManager, logger, null, cache)
+        : this(remoteTokenProvider, processManager, logger, null, versionDetailsParser, cache)
     {
     }
 
@@ -75,6 +76,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         IProcessManager processManager,
         ILogger logger,
         string? temporaryRepositoryPath,
+        IVersionDetailsParser versionDetailsParser,
         IMemoryCache? cache)
         : base(remoteTokenProvider, processManager, temporaryRepositoryPath, cache, logger)
     {
@@ -86,6 +88,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             NullValueHandling = NullValueHandling.Ignore
         };
         _gitRefCommitCache = [];
+        _versionDetailsParser = versionDetailsParser;
     }
 
     public bool AllowRetries { get; set; } = true;
@@ -1556,7 +1559,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         return [.. allCommits.Take(maxCount)];
     }
 
-    public async Task<ForwardFlow> GetLastIncomingForwardFlowAtCommitAsync(string vmrUrl, string mappingName, string commit)
+    public async Task<ForwardFlow?> GetLastIncomingForwardFlowAsync(string vmrUrl, string mappingName, string commit)
     {
         var content = await GetFileContentAtCommit(
             vmrUrl,
@@ -1587,18 +1590,21 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
         return new ForwardFlow(lastForwardFlowRepoSha, lastForwardFlowVmrSha);
     }
 
-    public async Task<Backflow> GetLastIncomingBackflowAsync(string repoUrl, string commit)
+    public async Task<Backflow?> GetLastIncomingBackflowAsync(string repoUrl, string commit)
     {
         var content = await GetFileContentAtCommit(
             repoUrl,
             commit,
             VersionFiles.VersionDetailsXml);
 
-        var lastBackflowVmrSha = VersionDetailsParser
-            .ParseVersionDetailsXml(content)
+        var lastBackflowVmrSha = _versionDetailsParser.ParseVersionDetailsXml(content)
             .Source?
-            .Sha
-            ?? throw new ("Could not parse version details");
+            .Sha;
+
+        if (lastBackflowVmrSha == null)
+        {
+            return null;
+        }
 
         // todo: we can skip this call if the last flown SHA is one that we already cached
         int lineNumber = content

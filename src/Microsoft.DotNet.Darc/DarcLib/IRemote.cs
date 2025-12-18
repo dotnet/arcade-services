@@ -283,7 +283,7 @@ public interface IRemote
     Task<List<Commit>> FetchNewerRepoCommitsAsync(string repoUrl, string branch, string commitSha, int maxCount = 100);
 
 
-    Task<ForwardFlow> GetLastIncomingForwardFlowAsync(string vmrUrl, string commit);
+    Task<ForwardFlow> GetLastIncomingForwardFlowAsync(string vmrUrl, string mappingNAme, string commit);
 
     Task<Backflow> GetLastIncomingBackflowAsync(string repoUrl, string commit);
 

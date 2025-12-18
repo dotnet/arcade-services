@@ -11,7 +11,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using ProductConstructionService.Api.v2019_01_16.Models;
-using ProductConstructionService.Common;
+using ProductConstructionService.Common.CodeflowHistory;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api.Api.v2019_01_16.Controllers;

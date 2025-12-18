@@ -22,6 +22,7 @@ public class GitRepoFactory : IGitRepoFactory
     private readonly ITelemetryRecorder _telemetryRecorder;
     private readonly IProcessManager _processManager;
     private readonly IFileSystem _fileSystem;
+    private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly ILoggerFactory _loggerFactory;
     private readonly string? _temporaryPath = null;
 
@@ -31,6 +32,7 @@ public class GitRepoFactory : IGitRepoFactory
         ITelemetryRecorder telemetryRecorder,
         IProcessManager processManager,
         IFileSystem fileSystem,
+        IVersionDetailsParser versionDetailsParser,
         ILoggerFactory loggerFactory,
         string temporaryPath)
     {
@@ -39,6 +41,7 @@ public class GitRepoFactory : IGitRepoFactory
         _telemetryRecorder = telemetryRecorder;
         _processManager = processManager;
         _fileSystem = fileSystem;
+        _versionDetailsParser = versionDetailsParser;
         _loggerFactory = loggerFactory;
         _temporaryPath = temporaryPath;
     }
@@ -56,6 +59,7 @@ public class GitRepoFactory : IGitRepoFactory
             _processManager,
             _loggerFactory.CreateLogger<GitHubClient>(),
             _temporaryPath,
+            _versionDetailsParser,
             // Caching not in use for Darc local client.
             null),
 

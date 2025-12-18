@@ -16,6 +16,7 @@ using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
+using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
@@ -1954,5 +1955,14 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         string commitSha,
         int maxCount)
         => throw new NotImplementedException();
+<<<<<<< HEAD
 >>>>>>> 0973d0ff2 (Codeflow graphs WIP)
+=======
+
+    public Task<List<Commit>> FetchLatestRepoCommitsAsync(string repoUrl, string branch, int maxCount) => throw new NotImplementedException();
+    public Task<List<Commit>> FetchNewerRepoCommitsAsync(string repoUrl, string branch, string commitSha, int maxCount) => throw new NotImplementedException();
+    public Task<ForwardFlow> GetLastIncomingForwardFlowAsync(string vmrUrl, string commit) => throw new NotImplementedException();
+    public Task<Backflow> GetLastIncomingBackflowAsync(string repoUrl, string commit) => throw new NotImplementedException();
+    public Task<ForwardFlow> GetLastIncomingForwardFlowAsync(string vmrUrl, string mappingName, string commit) => throw new NotImplementedException();
+>>>>>>> e3300f865 (fix build)
 }

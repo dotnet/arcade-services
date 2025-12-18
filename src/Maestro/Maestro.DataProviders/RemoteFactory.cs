@@ -25,6 +25,7 @@ public class RemoteFactory : IRemoteFactory
     private readonly IGitHubTokenProvider _gitHubTokenProvider;
     private readonly IAzureDevOpsTokenProvider _azdoTokenProvider;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IVersionDetailsParser _versionDetailsParser;
 
     public RemoteFactory(
         BuildAssetRegistryContext context,
@@ -45,6 +46,7 @@ public class RemoteFactory : IRemoteFactory
         _azdoTokenProvider = azdoTokenProvider;
         _cache = memoryCache;
         _serviceProvider = serviceProvider;
+        _versionDetailsParser = versionDetailsParser;
     }
 
     public async Task<IRemote> CreateRemoteAsync(string repoUrl)
@@ -87,6 +89,7 @@ public class RemoteFactory : IRemoteFactory
                 : new GitHubClient(
                     new Microsoft.DotNet.DarcLib.GitHubTokenProvider(_gitHubTokenProvider),
                     _processManager,
+                    _versionDetailsParser,
                     _loggerFactory.CreateLogger<GitHubClient>(),
                     _cache.Cache),
 

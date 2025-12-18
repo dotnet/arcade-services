@@ -5,14 +5,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Xml;
-using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
-using Microsoft.TeamFoundation.Work.WebApi;
-using static System.Net.Mime.MediaTypeNames;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Helpers;
@@ -61,13 +56,13 @@ public class VersionDetailsParser : IVersionDetailsParser
         return ParseVersionDetailsXml(content, includePinned: includePinned);
     }
 
-    public static VersionDetails ParseVersionDetailsXml(string fileContents, bool includePinned = true)
+    public VersionDetails ParseVersionDetailsXml(string fileContents, bool includePinned = true)
     {
         XmlDocument document = GetXmlDocument(fileContents);
         return ParseVersionDetailsXml(document, includePinned: includePinned);
     }
 
-    public static VersionDetails ParseVersionDetailsXml(XmlDocument document, bool includePinned = true)
+    public VersionDetails ParseVersionDetailsXml(XmlDocument document, bool includePinned = true)
     {
         XmlNodeList? dependencyNodes = (document?.DocumentElement?.SelectNodes($"//{DependencyElementName}"))
             ?? throw new Exception($"There was an error while reading '{VersionFiles.VersionDetailsXml}' and it came back empty. " +
@@ -82,7 +77,7 @@ public class VersionDetailsParser : IVersionDetailsParser
         return new VersionDetails(dependencies, vmrCodeflow);
     }
 
-    private static List<DependencyDetail> ParseDependencyDetails(XmlNodeList dependencies)
+    private List<DependencyDetail> ParseDependencyDetails(XmlNodeList dependencies)
     {
         List<DependencyDetail> dependencyDetails = [];
 

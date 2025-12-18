@@ -508,16 +508,19 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// <summary>
     /// Finds the last backflow between a repo and a VMR.
     /// </summary>
-    private async Task<Backflow?> GetLastBackflow(string repoPath)
+    private async Task<Backflow?> GetLastBackflow(NativePath repoPath)
     {
-        var versionDetailsContent = await _localGitClient.GetFileFromGitAsync(repoPath, VersionFiles.VersionDetailsXml);
-        if (versionDetailsContent == null)
+        // Last backflow SHA comes from Version.Details.xml in the repo
+        SourceDependency? source = _versionDetailsParser.ParseVersionDetailsFile(repoPath / VersionFiles.VersionDetailsXml).Source;
+        if (source is null)
         {
             return null;
         }
 
-        var lineNumber = VersionDetailsParser.SourceDependencyLineNumber(versionDetailsContent);
-        string lastBackflowRepoSha = await _localGitClient.BlameLineAsync(repoPath, VersionFiles.VersionDetailsXml, lineNumber);
+        string lastBackflowVmrSha = source.Sha;
+        string lastBackflowRepoSha = await _localGitClient.BlameLineAsync(
+            repoPath / VersionFiles.VersionDetailsXml,
+            line => line.Contains(VersionDetailsParser.SourceElementName) && line.Contains(lastBackflowVmrSha));
 
         return new Backflow(lastBackflowVmrSha, lastBackflowRepoSha);
     }
