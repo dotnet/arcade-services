@@ -111,6 +111,40 @@ public class AddChannelOperationConfigRepoTests : ConfigurationManagementTestBas
     }
 
     [Test]
+    public async Task AddChannelOperation_WithConfigRepo_FailsWhenEquivalentChannelExistsInBar()
+    {
+        // Arrange
+        var channelToAdd = new ChannelYaml
+        {
+            Name = ".NET 9",
+            Classification = "product"
+        };
+
+        // Setup an existing channel returned by BAR
+        var existingChannel = new Channel(
+            id: 42,
+            name: channelToAdd.Name,
+            classification: channelToAdd.Classification);
+
+        BarClientMock
+            .Setup(x => x.GetChannelsAsync())
+            .ReturnsAsync([existingChannel]);
+
+        var options = CreateAddChannelOptions(channelToAdd, configurationBranch: GetTestBranch());
+        var operation = CreateOperation(options);
+
+        // Act
+        int result = await operation.ExecuteAsync();
+
+        // Assert
+        result.Should().Be(Constants.ErrorCode);
+
+        // No new yml files should have been created (only the README.md from setup)
+        var ymlFiles = Directory.GetFiles(ConfigurationRepoPath, "*.yml", SearchOption.AllDirectories);
+        ymlFiles.Should().BeEmpty();
+    }
+
+    [Test]
     public async Task AddChannelOperation_WithConfigRepo_FailsWhenEquivalentChannelExistsInYamlFile()
     {
         // Arrange

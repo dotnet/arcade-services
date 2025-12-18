@@ -85,12 +85,12 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             $"Successfully added channel '{channel.Name}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
 
 
-    private async Task PerformConfigurationRepositoryOperationInternal<T>(
+    private async Task PerformConfigurationRepositoryOperationInternal<TModel>(
         ConfigurationRepositoryOperationParameters parameters,
-        T yamlModel,
-        Func<ConfigurationRepositoryOperationParameters, IGitRepo, string, T, Task> operation,
+        TModel yamlModel,
+        Func<ConfigurationRepositoryOperationParameters, IGitRepo, string, TModel, Task> operation,
         string noPrOperationMessage)
-        where T : IYamlModel
+        where TModel : IYamlModel
     {
         var configurationRepo = await _configurationRepoFactory.CreateClient(parameters.RepositoryUri);
 
@@ -117,17 +117,17 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
     /// <summary>
     /// Generic method to add a new configuration object to the configuration repository.
     /// </summary>
-    private async Task AddModelInternalAsync<T, TKey>(
+    private async Task AddModelInternalAsync<TModel, TKey>(
         ConfigurationRepositoryOperationParameters parameters,
         IGitRepo configurationRepo,
         string workingBranch,
-        T yamlModel,
-        Func<T, string> getDefaultFilePath,
-        Func<T, T, bool> isEquivalent,
-        Func<T, string, string> getDuplicateError,
-        IComparer<T> comparer,
+        TModel yamlModel,
+        Func<TModel, string> getDefaultFilePath,
+        Func<TModel, TModel, bool> isEquivalent,
+        Func<TModel, string, string> getDuplicateError,
+        IComparer<TModel> comparer,
         string commitMessage)
-        where T : IYamlModel
+        where TModel : IYamlModel
         where TKey : IEquatable<TKey>
     {
         var filePath = string.IsNullOrEmpty(parameters.ConfigurationFilePath)
@@ -135,7 +135,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             : parameters.ConfigurationFilePath;
         _logger.LogInformation("Adding new configuration to file {0}", filePath);
 
-        var yamlModelsInFile = await FetchAndParseRemoteConfiguration<T>(
+        var yamlModelsInFile = await FetchAndParseRemoteConfiguration<TModel>(
             configurationRepo,
             parameters.RepositoryUri,
             workingBranch,
@@ -144,7 +144,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         var equivalentInFile = yamlModelsInFile.FirstOrDefault(m => isEquivalent(m, yamlModel));
         if (equivalentInFile != null)
         {
-            throw new ArgumentException(getDuplicateError(equivalentInFile, filePath));
+            throw new DuplicateConfigurationObjectException(getDuplicateError(equivalentInFile, filePath), filePath);
         }
 
         yamlModelsInFile.Add(yamlModel);
@@ -161,16 +161,16 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
     /// <summary>
     /// Generic method to delete a configuration object from the configuration repository.
     /// </summary>
-    private async Task DeleteModelInternalAsync<T, TKey>(
+    private async Task DeleteModelInternalAsync<TModel, TKey>(
         ConfigurationRepositoryOperationParameters parameters,
         IGitRepo configurationRepo,
         string workingBranch,
-        T yamlModel,
-        Func<T, TKey> getKey,
-        Func<T, string, string, string, string> getNotFoundError,
-        IComparer<T> comparer,
+        TModel yamlModel,
+        Func<TModel, TKey> getKey,
+        Func<TModel, string, string, string, string> getNotFoundError,
+        IComparer<TModel> comparer,
         string commitMessage)
-        where T : IYamlModel
+        where TModel : IYamlModel
         where TKey : IEquatable<TKey>
     {
         var (filePath, yamlModelsInFile) = await GetFilePathAndModels(
@@ -185,11 +185,12 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
 
         if (yamlModelsInFile.Count == yamlModelsWithoutDeleted.Count)
         {
-            throw new ArgumentException(getNotFoundError(
-                yamlModel,
+            var branchName = parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch;
+            throw new ConfigurationObjectNotFoundException(
+                getNotFoundError(yamlModel, filePath, parameters.RepositoryUri, branchName),
                 filePath,
                 parameters.RepositoryUri,
-                parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch));
+                branchName);
         }
 
         await CommitConfigurationDataAsync(
@@ -205,16 +206,16 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
     /// <summary>
     /// Generic method to update an existing configuration object in the configuration repository.
     /// </summary>
-    private async Task UpdateModelInternalAsync<T, TKey>(
+    private async Task UpdateModelInternalAsync<TModel, TKey>(
         ConfigurationRepositoryOperationParameters parameters,
         IGitRepo configurationRepo,
         string workingBranch,
-        T updatedYamlModel,
-        Func<T, TKey> getKey,
-        Func<T, string, string, string, string> getNotFoundError,
-        IComparer<T> comparer,
+        TModel updatedYamlModel,
+        Func<TModel, TKey> getKey,
+        Func<TModel, string, string, string, string> getNotFoundError,
+        IComparer<TModel> comparer,
         string commitMessage)
-        where T : IYamlModel
+        where TModel : IYamlModel
         where TKey : IEquatable<TKey>
     {
         var (filePath, yamlModelsInFile) = await GetFilePathAndModels(
@@ -228,11 +229,12 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         var existingYamlModel = yamlModelsInFile.FirstOrDefault(m => getKey(m).Equals(yamlModelKey));
         if (existingYamlModel == null)
         {
-            throw new ArgumentException(getNotFoundError(
-                updatedYamlModel,
+            var branchName = parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch;
+            throw new ConfigurationObjectNotFoundException(
+                getNotFoundError(updatedYamlModel, filePath, parameters.RepositoryUri, branchName),
                 filePath,
                 parameters.RepositoryUri,
-                parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch));
+                branchName);
         }
 
         var index = yamlModelsInFile.IndexOf(existingYamlModel);
@@ -251,13 +253,13 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
     /// <summary>
     /// Gets the file path and yaml models, either from the specified path or by searching.
     /// </summary>
-    private async Task<(string FilePath, List<T> YamlModels)> GetFilePathAndModels<T, TKey>(
+    private async Task<(string FilePath, List<TModel> YamlModels)> GetFilePathAndModels<TModel, TKey>(
         ConfigurationRepositoryOperationParameters parameters,
         IGitRepo configurationRepo,
         string workingBranch,
-        T yamlModel,
-        Func<T, TKey> getKey)
-        where T : IYamlModel
+        TModel yamlModel,
+        Func<TModel, TKey> getKey)
+        where TModel : IYamlModel
         where TKey : IEquatable<TKey>
     {
         if (string.IsNullOrEmpty(parameters.ConfigurationFilePath))
@@ -271,7 +273,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         }
         else
         {
-            var yamlModels = await FetchAndParseRemoteConfiguration<T>(
+            var yamlModels = await FetchAndParseRemoteConfiguration<TModel>(
                 configurationRepo,
                 parameters.RepositoryUri,
                 workingBranch,
@@ -296,15 +298,15 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         }
     }
 
-    private static async Task CommitConfigurationDataAsync<T>(
+    private static async Task CommitConfigurationDataAsync<TModel>(
         IGitRepo gitRepo,
         string repositoryUri,
         string workingBranch,
         string filePath,
-        IEnumerable<T> data,
-        IComparer<T> comparer,
+        IEnumerable<TModel> data,
+        IComparer<TModel> comparer,
         string commitMessage)
-        where T : IYamlModel
+        where TModel : IYamlModel
     {
         if (!data.Any())
         {
@@ -392,13 +394,13 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         _logger.LogInformation("Created pull request at {0}", guiUri);
     }
 
-    private async Task<(string, List<T>)> FindAndParseConfigurationFile<T, TKey>(
+    private async Task<(string, List<TModel>)> FindAndParseConfigurationFile<TModel, TKey>(
         IGitRepo gitRepo,
         string repositoryUri,
         string workingBranch,
-        T searchObject,
-        Func<T, TKey> getUniqueKey)
-        where T : IYamlModel
+        TModel searchObject,
+        Func<TModel, TKey> getUniqueKey)
+        where TModel : IYamlModel
         where TKey : IEquatable<TKey>
     {
         // Try the default file first before searching all files
@@ -414,13 +416,13 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         return await SearchAllFilesInFolderAsync(gitRepo, repositoryUri, workingBranch, searchObject, getUniqueKey);
     }
 
-    private async Task<(string FilePath, List<T> Content)?> TryFindInDefaultFileAsync<T, TKey>(
+    private async Task<(string FilePath, List<TModel> Content)?> TryFindInDefaultFileAsync<TModel, TKey>(
         IGitRepo gitRepo,
         string repositoryUri,
         string workingBranch,
-        T searchObject,
-        Func<T, TKey> getUniqueKey)
-        where T : IYamlModel
+        TModel searchObject,
+        Func<TModel, TKey> getUniqueKey)
+        where TModel : IYamlModel
         where TKey : IEquatable<TKey>
     {
         var defaultFilePath = ConfigFilePathResolver.GetDefaultFilePath(searchObject);
@@ -429,7 +431,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         try
         {
             var defaultFileContents = await gitRepo.GetFileContentsAsync(repositoryUri, workingBranch, defaultFilePath);
-            var deserializedYamls = _yamlDeserializer.Deserialize<List<T>>(defaultFileContents);
+            var deserializedYamls = _yamlDeserializer.Deserialize<List<TModel>>(defaultFileContents);
 
             if (deserializedYamls.Any(y => searchKey.Equals(getUniqueKey(y))))
             {
@@ -444,13 +446,13 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         return null;
     }
 
-    private async Task<(string FilePath, List<T> Content)> SearchAllFilesInFolderAsync<T, TKey>(
+    private async Task<(string FilePath, List<TModel> Content)> SearchAllFilesInFolderAsync<TModel, TKey>(
         IGitRepo gitRepo,
         string repositoryUri,
         string workingBranch,
-        T searchObject,
-        Func<T, TKey> getUniqueKey)
-        where T : IYamlModel
+        TModel searchObject,
+        Func<TModel, TKey> getUniqueKey)
+        where TModel : IYamlModel
         where TKey : IEquatable<TKey>
     {
         var folderPath = ConfigFilePathResolver.GetDefaultFileFolder(searchObject);
@@ -465,7 +467,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             try
             {
                 var fileContent = await gitRepo.GetFileContentsAsync(repositoryUri, workingBranch, filePath);
-                var deserializedYamls = _yamlDeserializer.Deserialize<List<T>>(fileContent);
+                var deserializedYamls = _yamlDeserializer.Deserialize<List<TModel>>(fileContent);
 
                 if (deserializedYamls.Any(y => searchKey.Equals(getUniqueKey(y))))
                 {

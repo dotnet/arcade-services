@@ -64,6 +64,25 @@ internal class AddChannelOperation : Operation
                 await _configurationRepositoryManager.AddChannelAsync(
                     _options.ToConfigurationRepositoryOperationParameters(),
                     channelYaml);
+
+                // Output success message
+                switch (_options.OutputFormat)
+                {
+                    case DarcOutputType.json:
+                        Console.WriteLine(JsonConvert.SerializeObject(
+                            new
+                            {
+                                name = channelYaml.Name,
+                                classification = channelYaml.Classification
+                            },
+                            Formatting.Indented));
+                        break;
+                    case DarcOutputType.text:
+                        Console.WriteLine($"Successfully created new channel with name '{_options.Name}'.");
+                        break;
+                    default:
+                        throw new NotImplementedException($"Output type {_options.OutputFormat} not supported by add-channel");
+                }
             }
             else
             {
@@ -119,9 +138,18 @@ internal class AddChannelOperation : Operation
                 throw new ArgumentException($"A channel with name '{existingChannel.Name}' already exists.");
             }
         }
-        catch (RestApiException)
+        catch (RestApiException e)
         {
-            // If we can't access the BAR API, we'll just proceed and let the configuration repository check for duplicates
+            var statusCode = e.Response?.Status;
+
+            // Authentication and authorization failures should fail the operation
+            if (statusCode == (int)HttpStatusCode.Unauthorized || statusCode == (int)HttpStatusCode.Forbidden)
+            {
+                _logger.LogError(e, "Failed to validate channel against BAR API due to authentication or authorization error.");
+                throw;
+            }
+
+            // If we can't access the BAR API for other reasons, we'll just proceed and let the configuration repository check for duplicates
             _logger.LogWarning("Could not validate channel against BAR API. Will proceed with configuration repository validation.");
         }
     }
