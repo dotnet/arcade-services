@@ -15,7 +15,7 @@ using Microsoft.EntityFrameworkCore;
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion;
 
-internal class ConfigurationIngestor(
+internal partial class ConfigurationIngestor(
         BuildAssetRegistryContext context,
         ISqlBarClient sqlBarClient)
     : IConfigurationIngestor
@@ -33,9 +33,9 @@ internal class ConfigurationIngestor(
         var namespaceEntity = await FetchOrCreateNamespace(configurationNamespace);
 
         var existingConfigurationData =
-            ConfigurationDataHelper.CreateConfigurationDataObject(namespaceEntity);
+            CreateConfigurationDataObject(namespaceEntity);
 
-        var configurationDataUpdate = ConfigurationDataHelper.ComputeEntityUpdates(
+        var configurationDataUpdate = ComputeEntityUpdates(
             ingestionData,
             existingConfigurationData);
 
@@ -144,7 +144,7 @@ internal class ConfigurationIngestor(
         Dictionary<string, Channel> existingChannelsByName)
     {
         List<Subscription> subscriptionDaos = [.. newSubscriptions
-            .Select(sub => ConfigurationDataHelper.ConvertIngestedSubscriptionToDao(
+            .Select(sub => ConvertIngestedSubscriptionToDao(
                 sub,
                 namespaceEntity,
                 existingChannelsByName))];
@@ -158,7 +158,7 @@ internal class ConfigurationIngestor(
         Dictionary<string, Channel> existingChannelsByName)
     {
         List<Subscription> subscriptionDaos = [.. updatedSubscriptions
-            .Select(sub => ConfigurationDataHelper.ConvertIngestedSubscriptionToDao(
+            .Select(sub => ConvertIngestedSubscriptionToDao(
                 sub,
                 namespaceEntity,
                 existingChannelsByName))];
@@ -181,8 +181,8 @@ internal class ConfigurationIngestor(
         IEnumerable<IngestedChannel> newChannels,
         Namespace namespaceEntity)
     {
-        List<Channel> channelDaos = [.. newChannels
-            .Select(ch => ConfigurationDataHelper.ConvertIngestedChannelToDao(ch, namespaceEntity))];
+        var channelDaos = newChannels
+            .Select(ch => ConvertIngestedChannelToDao(ch, namespaceEntity));
 
         _context.Channels.AddRange(channelDaos);
     }
@@ -231,11 +231,8 @@ internal class ConfigurationIngestor(
         Namespace namespaceEntity,
         Dictionary<string, Channel> dbChannelsByName)
     {
-        List<DefaultChannel> defaultChannelDaos = [.. newDefaultChannels
-            .Select(dc => ConfigurationDataHelper.ConvertIngestedDefaultChannelToDao(
-                dc,
-                namespaceEntity,
-                dbChannelsByName))];
+        var defaultChannelDaos = newDefaultChannels
+            .Select(dc => ConvertIngestedDefaultChannelToDao(dc, namespaceEntity, dbChannelsByName));
 
         _context.DefaultChannels.AddRange(defaultChannelDaos);
     }
@@ -288,10 +285,8 @@ internal class ConfigurationIngestor(
         IEnumerable<IngestedBranchMergePolicies> newBranchMergePolicies,
         Namespace namespaceEntity)
     {
-        List<RepositoryBranch> branchMergePolicyDaos = [.. newBranchMergePolicies
-            .Select(bmp => ConfigurationDataHelper.ConvertIngestedBranchMergePoliciesToDao(
-                bmp,
-                namespaceEntity))];
+        var branchMergePolicyDaos = newBranchMergePolicies
+            .Select(bmp => ConvertIngestedBranchMergePoliciesToDao(bmp, namespaceEntity));
 
         _context.RepositoryBranches.AddRange(branchMergePolicyDaos);
     }
@@ -309,7 +304,7 @@ internal class ConfigurationIngestor(
             var dbRepositoryBranch = dbRepositoryBranches[(bmp.Values.Repository, bmp.Values.Branch)];
 
             var updatedBranchMergePoliciesDao =
-                ConfigurationDataHelper.ConvertIngestedBranchMergePoliciesToDao(bmp, namespaceEntity);
+                ConvertIngestedBranchMergePoliciesToDao(bmp, namespaceEntity);
 
             dbRepositoryBranch.PolicyString = updatedBranchMergePoliciesDao.PolicyString;
 

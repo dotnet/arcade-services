@@ -13,9 +13,9 @@ using Newtonsoft.Json.Linq;
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion;
 
-internal class ConfigurationDataHelper
+internal partial class ConfigurationIngestor
 {
-    internal static IngestedConfigurationData CreateConfigurationDataObject(Namespace namespaceEntity)
+    private static IngestedConfigurationData CreateConfigurationDataObject(Namespace namespaceEntity)
     {
         var convertedSubscriptions = namespaceEntity.Subscriptions
             .Select(sub => SqlBarClient.ToClientModelSubscription(sub))
@@ -48,7 +48,7 @@ internal class ConfigurationDataHelper
             convertedBranchMergePolicies);
     }
 
-    internal static IngestedConfigurationUpdates ComputeEntityUpdates(
+    private static IngestedConfigurationUpdates ComputeEntityUpdates(
         IngestedConfigurationData configurationData,
         IngestedConfigurationData existingConfigurationData)
     {
@@ -79,7 +79,7 @@ internal class ConfigurationDataHelper
             branchMergePolicyChanges);
     }
 
-    internal static EntityChanges<T> ComputeUpdatesForEntity<T, TId>(
+    private static EntityChanges<T> ComputeUpdatesForEntity<T, TId>(
         IReadOnlyCollection<T> dbEntities,
         IReadOnlyCollection<T> externalEntities)
         where T : class, IExternallySyncedEntity<TId>
@@ -100,7 +100,7 @@ internal class ConfigurationDataHelper
         return new EntityChanges<T>(creations, updates, removals);
     }
 
-    internal static Subscription ConvertIngestedSubscriptionToDao(
+    private static Subscription ConvertIngestedSubscriptionToDao(
         IngestedSubscription subscription,
         Namespace namespaceEntity,
         Dictionary<string, Channel> existingChannelsByName)
@@ -135,7 +135,7 @@ internal class ConfigurationDataHelper
         };
     }
 
-    internal static Channel ConvertIngestedChannelToDao(
+    private static Channel ConvertIngestedChannelToDao(
         IngestedChannel channel,
         Namespace namespaceEntity)
         =>  new()
@@ -145,7 +145,7 @@ internal class ConfigurationDataHelper
             Namespace = namespaceEntity,
         };
 
-    internal static DefaultChannel ConvertIngestedDefaultChannelToDao(
+    private static DefaultChannel ConvertIngestedDefaultChannelToDao(
         IngestedDefaultChannel defaultChannel,
         Namespace namespaceEntity,
         Dictionary<string, Channel> existingChannelsByName)
@@ -169,7 +169,7 @@ internal class ConfigurationDataHelper
         }
     }
 
-    internal static RepositoryBranch ConvertIngestedBranchMergePoliciesToDao(
+    private static RepositoryBranch ConvertIngestedBranchMergePoliciesToDao(
         IngestedBranchMergePolicies branchMergePolicies,
         Namespace namespaceEntity)
     {
