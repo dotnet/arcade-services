@@ -4,7 +4,7 @@
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 
 #nullable enable
-namespace Maestro.DataProviders.ConfigurationIngestion.Helpers;
+namespace Maestro.DataProviders.ConfigurationIngestion.Model;
 
 internal class IngestedDefaultChannel :
     IExternallySyncedEntity<(string Repository, string Branch, string Channel)>

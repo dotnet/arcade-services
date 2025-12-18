@@ -5,7 +5,7 @@ using System;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 
 #nullable enable
-namespace Maestro.DataProviders.ConfigurationIngestion.Helpers;
+namespace Maestro.DataProviders.ConfigurationIngestion.Model;
 
 internal class IngestedSubscription : IExternallySyncedEntity<Guid>
 {

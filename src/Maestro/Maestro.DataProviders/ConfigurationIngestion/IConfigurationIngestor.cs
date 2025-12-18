@@ -3,7 +3,7 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Maestro.DataProviders.ConfigurationIngestion.Helpers;
+using Maestro.DataProviders.ConfigurationIngestion.Model;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 
 #nullable enable

@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Maestro.MergePolicyEvaluation;
-using Maestro.DataProviders.ConfigurationIngestion.Helpers;
+using Maestro.DataProviders.ConfigurationIngestion.Model;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion.Validations;

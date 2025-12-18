@@ -4,7 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Maestro.DataProviders.ConfigurationIngestion.Helpers;
+using Maestro.DataProviders.ConfigurationIngestion.Model;
 using Maestro.MergePolicyEvaluation;
 
 #nullable enable

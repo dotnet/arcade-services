@@ -3,7 +3,7 @@
 
 using System;
 using System.Collections.Generic;
-using Maestro.DataProviders.ConfigurationIngestion.Helpers;
+using Maestro.DataProviders.ConfigurationIngestion.Model;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion.Validations;

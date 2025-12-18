@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 #nullable enable
-namespace Maestro.DataProviders.ConfigurationIngestion.Helpers;
+namespace Maestro.DataProviders.ConfigurationIngestion.Model;
 
 internal record IngestedConfigurationData(
     IReadOnlyCollection<IngestedSubscription> Subscriptions,

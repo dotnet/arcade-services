@@ -3,7 +3,7 @@
 
 #nullable enable
 
-namespace Maestro.DataProviders.ConfigurationIngestion.Helpers;
+namespace Maestro.DataProviders.ConfigurationIngestion.Model;
 
 /// <summary>
 /// Defines an entity that is ingested from an external source and synchronized into the system.

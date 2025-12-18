@@ -4,7 +4,7 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using Maestro.DataProviders.ConfigurationIngestion.Helpers;
+using Maestro.DataProviders.ConfigurationIngestion.Model;
 
 namespace Maestro.DataProviders.ConfigurationIngestion.Validations;
 

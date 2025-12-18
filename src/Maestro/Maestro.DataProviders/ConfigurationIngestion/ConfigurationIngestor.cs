@@ -7,7 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Maestro.Data;
 using Maestro.Data.Models;
-using Maestro.DataProviders.ConfigurationIngestion.Helpers;
+using Maestro.DataProviders.ConfigurationIngestion.Model;
 using Maestro.DataProviders.ConfigurationIngestion.Validations;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.EntityFrameworkCore;

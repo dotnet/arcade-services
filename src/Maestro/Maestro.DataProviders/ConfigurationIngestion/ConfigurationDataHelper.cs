@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Maestro.Data.Models;
-using Maestro.DataProviders.ConfigurationIngestion.Helpers;
+using Maestro.DataProviders.ConfigurationIngestion.Model;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
