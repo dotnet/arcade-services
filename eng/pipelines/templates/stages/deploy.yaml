@@ -28,19 +28,19 @@ stages:
     - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
       - name: BarConnectionString
         value: "Data Source=tcp:maestro-prod.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Default; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=120; Encrypt=True; TrustServerCertificate=False; User Id=1093df3b-c754-4788-a4ae-ea33b86b82aa"
-      - name: BarConnectionString
+      - name: BarMigrationServiceConnection
         value: BarMigrationProd
 
     - ${{ else }}:
       - name: BarConnectionString
         value: "Data Source=tcp:maestro-int-server.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Default; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=120; Encrypt=True; TrustServerCertificate=False; User Id=736067df-a2c8-4c63-ad30-12db55c186cc"
-      - name: BarConnectionString
+      - name: BarMigrationServiceConnection
         value: BarMigrationInt
     steps:
     - task: AzureCLI@2
       displayName: Entity Framework update
       inputs:
-        azureSubscription: ${{ variables.BarConnectionString }}
+        azureSubscription: ${{ variables.BarMigrationServiceConnection }}
         scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
