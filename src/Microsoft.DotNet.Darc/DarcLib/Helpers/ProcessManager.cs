@@ -25,9 +25,25 @@ public interface IProcessManager
         Dictionary<string, string>? envVariables = null,
         CancellationToken cancellationToken = default);
 
+    Task<ProcessExecutionResult> Execute(
+        string executable,
+        IEnumerable<string> arguments,
+        string? standardInput,
+        TimeSpan? timeout = null,
+        string? workingDir = null,
+        Dictionary<string, string>? envVariables = null,
+        CancellationToken cancellationToken = default);
+
     Task<ProcessExecutionResult> ExecuteGit(
         string repoPath,
         string[] arguments,
+        Dictionary<string, string>? envVariables = null,
+        CancellationToken cancellationToken = default);
+
+    Task<ProcessExecutionResult> ExecuteGit(
+        string repoPath,
+        string[] arguments,
+        string? standardInput,
         Dictionary<string, string>? envVariables = null,
         CancellationToken cancellationToken = default);
 
@@ -40,6 +56,14 @@ public interface IProcessManager
         Dictionary<string, string>? envVariables = null,
         CancellationToken cancellationToken = default)
         => ExecuteGit(repoPath, [.. arguments], envVariables, cancellationToken);
+
+    Task<ProcessExecutionResult> ExecuteGit(
+        string repoPath,
+        IEnumerable<string> arguments,
+        string? standardInput,
+        Dictionary<string, string>? envVariables = null,
+        CancellationToken cancellationToken = default)
+        => ExecuteGit(repoPath, [.. arguments], standardInput, envVariables, cancellationToken);
 
     string FindGitRoot(string path);
 
@@ -71,9 +95,45 @@ public class ProcessManager : IProcessManager
             ex => ex is ProcessFailedException e && e.ExecutionResult.ExitCode == 128 && e.ExecutionResult.StandardError.Contains(".git/index.lock"));
     }
 
+    public async Task<ProcessExecutionResult> ExecuteGit(
+        string repoPath,
+        string[] arguments,
+        string? standardInput,
+        Dictionary<string, string>? envVariables = null,
+        CancellationToken cancellationToken = default)
+    {
+        // When another process is using the directory, we retry a few times
+        return await ExponentialRetry.Default.RetryAsync(
+            async () => await Execute(
+                GitExecutable,
+                (new[] { "-C", repoPath }).Concat(arguments),
+                standardInput,
+                envVariables: envVariables,
+                cancellationToken: cancellationToken),
+            ex => _logger.LogDebug("Another git process seems to be running in this repository, retrying..."),
+            ex => ex is ProcessFailedException e && e.ExecutionResult.ExitCode == 128 && e.ExecutionResult.StandardError.Contains(".git/index.lock"));
+    }
+
+    public Task<ProcessExecutionResult> Execute(
+        string executable,
+        IEnumerable<string> arguments,
+        TimeSpan? timeout = null,
+        string? workingDir = null,
+        Dictionary<string, string>? envVariables = null,
+        CancellationToken cancellationToken = default)
+        => Execute(
+            executable,
+            arguments,
+            standardInput: null,
+            timeout,
+            workingDir,
+            envVariables,
+            cancellationToken);
+
     public async Task<ProcessExecutionResult> Execute(
         string executable,
         IEnumerable<string> arguments,
+        string? standardInput,
         TimeSpan? timeout = null,
         string? workingDir = null,
         Dictionary<string, string>? envVariables = null,
@@ -86,6 +146,7 @@ public class ProcessManager : IProcessManager
             UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            RedirectStandardInput = standardInput != null,
             WorkingDirectory = workingDir,
         };
 
@@ -140,6 +201,14 @@ public class ProcessManager : IProcessManager
         };
 
         p.Start();
+
+        if (standardInput != null)
+        {
+            await p.StandardInput.WriteAsync(standardInput);
+            await p.StandardInput.FlushAsync();
+            p.StandardInput.Close();
+        }
+
         p.BeginOutputReadLine();
         p.BeginErrorReadLine();
 
