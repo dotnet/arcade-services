@@ -43,7 +43,18 @@ internal class WorkItemConsumer(
 
         while (!cancellationToken.IsCancellationRequested)
         {
-            await using (WorkItemScope workItemScope = await _scopeManager.BeginWorkItemScopeWhenReadyAsync())
+            WorkItemScope workItemScope;
+            try
+            {
+                workItemScope = await _scopeManager.BeginWorkItemScopeWhenReadyAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "Consumer {consumerId} failed to begin work item scope", _consumerId);
+                throw;
+            }
+
+            await using (workItemScope)
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -64,6 +75,8 @@ internal class WorkItemConsumer(
                 }
             }
         }
+
+        _logger.LogInformation("Consumer {consumerId} stopping processing PCS queue {queueName}", _consumerId, _queueName);
     }
 
     private async Task ReadAndProcessWorkItemAsync(QueueClient queueClient, WorkItemScope workItemScope, CancellationToken cancellationToken)
