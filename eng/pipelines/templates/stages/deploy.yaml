@@ -21,6 +21,9 @@ stages:
   jobs:
   - job: updateDatabase
     displayName: Update BuildAssetRegistry database
+    pool:
+      name: NetCore1ESPool-Internal
+      demands: ImageOverride -equals 1es-windows-2022
     variables:
     - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
       - name: BarConnectionString
@@ -96,8 +99,6 @@ stages:
   jobs:
   - job: DeployPCS
     displayName: Deploy PCS
-    dependsOn:
-    - updateDatabase
     pool:
       name: NetCore1ESPool-Internal
       demands: ImageOverride -equals 1es-windows-2022
