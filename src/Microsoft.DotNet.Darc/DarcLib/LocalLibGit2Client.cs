@@ -7,7 +7,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
 using Maestro.Common;
@@ -52,70 +51,55 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
 
     public async Task CommitFilesAsync(List<GitFile> filesToCommit, string repoPath, string branch, string commitMessage)
     {
-        SemaphoreSlim commitThrottle = new SemaphoreSlim(16, 16);
         repoPath = await GetRootDirAsync(repoPath);
-        List<Task> commitTasks = new List<Task>();
         try
         {
             using (var localRepo = new Repository(repoPath))
+            foreach (GitFile file in filesToCommit)
             {
-                commitTasks = filesToCommit.Select(async file =>
+                Debug.Assert(file != null, $"Passed in a null {nameof(GitFile)} in {nameof(filesToCommit)}");
+                switch (file.Operation)
                 {
-                    try
-                    {
-                        await commitThrottle.WaitAsync();
+                    case GitFileOperation.Add:
+                        var parentDirectoryInfo = Directory.GetParent(file.FilePath)
+                            ?? throw new Exception($"Cannot find parent directory of {file.FilePath}.");
 
-                        Debug.Assert(file != null, $"Passed in a null {nameof(GitFile)} in {nameof(filesToCommit)}");
-                        switch (file.Operation)
+                        string parentDirectory = parentDirectoryInfo.FullName;
+
+                        if (!Directory.Exists(parentDirectory))
                         {
-                            case GitFileOperation.Add:
-                                var parentDirectoryInfo = Directory.GetParent(file.FilePath)
-                                    ?? throw new Exception($"Cannot find parent directory of {file.FilePath}.");
-
-                                string parentDirectory = parentDirectoryInfo.FullName;
-
-                                if (!Directory.Exists(parentDirectory))
-                                {
-                                    Directory.CreateDirectory(parentDirectory);
-                                }
-
-                                string fullPath = Path.Combine(repoPath, file.FilePath);
-                                using (var streamWriter = new StreamWriter(fullPath))
-                                {
-                                    string finalContent;
-                                    switch (file.ContentEncoding)
-                                    {
-                                        case ContentEncoding.Utf8:
-                                            finalContent = file.Content;
-                                            break;
-                                        case ContentEncoding.Base64:
-                                            byte[] bytes = Convert.FromBase64String(file.Content);
-                                            finalContent = Encoding.UTF8.GetString(bytes);
-                                            break;
-                                        default:
-                                            throw new DarcException($"Unknown file content encoding {file.ContentEncoding}");
-                                    }
-                                    finalContent = await NormalizeLineEndingsAsync(repoPath, fullPath, finalContent);
-                                    await streamWriter.WriteAsync(finalContent);
-
-                                    AddFileToIndex(localRepo, file, fullPath);
-                                }
-                                break;
-                            case GitFileOperation.Delete:
-                                if (File.Exists(file.FilePath))
-                                {
-                                    File.Delete(file.FilePath);
-                                }
-                                break;
+                            Directory.CreateDirectory(parentDirectory);
                         }
-                    }
-                    finally
-                    {
-                        commitThrottle.Release();
-                    }
-                }).ToList();
 
-                await Task.WhenAll(commitTasks);
+                        string fullPath = Path.Combine(repoPath, file.FilePath);
+                        using (var streamWriter = new StreamWriter(fullPath))
+                        {
+                            string finalContent;
+                            switch (file.ContentEncoding)
+                            {
+                                case ContentEncoding.Utf8:
+                                    finalContent = file.Content;
+                                    break;
+                                case ContentEncoding.Base64:
+                                    byte[] bytes = Convert.FromBase64String(file.Content);
+                                    finalContent = Encoding.UTF8.GetString(bytes);
+                                    break;
+                                default:
+                                    throw new DarcException($"Unknown file content encoding {file.ContentEncoding}");
+                            }
+                            finalContent = await NormalizeLineEndingsAsync(repoPath, fullPath, finalContent);
+                            await streamWriter.WriteAsync(finalContent);
+
+                            AddFileToIndex(localRepo, file, fullPath);
+                        }
+                        break;
+                    case GitFileOperation.Delete:
+                        if (File.Exists(file.FilePath))
+                        {
+                            File.Delete(file.FilePath);
+                        }
+                        break;
+                }
             }
         }
         catch (Exception exc)
