@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using AwesomeAssertions;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders.ConfigurationIngestion;
@@ -86,9 +87,13 @@ public class ConfigurationIngestorTests
         Assert.That(result.RepositoryBranches.Updates.Count, Is.EqualTo(0));
         Assert.That(result.RepositoryBranches.Removals.Count, Is.EqualTo(0));
 
-        var channels = await _context.Channels.ToListAsync();
-        Assert.That(channels, Has.Count.EqualTo(1));
-        Assert.That(channels[0].Name, Is.EqualTo(".NET 8"));
+        var namespaceEntity = await _context.Namespaces
+            .Include(n => n.Channels)
+            .FirstOrDefaultAsync(n => n.Name == _testNamespace);
+
+        namespaceEntity.Should().NotBeNull();
+        namespaceEntity.Channels.Should().ContainSingle()
+            .Which.Name.Should().Be(".NET 8");
     }
 
     [Test]
@@ -104,8 +109,8 @@ public class ConfigurationIngestorTests
         var namespaceEntity = await _context.Namespaces
             .FirstOrDefaultAsync(ns => ns.Name == _testNamespace);
 
-        Assert.That(namespaceEntity, Is.Not.Null);
-        Assert.That(namespaceEntity!.Name, Is.EqualTo(_testNamespace));
+        namespaceEntity.Should().NotBeNull();
+        namespaceEntity.Name.Should().Be(_testNamespace);
     }
 
     #endregion
@@ -137,15 +142,18 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
-        Assert.That(result.Channels.Updates.Count, Is.EqualTo(1));
-        Assert.That(result.Channels.Creations.Count, Is.EqualTo(0));
-        Assert.That(result.Channels.Removals.Count, Is.EqualTo(0));
+        result.Channels.Updates.Should().HaveCount(1);
+        result.Channels.Creations.Should().BeEmpty();
+        result.Channels.Removals.Should().BeEmpty();
 
-        var updatedChannel = await _context.Channels
-            .FirstOrDefaultAsync(c => c.Name == "Test Channel");
+        namespaceEntity = await _context.Namespaces
+            .Include(n => n.Channels)
+            .FirstOrDefaultAsync(n => n.Name == _testNamespace);
 
-        Assert.That(updatedChannel, Is.Not.Null);
-        Assert.That(updatedChannel!.Classification, Is.EqualTo("production"));
+        namespaceEntity.Should().NotBeNull();
+        var updatedChannel = namespaceEntity.Channels.FirstOrDefault(c => c.Name == "Test Channel");
+        updatedChannel.Should().NotBeNull();
+        updatedChannel.Classification.Should().Be("production");
     }
 
     [Test]
@@ -190,7 +198,7 @@ public class ConfigurationIngestorTests
         // Act
         var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
-        Assert.That(result.Subscriptions.Updates.Count, Is.EqualTo(1));
+        result.Subscriptions.Updates.Should().HaveCount(1);
     }
 
     [Test]
@@ -245,17 +253,17 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
-        Assert.That(result.Subscriptions.Updates.Count, Is.EqualTo(1));
+        result.Subscriptions.Updates.Should().HaveCount(1);
 
         var updated = await _context.Subscriptions
             .Include(s => s.ExcludedAssets)
             .FirstOrDefaultAsync(s => s.Id == subscriptionId);
 
-        Assert.That(updated, Is.Not.Null);
-        Assert.That(updated!.ExcludedAssets, Has.Count.EqualTo(3));
-        Assert.That(updated.ExcludedAssets.Any(a => a.Filter == "Microsoft.NET.Sdk"), Is.True);
-        Assert.That(updated.ExcludedAssets.Any(a => a.Filter == "Microsoft.AspNetCore.*"), Is.True);
-        Assert.That(updated.ExcludedAssets.Any(a => a.Filter == "System.Text.Json"), Is.True);
+        updated.Should().NotBeNull();
+        updated.ExcludedAssets.Should().HaveCount(3);
+        updated.ExcludedAssets.Should().Contain(a => a.Filter == "Microsoft.NET.Sdk");
+        updated.ExcludedAssets.Should().Contain(a => a.Filter == "Microsoft.AspNetCore.*");
+        updated.ExcludedAssets.Should().Contain(a => a.Filter == "System.Text.Json");
     }
 
     [Test]
@@ -310,15 +318,15 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
-        Assert.That(result.Subscriptions.Updates.Count, Is.EqualTo(1));
+        result.Subscriptions.Updates.Should().HaveCount(1);
 
         var updated = await _context.Subscriptions
             .Include(s => s.ExcludedAssets)
             .FirstOrDefaultAsync(s => s.Id == subscriptionId);
 
-        Assert.That(updated, Is.Not.Null);
-        Assert.That(updated!.ExcludedAssets, Has.Count.EqualTo(1));
-        Assert.That(updated.ExcludedAssets.First().Filter, Is.EqualTo("Microsoft.NET.Sdk"));
+        updated.Should().NotBeNull();
+        updated.ExcludedAssets.Should().ContainSingle()
+            .Which.Filter.Should().Be("Microsoft.NET.Sdk");
     }
 
     [Test]
@@ -369,14 +377,14 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
-        Assert.That(result.Subscriptions.Updates.Count, Is.EqualTo(1));
+        result.Subscriptions.Updates.Should().HaveCount(1);
 
         var updated = await _context.Subscriptions
             .Include(s => s.ExcludedAssets)
             .FirstOrDefaultAsync(s => s.Id == subscriptionId);
 
-        Assert.That(updated, Is.Not.Null);
-        Assert.That(updated!.ExcludedAssets, Is.Empty);
+        updated.Should().NotBeNull();
+        updated.ExcludedAssets.Should().BeEmpty();
     }
 
     [Test]
@@ -434,29 +442,26 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
-        Assert.That(result.Subscriptions.Updates.Count, Is.EqualTo(1));
+        result.Subscriptions.Updates.Should().HaveCount(1);
 
         var updated = await _context.Subscriptions
             .Include(s => s.ExcludedAssets)
             .FirstOrDefaultAsync(s => s.Id == subscriptionId);
 
-        Assert.That(updated, Is.Not.Null);
-        Assert.That(updated!.ExcludedAssets, Has.Count.EqualTo(3));
+        updated.Should().NotBeNull();
+        updated.ExcludedAssets.Should().HaveCount(3);
 
         // Verify ToKeep.Package is unchanged
-        var toKeep = updated.ExcludedAssets.FirstOrDefault(a => a.Filter == "ToKeep.Package");
-        Assert.That(toKeep, Is.Not.Null);
+        updated.ExcludedAssets.Should().Contain(a => a.Filter == "ToKeep.Package");
 
-        // Verify ToModify.Package has updated NonShipping flag
-        var toModify = updated.ExcludedAssets.FirstOrDefault(a => a.Filter == "ToModify.Package");
-        Assert.That(toModify, Is.Not.Null);
+        // Verify ToModify.Package exists
+        updated.ExcludedAssets.Should().Contain(a => a.Filter == "ToModify.Package");
 
         // Verify NewPackage.* was added
-        var newPackage = updated.ExcludedAssets.FirstOrDefault(a => a.Filter == "NewPackage.*");
-        Assert.That(newPackage, Is.Not.Null);
+        updated.ExcludedAssets.Should().Contain(a => a.Filter == "NewPackage.*");
 
         // Verify ToRemove.Package was removed
-        Assert.That(updated.ExcludedAssets.Any(a => a.Filter == "ToRemove.Package"), Is.False);
+        updated.ExcludedAssets.Should().NotContain(a => a.Filter == "ToRemove.Package");
     }
 
     [Test]
@@ -496,11 +501,16 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
-        Assert.That(result.DefaultChannels.Updates.Count, Is.EqualTo(1));
+        result.DefaultChannels.Updates.Should().HaveCount(1);
 
-        var updated = await _context.DefaultChannels.FirstOrDefaultAsync(dc => dc.Id == 1);
-        Assert.That(updated, Is.Not.Null);
-        Assert.That(updated!.Enabled, Is.False);
+        namespaceEntity = await _context.Namespaces
+            .Include(n => n.DefaultChannels)
+            .FirstOrDefaultAsync(n => n.Name == _testNamespace);
+
+        namespaceEntity.Should().NotBeNull();
+        var updated = namespaceEntity.DefaultChannels.FirstOrDefault();
+        updated.Should().NotBeNull();
+        updated.Enabled.Should().BeFalse();
     }
 
     [Test]
@@ -539,13 +549,18 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
-        Assert.That(result.RepositoryBranches.Updates.Count, Is.EqualTo(1));
+        result.RepositoryBranches.Updates.Should().HaveCount(1);
 
-        var updated = await _context.RepositoryBranches
-            .FirstOrDefaultAsync(rb => rb.RepositoryName == "https://github.com/dotnet/runtime" && rb.BranchName == "main");
+        namespaceEntity = await _context.Namespaces
+            .Include(n => n.RepositoryBranches)
+            .FirstOrDefaultAsync(n => n.Name == _testNamespace);
 
-        Assert.That(updated, Is.Not.Null);
-        Assert.That(updated!.PolicyObject.MergePolicies, Has.Count.EqualTo(2));
+        namespaceEntity.Should().NotBeNull();
+        var updated = namespaceEntity.RepositoryBranches
+            .FirstOrDefault(rb => rb.RepositoryName == "https://github.com/dotnet/runtime" && rb.BranchName == "main");
+
+        updated.Should().NotBeNull();
+        updated.PolicyObject.MergePolicies.Should().HaveCount(2);
     }
 
     #endregion
@@ -556,7 +571,8 @@ public class ConfigurationIngestorTests
     public async Task IngestConfigurationAsync_RemoveChannel_DeletesChannel()
     {
         // Arrange
-        var namespaceEntity = await CreateNamespace();
+        await CreateNamespace();
+        var namespaceEntity = await _context.Namespaces.FirstAsync(n => n.Name == _testNamespace);
         var channel = CreateChannel("Old Channel", "dev", namespaceEntity);
         await _context.Channels.AddAsync(channel);
         await _context.SaveChangesAsync();
@@ -567,10 +583,14 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
-        Assert.That(result.Channels.Removals.Count, Is.EqualTo(1));
+        result.Channels.Removals.Should().HaveCount(1);
 
-        var channels = await _context.Channels.ToListAsync();
-        Assert.That(channels, Is.Empty);
+        var updatedNamespace = await _context.Namespaces
+            .Include(n => n.Channels)
+            .FirstOrDefaultAsync(n => n.Name == _testNamespace);
+
+        updatedNamespace.Should().NotBeNull();
+        updatedNamespace.Channels.Should().BeEmpty();
     }
 
 
@@ -686,10 +706,14 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
-        Assert.That(result.Subscriptions.Removals.Count, Is.EqualTo(1));
+        result.Subscriptions.Removals.Should().HaveCount(1);
 
-        var subscriptions = await _context.Subscriptions.ToListAsync();
-        Assert.That(subscriptions, Is.Empty);
+        namespaceEntity = await _context.Namespaces
+            .Include(n => n.Subscriptions)
+            .FirstOrDefaultAsync(n => n.Name == _testNamespace);
+
+        namespaceEntity.Should().NotBeNull();
+        namespaceEntity.Subscriptions.Should().BeEmpty();
     }
 
     [Test]
@@ -721,10 +745,14 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
-        Assert.That(result.DefaultChannels.Removals.Count, Is.EqualTo(1));
+        result.DefaultChannels.Removals.Should().HaveCount(1);
 
-        var defaultChannels = await _context.DefaultChannels.ToListAsync();
-        Assert.That(defaultChannels, Is.Empty);
+        namespaceEntity = await _context.Namespaces
+            .Include(n => n.DefaultChannels)
+            .FirstOrDefaultAsync(n => n.Name == _testNamespace);
+
+        namespaceEntity.Should().NotBeNull();
+        namespaceEntity.DefaultChannels.Should().BeEmpty();
     }
 
     [Test]
@@ -748,10 +776,14 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
-        Assert.That(result.RepositoryBranches.Removals.Count, Is.EqualTo(1));
+        result.RepositoryBranches.Removals.Should().HaveCount(1);
 
-        var branches = await _context.RepositoryBranches.ToListAsync();
-        Assert.That(branches, Is.Empty);
+        namespaceEntity = await _context.Namespaces
+            .Include(n => n.RepositoryBranches)
+            .FirstOrDefaultAsync(n => n.Name == _testNamespace);
+
+        namespaceEntity.Should().NotBeNull();
+        namespaceEntity.RepositoryBranches.Should().BeEmpty();
     }
 
     #endregion
@@ -788,17 +820,22 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
-        Assert.That(result.Channels.Creations.Count, Is.EqualTo(1));
-        Assert.That(result.Channels.Updates.Count, Is.EqualTo(2)); // Both existing and updated
-        Assert.That(result.Channels.Removals.Count, Is.EqualTo(1));
+        result.Channels.Creations.Should().HaveCount(1);
+        result.Channels.Updates.Should().HaveCount(2); // Both existing and updated
+        result.Channels.Removals.Should().HaveCount(1);
 
-        var channels = await _context.Channels.ToListAsync();
-        Assert.That(channels, Has.Count.EqualTo(3));
-        Assert.That(channels.Any(c => c.Name == "New Channel"), Is.True);
-        Assert.That(channels.Any(c => c.Name == "Channel To Delete"), Is.False);
+        namespaceEntity = await _context.Namespaces
+            .Include(n => n.Channels)
+            .FirstOrDefaultAsync(n => n.Name == _testNamespace);
+
+        namespaceEntity.Should().NotBeNull();
+        var channels = namespaceEntity.Channels;
+        channels.Should().HaveCount(3);
+        channels.Should().Contain(c => c.Name == "New Channel");
+        channels.Should().NotContain(c => c.Name == "Channel To Delete");
 
         var updated = channels.First(c => c.Name == "Channel To Update");
-        Assert.That(updated.Classification, Is.EqualTo("production"));
+        updated.Classification.Should().Be("production");
     }
 
     [Test]
@@ -865,17 +902,22 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
-        Assert.That(result.Channels.Updates.Count, Is.EqualTo(2)); // .NET 8
+        result.Channels.Updates.Should().HaveCount(2); // .NET 8
 
-        Assert.That(result.Subscriptions.Creations.Count, Is.EqualTo(1));
-        Assert.That(result.Subscriptions.Removals.Count, Is.EqualTo(1));
+        result.Subscriptions.Creations.Should().HaveCount(1);
+        result.Subscriptions.Removals.Should().HaveCount(1);
 
-        Assert.That(result.DefaultChannels.Creations.Count, Is.EqualTo(1));
-        Assert.That(result.RepositoryBranches.Creations.Count, Is.EqualTo(1));
+        result.DefaultChannels.Creations.Should().HaveCount(1);
+        result.RepositoryBranches.Creations.Should().HaveCount(1);
 
-        var channels = await _context.Channels.ToListAsync();
-        Assert.That(channels, Has.Count.EqualTo(2));
-        Assert.That(channels.Any(c => c.Name == ".NET 9"), Is.True);
+        namespaceEntity = await _context.Namespaces
+            .Include(n => n.Channels)
+            .FirstOrDefaultAsync(n => n.Name == _testNamespace);
+
+        namespaceEntity.Should().NotBeNull();
+        var channels = namespaceEntity.Channels;
+        channels.Should().HaveCount(2);
+        channels.Should().Contain(c => c.Name == ".NET 9");
     }
 
     #endregion
@@ -896,8 +938,10 @@ public class ConfigurationIngestorTests
         await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
-        var namespaces = await _context.Namespaces.ToListAsync();
-        Assert.That(namespaces, Has.Count.EqualTo(2)); // 1 new namespace + the original one (created by DB migration)
+        var namespaceEntity = await _context.Namespaces
+            .FirstOrDefaultAsync(n => n.Name == _testNamespace);
+
+        namespaceEntity.Should().NotBeNull();
     }
 
     [Test]
@@ -924,20 +968,19 @@ public class ConfigurationIngestorTests
         await _ingestor.IngestConfigurationAsync(configData2, namespace2);
 
         // Assert
-        var namespaces = await _context.Namespaces.ToListAsync();
-        Assert.That(namespaces, Has.Count.EqualTo(3)); // 2 new namespaces + the original one (created by DB migration)
+        var namespaces = await _context.Namespaces
+            .Where(n => n.Name == namespace1 || n.Name == namespace2)
+            .Include(n => n.Channels)
+            .ToListAsync();
 
         var channels = await _context.Channels.ToListAsync();
-        Assert.That(channels, Has.Count.EqualTo(2));
+        namespaces.SelectMany(n => n.Channels).Should().HaveCount(2);
 
         var ns1 = namespaces.First(n => n.Name == namespace1);
         var ns2 = namespaces.First(n => n.Name == namespace2);
 
-        var channel1 = channels.First(c => c.Name == "Channel 1");
-        var channel2 = channels.First(c => c.Name == "Channel 2");
-
-        Assert.That(channel1.Namespace.Name, Is.EqualTo(namespace1));
-        Assert.That(channel2.Namespace.Name, Is.EqualTo(namespace2));
+        ns1.Channels.Should().Contain(c => c.Name == "Channel 1");
+        ns2.Channels.Should().Contain(c => c.Name == "Channel 2");
     }
 
     #endregion
