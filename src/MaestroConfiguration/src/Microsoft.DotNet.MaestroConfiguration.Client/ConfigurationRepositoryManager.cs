@@ -6,8 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
-using Microsoft.DotNet.ProductConstructionService.Client;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -40,29 +38,52 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         => await PerformConfigurationRepositoryOperationInternal(
             parameters,
             subscription,
-            AddSubscriptionInternalAsync,
+            (p, repo, branch, s) => AddModelInternalAsync<SubscriptionYaml, Guid>(
+                p, repo, branch, s,
+                ConfigFilePathResolver.GetDefaultSubscriptionFilePath,
+                (existing, newSub) => existing.IsEquivalentTo(newSub),
+                (existing, filePath) => $"Subscription {existing.Id} with equivalent parameters already exists in '{filePath}'.",
+                new SubscriptionYamlComparer(),
+                $"Add new subscription ({s.Channel}) {s.SourceRepository} => {s.TargetRepository} ({s.TargetBranch})"),
             $"Successfully added subscription with id '{subscription.Id}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
 
     public async Task DeleteSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml subscription)
         => await PerformConfigurationRepositoryOperationInternal(
             parameters,
             subscription,
-            DeleteSubscriptionInternalAsync,
+            (p, repo, branch, s) => DeleteModelInternalAsync<SubscriptionYaml, Guid>(
+                p, repo, branch, s,
+                YamlModelUniqueKeys.GetSubscriptionKey,
+                (model, filePath, repoUri, branchName) => $"Found no subscription with id {model.Id} to delete in file {filePath} of repo {repoUri} on branch {branchName}",
+                new SubscriptionYamlComparer(),
+                $"Delete subscription {s.Id}"),
             $"Successfully deleted subscription with id '{subscription.Id}' from branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
 
     public async Task UpdateSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml updatedSubscription)
         => await PerformConfigurationRepositoryOperationInternal(
             parameters,
             updatedSubscription,
-            UpdateSubscriptionInternalAsync,
+            (p, repo, branch, s) => UpdateModelInternalAsync<SubscriptionYaml, Guid>(
+                p, repo, branch, s,
+                YamlModelUniqueKeys.GetSubscriptionKey,
+                (model, filePath, repoUri, branchName) => $"No existing subscription with id {model.Id} found in file {filePath} of repo {repoUri} on branch {branchName}",
+                new SubscriptionYamlComparer(),
+                $"Update subscription {s.Id}"),
             $"Successfully updated subscription with id '{updatedSubscription.Id}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
 
     public async Task AddChannelAsync(ConfigurationRepositoryOperationParameters parameters, ChannelYaml channel)
         => await PerformConfigurationRepositoryOperationInternal(
             parameters,
             channel,
-            AddChannelInternalAsync,
+            (p, repo, branch, c) => AddModelInternalAsync<ChannelYaml, string>(
+                p, repo, branch, c,
+                ConfigFilePathResolver.GetDefaultChannelFilePath,
+                (existing, newChannel) => string.Equals(existing.Name, newChannel.Name, StringComparison.OrdinalIgnoreCase),
+                (existing, filePath) => $"Channel with name '{existing.Name}' already exists in '{filePath}'.",
+                new ChannelYamlComparer(),
+                $"Add new channel '{c.Name}'"),
             $"Successfully added channel '{channel.Name}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+
 
     private async Task PerformConfigurationRepositoryOperationInternal<T>(
         ConfigurationRepositoryOperationParameters parameters,
@@ -93,168 +114,170 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         }
     }
 
-    private async Task AddSubscriptionInternalAsync(
+    /// <summary>
+    /// Generic method to add a new configuration object to the configuration repository.
+    /// </summary>
+    private async Task AddModelInternalAsync<T, TKey>(
         ConfigurationRepositoryOperationParameters parameters,
         IGitRepo configurationRepo,
         string workingBranch,
-        SubscriptionYaml subscription)
+        T yamlModel,
+        Func<T, string> getDefaultFilePath,
+        Func<T, T, bool> isEquivalent,
+        Func<T, string, string> getDuplicateError,
+        IComparer<T> comparer,
+        string commitMessage)
+        where T : IYamlModel
+        where TKey : IEquatable<TKey>
     {
-        var newSubscriptionFilePath = string.IsNullOrEmpty(parameters.ConfigurationFilePath)
-            ? ConfigFilePathResolver.GetDefaultSubscriptionFilePath(subscription)
+        var filePath = string.IsNullOrEmpty(parameters.ConfigurationFilePath)
+            ? getDefaultFilePath(yamlModel)
             : parameters.ConfigurationFilePath;
-        _logger.LogInformation("Adding new subscription to file {0}", newSubscriptionFilePath);
+        _logger.LogInformation("Adding new configuration to file {0}", filePath);
 
-        var subscriptionsInFile = await FetchAndParseRemoteConfiguration<SubscriptionYaml>(
+        var yamlModelsInFile = await FetchAndParseRemoteConfiguration<T>(
             configurationRepo,
             parameters.RepositoryUri,
             workingBranch,
-            newSubscriptionFilePath);
+            filePath);
 
-        // If we have a branch that hasn't been ingested yet, we need to check for equivalent subscriptions in the file
-        var equivalentInFile = subscriptionsInFile.FirstOrDefault(s => s.IsEquivalentTo(subscription));
+        var equivalentInFile = yamlModelsInFile.FirstOrDefault(m => isEquivalent(m, yamlModel));
         if (equivalentInFile != null)
         {
-            throw new ArgumentException($"Subscription {equivalentInFile.Id} with equivalent parameters already exists in '{newSubscriptionFilePath}'.");
+            throw new ArgumentException(getDuplicateError(equivalentInFile, filePath));
         }
 
-        subscriptionsInFile.Add(subscription);
+        yamlModelsInFile.Add(yamlModel);
         await CommitConfigurationDataAsync(
             configurationRepo,
             parameters.RepositoryUri,
             workingBranch,
-            newSubscriptionFilePath,
-            subscriptionsInFile,
-            new SubscriptionYamlComparer(),
-            $"Add new subscription ({subscription.Channel}) {subscription.SourceRepository} => {subscription.TargetRepository} ({subscription.TargetBranch})"); ;
+            filePath,
+            yamlModelsInFile,
+            comparer,
+            commitMessage);
     }
 
-    private async Task DeleteSubscriptionInternalAsync(
+    /// <summary>
+    /// Generic method to delete a configuration object from the configuration repository.
+    /// </summary>
+    private async Task DeleteModelInternalAsync<T, TKey>(
         ConfigurationRepositoryOperationParameters parameters,
         IGitRepo configurationRepo,
         string workingBranch,
-        SubscriptionYaml subscription)
+        T yamlModel,
+        Func<T, TKey> getKey,
+        Func<T, string, string, string, string> getNotFoundError,
+        IComparer<T> comparer,
+        string commitMessage)
+        where T : IYamlModel
+        where TKey : IEquatable<TKey>
     {
-        string subscriptionFilePath;
-        List<SubscriptionYaml> subscriptionsInFile;
+        var (filePath, yamlModelsInFile) = await GetFilePathAndModels(
+            parameters,
+            configurationRepo,
+            workingBranch,
+            yamlModel,
+            getKey);
+
+        var yamlModelKey = getKey(yamlModel);
+        var yamlModelsWithoutDeleted = yamlModelsInFile.Where(m => !getKey(m).Equals(yamlModelKey)).ToList();
+
+        if (yamlModelsInFile.Count == yamlModelsWithoutDeleted.Count)
+        {
+            throw new ArgumentException(getNotFoundError(
+                yamlModel,
+                filePath,
+                parameters.RepositoryUri,
+                parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch));
+        }
+
+        await CommitConfigurationDataAsync(
+            configurationRepo,
+            parameters.RepositoryUri,
+            workingBranch,
+            filePath,
+            yamlModelsWithoutDeleted,
+            comparer,
+            commitMessage);
+    }
+
+    /// <summary>
+    /// Generic method to update an existing configuration object in the configuration repository.
+    /// </summary>
+    private async Task UpdateModelInternalAsync<T, TKey>(
+        ConfigurationRepositoryOperationParameters parameters,
+        IGitRepo configurationRepo,
+        string workingBranch,
+        T updatedYamlModel,
+        Func<T, TKey> getKey,
+        Func<T, string, string, string, string> getNotFoundError,
+        IComparer<T> comparer,
+        string commitMessage)
+        where T : IYamlModel
+        where TKey : IEquatable<TKey>
+    {
+        var (filePath, yamlModelsInFile) = await GetFilePathAndModels(
+            parameters,
+            configurationRepo,
+            workingBranch,
+            updatedYamlModel,
+            getKey);
+
+        var yamlModelKey = getKey(updatedYamlModel);
+        var existingYamlModel = yamlModelsInFile.FirstOrDefault(m => getKey(m).Equals(yamlModelKey));
+        if (existingYamlModel == null)
+        {
+            throw new ArgumentException(getNotFoundError(
+                updatedYamlModel,
+                filePath,
+                parameters.RepositoryUri,
+                parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch));
+        }
+
+        var index = yamlModelsInFile.IndexOf(existingYamlModel);
+        yamlModelsInFile[index] = updatedYamlModel;
+
+        await CommitConfigurationDataAsync(
+            configurationRepo,
+            parameters.RepositoryUri,
+            workingBranch,
+            filePath,
+            yamlModelsInFile,
+            comparer,
+            commitMessage);
+    }
+
+    /// <summary>
+    /// Gets the file path and yaml models, either from the specified path or by searching.
+    /// </summary>
+    private async Task<(string FilePath, List<T> YamlModels)> GetFilePathAndModels<T, TKey>(
+        ConfigurationRepositoryOperationParameters parameters,
+        IGitRepo configurationRepo,
+        string workingBranch,
+        T yamlModel,
+        Func<T, TKey> getKey)
+        where T : IYamlModel
+        where TKey : IEquatable<TKey>
+    {
         if (string.IsNullOrEmpty(parameters.ConfigurationFilePath))
         {
-            (subscriptionFilePath, subscriptionsInFile) = await FindAndParseConfigurationFile(
+            return await FindAndParseConfigurationFile(
                 configurationRepo,
                 parameters.RepositoryUri,
                 workingBranch,
-                subscription,
-                YamlModelUniqueKeys.GetSubscriptionKey);
+                yamlModel,
+                getKey);
         }
         else
         {
-            subscriptionFilePath = parameters.ConfigurationFilePath;
-            subscriptionsInFile = await FetchAndParseRemoteConfiguration<SubscriptionYaml>(
+            var yamlModels = await FetchAndParseRemoteConfiguration<T>(
                 configurationRepo,
                 parameters.RepositoryUri,
                 workingBranch,
-                subscriptionFilePath);
+                parameters.ConfigurationFilePath);
+            return (parameters.ConfigurationFilePath, yamlModels);
         }
-
-        var subscriptionsWithoutDeleted = subscriptionsInFile.Where(s => s.Id != subscription.Id).ToList();
-
-        if (subscriptionsInFile.Count == subscriptionsWithoutDeleted.Count)
-        {
-            throw new ArgumentException(
-                $"Found no subscription with id {subscription.Id} to delete in file {subscriptionFilePath} " +
-                $"of repo {parameters.RepositoryUri} on branch {parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch}");
-        }
-
-        await CommitConfigurationDataAsync(
-            configurationRepo,
-            parameters.RepositoryUri,
-            workingBranch,
-            subscriptionFilePath,
-            subscriptionsWithoutDeleted,
-            new SubscriptionYamlComparer(),
-            $"Delete subscription {subscription.Id}");
-    }
-
-    private async Task UpdateSubscriptionInternalAsync(
-        ConfigurationRepositoryOperationParameters parameters,
-        IGitRepo configurationRepo,
-        string workingBranch,
-        SubscriptionYaml updatedSubscription)
-    {
-        string subscriptionFilePath;
-        List<SubscriptionYaml> subscriptionsInFile;
-        if (string.IsNullOrEmpty(parameters.ConfigurationFilePath))
-        {
-            (subscriptionFilePath, subscriptionsInFile) = await FindAndParseConfigurationFile(
-                configurationRepo,
-                parameters.RepositoryUri,
-                workingBranch,
-                updatedSubscription,
-                YamlModelUniqueKeys.GetSubscriptionKey);
-        }
-        else
-        {
-            subscriptionFilePath = parameters.ConfigurationFilePath;
-            subscriptionsInFile = await FetchAndParseRemoteConfiguration<SubscriptionYaml>(
-                configurationRepo,
-                parameters.RepositoryUri,
-                workingBranch,
-                subscriptionFilePath);
-        }
-
-        // replace the old subscription (with the same id) with the the updated one
-        var existingSubscription = subscriptionsInFile.FirstOrDefault(s => s.Id == updatedSubscription.Id);
-        if (existingSubscription == null)
-        {
-            throw new ArgumentException(
-                $"No existing subscription with id {updatedSubscription.Id} found in file {subscriptionFilePath} " +
-                $"of repo {parameters.RepositoryUri} on branch {parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch}");
-        }
-        var index = subscriptionsInFile.IndexOf(existingSubscription);
-        subscriptionsInFile[index] = updatedSubscription;
-
-        await CommitConfigurationDataAsync(
-            configurationRepo,
-            parameters.RepositoryUri,
-            workingBranch,
-            subscriptionFilePath,
-            subscriptionsInFile,
-            new SubscriptionYamlComparer(),
-            $"Update subscription {updatedSubscription.Id}");
-    }
-
-    private async Task AddChannelInternalAsync(
-        ConfigurationRepositoryOperationParameters parameters,
-        IGitRepo configurationRepo,
-        string workingBranch,
-        ChannelYaml channel)
-    {
-        var newChannelFilePath = string.IsNullOrEmpty(parameters.ConfigurationFilePath)
-            ? ConfigFilePathResolver.GetDefaultChannelFilePath(channel)
-            : parameters.ConfigurationFilePath;
-        _logger.LogInformation("Adding new channel to file {0}", newChannelFilePath);
-
-        var channelsInFile = await FetchAndParseRemoteConfiguration<ChannelYaml>(
-            configurationRepo,
-            parameters.RepositoryUri,
-            workingBranch,
-            newChannelFilePath);
-
-        // Check for duplicate channel with the same name in the file
-        var equivalentInFile = channelsInFile.FirstOrDefault(c => string.Equals(c.Name, channel.Name, StringComparison.OrdinalIgnoreCase));
-        if (equivalentInFile != null)
-        {
-            throw new ArgumentException($"Channel with name '{equivalentInFile.Name}' already exists in '{newChannelFilePath}'.");
-        }
-
-        channelsInFile.Add(channel);
-        await CommitConfigurationDataAsync(
-            configurationRepo,
-            parameters.RepositoryUri,
-            workingBranch,
-            newChannelFilePath,
-            channelsInFile,
-            new ChannelYamlComparer(),
-            $"Add new channel '{channel.Name}'");
     }
 
     #region helper methods
