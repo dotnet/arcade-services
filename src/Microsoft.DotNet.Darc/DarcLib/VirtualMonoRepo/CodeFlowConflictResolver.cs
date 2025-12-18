@@ -248,23 +248,17 @@ public abstract class CodeFlowConflictResolver
     {
         _logger.LogDebug("Trying to auto-resolve a conflict in {filePath} based on a crossing flow...", conflictedFile);
 
-        UnixPath vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name);
-        if (codeflowOptions.CurrentFlow.IsForwardFlow && !conflictedFile.Path.StartsWith(vmrSourcesPath + '/'))
+        UnixPath vmrRepoPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name);
+        if (codeflowOptions.CurrentFlow.IsForwardFlow && !conflictedFile.Path.StartsWith(vmrRepoPath + '/'))
         {
             _logger.LogWarning("Conflict in {file} is not in the source repo, skipping auto-resolution", conflictedFile);
             return false;
         }
 
         // Create patch for the file represent only the most current flow
-        string fromSha, toSha;
-        if (codeflowOptions.CurrentFlow.IsForwardFlow)
-        {
-            (fromSha, toSha) = (crossingFlow.RepoSha, codeflowOptions.CurrentFlow.RepoSha);
-        }
-        else
-        {
-            (fromSha, toSha) = (crossingFlow.VmrSha, codeflowOptions.CurrentFlow.VmrSha);
-        }
+        var (fromSha, toSha) = codeflowOptions.CurrentFlow.IsForwardFlow
+            ? (crossingFlow.RepoSha, codeflowOptions.CurrentFlow.RepoSha)
+            : (crossingFlow.VmrSha, codeflowOptions.CurrentFlow.VmrSha);
 
         var patchName = _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch";
         List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
@@ -272,15 +266,15 @@ public abstract class CodeFlowConflictResolver
             fromSha,
             toSha,
             path: codeflowOptions.CurrentFlow.IsForwardFlow
-                ? new UnixPath(conflictedFile.Path.Substring(vmrSourcesPath.Length + 1))
+                ? new UnixPath(conflictedFile.Path.Substring(vmrRepoPath.Length + 1))
                 : conflictedFile,
             filters: null,
             relativePaths: true,
             workingDir: codeflowOptions.CurrentFlow.IsForwardFlow
                 ? repo.Path
-                : vmr.Path / vmrSourcesPath,
+                : vmr.Path / vmrRepoPath,
             applicationPath: codeflowOptions.CurrentFlow.IsForwardFlow
-                ? vmrSourcesPath
+                ? vmrRepoPath
                 : null,
             ignoreLineEndings: true,
             cancellationToken);
@@ -319,6 +313,8 @@ public abstract class CodeFlowConflictResolver
                 keepConflicts: false,
                 cancellationToken: cancellationToken);
             _logger.LogDebug("Successfully auto-resolved a conflict in {filePath}", conflictedFile);
+
+            await targetRepo.ExecuteGitCommand(["restore", conflictedFile], cancellationToken);
 
             return true;
         }
@@ -369,4 +365,134 @@ public abstract class CodeFlowConflictResolver
         var result = await repo.RunGitCommandAsync(["merge", "--abort"], CancellationToken.None);
         result.ThrowIfFailed("Failed to abort a merge when resolving version file conflicts");
     }
+
+    /// <summary>
+    /// Tries to reverse apply the latest flow to detect partial reverts and fix them using the crossing flow.
+    /// If the current flow does not apply in reverse, it means some changes were lost (a revert happened).
+    /// </summary>
+    protected async Task DetectAndFixPartialReverts(
+        CodeflowOptions codeflowOptions,
+        ILocalGitRepo vmr,
+        ILocalGitRepo productRepo,
+        IReadOnlyCollection<UnixPath> conflictedFiles,
+        LastFlows lastFlows,
+        CancellationToken cancellationToken)
+    {
+        if (lastFlows.CrossingFlow == null)
+        {
+            return;
+        }
+
+        // Create patch representing the current flow (minus the recreated previous flows)
+        var (fromSha, toSha) = codeflowOptions.CurrentFlow.IsForwardFlow
+            ? (lastFlows.CrossingFlow.RepoSha, codeflowOptions.CurrentFlow.RepoSha)
+            : (lastFlows.CrossingFlow.VmrSha, codeflowOptions.CurrentFlow.VmrSha);
+
+        var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : productRepo;
+        var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
+
+        // We create the patch minus the version, conflicted and cloaked files
+        IReadOnlyCollection<string> excludedFiles =
+        [
+            .. conflictedFiles.Select(conflictedFile => VmrPatchHandler.GetExclusionRule(codeflowOptions.CurrentFlow.IsForwardFlow
+                ? new UnixPath(conflictedFile.Path.Substring(vmrSourcesPath.Length + 1))
+                : conflictedFile)),
+            .. GetPatchExclusions(codeflowOptions.Mapping),
+        ];
+
+        List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
+            _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch",
+            fromSha,
+            toSha,
+            path: null,
+            filters:
+            excludedFiles,
+            relativePaths: true,
+            workingDir: codeflowOptions.CurrentFlow.IsForwardFlow
+                ? productRepo.Path
+                : _vmrInfo.GetRepoSourcesPath(codeflowOptions.Mapping),
+            applicationPath: codeflowOptions.CurrentFlow.IsForwardFlow
+                ? vmrSourcesPath
+                : null,
+            ignoreLineEndings: true,
+            cancellationToken);
+
+        // We try to reverse-apply the current changes - if we fail, it means there is a missing change
+        try
+        {
+            await _patchHandler.ApplyPatches(
+                patches,
+                targetRepo.Path,
+                removePatchAfter: false,
+                keepConflicts: false,
+                reverseApply: true,
+                applyToIndex: false,
+                cancellationToken);
+        }
+        catch (PatchApplicationFailedException e)
+        {
+            var revertedFiles = e.Result.StandardError
+                .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+                .Where(line => line.StartsWith("error:") && line.EndsWith(": patch does not apply"))
+                .Select(line => new UnixPath(line.Substring(7, line.Length - 29).Trim()));
+
+            if (!revertedFiles.Any())
+            {
+                _logger.LogError(e, "Failed to detect reverted files from patch application failure");
+                _logger.LogDebug(e.Result.ToString());
+                return;
+            }
+
+            await FixRevertedFiles(
+                codeflowOptions,
+                vmr,
+                productRepo,
+                lastFlows.CrossingFlow,
+                revertedFiles,
+                cancellationToken);
+        }
+    }
+
+    private async Task FixRevertedFiles(
+        CodeflowOptions codeflowOptions,
+        ILocalGitRepo vmr,
+        ILocalGitRepo productRepo,
+        Codeflow crossingFlow,
+        IEnumerable<UnixPath> revertedFiles,
+        CancellationToken cancellationToken)
+    {
+        var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : productRepo;
+
+        foreach (var revertedFile in revertedFiles)
+        {
+            _logger.LogInformation("Detected a revert in {file}. Fixing using a crossing flow...",
+                revertedFile);
+
+            string contentBefore = await _fileSystem.ReadAllTextAsync(targetRepo.Path / revertedFile);
+
+            (await targetRepo.ExecuteGitCommand(["checkout", codeflowOptions.TargetBranch, revertedFile], cancellationToken))
+                .ThrowIfFailed($"Failed to check out {revertedFile} from branch {codeflowOptions.TargetBranch}");
+
+            if (!await TryResolvingConflictWithCrossingFlow(
+                codeflowOptions,
+                vmr,
+                productRepo,
+                revertedFile,
+                crossingFlow,
+                cancellationToken))
+            {
+                _logger.LogError("Failed to auto-resolve a conflict in {file} while fixing a partial revert",
+                    revertedFile);
+                _fileSystem.WriteToFile(targetRepo.Path / revertedFile, contentBefore);
+                await targetRepo.StageAsync([revertedFile], cancellationToken);
+            }
+        }
+    }
+
+    protected virtual IEnumerable<string> GetPatchExclusions(SourceMapping mapping) =>
+    [
+        .. mapping.Include.Select(VmrPatchHandler.GetInclusionRule),
+        .. mapping.Exclude.Select(VmrPatchHandler.GetExclusionRule),
+        .. DependencyFileManager.CodeflowDependencyFiles.Select(VmrPatchHandler.GetExclusionRule),
+    ];
 }

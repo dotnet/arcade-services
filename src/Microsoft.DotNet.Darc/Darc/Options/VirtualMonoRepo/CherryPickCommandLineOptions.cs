@@ -3,7 +3,7 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations.VirtualMonoRepo;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
@@ -17,14 +17,5 @@ internal class CherryPickCommandLineOptions : VmrCommandLineOptions<CherryPickOp
     [Option("commit", Required = true, HelpText = "Commit SHA to cherry-pick")]
     public string Commit { get; set; } = string.Empty;
 
-    public override IServiceCollection RegisterServices(IServiceCollection services)
-    {
-        if (!Verbose && !Debug)
-        {
-            // Force verbose output for these commands
-            Verbose = true;
-        }
-
-        return base.RegisterServices(services);
-    }
+    protected override LogLevel DefaultLogVerbosity => LogLevel.Information;
 }

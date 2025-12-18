@@ -59,4 +59,28 @@ public static class ConfigFilePathResolver
 
     private static string NormalizeChannelName(string channelName) =>
         channelName.ToLowerInvariant().Replace(" ", "-");
+
+    /// <summary>
+    /// Gets the default file path for any YAML model instance.
+    /// </summary>
+    public static string GetDefaultFilePath(IYamlModel model) => model switch
+    {
+        SubscriptionYaml subscription => GetDefaultSubscriptionFilePath(subscription),
+        DefaultChannelYaml defaultChannel => GetDefaultDefaultChannelFilePath(defaultChannel),
+        ChannelYaml channel => GetDefaultChannelFilePath(channel),
+        BranchMergePoliciesYaml branchMergePolicies => GetDefaultRepositoryBranchFilePath(branchMergePolicies),
+        _ => throw new ArgumentException($"No path resolver registered for type {model.GetType().Name}", nameof(model))
+    };
+
+    /// <summary>
+    /// Gets the default file path for any YAML model instance.
+    /// </summary>
+    public static string GetDefaultFileFolder(IYamlModel model) => model switch
+    {
+        SubscriptionYaml subscription => SubscriptionFolderPath,
+        DefaultChannelYaml defaultChannel => DefaultChannelFolderPath,
+        ChannelYaml channel => ChannelFolderPath,
+        BranchMergePoliciesYaml branchMergePolicies => RepositoryBranchFolderPath,
+        _ => throw new ArgumentException($"No path resolver registered for type {model.GetType().Name}", nameof(model))
+    };
 }

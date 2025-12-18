@@ -14,7 +14,7 @@ using Microsoft.DotNet.Services.Utility;
 
 namespace Microsoft.DotNet.Darc.Options;
 
-internal abstract class SubscriptionsCommandLineOptions<T> : CommandLineOptions<T> where T : Operation
+internal abstract class SubscriptionsCommandLineOptions<T> : ConfigurationManagementCommandLineOptions<T> where T : Operation
 {
     [Option("target-repo", HelpText = "Filter by target repo (matches substring unless --exact or --regex is passed).")]
     public string TargetRepository { get; set; }

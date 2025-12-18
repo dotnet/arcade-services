@@ -431,17 +431,23 @@ public sealed class Remote : IRemote
 
     public async Task<List<GitFile>> GetCommonScriptFilesAsync(string repoUri, string commit, LocalPath relativeBasePath = null)
     {
-        _logger.LogInformation("Generating commits for script files");
+        _logger.LogInformation("Retrieving eng/common script files");
         string path = relativeBasePath == null
             ? Constants.CommonScriptFilesPath
             : relativeBasePath / Constants.CommonScriptFilesPath;
 
         List<GitFile> files = await _remoteGitClient.GetFilesAtCommitAsync(repoUri, commit, path);
 
-        _logger.LogInformation("Generating commits for script files succeeded!");
+        _logger.LogInformation("Retrieving eng/common script files succeeded!");
 
         return files;
     }
+
+    public async Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path)
+        => await _remoteGitClient.GetFilesAtCommitAsync(repoUri, commit, path);
+
+    public async Task<List<string>> ListFilesAtCommitAsync(string repoUri, string commit, string path)
+        => await _remoteGitClient.ListFilesAtCommitAsync(repoUri, commit, path);
 
     public async Task CommentPullRequestAsync(string pullRequestUri, string comment)
     {

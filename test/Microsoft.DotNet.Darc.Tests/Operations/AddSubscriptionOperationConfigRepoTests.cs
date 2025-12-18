@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AwesomeAssertions;
 using Microsoft.DotNet.Darc.Operations;
@@ -330,11 +329,5 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
             RemoteFactoryMock.Object,
             GitRepoFactory,
             ConfigurationRepositoryManager);
-    }
-
-    private static async Task<List<SubscriptionYaml>> DeserializeSubscriptionsAsync(string filePath)
-    {
-        var content = await File.ReadAllTextAsync(filePath);
-        return YamlDeserializer.Deserialize<List<SubscriptionYaml>>(content) ?? [];
     }
 }

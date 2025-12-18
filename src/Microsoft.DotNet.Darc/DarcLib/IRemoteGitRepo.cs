@@ -115,9 +115,14 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     Task<Commit?> GetCommitAsync(string repoUri, string sha);
 
     /// <summary>
-    /// Gets a list of file under a given path in a given revision.
+    /// Gets a list of files with their content under a given path in a given revision.
     /// </summary>
     Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path);
+
+    /// <summary>
+    /// Gets a list of files without their content under a given path in a given revision.
+    /// </summary>
+    Task<List<string>> ListFilesAtCommitAsync(string repoUri, string commit, string path);
 
     /// <summary>
     /// Retrieve the list of status checks on a PR.

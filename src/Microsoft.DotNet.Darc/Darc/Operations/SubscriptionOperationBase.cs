@@ -4,21 +4,24 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.MaestroConfiguration.Client;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
 
 internal abstract class SubscriptionOperationBase : Operation
 {
+    protected readonly IConfigurationRepositoryManager _configurationRepositoryManager;
     protected readonly IBarApiClient _barClient;
     protected readonly ILogger _logger;
 
     protected SubscriptionOperationBase(
-        IBarApiClient barClient, ILogger logger)
+        IBarApiClient barClient, IConfigurationRepositoryManager configurationRepositoryManager, ILogger logger)
     {
         _barClient = barClient;
+        _configurationRepositoryManager = configurationRepositoryManager;
         _logger = logger;
     }
 
@@ -93,5 +96,28 @@ internal abstract class SubscriptionOperationBase : Operation
             targetDirectory
                 .Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(p => p == "/" ? "." : p));
+    }
+
+    protected async Task ValidateNoEquivalentSubscription(SubscriptionYaml subscriptionYaml)
+    {
+        var channel = await _barClient.GetChannelAsync(subscriptionYaml.Channel);
+        if (channel == null)
+        {
+            throw new ArgumentException($"Channel '{subscriptionYaml.Channel}' does not exist.");
+        }
+
+        var equivalentSub = (await _barClient.GetSubscriptionsAsync(
+                sourceRepo: subscriptionYaml.SourceRepository,
+                channelId: channel.Id,
+                targetRepo: subscriptionYaml.TargetRepository,
+                sourceEnabled: subscriptionYaml.SourceEnabled,
+                sourceDirectory: subscriptionYaml.SourceDirectory,
+                targetDirectory: subscriptionYaml.TargetDirectory))
+            .FirstOrDefault(s => s.TargetBranch == subscriptionYaml.TargetBranch);
+
+        if (equivalentSub != null && equivalentSub.Id != subscriptionYaml.Id)
+        {
+            throw new ArgumentException($"An equivalent subscription '{equivalentSub.Id}' already exists.");
+        }
     }
 }

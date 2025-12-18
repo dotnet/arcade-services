@@ -1601,6 +1601,10 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// <param name="str">String to be shortened if necessary</param>
     private static string TruncateDescriptionIfNeeded(string str)
     {
+        if (str == null)
+        {
+            return null;
+        }
         if (str.Length > MaxPullRequestDescriptionLength)
         {
             return str.Substring(0, MaxPullRequestDescriptionLength);
@@ -1944,4 +1948,29 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         UpdatedAt = DateTimeOffset.UtcNow,
         HeadBranchSha = pr.LastMergeSourceCommit.CommitId,
     };
+
+    public async Task<List<string>> ListFilesAtCommitAsync(string repoUri, string commit, string path)
+    {
+        (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
+
+        // AzDo doesn't work with leading paths like ./, for example ./eng/common/builds.ps1, so we need to strip it
+        if (path.StartsWith("./"))
+        {
+            path = path.Substring(2);
+        }
+
+        JObject content = await ExecuteAzureDevOpsAPIRequestAsync(
+            HttpMethod.Get,
+            accountName,
+            projectName,
+            $"_apis/git/repositories/{repoName}/items?scopePath={path}&version={commit}&versionType=commit&recursionLevel=oneLevel",
+            _logger);
+
+        List<AzureDevOpsItem> items = JsonConvert.DeserializeObject<List<AzureDevOpsItem>>(Convert.ToString(content["value"]));
+
+        return items
+            .Where(item => !item.IsFolder)
+            .Select(item => item.Path.TrimStart('/'))
+            .ToList();
+    }
 }

@@ -24,8 +24,8 @@ public class BranchOrderComparerTests
             new() { Repository = "https://github.com/test/repo", Branch = "internal/release/8.0" },
         ];
 
-        // Act - Sort using the IComparable implementation
-        var sorted = YamlModelSorter.Sort(unsortedPolicies).ToList();
+        // Act - Sort using the comparer
+        var sorted = unsortedPolicies.OrderBy(x => x, new BranchMergePoliciesYamlComparer()).ToList();
 
         // Assert - Verify order: main, master, release/*, internal/release/*, then alphabetically
         sorted[0].Branch.Should().Be("main");

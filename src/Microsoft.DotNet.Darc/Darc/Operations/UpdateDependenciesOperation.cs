@@ -262,7 +262,9 @@ internal class UpdateDependenciesOperation : Operation
 
         if (!_options.DryRun)
         {
+            Console.Write("    Applying updates...");
             await local.UpdateDependenciesAsync(dependenciesToUpdate, _remoteFactory, _gitRepoFactory, _barClient, relativeBasePath);
+            Console.WriteLine("    done.");
         }
     }
 
@@ -276,16 +278,18 @@ internal class UpdateDependenciesOperation : Operation
             return Constants.SuccessCode;
         }
 
-        Console.WriteLine("    Checking for coherency updates...");
+        Console.Write("    Checking for coherency updates...");
 
         List<DependencyUpdate> coherencyUpdates = null;
         try
         {
             // Now run a coherency update based on the current set of dependencies updated from the previous pass.
             coherencyUpdates = await _coherencyUpdateResolver.GetRequiredCoherencyUpdatesAsync(currentDependencies);
+            Console.WriteLine("done.");
         }
         catch (DarcCoherencyException e)
         {
+            Console.WriteLine("failed.");
             PrettyPrintCoherencyErrors(e);
             return Constants.ErrorCode;
         }

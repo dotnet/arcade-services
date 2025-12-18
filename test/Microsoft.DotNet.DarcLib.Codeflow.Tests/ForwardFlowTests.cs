@@ -672,10 +672,9 @@ internal class ForwardFlowTests : CodeFlowTests
         File.Exists(_productRepoVmrPath / FileChangedAndPartiallyRevertedName).Should().BeTrue(
             "Partially reverted file should exist");
 
-        // TODO: https://github.com/dotnet/arcade-services/issues/5541 Partial reverts still not working fully
-        //(await File.ReadAllTextAsync(_productRepoVmrPath / FileChangedAndPartiallyRevertedName)).Should().Be(
-        //    PartialRevertChange2 + Environment.NewLine,
-        //    "Partially reverted file should have the second change");
+        (await File.ReadAllTextAsync(_productRepoVmrPath / FileChangedAndPartiallyRevertedName)).Should().Be(
+            PartialRevertChange2 + Environment.NewLine,
+            "Partially reverted file should have the second change");
 
         // FileInConflict should exist with the source repo's content (conflict resolved)
         File.Exists(_productRepoVmrPath / FileInConflictName).Should().BeTrue(
