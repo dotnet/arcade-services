@@ -13,11 +13,38 @@ stages:
       environment: Staging
     pool: server
 
+- stage: Migrations
+  displayName: Apply Database Migrations
+  dependsOn:
+  - Build
+  - Approval
+  jobs:
+  - job: updateDatabase
+    displayName: Update BuildAssetRegistry database
+    steps:
+    - task: AzureCLI@2
+      displayName: Entity Framework update
+      inputs:
+        azureSubscription: ${{ variables.BarMigrationSubscription }}
+        scriptType: ps
+        scriptLocation: inlineScript
+        inlineScript: |
+          .\eng\common\build.ps1 -restore -build -projects src\Maestro\Maestro.Data\Maestro.Data.csproj
+          .\.dotnet\dotnet tool restore
+          .\.dotnet\dotnet ef database update                           `
+            --project .\src\Maestro\Maestro.Data\Maestro.Data.csproj    `
+            --msbuildprojectextensionspath .\artifacts\obj\Maestro.Data `
+            --no-build                                                  `
+            --verbose
+      env:
+        BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: ${{ variables.BarConnectionString }}
+
 - stage: Deploy
   displayName: Deploy
   dependsOn:
   - Build
   - Approval
+  - Migrations
 
   variables:
   - name: currentDate
@@ -79,26 +106,6 @@ stages:
       value: "product-construction-service-redis-int.redis.cache.windows.net:6380,ssl=true"
 
   jobs:
-  - job: updateDatabase
-    displayName: Update BuildAssetRegistry database
-    steps:
-    - task: AzureCLI@2
-      displayName: Entity Framework update
-      inputs:
-        azureSubscription: ${{ variables.BarMigrationSubscription }}
-        scriptType: ps
-        scriptLocation: inlineScript
-        inlineScript: |
-          .\eng\common\build.ps1 -restore -build -projects src\Maestro\Maestro.Data\Maestro.Data.csproj
-          .\.dotnet\dotnet tool restore
-          .\.dotnet\dotnet ef database update                           `
-            --project .\src\Maestro\Maestro.Data\Maestro.Data.csproj    `
-            --msbuildprojectextensionspath .\artifacts\obj\Maestro.Data `
-            --no-build                                                  `
-            --verbose
-      env:
-        BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: ${{ variables.BarConnectionString }}
-
   - job: DeployPCS
     displayName: Deploy PCS
     dependsOn:
