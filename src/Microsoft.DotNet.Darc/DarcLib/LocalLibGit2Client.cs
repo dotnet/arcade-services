@@ -52,70 +52,64 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
 
     public async Task CommitFilesAsync(List<GitFile> filesToCommit, string repoPath, string branch, string commitMessage)
     {
-        SemaphoreSlim commitThrottle = new SemaphoreSlim(16, 16);
         repoPath = await GetRootDirAsync(repoPath);
-        List<Task> commitTasks = new List<Task>();
         try
         {
             using (var localRepo = new Repository(repoPath))
             {
-                commitTasks = filesToCommit.Select(async file =>
+                var filesToAdd = filesToCommit
+                    .Where(f => f.Operation == GitFileOperation.Add)
+                    .Select(f => f.FilePath)
+                    .ToArray();
+
+                foreach (var relativePath in filesToAdd)
                 {
-                    try
-                    {
-                        await commitThrottle.WaitAsync();
+                    EnsureParentDirectoryExists(Path.Combine(repoPath, relativePath));
+                }
 
-                        Debug.Assert(file != null, $"Passed in a null {nameof(GitFile)} in {nameof(filesToCommit)}");
-                        switch (file.Operation)
+                Dictionary<string, EolAttribute> eolByPath = await GetEolAttributesAsync(repoPath, filesToAdd);
+
+                foreach (var file in filesToCommit)
+                {
+                    Debug.Assert(file != null, $"Passed in a null {nameof(GitFile)} in {nameof(filesToCommit)}");
+                    switch (file.Operation)
+                    {
+                        case GitFileOperation.Add:
                         {
-                            case GitFileOperation.Add:
-                                var parentDirectoryInfo = Directory.GetParent(file.FilePath)
-                                    ?? throw new Exception($"Cannot find parent directory of {file.FilePath}.");
+                            string fullPath = Path.Combine(repoPath, file.FilePath);
+                            string finalContent;
+                            switch (file.ContentEncoding)
+                            {
+                                case ContentEncoding.Utf8:
+                                    finalContent = file.Content;
+                                    break;
+                                case ContentEncoding.Base64:
+                                    byte[] bytes = Convert.FromBase64String(file.Content);
+                                    finalContent = Encoding.UTF8.GetString(bytes);
+                                    break;
+                                default:
+                                    throw new DarcException($"Unknown file content encoding {file.ContentEncoding}");
+                            }
 
-                                string parentDirectory = parentDirectoryInfo.FullName;
+                            if (!eolByPath.TryGetValue(file.FilePath, out EolAttribute eolAttr))
+                            {
+                                throw new DarcException($"Could not find eol attribute for file {file.FilePath} in repo {repoPath}");
+                            }
 
-                                if (!Directory.Exists(parentDirectory))
-                                {
-                                    Directory.CreateDirectory(parentDirectory);
-                                }
+                            finalContent = NormalizeLineEndings(eolAttr, finalContent);
+                            await File.WriteAllTextAsync(fullPath, finalContent);
 
-                                string fullPath = Path.Combine(repoPath, file.FilePath);
-                                using (var streamWriter = new StreamWriter(fullPath))
-                                {
-                                    string finalContent;
-                                    switch (file.ContentEncoding)
-                                    {
-                                        case ContentEncoding.Utf8:
-                                            finalContent = file.Content;
-                                            break;
-                                        case ContentEncoding.Base64:
-                                            byte[] bytes = Convert.FromBase64String(file.Content);
-                                            finalContent = Encoding.UTF8.GetString(bytes);
-                                            break;
-                                        default:
-                                            throw new DarcException($"Unknown file content encoding {file.ContentEncoding}");
-                                    }
-                                    finalContent = await NormalizeLineEndingsAsync(repoPath, fullPath, finalContent);
-                                    await streamWriter.WriteAsync(finalContent);
-
-                                    AddFileToIndex(localRepo, file, fullPath);
-                                }
-                                break;
-                            case GitFileOperation.Delete:
-                                if (File.Exists(file.FilePath))
-                                {
-                                    File.Delete(file.FilePath);
-                                }
-                                break;
+                            AddFileToIndex(localRepo, file, fullPath);
+                            break;
                         }
+                        case GitFileOperation.Delete:
+                            if (File.Exists(file.FilePath))
+                            {
+                                File.Delete(file.FilePath);
+                            }
+                            break;
                     }
-                    finally
-                    {
-                        commitThrottle.Release();
-                    }
-                }).ToList();
-
-                await Task.WhenAll(commitTasks);
+                }
             }
         }
         catch (Exception exc)
@@ -124,33 +118,30 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
         }
     }
 
-    /// <summary>
-    /// Normalize line endings of content.
-    /// </summary>
-    /// <param name="filePath">Path of file</param>
-    /// <param name="content">Content to normalize</param>
-    /// <returns>Normalized content</returns>
-    /// <remarks>
-    ///     Normalize based on the following rules:
-    ///     - Auto CRLF is assumed.
-    ///     - Check the git attributes the file to determine whether it has a specific setting for the file.  If so, use that.
-    ///     - If no setting, or if auto, then determine whether incoming content differs in line ends vs. the
-    ///       OS setting, and replace if needed.
-    /// </remarks>
-    private async Task<string> NormalizeLineEndingsAsync(string repoPath, string filePath, string content)
+    private enum EolAttribute
+    {
+        UnspecifiedOrAuto,
+        Crlf,
+        Lf,
+    }
+
+    private static void EnsureParentDirectoryExists(string fullPath)
+    {
+        string? parentDirectory = Path.GetDirectoryName(fullPath);
+        if (string.IsNullOrEmpty(parentDirectory))
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(parentDirectory);
+    }
+
+    private static string NormalizeLineEndings(EolAttribute eolAttr, string content)
     {
         const string crlf = "\r\n";
         const string lf = "\n";
 
-        // Check gitAttributes to determine whether the file has eof handling set.
-        var result = await _processManager.ExecuteGit(repoPath, ["check-attr", "eol", "--", filePath]);
-        result.ThrowIfFailed($"Failed to determine eol for {filePath}");
-
-        string eofAttr = result.StandardOutput.Trim();
-
-        if (string.IsNullOrEmpty(eofAttr) ||
-            eofAttr.Contains("eol: unspecified") ||
-            eofAttr.Contains("eol: auto"))
+        if (eolAttr == EolAttribute.UnspecifiedOrAuto)
         {
             if (Environment.NewLine != crlf)
             {
@@ -161,7 +152,7 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
                 return content.Replace(lf, Environment.NewLine);
             }
         }
-        else if (eofAttr.Contains("eol: crlf"))
+        else if (eolAttr == EolAttribute.Crlf)
         {
             // Test to avoid adding extra \r.
             if (!content.Contains(crlf))
@@ -169,16 +160,58 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
                 return content.Replace(lf, crlf);
             }
         }
-        else if (eofAttr.Contains("eol: lf"))
+        else if (eolAttr == EolAttribute.Lf)
         {
             return content.Replace(crlf, lf);
         }
-        else
-        {
-            throw new DarcException($"Unknown eof setting '{eofAttr}' for file '{filePath};");
-        }
 
         return content;
+    }
+
+    private async Task<Dictionary<string, EolAttribute>> GetEolAttributesAsync(string repoPath, IEnumerable<string> relativePaths)
+    {
+        // `git check-attr --stdin` expects NUL-delimited paths by default.
+        string[] paths = relativePaths
+            .Where(p => !string.IsNullOrEmpty(p))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (paths.Length == 0)
+        {
+            return new Dictionary<string, EolAttribute>(StringComparer.Ordinal);
+        }
+
+        string stdin = string.Join("\0", paths) + "\0";
+        var result = await _processManager.ExecuteGit(repoPath, ["check-attr", "eol", "--stdin", "-z"], stdin);
+        result.ThrowIfFailed("Failed to determine eol attributes");
+
+        return ParseEolCheckAttrOutput(result.StandardOutput);
+    }
+
+    private static Dictionary<string, EolAttribute> ParseEolCheckAttrOutput(string standardOutput)
+    {
+        // Output format with -z: <path>\0<attr>\0<value>\0
+        // Example value is "unspecified", "auto", "crlf", "lf", or "unset".
+        var tokens = standardOutput.Split('\0', StringSplitOptions.RemoveEmptyEntries);
+        var map = new Dictionary<string, EolAttribute>(StringComparer.Ordinal);
+
+        for (int i = 0; i + 2 < tokens.Length; i += 3)
+        {
+            string path = tokens[i];
+            string value = tokens[i + 2];
+
+            map[path] = value switch
+            {
+                "crlf" => EolAttribute.Crlf,
+                "lf" => EolAttribute.Lf,
+                "auto" => EolAttribute.UnspecifiedOrAuto,
+                "unspecified" => EolAttribute.UnspecifiedOrAuto,
+                "unset" => EolAttribute.UnspecifiedOrAuto,
+                _ => EolAttribute.UnspecifiedOrAuto,
+            };
+        }
+
+        return map;
     }
 
     /// <summary>
