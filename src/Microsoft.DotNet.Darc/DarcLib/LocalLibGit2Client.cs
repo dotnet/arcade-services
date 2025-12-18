@@ -77,8 +77,6 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
                         case GitFileOperation.Add:
                         {
                             string fullPath = Path.Combine(repoPath, file.FilePath);
-                            EnsureParentDirectoryExists(fullPath);
-
                             string finalContent;
                             switch (file.ContentEncoding)
                             {
@@ -214,63 +212,6 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
         }
 
         return map;
-    }
-
-    /// <summary>
-    /// Normalize line endings of content.
-    /// </summary>
-    /// <param name="filePath">Path of file</param>
-    /// <param name="content">Content to normalize</param>
-    /// <returns>Normalized content</returns>
-    /// <remarks>
-    ///     Normalize based on the following rules:
-    ///     - Auto CRLF is assumed.
-    ///     - Check the git attributes the file to determine whether it has a specific setting for the file.  If so, use that.
-    ///     - If no setting, or if auto, then determine whether incoming content differs in line ends vs. the
-    ///       OS setting, and replace if needed.
-    /// </remarks>
-    private async Task<string> NormalizeLineEndingsAsync(string repoPath, string filePath, string content)
-    {
-        const string crlf = "\r\n";
-        const string lf = "\n";
-
-        // Check gitAttributes to determine whether the file has eof handling set.
-        var result = await _processManager.Execute(repoPath, ["check-attr", "eol", "--", filePath]);
-        result.ThrowIfFailed($"Failed to determine eol for {filePath}");
-
-        string eofAttr = result.StandardOutput.Trim();
-
-        if (string.IsNullOrEmpty(eofAttr) ||
-            eofAttr.Contains("eol: unspecified") ||
-            eofAttr.Contains("eol: auto"))
-        {
-            if (Environment.NewLine != crlf)
-            {
-                return content.Replace(crlf, Environment.NewLine);
-            }
-            else if (Environment.NewLine == crlf && !content.Contains(crlf))
-            {
-                return content.Replace(lf, Environment.NewLine);
-            }
-        }
-        else if (eofAttr.Contains("eol: crlf"))
-        {
-            // Test to avoid adding extra \r.
-            if (!content.Contains(crlf))
-            {
-                return content.Replace(lf, crlf);
-            }
-        }
-        else if (eofAttr.Contains("eol: lf"))
-        {
-            return content.Replace(crlf, lf);
-        }
-        else
-        {
-            throw new DarcException($"Unknown eof setting '{eofAttr}' for file '{filePath};");
-        }
-
-        return content;
     }
 
     /// <summary>
