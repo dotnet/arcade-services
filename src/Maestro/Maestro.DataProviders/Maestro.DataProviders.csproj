@@ -15,4 +15,5 @@
     <ProjectReference Include="..\Maestro.Common\Maestro.Common.csproj" />
     <ProjectReference Include="..\Maestro.Data\Maestro.Data.csproj" />
   </ItemGroup>
+
 </Project>

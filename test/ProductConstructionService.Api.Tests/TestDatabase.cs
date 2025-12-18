@@ -10,36 +10,17 @@ using Microsoft.Extensions.Hosting.Internal;
 
 namespace ProductConstructionService.Api.Tests;
 
-[SetUpFixture]
-public static class SharedData
-{
-    public static TestDatabase Database { get; private set; } = null!;
-
-    [OneTimeSetUp]
-    public static void SetUp()
-    {
-        Database = new SharedTestDatabase();
-    }
-
-    [OneTimeTearDown]
-    public static void TearDown()
-    {
-        Database.Dispose();
-        Database = null!;
-    }
-
-    private class SharedTestDatabase : TestDatabase
-    {
-    }
-}
-
 public class TestDatabase : IDisposable
 {
-    private const string TestDatabasePrefix = "TFD_";
+    private readonly string _testDatabasePrefix;
     internal const string TestNamespace = "test-namespace";
-    private readonly Lazy<Task<string>> _databaseName = new(
-        InitializeDatabaseAsync,
-        LazyThreadSafetyMode.ExecutionAndPublication);
+    private readonly Lazy<Task<string>> _databaseName;
+
+    public TestDatabase(string testDatabasePrefix)
+    {
+        _testDatabasePrefix = testDatabasePrefix;
+        _databaseName = new(InitializeDatabaseAsync, LazyThreadSafetyMode.ExecutionAndPublication);
+    }
 
     public void Dispose()
     {
@@ -51,12 +32,9 @@ public class TestDatabase : IDisposable
 
     public async Task<string> GetConnectionString() => BuildAssetRegistryContextFactory.GetConnectionString(await _databaseName.Value);
 
-    private static async Task<string> InitializeDatabaseAsync()
+    private async Task<string> InitializeDatabaseAsync()
     {
-        string databaseName = TestDatabasePrefix +
-            $"_{TestContext.CurrentContext.Test.ClassName!.Split('.').Last()}" +
-            $"_{TestContext.CurrentContext.Test.MethodName}" +
-            $"_{DateTime.Now:yyyyMMddHHmmss}";
+        string databaseName = $"{_testDatabasePrefix}_{DateTime.Now:yyyyMMddHHmmss}";
 
         TestContext.WriteLine($"Creating database '{databaseName}'");
 
@@ -94,12 +72,12 @@ public class TestDatabase : IDisposable
         return databaseName;
     }
 
-    private static async Task DropAllTestDatabases(SqlConnection connection)
+    private async Task DropAllTestDatabases(SqlConnection connection)
     {
         var previousTestDbs = new List<string>();
         await using (SqlCommand command = connection.CreateCommand())
         {
-            command.CommandText = $"SELECT name FROM sys.databases WHERE name LIKE '{TestDatabasePrefix}%'";
+            command.CommandText = $"SELECT name FROM sys.databases WHERE name LIKE '{_testDatabasePrefix}%'";
             await using SqlDataReader reader = await command.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
