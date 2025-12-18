@@ -88,11 +88,12 @@ public class ProcessManager : IProcessManager
         Dictionary<string, string>? envVariables = null,
         CancellationToken cancellationToken = default)
     {
-        // When another process is using the directory, we retry a few times
-        return await ExponentialRetry.Default.RetryAsync(
-            async() => await Execute(GitExecutable, (new[] { "-C", repoPath }).Concat(arguments), envVariables: envVariables, cancellationToken: cancellationToken),
-            ex => _logger.LogDebug("Another git process seems to be running in this repository, retrying..."),
-            ex => ex is ProcessFailedException e && e.ExecutionResult.ExitCode == 128 && e.ExecutionResult.StandardError.Contains(".git/index.lock"));
+        return await ExecuteGit(
+            repoPath,
+            arguments,
+            standardInput: null,
+            envVariables: envVariables,
+            cancellationToken: cancellationToken);
     }
 
     public async Task<ProcessExecutionResult> ExecuteGit(
