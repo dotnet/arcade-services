@@ -15,7 +15,7 @@ namespace Maestro.DataProviders.ConfigurationIngestion;
 
 internal class ConfigurationDataHelper
 {
-    internal static ConfigurationData CreateConfigurationDataObject(Namespace namespaceEntity)
+    internal static IngestedConfigurationData CreateConfigurationDataObject(Namespace namespaceEntity)
     {
         var convertedSubscriptions = namespaceEntity.Subscriptions
             .Select(sub => SqlBarClient.ToClientModelSubscription(sub))
@@ -41,16 +41,16 @@ internal class ConfigurationDataHelper
             .Select(rbYaml => new IngestedBranchMergePolicies(rbYaml))
             .ToList();
 
-        return new ConfigurationData(
+        return new IngestedConfigurationData(
             convertedSubscriptions,
             convertedChannels,
             convertedDefaultChannels,
             convertedBranchMergePolicies);
     }
 
-    internal static ConfigurationDataUpdate ComputeEntityUpdates(
-        ConfigurationData configurationData,
-        ConfigurationData existingConfigurationData)
+    internal static IngestedConfigurationUpdates ComputeEntityUpdates(
+        IngestedConfigurationData configurationData,
+        IngestedConfigurationData existingConfigurationData)
     {
         EntityChanges<IngestedSubscription> subscriptionChanges =
             ComputeUpdatesForEntity<IngestedSubscription, Guid>(
@@ -72,7 +72,7 @@ internal class ConfigurationDataHelper
                 existingConfigurationData.BranchMergePolicies,
                 configurationData.BranchMergePolicies);
 
-        return new ConfigurationDataUpdate(
+        return new IngestedConfigurationUpdates(
             subscriptionChanges,
             channelChanges,
             defaultChannelChanges,

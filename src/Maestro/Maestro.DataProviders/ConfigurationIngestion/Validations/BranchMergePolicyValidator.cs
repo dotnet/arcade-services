@@ -10,7 +10,7 @@ using Maestro.DataProviders.ConfigurationIngestion.Helpers;
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion.Validations;
 
-public class BranchMergePolicyValidator
+internal class BranchMergePolicyValidator
 {
     public static void ValidateBranchMergePolicies(
         IReadOnlyCollection<IngestedBranchMergePolicies> branchMergePolicies)

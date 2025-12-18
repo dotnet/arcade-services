@@ -16,17 +16,19 @@ using Microsoft.EntityFrameworkCore;
 namespace Maestro.DataProviders.ConfigurationIngestion;
 
 internal class ConfigurationIngestor(
-    BuildAssetRegistryContext context,
-    ISqlBarClient sqlBarClient) : IConfigurationIngestor
+        BuildAssetRegistryContext context,
+        ISqlBarClient sqlBarClient)
+    : IConfigurationIngestor
 {
     private readonly BuildAssetRegistryContext _context = context;
     private readonly ISqlBarClient _sqlBarClient = sqlBarClient;
 
-    public async Task<ConfigurationDataUpdate> IngestConfigurationAsync(
+    public async Task<ConfigurationUpdates> IngestConfigurationAsync(
         ConfigurationData configurationData,
         string configurationNamespace)
     {
-        ValidateEntityFields(configurationData);
+        var ingestionData = IngestedConfigurationData.FromYamls(configurationData);
+        ValidateEntityFields(ingestionData);
 
         var namespaceEntity = await FetchOrCreateNamespace(configurationNamespace);
 
@@ -34,15 +36,15 @@ internal class ConfigurationIngestor(
             ConfigurationDataHelper.CreateConfigurationDataObject(namespaceEntity);
 
         var configurationDataUpdate = ConfigurationDataHelper.ComputeEntityUpdates(
-            configurationData,
+            ingestionData,
             existingConfigurationData);
 
         await SaveConfigurationData(configurationDataUpdate, namespaceEntity);
 
-        return configurationDataUpdate;
+        return configurationDataUpdate.ToYamls();
     }
 
-    private static void ValidateEntityFields(ConfigurationData newConfigurationData)
+    private static void ValidateEntityFields(IngestedConfigurationData newConfigurationData)
     {
         SubscriptionValidator.ValidateSubscriptions(newConfigurationData.Subscriptions);
         ChannelValidator.ValidateChannels(newConfigurationData.Channels);
@@ -50,7 +52,7 @@ internal class ConfigurationIngestor(
         BranchMergePolicyValidator.ValidateBranchMergePolicies(newConfigurationData.BranchMergePolicies);
     }
 
-    private async Task SaveConfigurationData(ConfigurationDataUpdate configurationDataUpdate, Namespace namespaceEntity)
+    private async Task SaveConfigurationData(IngestedConfigurationUpdates configurationDataUpdate, Namespace namespaceEntity)
     {
         // Deletions
         await DeleteSubscriptions(configurationDataUpdate.Subscriptions.Removals);
@@ -60,9 +62,7 @@ internal class ConfigurationIngestor(
         await DeleteRepositoryBranches(
             configurationDataUpdate.RepositoryBranches.Removals,
             namespaceEntity);
-        await DeleteChannels(configurationDataUpdate.Channels.Removals,
-            configurationDataUpdate.Subscriptions.Creations,
-            configurationDataUpdate.Subscriptions.Updates);
+        await DeleteChannels(configurationDataUpdate.Channels.Removals);
 
         var existingChannels = _context.Channels.ToDictionary(c => c.Name);
 
@@ -73,8 +73,7 @@ internal class ConfigurationIngestor(
 
         UpdateChannels(
             configurationDataUpdate.Channels.Updates,
-            [.. existingChannels.Values],
-            namespaceEntity);
+            [.. existingChannels.Values]);
 
         // We fetch the channels again including newly created ones
         existingChannels = _context.Channels
@@ -190,8 +189,7 @@ internal class ConfigurationIngestor(
 
     private void UpdateChannels(
         IEnumerable<IngestedChannel> updatedChannels,
-        List<Channel> dbChannels,
-        Namespace namespaceEntity)
+        List<Channel> dbChannels)
     {
         var dbChannelsByName = dbChannels.ToDictionary(c => c.Name);
 
@@ -204,10 +202,7 @@ internal class ConfigurationIngestor(
         }
     }
 
-    private async Task DeleteChannels(
-        IEnumerable<IngestedChannel> removedChannels,
-        IEnumerable<IngestedSubscription> addedSubscriptions,
-        IEnumerable<IngestedSubscription> updatedSubscriptions)
+    private async Task DeleteChannels(IEnumerable<IngestedChannel> removedChannels)
     {
 
         var channelNames = removedChannels.Select(c => c.Values.Name);

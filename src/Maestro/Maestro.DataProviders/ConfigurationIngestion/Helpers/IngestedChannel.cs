@@ -6,7 +6,7 @@ using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion.Helpers;
 
-public class IngestedChannel : IExternallySyncedEntity<string>
+internal class IngestedChannel : IExternallySyncedEntity<string>
 {
     public IngestedChannel(ChannelYaml values) => Values = values;
 

@@ -8,7 +8,7 @@ using Maestro.DataProviders.ConfigurationIngestion.Helpers;
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion.Validations;
 
-public class ChannelValidator
+internal class ChannelValidator
 {
     /// <summary>
     /// Validates a collection of Channel entities against business rules.

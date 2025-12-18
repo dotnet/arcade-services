@@ -6,7 +6,7 @@ using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion.Helpers;
 
-public class IngestedBranchMergePolicies : IExternallySyncedEntity<(string Repository, string Branch)>
+internal class IngestedBranchMergePolicies : IExternallySyncedEntity<(string Repository, string Branch)>
 {
     public IngestedBranchMergePolicies(BranchMergePoliciesYaml values) => Values = values;
 

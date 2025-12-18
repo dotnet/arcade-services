@@ -7,7 +7,7 @@ using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion.Helpers;
 
-public class IngestedSubscription : IExternallySyncedEntity<Guid>
+internal class IngestedSubscription : IExternallySyncedEntity<Guid>
 {
     public IngestedSubscription(SubscriptionYaml values) => Values = values;
 
