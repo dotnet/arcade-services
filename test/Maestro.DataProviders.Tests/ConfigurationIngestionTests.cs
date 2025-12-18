@@ -73,21 +73,21 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
 
         // Assert
-        Assert.That(result.Channels.Creations.Count, Is.EqualTo(1));
-        Assert.That(result.Channels.Updates.Count, Is.EqualTo(0));
-        Assert.That(result.Channels.Removals.Count, Is.EqualTo(0));
+        result.Channels.Creations.Should().HaveCount(1);
+        result.Channels.Updates.Should().BeEmpty();
+        result.Channels.Removals.Should().BeEmpty();
 
-        Assert.That(result.Subscriptions.Creations.Count, Is.EqualTo(1));
-        Assert.That(result.Subscriptions.Updates.Count, Is.EqualTo(0));
-        Assert.That(result.Subscriptions.Removals.Count, Is.EqualTo(0));
+        result.Subscriptions.Creations.Should().HaveCount(1);
+        result.Subscriptions.Updates.Should().BeEmpty();
+        result.Subscriptions.Removals.Should().BeEmpty();
 
-        Assert.That(result.DefaultChannels.Creations.Count, Is.EqualTo(1));
-        Assert.That(result.DefaultChannels.Updates.Count, Is.EqualTo(0));
-        Assert.That(result.DefaultChannels.Removals.Count, Is.EqualTo(0));
+        result.DefaultChannels.Creations.Should().HaveCount(1);
+        result.DefaultChannels.Updates.Should().BeEmpty();
+        result.DefaultChannels.Removals.Should().BeEmpty();
 
-        Assert.That(result.RepositoryBranches.Creations.Count, Is.EqualTo(1));
-        Assert.That(result.RepositoryBranches.Updates.Count, Is.EqualTo(0));
-        Assert.That(result.RepositoryBranches.Removals.Count, Is.EqualTo(0));
+        result.RepositoryBranches.Creations.Should().HaveCount(1);
+        result.RepositoryBranches.Updates.Should().BeEmpty();
+        result.RepositoryBranches.Removals.Should().BeEmpty();
 
         var namespaceEntity = await _context.Namespaces
             .Include(n => n.Channels)
@@ -618,10 +618,8 @@ public class ConfigurationIngestorTests
 
         var configData = new ConfigurationData([subscription], [], [], []);
 
-        Assert.ThrowsAsync<InvalidOperationException>(async () =>
-        {
-            var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
-        });
+        var act = async () => await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Test]
@@ -671,10 +669,8 @@ public class ConfigurationIngestorTests
         // Channel names are immutable.
         // During ingestion, the channel name update results in channel removal + creation.
         // This should fail because the channel is still referenced by the existing subscription in the DB.
-        Assert.ThrowsAsync<InvalidOperationException>(async () =>
-        {
-            var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
-        });
+        var act = async () => await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Test]
