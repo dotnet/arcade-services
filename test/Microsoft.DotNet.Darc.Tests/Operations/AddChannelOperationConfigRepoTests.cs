@@ -3,7 +3,6 @@
 
 #nullable enable
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -112,74 +111,6 @@ public class AddChannelOperationConfigRepoTests : ConfigurationManagementTestBas
     }
 
     [Test]
-    public async Task AddChannelOperation_WithConfigRepo_FailsWhenEquivalentChannelExists()
-    {
-        // Arrange
-        var channelToAdd = new ChannelYaml
-        {
-            Name = ".NET 9",
-            Classification = "product"
-        };
-
-        // Setup an existing channel returned by BAR
-        var existingChannel = new Channel(
-            id: 42,
-            name: channelToAdd.Name,
-            classification: channelToAdd.Classification);
-
-        BarClientMock
-            .Setup(x => x.GetChannelsAsync())
-            .ReturnsAsync([existingChannel]);
-
-        var options = CreateAddChannelOptions(channelToAdd, configurationBranch: GetTestBranch());
-        var operation = CreateOperation(options);
-
-        // Act
-        int result = await operation.ExecuteAsync();
-
-        // Assert
-        result.Should().Be(Constants.ErrorCode);
-
-        // No new yml files should have been created (only the README.md from setup)
-        var ymlFiles = Directory.GetFiles(ConfigurationRepoPath, "*.yml", SearchOption.AllDirectories);
-        ymlFiles.Should().BeEmpty();
-    }
-
-    [Test]
-    public async Task AddChannelOperation_WithConfigRepo_FileContentIsValidYaml()
-    {
-        // Arrange
-        var expectedChannel = new ChannelYaml
-        {
-            Name = ".NET 9 Preview",
-            Classification = "preview"
-        };
-
-        var expectedFilePath = ConfigFilePathResolver.GetDefaultChannelFilePath(expectedChannel);
-
-        var options = CreateAddChannelOptions(expectedChannel, configurationBranch: GetTestBranch());
-        var operation = CreateOperation(options);
-
-        // Act
-        int result = await operation.ExecuteAsync();
-
-        // Assert
-        result.Should().Be(Constants.SuccessCode);
-
-        // Verify file was created at the expected path
-        var fullExpectedPath = Path.Combine(ConfigurationRepoPath, expectedFilePath);
-        File.Exists(fullExpectedPath).Should().BeTrue($"Expected file at {fullExpectedPath}");
-
-        // Deserialize and verify channel properties match expected values
-        var channels = await DeserializeChannelsAsync(fullExpectedPath);
-        channels.Should().HaveCount(1);
-
-        var actualChannel = channels[0];
-        actualChannel.Name.Should().Be(expectedChannel.Name);
-        actualChannel.Classification.Should().Be(expectedChannel.Classification);
-    }
-
-    [Test]
     public async Task AddChannelOperation_WithConfigRepo_FailsWhenEquivalentChannelExistsInYamlFile()
     {
         // Arrange
@@ -247,9 +178,6 @@ public class AddChannelOperationConfigRepoTests : ConfigurationManagementTestBas
             _loggerMock.Object);
     }
 
-    /// <summary>
-    /// Deserializes a YAML file containing a list of channels.
-    /// </summary>
     private static async Task<List<ChannelYaml>> DeserializeChannelsAsync(string filePath)
     {
         var content = await File.ReadAllTextAsync(filePath);

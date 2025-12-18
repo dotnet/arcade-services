@@ -53,39 +53,17 @@ internal class AddChannelOperation : Operation
 
             if (_options.ShouldUseConfigurationRepository)
             {
-                // Create the channel YAML model
                 var channelYaml = new ChannelYaml
                 {
                     Name = _options.Name,
                     Classification = _options.Classification
                 };
 
-                // Validate that a channel with the same name doesn't already exist
                 await ValidateNoEquivalentChannel(channelYaml);
 
-                // Add the channel to the configuration repository
                 await _configurationRepositoryManager.AddChannelAsync(
                     _options.ToConfigurationRepositoryOperationParameters(),
                     channelYaml);
-
-                // Output success message
-                switch (_options.OutputFormat)
-                {
-                    case DarcOutputType.json:
-                        Console.WriteLine(JsonConvert.SerializeObject(
-                            new
-                            {
-                                name = channelYaml.Name,
-                                classification = channelYaml.Classification
-                            },
-                            Formatting.Indented));
-                        break;
-                    case DarcOutputType.text:
-                        Console.WriteLine($"Successfully created new channel with name '{_options.Name}'.");
-                        break;
-                    default:
-                        throw new NotImplementedException($"Output type {_options.OutputFormat} not supported by add-channel");
-                }
             }
             else
             {
