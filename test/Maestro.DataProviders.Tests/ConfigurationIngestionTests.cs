@@ -9,10 +9,10 @@ using System.Threading.Tasks;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders.ConfigurationIngestion;
-using Maestro.DataProviders.ConfigurationIngestion.Helpers;
 using Microsoft.Data.SqlClient;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
 #nullable enable
@@ -23,7 +23,7 @@ public class ConfigurationIngestorTests
 {
     private TestDatabase _testDatabase = null!;
     private BuildAssetRegistryContext _context = null!;
-    private ConfigurationIngestor _ingestor = null!;
+    private IConfigurationIngestor _ingestor = null!;
     private const string TestNamespace = "test-namespace";
 
     [SetUp]
@@ -38,8 +38,13 @@ public class ConfigurationIngestorTests
 
         _context = new BuildAssetRegistryContext(options);
 
-        var sqlBarClient = new SqlBarClient(_context, null);
-        _ingestor = new ConfigurationIngestor(_context, sqlBarClient);
+        var services = new ServiceCollection()
+            .AddSingleton(_context)
+            .AddSingleton<ISqlBarClient>(new SqlBarClient(_context, null))
+            .AddConfigurationIngestion();
+
+        _ingestor = services.BuildServiceProvider()
+            .GetRequiredService<IConfigurationIngestor>();
 
         // Pre-populate repositories used in tests
         await EnsureRepositoriesExist(
@@ -70,21 +75,21 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
 
         // Assert
-        Assert.That(result.Channels.Creations.Count(), Is.EqualTo(1));
-        Assert.That(result.Channels.Updates.Count(), Is.EqualTo(0));
-        Assert.That(result.Channels.Removals.Count(), Is.EqualTo(0));
+        Assert.That(result.Channels.Creations.Count, Is.EqualTo(1));
+        Assert.That(result.Channels.Updates.Count, Is.EqualTo(0));
+        Assert.That(result.Channels.Removals.Count, Is.EqualTo(0));
 
-        Assert.That(result.Subscriptions.Creations.Count(), Is.EqualTo(1));
-        Assert.That(result.Subscriptions.Updates.Count(), Is.EqualTo(0));
-        Assert.That(result.Subscriptions.Removals.Count(), Is.EqualTo(0));
+        Assert.That(result.Subscriptions.Creations.Count, Is.EqualTo(1));
+        Assert.That(result.Subscriptions.Updates.Count, Is.EqualTo(0));
+        Assert.That(result.Subscriptions.Removals.Count, Is.EqualTo(0));
 
-        Assert.That(result.DefaultChannels.Creations.Count(), Is.EqualTo(1));
-        Assert.That(result.DefaultChannels.Updates.Count(), Is.EqualTo(0));
-        Assert.That(result.DefaultChannels.Removals.Count(), Is.EqualTo(0));
+        Assert.That(result.DefaultChannels.Creations.Count, Is.EqualTo(1));
+        Assert.That(result.DefaultChannels.Updates.Count, Is.EqualTo(0));
+        Assert.That(result.DefaultChannels.Removals.Count, Is.EqualTo(0));
 
-        Assert.That(result.RepositoryBranches.Creations.Count(), Is.EqualTo(1));
-        Assert.That(result.RepositoryBranches.Updates.Count(), Is.EqualTo(0));
-        Assert.That(result.RepositoryBranches.Removals.Count(), Is.EqualTo(0));
+        Assert.That(result.RepositoryBranches.Creations.Count, Is.EqualTo(1));
+        Assert.That(result.RepositoryBranches.Updates.Count, Is.EqualTo(0));
+        Assert.That(result.RepositoryBranches.Removals.Count, Is.EqualTo(0));
 
         var channels = await _context.Channels.ToListAsync();
         Assert.That(channels, Has.Count.EqualTo(1));
@@ -121,11 +126,11 @@ public class ConfigurationIngestorTests
         await _context.Channels.AddAsync(existingChannel);
         await _context.SaveChangesAsync();
 
-        var updatedChannelYaml = new IngestedChannel(new ChannelYaml
+        var updatedChannelYaml = new ChannelYaml
         {
             Name = "Test Channel",
             Classification = "production",
-        });
+        };
 
         var configData = new ConfigurationData(
             [],
@@ -137,9 +142,9 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
 
         // Assert
-        Assert.That(result.Channels.Updates.Count(), Is.EqualTo(1));
-        Assert.That(result.Channels.Creations.Count(), Is.EqualTo(0));
-        Assert.That(result.Channels.Removals.Count(), Is.EqualTo(0));
+        Assert.That(result.Channels.Updates.Count, Is.EqualTo(1));
+        Assert.That(result.Channels.Creations.Count, Is.EqualTo(0));
+        Assert.That(result.Channels.Removals.Count, Is.EqualTo(0));
 
         var updatedChannel = await _context.Channels
             .FirstOrDefaultAsync(c => c.Name == "Test Channel");
@@ -170,7 +175,7 @@ public class ConfigurationIngestorTests
         await _context.Subscriptions.AddAsync(existingSubscription);
         await _context.SaveChangesAsync();
 
-        var updatedSubscription = new IngestedSubscription(new SubscriptionYaml
+        var updatedSubscription = new SubscriptionYaml
         {
             Id = subscriptionId,
             Channel = ".NET 8",
@@ -179,18 +184,18 @@ public class ConfigurationIngestorTests
             TargetBranch = "main",
             Enabled = false, // Changed from true to false
             UpdateFrequency = Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryBuild,
-        });
+        };
 
         var configData = new ConfigurationData(
             [updatedSubscription],
-            [new IngestedChannel(new ChannelYaml { Name = ".NET 8", Classification = "release" })],
+            [new ChannelYaml { Name = ".NET 8", Classification = "release" }],
             [],
             []);
 
         // Act
         var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
 
-        Assert.That(result.Subscriptions.Updates.Count(), Is.EqualTo(1));
+        Assert.That(result.Subscriptions.Updates.Count, Is.EqualTo(1));
     }
 
     [Test]
@@ -219,7 +224,7 @@ public class ConfigurationIngestorTests
         await _context.Subscriptions.AddAsync(existingSubscription);
         await _context.SaveChangesAsync();
 
-        var updatedSubscription = new IngestedSubscription(new SubscriptionYaml
+        var updatedSubscription = new SubscriptionYaml
         {
             Id = subscriptionId,
             Channel = ".NET 8",
@@ -233,11 +238,11 @@ public class ConfigurationIngestorTests
                 "Microsoft.AspNetCore.*",
                 "System.Text.Json",
             ],
-        });
+        };
 
         var configData = new ConfigurationData(
             [updatedSubscription],
-            [new IngestedChannel(new ChannelYaml { Name = ".NET 8", Classification = "release" })],
+            [new ChannelYaml { Name = ".NET 8", Classification = "release" }],
             [],
             []);
 
@@ -245,7 +250,7 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
 
         // Assert
-        Assert.That(result.Subscriptions.Updates.Count(), Is.EqualTo(1));
+        Assert.That(result.Subscriptions.Updates.Count, Is.EqualTo(1));
 
         var updated = await _context.Subscriptions
             .Include(s => s.ExcludedAssets)
@@ -286,7 +291,7 @@ public class ConfigurationIngestorTests
         await _context.Subscriptions.AddAsync(existingSubscription);
         await _context.SaveChangesAsync();
 
-        var updatedSubscription = new IngestedSubscription(new SubscriptionYaml
+        var updatedSubscription = new SubscriptionYaml
         {
             Id = subscriptionId,
             Channel = ".NET 8",
@@ -298,11 +303,11 @@ public class ConfigurationIngestorTests
             [
                 "Microsoft.NET.Sdk"
             ],
-        });
+        };
 
         var configData = new ConfigurationData(
             [updatedSubscription],
-            [new IngestedChannel(new ChannelYaml { Name = ".NET 8", Classification = "release" })],
+            [new ChannelYaml { Name = ".NET 8", Classification = "release" }],
             [],
             []);
 
@@ -310,7 +315,7 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
 
         // Assert
-        Assert.That(result.Subscriptions.Updates.Count(), Is.EqualTo(1));
+        Assert.That(result.Subscriptions.Updates.Count, Is.EqualTo(1));
 
         var updated = await _context.Subscriptions
             .Include(s => s.ExcludedAssets)
@@ -348,7 +353,7 @@ public class ConfigurationIngestorTests
         await _context.Subscriptions.AddAsync(existingSubscription);
         await _context.SaveChangesAsync();
 
-        var updatedSubscription = new IngestedSubscription(new SubscriptionYaml
+        var updatedSubscription = new SubscriptionYaml
         {
             Id = subscriptionId,
             Channel = ".NET 8",
@@ -357,11 +362,11 @@ public class ConfigurationIngestorTests
             TargetBranch = "main",
             Enabled = true,
             ExcludedAssets = [],
-        });
+        };
 
         var configData = new ConfigurationData(
             [updatedSubscription],
-            [new IngestedChannel(new ChannelYaml { Name = ".NET 8", Classification = "release" })],
+            [new ChannelYaml { Name = ".NET 8", Classification = "release" }],
             [],
             []);
 
@@ -369,7 +374,7 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
 
         // Assert
-        Assert.That(result.Subscriptions.Updates.Count(), Is.EqualTo(1));
+        Assert.That(result.Subscriptions.Updates.Count, Is.EqualTo(1));
 
         var updated = await _context.Subscriptions
             .Include(s => s.ExcludedAssets)
@@ -407,7 +412,7 @@ public class ConfigurationIngestorTests
         await _context.Subscriptions.AddAsync(existingSubscription);
         await _context.SaveChangesAsync();
 
-        var updatedSubscription = new IngestedSubscription(new SubscriptionYaml
+        var updatedSubscription = new SubscriptionYaml
         {
             Id = subscriptionId,
             Channel = ".NET 8",
@@ -422,11 +427,11 @@ public class ConfigurationIngestorTests
                 "NewPackage.*"
                 // ToRemove.Package is removed
             ],
-        });
+        };
 
         var configData = new ConfigurationData(
             [updatedSubscription],
-            [new IngestedChannel(new ChannelYaml { Name = ".NET 8", Classification = "release" })],
+            [new ChannelYaml { Name = ".NET 8", Classification = "release" }],
             [],
             []);
 
@@ -434,7 +439,7 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
 
         // Assert
-        Assert.That(result.Subscriptions.Updates.Count(), Is.EqualTo(1));
+        Assert.That(result.Subscriptions.Updates.Count, Is.EqualTo(1));
 
         var updated = await _context.Subscriptions
             .Include(s => s.ExcludedAssets)
@@ -478,17 +483,17 @@ public class ConfigurationIngestorTests
         await _context.DefaultChannels.AddAsync(defaultChannel);
         await _context.SaveChangesAsync();
 
-        var updatedDefaultChannel = new IngestedDefaultChannel(new DefaultChannelYaml
+        var updatedDefaultChannel = new DefaultChannelYaml
         {
             Repository = "https://github.com/dotnet/runtime",
             Branch = "main",
             Channel = ".NET 8",
             Enabled = false, // Changed from true to false
-        });
+        };
 
         var configData = new ConfigurationData(
             [],
-            [new IngestedChannel(new ChannelYaml { Name = ".NET 8", Classification = "release" })],
+            [new ChannelYaml { Name = ".NET 8", Classification = "release" }],
             [updatedDefaultChannel],
             []);
 
@@ -496,7 +501,7 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
 
         // Assert
-        Assert.That(result.DefaultChannels.Updates.Count(), Is.EqualTo(1));
+        Assert.That(result.DefaultChannels.Updates.Count, Is.EqualTo(1));
 
         var updated = await _context.DefaultChannels.FirstOrDefaultAsync(dc => dc.Id == 1);
         Assert.That(updated, Is.Not.Null);
@@ -518,7 +523,7 @@ public class ConfigurationIngestorTests
         await _context.RepositoryBranches.AddAsync(existingBranch);
         await _context.SaveChangesAsync();
 
-        var updatedBranchYaml = new IngestedBranchMergePolicies(new BranchMergePoliciesYaml
+        var updatedBranchYaml = new BranchMergePoliciesYaml
         {
             Repository = "https://github.com/dotnet/runtime",
             Branch = "main",
@@ -527,7 +532,7 @@ public class ConfigurationIngestorTests
                 new MergePolicyYaml { Name = "AllChecksSuccessful" },
                 new MergePolicyYaml { Name = "RequireReviews" },
             ],
-        });
+        };
 
         var configData = new ConfigurationData(
             [],
@@ -539,7 +544,7 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
 
         // Assert
-        Assert.That(result.RepositoryBranches.Updates.Count(), Is.EqualTo(1));
+        Assert.That(result.RepositoryBranches.Updates.Count, Is.EqualTo(1));
 
         var updated = await _context.RepositoryBranches
             .FirstOrDefaultAsync(rb => rb.RepositoryName == "https://github.com/dotnet/runtime" && rb.BranchName == "main");
@@ -567,7 +572,7 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
 
         // Assert
-        Assert.That(result.Channels.Removals.Count(), Is.EqualTo(1));
+        Assert.That(result.Channels.Removals.Count, Is.EqualTo(1));
 
         var channels = await _context.Channels.ToListAsync();
         Assert.That(channels, Is.Empty);
@@ -584,18 +589,17 @@ public class ConfigurationIngestorTests
         await _context.SaveChangesAsync();
 
         var subscription = 
-        new IngestedSubscription(new SubscriptionYaml
-                {
-                    Id = Guid.NewGuid(),
-                    Channel = "Old channel",
-                    SourceRepository = "https://github.com/dotnet/runtime",
-                    TargetRepository = "https://github.com/dotnet/aspnetcore",
-                    TargetBranch = "main",
-                    Enabled = true,
-                });
+        new SubscriptionYaml
+        {
+            Id = Guid.NewGuid(),
+            Channel = "Old channel",
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = "https://github.com/dotnet/aspnetcore",
+            TargetBranch = "main",
+            Enabled = true,
+        };
 
         var configData = new ConfigurationData([subscription], [], [], []);
-
 
         Assert.ThrowsAsync<InvalidOperationException>(async () =>
         {
@@ -624,13 +628,13 @@ public class ConfigurationIngestorTests
         await _context.Subscriptions.AddAsync(subscription);
         await _context.SaveChangesAsync();
 
-        var updatedChannelYaml = new IngestedChannel(new ChannelYaml
+        var updatedChannelYaml = new ChannelYaml
         {
             Name = "New Channel",
             Classification = "production",
-        });
+        };
 
-        var subscriptionYaml = new IngestedSubscription(new SubscriptionYaml
+        var subscriptionYaml = new SubscriptionYaml
         {
             Id = id,
             Channel = "New Channel",
@@ -638,7 +642,7 @@ public class ConfigurationIngestorTests
             TargetRepository = "https://github.com/dotnet/aspnetcore",
             TargetBranch = "main",
             Enabled = true,
-        });
+        };
 
         var configData = new ConfigurationData(
             [subscriptionYaml],
@@ -654,7 +658,6 @@ public class ConfigurationIngestorTests
         {
             var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
         });
-
     }
 
     [Test]
@@ -680,7 +683,7 @@ public class ConfigurationIngestorTests
 
         var configData = new ConfigurationData(
             [],
-            [new IngestedChannel(new ChannelYaml { Name = ".NET 8", Classification = "release" })],
+            [new ChannelYaml { Name = ".NET 8", Classification = "release" }],
             [],
             []);
 
@@ -688,7 +691,7 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
 
         // Assert
-        Assert.That(result.Subscriptions.Removals.Count(), Is.EqualTo(1));
+        Assert.That(result.Subscriptions.Removals.Count, Is.EqualTo(1));
 
         var subscriptions = await _context.Subscriptions.ToListAsync();
         Assert.That(subscriptions, Is.Empty);
@@ -715,7 +718,7 @@ public class ConfigurationIngestorTests
 
         var configData = new ConfigurationData(
             [],
-            [new IngestedChannel(new ChannelYaml { Name = ".NET 8", Classification = "release" })],
+            [new ChannelYaml { Name = ".NET 8", Classification = "release" }],
             [],
             []);
 
@@ -723,7 +726,7 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
 
         // Assert
-        Assert.That(result.DefaultChannels.Removals.Count(), Is.EqualTo(1));
+        Assert.That(result.DefaultChannels.Removals.Count, Is.EqualTo(1));
 
         var defaultChannels = await _context.DefaultChannels.ToListAsync();
         Assert.That(defaultChannels, Is.Empty);
@@ -750,7 +753,7 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
 
         // Assert
-        Assert.That(result.RepositoryBranches.Removals.Count(), Is.EqualTo(1));
+        Assert.That(result.RepositoryBranches.Removals.Count, Is.EqualTo(1));
 
         var branches = await _context.RepositoryBranches.ToListAsync();
         Assert.That(branches, Is.Empty);
@@ -778,9 +781,9 @@ public class ConfigurationIngestorTests
         var configData = new ConfigurationData(
             [],
             [
-                new IngestedChannel(new ChannelYaml { Name = "Existing Channel", Classification = "dev" }), // No change
-                new IngestedChannel(new ChannelYaml { Name = "Channel To Update", Classification = "production" }), // Update
-                new IngestedChannel(new ChannelYaml { Name = "New Channel", Classification = "test" }), // Create
+                new ChannelYaml { Name = "Existing Channel", Classification = "dev" }, // No change
+                new ChannelYaml { Name = "Channel To Update", Classification = "production" }, // Update
+                new ChannelYaml { Name = "New Channel", Classification = "test" }, // Create
                 // "Channel To Delete" is not included - will be deleted
             ],
             [],
@@ -790,9 +793,9 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
 
         // Assert
-        Assert.That(result.Channels.Creations.Count(), Is.EqualTo(1));
-        Assert.That(result.Channels.Updates.Count(), Is.EqualTo(2)); // Both existing and updated
-        Assert.That(result.Channels.Removals.Count(), Is.EqualTo(1));
+        Assert.That(result.Channels.Creations.Count, Is.EqualTo(1));
+        Assert.That(result.Channels.Updates.Count, Is.EqualTo(2)); // Both existing and updated
+        Assert.That(result.Channels.Removals.Count, Is.EqualTo(1));
 
         var channels = await _context.Channels.ToListAsync();
         Assert.That(channels, Has.Count.EqualTo(3));
@@ -831,7 +834,7 @@ public class ConfigurationIngestorTests
         var newSubscriptionId = Guid.NewGuid();
         var configData = new ConfigurationData(
             [
-                new IngestedSubscription(new SubscriptionYaml
+                new SubscriptionYaml
                 {
                     Id = newSubscriptionId,
                     Channel = ".NET 8",
@@ -839,41 +842,41 @@ public class ConfigurationIngestorTests
                     TargetRepository = "https://github.com/dotnet/aspnetcore",
                     TargetBranch = "main",
                     Enabled = true,
-                }),
+                },
             ],
             [
-                new IngestedChannel(new ChannelYaml { Name = ".NET 8", Classification = "release" }),
-                new IngestedChannel(new ChannelYaml { Name = ".NET 9", Classification = "preview" }),
+                new ChannelYaml { Name = ".NET 8", Classification = "release" },
+                new ChannelYaml { Name = ".NET 9", Classification = "preview" },
             ],
             [
-                new IngestedDefaultChannel(new DefaultChannelYaml
+                new DefaultChannelYaml
                 {
                     Repository = "https://github.com/dotnet/runtime",
                     Branch = "main",
                     Channel = ".NET 8",
                     Enabled = true,
-                }),
+                },
             ],
             [
-                new IngestedBranchMergePolicies(new BranchMergePoliciesYaml
+                new BranchMergePoliciesYaml
                 {
                     Repository = "https://github.com/dotnet/runtime",
                     Branch = "main",
                     MergePolicies = [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
-                }),
+                },
             ]);
 
         // Act
         var result = await _ingestor.IngestConfigurationAsync(configData, TestNamespace);
 
         // Assert
-        Assert.That(result.Channels.Updates.Count(), Is.EqualTo(2)); // .NET 8
+        Assert.That(result.Channels.Updates.Count, Is.EqualTo(2)); // .NET 8
 
-        Assert.That(result.Subscriptions.Creations.Count(), Is.EqualTo(1));
-        Assert.That(result.Subscriptions.Removals.Count(), Is.EqualTo(1));
+        Assert.That(result.Subscriptions.Creations.Count, Is.EqualTo(1));
+        Assert.That(result.Subscriptions.Removals.Count, Is.EqualTo(1));
 
-        Assert.That(result.DefaultChannels.Creations.Count(), Is.EqualTo(1));
-        Assert.That(result.RepositoryBranches.Creations.Count(), Is.EqualTo(1));
+        Assert.That(result.DefaultChannels.Creations.Count, Is.EqualTo(1));
+        Assert.That(result.RepositoryBranches.Creations.Count, Is.EqualTo(1));
 
         var channels = await _context.Channels.ToListAsync();
         Assert.That(channels, Has.Count.EqualTo(2));
@@ -911,13 +914,13 @@ public class ConfigurationIngestorTests
 
         var configData1 = new ConfigurationData(
             [],
-            [new IngestedChannel(new ChannelYaml { Name = "Channel 1", Classification = "dev" })],
+            [new ChannelYaml { Name = "Channel 1", Classification = "dev" }],
             [],
             []);
 
         var configData2 = new ConfigurationData(
             [],
-            [new IngestedChannel(new ChannelYaml { Name = "Channel 2", Classification = "release" })],
+            [new ChannelYaml { Name = "Channel 2", Classification = "release" }],
             [],
             []);
 
@@ -1035,11 +1038,13 @@ public class ConfigurationIngestorTests
 
         var policyObject = new RepositoryBranch.Policy
         {
-            MergePolicies = mergePolicies.Select(mp => new MergePolicyDefinition
-            {
-                Name = mp.Name,
-                Properties = mp.Properties?.ToDictionary(p => p.Key, p => Newtonsoft.Json.Linq.JToken.FromObject(p.Value)),
-            }).ToList(),
+            MergePolicies = mergePolicies
+                .Select(mp => new MergePolicyDefinition
+                {
+                    Name = mp.Name,
+                    Properties = mp.Properties?.ToDictionary(p => p.Key, p => Newtonsoft.Json.Linq.JToken.FromObject(p.Value)),
+                })
+                .ToList(),
         };
 
         return new RepositoryBranch
@@ -1054,13 +1059,13 @@ public class ConfigurationIngestorTests
 
     private static ConfigurationData CreateBasicConfigurationData()
     {
-        var channelYaml = new IngestedChannel(new ChannelYaml
+        var channelYaml = new ChannelYaml
         {
             Name = ".NET 8",
             Classification = "release",
-        });
+        };
 
-        var subscriptionYaml = new IngestedSubscription(new SubscriptionYaml
+        var subscriptionYaml = new SubscriptionYaml
         {
             Id = Guid.NewGuid(),
             Channel = ".NET 8",
@@ -1068,22 +1073,22 @@ public class ConfigurationIngestorTests
             TargetRepository = "https://github.com/dotnet/aspnetcore",
             TargetBranch = "main",
             Enabled = true,
-        });
+        };
 
-        var defaultChannelYaml = new IngestedDefaultChannel(new DefaultChannelYaml
+        var defaultChannelYaml = new DefaultChannelYaml
         {
             Repository = "https://github.com/dotnet/runtime",
             Branch = "main",
             Channel = ".NET 8",
             Enabled = true,
-        });
+        };
 
-        var branchMergePoliciesYaml = new IngestedBranchMergePolicies(new BranchMergePoliciesYaml
+        var branchMergePoliciesYaml = new BranchMergePoliciesYaml
         {
             Repository = "https://github.com/dotnet/runtime2",
             Branch = "main",
             MergePolicies = [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
-        });
+        };
 
         return new ConfigurationData(
             [subscriptionYaml],

@@ -3,6 +3,7 @@
 
 using Maestro.DataProviders.ConfigurationIngestion;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Maestro.DataProviders;
 
@@ -10,8 +11,8 @@ public static class DataProvidersExtensions
 {
     public static IServiceCollection AddConfigurationIngestion(this IServiceCollection services)
     {
-        services.AddTransient<ISqlBarClient, SqlBarClient>();
-        services.AddTransient<IConfigurationIngestor, ConfigurationIngestor>();
+        services.TryAddTransient<ISqlBarClient, SqlBarClient>();
+        services.TryAddTransient<IConfigurationIngestor, ConfigurationIngestor>();
         return services;
     }
 }
