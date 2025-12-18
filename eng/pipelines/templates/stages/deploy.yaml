@@ -19,7 +19,7 @@ stages:
   - Build
   - Approval
   jobs:
-  - job: updateDatabase
+  - job: UpdateDatabase
     displayName: Update BuildAssetRegistry database
     pool:
       name: NetCore1ESPool-Internal
