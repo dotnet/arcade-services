@@ -401,6 +401,9 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             AzureDevOpsRepository = codeflowOptions.Build.AzureDevOpsRepository
         };
 
+        Codeflow? previousFlow = null;
+        LastFlows? previousFlows = null;
+
         // We recursively try to re-create previous flows until we find the one that introduced the conflict with the current flown
         int flowsToRecreate = 1;
         while (flowsToRecreate < 50)
@@ -408,11 +411,10 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             _logger.LogInformation("Trying to recreate {count} previous flow(s)..", flowsToRecreate);
 
             // We rewing to the previous flow and create a branch there
-            (Codeflow previousFlow, LastFlows previousFlows) = await RewindToPreviousFlowAsync(
+            (previousFlow, previousFlows) = await UnwindPreviousFlowAsync(
                 codeflowOptions.Mapping,
                 repo,
-                flowsToRecreate,
-                lastFlows,
+                previousFlows ?? lastFlows,
                 codeflowOptions.HeadBranch,
                 codeflowOptions.TargetBranch,
                 cancellationToken);
@@ -430,8 +432,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     {
                         Build = previouslyAppliedBuild,
                         CurrentFlow = currentIsBackflow
-                            ? new Backflow(previouslyAppliedBuild.Commit, previousFlow.RepoSha)
-                            : new ForwardFlow(previouslyAppliedBuild.Commit, previousFlow.VmrSha),
+                            ? new Backflow(previouslyAppliedBuild.Commit, previousFlow!.RepoSha)
+                            : new ForwardFlow(previouslyAppliedBuild.Commit, previousFlow!.VmrSha),
                         EnableRebase = false,
                         ForceUpdate = true,
                     },
@@ -472,7 +474,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
                 return result with
                 {
-                    RecreatedPreviousFlows = flowsToRecreate > 1,
+                    RecreatedPreviousFlows = true,
                 };
             }
             catch (Exception e) when (e is PatchApplicationFailedException || e is ConflictInPrBranchException)
@@ -491,10 +493,13 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         throw new DarcException($"Failed to apply changes due to conflicts even after {flowsToRecreate} previous flows were recreated");
     }
 
-    protected abstract Task<(Codeflow, LastFlows)> RewindToPreviousFlowAsync(
+    /// <summary>
+    /// Unwinds the last flow before previousFlows and creates a work branch there.
+    /// </summary>
+    /// <returns>The previous-previous flow and its previous flows.</returns>
+    protected abstract Task<(Codeflow, LastFlows)> UnwindPreviousFlowAsync(
         SourceMapping mapping,
         ILocalGitRepo targetRepo,
-        int depth,
         LastFlows previousFlows,
         string branchToCreate,
         string targetBranch,
