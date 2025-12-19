@@ -411,7 +411,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             _logger.LogInformation("Trying to recreate {count} previous flow(s)..", flowsToRecreate);
 
             // We rewing to the previous flow and create a branch there
-            (previousFlow, previousFlows) = await RewindToPreviousFlowAsync(
+            (previousFlow, previousFlows) = await UnwindPreviousFlowAsync(
                 codeflowOptions.Mapping,
                 repo,
                 previousFlows ?? lastFlows,
@@ -497,7 +497,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     /// Unwinds the last flow before previousFlows and creates a work branch there.
     /// </summary>
     /// <returns>The previous-previous flow and its previous flows.</returns>
-    protected abstract Task<(Codeflow, LastFlows)> RewindToPreviousFlowAsync(
+    protected abstract Task<(Codeflow, LastFlows)> UnwindPreviousFlowAsync(
         SourceMapping mapping,
         ILocalGitRepo targetRepo,
         LastFlows previousFlows,

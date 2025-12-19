@@ -430,7 +430,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             : null;
     }
 
-    protected override async Task<(Codeflow, LastFlows)> RewindToPreviousFlowAsync(
+    protected override async Task<(Codeflow, LastFlows)> UnwindPreviousFlowAsync(
         SourceMapping mapping,
         ILocalGitRepo sourceRepo,
         LastFlows previousFlows,

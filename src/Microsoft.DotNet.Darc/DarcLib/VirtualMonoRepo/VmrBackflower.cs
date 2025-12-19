@@ -494,7 +494,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private NativePath GetPatchName(SourceMapping mapping, LastFlows lastFlows, Codeflow currentFlow)
         => _vmrInfo.TmpPath / $"{mapping.Name}-{Commit.GetShortSha(lastFlows.LastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}.patch";
 
-    protected override async Task<(Codeflow, LastFlows)> RewindToPreviousFlowAsync(
+    protected override async Task<(Codeflow, LastFlows)> UnwindPreviousFlowAsync(
         SourceMapping mapping,
         ILocalGitRepo targetRepo,
         LastFlows previousFlows,
