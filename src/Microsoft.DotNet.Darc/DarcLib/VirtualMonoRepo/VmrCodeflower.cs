@@ -474,7 +474,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
                 return result with
                 {
-                    RecreatedPreviousFlows = flowsToRecreate > 1,
+                    RecreatedPreviousFlows = true,
                 };
             }
             catch (Exception e) when (e is PatchApplicationFailedException || e is ConflictInPrBranchException)
