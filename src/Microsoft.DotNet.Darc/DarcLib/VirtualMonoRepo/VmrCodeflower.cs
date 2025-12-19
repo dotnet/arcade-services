@@ -493,6 +493,10 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         throw new DarcException($"Failed to apply changes due to conflicts even after {flowsToRecreate} previous flows were recreated");
     }
 
+    /// <summary>
+    /// Unwinds the last flow before previousFlows and creates a work branch there.
+    /// </summary>
+    /// <returns>The previous-previous flow and its previous flows.</returns>
     protected abstract Task<(Codeflow, LastFlows)> RewindToPreviousFlowAsync(
         SourceMapping mapping,
         ILocalGitRepo targetRepo,

@@ -430,10 +430,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             : null;
     }
 
-    /// <summary>
-    /// Traverses the current branch's history to find {depth}-th last backflow and creates a branch there.
-    /// </summary>
-    /// <returns>The {depth}-th last flow and its previous flows.</returns>
     protected override async Task<(Codeflow, LastFlows)> RewindToPreviousFlowAsync(
         SourceMapping mapping,
         ILocalGitRepo sourceRepo,

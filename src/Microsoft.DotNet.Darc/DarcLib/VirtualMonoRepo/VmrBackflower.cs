@@ -494,10 +494,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
     private NativePath GetPatchName(SourceMapping mapping, LastFlows lastFlows, Codeflow currentFlow)
         => _vmrInfo.TmpPath / $"{mapping.Name}-{Commit.GetShortSha(lastFlows.LastFlow.VmrSha)}-{Commit.GetShortSha(currentFlow.TargetSha)}.patch";
 
-    /// <summary>
-    /// Traverses the current branch's history to find {depth}-th last backflow and creates a branch there.
-    /// </summary>
-    /// <returns>The {depth}-th last flow and its previous flows.</returns>
     protected override async Task<(Codeflow, LastFlows)> RewindToPreviousFlowAsync(
         SourceMapping mapping,
         ILocalGitRepo targetRepo,
