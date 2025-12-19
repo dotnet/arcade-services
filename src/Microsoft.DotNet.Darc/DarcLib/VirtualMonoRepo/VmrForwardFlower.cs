@@ -446,7 +446,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         var previousFlow = previousFlows.LastForwardFlow;
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         await vmr.ResetWorkingTree();
-        await vmr.CheckoutAsync(targetBranch);
+        await vmr.ForceCheckoutAsync(targetBranch);
 
         for (int i = 1; i < depth; i++)
         {
@@ -463,7 +463,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 resetToRemote: false,
                 cancellationToken);
 
-            await sourceRepo.CheckoutAsync(_sourceManifest.GetRepoVersion(mapping.Name).CommitSha);
+            await sourceRepo.ForceCheckoutAsync(_sourceManifest.GetRepoVersion(mapping.Name).CommitSha);
             previousFlows = await GetLastFlowsAsync(mapping.Name, sourceRepo, currentIsBackflow: false);
             previousFlow = previousFlows.LastForwardFlow;
         }

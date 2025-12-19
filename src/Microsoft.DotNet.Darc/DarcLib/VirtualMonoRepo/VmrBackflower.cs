@@ -508,7 +508,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         CancellationToken cancellationToken)
     {
         await targetRepo.ResetWorkingTree();
-        await targetRepo.CheckoutAsync(targetBranch);
+        await targetRepo.ForceCheckoutAsync(targetBranch);
 
         Backflow previousFlow = previousFlows.LastBackFlow
             ?? throw new DarcException("No more backflows found to recreate");
@@ -521,7 +521,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 previousFlow.RepoSha);
 
             await targetRepo.ResetWorkingTree();
-            await targetRepo.CheckoutAsync(previousFlowSha);
+            await targetRepo.ForceCheckoutAsync(previousFlowSha);
             await _vmrCloneManager.PrepareVmrAsync(
                 [_vmrInfo.VmrUri],
                 [previousFlow.VmrSha],
@@ -535,7 +535,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
 
         // Check out the repo before the flows we want to recreate
-        await targetRepo.CheckoutAsync(previousFlow.RepoSha);
+        await targetRepo.ForceCheckoutAsync(previousFlow.RepoSha);
         await targetRepo.CreateBranchAsync(branchToCreate, overwriteExistingBranch: true);
 
         return (previousFlow, previousFlows);
