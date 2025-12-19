@@ -414,13 +414,9 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             (previousFlow, previousFlows) = await RewindToPreviousFlowAsync(
                 codeflowOptions.Mapping,
                 repo,
-                flowsToRecreate,
-                lastFlows,
+                previousFlows ?? lastFlows,
                 codeflowOptions.HeadBranch,
                 codeflowOptions.TargetBranch,
-                previousFlow != null && previousFlows != null
-                    ? (previousFlow, previousFlows)
-                    : null,
                 cancellationToken);
 
             // We store the SHA where the head branch originates from so that later we can diff it
@@ -500,11 +496,9 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     protected abstract Task<(Codeflow, LastFlows)> RewindToPreviousFlowAsync(
         SourceMapping mapping,
         ILocalGitRepo targetRepo,
-        int depth,
         LastFlows previousFlows,
         string branchToCreate,
         string targetBranch,
-        (Codeflow PreviousFlow, LastFlows LastFlows)? lastRewind,
         CancellationToken cancellationToken);
 
     /// <summary>

@@ -437,66 +437,39 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     protected override async Task<(Codeflow, LastFlows)> RewindToPreviousFlowAsync(
         SourceMapping mapping,
         ILocalGitRepo sourceRepo,
-        int depth,
         LastFlows previousFlows,
         string branchToCreate,
         string targetBranch,
-        (Codeflow PreviousFlow, LastFlows LastFlows)? lastRewind,
         CancellationToken cancellationToken)
     {
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
-        ForwardFlow previousFlow;
-        int i = 1;
-        if (lastRewind.HasValue)
-        {
-            i = depth - 1;
-            previousFlow = (ForwardFlow)lastRewind.Value.PreviousFlow;
-            previousFlows = lastRewind.Value.LastFlows;
-            await _vmrCloneManager.PrepareVmrAsync(
-                [_vmrInfo.VmrUri],
-                [previousFlow.VmrSha],
-                previousFlow.VmrSha,
-                resetToRemote: false,
-                cancellationToken);
-
-            await sourceRepo.ForceCheckoutAsync(previousFlow.RepoSha);
-        }
-        else
-        {
-            previousFlow = previousFlows.LastForwardFlow;
-            await vmr.ResetWorkingTree();
-            await vmr.ForceCheckoutAsync(targetBranch);
-        }
-
-        while (i++ < depth)
-        {
-            var previousFlowSha = await _localGitClient.BlameLineAsync(
-                _vmrInfo.SourceManifestPath,
-                line => line.Contains(previousFlow.RepoSha),
-                previousFlow.VmrSha);
-
-            await _localGitClient.ResetWorkingTree(_vmrInfo.VmrPath);
-            await _vmrCloneManager.PrepareVmrAsync(
-                [_vmrInfo.VmrUri],
-                [previousFlowSha],
-                previousFlowSha,
-                resetToRemote: false,
-                cancellationToken);
-
-            await sourceRepo.ForceCheckoutAsync(_sourceManifest.GetRepoVersion(mapping.Name).CommitSha);
-            previousFlows = await GetLastFlowsAsync(mapping.Name, sourceRepo, currentIsBackflow: false);
-            previousFlow = previousFlows.LastForwardFlow;
-        }
-
-        // Check out the VMR before the flows we want to recreate
-        await _localGitClient.ResetWorkingTree(_vmrInfo.VmrPath);
-        vmr = await _vmrCloneManager.PrepareVmrAsync(
+        ForwardFlow previousFlow = previousFlow = previousFlows.LastForwardFlow;
+        await _vmrCloneManager.PrepareVmrAsync(
             [_vmrInfo.VmrUri],
             [previousFlow.VmrSha],
             previousFlow.VmrSha,
             resetToRemote: false,
             cancellationToken);
+
+        await sourceRepo.ForceCheckoutAsync(previousFlow.RepoSha);
+
+        var previousFlowSha = await _localGitClient.BlameLineAsync(
+            _vmrInfo.SourceManifestPath,
+            line => line.Contains(previousFlow.RepoSha),
+            previousFlow.VmrSha);
+
+        await _localGitClient.ResetWorkingTree(_vmrInfo.VmrPath);
+        vmr = await _vmrCloneManager.PrepareVmrAsync(
+            [_vmrInfo.VmrUri],
+            [previousFlowSha],
+            previousFlowSha,
+            resetToRemote: false,
+            cancellationToken);
+
+        await sourceRepo.ForceCheckoutAsync(_sourceManifest.GetRepoVersion(mapping.Name).CommitSha);
+        previousFlows = await GetLastFlowsAsync(mapping.Name, sourceRepo, currentIsBackflow: false);
+        previousFlow = previousFlows.LastForwardFlow;
 
         await vmr.CreateBranchAsync(branchToCreate, overwriteExistingBranch: true);
 
