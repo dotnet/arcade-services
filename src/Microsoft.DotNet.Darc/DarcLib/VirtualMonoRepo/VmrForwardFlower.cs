@@ -441,14 +441,35 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         LastFlows previousFlows,
         string branchToCreate,
         string targetBranch,
+        (Codeflow PreviousFlow, LastFlows LastFlows)? lastRewind,
         CancellationToken cancellationToken)
     {
-        var previousFlow = previousFlows.LastForwardFlow;
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        await vmr.ResetWorkingTree();
-        await vmr.ForceCheckoutAsync(targetBranch);
 
-        for (int i = 1; i < depth; i++)
+        ForwardFlow previousFlow;
+        int i = 1;
+        if (lastRewind.HasValue)
+        {
+            i = depth - 1;
+            previousFlow = (ForwardFlow)lastRewind.Value.PreviousFlow;
+            previousFlows = lastRewind.Value.LastFlows;
+            await _vmrCloneManager.PrepareVmrAsync(
+                [_vmrInfo.VmrUri],
+                [previousFlow.VmrSha],
+                previousFlow.VmrSha,
+                resetToRemote: false,
+                cancellationToken);
+
+            await sourceRepo.ForceCheckoutAsync(previousFlow.RepoSha);
+        }
+        else
+        {
+            previousFlow = previousFlows.LastForwardFlow;
+            await vmr.ResetWorkingTree();
+            await vmr.ForceCheckoutAsync(targetBranch);
+        }
+
+        while (i++ < depth)
         {
             var previousFlowSha = await _localGitClient.BlameLineAsync(
                 _vmrInfo.SourceManifestPath,

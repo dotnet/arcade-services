@@ -505,15 +505,35 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         LastFlows previousFlows,
         string branchToCreate,
         string targetBranch,
+        (Codeflow PreviousFlow, LastFlows LastFlows)? lastRewind,
         CancellationToken cancellationToken)
     {
-        await targetRepo.ResetWorkingTree();
-        await targetRepo.ForceCheckoutAsync(targetBranch);
+        Backflow previousFlow;
 
-        Backflow previousFlow = previousFlows.LastBackFlow
-            ?? throw new DarcException("No more backflows found to recreate");
+        int i = 1;
+        if (lastRewind.HasValue)
+        {
+            i = depth - 1;
+            previousFlow = (Backflow)lastRewind.Value.PreviousFlow;
+            previousFlows = lastRewind.Value.LastFlows;
 
-        for (int i = 1; i < depth; i++)
+            await targetRepo.ForceCheckoutAsync(previousFlow.RepoSha);
+            await _vmrCloneManager.PrepareVmrAsync(
+                [_vmrInfo.VmrUri],
+                [previousFlow.VmrSha],
+                previousFlow.VmrSha,
+                resetToRemote: false,
+                cancellationToken);
+        }
+        else
+        {
+            previousFlow = previousFlows.LastBackFlow
+                ?? throw new DarcException("No more backflows found to recreate");
+            await targetRepo.ResetWorkingTree();
+            await targetRepo.ForceCheckoutAsync(targetBranch);
+        }
+
+        while (i++ < depth)
         {
             var previousFlowSha = await _localGitClient.BlameLineAsync(
                 targetRepo.Path / VersionFiles.VersionDetailsXml,

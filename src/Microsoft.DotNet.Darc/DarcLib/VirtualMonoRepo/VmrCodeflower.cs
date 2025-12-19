@@ -401,6 +401,9 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             AzureDevOpsRepository = codeflowOptions.Build.AzureDevOpsRepository
         };
 
+        Codeflow? previousFlow = null;
+        LastFlows? previousFlows = null;
+
         // We recursively try to re-create previous flows until we find the one that introduced the conflict with the current flown
         int flowsToRecreate = 1;
         while (flowsToRecreate < 50)
@@ -408,13 +411,16 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             _logger.LogInformation("Trying to recreate {count} previous flow(s)..", flowsToRecreate);
 
             // We rewing to the previous flow and create a branch there
-            (Codeflow previousFlow, LastFlows previousFlows) = await RewindToPreviousFlowAsync(
+            (previousFlow, previousFlows) = await RewindToPreviousFlowAsync(
                 codeflowOptions.Mapping,
                 repo,
                 flowsToRecreate,
                 lastFlows,
                 codeflowOptions.HeadBranch,
                 codeflowOptions.TargetBranch,
+                previousFlow != null && previousFlows != null
+                    ? (previousFlow, previousFlows)
+                    : null,
                 cancellationToken);
 
             // We store the SHA where the head branch originates from so that later we can diff it
@@ -430,8 +436,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     {
                         Build = previouslyAppliedBuild,
                         CurrentFlow = currentIsBackflow
-                            ? new Backflow(previouslyAppliedBuild.Commit, previousFlow.RepoSha)
-                            : new ForwardFlow(previouslyAppliedBuild.Commit, previousFlow.VmrSha),
+                            ? new Backflow(previouslyAppliedBuild.Commit, previousFlow!.RepoSha)
+                            : new ForwardFlow(previouslyAppliedBuild.Commit, previousFlow!.VmrSha),
                         EnableRebase = false,
                         ForceUpdate = true,
                     },
@@ -498,6 +504,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         LastFlows previousFlows,
         string branchToCreate,
         string targetBranch,
+        (Codeflow PreviousFlow, LastFlows LastFlows)? lastRewind,
         CancellationToken cancellationToken);
 
     /// <summary>
