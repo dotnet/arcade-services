@@ -13,79 +13,34 @@ stages:
       environment: Staging
     pool: server
 
-- stage: Deploy
-  displayName: Deploy
+- stage: Migrations
+  displayName: Apply Database Migrations
   dependsOn:
   - Build
   - Approval
-
-  variables:
-  - name: currentDate
-    value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
-
-  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-    # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=202&path=Arcade-Services-Scenario-Tests
-    # Required for dotnet-bot-arcade-services-content-write
-    - group: Arcade-Services-Release
-    - name: PublishProfile
-      value: Prod
-    - name: Subscription
-      value: NetHelix
-    - name: BarConnectionString
-      value: "Data Source=tcp:maestro-prod.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Default; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=120; Encrypt=True; TrustServerCertificate=False; User Id=1093df3b-c754-4788-a4ae-ea33b86b82aa"
-    - name: BarMigrationSubscription
-      value: BarMigrationProd
-    - name: subscriptionId
-      value: fbd6122a-9ad3-42e4-976e-bccb82486856
-    - name: containerappName
-      value: product-construction-prod
-    - name: containerjobNames
-      value: sub-triggerer-twicedaily-prod,sub-triggerer-daily-prod,sub-triggerer-weekly-prod,sub-triggerer-everytwoweeks-prod,sub-triggerer-everymonth-prod,feed-cleaner-prod
-    - name: containerappEnvironmentName
-      value: product-construction-service-env-prod
-    - name: containerappWorkspaceName
-      value: product-construction-service-workspace-prod
-    - name: authServiceConnection
-      value: "Darc: Maestro Production"
-    - name: MaestroAppId
-      value: $(MaestroAppClientId)
-    - name: redisConnectionString
-      value: "product-construction-service-redis-prod.redis.cache.windows.net,ssl=true"
-
-  - ${{ else }}:
-    - name: PublishProfile
-      value: Int
-    - name: Subscription
-      value: NetHelixStaging
-    - name: BarConnectionString
-      value: "Data Source=tcp:maestro-int-server.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Default; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=120; Encrypt=True; TrustServerCertificate=False; User Id=736067df-a2c8-4c63-ad30-12db55c186cc"
-    - name: BarMigrationSubscription
-      value: BarMigrationInt
-    - name: subscriptionId
-      value: e6b5f9f5-0ca4-4351-879b-014d78400ec2
-    - name: containerappName
-      value: product-construction-int
-    - name: containerjobNames
-      value: sub-triggerer-twicedaily-int,sub-triggerer-daily-int,sub-triggerer-weekly-int,sub-triggerer-everytwoweeks-int,sub-triggerer-everymonth-int,feed-cleaner-int
-    - name: containerappEnvironmentName
-      value: product-construction-service-env-int
-    - name: containerappWorkspaceName
-      value: product-construction-service-workspace-int
-    - name: authServiceConnection
-      value: "Darc: Maestro Staging"
-    - name: MaestroAppId
-      value: $(MaestroStagingAppClientId)
-    - name: redisConnectionString
-      value: "product-construction-service-redis-int.redis.cache.windows.net:6380,ssl=true"
-
   jobs:
-  - job: updateDatabase
+  - job: UpdateDatabase
     displayName: Update BuildAssetRegistry database
+    pool:
+      name: NetCore1ESPool-Internal
+      demands: ImageOverride -equals 1es-windows-2022
+    variables:
+    - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+      - name: BarConnectionString
+        value: "Data Source=tcp:maestro-prod.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Default; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=120; Encrypt=True; TrustServerCertificate=False; User Id=1093df3b-c754-4788-a4ae-ea33b86b82aa"
+      - name: BarMigrationServiceConnection
+        value: BarMigrationProd
+
+    - ${{ else }}:
+      - name: BarConnectionString
+        value: "Data Source=tcp:maestro-int-server.database.windows.net,1433; Initial Catalog=BuildAssetRegistry; Authentication=Active Directory Default; Persist Security Info=False; MultipleActiveResultSets=True; Connect Timeout=120; Encrypt=True; TrustServerCertificate=False; User Id=736067df-a2c8-4c63-ad30-12db55c186cc"
+      - name: BarMigrationServiceConnection
+        value: BarMigrationInt
     steps:
     - task: AzureCLI@2
       displayName: Entity Framework update
       inputs:
-        azureSubscription: ${{ variables.BarMigrationSubscription }}
+        azureSubscription: ${{ variables.BarMigrationServiceConnection }}
         scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
@@ -99,10 +54,51 @@ stages:
       env:
         BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: ${{ variables.BarConnectionString }}
 
+- stage: Deploy
+  displayName: Deploy
+  dependsOn:
+  - Build
+  - Approval
+  - Migrations
+
+  variables:
+  - name: currentDate
+    value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
+
+  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+    # https://dev.azure.com/dnceng/internal/_library?itemType=VariableGroups&view=VariableGroupView&variableGroupId=202&path=Arcade-Services-Scenario-Tests
+    # Required for dotnet-bot-arcade-services-content-write
+    - group: Arcade-Services-Release
+    - name: subscriptionId
+      value: fbd6122a-9ad3-42e4-976e-bccb82486856
+    - name: containerappName
+      value: product-construction-prod
+    - name: containerjobNames
+      value: sub-triggerer-twicedaily-prod,sub-triggerer-daily-prod,sub-triggerer-weekly-prod,sub-triggerer-everytwoweeks-prod,sub-triggerer-everymonth-prod,feed-cleaner-prod
+    - name: containerappWorkspaceName
+      value: product-construction-service-workspace-prod
+    - name: authServiceConnection
+      value: "Darc: Maestro Production"
+    - name: redisConnectionString
+      value: "product-construction-service-redis-prod.redis.cache.windows.net,ssl=true"
+
+  - ${{ else }}:
+    - name: subscriptionId
+      value: e6b5f9f5-0ca4-4351-879b-014d78400ec2
+    - name: containerappName
+      value: product-construction-int
+    - name: containerjobNames
+      value: sub-triggerer-twicedaily-int,sub-triggerer-daily-int,sub-triggerer-weekly-int,sub-triggerer-everytwoweeks-int,sub-triggerer-everymonth-int,feed-cleaner-int
+    - name: containerappWorkspaceName
+      value: product-construction-service-workspace-int
+    - name: authServiceConnection
+      value: "Darc: Maestro Staging"
+    - name: redisConnectionString
+      value: "product-construction-service-redis-int.redis.cache.windows.net:6380,ssl=true"
+
+  jobs:
   - job: DeployPCS
     displayName: Deploy PCS
-    dependsOn:
-    - updateDatabase
     pool:
       name: NetCore1ESPool-Internal
       demands: ImageOverride -equals 1es-windows-2022

@@ -60,4 +60,10 @@ public interface IGitRepo
     /// <param name="prDescription">An optional description for the pull request.</param>
     /// <returns>The URL or identifier of the created pull request.</returns>
     Task<string> CreatePullRequestAsync(string repositoryUri, string headBranch, string baseBranch, string prTitle, string? prDescription = null);
+
+    Task<List<GitFile>> GetFilesContentAsync(string repositoryUri, string branch, string path);
+
+    Task DeleteFileAsync(string repositoryUri, string branch, string filePath, string commitMessage);
+
+    Task <List<string>> ListBlobsAsync(string repositoryUri, string branch, string path);
 }

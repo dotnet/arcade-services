@@ -46,6 +46,7 @@
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/Maestro.Data.Tests/Maestro.Data.Tests.csproj" />
+    <Project Path="test/Maestro.DataProviders.Tests/Maestro.DataProviders.Tests.csproj" />
     <Project Path="test/Maestro.MergePolicies.Tests/Maestro.MergePolicies.Tests.csproj" />
     <Project Path="test/Microsoft.DotNet.Darc.Tests/Microsoft.DotNet.Darc.Tests.csproj" />
     <Project Path="test/Microsoft.DotNet.DarcLib.Codeflow.Tests/Microsoft.DotNet.DarcLib.Codeflow.Tests.csproj" />

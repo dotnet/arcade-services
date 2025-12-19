@@ -10,6 +10,6 @@ namespace Microsoft.DotNet.MaestroConfiguration.Client;
 public interface IConfigurationRepositoryManager
 {
     Task AddSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml subscription);
-    Task DeleteSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, Guid subscriptionId);
+    Task DeleteSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml subscription);
     Task UpdateSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml updatedSubscription);
 }
