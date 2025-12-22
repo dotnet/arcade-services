@@ -23,7 +23,4 @@ internal class AddDefaultChannelCommandLineOptions : ConfigurationManagementComm
 
     [Option('q', "quiet", HelpText = "Do not prompt if the target repository/branch does not exist.")]
     public bool NoConfirmation { get; set; }
-
-    [Option("enabled", HelpText = "Whether default channel is enabled (active) or not", Default = true)]
-    public bool Enabled { get; set; }
 }

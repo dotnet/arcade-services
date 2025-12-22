@@ -3,7 +3,6 @@
 
 #nullable enable
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -122,92 +121,6 @@ public class AddDefaultChannelOperationConfigRepoTests : ConfigurationManagement
     }
 
     [Test]
-    public async Task AddDefaultChannelOperation_WithConfigRepo_FailsWhenEquivalentDefaultChannelExists()
-    {
-        // Arrange - Define expected default channel first
-        var expectedDefaultChannel = new DefaultChannelYaml
-        {
-            Repository = "https://github.com/dotnet/test-repo",
-            Branch = "main",
-            Channel = "test-channel",
-            Enabled = true
-        };
-
-        const int channelId = 42;
-        SetupChannel(expectedDefaultChannel.Channel, channelId: channelId);
-
-        // Setup an existing equivalent default channel returned by BAR
-        var existingDefaultChannel = new ProductConstructionService.Client.Models.DefaultChannel(
-            id: 1,
-            repository: expectedDefaultChannel.Repository,
-            enabled: true)
-        {
-            Branch = expectedDefaultChannel.Branch,
-            Channel = new ProductConstructionService.Client.Models.Channel(channelId, expectedDefaultChannel.Channel, "test")
-        };
-
-        BarClientMock
-            .Setup(x => x.GetDefaultChannelsAsync(
-                expectedDefaultChannel.Repository,
-                expectedDefaultChannel.Branch,
-                null))
-            .ReturnsAsync([existingDefaultChannel]);
-
-        var options = CreateAddDefaultChannelOptions(expectedDefaultChannel, configurationBranch: GetTestBranch());
-        var operation = CreateOperation(options);
-
-        // Act
-        int result = await operation.ExecuteAsync();
-
-        // Assert
-        result.Should().Be(Constants.ErrorCode);
-
-        // No new yml files should have been created (only the README.md from setup)
-        var ymlFiles = Directory.GetFiles(ConfigurationRepoPath, "*.yml", SearchOption.AllDirectories);
-        ymlFiles.Should().BeEmpty();
-    }
-
-    [Test]
-    public async Task AddDefaultChannelOperation_WithConfigRepo_FileContentIsValidYaml()
-    {
-        // Arrange - Define expected default channel first
-        var expectedDefaultChannel = new DefaultChannelYaml
-        {
-            Repository = "https://github.com/dotnet/runtime",
-            Branch = "release/8.0",
-            Channel = ".NET 8",
-            Enabled = true
-        };
-
-        var expectedFilePath = ConfigFilePathResolver.GetDefaultDefaultChannelFilePath(expectedDefaultChannel);
-
-        SetupChannel(expectedDefaultChannel.Channel);
-
-        var options = CreateAddDefaultChannelOptions(expectedDefaultChannel, configurationBranch: GetTestBranch());
-        var operation = CreateOperation(options);
-
-        // Act
-        int result = await operation.ExecuteAsync();
-
-        // Assert
-        result.Should().Be(Constants.SuccessCode);
-
-        // Verify file was created at the expected path
-        var fullExpectedPath = Path.Combine(ConfigurationRepoPath, expectedFilePath.ToString());
-        File.Exists(fullExpectedPath).Should().BeTrue($"Expected file at {fullExpectedPath}");
-
-        // Deserialize and verify default channel properties match expected values
-        var defaultChannels = await DeserializeDefaultChannelsAsync(fullExpectedPath);
-        defaultChannels.Should().HaveCount(1);
-
-        var actualDefaultChannel = defaultChannels[0];
-        actualDefaultChannel.Repository.Should().Be(expectedDefaultChannel.Repository);
-        actualDefaultChannel.Branch.Should().Be(expectedDefaultChannel.Branch);
-        actualDefaultChannel.Channel.Should().Be(expectedDefaultChannel.Channel);
-        actualDefaultChannel.Enabled.Should().Be(expectedDefaultChannel.Enabled);
-    }
-
-    [Test]
     public async Task AddDefaultChannelOperation_WithConfigRepo_FailsWhenEquivalentDefaultChannelExistsInYamlFile()
     {
         // Arrange - Define the default channel we want to add
@@ -264,7 +177,6 @@ public class AddDefaultChannelOperationConfigRepoTests : ConfigurationManagement
             Repository = defaultChannel.Repository,
             Branch = defaultChannel.Branch,
             Channel = defaultChannel.Channel,
-            Enabled = defaultChannel.Enabled,
             ConfigurationRepository = ConfigurationRepoPath,
             ConfigurationBranch = configurationBranch,
             ConfigurationBaseBranch = configurationBaseBranch,

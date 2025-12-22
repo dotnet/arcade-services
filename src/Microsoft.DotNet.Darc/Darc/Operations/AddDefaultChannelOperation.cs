@@ -62,7 +62,7 @@ internal class AddDefaultChannelOperation : Operation
                     Repository = _options.Repository,
                     Branch = _options.Branch,
                     Channel = _options.Channel,
-                    Enabled = _options.Enabled
+                    Enabled = true
                 };
 
                 await ValidateNoEquivalentDefaultChannel(defaultChannelYaml);
@@ -95,22 +95,17 @@ internal class AddDefaultChannelOperation : Operation
     /// </summary>
     private async Task ValidateNoEquivalentDefaultChannel(DefaultChannelYaml defaultChannel)
     {
-        // Check BAR for existing default channels with same repo and branch
-        var existingDefaultChannels = await _barClient.GetDefaultChannelsAsync(
-            repository: defaultChannel.Repository,
-            branch: defaultChannel.Branch,
-            channel: null);
+        var existingDefaultChannel = (await _barClient.GetDefaultChannelsAsync(
+                repository: defaultChannel.Repository,
+                branch: defaultChannel.Branch,
+                channel: defaultChannel.Channel))
+            .FirstOrDefault();
 
-        var equivalentInBar = existingDefaultChannels.FirstOrDefault(dc =>
-            string.Equals(dc.Repository, defaultChannel.Repository, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(dc.Branch, defaultChannel.Branch, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(dc.Channel.Name, defaultChannel.Channel, StringComparison.OrdinalIgnoreCase));
-
-        if (equivalentInBar != null)
+        if (existingDefaultChannel != null)
         {
             _logger.LogError("A default channel with the same repository, branch, and channel already exists (ID: {id})",
-                equivalentInBar.Id);
-            throw new MaestroConfiguration.Client.DuplicateConfigurationObjectException(null);
+                existingDefaultChannel.Id);
+            throw new ArgumentException($"A default channel with the repository {existingDefaultChannel.Repository}, branch {existingDefaultChannel.Branch} and channel {existingDefaultChannel.Channel} already exists");
         }
     }
 }
