@@ -10,31 +10,14 @@ namespace Microsoft.DotNet.MaestroConfiguration.Client;
 /// </summary>
 public class ConfigurationObjectNotFoundException : Exception
 {
-    /// <summary>
-    /// Gets the file path where the object was expected to be found.
-    /// </summary>
     public string FilePath { get; }
 
-    /// <summary>
-    /// Gets the repository URI where the search was performed.
-    /// </summary>
     public string RepositoryUri { get; }
 
-    /// <summary>
-    /// Gets the branch name where the search was performed.
-    /// </summary>
     public string BranchName { get; }
 
-    public ConfigurationObjectNotFoundException(string message, string filePath, string repositoryUri, string branchName)
-        : base(message)
-    {
-        FilePath = filePath;
-        RepositoryUri = repositoryUri;
-        BranchName = branchName;
-    }
-
-    public ConfigurationObjectNotFoundException(string message, string filePath, string repositoryUri, string branchName, Exception innerException)
-        : base(message, innerException)
+    public ConfigurationObjectNotFoundException(string filePath, string repositoryUri, string branchName)
+        : base()
     {
         FilePath = filePath;
         RepositoryUri = repositoryUri;

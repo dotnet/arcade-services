@@ -10,19 +10,10 @@ namespace Microsoft.DotNet.MaestroConfiguration.Client;
 /// </summary>
 public class DuplicateConfigurationObjectException : Exception
 {
-    /// <summary>
-    /// Gets the file path where the duplicate was found.
-    /// </summary>
     public string FilePath { get; }
 
-    public DuplicateConfigurationObjectException(string message, string filePath)
-        : base(message)
-    {
-        FilePath = filePath;
-    }
-
-    public DuplicateConfigurationObjectException(string message, string filePath, Exception innerException)
-        : base(message, innerException)
+    public DuplicateConfigurationObjectException(string filePath)
+        : base()
     {
         FilePath = filePath;
     }

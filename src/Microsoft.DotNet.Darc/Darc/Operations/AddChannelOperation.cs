@@ -64,25 +64,6 @@ internal class AddChannelOperation : Operation
                 await _configurationRepositoryManager.AddChannelAsync(
                     _options.ToConfigurationRepositoryOperationParameters(),
                     channelYaml);
-
-                // Output success message
-                switch (_options.OutputFormat)
-                {
-                    case DarcOutputType.json:
-                        Console.WriteLine(JsonConvert.SerializeObject(
-                            new
-                            {
-                                name = channelYaml.Name,
-                                classification = channelYaml.Classification
-                            },
-                            Formatting.Indented));
-                        break;
-                    case DarcOutputType.text:
-                        Console.WriteLine($"Successfully created new channel with name '{_options.Name}'.");
-                        break;
-                    default:
-                        throw new NotImplementedException($"Output type {_options.OutputFormat} not supported by add-channel");
-                }
             }
             else
             {
@@ -128,29 +109,12 @@ internal class AddChannelOperation : Operation
 
     private async Task ValidateNoEquivalentChannel(ChannelYaml channelYaml)
     {
-        try
+        // Check if a channel with the same name already exists in BAR
+        var existingChannels = await _barClient.GetChannelsAsync();
+        var existingChannel = existingChannels.FirstOrDefault(c => string.Equals(c.Name, channelYaml.Name, StringComparison.OrdinalIgnoreCase));
+        if (existingChannel != null)
         {
-            // Check if a channel with the same name already exists in BAR
-            var existingChannels = await _barClient.GetChannelsAsync();
-            var existingChannel = existingChannels.FirstOrDefault(c => string.Equals(c.Name, channelYaml.Name, StringComparison.OrdinalIgnoreCase));
-            if (existingChannel != null)
-            {
-                throw new ArgumentException($"A channel with name '{existingChannel.Name}' already exists.");
-            }
-        }
-        catch (RestApiException e)
-        {
-            var statusCode = e.Response?.Status;
-
-            // Authentication and authorization failures should fail the operation
-            if (statusCode == (int)HttpStatusCode.Unauthorized || statusCode == (int)HttpStatusCode.Forbidden)
-            {
-                _logger.LogError(e, "Failed to validate channel against BAR API due to authentication or authorization error.");
-                throw;
-            }
-
-            // If we can't access the BAR API for other reasons, we'll just proceed and let the configuration repository check for duplicates
-            _logger.LogWarning("Could not validate channel against BAR API. Will proceed with configuration repository validation.");
+            throw new ArgumentException($"A channel with name '{existingChannel.Name}' already exists.");
         }
     }
 }
