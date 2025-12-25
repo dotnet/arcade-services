@@ -11,6 +11,8 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.MaestroConfiguration.Client;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -23,17 +25,20 @@ internal class SetRepositoryMergePoliciesOperation : Operation
     private readonly SetRepositoryMergePoliciesCommandLineOptions _options;
     private readonly IBarApiClient _barClient;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly IConfigurationRepositoryManager _configurationRepositoryManager;
     private readonly ILogger<SetRepositoryMergePoliciesOperation> _logger;
 
     public SetRepositoryMergePoliciesOperation(
         SetRepositoryMergePoliciesCommandLineOptions options,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
+        IConfigurationRepositoryManager configurationRepositoryManager,
         ILogger<SetRepositoryMergePoliciesOperation> logger)
     {
         _options = options;
         _barClient = barClient;
         _remoteFactory = remoteFactory;
+        _configurationRepositoryManager = configurationRepositoryManager;
         _logger = logger;
     }
 
@@ -158,8 +163,34 @@ internal class SetRepositoryMergePoliciesOperation : Operation
 
         try
         {
-            await _barClient.SetRepositoryMergePoliciesAsync(repository, branch, mergePolicies);
-            Console.WriteLine($"Successfully updated merge policies for {repository}@{branch}.");
+            if (_options.ShouldUseConfigurationRepository)
+            {
+                BranchMergePoliciesYaml branchMergePoliciesYaml = new()
+                {
+                    Repository = repository,
+                    Branch = branch,
+                    MergePolicies = MergePolicyYaml.FromClientModels(mergePolicies)
+                };
+
+                var policies = await _barClient.GetRepositoryMergePoliciesAsync(repository, branch);
+                if (policies != null)
+                {
+                    await _configurationRepositoryManager.UpdateRepositoryMergePoliciesAsync(
+                        _options.ToConfigurationRepositoryOperationParameters(),
+                        branchMergePoliciesYaml);
+                }
+                else
+                {
+                    await _configurationRepositoryManager.AddRepositoryMergePoliciesAsync(
+                        _options.ToConfigurationRepositoryOperationParameters(),
+                        branchMergePoliciesYaml);
+                }
+            }
+            else
+            {
+                await _barClient.SetRepositoryMergePoliciesAsync(repository, branch, mergePolicies);
+                Console.WriteLine($"Successfully updated merge policies for {repository}@{branch}.");
+            }
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)

@@ -129,6 +129,57 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         }
     }
 
+    public async Task AddRepositoryMergePoliciesAsync(ConfigurationRepositoryOperationParameters parameters, BranchMergePoliciesYaml branchMergePolicies)
+    {
+        try
+        {
+            await PerformConfigurationRepositoryOperationInternal(
+                parameters,
+                branchMergePolicies,
+                (p, repo, branch, bmp) => AddModelInternalAsync<BranchMergePoliciesYaml, (string, string)>(
+                    p, repo, branch, bmp,
+                    ConfigFilePathResolver.GetDefaultRepositoryBranchFilePath,
+                    (existing, newBmp) => YamlModelUniqueKeys.GetBranchMergePoliciesKey(existing) == YamlModelUniqueKeys.GetBranchMergePoliciesKey(newBmp),
+                    new BranchMergePoliciesYamlComparer(),
+                    $"Add merge policies for {bmp.Repository}@{bmp.Branch}"),
+                $"Successfully added merge policies for {branchMergePolicies.Repository}@{branchMergePolicies.Branch} on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+        }
+        catch (DuplicateConfigurationObjectException ex)
+        {
+            _logger.LogError("Repository branch merge policies for {repo}@{branch} already exist in '{filePath}'.",
+                branchMergePolicies.Repository,
+                branchMergePolicies.Branch,
+                ex.FilePath);
+            throw;
+        }
+    }
+
+    public async Task UpdateRepositoryMergePoliciesAsync(ConfigurationRepositoryOperationParameters parameters, BranchMergePoliciesYaml branchMergePolicies)
+    {
+        try
+        {
+            await PerformConfigurationRepositoryOperationInternal(
+                parameters,
+                branchMergePolicies,
+                (p, repo, branch, bmp) => UpdateModelInternalAsync(
+                    p, repo, branch, bmp,
+                    YamlModelUniqueKeys.GetBranchMergePoliciesKey,
+                    new BranchMergePoliciesYamlComparer(),
+                    $"Update merge policies for {bmp.Repository}@{bmp.Branch}"),
+                $"Successfully updated merge policies for {branchMergePolicies.Repository}@{branchMergePolicies.Branch} on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+        }
+        catch (ConfigurationObjectNotFoundException ex)
+        {
+            _logger.LogError("No existing repository branch configuration found for {repo}@{branch} in file {filePath} of repo {configRepo} on branch {configBranch}",
+                branchMergePolicies.Repository,
+                branchMergePolicies.Branch,
+                ex.FilePath,
+                ex.RepositoryUri,
+                ex.BranchName);
+            throw;
+        }
+    }
+
     private async Task PerformConfigurationRepositoryOperationInternal<TModel>(
         ConfigurationRepositoryOperationParameters parameters,
         TModel yamlModel,
