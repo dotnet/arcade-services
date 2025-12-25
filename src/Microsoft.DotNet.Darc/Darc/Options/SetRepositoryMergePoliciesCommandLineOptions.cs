@@ -8,7 +8,7 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("set-repository-policies", HelpText = "Set merge policies for the specific repository and branch")]
-internal class SetRepositoryMergePoliciesCommandLineOptions : CommandLineOptions<SetRepositoryMergePoliciesOperation>
+internal class SetRepositoryMergePoliciesCommandLineOptions : ConfigurationManagementCommandLineOptions<SetRepositoryMergePoliciesOperation>
 {
     [Option("repo", HelpText = "Name of repository to set repository merge policies for.")]
     public string Repository { get; set; }
