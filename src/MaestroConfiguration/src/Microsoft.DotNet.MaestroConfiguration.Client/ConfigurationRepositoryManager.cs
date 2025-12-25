@@ -128,6 +128,30 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             throw;
         }
     }
+    public async Task DeleteChannelAsync(ConfigurationRepositoryOperationParameters parameters, ChannelYaml channel)
+    {
+        try
+        {
+            await PerformConfigurationRepositoryOperationInternal(
+                parameters,
+                channel,
+                (p, repo, branch, c) => DeleteModelInternalAsync(
+                    p, repo, branch, c,
+                    YamlModelUniqueKeys.GetChannelKey,
+                    new ChannelYamlComparer(),
+                    $"Delete channel '{c.Name}'"),
+                $"Successfully deleted channel '{channel.Name}' from branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+        }
+        catch (ConfigurationObjectNotFoundException ex)
+        {
+            _logger.LogError("No existing channel with name '{name}' found in file {filePath} of repo {repo} on branch {branch}",
+                channel.Name,
+                ex.FilePath,
+                ex.RepositoryUri,
+                ex.BranchName);
+            throw;
+        }
+    }
 
     private async Task PerformConfigurationRepositoryOperationInternal<TModel>(
         ConfigurationRepositoryOperationParameters parameters,
