@@ -129,6 +129,34 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         }
     }
 
+    public async Task AddDefaultChannelAsync(ConfigurationRepositoryOperationParameters parameters, DefaultChannelYaml defaultChannel)
+    {
+        try
+        {
+            await PerformConfigurationRepositoryOperationInternal(
+                parameters,
+                defaultChannel,
+                (p, repo, branch, dc) => AddModelInternalAsync<DefaultChannelYaml, (string, string, string)>(
+                    p, repo, branch, dc,
+                    ConfigFilePathResolver.GetDefaultDefaultChannelFilePath,
+                    (existing, newDc) => string.Equals(existing.Repository, newDc.Repository, StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(existing.Branch, newDc.Branch, StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(existing.Channel, newDc.Channel, StringComparison.OrdinalIgnoreCase),
+                    new DefaultChannelYamlComparer(),
+                    $"Add new default channel ({dc.Channel}) {dc.Repository} ({dc.Branch})"),
+                $"Successfully added default channel on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+        }
+        catch (DuplicateConfigurationObjectException ex)
+        {
+            _logger.LogError("Default channel with repository '{repo}', branch '{branch}', and channel '{channel}' already exists in '{filePath}'.",
+                defaultChannel.Repository,
+                defaultChannel.Branch,
+                defaultChannel.Channel,
+                ex.FilePath);
+            throw;
+        }
+    }
+
     private async Task PerformConfigurationRepositoryOperationInternal<TModel>(
         ConfigurationRepositoryOperationParameters parameters,
         TModel yamlModel,

@@ -7,7 +7,7 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options;
 
 [Verb("add-default-channel", HelpText = "Add a channel that a build of a branch+repository is automatically applied to.")]
-internal class AddDefaultChannelCommandLineOptions : CommandLineOptions<AddDefaultChannelOperation>
+internal class AddDefaultChannelCommandLineOptions : ConfigurationManagementCommandLineOptions<AddDefaultChannelOperation>
 {
     [Option("channel", Required = true, HelpText = "Name of channel that a build of 'branch' and 'repo' should be applied to.")]
     public string Channel { get; set; }
