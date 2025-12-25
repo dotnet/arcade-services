@@ -39,40 +39,23 @@ internal class DeleteChannelOperation : Operation
     /// <returns></returns>
     public override async Task<int> ExecuteAsync()
     {
+        Channel existingChannel = (await _barClient.GetChannelsAsync()).Where(channel => channel.Name.Equals(_options.Name, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+        if (existingChannel == null)
+        {
+            _logger.LogError($"Could not find channel with name '{_options.Name}'");
+            return Constants.ErrorCode;
+        }
+
         try
         {
             if (_options.ShouldUseConfigurationRepository)
             {
-                // Get the channel from the API to verify it exists
-                Channel existingChannel = (await _barClient.GetChannelsAsync())
-                    .Where(channel => channel.Name.Equals(_options.Name, StringComparison.OrdinalIgnoreCase))
-                    .FirstOrDefault();
-
-                if (existingChannel == null)
-                {
-                    _logger.LogError($"Could not find channel with name '{_options.Name}'");
-                    return Constants.ErrorCode;
-                }
-
-                var channelYaml = ChannelYaml.FromClientModel(existingChannel);
-
                 await _configurationRepositoryManager.DeleteChannelAsync(
                     _options.ToConfigurationRepositoryOperationParameters(),
-                    channelYaml);
-
-                Console.WriteLine($"Successfully deleted channel '{existingChannel.Name}'.");
+                    ChannelYaml.FromClientModel(existingChannel));
             }
             else
             {
-                // Get the ID of the channel with the specified name.
-                Channel existingChannel = (await _barClient.GetChannelsAsync()).Where(channel => channel.Name.Equals(_options.Name, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
-
-                if (existingChannel == null)
-                {
-                    _logger.LogError($"Could not find channel with name '{_options.Name}'");
-                    return Constants.ErrorCode;
-                }
-
                 await _barClient.DeleteChannelAsync(existingChannel.Id);
                 Console.WriteLine($"Successfully deleted channel '{existingChannel.Name}'.");
             }
