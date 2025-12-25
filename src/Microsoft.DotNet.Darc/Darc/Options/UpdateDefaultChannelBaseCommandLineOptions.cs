@@ -14,7 +14,7 @@ internal interface IUpdateDefaultChannelBaseCommandLineOptions : ICommandLineOpt
     string Repository { get; set; }
 }
 
-internal abstract class UpdateDefaultChannelBaseCommandLineOptions<T> : CommandLineOptions<T>, IUpdateDefaultChannelBaseCommandLineOptions where T : Operation
+internal abstract class UpdateDefaultChannelBaseCommandLineOptions<T> : ConfigurationManagementCommandLineOptions<T>, IUpdateDefaultChannelBaseCommandLineOptions where T : Operation
 {
     [Option("id", Default = -1, HelpText = "Existing default channel id")]
     public int Id { get; set; }
