@@ -17,15 +17,18 @@ public class WorkItemScope : IAsyncDisposable
     private readonly WorkItemProcessorRegistrations _processorRegistrations;
     private readonly Func<Task> _finalizer;
     private readonly IServiceScope _workItemScope;
+    private readonly DistributedLock _distributedLock;
 
     internal WorkItemScope(
         IOptions<WorkItemProcessorRegistrations> processorRegistrations,
         Func<Task> finalizer,
-        IServiceScope serviceScope)
+        IServiceScope serviceScope,
+        DistributedLock distributedLock)
     {
         _processorRegistrations = processorRegistrations.Value;
         _finalizer = finalizer;
         _workItemScope = serviceScope;
+        _distributedLock = distributedLock;
     }
 
     public async ValueTask DisposeAsync()
@@ -87,21 +90,15 @@ public class WorkItemScope : IAsyncDisposable
             var cache = _workItemScope.ServiceProvider.GetRequiredService<IRedisCacheFactory>();
             var stopwatch = Stopwatch.StartNew();
 
-            IAsyncDisposable? @lock;
-            do
-            {
-                await using (@lock = await cache.TryAcquireLock(mutexKey, TimeSpan.FromHours(1), cancellationToken))
-                {
-                    if (@lock != null)
-                    {
-                        stopwatch.Stop();
-                        logger.LogInformation("Acquired lock for {type} in {elapsedMilliseconds} ms",
-                            type,
-                            (int)stopwatch.ElapsedMilliseconds);
-                        await ProcessWorkItemAsync();
-                    }
-                }
-            } while (@lock == null);
+            await _distributedLock.RunWithLockAsync(mutexKey, async () =>
+            { 
+                stopwatch.Stop();
+                logger.LogInformation("Acquired lock for {type} in {elapsedMilliseconds} ms",
+                    type,
+                    (int)stopwatch.ElapsedMilliseconds);
+                await ProcessWorkItemAsync();
+            },
+            cancellationToken: cancellationToken);
         }
     }
 

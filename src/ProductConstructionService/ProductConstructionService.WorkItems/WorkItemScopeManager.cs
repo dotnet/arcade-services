@@ -3,6 +3,7 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using ProductConstructionService.Common;
 
 namespace ProductConstructionService.WorkItems;
 
@@ -11,17 +12,20 @@ public class WorkItemScopeManager
     private readonly IServiceProvider _serviceProvider;
     private readonly WorkItemProcessorState _state;
     private readonly int _pollingRateSeconds;
+    private readonly DistributedLock _distributedLock;
 
     private int _activeWorkItems = 0;
 
     public WorkItemScopeManager(
         IServiceProvider serviceProvider,
         WorkItemProcessorState state,
-        int pollingRateSeconds)
+        int pollingRateSeconds,
+        DistributedLock distributedLock)
     {
         _serviceProvider = serviceProvider;
         _state = state;
         _pollingRateSeconds = pollingRateSeconds;
+        _distributedLock = distributedLock;
     }
 
     /// <summary>
@@ -37,7 +41,8 @@ public class WorkItemScopeManager
         return new WorkItemScope(
             scope.ServiceProvider.GetRequiredService<IOptions<WorkItemProcessorRegistrations>>(),
             WorkItemFinishedAsync,
-            scope);
+            scope,
+            _distributedLock);
     }
 
     private async Task WorkItemFinishedAsync()

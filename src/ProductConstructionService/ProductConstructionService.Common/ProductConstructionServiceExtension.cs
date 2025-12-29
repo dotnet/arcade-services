@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data;
-using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
@@ -29,7 +28,6 @@ public static class ProductConstructionServiceExtension
         string databaseConnectionString = builder.Configuration.GetRequiredValue(DatabaseConnectionString)
             .Replace(SqlConnectionStringUserIdPlaceholder, managedIdentityClientId);
 
-        builder.Services.TryAddTransient<IBasicBarClient, SqlBarClient>();
         builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
         {
             // Do not log DB context initialization and command executed events
