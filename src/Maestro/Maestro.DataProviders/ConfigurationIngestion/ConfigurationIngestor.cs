@@ -19,12 +19,12 @@ namespace Maestro.DataProviders.ConfigurationIngestion;
 internal partial class ConfigurationIngestor(
         BuildAssetRegistryContext context,
         ISqlBarClient sqlBarClient,
-        DistributedLock distributedLock)
+        IDistributedLock distributedLock)
     : IConfigurationIngestor
 {
     private readonly BuildAssetRegistryContext _context = context;
     private readonly ISqlBarClient _sqlBarClient = sqlBarClient;
-    private readonly DistributedLock _distributedLock = distributedLock;
+    private readonly IDistributedLock _distributedLock = distributedLock;
 
     public async Task<ConfigurationUpdates> IngestConfigurationAsync(
         ConfigurationData configurationData,

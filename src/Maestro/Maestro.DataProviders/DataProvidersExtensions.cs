@@ -14,8 +14,6 @@ public static class DataProvidersExtensions
     {
         services.TryAddTransient<ISqlBarClient, SqlBarClient>();
         services.TryAddTransient<IConfigurationIngestor, ConfigurationIngestor>();
-        services.AddSingleton<IRedisCacheFactory, RedisCacheFactory>();
-        services.AddSingleton<IDistributedLock, DistributedLock>();
 
         return services;
     }

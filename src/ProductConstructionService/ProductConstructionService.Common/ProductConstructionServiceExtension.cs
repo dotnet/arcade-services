@@ -7,7 +7,6 @@ using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using StackExchange.Redis;
