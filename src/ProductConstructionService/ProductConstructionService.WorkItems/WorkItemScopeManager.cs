@@ -3,7 +3,6 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using ProductConstructionService.Common;
 
 namespace ProductConstructionService.WorkItems;
 
