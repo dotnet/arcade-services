@@ -12,7 +12,6 @@ namespace ProductConstructionService.DependencyFlow;
 internal class SubscriptionTriggerer : ISubscriptionTriggerer
 {
     private readonly IPullRequestUpdaterFactory _updaterFactory;
-    private readonly IRedisCacheFactory _cacheFactory;
     private readonly BuildAssetRegistryContext _context;
     private readonly ILogger<SubscriptionTriggerer> _logger;
     private readonly IDistributedLock _distributedLock;
@@ -21,14 +20,12 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
     public SubscriptionTriggerer(
         BuildAssetRegistryContext context,
         IPullRequestUpdaterFactory updaterFactory,
-        IRedisCacheFactory cacheFactory,
         ILogger<SubscriptionTriggerer> logger,
         IDistributedLock distributedLock,
         Guid subscriptionId)
     {
         _context = context;
         _updaterFactory = updaterFactory;
-        _cacheFactory = cacheFactory;
         _logger = logger;
         _subscriptionId = subscriptionId;
         _distributedLock = distributedLock;
