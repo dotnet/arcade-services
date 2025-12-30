@@ -3,7 +3,47 @@
 
 namespace ProductConstructionService.Common;
 
-public class DistributedLock
+
+public interface IDistributedLock
+{
+    /// <summary>
+    /// Executes the specified action within a distributed lock, and return the result.
+    /// </summary>
+    /// <typeparam name="T">The type of the result returned by the action.</typeparam>
+    /// <param name="key">The unique identifier for the lock.</param>
+    /// <param name="action">The asynchronous delegate to execute while the lock is held. Cannot be null.</param>
+    /// <param name="timeout">The maximum duration to wait to acquire the lock before the operation is aborted, or null to use the default
+    /// timeout.</param>
+    /// <param name="cancellationToken">A token to observe while waiting to acquire the lock and executing the action. The operation is canceled if the
+    /// token is signaled.</param>
+    /// <returns>A task that represents the asynchronous operation. The task completes when the action has finished executing
+    /// under the lock.</returns>
+    Task<T> ExecuteWithLockAsync<T>(
+        string key,
+        Func<Task<T>> action,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Executes the specified action within a distributed lock.
+    /// </summary>
+    /// <param name="key">The unique identifier for the lock. Actions using the same key are executed sequentially to ensure mutual
+    /// exclusion.</param>
+    /// <param name="action">The asynchronous delegate to execute while the lock is held. Cannot be null.</param>
+    /// <param name="timeout">The maximum duration to wait to acquire the lock before the operation is aborted, or null to use the default
+    /// timeout.</param>
+    /// <param name="cancellationToken">A token to observe while waiting to acquire the lock and executing the action. The operation is canceled if the
+    /// token is signaled.</param>
+    /// <returns>A task that represents the asynchronous operation. The task completes when the action has finished executing
+    /// under the lock.</returns>
+    Task RunWithLockAsync(
+        string key,
+        Func<Task> action,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default);
+}
+
+public class DistributedLock : IDistributedLock
 {
     private readonly IRedisCacheFactory _cacheFactory;
 
@@ -19,18 +59,24 @@ public class DistributedLock
         CancellationToken cancellationToken = default)
     {
         var effectiveTimeout = timeout ?? TimeSpan.FromHours(1);
-        IAsyncDisposable? @lock;
 
+        IAsyncDisposable? @lock;
         do
         {
-            await using (@lock = await _cacheFactory.TryAcquireLock(key, effectiveTimeout, cancellationToken: cancellationToken))
-            {
-                if (@lock == null)
-                {
-                    continue; // retry
-                }
+            @lock = await _cacheFactory.TryAcquireLock(
+                key,
+                effectiveTimeout,
+                cancellationToken: cancellationToken);
 
-                return await action(); // run the action and return its result
+            if (@lock == null)
+            {
+                // failed to acquire lock, retry
+                continue; 
+            }
+
+            await using (@lock)
+            {
+                return await action();
             }
         } while (@lock == null);
 
@@ -42,10 +88,10 @@ public class DistributedLock
     /// Non-generic overload for actions that do not return a value.
     /// </summary>
     public async Task RunWithLockAsync(
-    string key,
-    Func<Task> action,
-    TimeSpan? timeout = null,
-    CancellationToken cancellationToken = default)
+        string key,
+        Func<Task> action,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default)
     {
         await ExecuteWithLockAsync<object>(
             key,

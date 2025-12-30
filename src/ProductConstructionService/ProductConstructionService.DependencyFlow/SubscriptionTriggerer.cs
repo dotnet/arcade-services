@@ -15,7 +15,7 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
     private readonly IRedisCacheFactory _cacheFactory;
     private readonly BuildAssetRegistryContext _context;
     private readonly ILogger<SubscriptionTriggerer> _logger;
-    private readonly DistributedLock _distributedLock;
+    private readonly IDistributedLock _distributedLock;
     private readonly Guid _subscriptionId;
 
     public SubscriptionTriggerer(
@@ -23,7 +23,7 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
         IPullRequestUpdaterFactory updaterFactory,
         IRedisCacheFactory cacheFactory,
         ILogger<SubscriptionTriggerer> logger,
-        DistributedLock distributedLock,
+        IDistributedLock distributedLock,
         Guid subscriptionId)
     {
         _context = context;

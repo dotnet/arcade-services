@@ -30,13 +30,13 @@ internal partial class ConfigurationIngestor(
         ConfigurationData configurationData,
         string configurationNamespace)
     {
-        var configurationDataUpdate =
+        var ingestionResult =
             await _distributedLock.ExecuteWithLockAsync("ConfigurationIngestion", async () =>
             {
                 return await IngestConfigurationInternalAsync(configurationData, configurationNamespace);
             });
 
-        return configurationDataUpdate;
+        return ingestionResult;
     }
 
     public async Task<ConfigurationUpdates> IngestConfigurationInternalAsync(

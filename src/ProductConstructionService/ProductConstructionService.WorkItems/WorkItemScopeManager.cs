@@ -12,7 +12,7 @@ public class WorkItemScopeManager
     private readonly IServiceProvider _serviceProvider;
     private readonly WorkItemProcessorState _state;
     private readonly int _pollingRateSeconds;
-    private readonly DistributedLock _distributedLock;
+    private readonly IDistributedLock _distributedLock;
 
     private int _activeWorkItems = 0;
 
@@ -20,7 +20,7 @@ public class WorkItemScopeManager
         IServiceProvider serviceProvider,
         WorkItemProcessorState state,
         int pollingRateSeconds,
-        DistributedLock distributedLock)
+        IDistributedLock distributedLock)
     {
         _serviceProvider = serviceProvider;
         _state = state;
