@@ -12,20 +12,17 @@ public class WorkItemScopeManager
     private readonly IServiceProvider _serviceProvider;
     private readonly WorkItemProcessorState _state;
     private readonly int _pollingRateSeconds;
-    private readonly IDistributedLock _distributedLock;
 
     private int _activeWorkItems = 0;
 
     public WorkItemScopeManager(
         IServiceProvider serviceProvider,
         WorkItemProcessorState state,
-        int pollingRateSeconds,
-        IDistributedLock distributedLock)
+        int pollingRateSeconds)
     {
         _serviceProvider = serviceProvider;
         _state = state;
         _pollingRateSeconds = pollingRateSeconds;
-        _distributedLock = distributedLock;
     }
 
     /// <summary>
@@ -41,8 +38,7 @@ public class WorkItemScopeManager
         return new WorkItemScope(
             scope.ServiceProvider.GetRequiredService<IOptions<WorkItemProcessorRegistrations>>(),
             WorkItemFinishedAsync,
-            scope,
-            _distributedLock);
+            scope);
     }
 
     private async Task WorkItemFinishedAsync()

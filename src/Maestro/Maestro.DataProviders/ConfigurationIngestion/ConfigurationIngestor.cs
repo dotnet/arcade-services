@@ -39,7 +39,7 @@ internal partial class ConfigurationIngestor(
         return ingestionResult;
     }
 
-    public async Task<ConfigurationUpdates> IngestConfigurationInternalAsync(
+    private async Task<ConfigurationUpdates> IngestConfigurationInternalAsync(
         ConfigurationData configurationData,
         string configurationNamespace)
     {

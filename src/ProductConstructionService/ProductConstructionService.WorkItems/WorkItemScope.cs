@@ -17,18 +17,15 @@ public class WorkItemScope : IAsyncDisposable
     private readonly WorkItemProcessorRegistrations _processorRegistrations;
     private readonly Func<Task> _finalizer;
     private readonly IServiceScope _workItemScope;
-    private readonly IDistributedLock _distributedLock;
 
     internal WorkItemScope(
         IOptions<WorkItemProcessorRegistrations> processorRegistrations,
         Func<Task> finalizer,
-        IServiceScope serviceScope,
-        IDistributedLock distributedLock)
+        IServiceScope serviceScope)
     {
         _processorRegistrations = processorRegistrations.Value;
         _finalizer = finalizer;
         _workItemScope = serviceScope;
-        _distributedLock = distributedLock;
     }
 
     public async ValueTask DisposeAsync()
@@ -87,9 +84,10 @@ public class WorkItemScope : IAsyncDisposable
         else
         {
             // Otherwise, acquire a mutex and process it under the lock
+            var distributedLock = _workItemScope.ServiceProvider.GetRequiredService<IDistributedLock>();
             var stopwatch = Stopwatch.StartNew();
 
-            await _distributedLock.RunWithLockAsync(mutexKey, async () =>
+            await distributedLock.RunWithLockAsync(mutexKey, async () =>
             { 
                 stopwatch.Stop();
                 logger.LogInformation("Acquired lock for {type} in {elapsedMilliseconds} ms",

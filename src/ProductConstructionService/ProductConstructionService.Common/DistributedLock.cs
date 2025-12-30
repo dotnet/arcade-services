@@ -80,7 +80,7 @@ public class DistributedLock : IDistributedLock
             }
         } while (@lock == null);
 
-        // This is only reached if somehow @lock is never acquired, which theoretically can't happen
+        // This can never be reached, but the compiler doesn't know that so we need to throw.
         throw new InvalidOperationException("Failed to acquire lock.");
     }
 
