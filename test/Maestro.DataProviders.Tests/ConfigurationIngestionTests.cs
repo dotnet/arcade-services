@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using AwesomeAssertions;
+using ProductConstructionService.Common;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders.ConfigurationIngestion;
@@ -9,6 +10,7 @@ using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.Api.Tests;
+using Moq;
 
 namespace Maestro.DataProviders.Tests;
 
@@ -36,9 +38,22 @@ public class ConfigurationIngestorTests
 
         _context = new BuildAssetRegistryContext(options);
 
+        var distributedLockMock = new Mock<IDistributedLock>();
+
+        distributedLockMock
+            .Setup(dl => dl.ExecuteWithLockAsync<ConfigurationUpdates>(
+                It.IsAny<string>(),
+                It.IsAny<Func<Task<ConfigurationUpdates>>>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<string, Func<Task<ConfigurationUpdates>>, TimeSpan?, CancellationToken>(
+                async (_, action, _, _) => await action());
+
+
         var services = new ServiceCollection()
             .AddSingleton(_context)
             .AddSingleton<ISqlBarClient>(new SqlBarClient(_context, null))
+            .AddSingleton(distributedLockMock.Object)
             .AddConfigurationIngestion();
 
         _ingestor = services.BuildServiceProvider()

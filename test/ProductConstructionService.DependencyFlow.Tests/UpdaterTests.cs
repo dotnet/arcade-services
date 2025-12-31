@@ -51,6 +51,7 @@ internal abstract class UpdaterTests : TestsWithServices
         base.RegisterServices(services);
         services.AddDependencyFlowProcessors();
         services.AddSingleton<IRedisCacheFactory>(Cache);
+        services.AddSingleton<IDistributedLock, DistributedLock>();
         services.AddSingleton<IReminderManagerFactory>(Reminders);
         services.AddOperationTracking(_ => { });
         services.AddSingleton<ExponentialRetry>();
