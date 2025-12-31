@@ -41,12 +41,14 @@ public class ConfigurationIngestorTests
         var distributedLockMock = new Mock<IDistributedLock>();
 
         distributedLockMock
-            .Setup(dl => dl.ExecuteWithLockAsync<object>(
+            .Setup(dl => dl.ExecuteWithLockAsync<ConfigurationUpdates>(
                 It.IsAny<string>(),
-                It.IsAny<Func<Task<object>>>(),
+                It.IsAny<Func<Task<ConfigurationUpdates>>>(),
                 It.IsAny<TimeSpan?>(),
                 It.IsAny<CancellationToken>()))
-            .Returns<string, Func<Task<object>>, TimeSpan?, CancellationToken>(async (key, func, timeout, token) => await func());
+            .Returns<string, Func<Task<ConfigurationUpdates>>, TimeSpan?, CancellationToken>(
+                async (_, action, _, _) => await action());
+
 
         var services = new ServiceCollection()
             .AddSingleton(_context)
