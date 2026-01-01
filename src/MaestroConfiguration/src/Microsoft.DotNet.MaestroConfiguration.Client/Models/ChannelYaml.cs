@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using YamlDotNet.Serialization;
 
@@ -20,4 +21,21 @@ public class ChannelYaml : IYamlModel
         Name = channel.Name,
         Classification = channel.Classification,
     };
+
+    public string GetUniqueId() => Name;
+
+    public string GetDefaultFilePath() => $"channels/{Name}.yaml";
+
+    public int Compare(object? x, object? y)
+    {
+        if (x is not ChannelYaml left)
+        {
+            return 1;
+        }
+        if (y is not ChannelYaml right)
+        {
+            return -1;
+        }
+        return string.Compare(left.Name, right.Name, StringComparison.Ordinal);
+    }
 }
