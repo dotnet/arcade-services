@@ -177,9 +177,9 @@ public class SubscriptionsController : ControllerBase
     {
         var subscription = await _context.Subscriptions
             .Include(sub => sub.LastAppliedBuild)
-            .FirstOrDefaultAsync(sub => sub.Id == id);
+            .FirstOrDefaultAsync(sub => sub.Id == id && sub.SourceEnabled == true);
 
-        if (subscription == null || !subscription.SourceEnabled)
+        if (subscription == null)
         {
             return NotFound();
         }
@@ -190,12 +190,7 @@ public class SubscriptionsController : ControllerBase
             .Where(sub =>
                 sub.SourceRepository == subscription.TargetRepository ||
                 sub.TargetRepository == subscription.SourceRepository)
-            .FirstOrDefaultAsync();
-
-        if (oppositeDirectionSubscription?.SourceEnabled != true)
-        {
-            oppositeDirectionSubscription = null;
-        }
+            .FirstOrDefaultAsync(sub => sub.SourceEnabled == true);
 
         bool isForwardFlow = !string.IsNullOrEmpty(subscription.TargetDirectory);
 
@@ -208,7 +203,7 @@ public class SubscriptionsController : ControllerBase
             ? await _codeflowHistoryManager.FetchLatestCodeflowHistoryAsync(oppositeDirectionSubscription)
             : [];
 
-        var lastCommit = subscription.LastAppliedBuild.Commit;
+        var lastCommit = subscription.LastAppliedBuild?.Commit;
 
         bool resultIsOutdated = IsCodeflowHistoryOutdated(subscription, cachedFlows) ||
             IsCodeflowHistoryOutdated(oppositeDirectionSubscription, oppositeCachedFlows);

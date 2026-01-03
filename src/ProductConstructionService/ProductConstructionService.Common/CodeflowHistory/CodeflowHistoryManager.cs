@@ -30,10 +30,10 @@ public record CodeflowGraphCommit(
 
 public class CodeflowHistoryManager(
     IRemoteFactory remoteFactory,
-    IConnectionMultiplexer connection) : ICodeflowHistoryManager
+    ConfigurationOptions options) : ICodeflowHistoryManager
 {
     private readonly IRemoteFactory _remoteFactory = remoteFactory;
-    private readonly IConnectionMultiplexer _connection = connection;
+    private readonly IConnectionMultiplexer _connection = ConnectionMultiplexer.Connect(options);
 
     private static RedisKey GetCodeflowGraphCommitKey(string id) => $"CodeflowGraphCommit_{id}";
     private static RedisKey GetSortedSetKey(string id) => $"CodeflowHistory_{id}";
@@ -53,19 +53,22 @@ public class CodeflowHistoryManager(
         var cache = _connection.GetDatabase();
 
         var res = await cache.SortedSetRangeByRankWithScoresAsync(
-            key: subscriptionId,
+            key: GetSortedSetKey(subscriptionId),
             start: 0,
             stop: commitFetchCount - 1,
             order: Order.Descending);
 
         var commitKeys = res
-            .Select(e => new RedisKey(e.Element.ToString()))
+            .Select(e => new RedisKey(GetCodeflowGraphCommitKey(e.Element.ToString())))
             .ToArray();
 
         var commitValues = await cache.StringGetAsync(commitKeys);
 
         if (commitValues.Any(val => !val.HasValue))
+        {
+            await ClearCodeflowCacheAsync(subscriptionId);
             throw new InvalidOperationException($"Corrupted commit data encountered for subscription `{subscriptionId}`.");
+        }
 
         return [.. commitValues
             .Select(commit => JsonSerializer.Deserialize<CodeflowGraphCommit>(commit.ToString()))
@@ -119,11 +122,11 @@ public class CodeflowHistoryManager(
         {
             Codeflow? lastFlow = !string.IsNullOrEmpty(subscription.TargetDirectory)
                 ? await remote.GetLastIncomingForwardFlowAsync(
-                    subscription.TargetBranch,
+                    subscription.TargetRepository,
                     subscription.TargetDirectory,
                     current.Value.CommitSha)
                 : await remote.GetLastIncomingBackflowAsync(
-                    subscription.TargetBranch,
+                    subscription.TargetRepository,
                     current.Value.CommitSha);
 
             var target = current;
@@ -157,10 +160,11 @@ public class CodeflowHistoryManager(
         var cache = _connection.GetDatabase();
 
         var sortedSetEntries = commits
+            .Reverse()
             .Select(c => new SortedSetEntry(c.CommitSha, latestCachedCommitScore++))
             .ToArray();
 
-        await cache.SortedSetAddAsync(subscriptionId, sortedSetEntries);
+        await cache.SortedSetAddAsync(GetSortedSetKey(subscriptionId), sortedSetEntries);
 
         var commitGraphEntries = commits
             .Select(c => new KeyValuePair<RedisKey, RedisValue>(

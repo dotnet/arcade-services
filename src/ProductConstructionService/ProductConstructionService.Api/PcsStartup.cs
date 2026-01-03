@@ -38,6 +38,7 @@ using Octokit.Webhooks;
 using ProductConstructionService.Api.Controllers;
 using Azure.Core;
 using Microsoft.DotNet.DarcLib.Helpers;
+using ProductConstructionService.Common.CodeflowHistory;
 
 namespace ProductConstructionService.Api;
 
@@ -138,6 +139,7 @@ internal static class PcsStartup
         builder.Services.Configure<ExponentialRetryOptions>(_ => { });
         builder.Services.AddMemoryCache();
         builder.Services.AddSingleton(builder.Configuration);
+        builder.Services.AddScoped<ICodeflowHistoryManager, CodeflowHistoryManager>();
 
         // We do not use AddMemoryCache here. We use our own cache because we wish to
         // use a sized cache and some components, such as EFCore, do not implement their caching

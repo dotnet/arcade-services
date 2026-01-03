@@ -1540,11 +1540,12 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             {
                 var convertedCommit = new Commit(
                     c.Author?.Login,
-                    c.Commit.Sha,
+                    c.Sha,
                     c.Commit.Message);
 
                 allCommits.Add(convertedCommit);
-                if (convertedCommit.Sha.Equals(commitSha))
+
+                if (convertedCommit.Sha == commitSha)
                 {
                     break;
                 }
@@ -1578,11 +1579,12 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             return null;
         }
 
-        int lineNumber = content.Split(Environment.NewLine)
+        int lineNumber = content.Split('\n')
             .ToList()
-            .FindIndex(line => line.Contains(lastForwardFlowRepoSha));
+            .FindIndex(line => line.Contains(lastForwardFlowRepoSha))
+            + 1; // result is 0-indexed, but github lines are 1-indexed;
 
-
+        // todo: we can skip this call if the last flown SHA is one that we already cached
         string lastForwardFlowVmrSha = await BlameLineAsync(
             vmrUrl,
             commit,
@@ -1608,14 +1610,15 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             return null;
         }
 
-        // todo: we can skip this call if the last flown SHA is one that we already cached
         int lineNumber = content
-            .Split(Environment.NewLine)
+            .Split('\n')
             .ToList()
             .FindIndex(line =>
                 line.Contains(VersionDetailsParser.SourceElementName) &&
-                line.Contains(lastBackflowVmrSha));
+                line.Contains(lastBackflowVmrSha))
+            + 1; // result is 0-indexed, but github lines are 1-indexed
 
+        // todo: we can skip this call if the last flown SHA is one that we already cached
         string lastBackflowRepoSha = await BlameLineAsync(
             repoUrl,
             commit,
@@ -1629,41 +1632,54 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     {
         (string owner, string repo) = ParseRepoUri(repoUrl);
 
-        string query = $@"""
-        {{
-          repository(owner: {owner}, name: {repo}) {{
-            object(expression: ""{commitOrBranch}:{filePath}"") {{
-              ... on Blob {{
-                blame {{
-                  ranges {{
-                    startingLine
-                    endingLine
-                    commit {{ oid }}
+        var query = $@"
+            query {{
+              repository(owner: {JsonConvert.SerializeObject(owner)}, name: {JsonConvert.SerializeObject(repo)}) {{
+                object(expression: {JsonConvert.SerializeObject(commitOrBranch)}) {{
+                  ... on Commit {{
+                    blame(path: {JsonConvert.SerializeObject(filePath)}) {{
+                      ranges {{
+                        startingLine
+                        endingLine
+                        commit {{
+                          oid
+                        }}
+                      }}
+                    }}
                   }}
                 }}
               }}
-            }}
-          }}
-        }}""";
-        
-        var client = CreateHttpClient(repoUrl);
+            }}";
+
+        using var client = CreateHttpClient(repoUrl);
 
         var requestBody = new { query };
-        var content = new StringContent(JsonConvert.SerializeObject(requestBody, _serializerSettings));
+        var content = new StringContent(
+            JsonConvert.SerializeObject(requestBody, _serializerSettings),
+            Encoding.UTF8,
+            "application/json"
+        );
 
-        var response = await client.PostAsync("", content);
+        var response = await client.PostAsync("graphql", content);
         response.EnsureSuccessStatusCode();
 
         using var stream = await response.Content.ReadAsStreamAsync();
         using var doc = await JsonDocument.ParseAsync(stream);
 
-        var ranges = doc.RootElement
+        if (doc.RootElement.TryGetProperty("errors", out var errors))
+            throw new InvalidOperationException($"GitHub GraphQL error: {errors}");
+
+        var obj = doc.RootElement
             .GetProperty("data")
             .GetProperty("repository")
-            .GetProperty("object")
-            .GetProperty("blame")
-            .GetProperty("ranges")
-            .EnumerateArray();
+            .GetProperty("object");
+
+        if (obj.ValueKind == JsonValueKind.Null)
+            throw new InvalidOperationException($"Commit or branch '{commitOrBranch}' not found.");
+
+        // The blame field comes directly from the Commit node
+        var blame = obj.GetProperty("blame");
+        var ranges = blame.GetProperty("ranges").EnumerateArray();
 
         foreach (var range in ranges)
         {
@@ -1672,17 +1688,20 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
 
             if (lineNumber >= start && lineNumber <= end)
             {
-                return range.GetProperty("commit").GetProperty("oid").GetString()!;
+                var oid = range.GetProperty("commit").GetProperty("oid").GetString();
+                return oid ?? throw new InvalidOperationException("Commit OID was null.");
             }
         }
 
         throw new InvalidOperationException($"Line {lineNumber} not found in blame data.");
     }
 
+
+
     private async Task<string> GetFileContentAtCommit(string repoUrl, string commit, string filePath)
     {
         (string owner, string repo) = ParseRepoUri(repoUrl);
         var file = await GetClient(repoUrl).Repository.Content.GetAllContentsByRef(owner, repo, filePath, commit);
-        return Encoding.UTF8.GetString(Convert.FromBase64String(file[0].Content));
+        return file[0].Content;
     }
 }
