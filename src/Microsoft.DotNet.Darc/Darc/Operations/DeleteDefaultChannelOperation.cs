@@ -48,9 +48,23 @@ internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation
             {
                 var defaultChannelYaml = DefaultChannelYaml.FromClientModel(resolvedChannel);
 
-                await _configurationRepositoryManager.DeleteDefaultChannelAsync(
-                    _options.ToConfigurationRepositoryOperationParameters(),
-                    defaultChannelYaml);
+                try
+                {
+                    await _configurationRepositoryManager.DeleteDefaultChannelAsync(
+                                _options.ToConfigurationRepositoryOperationParameters(),
+                                defaultChannelYaml);
+                }
+                catch (ConfigurationObjectNotFoundException ex)
+                {
+                    _logger.LogError("No existing default channel for {repo} ({branch}) => {channel} found in file {filePath} of repo {configRepo} on branch {configBranch}",
+                        defaultChannelYaml.Repository,
+                        defaultChannelYaml.Branch,
+                        defaultChannelYaml.Channel,
+                        ex.FilePath,
+                        ex.RepositoryUri,
+                        ex.BranchName);
+                    return Constants.ErrorCode;
+                }
             }
             else
             {
