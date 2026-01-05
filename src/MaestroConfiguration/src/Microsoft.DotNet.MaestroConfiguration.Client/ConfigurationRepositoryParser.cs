@@ -16,7 +16,8 @@ public interface IConfigurationRepositoryParser
 
 public class ConfigurationRepositoryParser : IConfigurationRepositoryParser
 {
-    IGitRepoFactory _gitRepoFactory;
+    private readonly IGitRepoFactory _gitRepoFactory;
+
     public ConfigurationRepositoryParser(IGitRepoFactory gitRepoFactory)
     {
         _gitRepoFactory = gitRepoFactory;
@@ -34,15 +35,15 @@ public class ConfigurationRepositoryParser : IConfigurationRepositoryParser
 
         var channels = (await gitRepo.GetFilesContentAsync(repoUri, branch, ConfigFilePathResolver.ChannelFolderPath))
             .SelectMany(f => deserializer.Deserialize<List<ChannelYaml>>(f.Content) ?? [])
-            .ToList() ?? [];
+            .ToList();
 
         var defaultChannels = (await gitRepo.GetFilesContentAsync(repoUri, branch, ConfigFilePathResolver.DefaultChannelFolderPath))
             .SelectMany(f => deserializer.Deserialize<List<DefaultChannelYaml>>(f.Content) ?? [])
-            .ToList() ?? [];
+            .ToList();
 
         var branchMergePolicies = (await gitRepo.GetFilesContentAsync(repoUri, branch, ConfigFilePathResolver.RepositoryBranchFolderPath))
             .SelectMany(f => deserializer.Deserialize<List<BranchMergePoliciesYaml>>(f.Content) ?? [])
-            .ToList() ?? [];
+            .ToList();
 
         return new YamlConfiguration(
             subscriptions,

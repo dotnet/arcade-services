@@ -17,7 +17,6 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
     {
         Task<ConfigurationUpdates> IngestNamespaceAsync(
             string namespaceName,
-            bool saveChanges,
             ClientYamlConfiguration body = default,
             CancellationToken cancellationToken = default
         );
@@ -45,7 +44,6 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         public async Task<ConfigurationUpdates> IngestNamespaceAsync(
             string namespaceName,
-            bool saveChanges,
             ClientYamlConfiguration body = default,
             CancellationToken cancellationToken = default
         )
@@ -68,10 +66,6 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             if (!string.IsNullOrEmpty(namespaceName))
             {
                 _url.AppendQuery("namespaceName", Client.Serialize(namespaceName));
-            }
-            if (saveChanges != default(bool))
-            {
-                _url.AppendQuery("saveChanges", Client.Serialize(saveChanges));
             }
             _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 

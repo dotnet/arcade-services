@@ -20,27 +20,30 @@ public class IngestionController : Controller
 {
     private readonly IConfigurationIngestor _configurationIngestor;
     private readonly ISqlBarClient _sqlBarClient;
+    private readonly ILogger<IngestionController> _logger;
 
     private const string ProductionNamespaceName = "production";
 
-    public IngestionController(IConfigurationIngestor configurationIngestor, ISqlBarClient sqlBarClient)
+    public IngestionController(IConfigurationIngestor configurationIngestor, ISqlBarClient sqlBarClient, ILogger<IngestionController> logger)
     {
         _configurationIngestor = configurationIngestor;
         _sqlBarClient = sqlBarClient;
+        _logger = logger;
     }
 
     [HttpPost(Name = "ingest")]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(ConfigurationUpdates), Description = "Makes PCS ingest a namespace configuration")]
     public async Task<IActionResult> IngestNamespace(
-        string namespaceName,
+        [FromQuery] string namespaceName,
         [FromBody] YamlConfiguration yamlConfiguration,
-        bool saveChanges = true)
+        [FromBody] bool saveChanges = true)
     {
         if (namespaceName == ProductionNamespaceName)
         {
             saveChanges = false;
         }
 
+        _logger.LogInformation("Ingesting configuration for namespace {NamespaceName} (saveChanges={SaveChanges})", namespaceName, saveChanges);
         var updates = await _configurationIngestor.IngestConfigurationAsync(
             new ConfigurationData(
                 yamlConfiguration.Subscriptions,
@@ -61,6 +64,7 @@ public class IngestionController : Controller
         {
             saveChanges = false;
         }
+        _logger.LogInformation("Deleting namespace {NamespaceName} (saveChanges={SaveChanges})", namespaceName, saveChanges);
         await _sqlBarClient.DeleteNamespaceAsync(namespaceName, saveChanges);
 
         return Ok(true);
