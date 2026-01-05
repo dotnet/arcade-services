@@ -347,6 +347,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                                 _options.ToConfigurationRepositoryOperationParameters(),
                                 subscriptionYaml);
                 }
+                // TODO drop to the "global try-catch" when configuration repo is the only behavior
                 catch (MaestroConfiguration.Client.DuplicateConfigurationObjectException ex)
                 {
                     _logger.LogError("Subscription {id} with equivalent parameters already exists in '{filePath}'.",

@@ -350,6 +350,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                                 _options.ToConfigurationRepositoryOperationParameters(),
                                 updatedSubscriptionYaml);
                 }
+                // TODO drop to the "global try-catch" when configuration repo is the only behavior
                 catch (MaestroConfiguration.Client.ConfigurationObjectNotFoundException ex)
                 {
                     _logger.LogError("No existing subscription with id {id} found in file {filePath} of repo {repo} on branch {branch}",

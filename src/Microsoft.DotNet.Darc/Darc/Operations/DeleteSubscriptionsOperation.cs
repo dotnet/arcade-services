@@ -85,6 +85,7 @@ internal class DeleteSubscriptionsOperation : Operation
                                         _options.ToConfigurationRepositoryOperationParameters(),
                                         SubscriptionYaml.FromClientModel(subscription));
                     }
+                    // TODO drop to the "global try-catch" when configuration repo is the only behavior
                     catch (ConfigurationObjectNotFoundException ex)
                     {
                         _logger.LogError("No existing subscription with id {id} found in file {filePath} of repo {repo} on branch {branch}",
