@@ -175,15 +175,41 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                 var policies = await _barClient.GetRepositoryMergePoliciesAsync(repository, branch);
                 if (policies != null)
                 {
-                    await _configurationRepositoryManager.UpdateRepositoryMergePoliciesAsync(
-                        _options.ToConfigurationRepositoryOperationParameters(),
-                        branchMergePoliciesYaml);
+                    try
+                    {
+                        await _configurationRepositoryManager.UpdateRepositoryMergePoliciesAsync(
+                            _options.ToConfigurationRepositoryOperationParameters(),
+                            branchMergePoliciesYaml);
+                    }
+                    // TODO drop to the "global try-catch" when configuration repo is the only behavior
+                    catch (ConfigurationObjectNotFoundException ex)
+                    {
+                        _logger.LogError("No existing repository branch configuration found for {repo}@{branch} in file {filePath} of repo {configRepo} on branch {configBranch}",
+                            branchMergePoliciesYaml.Repository,
+                            branchMergePoliciesYaml.Branch,
+                            ex.FilePath,
+                            ex.RepositoryUri,
+                            ex.BranchName);
+                        return Constants.ErrorCode;
+                    }
                 }
                 else
                 {
-                    await _configurationRepositoryManager.AddRepositoryMergePoliciesAsync(
-                        _options.ToConfigurationRepositoryOperationParameters(),
-                        branchMergePoliciesYaml);
+                    try
+                    {
+                        await _configurationRepositoryManager.AddRepositoryMergePoliciesAsync(
+                                        _options.ToConfigurationRepositoryOperationParameters(),
+                                        branchMergePoliciesYaml);
+                    }
+                    // TODO drop to the "global try-catch" when configuration repo is the only behavior
+                    catch (DuplicateConfigurationObjectException ex)
+                    {
+                        _logger.LogError("Repository branch merge policies for {repo}@{branch} already exist in '{filePath}'.",
+                            branchMergePoliciesYaml.Repository,
+                            branchMergePoliciesYaml.Branch,
+                            ex.FilePath);
+                        return Constants.ErrorCode;
+                    }
                 }
             }
             else

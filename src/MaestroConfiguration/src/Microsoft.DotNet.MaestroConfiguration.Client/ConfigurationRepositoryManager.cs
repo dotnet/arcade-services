@@ -38,10 +38,10 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         => await PerformConfigurationRepositoryOperationInternal(
             parameters,
             subscription,
-            (p, repo, branch, s) => AddModelInternalAsync<SubscriptionYaml, Guid>(
+            (p, repo, branch, s) => AddModelInternalAsync(
                 p, repo, branch, s,
                 ConfigFilePathResolver.GetDefaultSubscriptionFilePath,
-                (existing, newSub) => existing.IsEquivalentTo(newSub),
+                YamlModelUniqueKeys.GetSubscriptionEquivalencyKey,
                 new SubscriptionYamlComparer(),
                 $"Add new subscription ({s.Channel}) {s.SourceRepository} => {s.TargetRepository} ({s.TargetBranch})"),
             $"Successfully added subscription with id '{subscription.Id}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
@@ -72,10 +72,10 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         => await PerformConfigurationRepositoryOperationInternal(
             parameters,
             channel,
-            (p, repo, branch, c) => AddModelInternalAsync<ChannelYaml, string>(
+            (p, repo, branch, c) => AddModelInternalAsync(
                 p, repo, branch, c,
                 ConfigFilePathResolver.GetDefaultChannelFilePath,
-                (existing, newChannel) => string.Equals(existing.Name, newChannel.Name, StringComparison.OrdinalIgnoreCase),
+                YamlModelUniqueKeys.GetChannelKey,
                 new ChannelYamlComparer(),
                 $"Add new channel '{c.Name}'"),
             $"Successfully added channel '{channel.Name}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
@@ -84,66 +84,36 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         => await PerformConfigurationRepositoryOperationInternal(
             parameters,
             defaultChannel,
-            (p, repo, branch, dc) => AddModelInternalAsync<DefaultChannelYaml, (string, string, string)>(
+            (p, repo, branch, dc) => AddModelInternalAsync(
                 p, repo, branch, dc,
                 ConfigFilePathResolver.GetDefaultDefaultChannelFilePath,
-                (existing, newDc) => string.Equals(existing.Repository, newDc.Repository, StringComparison.OrdinalIgnoreCase)
-                    && string.Equals(existing.Branch, newDc.Branch, StringComparison.OrdinalIgnoreCase)
-                    && string.Equals(existing.Channel, newDc.Channel, StringComparison.OrdinalIgnoreCase),
+                YamlModelUniqueKeys.GetDefaultChannelKey,
                 new DefaultChannelYamlComparer(),
                 $"Add new default channel ({dc.Channel}) {dc.Repository} ({dc.Branch})"),
             $"Successfully added default channel on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
 
     public async Task AddRepositoryMergePoliciesAsync(ConfigurationRepositoryOperationParameters parameters, BranchMergePoliciesYaml branchMergePolicies)
-    {
-        try
-        {
-            await PerformConfigurationRepositoryOperationInternal(
-                parameters,
-                branchMergePolicies,
-                (p, repo, branch, bmp) => AddModelInternalAsync(
-                    p, repo, branch, bmp,
-                    ConfigFilePathResolver.GetDefaultRepositoryBranchFilePath,
-                    YamlModelUniqueKeys.GetBranchMergePoliciesKey,
-                    new BranchMergePoliciesYamlComparer(),
-                    $"Add merge policies for {bmp.Repository}@{bmp.Branch}"),
-                $"Successfully added merge policies for {branchMergePolicies.Repository}@{branchMergePolicies.Branch} on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
-        }
-        catch (DuplicateConfigurationObjectException ex)
-        {
-            _logger.LogError("Repository branch merge policies for {repo}@{branch} already exist in '{filePath}'.",
-                branchMergePolicies.Repository,
-                branchMergePolicies.Branch,
-                ex.FilePath);
-            throw;
-        }
-    }
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            branchMergePolicies,
+            (p, repo, branch, bmp) => AddModelInternalAsync(
+                p, repo, branch, bmp,
+                ConfigFilePathResolver.GetDefaultRepositoryBranchFilePath,
+                YamlModelUniqueKeys.GetBranchMergePoliciesKey,
+                new BranchMergePoliciesYamlComparer(),
+                $"Add merge policies for {bmp.Repository}@{bmp.Branch}"),
+            $"Successfully added merge policies for {branchMergePolicies.Repository}@{branchMergePolicies.Branch} on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
 
     public async Task UpdateRepositoryMergePoliciesAsync(ConfigurationRepositoryOperationParameters parameters, BranchMergePoliciesYaml branchMergePolicies)
-    {
-        try
-        {
-            await PerformConfigurationRepositoryOperationInternal(
-                parameters,
-                branchMergePolicies,
-                (p, repo, branch, bmp) => UpdateModelInternalAsync(
-                    p, repo, branch, bmp,
-                    YamlModelUniqueKeys.GetBranchMergePoliciesKey,
-                    new BranchMergePoliciesYamlComparer(),
-                    $"Update merge policies for {bmp.Repository}@{bmp.Branch}"),
-                $"Successfully updated merge policies for {branchMergePolicies.Repository}@{branchMergePolicies.Branch} on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
-        }
-        catch (ConfigurationObjectNotFoundException ex)
-        {
-            _logger.LogError("No existing repository branch configuration found for {repo}@{branch} in file {filePath} of repo {configRepo} on branch {configBranch}",
-                branchMergePolicies.Repository,
-                branchMergePolicies.Branch,
-                ex.FilePath,
-                ex.RepositoryUri,
-                ex.BranchName);
-            throw;
-        }
-    }
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            branchMergePolicies,
+            (p, repo, branch, bmp) => UpdateModelInternalAsync(
+                p, repo, branch, bmp,
+                YamlModelUniqueKeys.GetBranchMergePoliciesKey,
+                new BranchMergePoliciesYamlComparer(),
+                $"Update merge policies for {bmp.Repository}@{bmp.Branch}"),
+            $"Successfully updated merge policies for {branchMergePolicies.Repository}@{branchMergePolicies.Branch} on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
 
     private async Task PerformConfigurationRepositoryOperationInternal<TModel>(
         ConfigurationRepositoryOperationParameters parameters,
