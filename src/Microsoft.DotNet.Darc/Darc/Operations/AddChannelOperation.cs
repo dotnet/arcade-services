@@ -61,9 +61,20 @@ internal class AddChannelOperation : Operation
 
                 await ValidateNoEquivalentChannel(channelYaml);
 
-                await _configurationRepositoryManager.AddChannelAsync(
-                    _options.ToConfigurationRepositoryOperationParameters(),
-                    channelYaml);
+                try
+                {
+                    await _configurationRepositoryManager.AddChannelAsync(
+                                _options.ToConfigurationRepositoryOperationParameters(),
+                                channelYaml);
+                }
+                // TODO drop to the "global try-catch" when configuration repo is the only behavior
+                catch (DuplicateConfigurationObjectException e)
+                {
+                    _logger.LogError("Channel with name '{name}' already exists in '{filePath}'.",
+                       channelYaml.Name,
+                       e.FilePath);
+                    return Constants.ErrorCode;
+                }
             }
             else
             {
