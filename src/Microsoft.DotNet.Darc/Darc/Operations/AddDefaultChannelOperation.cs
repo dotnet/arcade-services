@@ -67,9 +67,22 @@ internal class AddDefaultChannelOperation : Operation
 
                 await ValidateNoEquivalentDefaultChannel(defaultChannelYaml);
 
-                await _configurationRepositoryManager.AddDefaultChannelAsync(
-                    _options.ToConfigurationRepositoryOperationParameters(),
-                    defaultChannelYaml);
+                try
+                {
+                    await _configurationRepositoryManager.AddDefaultChannelAsync(
+                                _options.ToConfigurationRepositoryOperationParameters(),
+                                defaultChannelYaml);
+                }
+                // TODO drop to the "global try-catch" when configuration repo is the only behavior
+                catch (MaestroConfiguration.Client.DuplicateConfigurationObjectException e)
+                {
+                    _logger.LogError("Default channel with repository '{repo}', branch '{branch}', and channel '{channel}' already exists in '{filePath}'.",
+                        defaultChannelYaml.Repository,
+                        defaultChannelYaml.Branch,
+                        defaultChannelYaml.Channel,
+                        e.FilePath);
+                    return Constants.ErrorCode;
+                }
             }
             else
             {

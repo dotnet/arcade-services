@@ -79,9 +79,21 @@ internal class DeleteSubscriptionsOperation : Operation
             {
                 foreach (Subscription subscription in subscriptionsToDelete)
                 {
-                    await _configRepositoryManager.DeleteSubscriptionAsync(
-                        _options.ToConfigurationRepositoryOperationParameters(),
-                        SubscriptionYaml.FromClientModel(subscription));
+                    try
+                    {
+                        await _configRepositoryManager.DeleteSubscriptionAsync(
+                                        _options.ToConfigurationRepositoryOperationParameters(),
+                                        SubscriptionYaml.FromClientModel(subscription));
+                    }
+                    catch (ConfigurationObjectNotFoundException ex)
+                    {
+                        _logger.LogError("No existing subscription with id {id} found in file {filePath} of repo {repo} on branch {branch}",
+                            subscription.Id,
+                            ex.FilePath,
+                            ex.RepositoryUri,
+                            ex.BranchName);
+                        return Constants.ErrorCode;
+                    }
                 }
             }
             else
