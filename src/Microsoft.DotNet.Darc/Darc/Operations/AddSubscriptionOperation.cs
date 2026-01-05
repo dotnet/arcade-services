@@ -341,9 +341,20 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
 
                 await ValidateNoEquivalentSubscription(subscriptionYaml);
 
-                await _configurationRepositoryManager.AddSubscriptionAsync(
-                    _options.ToConfigurationRepositoryOperationParameters(),
-                    subscriptionYaml);
+                try
+                {
+                    await _configurationRepositoryManager.AddSubscriptionAsync(
+                                _options.ToConfigurationRepositoryOperationParameters(),
+                                subscriptionYaml);
+                }
+                // TODO drop to the "global try-catch" when configuration repo is the only behavior
+                catch (MaestroConfiguration.Client.DuplicateConfigurationObjectException ex)
+                {
+                    _logger.LogError("Subscription {id} with equivalent parameters already exists in '{filePath}'.",
+                        subscriptionYaml.Id,
+                        ex.FilePath);
+                    return Constants.ErrorCode;
+                }
             }
             else
             {

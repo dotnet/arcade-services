@@ -13,7 +13,7 @@ public class DuplicateConfigurationObjectException : Exception
     public string FilePath { get; }
 
     public DuplicateConfigurationObjectException(string filePath)
-        : base()
+        : base($"Configuration object with equivalent parameters already exists in '{filePath}'.")
     {
         FilePath = filePath;
     }
