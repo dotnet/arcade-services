@@ -17,7 +17,7 @@ public class ConfigurationObjectNotFoundException : Exception
     public string BranchName { get; }
 
     public ConfigurationObjectNotFoundException(string filePath, string repositoryUri, string branchName)
-        : base()
+        : base($"Configuration object not found in '{filePath}' (Repository: {repositoryUri}, Branch: {branchName}).")
     {
         FilePath = filePath;
         RepositoryUri = repositoryUri;
