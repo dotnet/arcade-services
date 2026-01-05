@@ -41,10 +41,10 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             await PerformConfigurationRepositoryOperationInternal(
                 parameters,
                 subscription,
-                (p, repo, branch, s) => AddModelInternalAsync<SubscriptionYaml, Guid>(
+                (p, repo, branch, s) => AddModelInternalAsync(
                     p, repo, branch, s,
                     ConfigFilePathResolver.GetDefaultSubscriptionFilePath,
-                    (existing, newSub) => existing.IsEquivalentTo(newSub),
+                    YamlModelUniqueKeys.GetSubscriptionEquivalencyKey,
                     new SubscriptionYamlComparer(),
                     $"Add new subscription ({s.Channel}) {s.SourceRepository} => {s.TargetRepository} ({s.TargetBranch})"),
                 $"Successfully added subscription with id '{subscription.Id}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
@@ -112,10 +112,10 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             await PerformConfigurationRepositoryOperationInternal(
                 parameters,
                 channel,
-                (p, repo, branch, c) => AddModelInternalAsync<ChannelYaml, string>(
+                (p, repo, branch, c) => AddModelInternalAsync(
                     p, repo, branch, c,
                     ConfigFilePathResolver.GetDefaultChannelFilePath,
-                    (existing, newChannel) => string.Equals(existing.Name, newChannel.Name, StringComparison.OrdinalIgnoreCase),
+                    YamlModelUniqueKeys.GetChannelKey,
                     new ChannelYamlComparer(),
                     $"Add new channel '{c.Name}'"),
                 $"Successfully added channel '{channel.Name}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
@@ -136,10 +136,10 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             await PerformConfigurationRepositoryOperationInternal(
                 parameters,
                 branchMergePolicies,
-                (p, repo, branch, bmp) => AddModelInternalAsync<BranchMergePoliciesYaml, (string, string)>(
+                (p, repo, branch, bmp) => AddModelInternalAsync(
                     p, repo, branch, bmp,
                     ConfigFilePathResolver.GetDefaultRepositoryBranchFilePath,
-                    (existing, newBmp) => YamlModelUniqueKeys.GetBranchMergePoliciesKey(existing) == YamlModelUniqueKeys.GetBranchMergePoliciesKey(newBmp),
+                    YamlModelUniqueKeys.GetBranchMergePoliciesKey,
                     new BranchMergePoliciesYamlComparer(),
                     $"Add merge policies for {bmp.Repository}@{bmp.Branch}"),
                 $"Successfully added merge policies for {branchMergePolicies.Repository}@{branchMergePolicies.Branch} on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
@@ -218,7 +218,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         string workingBranch,
         TModel yamlModel,
         Func<TModel, string> getDefaultFilePath,
-        Func<TModel, TModel, bool> isEquivalent,
+        Func<TModel, TKey> getModelId,
         IComparer<TModel> modelComparer,
         string commitMessage)
         where TModel : IYamlModel
@@ -235,7 +235,8 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             workingBranch,
             filePath);
 
-        var equivalentInFile = yamlModelsInFile.FirstOrDefault(m => isEquivalent(m, yamlModel));
+        var yamlModelKey = getModelId(yamlModel);
+        var equivalentInFile = yamlModelsInFile.FirstOrDefault(m => getModelId(m).Equals(yamlModelKey));
         if (equivalentInFile != null)
         {
             throw new DuplicateConfigurationObjectException(filePath);
