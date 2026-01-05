@@ -9,5 +9,7 @@ public class CodeflowHistoryResult
 {
     public IReadOnlyCollection<CodeflowGraphCommit> ForwardFlowHistory { get; set; } = [];
     public IReadOnlyCollection<CodeflowGraphCommit> BackflowHistory { get; set; } = [];
+    public string RepoName { get; set; } = "";
+    public string VmrName { get; set; } = "";
     public bool ResultIsOutdated { get; set; }
 }
