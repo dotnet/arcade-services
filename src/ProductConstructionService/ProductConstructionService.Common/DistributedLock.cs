@@ -39,7 +39,7 @@ public interface IDistributedLock
     /// token is signaled.</param>
     /// <returns>A task that represents the asynchronous operation. The task completes when the action has finished executing
     /// under the lock.</returns>
-    Task RunWithLockAsync(
+    Task ExecuteWithLockAsync(
         string key,
         Func<Task> action,
         TimeSpan? timeout = null,
@@ -106,7 +106,7 @@ public class DistributedLock(
     /// <summary>
     /// Non-generic overload for actions that do not return a value.
     /// </summary>
-    public async Task RunWithLockAsync(
+    public async Task ExecuteWithLockAsync(
         string key,
         Func<Task> action,
         TimeSpan? timeout = null,

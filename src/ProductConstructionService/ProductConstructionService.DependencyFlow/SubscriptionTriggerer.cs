@@ -126,7 +126,7 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
 
         var mutexKey = pullRequestUpdater.Id.ToString();
 
-        await _distributedLock.RunWithLockAsync(mutexKey,
+        await _distributedLock.ExecuteWithLockAsync(mutexKey,
             async () =>
             {
                 _logger.LogInformation("Running asset update for {subscriptionId}", _subscriptionId);

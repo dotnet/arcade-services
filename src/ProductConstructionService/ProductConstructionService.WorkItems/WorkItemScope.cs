@@ -87,7 +87,7 @@ public class WorkItemScope : IAsyncDisposable
             var distributedLock = _workItemScope.ServiceProvider.GetRequiredService<IDistributedLock>();
             var stopwatch = Stopwatch.StartNew();
 
-            await distributedLock.RunWithLockAsync(mutexKey, async () =>
+            await distributedLock.ExecuteWithLockAsync(mutexKey, async () =>
             { 
                 stopwatch.Stop();
                 logger.LogInformation("Acquired lock for {type} in {elapsedMilliseconds} ms",
