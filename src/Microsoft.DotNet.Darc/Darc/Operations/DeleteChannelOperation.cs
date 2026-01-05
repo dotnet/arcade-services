@@ -50,9 +50,21 @@ internal class DeleteChannelOperation : Operation
         {
             if (_options.ShouldUseConfigurationRepository)
             {
-                await _configurationRepositoryManager.DeleteChannelAsync(
-                    _options.ToConfigurationRepositoryOperationParameters(),
-                    ChannelYaml.FromClientModel(existingChannel));
+                try
+                {
+                    await _configurationRepositoryManager.DeleteChannelAsync(
+                                _options.ToConfigurationRepositoryOperationParameters(),
+                                ChannelYaml.FromClientModel(existingChannel));
+                }
+                catch (ConfigurationObjectNotFoundException ex)
+                {
+                    _logger.LogError("No existing channel with name '{name}' found in file {filePath} of repo {repo} on branch {branch}",
+                        existingChannel.Name,
+                        ex.FilePath,
+                        ex.RepositoryUri,
+                        ex.BranchName);
+                    return Constants.ErrorCode;
+                }
             }
             else
             {
