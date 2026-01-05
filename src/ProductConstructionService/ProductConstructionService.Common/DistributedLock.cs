@@ -1,6 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+
 namespace ProductConstructionService.Common;
 
 
@@ -43,14 +46,12 @@ public interface IDistributedLock
         CancellationToken cancellationToken = default);
 }
 
-public class DistributedLock : IDistributedLock
+public class DistributedLock(
+    IRedisCacheFactory redisCacheFactory,
+    ILogger<DistributedLock> logger) : IDistributedLock
 {
-    private readonly IRedisCacheFactory _cacheFactory;
-
-    public DistributedLock(IRedisCacheFactory cacheFactory)
-    {
-        _cacheFactory = cacheFactory;
-    }
+    private readonly IRedisCacheFactory _cacheFactory = redisCacheFactory;
+    private readonly ILogger<DistributedLock> _logger = logger;
 
     public async Task<T> ExecuteWithLockAsync<T>(
         string key,
@@ -63,6 +64,11 @@ public class DistributedLock : IDistributedLock
         IAsyncDisposable? @lock;
         do
         {
+            var stopwatch = Stopwatch.StartNew();
+            _logger.LogDebug(
+                "Attempting to acquire distributed lock with key {LockKey}",
+                key);
+
             @lock = await _cacheFactory.TryAcquireLock(
                 key,
                 effectiveTimeout,
@@ -70,13 +76,26 @@ public class DistributedLock : IDistributedLock
 
             if (@lock == null)
             {
-                // failed to acquire lock, retry
-                continue; 
+                _logger.LogWarning(
+                    "Failed to acquire distributed lock with key {LockKey} after {WaitMs} ms.",
+                    key,
+                    stopwatch.ElapsedMilliseconds);
+                
+                continue;
             }
 
             await using (@lock)
             {
-                return await action();
+                stopwatch.Stop();
+                _logger.LogInformation(
+                    "Acquired distributed lock for key '{Key}' after {ElapsedMilliseconds} ms",
+                    key, stopwatch.ElapsedMilliseconds);
+
+                T result = await action();
+
+                _logger.LogInformation("Released distributed lock for key '{Key}'", key);
+
+                return result;
             }
         } while (@lock == null);
 
