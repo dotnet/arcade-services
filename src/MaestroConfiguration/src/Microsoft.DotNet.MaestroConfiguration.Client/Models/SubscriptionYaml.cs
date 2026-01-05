@@ -84,12 +84,12 @@ public class SubscriptionYaml : IYamlModel
         TargetBranch = subscription.TargetBranch,
         UpdateFrequency = subscription.Policy.UpdateFrequency,
         Batchable = subscription.Policy.Batchable,
-        MergePolicies = MergePolicyYaml.FromClientModels(subscription.Policy.MergePolicies),
+        MergePolicies = MergePolicyYaml.FromClientModels(subscription.Policy.MergePolicies ?? []),
         FailureNotificationTags = subscription.PullRequestFailureNotificationTags,
         SourceEnabled = subscription.SourceEnabled,
         SourceDirectory = subscription.SourceDirectory,
         TargetDirectory = subscription.TargetDirectory,
-        ExcludedAssets = subscription.ExcludedAssets.ToList(),
+        ExcludedAssets = subscription.ExcludedAssets?.ToList() ?? [],
     };
 
     /// <summary>

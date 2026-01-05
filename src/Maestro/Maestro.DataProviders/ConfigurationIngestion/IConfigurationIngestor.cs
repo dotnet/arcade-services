@@ -17,7 +17,8 @@ public interface IConfigurationIngestor
     /// <returns>A record of the entity changes applied during ingestion.</returns>
     Task<ConfigurationUpdates> IngestConfigurationAsync(
         ConfigurationData configurationData,
-        string configurationNamespace);
+        string configurationNamespace,
+        bool saveChanges);
 }
 
 public record ConfigurationUpdates(

@@ -538,7 +538,7 @@ public class SqlBarClient : ISqlBarClient
 
     public async Task CreateSubscriptionsAsync(
         IEnumerable<Data.Models.Subscription> subscriptionsToCreate,
-        bool andSaveContext = true)
+        bool andSaveContext)
     {
         var existingSubscriptions = await _context.Subscriptions.ToListAsync();
 
@@ -608,7 +608,7 @@ public class SqlBarClient : ISqlBarClient
     private async Task UpdateSubscriptionAsync(
         Data.Models.Subscription subscription,
         Data.Models.Subscription existingSubscription,
-        bool andSaveContext = true)
+        bool andSaveContext)
     {
         List<string> illegalFieldChanges = [];
 
@@ -657,7 +657,7 @@ public class SqlBarClient : ISqlBarClient
     }
 
     public async Task DeleteSubscriptionsAsync(
-        IEnumerable<Data.Models.Subscription> subscriptionsToDelete, bool andSaveContext = true)
+        IEnumerable<Data.Models.Subscription> subscriptionsToDelete, bool andSaveContext)
     {
         var subscriptionLookups = subscriptionsToDelete.ToDictionary(s => s.Id);
 
@@ -681,8 +681,9 @@ public class SqlBarClient : ISqlBarClient
     {
         List<Data.Models.AssetFilter> result = [];
 
-        var existingFilterLookups = existingFilters
-            .ToDictionary(a => a.Filter, StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, Data.Models.AssetFilter> existingFilterLookups = existingFilters?
+            .ToDictionary(a => a.Filter, StringComparer.OrdinalIgnoreCase)
+            ?? [];
 
         foreach (var asset in incomingFilters)
         {
@@ -730,6 +731,40 @@ public class SqlBarClient : ISqlBarClient
                     subscription.TargetDirectory,
                     subscription.SourceEnabled.ToString(),
             });
+        }
+    }
+
+    public async Task DeleteNamespaceAsync(string namespaceName, bool andSaveContext)
+    {
+        var barNamespace = _context.Namespaces
+            .Include(n => n.Subscriptions)
+            .ThenInclude(s => s.ExcludedAssets)
+            .Include(n => n.Channels)
+            .Include(n => n.DefaultChannels)
+            .Include(n => n.RepositoryBranches)
+            .FirstOrDefault(n => n.Name == namespaceName);
+
+        if (barNamespace == null)
+        {
+            throw new InvalidOperationException($"Namespace '{namespaceName}' not found.");
+        }
+
+        var subscriptionIds = barNamespace.Subscriptions.Select(sub => sub.Id).ToHashSet();
+
+        _context.SubscriptionUpdates.RemoveRange(
+            _context.SubscriptionUpdates
+                .Where(s => subscriptionIds.Contains(s.SubscriptionId)));
+        _context.AssetFilters.RemoveRange(
+            barNamespace.Subscriptions.SelectMany(s => s.ExcludedAssets));
+        _context.Channels.RemoveRange(barNamespace.Channels);
+        _context.DefaultChannels.RemoveRange(barNamespace.DefaultChannels);
+        _context.Subscriptions.RemoveRange(barNamespace.Subscriptions);
+        _context.RepositoryBranches.RemoveRange(barNamespace.RepositoryBranches);
+        _context.Namespaces.Remove(barNamespace);
+
+        if (andSaveContext)
+        {
+            await _context.SaveChangesAsync();
         }
     }
 }
