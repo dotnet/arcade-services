@@ -736,13 +736,13 @@ public class SqlBarClient : ISqlBarClient
 
     public async Task DeleteNamespaceAsync(string namespaceName, bool andSaveContext)
     {
-        var barNamespace = _context.Namespaces
+        var barNamespace = await _context.Namespaces
             .Include(n => n.Subscriptions)
             .ThenInclude(s => s.ExcludedAssets)
             .Include(n => n.Channels)
             .Include(n => n.DefaultChannels)
             .Include(n => n.RepositoryBranches)
-            .FirstOrDefault(n => n.Name == namespaceName);
+            .FirstOrDefaultAsync(n => n.Name == namespaceName);
 
         if (barNamespace == null)
         {

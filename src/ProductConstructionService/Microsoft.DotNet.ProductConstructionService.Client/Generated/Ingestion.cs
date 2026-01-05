@@ -11,12 +11,11 @@ using Azure.Core;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 
 
-
 namespace Microsoft.DotNet.ProductConstructionService.Client
 {
     public partial interface IIngestion
     {
-        Task<bool> IngestNamespaceAsync(
+        Task<ConfigurationUpdates> IngestNamespaceAsync(
             string namespaceName,
             bool saveChanges,
             ClientYamlConfiguration body = default,
@@ -44,7 +43,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         partial void HandleFailedIngestNamespaceRequest(RestApiException ex);
 
-        public async Task<bool> IngestNamespaceAsync(
+        public async Task<ConfigurationUpdates> IngestNamespaceAsync(
             string namespaceName,
             bool saveChanges,
             ClientYamlConfiguration body = default,
@@ -103,7 +102,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<bool>(_content);
+                        var _body = Client.Deserialize<ConfigurationUpdates>(_content);
                         return _body;
                     }
                 }

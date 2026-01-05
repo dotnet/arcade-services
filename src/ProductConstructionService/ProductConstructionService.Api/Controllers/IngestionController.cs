@@ -30,7 +30,7 @@ public class IngestionController : Controller
     }
 
     [HttpPost(Name = "ingest")]
-    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(bool), Description = "Makes PCS ingest a namespace configuration")]
+    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(ConfigurationUpdates), Description = "Makes PCS ingest a namespace configuration")]
     public async Task<IActionResult> IngestNamespace(
         string namespaceName,
         [FromBody] YamlConfiguration yamlConfiguration,
@@ -50,7 +50,7 @@ public class IngestionController : Controller
             namespaceName,
             saveChanges);
 
-        return Ok(true);
+        return Ok(updates);
     }
 
     [HttpDelete(Name = "delete")]

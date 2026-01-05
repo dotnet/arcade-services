@@ -32,7 +32,6 @@ public class ConfigurationRepositoryParser : IConfigurationRepositoryParser
             .SelectMany(f => deserializer.Deserialize<List<SubscriptionYaml>>(f.Content) ?? [])
             .ToList();
 
-        var channelsFiles = await gitRepo.GetFilesContentAsync(repoUri, branch, ConfigFilePathResolver.ChannelFolderPath);
         var channels = (await gitRepo.GetFilesContentAsync(repoUri, branch, ConfigFilePathResolver.ChannelFolderPath))
             .SelectMany(f => deserializer.Deserialize<List<ChannelYaml>>(f.Content) ?? [])
             .ToList() ?? [];
