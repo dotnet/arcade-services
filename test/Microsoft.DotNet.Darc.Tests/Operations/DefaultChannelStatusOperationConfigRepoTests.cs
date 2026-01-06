@@ -385,9 +385,9 @@ public class DefaultChannelStatusOperationConfigRepoTests : ConfigurationManagem
         var defaultChannel = new DefaultChannel(
             id: id,
             repository: repository,
-            branch: branch,
             enabled: enabled)
         {
+            Branch = branch,
             Channel = new Channel(1, channel, "test")
         };
 
@@ -395,9 +395,7 @@ public class DefaultChannelStatusOperationConfigRepoTests : ConfigurationManagem
             .Setup(x => x.GetDefaultChannelsAsync(
                 It.IsAny<string?>(),
                 It.IsAny<string?>(),
-                It.IsAny<int?>(),
-                It.IsAny<string?>(),
-                It.IsAny<bool?>()))
+                It.IsAny<string?>()))
             .ReturnsAsync(new List<DefaultChannel> { defaultChannel });
     }
 
