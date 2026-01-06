@@ -92,7 +92,7 @@ internal class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
                 // TODO drop to the "global try-catch" when configuration repo is the only behavior
                 catch (MaestroConfiguration.Client.ConfigurationObjectNotFoundException ex)
                 {
-                    _logger.LogError("No existing default channel with repository '{repo}', branch '{branch}', and channel '{channel}' found in file {filePath} of repo {repo} on branch {branch}",
+                    _logger.LogError("No existing default channel with repository '{repository}', branch '{branch}', and channel '{channel}' found in file {filePath} of repo {repositoryUri} on branch {branchName}",
                         updatedDefaultChannelYaml.Repository,
                         updatedDefaultChannelYaml.Branch,
                         updatedDefaultChannelYaml.Channel,
