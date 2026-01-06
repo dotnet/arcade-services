@@ -70,9 +70,11 @@ internal class AddChannelOperation : Operation
                 // TODO https://github.com/dotnet/arcade-services/issues/5693 drop to the "global try-catch" when configuration repo is the only behavior
                 catch (DuplicateConfigurationObjectException e)
                 {
-                    _logger.LogError("Channel with name '{name}' already exists in '{filePath}'.",
+                    _logger.LogError("Channel with name '{name}' already exists in '{filePath}' in repo {repo} on branch {branch}.",
                        channelYaml.Name,
-                       e.FilePath);
+                       e.FilePath,
+                       e.Repository,
+                       e.Branch);
                     return Constants.ErrorCode;
                 }
             }

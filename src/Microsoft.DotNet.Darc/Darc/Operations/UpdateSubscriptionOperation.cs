@@ -360,6 +360,10 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                         ex.BranchName);
                     return Constants.ErrorCode;
                 }
+                catch (MaestroConfiguration.Client.DuplicateConfigurationObjectException ex)
+                {
+                    _logger.LogError("Subscription with equivalent parameters already exists in file {filePath}", ex.FilePath);
+                }
             }
             else
             {

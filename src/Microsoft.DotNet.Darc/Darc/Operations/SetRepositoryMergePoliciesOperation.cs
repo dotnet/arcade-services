@@ -234,10 +234,12 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                     // TODO https://github.com/dotnet/arcade-services/issues/5693 drop to the "global try-catch" when configuration repo is the only behavior
                     catch (DuplicateConfigurationObjectException ex)
                     {
-                        _logger.LogError("Repository branch merge policies for {repo}@{branch} already exist in '{filePath}'.",
+                        _logger.LogError("Repository branch merge policies for {repo}@{branch} already exist in '{filePath}' in repo {repo} on branch {branch}.",
                             branchMergePoliciesYaml.Repository,
                             branchMergePoliciesYaml.Branch,
-                            ex.FilePath);
+                            ex.FilePath,
+                            ex.Repository,
+                            ex.Branch);
                         return Constants.ErrorCode;
                     }
                 }
