@@ -561,7 +561,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.Is<string>(uri => uri.StartsWith(Subscription.TargetDirectory != null ? VmrUri + "/pulls/" : InProgressPrUrl)),
                 It.Is<string>(content => content.Contains(rebaseStrategy
                     ? "The conflicts in the following files need to be manually resolved"
-                    : "There was a conflict in the PR branch when flowing source"))))
+                    : "Maestro attempted to flow new changes from"))))
             .Returns(Task.CompletedTask);
 
         // We re-evaulate checks after we push changes

@@ -1342,8 +1342,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         finally
         {
-            // Even if we fail to update the PR title and description, the changes already got pushed, so we want to enqueue a
-            // PullRequestCheck
+            // Even if we fail to update the PR title and description, the changes already got pushed, so we want to enqueue a PullRequestCheck
             pullRequest.SourceSha = update.SourceSha;
             pullRequest.LastUpdate = DateTime.UtcNow;
             pullRequest.MergeState = InProgressPullRequestState.Mergeable;
@@ -1550,7 +1549,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 subscription,
                 pr,
                 prInfo.HeadBranch),
-            CommentType.Caution);
+            CommentType.Information);
 
         pr.MergeState = InProgressPullRequestState.Conflict;
         pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
@@ -1619,17 +1618,15 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     {
         PullRequest prInfo;
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
+        NativePath localRepo = subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowResult.RepoPath;
+        bool prIsEmpty;
+        string initialCommitMessage = $"Initial commit for subscription {subscription.Id}";
 
         if (pr == null)
         {
+            prIsEmpty = true;
             _logger.LogInformation("Creating PR that requires manual conflict resolution for build {buildId}...", update.BuildId);
-
-            // Start a new branch (has to have an empty commit to differentiate it from the target branch)
-            var localRepo = subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowResult.RepoPath;
-            await _gitClient.ForceCheckoutAsync(localRepo, subscription.TargetBranch);
-            await _gitClient.CreateBranchAsync(localRepo, prHeadBranch, overwriteExistingBranch: true);
-            await _gitClient.CommitAsync(localRepo, $"Initial commit for subscription {subscription.Id} / build {update.BuildId}", allowEmpty: true);
-            await _gitClient.Push(localRepo, prHeadBranch, subscription.TargetRepository);
+            await CreateEmptyPrBranch(subscription, prHeadBranch, localRepo, initialCommitMessage);
 
             (pr, prInfo) = await CreateCodeFlowPullRequestAsync(
                 update,
@@ -1641,6 +1638,17 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         else
         {
+            var latestPrCommit = await _gitClient.GetShaForRefAsync(localRepo, prHeadBranch);
+            var latestCommitMessage = await _gitClient.RunGitCommandAsync(localRepo, [$"log", "-1", "--pretty=%B", latestPrCommit]);
+            prIsEmpty = latestCommitMessage.StandardOutput.Trim().StartsWith(initialCommitMessage);
+
+            // When the PR is empty but a new build has flown in, we should rebase the PR branch onto the target branch and force-push
+            if (prIsEmpty)
+            {
+                _logger.LogInformation("Rebasing empty PR branch {headBranch} onto {targetBranch}", prHeadBranch, subscription.TargetBranch);
+                await CreateEmptyPrBranch(subscription, prHeadBranch, localRepo, initialCommitMessage);
+            }
+
             prInfo = await remote.GetPullRequestAsync(pr.Url)
                 ?? throw new DarcException($"Failed to retrieve PR info for existing PR {pr.Url} while requesting manual conflict resolution");
 
@@ -1665,12 +1673,26 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 update,
                 subscription,
                 codeFlowResult.ConflictedFiles,
-                prHeadBranch),
+                prHeadBranch,
+                prIsEmpty),
             CommentType.Caution);
 
         // We know for sure that we will fail the codeflow checks (codeflow metadata will be expected to match the new build)
         // So we trigger the evaluation right away
         await RunMergePolicyEvaluation(pr, prInfo, remote);
+    }
+
+    /// <summary>
+    /// Creates and pushes a new branch.
+    /// It must have an empty commit to differentiate it from the target branch so that an empty PR can be created.
+    /// </summary>
+    /// <returns></returns>
+    private async Task CreateEmptyPrBranch(SubscriptionDTO subscription, string prHeadBranch, NativePath localRepo, string initialCommitMessage)
+    {
+        await _gitClient.ForceCheckoutAsync(localRepo, subscription.TargetBranch);
+        await _gitClient.CreateBranchAsync(localRepo, prHeadBranch, overwriteExistingBranch: true);
+        await _gitClient.CommitAsync(localRepo, initialCommitMessage, allowEmpty: true);
+        await _gitClient.Push(localRepo, prHeadBranch, subscription.TargetRepository);
     }
 
     #endregion
