@@ -112,16 +112,27 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         string prHeadBranch,
         bool prIsEmpty)
     {
-        var comment = new StringBuilder()
-            .AppendLine("# 🛑 Conflict detected")
-            .Append($"A conflict was detected when trying to update this PR with changes from ")
+        var comment = new StringBuilder("# \U0001f6d1 ");
+
+        if (prIsEmpty)
+        {
+            comment.AppendLine("Action Required — Conflict detected");
+        }
+        else
+        {
+            comment.AppendLine("Codeflow Paused — Conflict detected");
+        }
+
+        comment
+            .Append($"A conflict was detected when trying to update this PR with changes from build `{update.BuildId}` of ")
             .Append(GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha))
             .AppendLine(".");
 
         if (!prIsEmpty)
         {
-            comment.AppendLine(
-                "You can either merge the PR without getting these new updates or resolve the conflicts manually so that automated codeflow can resume for this PR.");
+            comment
+                .Append("You can either merge the PR without getting these new updates ")
+                .AppendLine("**or** resolve the conflicts manually so that automated codeflow can resume for this PR.");
         }
 
         comment
@@ -149,7 +160,7 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
 
         comment.AppendLine(
             $"""
-            #### ℹ️ To resolve the conflicts, please follow these steps:
+            #### \U0001f6c8 To resolve the conflicts, please follow these steps:
             1. Clone the current repository
                 ```bash
                 git clone {subscription.TargetRepository}
@@ -172,7 +183,6 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
             5. Once pushed, the `Codeflow verification` check will turn green.  
                 If not, a new build might have flown into the PR and you might need to run the command above again.
             """);
-
         return comment.ToString();
     }
 
