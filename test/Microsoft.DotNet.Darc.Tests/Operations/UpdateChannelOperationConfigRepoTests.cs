@@ -277,23 +277,24 @@ public class UpdateChannelOperationConfigRepoTests : ConfigurationManagementTest
     }
 
     [Test]
-    public async Task UpdateChannelOperation_WithConfigRepo_FailsWhenClassificationNotProvided()
+    public async Task UpdateChannelOperation_WithConfigRepo_KeepsExistingClassificationWhenNotProvided()
     {
         // Arrange
         const string channelName = ".NET 9";
+        const string existingClassification = "dev";
         var testBranch = GetTestBranch();
 
-        var channelYaml = new ChannelYaml { Name = channelName, Classification = "dev" };
+        var channelYaml = new ChannelYaml { Name = channelName, Classification = existingClassification };
         var configFilePath = ConfigFilePathResolver.GetDefaultChannelFilePath(channelYaml);
         await CreateFileInConfigRepoAsync(configFilePath, CreateChannelYamlContent(channelYaml));
 
-        var channel = CreateTestChannel(1, channelName, "dev");
+        var channel = CreateTestChannel(1, channelName, existingClassification);
         SetupGetChannelAsync(channel);
 
-        // Don't provide classification (only name, which is not allowed)
+        // Don't provide classification - it should keep the existing one
         var options = CreateUpdateChannelOptions(
             id: 1,
-            name: channelName, // Same name, but classification is missing
+            name: channelName, // Same name is allowed
             configurationBranch: testBranch);
         var operation = CreateOperation(options);
 
@@ -301,7 +302,15 @@ public class UpdateChannelOperationConfigRepoTests : ConfigurationManagementTest
         int result = await operation.ExecuteAsync();
 
         // Assert
-        result.Should().Be(Constants.ErrorCode);
+        result.Should().Be(Constants.SuccessCode);
+
+        // Verify the channel classification was not changed
+        await CheckoutBranch(testBranch);
+        var fullPath = Path.Combine(ConfigurationRepoPath, configFilePath);
+        var channels = await DeserializeChannelsAsync(fullPath);
+        channels.Should().HaveCount(1);
+        channels[0].Name.Should().Be(channelName);
+        channels[0].Classification.Should().Be(existingClassification);
     }
 
     #region Helper methods

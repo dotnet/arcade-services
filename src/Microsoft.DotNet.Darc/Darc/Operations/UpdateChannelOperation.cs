@@ -66,18 +66,11 @@ internal class UpdateChannelOperation : Operation
                     return Constants.ErrorCode;
                 }
 
-                // Only classification can be updated
-                if (string.IsNullOrEmpty(_options.Classification))
-                {
-                    _logger.LogError("Classification must be specified when updating a channel via the configuration repository.");
-                    return Constants.ErrorCode;
-                }
-
                 // Create an updated channel YAML with the new classification
                 var updatedChannelYaml = new ChannelYaml
                 {
                     Name = channel.Name, // Keep the original name (immutable)
-                    Classification = _options.Classification
+                    Classification = _options.Classification ?? channel.Classification
                 };
 
                 try
