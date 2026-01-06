@@ -136,6 +136,7 @@ internal static class Program
         typeof(TriggerSubscriptionsCommandLineOptions),
         typeof(UpdateBuildCommandLineOptions),
         typeof(UpdateChannelCommandLineOptions),
+        typeof(UpdateDefaultChannelCommandLineOptions),
         typeof(UpdateDependenciesCommandLineOptions),
         typeof(UpdateSubscriptionCommandLineOptions),
         typeof(VerifyCommandLineOptions),
