@@ -34,7 +34,7 @@ internal partial class ConfigurationIngestor(
         var ingestionResult =
             await _distributedLock.ExecuteWithLockAsync("ConfigurationIngestion", async () =>
             {
-                return await IngestConfigurationInternalAsync(configurationData, configurationNamespace);
+                return await IngestConfigurationInternalAsync(configurationData, configurationNamespace, saveChanges);
             });
 
         return ingestionResult;
@@ -42,7 +42,8 @@ internal partial class ConfigurationIngestor(
 
     private async Task<ConfigurationUpdates> IngestConfigurationInternalAsync(
         ConfigurationData configurationData,
-        string configurationNamespace)
+        string configurationNamespace,
+        bool saveChanges)
     {
         var ingestionData = IngestedConfigurationData.FromYamls(configurationData);
         ValidateEntityFields(ingestionData);
