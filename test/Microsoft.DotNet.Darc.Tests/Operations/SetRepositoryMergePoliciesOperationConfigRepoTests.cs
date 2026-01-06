@@ -12,7 +12,6 @@ using AwesomeAssertions;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.MaestroConfiguration.Client;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -44,7 +43,7 @@ public class SetRepositoryMergePoliciesOperationConfigRepoTests : ConfigurationM
         var testBranch = GetTestBranch();
 
         // Mock that no policies exist yet
-        SetupGetRepositoryMergePoliciesAsync(repository, branch, null);
+        SetupGetRepositoryMergePoliciesAsync(repository, branch, []);
 
         var mergePolicies = new List<MergePolicy>
         {
@@ -98,7 +97,7 @@ public class SetRepositoryMergePoliciesOperationConfigRepoTests : ConfigurationM
         var testBranch = GetTestBranch();
 
         // Mock that no policies exist for branch2 (we're adding new policies)
-        SetupGetRepositoryMergePoliciesAsync(repository, branch2, null);
+        SetupGetRepositoryMergePoliciesAsync(repository, branch2, []);
 
         var configFilePath = ConfigFilePathResolver.GetDefaultRepositoryBranchFilePath(new BranchMergePoliciesYaml
         {

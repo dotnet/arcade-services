@@ -173,7 +173,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                 };
 
                 var policies = await _barClient.GetRepositoryMergePoliciesAsync(repository, branch);
-                if (policies != null)
+                if (policies != null && policies.Any())
                 {
                     try
                     {
