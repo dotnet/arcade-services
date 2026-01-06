@@ -665,18 +665,18 @@ internal class ForwardFlowTests : CodeFlowTests
         File.Delete(ProductRepoPath / Revert_FileAddedAndRemovedName);
         await GitOperations.CommitAll(ProductRepoPath, "Revert changes", allowEmpty: false);
 
-        // Step 5: Forward flow with reverts and conflicts
-        stagedFiles = await CallDarcForwardflow(expectedConflicts: [VmrInfo.SourcesDir / Constants.ProductRepoName / Conflict_FileChangedInBoth]);
         expectedStagedFiles[1] = VmrInfo.SourcesDir / Constants.ProductRepoName / Conflict_FileRenamedNewName; // no more Version.Details.xml changes
         expectedStagedFiles.Add(VmrInfo.SourcesDir / Constants.ProductRepoName / Revert_FileRemovedAndAddedName);
         expectedStagedFiles.Add(VmrInfo.SourcesDir / Constants.ProductRepoName / Conflict_FileAddedInBoth);
         expectedStagedFiles.Add(VmrInfo.SourcesDir / Constants.ProductRepoName / Conflict_FileRemovedInSourceAndChangedInTarget);
         expectedStagedFiles.Add(VmrInfo.SourcesDir / Constants.ProductRepoName / Conflict_FileChangedInBoth);
 
+        string[] expectedConflictedFiles = [.. expectedStagedFiles.Skip(5)];
+
+        // Step 5: Forward flow with reverts and conflicts
+        stagedFiles = await CallDarcForwardflow(expectedConflicts: expectedConflictedFiles);
         stagedFiles.Should().BeEquivalentTo(expectedStagedFiles, "There should be staged files after forward flow");
 
-        // Conflict markers only in Conflict file (we have to exclude it plus exclude non-existent files
-        IReadOnlyCollection<string> expectedConflictedFiles = [..expectedStagedFiles.Skip(5)];
         await GitOperationsHelper.VerifyNoConflictMarkers(
             VmrPath,
             expectedStagedFiles

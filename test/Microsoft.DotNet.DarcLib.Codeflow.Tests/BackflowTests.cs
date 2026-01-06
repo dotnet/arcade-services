@@ -968,18 +968,19 @@ internal class BackflowTests : CodeFlowTests
         File.Delete(_productRepoVmrPath / Revert_FileAddedAndRemovedName);
         await GitOperations.CommitAll(VmrPath, "Revert changes", allowEmpty: false);
 
-        // Step 5: Backflow with reverts and conflicts
-        stagedFiles = await CallDarcBackflow(expectedConflicts: [Conflict_FileChangedInBoth]);
-        expectedStagedFiles.Add(Conflict_FileRenamedNewName);
         expectedStagedFiles.Add(Revert_FileRemovedAndAddedName);
+        expectedStagedFiles.Add(Conflict_FileRenamedNewName);
         expectedStagedFiles.Add(Conflict_FileAddedInBoth);
         expectedStagedFiles.Add(Conflict_FileRemovedInSourceAndChangedInTarget);
         expectedStagedFiles.Add(Conflict_FileChangedInBoth);
 
+        string[] expectedConflictedFiles = [.. expectedStagedFiles.Skip(5)];
+
+        // Step 5: Backflow with reverts and conflicts
+        stagedFiles = await CallDarcBackflow(expectedConflicts: expectedConflictedFiles);
+
         stagedFiles.Should().BeEquivalentTo(expectedStagedFiles, "There should be staged files after backflow");
 
-        // Conflict markers only in Conflict file (we have to exclude it plus exclude non-existent files
-        IReadOnlyCollection<string> expectedConflictedFiles = [..expectedStagedFiles.Skip(4)];
         await Helpers.GitOperationsHelper.VerifyNoConflictMarkers(
             ProductRepoPath,
             expectedStagedFiles
