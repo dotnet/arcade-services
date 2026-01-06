@@ -88,7 +88,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             channel,
             (p, repo, branch, c) => DeleteModelInternalAsync(
                 p, repo, branch, c,
-                YamlModelUniqueKeys.GetChannelKey,
+                YamlModelUniquenessKeys.GetChannelKey,
                 new ChannelYamlComparer(),
                 $"Delete channel '{c.Name}'"),
             $"Successfully deleted channel '{channel.Name}' from branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
