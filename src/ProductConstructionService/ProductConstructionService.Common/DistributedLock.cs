@@ -65,7 +65,7 @@ public class DistributedLock(
         do
         {
             var stopwatch = Stopwatch.StartNew();
-            _logger.LogDebug(
+            _logger.LogInformation(
                 "Attempting to acquire distributed lock with key {LockKey}",
                 key);
 
@@ -90,12 +90,14 @@ public class DistributedLock(
                 _logger.LogInformation(
                     "Acquired distributed lock for key '{Key}' after {ElapsedMilliseconds} ms",
                     key, stopwatch.ElapsedMilliseconds);
-
-                T result = await action();
-
-                _logger.LogInformation("Released distributed lock for key '{Key}'", key);
-
-                return result;
+                try
+                {
+                    return await action();
+                }
+                finally
+                {
+                    _logger.LogInformation("Released distributed lock for key '{Key}'", key);
+                }
             }
         } while (@lock == null);
 
