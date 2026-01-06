@@ -113,7 +113,7 @@ internal class UpdateDefaultChannelOperation : Operation
             return Constants.ErrorCode;
         }
 
-        // Create the updated default channel YAML with the original values as the key
+        // Create the original default channel YAML (used to find and delete the old entry)
         var originalDefaultChannelYaml = DefaultChannelYaml.FromClientModel(resolvedChannel);
 
         // Build the updated values - use new values if provided, otherwise keep the original
@@ -138,13 +138,8 @@ internal class UpdateDefaultChannelOperation : Operation
         {
             await _configurationRepositoryManager.UpdateDefaultChannelAsync(
                 _options.ToConfigurationRepositoryOperationParameters(),
-                new DefaultChannelYaml
-                {
-                    Repository = updatedRepository,
-                    Branch = updatedBranch,
-                    Channel = updatedChannel,
-                    Enabled = updatedEnabled
-                });
+                originalDefaultChannelYaml,
+                updatedDefaultChannelYaml);
 
             Console.WriteLine($"Successfully updated default channel association.");
             return Constants.SuccessCode;

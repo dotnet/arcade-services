@@ -105,16 +105,71 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
                 $"Add new default channel ({dc.Channel}) {dc.Repository} ({dc.Branch})"),
             $"Successfully added default channel on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
 
-    public async Task UpdateDefaultChannelAsync(ConfigurationRepositoryOperationParameters parameters, DefaultChannelYaml updatedDefaultChannel)
+    public async Task DeleteDefaultChannelAsync(ConfigurationRepositoryOperationParameters parameters, DefaultChannelYaml defaultChannel)
         => await PerformConfigurationRepositoryOperationInternal(
             parameters,
-            updatedDefaultChannel,
-            (p, repo, branch, dc) => UpdateModelInternalAsync(
+            defaultChannel,
+            (p, repo, branch, dc) => DeleteModelInternalAsync(
                 p, repo, branch, dc,
                 YamlModelUniqueKeys.GetDefaultChannelKey,
                 new DefaultChannelYamlComparer(),
-                $"Update default channel ({dc.Channel}) {dc.Repository} ({dc.Branch})"),
-            $"Successfully updated default channel on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+                $"Delete default channel ({dc.Channel}) {dc.Repository} ({dc.Branch})"),
+            $"Successfully deleted default channel from branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+
+    public async Task UpdateDefaultChannelAsync(ConfigurationRepositoryOperationParameters parameters, DefaultChannelYaml originalDefaultChannel, DefaultChannelYaml updatedDefaultChannel)
+    {
+        var configurationRepo = await _configurationRepoFactory.CreateClient(parameters.RepositoryUri);
+
+        await ValidateConfigurationRepositoryParametersAsync(configurationRepo, parameters);
+        var workingBranch = await PrepareConfigurationBranchAsync(configurationRepo, parameters);
+
+        // Find the file containing the original default channel
+        var (filePath, yamlModelsInFile) = await FindAndParseConfigurationFile(
+            configurationRepo,
+            parameters.RepositoryUri,
+            workingBranch,
+            originalDefaultChannel,
+            YamlModelUniqueKeys.GetDefaultChannelKey);
+
+        // Find and replace the old entry with the new one
+        var originalKey = YamlModelUniqueKeys.GetDefaultChannelKey(originalDefaultChannel);
+        var existingYamlModel = yamlModelsInFile.FirstOrDefault(m => YamlModelUniqueKeys.GetDefaultChannelKey(m).Equals(originalKey));
+        
+        if (existingYamlModel == null)
+        {
+            var branchName = parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch;
+            throw new ConfigurationObjectNotFoundException(
+                filePath,
+                parameters.RepositoryUri,
+                branchName);
+        }
+
+        var index = yamlModelsInFile.IndexOf(existingYamlModel);
+        yamlModelsInFile[index] = updatedDefaultChannel;
+
+        await CommitConfigurationDataAsync(
+            configurationRepo,
+            parameters.RepositoryUri,
+            workingBranch,
+            filePath,
+            yamlModelsInFile,
+            new DefaultChannelYamlComparer(),
+            $"Update default channel ({originalDefaultChannel.Channel}) {originalDefaultChannel.Repository} ({originalDefaultChannel.Branch})");
+
+        if (!parameters.DontOpenPr)
+        {
+            await CreatePullRequest(
+                configurationRepo,
+                parameters.RepositoryUri,
+                workingBranch,
+                parameters.ConfigurationBaseBranch,
+                "Updating Maestro configuration");
+        }
+        else
+        {
+            _logger.LogInformation("Successfully updated default channel on branch '{branch}' of the configuration repository {repo}", parameters.ConfigurationBranch, parameters.RepositoryUri);
+        }
+    }
 
     private async Task PerformConfigurationRepositoryOperationInternal<TModel>(
         ConfigurationRepositoryOperationParameters parameters,
