@@ -46,22 +46,16 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         InProgressPullRequest pr,
         string prHeadBranch)
     {
-        StringBuilder comment = new();
-        comment.AppendLine($"There was a conflict in the PR branch when flowing source from {GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha)}");
-        comment.AppendLine("Files conflicting with the head branch:");
-        AppendConflictedFileList(update, subscription, [..filesInConflict.Select(f => new UnixPath(f))], prHeadBranch, comment);
-        comment.AppendLine();
-        comment.AppendLine("Updates from this subscription will be blocked until the conflict is resolved, or the PR is merged");
-
-        var notificationTags = GetNotificationTags(subscription);
-        if (!string.IsNullOrEmpty(notificationTags))
-        {
-            comment.AppendLine();
-            comment.AppendLine("Tagging the following users to help with conflict resolution:");
-            comment.AppendLine(notificationTags);
-        }
-
-        return comment.ToString();
+        return new StringBuilder()
+            .Append("Maestro attempted to flow new changes from ")
+            .Append(GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha))
+            .AppendLine(" but conflicted with changes in the PR branch.")
+            .AppendLine()
+            .AppendLine("Conflicted files:")
+            .AppendConflictedFileList(update, subscription, [..filesInConflict.Select(f => new UnixPath(f))], prHeadBranch)
+            .AppendLine()
+            .AppendLine("Updates from this subscription will be paused until the PR branch is either merged or changed further so that the conflicts are resolved (files match).")
+            .ToString();
     }
 
     public static string NotifyAboutMergeConflict(
@@ -115,28 +109,37 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         SubscriptionUpdateWorkItem update,
         Subscription subscription,
         IReadOnlyCollection<UnixPath> conflictedFiles,
-        string prHeadBranch)
+        string prHeadBranch,
+        bool prIsEmpty)
     {
-        StringBuilder comment = new();
-        comment.AppendLine("# 🛑 Conflict detected");
-        comment.Append($"A conflict was detected when trying to update this PR with changes from ");
-        comment.Append(GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha));
-        comment.AppendLine(".");
-        comment.AppendLine();
+        var comment = new StringBuilder()
+            .AppendLine("# 🛑 Conflict detected")
+            .Append($"A conflict was detected when trying to update this PR with changes from ")
+            .Append(GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha))
+            .AppendLine(".");
+
+        if (!prIsEmpty)
+        {
+            comment.AppendLine(
+                "You can either merge the PR without getting these new updates or resolve the conflicts manually so that automated codeflow can resume for this PR.");
+        }
+
+        comment
+            .AppendLine();
 
         var notificationTags = GetNotificationTags(subscription);
         if (!string.IsNullOrEmpty(notificationTags))
         {
-            comment.Append(notificationTags);
-            comment.AppendLine(" please help resolve the conflict in this PR.");
-            comment.AppendLine();
+            comment
+                .Append(notificationTags)
+                .AppendLine(" please help resolve the conflict in this PR.")
+                .AppendLine();
         }
 
-        comment.AppendLine("The conflicts in the following files need to be manually resolved so that automated codeflow can resume for this PR:");
-
-        AppendConflictedFileList(update, subscription, conflictedFiles, prHeadBranch, comment);
-
-        comment.AppendLine();
+        comment
+            .AppendLine("The conflicts in the following files need to be manually resolved:")
+            .AppendConflictedFileList(update, subscription, conflictedFiles, prHeadBranch)
+            .AppendLine();
 
         // https://github.com/dotnet/arcade-services/issues/5443 - temporary hardcode the version to give repos time to get new arcade
         var maestroVersion = FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location)
@@ -146,7 +149,7 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
 
         comment.AppendLine(
             $"""
-            #### ℹ️ To resolve the conflict, please follow these steps:
+            #### ℹ️ To resolve the conflicts, please follow these steps:
             1. Clone the current repository
                 ```bash
                 git clone {subscription.TargetRepository}
@@ -250,37 +253,16 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
 
         return string.Join(Environment.NewLine, tagsToNotify);
     }
+}
 
-    private static (string, string) GetFileUrls(SubscriptionUpdateWorkItem update,
-        Subscription subscription,
-        string filePath,
-        string prHeadBranch)
-    {
-        string vmrFileUrl;
-        string repoFileUrl;
-        if (subscription.IsBackflow())
-        {
-            vmrFileUrl = GitRepoUrlUtils.GetVmrFileAtCommitUri(update.SourceRepo, subscription.SourceDirectory, update.SourceSha, filePath);
-            repoFileUrl = GitRepoUrlUtils.GetRepoFileAtBranchUri(subscription.TargetRepository, prHeadBranch, filePath);
-        }
-        else if (subscription.IsForwardFlow())
-        {
-            vmrFileUrl = GitRepoUrlUtils.GetVmrFileAtBranchUri(subscription.TargetRepository, subscription.TargetDirectory, prHeadBranch, filePath);
-            repoFileUrl = GitRepoUrlUtils.GetRepoFileAtCommitUri(update.SourceRepo, update.SourceSha, filePath);
-        }
-        else
-        {
-            throw new InvalidOperationException($"Failed to generate codeflow conflict message because subscription {subscription.Id} is not source-enabled.");
-        }
-        return (vmrFileUrl, repoFileUrl);
-    }
-
-    private static void AppendConflictedFileList(
+static file class StringBuildExtensions
+{
+    public static StringBuilder AppendConflictedFileList(
+        this StringBuilder sb,
         SubscriptionUpdateWorkItem update,
         Subscription subscription,
         IReadOnlyCollection<UnixPath> conflictedFiles,
-        string prHeadBranch,
-        StringBuilder sb)
+        string prHeadBranch)
     {
         string srcDir = subscription.IsForwardFlow()
             ? VmrInfo.GetRelativeRepoSourcesPath(subscription.TargetDirectory)
@@ -307,5 +289,31 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
             sb.AppendLine($" - `{relativeFilePath}`");
             sb.AppendLine($"     *🔍 View file in {repoLink} vs {vmrLink}*");
         }
+
+        return sb;
+    }
+
+    private static (string, string) GetFileUrls(SubscriptionUpdateWorkItem update,
+        Subscription subscription,
+        string filePath,
+        string prHeadBranch)
+    {
+        string vmrFileUrl;
+        string repoFileUrl;
+        if (subscription.IsBackflow())
+        {
+            vmrFileUrl = GitRepoUrlUtils.GetVmrFileAtCommitUri(update.SourceRepo, subscription.SourceDirectory, update.SourceSha, filePath);
+            repoFileUrl = GitRepoUrlUtils.GetRepoFileAtBranchUri(subscription.TargetRepository, prHeadBranch, filePath);
+        }
+        else if (subscription.IsForwardFlow())
+        {
+            vmrFileUrl = GitRepoUrlUtils.GetVmrFileAtBranchUri(subscription.TargetRepository, subscription.TargetDirectory, prHeadBranch, filePath);
+            repoFileUrl = GitRepoUrlUtils.GetRepoFileAtCommitUri(update.SourceRepo, update.SourceSha, filePath);
+        }
+        else
+        {
+            throw new InvalidOperationException($"Failed to generate codeflow conflict message because subscription {subscription.Id} is not source-enabled.");
+        }
+        return (vmrFileUrl, repoFileUrl);
     }
 }
