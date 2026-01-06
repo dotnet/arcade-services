@@ -128,29 +128,16 @@ internal class SubscriptionsStatusOperation : Operation
                 if (_options.ShouldUseConfigurationRepository)
                 {
                     // Create an updated subscription YAML with only the Enabled property changed
-                    var updatedSubscriptionYaml = new SubscriptionYaml
+                    var updatedyaml = SubscriptionYaml.FromClientModel(subscription) with
                     {
-                        Id = subscription.Id,
                         Enabled = _options.Enable,
-                        Channel = subscription.Channel.Name,
-                        SourceRepository = subscription.SourceRepository,
-                        TargetRepository = subscription.TargetRepository,
-                        TargetBranch = subscription.TargetBranch,
-                        UpdateFrequency = subscription.Policy.UpdateFrequency,
-                        Batchable = subscription.Policy.Batchable,
-                        MergePolicies = MergePolicyYaml.FromClientModels(subscription.Policy.MergePolicies),
-                        FailureNotificationTags = subscription.PullRequestFailureNotificationTags,
-                        SourceEnabled = subscription.SourceEnabled,
-                        SourceDirectory = subscription.SourceDirectory,
-                        TargetDirectory = subscription.TargetDirectory,
-                        ExcludedAssets = [..subscription.ExcludedAssets]
                     };
 
                     try
                     {
                         await _configurationRepositoryManager.UpdateSubscriptionAsync(
                             _options.ToConfigurationRepositoryOperationParameters(),
-                            updatedSubscriptionYaml);
+                            updatedyaml);
                     }
                     // TODO drop to the "global try-catch" when configuration repo is the only behavior
                     catch (MaestroConfiguration.Client.ConfigurationObjectNotFoundException ex)

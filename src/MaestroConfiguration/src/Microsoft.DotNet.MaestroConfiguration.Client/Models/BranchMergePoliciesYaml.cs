@@ -7,7 +7,7 @@ using YamlDotNet.Serialization;
 
 namespace Microsoft.DotNet.MaestroConfiguration.Client.Models;
 
-public class BranchMergePoliciesYaml : IYamlModel
+public record BranchMergePoliciesYaml : IYamlModel
 {
     public const string RepoElement = "Repository URL";
     public const string BranchElement = "Branch";
