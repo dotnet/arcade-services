@@ -175,26 +175,56 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                 var policies = await _barClient.GetRepositoryMergePoliciesAsync(repository, branch);
                 if (policies != null && policies.Any())
                 {
-                    try
+                    if (branchMergePoliciesYaml.MergePolicies.Any())
                     {
-                        await _configurationRepositoryManager.UpdateRepositoryMergePoliciesAsync(
-                            _options.ToConfigurationRepositoryOperationParameters(),
-                            branchMergePoliciesYaml);
+                        try
+                        {
+                            await _configurationRepositoryManager.UpdateRepositoryMergePoliciesAsync(
+                                _options.ToConfigurationRepositoryOperationParameters(),
+                                branchMergePoliciesYaml);
+                        }
+                        // TODO drop to the "global try-catch" when configuration repo is the only behavior
+                        catch (ConfigurationObjectNotFoundException ex)
+                        {
+                            _logger.LogError("No existing repository branch configuration found for {repo}@{branch} in file {filePath} of repo {configRepo} on branch {configBranch}",
+                                branchMergePoliciesYaml.Repository,
+                                branchMergePoliciesYaml.Branch,
+                                ex.FilePath,
+                                ex.RepositoryUri,
+                                ex.BranchName);
+                            return Constants.ErrorCode;
+                        } 
                     }
-                    // TODO drop to the "global try-catch" when configuration repo is the only behavior
-                    catch (ConfigurationObjectNotFoundException ex)
+                    else
                     {
-                        _logger.LogError("No existing repository branch configuration found for {repo}@{branch} in file {filePath} of repo {configRepo} on branch {configBranch}",
-                            branchMergePoliciesYaml.Repository,
-                            branchMergePoliciesYaml.Branch,
-                            ex.FilePath,
-                            ex.RepositoryUri,
-                            ex.BranchName);
-                        return Constants.ErrorCode;
+                        try
+                        {
+                            await _configurationRepositoryManager.DeleteRepositoryMergePoliciesAsync(
+                                _options.ToConfigurationRepositoryOperationParameters(),
+                                branchMergePoliciesYaml);
+                        }
+                        // TODO drop to the "global try-catch" when configuration repo is the only behavior
+                        catch (ConfigurationObjectNotFoundException ex)
+                        {
+                            _logger.LogError("No existing repository branch configuration found for {repo}@{branch} in file {filePath} of repo {configRepo} on branch {configBranch}",
+                                branchMergePoliciesYaml.Repository,
+                                branchMergePoliciesYaml.Branch,
+                                ex.FilePath,
+                                ex.RepositoryUri,
+                                ex.BranchName);
+                            return Constants.ErrorCode;
+                        }
                     }
                 }
                 else
                 {
+                    if (!branchMergePoliciesYaml.MergePolicies.Any())
+                    {
+                        _logger.LogWarning("No merge policies specified for {repo}@{branch}, nothing to add.", 
+                            branchMergePoliciesYaml.Repository, 
+                            branchMergePoliciesYaml.Branch);
+                        return Constants.SuccessCode;
+                    }
                     try
                     {
                         await _configurationRepositoryManager.AddRepositoryMergePoliciesAsync(

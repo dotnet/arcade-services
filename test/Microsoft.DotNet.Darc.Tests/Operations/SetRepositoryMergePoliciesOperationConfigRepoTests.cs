@@ -42,7 +42,6 @@ public class SetRepositoryMergePoliciesOperationConfigRepoTests : ConfigurationM
         var branch = "main";
         var testBranch = GetTestBranch();
 
-        // Mock that no policies exist yet
         SetupGetRepositoryMergePoliciesAsync(repository, branch, []);
 
         var mergePolicies = new List<MergePolicy>
@@ -66,7 +65,6 @@ public class SetRepositoryMergePoliciesOperationConfigRepoTests : ConfigurationM
         // Assert
         result.Should().Be(Constants.SuccessCode);
 
-        // Verify file was created at the expected path
         await CheckoutBranch(testBranch);
         var expectedFilePath = ConfigFilePathResolver.GetDefaultRepositoryBranchFilePath(new BranchMergePoliciesYaml
         {
@@ -76,7 +74,6 @@ public class SetRepositoryMergePoliciesOperationConfigRepoTests : ConfigurationM
         var fullExpectedPath = Path.Combine(ConfigurationRepoPath, expectedFilePath);
         File.Exists(fullExpectedPath).Should().BeTrue($"Expected file at {fullExpectedPath}");
 
-        // Deserialize and verify branch merge policies
         var branchPolicies = await DeserializeBranchMergePoliciesAsync(fullExpectedPath);
         branchPolicies.Should().HaveCount(1);
 
@@ -96,7 +93,6 @@ public class SetRepositoryMergePoliciesOperationConfigRepoTests : ConfigurationM
         var branch2 = "release/8.0";
         var testBranch = GetTestBranch();
 
-        // Mock that no policies exist for branch2 (we're adding new policies)
         SetupGetRepositoryMergePoliciesAsync(repository, branch2, []);
 
         var configFilePath = ConfigFilePathResolver.GetDefaultRepositoryBranchFilePath(new BranchMergePoliciesYaml
@@ -105,7 +101,6 @@ public class SetRepositoryMergePoliciesOperationConfigRepoTests : ConfigurationM
             Branch = branch1
         });
 
-        // Create existing branch policies file
         var existingContent = $$"""
             - Branch: {{branch1}}
               Repository URL: {{repository}}
@@ -133,7 +128,6 @@ public class SetRepositoryMergePoliciesOperationConfigRepoTests : ConfigurationM
         // Assert
         result.Should().Be(Constants.SuccessCode);
 
-        // Verify both branch policies are present
         await CheckoutBranch(testBranch);
         var fullPath = Path.Combine(ConfigurationRepoPath, configFilePath);
         var branchPolicies = await DeserializeBranchMergePoliciesAsync(fullPath);
@@ -151,7 +145,6 @@ public class SetRepositoryMergePoliciesOperationConfigRepoTests : ConfigurationM
         var branch = "main";
         var testBranch = GetTestBranch();
 
-        // Mock that policies already exist (so we update instead of add)
         var existingPolicies = new List<MergePolicy>
         {
             new MergePolicy
@@ -168,7 +161,6 @@ public class SetRepositoryMergePoliciesOperationConfigRepoTests : ConfigurationM
             Branch = branch
         });
 
-        // Create existing branch policies file
         var existingContent = $$"""
             - Branch: {{branch}}
               Repository URL: {{repository}}
@@ -204,7 +196,6 @@ public class SetRepositoryMergePoliciesOperationConfigRepoTests : ConfigurationM
         // Assert
         result.Should().Be(Constants.SuccessCode);
 
-        // Verify policies were updated (not appended)
         await CheckoutBranch(testBranch);
         var fullPath = Path.Combine(ConfigurationRepoPath, configFilePath);
         var branchPolicies = await DeserializeBranchMergePoliciesAsync(fullPath);
@@ -216,6 +207,89 @@ public class SetRepositoryMergePoliciesOperationConfigRepoTests : ConfigurationM
         updatedPolicy.MergePolicies.Should().HaveCount(2);
         updatedPolicy.MergePolicies.Should().Contain(p => p.Name == MergePolicyConstants.AllCheckSuccessfulMergePolicyName);
         updatedPolicy.MergePolicies.Should().Contain(p => p.Name == MergePolicyConstants.NoRequestedChangesMergePolicyName);
+    }
+
+    [Test]
+    public async Task SetRepositoryMergePoliciesOperation_WithConfigRepo_NoPoliciesAndNoneExist_DoesNothing()
+    {
+        // Arrange
+        var repository = "https://github.com/dotnet/test-repo";
+        var branch = "main";
+        var testBranch = GetTestBranch();
+
+        SetupGetRepositoryMergePoliciesAsync(repository, branch, []);
+
+        var mergePolicies = new List<MergePolicy>();
+
+        var options = CreateSetRepositoryMergePoliciesOptions(repository, branch, mergePolicies, configurationBranch: testBranch);
+        var operation = CreateOperation(options);
+
+        // Act
+        int result = await operation.ExecuteAsync();
+
+        // Assert
+        result.Should().Be(Constants.SuccessCode);
+
+        await CheckoutBranch(testBranch);
+        var expectedFilePath = ConfigFilePathResolver.GetDefaultRepositoryBranchFilePath(new BranchMergePoliciesYaml
+        {
+            Repository = repository,
+            Branch = branch
+        });
+        var fullExpectedPath = Path.Combine(ConfigurationRepoPath, expectedFilePath);
+
+        // File should not exist since no policies were added
+        File.Exists(fullExpectedPath).Should().BeFalse($"Expected no file at {fullExpectedPath} since no policies were specified");
+    }
+
+    [Test]
+    public async Task SetRepositoryMergePoliciesOperation_WithConfigRepo_NoPoliciesProvidedAndPoliciesExist_DeletesPolicies()
+    {
+        // Arrange
+        var repository = "https://github.com/dotnet/test-repo";
+        var branch = "main";
+        var testBranch = GetTestBranch();
+
+        var existingPolicies = new List<MergePolicy>
+        {
+            new MergePolicy
+            {
+                Name = MergePolicyConstants.StandardMergePolicyName,
+                Properties = new Dictionary<string, JToken>()
+            }
+        };
+        SetupGetRepositoryMergePoliciesAsync(repository, branch, existingPolicies);
+
+        var configFilePath = ConfigFilePathResolver.GetDefaultRepositoryBranchFilePath(new BranchMergePoliciesYaml
+        {
+            Repository = repository,
+            Branch = branch
+        });
+
+        var existingContent = $$"""
+            - Branch: {{branch}}
+              Repository URL: {{repository}}
+              Merge Policies:
+                - Name: Standard
+                  Properties: {}
+            """;
+        await CreateFileInConfigRepoAsync(configFilePath, existingContent);
+
+        // No merge policies specified (empty list) - should trigger deletion
+        var mergePolicies = new List<MergePolicy>();
+
+        var options = CreateSetRepositoryMergePoliciesOptions(repository, branch, mergePolicies, configurationBranch: testBranch);
+        var operation = CreateOperation(options);
+
+        // Act
+        int result = await operation.ExecuteAsync();
+
+        // Assert
+        result.Should().Be(Constants.SuccessCode);
+
+        await CheckoutBranch(testBranch);
+        var fullPath = Path.Combine(ConfigurationRepoPath, configFilePath);
+        File.Exists(fullPath).Should().BeFalse($"Expected file at {fullPath} to be deleted since no policies were specified");
     }
 
     private void SetupGetRepositoryMergePoliciesAsync(string repository, string branch, IEnumerable<MergePolicy>? policies) => BarClientMock

@@ -115,6 +115,17 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
                 $"Update merge policies for {bmp.Repository}@{bmp.Branch}"),
             $"Successfully updated merge policies for {branchMergePolicies.Repository}@{branchMergePolicies.Branch} on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
 
+    public async Task DeleteRepositoryMergePoliciesAsync(ConfigurationRepositoryOperationParameters parameters, BranchMergePoliciesYaml branchMergePoliciesYaml)
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            branchMergePoliciesYaml,
+            (p, repo, branch, bmp) => DeleteModelInternalAsync(
+                p, repo, branch, bmp,
+                YamlModelUniqueKeys.GetBranchMergePoliciesKey,
+                new BranchMergePoliciesYamlComparer(),
+                $"Delete merge policies for {bmp.Repository}@{bmp.Branch}"),
+            $"Successfully deleted merge policies for {branchMergePoliciesYaml.Repository}@{branchMergePoliciesYaml.Branch} from branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+
     private async Task PerformConfigurationRepositoryOperationInternal<TModel>(
         ConfigurationRepositoryOperationParameters parameters,
         TModel yamlModel,
