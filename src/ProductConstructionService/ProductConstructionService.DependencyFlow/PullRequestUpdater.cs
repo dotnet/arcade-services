@@ -1686,13 +1686,16 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// Creates and pushes a new branch.
     /// It must have an empty commit to differentiate it from the target branch so that an empty PR can be created.
     /// </summary>
-    /// <returns></returns>
-    private async Task CreateEmptyPrBranch(SubscriptionDTO subscription, string prHeadBranch, NativePath localRepo, string initialCommitMessage)
+    private async Task CreateEmptyPrBranch(
+        SubscriptionDTO subscription,
+        string prHeadBranch,
+        NativePath localRepo,
+        string initialCommitMessage)
     {
         await _gitClient.ForceCheckoutAsync(localRepo, subscription.TargetBranch);
         await _gitClient.CreateBranchAsync(localRepo, prHeadBranch, overwriteExistingBranch: true);
         await _gitClient.CommitAsync(localRepo, initialCommitMessage, allowEmpty: true);
-        await _gitClient.Push(localRepo, prHeadBranch, subscription.TargetRepository);
+        await _gitClient.Push(localRepo, prHeadBranch, subscription.TargetRepository, force: true);
     }
 
     #endregion

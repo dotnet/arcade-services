@@ -7,7 +7,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
 using Maestro.Common;
@@ -393,7 +392,8 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
         string repoPath,
         string branchName,
         string remoteUrl,
-        LibGit2Sharp.Identity? identity = null)
+        LibGit2Sharp.Identity? identity = null,
+        bool force = false)
     {
         identity ??= new LibGit2Sharp.Identity(Constants.DarcBotName, Constants.DarcBotEmail);
 
@@ -417,17 +417,21 @@ public class LocalLibGit2Client : LocalGitClient, ILocalLibGit2Client
                 }
         };
 
+        var refSpec = force
+            ? $"+{branch.CanonicalName}"
+            : branch.CanonicalName;
+
         await _exponentialRetry.RetryAsync(
             () =>
             {
-                repo.Network.Push(remote, branch.CanonicalName, pushOptions);
+                repo.Network.Push(remote, refSpec, pushOptions);
                 return Task.CompletedTask;
             },
             ex => _logger.LogWarning(ex, "An exception occurred during `git push`: {exceptionMessage}. Retrying...", ex.Message),
             ex => ex is LibGit2SharpException);
         repo.Branches.Update(branch, b => b.TrackedBranch = $"refs/remotes/{remote.Name}/{branch.FriendlyName}");
 
-        _logger.LogInformation("Pushed branch {branch} to {remote}", branch, remote.Url);
+        _logger.LogInformation("Pushed branch {branch} to {remote}{forceIndicator}", branch, remote.Url, force ? " (force)" : "");
     }
 
     /// <summary>
