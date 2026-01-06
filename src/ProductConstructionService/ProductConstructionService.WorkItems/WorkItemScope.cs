@@ -84,24 +84,10 @@ public class WorkItemScope : IAsyncDisposable
         else
         {
             // Otherwise, acquire a mutex and process it under the lock
-            var cache = _workItemScope.ServiceProvider.GetRequiredService<IRedisCacheFactory>();
+            var distributedLock = _workItemScope.ServiceProvider.GetRequiredService<IDistributedLock>();
             var stopwatch = Stopwatch.StartNew();
 
-            IAsyncDisposable? @lock;
-            do
-            {
-                await using (@lock = await cache.TryAcquireLock(mutexKey, TimeSpan.FromHours(1), cancellationToken))
-                {
-                    if (@lock != null)
-                    {
-                        stopwatch.Stop();
-                        logger.LogInformation("Acquired lock for {type} in {elapsedMilliseconds} ms",
-                            type,
-                            (int)stopwatch.ElapsedMilliseconds);
-                        await ProcessWorkItemAsync();
-                    }
-                }
-            } while (@lock == null);
+            await distributedLock.ExecuteWithLockAsync(mutexKey, ProcessWorkItemAsync, cancellationToken: cancellationToken);
         }
     }
 
