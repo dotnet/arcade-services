@@ -13,6 +13,7 @@ public interface IConfigurationRepositoryManager
     Task DeleteSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml subscription);
     Task UpdateSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml updatedSubscription);
     Task AddChannelAsync(ConfigurationRepositoryOperationParameters parameters, ChannelYaml channel);
+    Task UpdateChannelAsync(ConfigurationRepositoryOperationParameters parameters, ChannelYaml updatedChannel);
     Task DeleteChannelAsync(ConfigurationRepositoryOperationParameters parameters, ChannelYaml channel);
     Task AddDefaultChannelAsync(ConfigurationRepositoryOperationParameters parameters, DefaultChannelYaml defaultChannel);
 }
