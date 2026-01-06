@@ -80,6 +80,17 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
                 $"Add new channel '{c.Name}'"),
             $"Successfully added channel '{channel.Name}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
 
+    public async Task DeleteChannelAsync(ConfigurationRepositoryOperationParameters parameters, ChannelYaml channel)
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            channel,
+            (p, repo, branch, c) => DeleteModelInternalAsync(
+                p, repo, branch, c,
+                YamlModelUniqueKeys.GetChannelKey,
+                new ChannelYamlComparer(),
+                $"Delete channel '{c.Name}'"),
+            $"Successfully deleted channel '{channel.Name}' from branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+
     public async Task AddDefaultChannelAsync(ConfigurationRepositoryOperationParameters parameters, DefaultChannelYaml defaultChannel)
         => await PerformConfigurationRepositoryOperationInternal(
             parameters,
