@@ -729,6 +729,8 @@ internal class ForwardFlowTests : CodeFlowTests
         (await File.ReadAllTextAsync(_productRepoVmrPath / Conflict_FileRemovedInTargetAndChangedInSource)).Should().Be(
             "This file will be removed in target and changed in source");
 
+        // Somehow git does not delete this file when we checkout --theirs even though it was deleted in the source
+        // However, the conflict happens, which is important
         (await File.ReadAllTextAsync(_productRepoVmrPath / Conflict_FileRemovedInSourceAndChangedInTarget)).Should().Be(
             "This file has been changed in target");
     }
