@@ -183,7 +183,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                                 _options.ToConfigurationRepositoryOperationParameters(),
                                 branchMergePoliciesYaml);
                         }
-                        // TODO drop to the "global try-catch" when configuration repo is the only behavior
+                        // TODO https://github.com/dotnet/arcade-services/issues/5693 drop to the "global try-catch" when configuration repo is the only behavior
                         catch (ConfigurationObjectNotFoundException ex)
                         {
                             _logger.LogError("No existing repository branch configuration found for {repo}@{branch} in file {filePath} of repo {configRepo} on branch {configBranch}",
@@ -203,7 +203,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                                 _options.ToConfigurationRepositoryOperationParameters(),
                                 branchMergePoliciesYaml);
                         }
-                        // TODO drop to the "global try-catch" when configuration repo is the only behavior
+                        // TODO https://github.com/dotnet/arcade-services/issues/5693 drop to the "global try-catch" when configuration repo is the only behavior
                         catch (ConfigurationObjectNotFoundException ex)
                         {
                             _logger.LogError("No existing repository branch configuration found for {repo}@{branch} in file {filePath} of repo {configRepo} on branch {configBranch}",
@@ -231,7 +231,7 @@ internal class SetRepositoryMergePoliciesOperation : Operation
                                         _options.ToConfigurationRepositoryOperationParameters(),
                                         branchMergePoliciesYaml);
                     }
-                    // TODO drop to the "global try-catch" when configuration repo is the only behavior
+                    // TODO https://github.com/dotnet/arcade-services/issues/5693 drop to the "global try-catch" when configuration repo is the only behavior
                     catch (DuplicateConfigurationObjectException ex)
                     {
                         _logger.LogError("Repository branch merge policies for {repo}@{branch} already exist in '{filePath}'.",
