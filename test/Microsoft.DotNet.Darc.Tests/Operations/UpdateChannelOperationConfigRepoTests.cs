@@ -85,8 +85,8 @@ public class UpdateChannelOperationConfigRepoTests : ConfigurationManagementTest
         const string channel2Name = ".NET 9";
         var testBranch = GetTestBranch();
 
-        var channel1Yaml = new ChannelYaml { Name = channel1Name, Classification = "product" };
-        var channel2Yaml = new ChannelYaml { Name = channel2Name, Classification = "dev" };
+        var channel1Yaml = new ChannelYaml { Name = channel1Name, Classification = "dev" };
+        var channel2Yaml = new ChannelYaml { Name = channel2Name, Classification = "preview" };
 
         // Create file with both channels
         var configFilePath = new UnixPath(ConfigFilePathResolver.ChannelFolderPath) / ".net.yml";
@@ -97,7 +97,7 @@ public class UpdateChannelOperationConfigRepoTests : ConfigurationManagementTest
             """;
         await CreateFileInConfigRepoAsync(configFilePath.ToString(), existingContent);
 
-        var channel = CreateTestChannel(1, channel2Name, "dev");
+        var channel = CreateTestChannel(1, channel2Name, "preview");
         SetupGetChannelAsync(channel);
 
         var options = CreateUpdateChannelOptions(
@@ -127,7 +127,7 @@ public class UpdateChannelOperationConfigRepoTests : ConfigurationManagementTest
         // Verify channel 1 was not modified
         var unchangedChannel = channels.Find(c => c.Name == channel1Name);
         unchangedChannel.Should().NotBeNull();
-        unchangedChannel!.Classification.Should().Be("product");
+        unchangedChannel!.Classification.Should().Be("dev");
     }
 
     [Test]
