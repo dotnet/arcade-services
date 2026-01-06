@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -979,7 +978,7 @@ internal class BackflowTests : CodeFlowTests
 
         stagedFiles.Should().BeEquivalentTo(expectedStagedFiles, "There should be staged files after backflow");
 
-        // Conflict markers only in Conflict file (we have to exclude it plus exclude non-existant files
+        // Conflict markers only in Conflict file (we have to exclude it plus exclude non-existent files
         IReadOnlyCollection<string> expectedConflictedFiles = [..expectedStagedFiles.Skip(4)];
         await Helpers.GitOperationsHelper.VerifyNoConflictMarkers(
             ProductRepoPath,

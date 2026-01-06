@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using AwesomeAssertions;
-using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Codeflow.Tests.Helpers;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
@@ -676,7 +675,7 @@ internal class ForwardFlowTests : CodeFlowTests
 
         stagedFiles.Should().BeEquivalentTo(expectedStagedFiles, "There should be staged files after forward flow");
 
-        // Conflict markers only in Conflict file (we have to exclude it plus exclude non-existant files
+        // Conflict markers only in Conflict file (we have to exclude it plus exclude non-existent files
         IReadOnlyCollection<string> expectedConflictedFiles = [..expectedStagedFiles.Skip(5)];
         await GitOperationsHelper.VerifyNoConflictMarkers(
             VmrPath,
