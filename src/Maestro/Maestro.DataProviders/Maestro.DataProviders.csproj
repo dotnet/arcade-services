@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\Maestro.Common\Maestro.Common.csproj" />
+    <ProjectReference Include="..\..\ProductConstructionService\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />
     <ProjectReference Include="..\Maestro.Data\Maestro.Data.csproj" />
   </ItemGroup>
 
