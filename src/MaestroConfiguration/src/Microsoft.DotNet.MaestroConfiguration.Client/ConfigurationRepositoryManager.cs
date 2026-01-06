@@ -35,99 +35,75 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
     }
 
     public async Task AddSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml subscription)
-    {
-        try
-        {
-            await PerformConfigurationRepositoryOperationInternal(
-                parameters,
-                subscription,
-                (p, repo, branch, s) => AddModelInternalAsync<SubscriptionYaml, Guid>(
-                    p, repo, branch, s,
-                    ConfigFilePathResolver.GetDefaultSubscriptionFilePath,
-                    (existing, newSub) => existing.IsEquivalentTo(newSub),
-                    new SubscriptionYamlComparer(),
-                    $"Add new subscription ({s.Channel}) {s.SourceRepository} => {s.TargetRepository} ({s.TargetBranch})"),
-                $"Successfully added subscription with id '{subscription.Id}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
-        }
-        catch (DuplicateConfigurationObjectException ex)
-        {
-            _logger.LogError("Subscription {id} with equivalent parameters already exists in '{filePath}'.",
-                subscription.Id,
-                ex.FilePath);
-            throw;
-        }
-    }
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            subscription,
+            (p, repo, branch, s) => AddModelInternalAsync<SubscriptionYaml, Guid>(
+                p, repo, branch, s,
+                ConfigFilePathResolver.GetDefaultSubscriptionFilePath,
+                (existing, newSub) => existing.IsEquivalentTo(newSub),
+                new SubscriptionYamlComparer(),
+                $"Add new subscription ({s.Channel}) {s.SourceRepository} => {s.TargetRepository} ({s.TargetBranch})"),
+            $"Successfully added subscription with id '{subscription.Id}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+
     public async Task DeleteSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml subscription)
-    {
-        try
-        {
-            await PerformConfigurationRepositoryOperationInternal(
-                parameters,
-                subscription,
-                (p, repo, branch, s) => DeleteModelInternalAsync(
-                    p, repo, branch, s,
-                    YamlModelUniqueKeys.GetSubscriptionKey,
-                    new SubscriptionYamlComparer(),
-                    $"Delete subscription {s.Id}"),
-                $"Successfully deleted subscription with id '{subscription.Id}' from branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
-        }
-        catch (ConfigurationObjectNotFoundException ex)
-        {
-            _logger.LogError("No existing subscription with id {id} found in file {filePath} of repo {repo} on branch {branch}",
-                subscription.Id,
-                ex.FilePath,
-                ex.RepositoryUri,
-                ex.BranchName);
-            throw;
-        }
-    }
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            subscription,
+            (p, repo, branch, s) => DeleteModelInternalAsync(
+                p, repo, branch, s,
+                YamlModelUniqueKeys.GetSubscriptionKey,
+                new SubscriptionYamlComparer(),
+                $"Delete subscription {s.Id}"),
+            $"Successfully deleted subscription with id '{subscription.Id}' from branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+
     public async Task UpdateSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml updatedSubscription)
-    {
-        try
-        {
-            await PerformConfigurationRepositoryOperationInternal(
-                parameters,
-                updatedSubscription,
-                (p, repo, branch, s) => UpdateModelInternalAsync(
-                    p, repo, branch, s,
-                    YamlModelUniqueKeys.GetSubscriptionKey,
-                    new SubscriptionYamlComparer(),
-                    $"Update subscription {s.Id}"),
-                $"Successfully updated subscription with id '{updatedSubscription.Id}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
-        }
-        catch (ConfigurationObjectNotFoundException ex)
-        {
-            _logger.LogError("No existing subscription with id {id} found in file {filePath} of repo {repo} on branch {branch}",
-                updatedSubscription.Id,
-                ex.FilePath,
-                ex.RepositoryUri,
-                ex.BranchName);
-            throw;
-        }
-    }
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            updatedSubscription,
+            (p, repo, branch, s) => UpdateModelInternalAsync(
+                p, repo, branch, s,
+                YamlModelUniqueKeys.GetSubscriptionKey,
+                new SubscriptionYamlComparer(),
+                $"Update subscription {s.Id}"),
+            $"Successfully updated subscription with id '{updatedSubscription.Id}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+
     public async Task AddChannelAsync(ConfigurationRepositoryOperationParameters parameters, ChannelYaml channel)
-    {
-        try
-        {
-            await PerformConfigurationRepositoryOperationInternal(
-                parameters,
-                channel,
-                (p, repo, branch, c) => AddModelInternalAsync<ChannelYaml, string>(
-                    p, repo, branch, c,
-                    ConfigFilePathResolver.GetDefaultChannelFilePath,
-                    (existing, newChannel) => string.Equals(existing.Name, newChannel.Name, StringComparison.OrdinalIgnoreCase),
-                    new ChannelYamlComparer(),
-                    $"Add new channel '{c.Name}'"),
-                $"Successfully added channel '{channel.Name}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
-        }
-        catch (DuplicateConfigurationObjectException ex)
-        {
-            _logger.LogError("Channel with name '{name}' already exists in '{filePath}'.",
-               channel.Name,
-               ex.FilePath);
-            throw;
-        }
-    }
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            channel,
+            (p, repo, branch, c) => AddModelInternalAsync<ChannelYaml, string>(
+                p, repo, branch, c,
+                ConfigFilePathResolver.GetDefaultChannelFilePath,
+                (existing, newChannel) => string.Equals(existing.Name, newChannel.Name, StringComparison.OrdinalIgnoreCase),
+                new ChannelYamlComparer(),
+                $"Add new channel '{c.Name}'"),
+            $"Successfully added channel '{channel.Name}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+
+    public async Task DeleteChannelAsync(ConfigurationRepositoryOperationParameters parameters, ChannelYaml channel)
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            channel,
+            (p, repo, branch, c) => DeleteModelInternalAsync(
+                p, repo, branch, c,
+                YamlModelUniqueKeys.GetChannelKey,
+                new ChannelYamlComparer(),
+                $"Delete channel '{c.Name}'"),
+            $"Successfully deleted channel '{channel.Name}' from branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+
+    public async Task AddDefaultChannelAsync(ConfigurationRepositoryOperationParameters parameters, DefaultChannelYaml defaultChannel)
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            defaultChannel,
+            (p, repo, branch, dc) => AddModelInternalAsync<DefaultChannelYaml, (string, string, string)>(
+                p, repo, branch, dc,
+                ConfigFilePathResolver.GetDefaultDefaultChannelFilePath,
+                (existing, newDc) => string.Equals(existing.Repository, newDc.Repository, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(existing.Branch, newDc.Branch, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(existing.Channel, newDc.Channel, StringComparison.OrdinalIgnoreCase),
+                new DefaultChannelYamlComparer(),
+                $"Add new default channel ({dc.Channel}) {dc.Repository} ({dc.Branch})"),
+            $"Successfully added default channel on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
 
     private async Task PerformConfigurationRepositoryOperationInternal<TModel>(
         ConfigurationRepositoryOperationParameters parameters,
