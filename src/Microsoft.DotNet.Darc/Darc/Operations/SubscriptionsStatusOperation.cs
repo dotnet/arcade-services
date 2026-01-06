@@ -127,23 +127,24 @@ internal class SubscriptionsStatusOperation : Operation
 
                 if (_options.ShouldUseConfigurationRepository)
                 {
-                    // Create an updated subscription YAML with only the Enabled property changed
+                    // Create a subscription YAML from the client model and update Enabled property
+                    var baseSubscriptionYaml = SubscriptionYaml.FromClientModel(subscription);
                     var updatedSubscriptionYaml = new SubscriptionYaml
                     {
-                        Id = subscription.Id,
+                        Id = baseSubscriptionYaml.Id,
                         Enabled = _options.Enable,
-                        Channel = subscription.Channel.Name,
-                        SourceRepository = subscription.SourceRepository,
-                        TargetRepository = subscription.TargetRepository,
-                        TargetBranch = subscription.TargetBranch,
-                        UpdateFrequency = subscription.Policy.UpdateFrequency,
-                        Batchable = subscription.Policy.Batchable,
-                        MergePolicies = MergePolicyYaml.FromClientModels(subscription.Policy.MergePolicies),
-                        FailureNotificationTags = subscription.PullRequestFailureNotificationTags,
-                        SourceEnabled = subscription.SourceEnabled,
-                        SourceDirectory = subscription.SourceDirectory,
-                        TargetDirectory = subscription.TargetDirectory,
-                        ExcludedAssets = [..subscription.ExcludedAssets]
+                        Channel = baseSubscriptionYaml.Channel,
+                        SourceRepository = baseSubscriptionYaml.SourceRepository,
+                        TargetRepository = baseSubscriptionYaml.TargetRepository,
+                        TargetBranch = baseSubscriptionYaml.TargetBranch,
+                        UpdateFrequency = baseSubscriptionYaml.UpdateFrequency,
+                        Batchable = baseSubscriptionYaml.Batchable,
+                        MergePolicies = baseSubscriptionYaml.MergePolicies,
+                        FailureNotificationTags = baseSubscriptionYaml.FailureNotificationTags,
+                        SourceEnabled = baseSubscriptionYaml.SourceEnabled,
+                        SourceDirectory = baseSubscriptionYaml.SourceDirectory,
+                        TargetDirectory = baseSubscriptionYaml.TargetDirectory,
+                        ExcludedAssets = baseSubscriptionYaml.ExcludedAssets
                     };
 
                     try
