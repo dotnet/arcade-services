@@ -81,7 +81,7 @@ internal class UpdateDefaultChannelOperation : Operation
     private async Task<int> UpdateViaApiAsync(bool? enabled)
     {
         DefaultChannel resolvedChannel = await ResolveSingleChannelAsync();
-        if (resolvedChannel == null)
+        if (resolvedChannel is null)
         {
             return Constants.ErrorCode;
         }
@@ -108,7 +108,7 @@ internal class UpdateDefaultChannelOperation : Operation
     {
         // First, resolve the existing default channel to get the current values
         DefaultChannel resolvedChannel = await ResolveSingleChannelAsync();
-        if (resolvedChannel == null)
+        if (resolvedChannel is null)
         {
             return Constants.ErrorCode;
         }
@@ -167,7 +167,7 @@ internal class UpdateDefaultChannelOperation : Operation
         if (_options.Id != -1)
         {
             DefaultChannel defaultChannel = potentialDefaultChannels.SingleOrDefault(d => d.Id == _options.Id);
-            if (defaultChannel == null)
+            if (defaultChannel is null)
             {
                 Console.WriteLine($"Could not find a default channel with id {_options.Id}");
             }
