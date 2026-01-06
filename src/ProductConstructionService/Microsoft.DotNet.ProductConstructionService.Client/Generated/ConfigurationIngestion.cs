@@ -8,16 +8,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Core;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
+
 
 
 namespace Microsoft.DotNet.ProductConstructionService.Client
 {
-    public partial interface IIngestion
+    public partial interface IConfigurationIngestion
     {
-        Task<ConfigurationUpdates> IngestNamespaceAsync(
+        Task<Models.ConfigurationUpdates> IngestNamespaceAsync(
             string namespaceName,
-            ClientYamlConfiguration body = default,
+            Models.ClientYamlConfiguration body = default,
             CancellationToken cancellationToken = default
         );
 
@@ -29,9 +29,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
     }
 
-    internal partial class Ingestion : IServiceOperations<ProductConstructionServiceApi>, IIngestion
+    internal partial class ConfigurationIngestion : IServiceOperations<ProductConstructionServiceApi>, IConfigurationIngestion
     {
-        public Ingestion(ProductConstructionServiceApi client)
+        public ConfigurationIngestion(ProductConstructionServiceApi client)
         {
             Client = client ?? throw new ArgumentNullException(nameof(client));
         }
@@ -42,9 +42,9 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         partial void HandleFailedIngestNamespaceRequest(RestApiException ex);
 
-        public async Task<ConfigurationUpdates> IngestNamespaceAsync(
+        public async Task<Models.ConfigurationUpdates> IngestNamespaceAsync(
             string namespaceName,
-            ClientYamlConfiguration body = default,
+            Models.ClientYamlConfiguration body = default,
             CancellationToken cancellationToken = default
         )
         {
@@ -60,7 +60,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/ingestion",
+                "/api/configuration-ingestion",
                 false);
 
             if (!string.IsNullOrEmpty(namespaceName))
@@ -75,7 +75,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                 _req.Uri = _url;
                 _req.Method = RequestMethod.Post;
 
-                if (body != default(ClientYamlConfiguration))
+                if (body != default(Models.ClientYamlConfiguration))
                 {
                     _req.Content = RequestContent.Create(Encoding.UTF8.GetBytes(Client.Serialize(body)));
                     _req.Headers.Add("Content-Type", "application/json; charset=utf-8");
@@ -96,7 +96,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<ConfigurationUpdates>(_content);
+                        var _body = Client.Deserialize<Models.ConfigurationUpdates>(_content);
                         return _body;
                     }
                 }
@@ -114,11 +114,11 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedIngestNamespaceRequest(ex);
             HandleFailedRequest(ex);
@@ -146,7 +146,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/ingestion",
+                "/api/configuration-ingestion",
                 false);
 
             if (!string.IsNullOrEmpty(namespaceName))
@@ -198,11 +198,11 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedDeleteNamespaceRequest(ex);
             HandleFailedRequest(ex);

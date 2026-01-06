@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Linq;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
@@ -106,5 +107,54 @@ public class SubscriptionYaml : IYamlModel
                SourceEnabled == other.SourceEnabled &&
                string.Equals(SourceDirectory, other.SourceDirectory, StringComparison.OrdinalIgnoreCase) &&
                string.Equals(TargetDirectory, other.TargetDirectory, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static ClientSubscriptionYaml ToPcsClient(SubscriptionYaml s)
+    {
+        return new ClientSubscriptionYaml(
+            id: s.Id,
+            enabled: s.Enabled,
+            channel: s.Channel,
+            sourceRepository: s.SourceRepository,
+            targetRepository: s.TargetRepository,
+            targetBranch: s.TargetBranch,
+            updateFrequency: ConvertUpdateFrequency(s.UpdateFrequency),
+            batchable: s.Batchable,
+            sourceEnabled: s.SourceEnabled)
+        {
+            ExcludedAssets = s.ExcludedAssets?.ToImmutableList() ?? ImmutableList<string>.Empty,
+            MergePolicies = MergePolicyYaml.ToPcsClientList(s.MergePolicies),
+            FailureNotificationTags = s.FailureNotificationTags,
+            SourceDirectory = s.SourceDirectory,
+            TargetDirectory = s.TargetDirectory
+        };
+    }
+
+    public static IImmutableList<ClientSubscriptionYaml> ToPcsClientList(
+        IReadOnlyCollection<SubscriptionYaml>? subscriptions)
+    {
+        if (subscriptions == null || subscriptions.Count == 0)
+        {
+            return ImmutableList<ClientSubscriptionYaml>.Empty;
+        }
+
+        return subscriptions
+            .Select(ToPcsClient)
+            .ToImmutableList();
+    }
+
+    public static ClientUpdateFrequency ConvertUpdateFrequency(UpdateFrequency updateFrequency)
+    {
+        return updateFrequency switch
+        {
+            UpdateFrequency.None => ClientUpdateFrequency.None,
+            UpdateFrequency.EveryDay => ClientUpdateFrequency.EveryDay,
+            UpdateFrequency.EveryBuild => ClientUpdateFrequency.EveryBuild,
+            UpdateFrequency.TwiceDaily => ClientUpdateFrequency.TwiceDaily,
+            UpdateFrequency.EveryWeek => ClientUpdateFrequency.EveryWeek,
+            UpdateFrequency.EveryTwoWeeks => ClientUpdateFrequency.EveryTwoWeeks,
+            UpdateFrequency.EveryMonth => ClientUpdateFrequency.EveryMonth,
+            _ => throw new ArgumentException($"Unknown UpdateFrequency value: {updateFrequency}", nameof(updateFrequency))
+        };
     }
 }

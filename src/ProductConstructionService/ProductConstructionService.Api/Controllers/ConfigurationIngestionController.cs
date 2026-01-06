@@ -9,22 +9,23 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
+using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.Configuration;
 
 namespace ProductConstructionService.Api.Controllers;
 
-[Route("ingestion")]
+[Route("configuration-ingestion")]
 [ApiVersion("2020-02-20")]
 [Authorize(Policy = AuthenticationConfiguration.AdminAuthorizationPolicyName)]
-public class IngestionController : Controller
+public class ConfigurationIngestionController : Controller
 {
     private readonly IConfigurationIngestor _configurationIngestor;
     private readonly ISqlBarClient _sqlBarClient;
-    private readonly ILogger<IngestionController> _logger;
+    private readonly ILogger<ConfigurationIngestionController> _logger;
 
     private const string ProductionNamespaceName = "production";
 
-    public IngestionController(IConfigurationIngestor configurationIngestor, ISqlBarClient sqlBarClient, ILogger<IngestionController> logger)
+    public ConfigurationIngestionController(IConfigurationIngestor configurationIngestor, ISqlBarClient sqlBarClient, ILogger<ConfigurationIngestionController> logger)
     {
         _configurationIngestor = configurationIngestor;
         _sqlBarClient = sqlBarClient;
@@ -44,16 +45,37 @@ public class IngestionController : Controller
         }
 
         _logger.LogInformation("Ingesting configuration for namespace {NamespaceName} (saveChanges={SaveChanges})", namespaceName, saveChanges);
-        var updates = await _configurationIngestor.IngestConfigurationAsync(
-            new ConfigurationData(
-                yamlConfiguration.Subscriptions,
-                yamlConfiguration.Channels,
-                yamlConfiguration.DefaultChannels,
-                yamlConfiguration.BranchMergePolicies),
-            namespaceName,
-            saveChanges);
+        try
+        {
+            var updates = await _configurationIngestor.IngestConfigurationAsync(
+                new ConfigurationData(
+                    yamlConfiguration.Subscriptions,
+                    yamlConfiguration.Channels,
+                    yamlConfiguration.DefaultChannels,
+                    yamlConfiguration.BranchMergePolicies),
+                namespaceName,
+                saveChanges);
 
-        return Ok(updates);
+            return Ok(updates);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Configuration validation failed",
+                Detail = ex.Message,
+                Status = 400
+            });
+        }
+        catch (Exception ex) when (ex is DbUpdateException || ex is InvalidOperationException)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "BAR constrains violated",
+                Detail = ex.Message,
+                Status = 400
+            });
+        }
     }
 
     [HttpDelete(Name = "delete")]

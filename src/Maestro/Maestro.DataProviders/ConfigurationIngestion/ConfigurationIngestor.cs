@@ -307,7 +307,7 @@ internal partial class ConfigurationIngestor(
     {
         var dbRepositoryBranches = await _context.RepositoryBranches
             .Where(rb => rb.Namespace.Name == namespaceEntity.Name)
-            .ToDictionaryAsync(rb => (rb.Repository.RepositoryName, rb.BranchName));
+            .ToDictionaryAsync(rb => (rb.RepositoryName, rb.BranchName));
 
         foreach (var bmp in updatedBranchMergePolicies)
         {

@@ -30,10 +30,10 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         IBuilds Builds { get; }
         IBuildTime BuildTime { get; }
         IChannels Channels { get; }
+        IConfigurationIngestion Ingestion { get; }
         IDefaultChannels DefaultChannels { get; }
         IFeatureFlags FeatureFlags { get; }
         IGoal Goal { get; }
-        IIngestion Ingestion { get; }
         IPipelines Pipelines { get; }
         IPullRequest PullRequest { get; }
         IRepository Repository { get; }
@@ -130,7 +130,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         public IGoal Goal { get; }
 
-        public IIngestion Ingestion { get; }
+        public IConfigurationIngestion Ingestion { get; }
 
         public IPipelines Pipelines { get; }
 
@@ -159,7 +159,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             DefaultChannels = new DefaultChannels(this);
             FeatureFlags = new FeatureFlags(this);
             Goal = new Goal(this);
-            Ingestion = new Ingestion(this);
+            Ingestion = new ConfigurationIngestion(this);
             Pipelines = new Pipelines(this);
             PullRequest = new PullRequest(this);
             Repository = new Repository(this);
