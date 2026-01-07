@@ -1626,7 +1626,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             prIsEmpty = true;
             _logger.LogInformation("Creating PR that requires manual conflict resolution for build {buildId}...", update.BuildId);
-            await CreateEmptyPrBranch(subscription, prHeadBranch, localRepo, initialCommitMessage);
+            await CreateEmptyPrBranch(subscription, localRepo, prHeadBranch, subscription.TargetBranch, initialCommitMessage);
 
             (pr, prInfo) = await CreateCodeFlowPullRequestAsync(
                 update,
@@ -1638,15 +1638,21 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         else
         {
-            var latestPrCommit = await _gitClient.GetShaForRefAsync(localRepo, prHeadBranch);
+            var remoteName = (await _gitClient.GetRemotesAsync(localRepo))
+                .First(r => r.Uri.Equals(subscription.TargetRepository))
+                .Name;
+            await _gitClient.UpdateRemoteAsync(localRepo, remoteName);
+            var latestPrCommit = await _gitClient.GetShaForRefAsync(localRepo, $"{remoteName}/{prHeadBranch}");
+            var latestTargetBranchCommit = await _gitClient.GetShaForRefAsync(localRepo, $"{remoteName}/{subscription.TargetBranch}");
+
             var latestCommitMessage = await _gitClient.RunGitCommandAsync(localRepo, [$"log", "-1", "--pretty=%B", latestPrCommit]);
             prIsEmpty = latestCommitMessage.StandardOutput.Trim().StartsWith(initialCommitMessage);
 
             // When the PR is empty but a new build has flown in, we should rebase the PR branch onto the target branch and force-push
-            if (prIsEmpty)
+            if (prIsEmpty && !await _gitClient.IsAncestorCommit(localRepo, latestTargetBranchCommit, latestPrCommit))
             {
                 _logger.LogInformation("Rebasing empty PR branch {headBranch} onto {targetBranch}", prHeadBranch, subscription.TargetBranch);
-                await CreateEmptyPrBranch(subscription, prHeadBranch, localRepo, initialCommitMessage);
+                await CreateEmptyPrBranch(subscription, localRepo, prHeadBranch, latestTargetBranchCommit, initialCommitMessage);
             }
 
             prInfo = await remote.GetPullRequestAsync(pr.Url)
@@ -1688,14 +1694,15 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// </summary>
     private async Task CreateEmptyPrBranch(
         SubscriptionDTO subscription,
-        string prHeadBranch,
         NativePath localRepo,
+        string prBranchName,
+        string baseCommit,
         string initialCommitMessage)
     {
-        await _gitClient.ForceCheckoutAsync(localRepo, subscription.TargetBranch);
-        await _gitClient.CreateBranchAsync(localRepo, prHeadBranch, overwriteExistingBranch: true);
+        await _gitClient.ForceCheckoutAsync(localRepo, baseCommit);
+        await _gitClient.CreateBranchAsync(localRepo, prBranchName, overwriteExistingBranch: true);
         await _gitClient.CommitAsync(localRepo, initialCommitMessage, allowEmpty: true);
-        await _gitClient.Push(localRepo, prHeadBranch, subscription.TargetRepository, force: true);
+        await _gitClient.Push(localRepo, prBranchName, subscription.TargetRepository, force: true);
     }
 
     #endregion
