@@ -43,10 +43,10 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
                 ConfigurationErrorsHeader,
                 string.Join(Environment.NewLine, configurationErrors),
                 SeekHelpMsg);
-            return FailDecisively($"Missing or mismatched values found in {VmrInfo.DefaultRelativeSourceManifestPath}", failureMessage);
+            return FailDecisively($"Unexpected codeflow metadata found in {VmrInfo.DefaultRelativeSourceManifestPath}", failureMessage);
         }
 
-        return SucceedDecisively($"Forward-flow checks succeeded.");
+        return SucceedDecisively("Forward flow checks succeeded.");
     }
 
     private static List<string> CalculateConfigurationErrors(
