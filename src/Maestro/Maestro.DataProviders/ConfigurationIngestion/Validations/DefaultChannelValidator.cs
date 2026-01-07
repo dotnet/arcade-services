@@ -32,22 +32,22 @@ internal class DefaultChannelValidator
 
         if (string.IsNullOrWhiteSpace(defaultChannel.Values.Repository))
         {
-            throw new IngestionEntityValidationException("Default channel repository is required.", defaultChannel.ToString());
+            throw new IngestionEntityValidationException("Default channel repository is required.", defaultChannel);
         }
 
         if (string.IsNullOrWhiteSpace(defaultChannel.Values.Branch))
         {
-            throw new IngestionEntityValidationException("Default channel branch is required.", defaultChannel.ToString());
+            throw new IngestionEntityValidationException("Default channel branch is required.", defaultChannel);
         }
 
         if (defaultChannel.Values.Repository.Length > 300)
         {
-            throw new IngestionEntityValidationException("Default channel repository cannot be longer than 300 characters.", defaultChannel.ToString());
+            throw new IngestionEntityValidationException("Default channel repository cannot be longer than 300 characters.", defaultChannel);
         }
 
         if (defaultChannel.Values.Branch.Length > 100)
         {
-            throw new IngestionEntityValidationException("Default channel branch name cannot be longer than 100 characters.", defaultChannel.ToString());
+            throw new IngestionEntityValidationException("Default channel branch name cannot be longer than 100 characters.", defaultChannel);
         }
     }
 }
