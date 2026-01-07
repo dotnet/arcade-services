@@ -29,8 +29,10 @@ internal class CodeFlowMergePolicy : MergePolicy
 
         ### :warning: Attention
 
-        This could be the result of unresolved conflicts in the PR. Maestro might be waiting for user intervention.
-        Check for a comment mentioning conflicts posted by Maestro on the PR.
+        This could be the result of Maestro attempting to flow new changes into the PR and hitting a conflict. Maestro is then waiting for user intervention.
+        Check for a comment mentioning conflicts posted by Maestro on the PR.  
+        You may also choose to ignore this check and merge without the latest changes flowing in.
+        The conflicts will then surface again in the follow-up PR.
         
         ### :exclamation: Important
 
