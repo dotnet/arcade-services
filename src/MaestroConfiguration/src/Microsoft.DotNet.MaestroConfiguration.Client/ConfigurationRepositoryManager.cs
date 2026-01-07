@@ -139,6 +139,16 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
                 new BranchMergePoliciesYamlComparer(),
                 $"Delete merge policies for {bmp.Repository}@{bmp.Branch}"),
             $"Successfully deleted merge policies for {branchMergePoliciesYaml.Repository}@{branchMergePoliciesYaml.Branch} from branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+    public async Task DeleteDefaultChannelAsync(ConfigurationRepositoryOperationParameters parameters, DefaultChannelYaml defaultChannel)
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            defaultChannel,
+            (p, repo, branch, dc) => DeleteModelInternalAsync(
+                p, repo, branch, dc,
+                YamlModelUniqueKeys.GetDefaultChannelKey,
+                new DefaultChannelYamlComparer(),
+                $"Delete default channel {dc.Repository} ({dc.Branch}) => {dc.Channel}"),
+            $"Successfully deleted default channel '{defaultChannel.Repository}' ({defaultChannel.Branch}) => '{defaultChannel.Channel}' from branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
 
     private async Task PerformConfigurationRepositoryOperationInternal<TModel>(
         ConfigurationRepositoryOperationParameters parameters,
