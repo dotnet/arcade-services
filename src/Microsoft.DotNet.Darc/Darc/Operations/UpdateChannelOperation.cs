@@ -66,10 +66,9 @@ internal class UpdateChannelOperation : Operation
                     return Constants.ErrorCode;
                 }
 
-                // Create an updated channel YAML with the new classification
-                var updatedChannelYaml = new ChannelYaml
+                // Create an updated channel YAML from the existing channel and update classification if provided
+                var updatedChannelYaml = ChannelYaml.FromClientModel(channel) with
                 {
-                    Name = channel.Name, // Keep the original name (immutable)
                     Classification = _options.Classification ?? channel.Classification
                 };
 

@@ -6,7 +6,7 @@ using YamlDotNet.Serialization;
 
 namespace Microsoft.DotNet.MaestroConfiguration.Client.Models;
 
-public class ChannelYaml : IYamlModel
+public record ChannelYaml : IYamlModel
 {
     [YamlMember(Alias = "Name", ApplyNamingConventions = false)]
     public required string Name { get; init; }
