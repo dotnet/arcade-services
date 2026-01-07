@@ -10,7 +10,7 @@ namespace Maestro.DataProviders.ConfigurationIngestion.Validations;
 
 internal class EntityValidator
 {
-    internal static void ValidateEntityUniqueness<T>(IEnumerable<IExternallySyncedEntity<T>> entities)
+    internal static void ValidateEntityUniqueness<T>(IEnumerable<IExternallySyncedEntity<T>> entities) where T : notnull
     {
         if (!entities.Any())
         {
@@ -21,8 +21,19 @@ internal class EntityValidator
 
         if (uniqueIds.Count != entities.Count())
         {
-            throw new ArgumentException($"{entities.GetType().GetGenericArguments()[0].Name} collection "
-            + "contains duplicate Ids.");
+            // Find duplicates to provide more details
+            var duplicates = entities
+                .GroupBy(e => e.UniqueId)
+                .Where(g => g.Count() > 1)
+                .Select(g => g.First())
+                .ToList();
+
+            var duplicateInfo = string.Join(", ", duplicates.Select(e => e.ToString()));
+            var entityTypeName = entities.First().GetType().Name;
+
+            throw new IngestionEntityValidationException(
+                $"{entityTypeName} collection contains duplicate Ids.",
+                duplicateInfo);
         }
     }
 }

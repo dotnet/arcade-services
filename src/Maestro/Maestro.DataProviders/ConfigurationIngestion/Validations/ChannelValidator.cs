@@ -30,7 +30,14 @@ internal class ChannelValidator
     {
         ArgumentNullException.ThrowIfNull(channel);
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(channel.Values.Name);
-        ArgumentException.ThrowIfNullOrWhiteSpace(channel.Values.Classification);
+        if (string.IsNullOrWhiteSpace(channel.Values.Name))
+        {
+            throw new IngestionEntityValidationException("Channel name is required.", channel.ToString());
+        }
+
+        if (string.IsNullOrWhiteSpace(channel.Values.Classification))
+        {
+            throw new IngestionEntityValidationException("Channel classification is required.", channel.ToString());
+        }
     }
 }
