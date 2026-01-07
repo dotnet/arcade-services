@@ -471,7 +471,8 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             try
             {
                 var fileContent = await gitRepo.GetFileContentsAsync(repositoryUri, workingBranch, filePath);
-                var deserializedYamls = _yamlDeserializer.Deserialize<List<TModel>>(fileContent);
+                var deserializedYamls = _yamlDeserializer.Deserialize<List<TModel>>(fileContent)
+                    ?? [];
 
                 if (deserializedYamls.Any(y => searchKey.Equals(getUniqueKey(y))))
                 {
