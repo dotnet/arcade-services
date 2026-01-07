@@ -533,14 +533,10 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         if (subscription != null)
         {
-            // We must check if the build really got applied or if someone merged an earlier build without resolving conflicts
-            int buildId = update.BuildId;
-            if (subscription.SourceEnabled)
-            {
-                buildId = await GetLastCodeflownBuild(subscription);
-            }
-
-            subscription.LastAppliedBuildId = buildId;
+            subscription.LastAppliedBuildId = subscription.SourceEnabled
+                // We must check if the build really got applied or if someone merged an earlier build without resolving conflicts
+                ? await GetLastCodeflownBuild(subscription)
+                : update.BuildId;
             _context.Subscriptions.Update(subscription);
             await _context.SaveChangesAsync();
         }
