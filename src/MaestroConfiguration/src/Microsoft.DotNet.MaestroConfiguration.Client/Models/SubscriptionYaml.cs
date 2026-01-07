@@ -14,7 +14,7 @@ namespace Microsoft.DotNet.MaestroConfiguration.Client.Models;
 /// Helper class for YAML encoding/decoding purposes.
 /// This is used so that we can have friendly alias names for elements.
 /// </summary>
-public class SubscriptionYaml : IYamlModel
+public record SubscriptionYaml : IYamlModel
 {
     public const string IdElement = "Id";
     public const string EnabledElement = "Enabled";
