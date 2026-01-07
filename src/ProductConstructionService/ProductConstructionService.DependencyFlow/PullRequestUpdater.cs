@@ -1638,6 +1638,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         else
         {
+            // We get the latest SHAs of the PR branch and the target branch
             var remoteName = (await _gitClient.GetRemotesAsync(localRepo))
                 .First(r => r.Uri.Equals(subscription.TargetRepository))
                 .Name;
@@ -1645,6 +1646,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             var latestPrCommit = await _gitClient.GetShaForRefAsync(localRepo, $"{remoteName}/{prHeadBranch}");
             var latestTargetBranchCommit = await _gitClient.GetShaForRefAsync(localRepo, $"{remoteName}/{subscription.TargetBranch}");
 
+            // We check if the PR branch still only contains the empty commit only
             var latestCommitMessage = await _gitClient.RunGitCommandAsync(localRepo, [$"log", "-1", "--pretty=%B", latestPrCommit]);
             prIsEmpty = latestCommitMessage.StandardOutput.Trim().StartsWith(initialCommitMessage);
 
