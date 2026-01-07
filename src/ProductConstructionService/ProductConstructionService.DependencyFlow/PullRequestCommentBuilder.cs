@@ -122,8 +122,9 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         if (!prIsEmpty)
         {
             comment
-                .Append("You can either merge the PR without getting these new updates ")
-                .AppendLine("**or** resolve the conflicts manually so that automated codeflow can resume for this PR.");
+                .AppendLine()
+                .Append("**:bulb: You can either merge the PR without getting these new updates ")
+                .AppendLine("or manually flow them in and resolve the conflicts so that automated codeflow can resume for this PR.**");
         }
 
         comment
