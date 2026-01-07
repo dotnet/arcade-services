@@ -112,8 +112,8 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         string prHeadBranch,
         bool prIsEmpty)
     {
-        var comment = new StringBuilder("# \U0001f6d1 ")
-            .Append(prIsEmpty ? "Action Required" : "Codeflow Paused")
+        var comment = new StringBuilder()
+            .Append(prIsEmpty ? "# :rotating_light: Action Required" : "# :stop_sign: Codeflow Paused")
             .AppendLine(" — Conflict detected")
             .Append($"A conflict was detected when trying to update this PR with changes from build `{update.BuildId}` of ")
             .Append(GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha))
