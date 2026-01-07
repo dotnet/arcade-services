@@ -71,9 +71,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             IBackflowConflictResolver versionFileConflictResolver,
             IFileSystem fileSystem,
             IBasicBarClient barClient,
-            ICommentCollector commentCollector,
             ILogger<VmrCodeFlower> logger)
-        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, commentCollector, logger)
+        : base(vmrInfo, sourceManifest, dependencyTracker, localGitClient, localGitRepoFactory, versionDetailsParser, fileSystem, logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;

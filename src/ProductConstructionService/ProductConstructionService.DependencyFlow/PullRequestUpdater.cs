@@ -1563,7 +1563,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private async Task HandleBlockingCodeflowException(InProgressPullRequest pr)
     {
         _logger.LogInformation("PR with url {prUrl} is blocked from receiving future codeflows.", pr.Url);
-
+        _commentCollector.AddComment(PullRequestCommentBuilder.BuildOppositeCodeflowMergedNotification(), CommentType.Warning);
         pr.BlockedFromFutureUpdates = true;
         await _pullRequestState.SetAsync(pr);
     }

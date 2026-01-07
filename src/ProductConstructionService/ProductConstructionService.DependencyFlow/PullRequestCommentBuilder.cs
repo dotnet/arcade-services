@@ -179,6 +179,26 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         return comment.ToString();
     }
 
+    public static string BuildOppositeCodeflowMergedNotification() =>
+        """
+        While this PR was open, the source repository has received code changes from this repository (an opposite codeflow merged).
+        To avoid complex conflicts, the codeflow cannot continue until this PR is closed or merged.
+        
+        You can continue with one of the following options:
+        - Merge this PR as usual without waiting for the new changes.
+           Once merged, Maestro will create a new codeflow PR with the new changes.
+        - Close this PR and wait for Maestro to open a new one with old and new changes included.
+           You will lose any manual changes made in this PR.
+           You can also manually trigger the new codeflow right away by running:
+           ```
+           darc trigger-subscriptions --id <subscriptionId>
+           ```
+        - Force a codeflow into this PR at your own risk (user PR commits might be reverted):
+           ```
+           darc trigger-subscriptions --id <subscriptionId> --force
+           ```
+        """;
+
     public async Task<string?> BuildTagSourceRepositoryGitHubContactsCommentAsync(InProgressPullRequest pr)
     {
         // We'll try to notify the source repo if the subscription provided a list of aliases to tag.

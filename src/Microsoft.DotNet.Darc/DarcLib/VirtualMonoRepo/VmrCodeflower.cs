@@ -46,7 +46,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IFileSystem _fileSystem;
-    private readonly ICommentCollector _commentCollector;
     private readonly ILogger<VmrCodeFlower> _logger;
 
     public const string FileToBeRemovedContent =
@@ -59,22 +58,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         not getting removed in the PR due to the other conflicts.
         """;
 
-    private static readonly string CannotFlowAdditionalFlowsInPrMsg =
-        """
-        While this PR was open, the source repository has received code changes from this repository (an opposite codeflow merged).
-        To avoid complex conflicts, the codeflow cannot continue until this PR is closed or merged.
-        
-        You can continue with one of the following options:
-        1. Merge this PR as usual without waiting for the new changes.
-           Once merged, Maestro will create a new codeflow PR with the new changes.
-        2. Close this PR and wait for Maestro to open a new one with old and new changes included.
-           You will lose any manual changes made in this PR.
-           You can also manually trigger the new codeflow right away by running:
-           `darc trigger-subscriptions --id <subscriptionId>`
-        3. Force a codeflow into this PR at your own risk (user PR commits might be reverted):
-           `darc trigger-subscriptions --id <subscriptionId> --force`
-        """;
-
     protected VmrCodeFlower(
         IVmrInfo vmrInfo,
         ISourceManifest sourceManifest,
@@ -83,7 +66,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         ILocalGitRepoFactory localGitRepoFactory,
         IVersionDetailsParser versionDetailsParser,
         IFileSystem fileSystem,
-        ICommentCollector commentCollector,
         ILogger<VmrCodeFlower> logger)
     {
         _vmrInfo = vmrInfo;
@@ -93,7 +75,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         _localGitRepoFactory = localGitRepoFactory;
         _versionDetailsParser = versionDetailsParser;
         _fileSystem = fileSystem;
-        _commentCollector = commentCollector;
         _logger = logger;
     }
 
@@ -119,7 +100,6 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         if (lastFlow.IsBackflow != codeflowOptions.CurrentFlow.IsBackflow && headBranchExisted && !codeflowOptions.ForceUpdate)
         {
-            _commentCollector.AddComment(CannotFlowAdditionalFlowsInPrMsg, CommentType.Information);
             throw new BlockingCodeflowException("Cannot apply codeflow on PR head branch because an opposite direction flow has been merged.");
         }
 
