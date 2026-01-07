@@ -61,14 +61,18 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
     private static readonly string CannotFlowAdditionalFlowsInPrMsg =
         """
-        The source repository has received code changes from an opposite flow. Any additional codeflows into this PR may potentially result in lost changes.
+        While this PR was open, the source repository has received code changes from this repository (an opposite codeflow merged).
+        To avoid complex conflicts, the codeflow cannot continue until this PR is closed or merged.
         
-        Please continue with one of the following options:
-        1. Close or merge this PR and let the codeflow continue normally
-        2. Close or merge this PR and receive the new codeflow immediately by triggering the subscription:
-            `darc trigger-subscriptions --id <subscriptionId>`
-        3. Force-flow new changes into this PR at your own risk (some PR commits might be reverted):
-            `darc trigger-subscriptions --force --id <subscriptionId>`
+        You can continue with one of the following options:
+        1. Merge this PR as usual without waiting for the new changes.
+           Once merged, Maestro will create a new codeflow PR with the new changes.
+        2. Close this PR and wait for Maestro to open a new one with old and new changes included.
+           You will lose any manual changes made in this PR.
+           You can also manually trigger the new codeflow right away by running:
+           `darc trigger-subscriptions --id <subscriptionId>`
+        3. Force a codeflow into this PR at your own risk (user PR commits might be reverted):
+           `darc trigger-subscriptions --id <subscriptionId> --force`
         """;
 
     protected VmrCodeFlower(
@@ -115,7 +119,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         if (lastFlow.IsBackflow != codeflowOptions.CurrentFlow.IsBackflow && headBranchExisted && !codeflowOptions.ForceUpdate)
         {
-            _commentCollector.AddComment(CannotFlowAdditionalFlowsInPrMsg, CommentType.Warning);
+            _commentCollector.AddComment(CannotFlowAdditionalFlowsInPrMsg, CommentType.Information);
             throw new BlockingCodeflowException("Cannot apply codeflow on PR head branch because an opposite direction flow has been merged.");
         }
 
