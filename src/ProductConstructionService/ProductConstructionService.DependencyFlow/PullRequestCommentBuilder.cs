@@ -183,6 +183,7 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
             5. Once pushed, the `Codeflow verification` check will turn green.  
                 If not, a new build might have flown into the PR and you might need to run the command above again.
             """);
+
         return comment.ToString();
     }
 
