@@ -75,11 +75,8 @@ internal class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
             if (_options.ShouldUseConfigurationRepository)
             {
                 // Create an updated YAML default channel with the new enabled status
-                DefaultChannelYaml updatedDefaultChannelYaml = new()
+                DefaultChannelYaml updatedDefaultChannelYaml = DefaultChannelYaml.FromClientModel(resolvedChannel) with
                 {
-                    Repository = resolvedChannel.Repository,
-                    Branch = resolvedChannel.Branch,
-                    Channel = resolvedChannel.Channel.Name,
                     Enabled = enabled
                 };
 
