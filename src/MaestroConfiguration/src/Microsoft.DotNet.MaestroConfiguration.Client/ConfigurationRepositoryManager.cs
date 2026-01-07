@@ -80,6 +80,17 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
                 $"Add new channel '{c.Name}'"),
             $"Successfully added channel '{channel.Name}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
 
+    public async Task UpdateChannelAsync(ConfigurationRepositoryOperationParameters parameters, ChannelYaml updatedChannel)
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            updatedChannel,
+            (p, repo, branch, c) => UpdateModelInternalAsync(
+                p, repo, branch, c,
+                YamlModelUniqueKeys.GetChannelKey,
+                new ChannelYamlComparer(),
+                $"Update channel '{c.Name}'"),
+            $"Successfully updated channel '{updatedChannel.Name}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+
     public async Task DeleteChannelAsync(ConfigurationRepositoryOperationParameters parameters, ChannelYaml channel)
         => await PerformConfigurationRepositoryOperationInternal(
             parameters,
