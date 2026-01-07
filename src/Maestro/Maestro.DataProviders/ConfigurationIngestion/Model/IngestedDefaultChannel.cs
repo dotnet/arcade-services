@@ -11,7 +11,7 @@ internal class IngestedDefaultChannel :
 {
     public IngestedDefaultChannel(DefaultChannelYaml values) => Values = values;
 
-    public (string, string, string) UniqueId => (Values.Repository, Values.Branch, Values.Channel);
+    public override (string, string, string) UniqueId => (Values.Repository, Values.Branch, Values.Channel);
 
     public DefaultChannelYaml Values { init; get; }
 
