@@ -116,6 +116,16 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
                 $"Add new default channel ({dc.Channel}) {dc.Repository} ({dc.Branch})"),
             $"Successfully added default channel on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
 
+    public async Task UpdateDefaultChannelAsync(ConfigurationRepositoryOperationParameters parameters, DefaultChannelYaml updatedDefaultChannel)
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            updatedDefaultChannel,
+            (p, repo, branch, dc) => UpdateModelInternalAsync(
+                p, repo, branch, dc,
+                YamlModelUniqueKeys.GetDefaultChannelKey,
+                new DefaultChannelYamlComparer(),
+                $"Update default channel ({dc.Channel}) {dc.Repository} ({dc.Branch})"),
+            $"Successfully updated default channel on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
     public async Task DeleteDefaultChannelAsync(ConfigurationRepositoryOperationParameters parameters, DefaultChannelYaml defaultChannel)
         => await PerformConfigurationRepositoryOperationInternal(
             parameters,
