@@ -222,6 +222,24 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                 .Returns(Task.CompletedTask)
                 .Verifiable();
 
+            // We must mock checking for which builds were applied in the merged PR
+            DarcRemotes[VmrUri]
+                .Setup(x => x.GetSourceManifestAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .ReturnsAsync(new SourceManifest(
+                    [
+                        new RepositoryRecord(
+                            Subscription.TargetDirectory,
+                            build.GetRepository(),
+                            build.Commit,
+                            build.Id),
+                        new RepositoryRecord(
+                            "another-repo",
+                            "https://github.com/another/repo",
+                            "abcdef01234234423",
+                            build.Id + 100),
+                    ], []))
+                .Verifiable();
+
             // URI of the new PR that should get created
             VmrPullRequestUrl = $"{VmrUri}/pulls/2";
             CreatePullRequestShouldReturnAValidValue();
