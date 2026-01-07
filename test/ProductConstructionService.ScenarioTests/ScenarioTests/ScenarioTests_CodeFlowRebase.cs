@@ -87,7 +87,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 GetGitHubRepoUrl(TestRepository.TestRepo1Name),
                 sourceBranchName,
                 (await GitGetCurrentSha()).TrimEnd(),
-                "1",
+                "2",
                 []);
 
             await AddBuildToChannelAsync(build.Id, channelName);
@@ -126,7 +126,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 GetGitHubRepoUrl(TestRepository.TestRepo1Name),
                 sourceBranchName,
                 (await GitGetCurrentSha()).TrimEnd(),
-                "2",
+                "3",
                 []);
 
             await AddBuildToChannelAsync(build.Id, channelName);
@@ -161,7 +161,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 GetGitHubRepoUrl(TestRepository.TestRepo1Name),
                 sourceBranchName,
                 (await GitGetCurrentSha()).TrimEnd(),
-                "2",
+                "4",
                 []);
 
             await AddBuildToChannelAsync(build.Id, channelName);

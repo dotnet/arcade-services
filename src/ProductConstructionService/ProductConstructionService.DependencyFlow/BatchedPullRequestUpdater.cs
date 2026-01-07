@@ -41,6 +41,7 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
         : base(
             id,
             mergePolicyEvaluator,
+            context,
             remoteFactory,
             updaterFactory,
             coherencyUpdateResolver,

@@ -31,25 +31,6 @@ internal class SubscriptionTriggerer : ISubscriptionTriggerer
         _distributedLock = distributedLock;
     }
 
-    public async Task<bool> UpdateForMergedPullRequestAsync(int updateBuildId)
-    {
-        _logger.LogInformation("Updating {subscriptionId} with latest build id {buildId}", _subscriptionId, updateBuildId);
-        Subscription? subscription = await _context.Subscriptions.FindAsync(_subscriptionId);
-
-        if (subscription != null)
-        {
-            subscription.LastAppliedBuildId = updateBuildId;
-            _context.Subscriptions.Update(subscription);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-        else
-        {
-            _logger.LogInformation("Could not find subscription with ID {subscriptionId}. Skipping latestBuild update.", _subscriptionId);
-            return false;
-        }
-    }
-
     public async Task<bool> AddDependencyFlowEventAsync(
         int updateBuildId,
         DependencyFlowEventType flowEvent,

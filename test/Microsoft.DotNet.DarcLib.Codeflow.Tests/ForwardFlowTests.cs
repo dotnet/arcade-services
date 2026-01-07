@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using AwesomeAssertions;
+using Microsoft.DotNet.DarcLib.Codeflow.Tests.Helpers;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
@@ -536,11 +537,23 @@ internal class ForwardFlowTests : CodeFlowTests
 
         await EnsureTestRepoIsInitialized();
 
-        const string FileAddedAndRemovedName = "FileAddedAndRemoved.txt";
-        const string FileRemovedAndAddedName = "FileRemovedAndAdded.txt";
-        const string FileChangedAndPartiallyRevertedName = "FileChangedAndPartiallyReverted.txt";
-        const string FileInConflictName = "FileInConflict.txt";
+        // Files that will cause a conflict later, each in a different way
+        const string Conflict_FileRemovedInTargetAndChangedInSource = "CONFLICT_removed_in_target_and_changed_in_source.txt";
+        const string Conflict_FileRemovedInSourceAndChangedInTarget = "CONFLICT_removed_in_source_and_changed_in_target.txt";
+        const string Conflict_FileChangedInBoth = "CONFLICT_changed_in_both.txt";
+        const string Conflict_FileAddedInBoth = "CONFLICT_added_in_both.txt";
+        const string Conflict_FileRenamedInSource = "CONFLICT_renamed_in_source.txt";
+        const string Conflict_FileRenamedInTarget = "CONFLICT_renamed_in_target.txt";
+        const string Conflict_FileRenamedNewName = "file_renamed_in_source_new_name.txt";
 
+        // Files which will be changed and later reverted in different ways
+        const string Revert_FileAddedAndRemovedName = "REVERT_added_and_removed.txt";
+        const string Revert_FileRemovedAndAddedName = "REVERT_removed_and_added.txt";
+        const string Revert_FileChangedAndPartiallyRevertedName = "REVERT_changed_and_partially_reverted.txt";
+
+        // Contents for the partially reverted file
+        // We have initial content, then we add a line at the end,
+        // Then we change a line in the middle + revert the addition of the line at the end.
         const string PartialRevertOriginal =
             """
             One
@@ -585,14 +598,21 @@ internal class ForwardFlowTests : CodeFlowTests
             """;
 
         const string OriginalFileRemovedAndAddedContent = "Original content that will be removed and re-added";
-        const string ConflictingContentInVmr = "Causing a conflict by a change in the target";
-        const string ConflictingContentInRepo = "Causing a conflict by a change in the source repo";
 
         await GitOperations.Checkout(ProductRepoPath, "main");
-        await File.WriteAllTextAsync(ProductRepoPath / FileChangedAndPartiallyRevertedName, PartialRevertOriginal);
+        await File.WriteAllTextAsync(ProductRepoPath / Revert_FileChangedAndPartiallyRevertedName, PartialRevertOriginal);
         await GitOperations.CommitAll(ProductRepoPath, "Set up file for partial revert");
 
         // Flow to VMR and back to populate the repo well (eng/common, the <Source /> tag..)
+
+        // Prepare files that will conflict in different ways
+        await File.WriteAllTextAsync(ProductRepoPath / Conflict_FileRemovedInTargetAndChangedInSource, "This file will be removed in target and changed in source");
+        await File.WriteAllTextAsync(ProductRepoPath / Conflict_FileRemovedInSourceAndChangedInTarget, "This file will be removed in source and changed in target");
+        await File.WriteAllTextAsync(ProductRepoPath / Conflict_FileChangedInBoth, "This file will be changed in both repos");
+        await File.WriteAllTextAsync(ProductRepoPath / Conflict_FileRenamedInSource, "This file will be renamed in source");
+        await File.WriteAllTextAsync(ProductRepoPath / Conflict_FileRenamedInTarget, "This file will be renamed in target");
+        await GitOperations.CommitAll(ProductRepoPath, "Set up files for conflict test");
+
         var codeflowResult = await ChangeRepoFileAndFlowIt("Initial content", branchName);
         codeflowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(VmrPath, branchName);
@@ -601,86 +621,116 @@ internal class ForwardFlowTests : CodeFlowTests
         codeflowResult.ShouldHaveUpdates();
         await GitOperations.MergePrBranch(ProductRepoPath, branchName);
 
-        // Setup: Create initial file state
-        await File.WriteAllTextAsync(ProductRepoPath / FileRemovedAndAddedName, OriginalFileRemovedAndAddedContent);
-        await GitOperations.CommitAll(ProductRepoPath, "Add file that will be removed and re-added");
-
-        // Step 1: Make changes in source repo
-        await File.WriteAllTextAsync(ProductRepoPath / FileInConflictName, "This file will cause a conflict");
-        await File.WriteAllTextAsync(ProductRepoPath / FileAddedAndRemovedName, "This file will be added and then removed");
-        await File.WriteAllTextAsync(ProductRepoPath / FileChangedAndPartiallyRevertedName, PartialRevertChange1);
-        File.Delete(ProductRepoPath / FileRemovedAndAddedName);
-
+        // Step 1: Make changes in source repo - different ways we can change a file and revert that change later
+        await File.WriteAllTextAsync(ProductRepoPath / Revert_FileRemovedAndAddedName, OriginalFileRemovedAndAddedContent);
+        await File.WriteAllTextAsync(ProductRepoPath / Revert_FileAddedAndRemovedName, "This file will be added and then removed");
+        await File.WriteAllTextAsync(ProductRepoPath / Revert_FileChangedAndPartiallyRevertedName, PartialRevertChange1);
+        File.Delete(ProductRepoPath / Revert_FileRemovedAndAddedName);
         await GitOperations.CommitAll(ProductRepoPath, "Make changes which will get reverted later", allowEmpty: false);
 
-        var expectedFiles = new List<string>
+        var expectedStagedFiles = new List<string>
         {
-            VmrInfo.SourcesDir / Constants.ProductRepoName / FileInConflictName,
-            VmrInfo.SourcesDir / Constants.ProductRepoName / FileAddedAndRemovedName,
-            VmrInfo.SourcesDir / Constants.ProductRepoName / FileChangedAndPartiallyRevertedName,
             VmrInfo.DefaultRelativeSourceManifestPath,
             VmrInfo.SourcesDir / Constants.ProductRepoName / VersionFiles.VersionDetailsXml,
+            VmrInfo.SourcesDir / Constants.ProductRepoName / Revert_FileAddedAndRemovedName,
+            VmrInfo.SourcesDir / Constants.ProductRepoName / Revert_FileChangedAndPartiallyRevertedName,
         };
 
         // Step 2: Forward flow first changes
         var stagedFiles = await CallDarcForwardflow();
-        stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
-        await Helpers.GitOperationsHelper.VerifyNoConflictMarkers(VmrPath, stagedFiles);
-        CheckFileContents(VmrPath / expectedFiles[0], "This file will cause a conflict");
-        CheckFileContents(VmrPath / expectedFiles[1], "This file will be added and then removed");
-        CheckFileContents(VmrPath / expectedFiles[2], PartialRevertChange1);
+        stagedFiles.Should().BeEquivalentTo(expectedStagedFiles, "There should be staged files after forward flow");
+        await GitOperationsHelper.VerifyNoConflictMarkers(VmrPath, stagedFiles);
+        CheckFileContents(VmrPath / expectedStagedFiles[2], "This file will be added and then removed");
+        CheckFileContents(VmrPath / expectedStagedFiles[3], PartialRevertChange1);
 
         // Step 3: Make a conflicting change directly in the target (simulating a change in the PR branch)
-        await File.WriteAllTextAsync(_productRepoVmrPath / FileInConflictName, ConflictingContentInVmr);
+        await GitOperations.CommitAll(VmrPath, "Committing the forward flow");
+        await File.WriteAllTextAsync(_productRepoVmrPath / Conflict_FileRemovedInSourceAndChangedInTarget, "This file has been changed in target");
+        await File.WriteAllTextAsync(_productRepoVmrPath / Conflict_FileChangedInBoth, "This file has been changed in target");
+        await File.WriteAllTextAsync(_productRepoVmrPath / Conflict_FileAddedInBoth, "This file has been added in both repos (from vmr)");
+        File.Move(_productRepoVmrPath / Conflict_FileRenamedInTarget, _productRepoVmrPath / "file_renamed_in_target_new_name.txt");
+        await File.WriteAllTextAsync(_productRepoVmrFilePath, "This file will be changed the same way in both sides and not conflict");
         await GitOperations.CommitAll(VmrPath, "Edit files directly in target (simulating PR branch change)", allowEmpty: false);
 
         // Step 4: Make reverts and conflict in source repo
-        await File.WriteAllTextAsync(ProductRepoPath / FileRemovedAndAddedName, OriginalFileRemovedAndAddedContent);
-        await File.WriteAllTextAsync(ProductRepoPath / FileChangedAndPartiallyRevertedName, PartialRevertChange2);
-        await File.WriteAllTextAsync(ProductRepoPath / FileInConflictName, ConflictingContentInRepo);
-        File.Delete(ProductRepoPath / FileAddedAndRemovedName);
+        File.Delete(ProductRepoPath / Conflict_FileRemovedInSourceAndChangedInTarget);
+        await File.WriteAllTextAsync(ProductRepoPath / Conflict_FileChangedInBoth, "This file has been changed in source");
+        await File.WriteAllTextAsync(ProductRepoPath / Conflict_FileAddedInBoth, "This file has been added in both repos (from repo)");
+        File.Move(ProductRepoPath / Conflict_FileRenamedInSource, ProductRepoPath / "file_renamed_in_source_new_name.txt");
+        await File.WriteAllTextAsync(_productRepoFilePath, "This file will be changed the same way in both sides and not conflict");
+        await GitOperations.CommitAll(ProductRepoPath, "Make conflicting changes", allowEmpty: false);
 
+        await File.WriteAllTextAsync(ProductRepoPath / Revert_FileRemovedAndAddedName, OriginalFileRemovedAndAddedContent);
+        await File.WriteAllTextAsync(ProductRepoPath / Revert_FileChangedAndPartiallyRevertedName, PartialRevertChange2);
+        File.Delete(ProductRepoPath / Revert_FileAddedAndRemovedName);
         await GitOperations.CommitAll(ProductRepoPath, "Revert changes", allowEmpty: false);
 
-        // Step 5: Forward flow with reverts and conflicts
-        stagedFiles = await CallDarcForwardflow(expectedConflicts: [expectedFiles[0]]);
-        // Removed file is new, V.D.xml is not changed anymore
-        expectedFiles[4] = VmrInfo.SourcesDir / Constants.ProductRepoName / FileRemovedAndAddedName;
-        stagedFiles.Should().BeEquivalentTo(expectedFiles, "There should be staged files after forward flow");
-        await Helpers.GitOperationsHelper.VerifyNoConflictMarkers(VmrPath, stagedFiles.Except([expectedFiles[0], expectedFiles[1]]));
+        expectedStagedFiles[1] = VmrInfo.SourcesDir / Constants.ProductRepoName / Conflict_FileRenamedNewName; // no more Version.Details.xml changes
+        expectedStagedFiles.Add(VmrInfo.SourcesDir / Constants.ProductRepoName / Revert_FileRemovedAndAddedName);
+        expectedStagedFiles.Add(VmrInfo.SourcesDir / Constants.ProductRepoName / Conflict_FileAddedInBoth);
+        expectedStagedFiles.Add(VmrInfo.SourcesDir / Constants.ProductRepoName / Conflict_FileRemovedInSourceAndChangedInTarget);
+        expectedStagedFiles.Add(VmrInfo.SourcesDir / Constants.ProductRepoName / Conflict_FileChangedInBoth);
 
-        // Now we commit this flow and verify all files are staged
-        await GitOperations.ExecuteGitCommand(VmrPath, ["checkout", "--theirs", "--", expectedFiles[0]]);
-        await GitOperations.ExecuteGitCommand(VmrPath, ["add", expectedFiles[0]]);
+        string[] expectedConflictedFiles = [.. expectedStagedFiles.Skip(5)];
+
+        // Step 5: Forward flow with reverts and conflicts
+        stagedFiles = await CallDarcForwardflow(expectedConflicts: expectedConflictedFiles);
+        stagedFiles.Should().BeEquivalentTo(expectedStagedFiles, "There should be staged files after forward flow");
+
+        await GitOperationsHelper.VerifyNoConflictMarkers(
+            VmrPath,
+            expectedStagedFiles
+                .Except(expectedConflictedFiles)
+                // File does not exist anymore
+                .Except([VmrInfo.SourcesDir / Constants.ProductRepoName / Revert_FileAddedAndRemovedName]));
+
+        // Resolve conflicts by taking the source repo's changes
+        foreach (var conflictedFile in expectedConflictedFiles)
+        {
+            await GitOperations.ExecuteGitCommand(VmrPath, ["checkout", "--theirs", "--", conflictedFile]);
+            await GitOperations.ExecuteGitCommand(VmrPath, ["add", conflictedFile]);
+        }
+
         await GitOperations.ExecuteGitCommand(VmrPath, ["commit", "-m", "Committing the forward flow"]);
         await GitOperations.CheckAllIsCommitted(VmrPath);
 
         // Verify final state: The reverts should be correctly applied despite conflicts
 
         // FileAddedAndRemoved should not exist (was added then removed)
-        File.Exists(_productRepoVmrPath / FileAddedAndRemovedName).Should().BeFalse(
+        File.Exists(_productRepoVmrPath / Revert_FileAddedAndRemovedName).Should().BeFalse(
             "File that was added and removed should not exist");
 
         // FileRemovedAndAdded should exist with original content (was removed then re-added)
-        File.Exists(_productRepoVmrPath / FileRemovedAndAddedName).Should().BeTrue(
+        File.Exists(_productRepoVmrPath / Revert_FileRemovedAndAddedName).Should().BeTrue(
             "File that was removed and re-added should exist");
-        (await File.ReadAllTextAsync(_productRepoVmrPath / FileRemovedAndAddedName)).Should().Be(
+        (await File.ReadAllTextAsync(_productRepoVmrPath / Revert_FileRemovedAndAddedName)).Should().Be(
             OriginalFileRemovedAndAddedContent,
             "File should have its original content after revert");
 
         // FileChangedAndPartiallyReverted should have the second change
-        File.Exists(_productRepoVmrPath / FileChangedAndPartiallyRevertedName).Should().BeTrue(
+        File.Exists(_productRepoVmrPath / Revert_FileChangedAndPartiallyRevertedName).Should().BeTrue(
             "Partially reverted file should exist");
 
-        (await File.ReadAllTextAsync(_productRepoVmrPath / FileChangedAndPartiallyRevertedName)).Should().Be(
-            PartialRevertChange2 + Environment.NewLine,
+        (await File.ReadAllTextAsync(_productRepoVmrPath / Revert_FileChangedAndPartiallyRevertedName)).Should().Be(
+            PartialRevertChange2,
             "Partially reverted file should have the second change");
 
-        // FileInConflict should exist with the source repo's content (conflict resolved)
-        File.Exists(_productRepoVmrPath / FileInConflictName).Should().BeTrue(
-            "Conflicting file should exist");
-        (await File.ReadAllTextAsync(_productRepoVmrPath / FileInConflictName)).Should().Be(
-            ConflictingContentInRepo,
-            "Conflicting file should have source repo's content after flow");
+        // Conflicted files should have the contents from the repo
+        (await File.ReadAllTextAsync(_productRepoVmrPath / Conflict_FileAddedInBoth)).Should().Be(
+            "This file has been added in both repos (from repo)");
+
+        (await File.ReadAllTextAsync(_productRepoVmrPath / Conflict_FileChangedInBoth)).Should().Be(
+            "This file has been changed in source");
+
+        (await File.ReadAllTextAsync(_productRepoVmrPath / Conflict_FileRenamedNewName)).Should().Be(
+            "This file will be renamed in source");
+
+        (await File.ReadAllTextAsync(_productRepoVmrPath / Conflict_FileRemovedInTargetAndChangedInSource)).Should().Be(
+            "This file will be removed in target and changed in source");
+
+        // Somehow git does not delete this file when we checkout --theirs even though it was deleted in the source
+        // However, the conflict happens, which is important
+        (await File.ReadAllTextAsync(_productRepoVmrPath / Conflict_FileRemovedInSourceAndChangedInTarget)).Should().Be(
+            "This file has been changed in target");
     }
 }
