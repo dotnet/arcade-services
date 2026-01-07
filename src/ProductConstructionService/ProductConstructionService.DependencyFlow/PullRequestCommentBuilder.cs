@@ -185,18 +185,19 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         To avoid complex conflicts, the codeflow cannot continue until this PR is closed or merged.
         
         You can continue with one of the following options:
-        - Merge this PR as usual without waiting for the new changes.
-           Once merged, Maestro will create a new codeflow PR with the new changes.
+        - Ignore this and merge this PR as usual without waiting for the new changes.
+          Once merged, Maestro will create a new codeflow PR with the new changes.
         - Close this PR and wait for Maestro to open a new one with old and new changes included.
-           You will lose any manual changes made in this PR.
-           You can also manually trigger the new codeflow right away by running:
-           ```
-           darc trigger-subscriptions --id <subscriptionId>
-           ```
-        - Force a codeflow into this PR at your own risk (user PR commits might be reverted):
-           ```
-           darc trigger-subscriptions --id <subscriptionId> --force
-           ```
+          You will lose any manual changes made in this PR.
+          You can also manually trigger the new codeflow right away by running:
+          ```
+          darc trigger-subscriptions --id <subscriptionId>
+          ```
+        - Force a codeflow into this PR at your own risk if you want the new changes.
+          User commits made to this PR might be reverted.
+          ```
+          darc trigger-subscriptions --id <subscriptionId> --force
+          ```
         """;
 
     public async Task<string?> BuildTagSourceRepositoryGitHubContactsCommentAsync(InProgressPullRequest pr)
