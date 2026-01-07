@@ -150,9 +150,9 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
             .First();
 
         comment
-            .AppendLine("#### \U0001f6c8 To resolve the conflicts, please follow these steps:")
             .AppendLine(
             $"""
+            #### :information_source: To resolve the conflicts, please follow these steps:
             1. Clone the current repository
                 ```bash
                 git clone {subscription.TargetRepository}
