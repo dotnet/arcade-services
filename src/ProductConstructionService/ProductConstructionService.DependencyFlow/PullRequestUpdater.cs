@@ -537,16 +537,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             int buildId = update.BuildId;
             if (subscription.SourceEnabled)
             {
-                try
-                {
-                    buildId = await GetLastCodeflownBuild(subscription);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, "Failed to get last codeflown build for subscription {subscriptionId}. Using build id {buildId} from the PR update.",
-                        update.SubscriptionId,
-                        buildId);
-                }
+                buildId = await GetLastCodeflownBuild(subscription);
             }
 
             subscription.LastAppliedBuildId = buildId;
