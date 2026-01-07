@@ -15,4 +15,5 @@ public interface IConfigurationRepositoryManager
     Task AddChannelAsync(ConfigurationRepositoryOperationParameters parameters, ChannelYaml channel);
     Task DeleteChannelAsync(ConfigurationRepositoryOperationParameters parameters, ChannelYaml channel);
     Task AddDefaultChannelAsync(ConfigurationRepositoryOperationParameters parameters, DefaultChannelYaml defaultChannel);
+    Task DeleteDefaultChannelAsync(ConfigurationRepositoryOperationParameters parameters, DefaultChannelYaml defaultChannel);
 }
