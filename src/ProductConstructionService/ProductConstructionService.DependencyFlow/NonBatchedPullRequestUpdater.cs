@@ -46,6 +46,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         : base(
             id,
             mergePolicyEvaluator,
+            context,
             remoteFactory,
             updaterFactory,
             coherencyUpdateResolver,
