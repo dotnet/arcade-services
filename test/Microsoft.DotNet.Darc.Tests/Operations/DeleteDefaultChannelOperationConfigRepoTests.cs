@@ -243,7 +243,7 @@ public class DeleteDefaultChannelOperationConfigRepoTests : ConfigurationManagem
         bool enabled = true)
     {
         return new DefaultChannel(
-            id: 1,
+            id: channelId,
             repository: repository,
             enabled: enabled)
         {
