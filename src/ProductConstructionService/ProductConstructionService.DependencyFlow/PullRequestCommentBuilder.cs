@@ -280,7 +280,7 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
     }
 }
 
-static file class StringBuildExtensions
+static file class StringBuilderExtensions
 {
     public static StringBuilder AppendConflictedFileList(
         this StringBuilder sb,
