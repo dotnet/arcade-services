@@ -228,7 +228,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             Times.Once);
 
         _gitClient.Verify(
-            g => g.Push(VmrPath, It.IsAny<string>(), VmrUri, It.IsAny<LibGit2Sharp.Identity>()),
+            g => g.Push(VmrPath, It.IsAny<string>(), VmrUri, It.IsAny<LibGit2Sharp.Identity>(), It.IsAny<bool>()),
             Times.Once);
     }
 
