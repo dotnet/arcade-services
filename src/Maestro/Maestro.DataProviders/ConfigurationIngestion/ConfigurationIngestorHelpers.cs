@@ -99,7 +99,7 @@ internal partial class ConfigurationIngestor
         IReadOnlyCollection<T> updates = [.. externalEntities
             .Where(e =>
                 dbById.TryGetValue(e.UniqueId, out var dbEntity)
-                && !e.Equals(dbEntity))];
+                && !e.Values.Equals(dbEntity.Values))];
 
         return new EntityChanges<T>(creations, updates, removals);
     }

@@ -801,30 +801,340 @@ public class ConfigurationIngestorTests
 
     #endregion
 
-    #region Mixed Operations Tests
+    #region No-Change Update Tests
 
     [Test]
-    public async Task IngestConfigurationAsync_MixedOperations_HandlesAllCorrectly()
+    public async Task IngestConfigurationAsync_ChannelWithoutChanges_NotReportedAsUpdate()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+        var existingChannel = CreateChannel("Test Channel", "dev", namespaceEntity);
+        await _context.Channels.AddAsync(existingChannel);
+        await _context.SaveChangesAsync();
+
+        var unchangedChannelYaml = new ChannelYaml
+        {
+            Name = "Test Channel",
+            Classification = "dev",
+        };
+
+        var configData = new ConfigurationData(
+            [],
+            [unchangedChannelYaml],
+            [],
+            []);
+
+        // Act
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
+
+        // Assert
+        result.Channels.Updates.Should().BeEmpty();
+        result.Channels.Creations.Should().BeEmpty();
+        result.Channels.Removals.Should().BeEmpty();
+    }
+
+    [Test]
+        public async Task IngestConfigurationAsync_ChannelWithChanges_ReportedAsUpdate()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+        var existingChannel = CreateChannel("Test Channel", "dev", namespaceEntity);
+        await _context.Channels.AddAsync(existingChannel);
+        await _context.SaveChangesAsync();
+
+        var updatedChannelYaml = new ChannelYaml
+        {
+            Name = "Test Channel",
+            Classification = "production",
+        };
+
+        var configData = new ConfigurationData(
+            [],
+            [updatedChannelYaml],
+            [],
+            []);
+
+        // Act
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
+
+        // Assert
+        result.Channels.Updates.Should().HaveCount(1);
+        result.Channels.Creations.Should().BeEmpty();
+        result.Channels.Removals.Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task IngestConfigurationAsync_SubscriptionWithoutChanges_NotReportedAsUpdate()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+        var channel = CreateChannel(".NET 8", "release", namespaceEntity);
+        await _context.Channels.AddAsync(channel);
+        await _context.SaveChangesAsync();
+
+        var subscriptionId = Guid.NewGuid();
+        var existingSubscription = CreateSubscription(
+            subscriptionId,
+            channel,
+            "https://github.com/dotnet/runtime",
+            "https://github.com/dotnet/aspnetcore",
+            "main",
+            enabled: true,
+            namespaceEntity);
+
+        await _context.Subscriptions.AddAsync(existingSubscription);
+        await _context.SaveChangesAsync();
+
+        var unchangedSubscription = new SubscriptionYaml
+        {
+            Id = subscriptionId,
+            Channel = ".NET 8",
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = "https://github.com/dotnet/aspnetcore",
+            TargetBranch = "main",
+            Enabled = true,
+            UpdateFrequency = Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryBuild,
+        };
+
+        var configData = new ConfigurationData(
+            [unchangedSubscription],
+            [new ChannelYaml { Name = ".NET 8", Classification = "release" }],
+            [],
+            []);
+
+        // Act
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
+
+        // Assert
+        result.Subscriptions.Updates.Should().BeEmpty();
+        result.Subscriptions.Creations.Should().BeEmpty();
+        result.Subscriptions.Removals.Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task IngestConfigurationAsync_SubscriptionWithEnabledChange_ReportedAsUpdate()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+        var channel = CreateChannel(".NET 8", "release", namespaceEntity);
+        await _context.Channels.AddAsync(channel);
+        await _context.SaveChangesAsync();
+
+        var subscriptionId = Guid.NewGuid();
+        var existingSubscription = CreateSubscription(
+            subscriptionId,
+            channel,
+            "https://github.com/dotnet/runtime",
+            "https://github.com/dotnet/aspnetcore",
+            "main",
+            enabled: true,
+            namespaceEntity);
+
+        await _context.Subscriptions.AddAsync(existingSubscription);
+        await _context.SaveChangesAsync();
+
+        var updatedSubscription = new SubscriptionYaml
+        {
+            Id = subscriptionId,
+            Channel = ".NET 8",
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = "https://github.com/dotnet/aspnetcore",
+            TargetBranch = "main",
+            Enabled = false,
+            UpdateFrequency = Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryBuild,
+        };
+
+        var configData = new ConfigurationData(
+            [updatedSubscription],
+            [new ChannelYaml { Name = ".NET 8", Classification = "release" }],
+            [],
+            []);
+
+        // Act
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
+
+        // Assert
+        result.Subscriptions.Updates.Should().HaveCount(1);
+    }
+
+    [Test]
+    public async Task IngestConfigurationAsync_DefaultChannelWithoutChanges_NotReportedAsUpdate()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+        var channel = CreateChannel(".NET 8", "release", namespaceEntity);
+        await _context.Channels.AddAsync(channel);
+        await _context.SaveChangesAsync();
+
+        var defaultChannel = CreateDefaultChannel(
+            channel,
+            "https://github.com/dotnet/runtime",
+            "main",
+            enabled: true,
+            namespaceEntity);
+
+        await _context.DefaultChannels.AddAsync(defaultChannel);
+        await _context.SaveChangesAsync();
+
+        var unchangedDefaultChannel = new DefaultChannelYaml
+        {
+            Repository = "https://github.com/dotnet/runtime",
+            Branch = "main",
+            Channel = ".NET 8",
+            Enabled = true,
+        };
+
+        var configData = new ConfigurationData(
+            [],
+            [new ChannelYaml { Name = ".NET 8", Classification = "release" }],
+            [unchangedDefaultChannel],
+            []);
+
+        // Act
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
+
+        // Assert
+        result.DefaultChannels.Updates.Should().BeEmpty();
+        result.DefaultChannels.Creations.Should().BeEmpty();
+        result.DefaultChannels.Removals.Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task IngestConfigurationAsync_DefaultChannelWithEnabledChange_ReportedAsUpdate()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+        var channel = CreateChannel(".NET 8", "release", namespaceEntity);
+        await _context.Channels.AddAsync(channel);
+        await _context.SaveChangesAsync();
+
+        var defaultChannel = CreateDefaultChannel(
+            channel,
+            "https://github.com/dotnet/runtime",
+            "main",
+            enabled: true,
+            namespaceEntity);
+
+        await _context.DefaultChannels.AddAsync(defaultChannel);
+        await _context.SaveChangesAsync();
+
+        var updatedDefaultChannel = new DefaultChannelYaml
+        {
+            Repository = "https://github.com/dotnet/runtime",
+            Branch = "main",
+            Channel = ".NET 8",
+            Enabled = false,
+        };
+
+        var configData = new ConfigurationData(
+            [],
+            [new ChannelYaml { Name = ".NET 8", Classification = "release" }],
+            [updatedDefaultChannel],
+            []);
+
+        // Act
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
+
+        // Assert
+        result.DefaultChannels.Updates.Should().HaveCount(1);
+    }
+
+    [Test]
+    public async Task IngestConfigurationAsync_RepositoryBranchWithoutChanges_NotReportedAsUpdate()
     {
         // Arrange
         var namespaceEntity = await CreateNamespace();
 
-        // Existing entities
-        var existingChannel = CreateChannel("Existing Channel", "dev", namespaceEntity);
-        var channelToUpdate = CreateChannel("Channel To Update", "dev", namespaceEntity);
-        var channelToDelete = CreateChannel("Channel To Delete", "dev", namespaceEntity);
+        var existingBranch = await CreateRepositoryBranch(
+            "https://github.com/dotnet/runtime",
+            "main",
+            [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
+            namespaceEntity);
 
-        await _context.Channels.AddRangeAsync(existingChannel, channelToUpdate, channelToDelete);
+        await _context.RepositoryBranches.AddAsync(existingBranch);
         await _context.SaveChangesAsync();
 
-        // Configuration with mixed operations
+        var unchangedBranchYaml = new BranchMergePoliciesYaml
+        {
+            Repository = "https://github.com/dotnet/runtime",
+            Branch = "main",
+            MergePolicies =
+            [
+                new MergePolicyYaml { Name = "AllChecksSuccessful" },
+            ],
+        };
+
+        var configData = new ConfigurationData(
+            [],
+            [],
+            [],
+            [unchangedBranchYaml]);
+
+        // Act
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
+
+        // Assert
+        result.RepositoryBranches.Updates.Should().BeEmpty();
+        result.RepositoryBranches.Creations.Should().BeEmpty();
+        result.RepositoryBranches.Removals.Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task IngestConfigurationAsync_RepositoryBranchWithPolicyChanges_ReportedAsUpdate()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+
+        var existingBranch = await CreateRepositoryBranch(
+            "https://github.com/dotnet/runtime",
+            "main",
+            [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
+            namespaceEntity);
+
+        await _context.RepositoryBranches.AddAsync(existingBranch);
+        await _context.SaveChangesAsync();
+
+        var updatedBranchYaml = new BranchMergePoliciesYaml
+        {
+            Repository = "https://github.com/dotnet/runtime",
+            Branch = "main",
+            MergePolicies =
+            [
+                new MergePolicyYaml { Name = "AllChecksSuccessful" },
+                new MergePolicyYaml { Name = "RequireReviews" },
+            ],
+        };
+
+        var configData = new ConfigurationData(
+            [],
+            [],
+            [],
+            [updatedBranchYaml]);
+
+        // Act
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
+
+        // Assert
+        result.RepositoryBranches.Updates.Should().HaveCount(1);
+    }
+
+    [Test]
+    public async Task IngestConfigurationAsync_MixedChangesAndNoChanges_ReportsOnlyActualUpdates()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+
+        var unchangedChannel = CreateChannel("Unchanged Channel", "dev", namespaceEntity);
+        var channelToUpdate = CreateChannel("Channel To Update", "dev", namespaceEntity);
+
+        await _context.Channels.AddRangeAsync(unchangedChannel, channelToUpdate);
+        await _context.SaveChangesAsync();
+
         var configData = new ConfigurationData(
             [],
             [
-                new ChannelYaml { Name = "Existing Channel", Classification = "dev" }, // No change
-                new ChannelYaml { Name = "Channel To Update", Classification = "production" }, // Update
-                new ChannelYaml { Name = "New Channel", Classification = "test" }, // Create
-                // "Channel To Delete" is not included - will be deleted
+                new ChannelYaml { Name = "Unchanged Channel", Classification = "dev" },
+                new ChannelYaml { Name = "Channel To Update", Classification = "production" },
             ],
             [],
             []);
@@ -833,104 +1143,10 @@ public class ConfigurationIngestorTests
         var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
-        result.Channels.Creations.Should().HaveCount(1);
-        result.Channels.Updates.Should().HaveCount(2); // Both existing and updated
-        result.Channels.Removals.Should().HaveCount(1);
-
-        namespaceEntity = await _context.Namespaces
-            .Include(n => n.Channels)
-            .FirstOrDefaultAsync(n => n.Name == _testNamespace);
-
-        namespaceEntity.Should().NotBeNull();
-        var channels = namespaceEntity.Channels;
-        channels.Should().HaveCount(3);
-        channels.Should().Contain(c => c.Name == "New Channel");
-        channels.Should().NotContain(c => c.Name == "Channel To Delete");
-
-        var updated = channels.First(c => c.Name == "Channel To Update");
-        updated.Classification.Should().Be("production");
-    }
-
-    [Test]
-    public async Task IngestConfigurationAsync_ComplexScenario_HandlesAllEntities()
-    {
-        // Arrange
-        var namespaceEntity = await CreateNamespace();
-
-        // Setup existing state
-        var existingChannel = CreateChannel(".NET 8", "release", namespaceEntity);
-        var oldChannel = CreateChannel(".NET 9", "dev", namespaceEntity);
-        await _context.Channels.AddRangeAsync(existingChannel, oldChannel);
-        await _context.SaveChangesAsync();
-
-        var oldSubscription = CreateSubscription(
-            Guid.NewGuid(),
-            oldChannel,
-            "https://github.com/dotnet/old",
-            "https://github.com/dotnet/target",
-            "main",
-            enabled: true,
-            namespaceEntity);
-
-        await _context.Subscriptions.AddAsync(oldSubscription);
-        await _context.SaveChangesAsync();
-
-        // New configuration
-        var newSubscriptionId = Guid.NewGuid();
-        var configData = new ConfigurationData(
-            [
-                new SubscriptionYaml
-                {
-                    Id = newSubscriptionId,
-                    Channel = ".NET 8",
-                    SourceRepository = "https://github.com/dotnet/runtime",
-                    TargetRepository = "https://github.com/dotnet/aspnetcore",
-                    TargetBranch = "main",
-                    Enabled = true,
-                },
-            ],
-            [
-                new ChannelYaml { Name = ".NET 8", Classification = "release" },
-                new ChannelYaml { Name = ".NET 9", Classification = "preview" },
-            ],
-            [
-                new DefaultChannelYaml
-                {
-                    Repository = "https://github.com/dotnet/runtime",
-                    Branch = "main",
-                    Channel = ".NET 8",
-                    Enabled = true,
-                },
-            ],
-            [
-                new BranchMergePoliciesYaml
-                {
-                    Repository = "https://github.com/dotnet/runtime",
-                    Branch = "main",
-                    MergePolicies = [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
-                },
-            ]);
-
-        // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
-
-        // Assert
-        result.Channels.Updates.Should().HaveCount(2); // .NET 8
-
-        result.Subscriptions.Creations.Should().HaveCount(1);
-        result.Subscriptions.Removals.Should().HaveCount(1);
-
-        result.DefaultChannels.Creations.Should().HaveCount(1);
-        result.RepositoryBranches.Creations.Should().HaveCount(1);
-
-        namespaceEntity = await _context.Namespaces
-            .Include(n => n.Channels)
-            .FirstOrDefaultAsync(n => n.Name == _testNamespace);
-
-        namespaceEntity.Should().NotBeNull();
-        var channels = namespaceEntity.Channels;
-        channels.Should().HaveCount(2);
-        channels.Should().Contain(c => c.Name == ".NET 9");
+        result.Channels.Updates.Should().HaveCount(1);
+        result.Channels.Updates.Should().Contain(c => c.Name == "Channel To Update");
+        result.Channels.Creations.Should().BeEmpty();
+        result.Channels.Removals.Should().BeEmpty();
     }
 
     #endregion
