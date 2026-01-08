@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.MaestroConfiguration.Client;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.DarcLib.ConfigurationRepository;
 
@@ -15,11 +16,13 @@ public class LocalGitRepo : MaestroConfiguration.Client.IGitRepo
 {
     private readonly IGitRepo _gitRepo;
     private readonly ILocalGitRepo _localGitRepo;
+    private readonly ILogger<LocalGitRepo> _logger;
 
-    public LocalGitRepo(IGitRepo gitRepo, ILocalGitRepo localGitRepo)
+    public LocalGitRepo(IGitRepo gitRepo, ILocalGitRepo localGitRepo, ILogger<LocalGitRepo> logger)
     {
         _gitRepo = gitRepo;
         _localGitRepo = localGitRepo;
+        _logger = logger;
     }
 
     public async Task CommitFilesAsync(string repositoryUri, string branchName, IReadOnlyList<MaestroConfiguration.Client.GitFile> files, string commitMessage)
@@ -34,14 +37,21 @@ public class LocalGitRepo : MaestroConfiguration.Client.IGitRepo
         => await _gitRepo.CreateBranchAsync(repositoryUri, branch, baseBranch);
 
     public Task<string> CreatePullRequestAsync(string repositoryUri, string headBranch, string baseBranch, string prTitle, string prDescription = null)
-        => throw new InvalidOperationException("Cannot create pull request when using local git repository.");
+    {
+        _logger.LogWarning("Cannot create pull request when using local git repository.");
+        return Task.FromResult(string.Empty);
+    }
 
     public async Task DeleteFileAsync(string repositoryUri, string branch, string filePath, string commitMessage)
-        => await _gitRepo.CommitFilesAsync(
+    {
+        await _gitRepo.CommitFilesAsync(
             [new Helpers.GitFile(new UnixPath(repositoryUri) / filePath, string.Empty, ContentEncoding.Utf8, operation: GitFileOperation.Delete)],
             repositoryUri,
             branch,
             commitMessage);
+        await _localGitRepo.StageAsync(["."]);
+        await _localGitRepo.CommitAsync(commitMessage, allowEmpty: false);
+    }
 
     public async Task<bool> DoesBranchExistAsync(string repositoryUri, string branchName)
         => await _gitRepo.DoesBranchExistAsync(repositoryUri, branchName);

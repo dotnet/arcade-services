@@ -9,8 +9,6 @@ public interface ISubscriptionTriggerer
 {
     Task UpdateSubscriptionAsync(int buildId, bool force = false);
 
-    Task<bool> UpdateForMergedPullRequestAsync(int updateBuildId);
-
     Task<bool> AddDependencyFlowEventAsync(
         int updateBuildId,
         DependencyFlowEventType flowEvent,

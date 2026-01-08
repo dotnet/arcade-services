@@ -80,7 +80,8 @@ public abstract class ConfigurationManagementTestBase
         ConfigurationRepositoryGitRepoFactory = new DarcLib.ConfigurationRepository.GitRepoFactory(
             GitRepoFactory,
             LocalGitRepoFactory,
-            RemoteFactoryMock.Object);
+            RemoteFactoryMock.Object,
+            NullLoggerFactory.Instance);
         ConfigurationRepositoryManager = new ConfigurationRepositoryManager(
             ConfigurationRepositoryGitRepoFactory,
             NullLogger<IConfigurationRepositoryManager>.Instance);

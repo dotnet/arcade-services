@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
+using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -36,6 +37,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 #endif
 
     private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
+    private readonly BuildAssetRegistryContext _context;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IPullRequestUpdaterFactory _updaterFactory;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
@@ -61,6 +63,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     public PullRequestUpdater(
         PullRequestUpdaterId id,
         IMergePolicyEvaluator mergePolicyEvaluator,
+        BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
         IPullRequestUpdaterFactory updaterFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
@@ -80,6 +83,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     {
         Id = id;
         _mergePolicyEvaluator = mergePolicyEvaluator;
+        _context = context;
         _remoteFactory = remoteFactory;
         _updaterFactory = updaterFactory;
         _coherencyUpdateResolver = coherencyUpdateResolver;
@@ -518,11 +522,28 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _logger.LogInformation("Updating subscriptions for merged PR");
         foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
         {
-            ISubscriptionTriggerer triggerer = _updaterFactory.CreateSubscriptionTrigerrer(update.SubscriptionId);
-            if (!await triggerer.UpdateForMergedPullRequestAsync(update.BuildId))
-            {
-                _logger.LogWarning("Failed to update subscription {subscriptionId} for merged PR", update.SubscriptionId);
-            }
+            await UpdateForMergedPullRequestAsync(update);
+        }
+    }
+
+    private async Task UpdateForMergedPullRequestAsync(SubscriptionPullRequestUpdate update)
+    {
+        _logger.LogInformation("Updating {subscriptionId} with latest build id {buildId}", update.SubscriptionId, update.BuildId);
+        Subscription? subscription = await _context.Subscriptions.FindAsync(update.SubscriptionId);
+
+        if (subscription != null)
+        {
+            subscription.LastAppliedBuildId = subscription.SourceEnabled
+                // We must check if the build really got applied or if someone merged an earlier build without resolving conflicts
+                ? await GetLastCodeflownBuild(subscription)
+                : update.BuildId;
+            _context.Subscriptions.Update(subscription);
+            await _context.SaveChangesAsync();
+        }
+        else
+        {
+            // This happens for deleted subscriptions (such as scenario tests)
+            _logger.LogInformation("Could not find subscription with ID {subscriptionId}. Skipping latestBuild update.", update.SubscriptionId);
         }
     }
 
@@ -1342,8 +1363,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         finally
         {
-            // Even if we fail to update the PR title and description, the changes already got pushed, so we want to enqueue a
-            // PullRequestCheck
+            // Even if we fail to update the PR title and description, the changes already got pushed, so we want to enqueue a PullRequestCheck
             pullRequest.SourceSha = update.SourceSha;
             pullRequest.LastUpdate = DateTime.UtcNow;
             pullRequest.MergeState = InProgressPullRequestState.Mergeable;
@@ -1550,7 +1570,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 subscription,
                 pr,
                 prInfo.HeadBranch),
-            CommentType.Caution);
+            CommentType.Information);
 
         pr.MergeState = InProgressPullRequestState.Conflict;
         pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
@@ -1564,7 +1584,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private async Task HandleBlockingCodeflowException(InProgressPullRequest pr)
     {
         _logger.LogInformation("PR with url {prUrl} is blocked from receiving future codeflows.", pr.Url);
-
+        _commentCollector.AddComment(PullRequestCommentBuilder.BuildOppositeCodeflowMergedNotification(), CommentType.Warning);
         pr.BlockedFromFutureUpdates = true;
         await _pullRequestState.SetAsync(pr);
     }
@@ -1619,17 +1639,15 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     {
         PullRequest prInfo;
         IRemote remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
+        NativePath localRepo = subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowResult.RepoPath;
+        bool prIsEmpty;
+        string initialCommitMessage = $"Initial commit for subscription {subscription.Id}";
 
         if (pr == null)
         {
+            prIsEmpty = true;
             _logger.LogInformation("Creating PR that requires manual conflict resolution for build {buildId}...", update.BuildId);
-
-            // Start a new branch (has to have an empty commit to differentiate it from the target branch)
-            var localRepo = subscription.IsForwardFlow() ? _vmrInfo.VmrPath : codeFlowResult.RepoPath;
-            await _gitClient.ForceCheckoutAsync(localRepo, subscription.TargetBranch);
-            await _gitClient.CreateBranchAsync(localRepo, prHeadBranch, overwriteExistingBranch: true);
-            await _gitClient.CommitAsync(localRepo, $"Initial commit for subscription {subscription.Id} / build {update.BuildId}", allowEmpty: true);
-            await _gitClient.Push(localRepo, prHeadBranch, subscription.TargetRepository);
+            await CreateEmptyPrBranch(subscription, localRepo, prHeadBranch, subscription.TargetBranch, initialCommitMessage);
 
             (pr, prInfo) = await CreateCodeFlowPullRequestAsync(
                 update,
@@ -1641,6 +1659,25 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
         else
         {
+            // We get the latest SHAs of the PR branch and the target branch
+            var remoteName = (await _gitClient.GetRemotesAsync(localRepo))
+                .First(r => r.Uri.Equals(subscription.TargetRepository))
+                .Name;
+            await _gitClient.UpdateRemoteAsync(localRepo, remoteName);
+            var latestPrCommit = await _gitClient.GetShaForRefAsync(localRepo, $"{remoteName}/{prHeadBranch}");
+            var latestTargetBranchCommit = await _gitClient.GetShaForRefAsync(localRepo, $"{remoteName}/{subscription.TargetBranch}");
+
+            // We check if the PR branch still only contains the empty commit only
+            var latestCommitMessage = await _gitClient.RunGitCommandAsync(localRepo, [$"log", "-1", "--pretty=%B", latestPrCommit]);
+            prIsEmpty = latestCommitMessage.StandardOutput.Trim().StartsWith(initialCommitMessage);
+
+            // When the PR is empty but a new build has flown in, we should rebase the PR branch onto the target branch and force-push
+            if (prIsEmpty && !await _gitClient.IsAncestorCommit(localRepo, latestTargetBranchCommit, latestPrCommit))
+            {
+                _logger.LogInformation("Rebasing empty PR branch {headBranch} onto {targetBranch}", prHeadBranch, subscription.TargetBranch);
+                await CreateEmptyPrBranch(subscription, localRepo, prHeadBranch, latestTargetBranchCommit, initialCommitMessage);
+            }
+
             prInfo = await remote.GetPullRequestAsync(pr.Url)
                 ?? throw new DarcException($"Failed to retrieve PR info for existing PR {pr.Url} while requesting manual conflict resolution");
 
@@ -1665,12 +1702,53 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 update,
                 subscription,
                 codeFlowResult.ConflictedFiles,
-                prHeadBranch),
+                prHeadBranch,
+                prIsEmpty),
             CommentType.Caution);
 
         // We know for sure that we will fail the codeflow checks (codeflow metadata will be expected to match the new build)
         // So we trigger the evaluation right away
         await RunMergePolicyEvaluation(pr, prInfo, remote);
+    }
+
+    /// <summary>
+    /// Creates and pushes a new branch.
+    /// It must have an empty commit to differentiate it from the target branch so that an empty PR can be created.
+    /// </summary>
+    private async Task CreateEmptyPrBranch(
+        SubscriptionDTO subscription,
+        NativePath localRepo,
+        string prBranchName,
+        string baseCommit,
+        string initialCommitMessage)
+    {
+        await _gitClient.ForceCheckoutAsync(localRepo, baseCommit);
+        await _gitClient.CreateBranchAsync(localRepo, prBranchName, overwriteExistingBranch: true);
+        await _gitClient.CommitAsync(localRepo, initialCommitMessage, allowEmpty: true);
+        await _gitClient.Push(localRepo, prBranchName, subscription.TargetRepository, force: true);
+    }
+
+    private async Task<int> GetLastCodeflownBuild(Subscription subscription)
+    {
+        var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
+        if (!string.IsNullOrEmpty(subscription.SourceDirectory))
+        {
+            // Backflow
+            var sourceTag = await remote.GetSourceDependencyAsync(subscription.TargetRepository, subscription.TargetBranch);
+
+            return sourceTag?.BarId
+                ?? throw new DarcException($"Failed to determine last flown VMR build " +
+                                           $"to {subscription.TargetRepository} @ {subscription.TargetBranch}");
+        }
+        else
+        {
+            // Forward flow
+            var sourceManifest = await remote.GetSourceManifestAsync(subscription.TargetRepository, subscription.TargetBranch);
+
+            return sourceManifest.GetRepositoryRecord(subscription.TargetDirectory)?.BarId
+                ?? throw new DarcException($"Failed to determine last flown build of {subscription.TargetDirectory} " +
+                                           $"to {subscription.TargetRepository} @ {subscription.TargetBranch}");
+        }
     }
 
     #endregion

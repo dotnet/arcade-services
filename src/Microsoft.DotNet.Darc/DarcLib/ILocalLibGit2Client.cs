@@ -26,13 +26,14 @@ public interface ILocalLibGit2Client : ILocalGitClient, IGitRepo
     /// <param name="repoPath">Path of the local repository</param>
     /// <param name="branchName">Name of branch to push</param>
     /// <param name="remoteUrl">URL to push to</param>
-    /// <param name="token">Token for authenticating for pushing</param>
     /// <param name="identity">Identity object containing username and email. Defaults to DarcBot identity</param>
+    /// <param name="force">Force push the branch</param>
     Task Push(
         string repoPath,
         string branchName,
         string remoteUrl,
-        LibGit2Sharp.Identity? identity = null);
+        LibGit2Sharp.Identity? identity = null,
+        bool force = false);
 
     /// <summary>
     /// This function works around a couple common issues when checking out files in LibGit2Sharp.

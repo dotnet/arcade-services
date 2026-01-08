@@ -40,6 +40,29 @@ public static class SwaggerConfiguration
                 // even nested (e.g. you changed Build, and Subscription contains a Build object), must be updated to return the new type.
                 // It could also mean that you forgot to apply [ApiRemoved] to an inherited method that shouldn't be included in the new version
 
+                // Custom schema ID selector to handle conflicts between API models and Client models
+                // For types from the Client namespace, we prefix with "Client" to avoid schema ID collisions
+                // For generic types, include type arguments to avoid conflicts (e.g., EntityChanges<ChannelYaml> vs EntityChanges<SubscriptionYaml>)
+                options.CustomSchemaIds(type =>
+                {
+                    var prefix = string.Empty;
+                    if (type.Namespace != null 
+                        && (type.Namespace.StartsWith("Microsoft.DotNet.MaestroConfiguration.Client")
+                            || type.Namespace.StartsWith("Microsoft.DotNet.ProductConstructionService.Client")))
+                    {
+                        prefix = "Client";
+                    }
+
+                    if (type.IsGenericType)
+                    {
+                        var genericTypeName = type.Name.Split('`')[0];
+                        var typeArguments = string.Join("", type.GetGenericArguments().Select(t => t.Name));
+                        return $"{prefix}{genericTypeName}{typeArguments}";
+                    }
+
+                    return $"{prefix}{type.Name}";
+                });
+
                 options.FilterOperations(
                     (op, ctx) =>
                     {
