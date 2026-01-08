@@ -37,11 +37,12 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
     public async Task AddSubscriptionAsync(ConfigurationRepositoryOperationParameters parameters, SubscriptionYaml subscription)
         => await PerformConfigurationRepositoryOperationInternal(
             parameters,
-            subscription,
-            (p, repo, branch, s) => AddModelInternalAsync<SubscriptionYaml, Guid>(
+            // TODO: Have a subscriptionYamlParameters model without the ID and pass it
+            RegenerateSubscriptionId(subscription),
+            (p, repo, branch, s) => AddModelInternalAsync(
                 p, repo, branch, s,
                 ConfigFilePathResolver.GetDefaultSubscriptionFilePath,
-                (existing, newSub) => existing.IsEquivalentTo(newSub),
+                YamlModelFunctionalKey.GetSubscriptionKey,
                 new SubscriptionYamlComparer(),
                 $"Add new subscription ({s.Channel}) {s.SourceRepository} => {s.TargetRepository} ({s.TargetBranch})"),
             $"Successfully added subscription with id '{subscription.Id}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
@@ -52,7 +53,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             subscription,
             (p, repo, branch, s) => DeleteModelInternalAsync(
                 p, repo, branch, s,
-                YamlModelUniqueKeys.GetSubscriptionKey,
+                YamlModelUniquenessKeys.GetSubscriptionKey,
                 new SubscriptionYamlComparer(),
                 $"Delete subscription {s.Id}"),
             $"Successfully deleted subscription with id '{subscription.Id}' from branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
@@ -63,7 +64,8 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             updatedSubscription,
             (p, repo, branch, s) => UpdateModelInternalAsync(
                 p, repo, branch, s,
-                YamlModelUniqueKeys.GetSubscriptionKey,
+                YamlModelUniquenessKeys.GetSubscriptionKey,
+                YamlModelFunctionalKey.GetSubscriptionKey,
                 new SubscriptionYamlComparer(),
                 $"Update subscription {s.Id}"),
             $"Successfully updated subscription with id '{updatedSubscription.Id}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
@@ -72,10 +74,10 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         => await PerformConfigurationRepositoryOperationInternal(
             parameters,
             channel,
-            (p, repo, branch, c) => AddModelInternalAsync<ChannelYaml, string>(
+            (p, repo, branch, c) => AddModelInternalAsync(
                 p, repo, branch, c,
                 ConfigFilePathResolver.GetDefaultChannelFilePath,
-                (existing, newChannel) => string.Equals(existing.Name, newChannel.Name, StringComparison.OrdinalIgnoreCase),
+                YamlModelFunctionalKey.GetChannelKey,
                 new ChannelYamlComparer(),
                 $"Add new channel '{c.Name}'"),
             $"Successfully added channel '{channel.Name}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
@@ -86,7 +88,8 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             updatedChannel,
             (p, repo, branch, c) => UpdateModelInternalAsync(
                 p, repo, branch, c,
-                YamlModelUniqueKeys.GetChannelKey,
+                YamlModelUniquenessKeys.GetChannelKey,
+                YamlModelFunctionalKey.GetChannelKey,
                 new ChannelYamlComparer(),
                 $"Update channel '{c.Name}'"),
             $"Successfully updated channel '{updatedChannel.Name}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
@@ -97,7 +100,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             channel,
             (p, repo, branch, c) => DeleteModelInternalAsync(
                 p, repo, branch, c,
-                YamlModelUniqueKeys.GetChannelKey,
+                YamlModelUniquenessKeys.GetChannelKey,
                 new ChannelYamlComparer(),
                 $"Delete channel '{c.Name}'"),
             $"Successfully deleted channel '{channel.Name}' from branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
@@ -106,23 +109,56 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         => await PerformConfigurationRepositoryOperationInternal(
             parameters,
             defaultChannel,
-            (p, repo, branch, dc) => AddModelInternalAsync<DefaultChannelYaml, (string, string, string)>(
+            (p, repo, branch, dc) => AddModelInternalAsync(
                 p, repo, branch, dc,
                 ConfigFilePathResolver.GetDefaultDefaultChannelFilePath,
-                (existing, newDc) => string.Equals(existing.Repository, newDc.Repository, StringComparison.OrdinalIgnoreCase)
-                    && string.Equals(existing.Branch, newDc.Branch, StringComparison.OrdinalIgnoreCase)
-                    && string.Equals(existing.Channel, newDc.Channel, StringComparison.OrdinalIgnoreCase),
+                YamlModelFunctionalKey.GetDefaultChannelKey,
                 new DefaultChannelYamlComparer(),
                 $"Add new default channel ({dc.Channel}) {dc.Repository} ({dc.Branch})"),
             $"Successfully added default channel on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
 
+    public async Task AddRepositoryMergePoliciesAsync(ConfigurationRepositoryOperationParameters parameters, BranchMergePoliciesYaml branchMergePolicies)
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            branchMergePolicies,
+            (p, repo, branch, bmp) => AddModelInternalAsync(
+                p, repo, branch, bmp,
+                ConfigFilePathResolver.GetDefaultRepositoryBranchFilePath,
+                YamlModelFunctionalKey.GetBranchMergePoliciesKey,
+                new BranchMergePoliciesYamlComparer(),
+                $"Add merge policies for {bmp.Repository}@{bmp.Branch}"),
+            $"Successfully added merge policies for {branchMergePolicies.Repository}@{branchMergePolicies.Branch} on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+
+    public async Task UpdateRepositoryMergePoliciesAsync(ConfigurationRepositoryOperationParameters parameters, BranchMergePoliciesYaml branchMergePolicies)
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            branchMergePolicies,
+            (p, repo, branch, bmp) => UpdateModelInternalAsync(
+                p, repo, branch, bmp,
+                YamlModelUniquenessKeys.GetBranchMergePoliciesKey,
+                YamlModelFunctionalKey.GetBranchMergePoliciesKey,
+                new BranchMergePoliciesYamlComparer(),
+                $"Update merge policies for {bmp.Repository}@{bmp.Branch}"),
+            $"Successfully updated merge policies for {branchMergePolicies.Repository}@{branchMergePolicies.Branch} on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+
+    public async Task DeleteRepositoryMergePoliciesAsync(ConfigurationRepositoryOperationParameters parameters, BranchMergePoliciesYaml branchMergePoliciesYaml)
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            branchMergePoliciesYaml,
+            (p, repo, branch, bmp) => DeleteModelInternalAsync(
+                p, repo, branch, bmp,
+                YamlModelUniquenessKeys.GetBranchMergePoliciesKey,
+                new BranchMergePoliciesYamlComparer(),
+                $"Delete merge policies for {bmp.Repository}@{bmp.Branch}"),
+            $"Successfully deleted merge policies for {branchMergePoliciesYaml.Repository}@{branchMergePoliciesYaml.Branch} from branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
     public async Task UpdateDefaultChannelAsync(ConfigurationRepositoryOperationParameters parameters, DefaultChannelYaml updatedDefaultChannel)
         => await PerformConfigurationRepositoryOperationInternal(
             parameters,
             updatedDefaultChannel,
             (p, repo, branch, dc) => UpdateModelInternalAsync(
                 p, repo, branch, dc,
-                YamlModelUniqueKeys.GetDefaultChannelKey,
+                YamlModelUniquenessKeys.GetDefaultChannelKey,
+                YamlModelFunctionalKey.GetDefaultChannelKey,
                 new DefaultChannelYamlComparer(),
                 $"Update default channel ({dc.Channel}) {dc.Repository} ({dc.Branch})"),
             $"Successfully updated default channel on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
@@ -132,7 +168,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             defaultChannel,
             (p, repo, branch, dc) => DeleteModelInternalAsync(
                 p, repo, branch, dc,
-                YamlModelUniqueKeys.GetDefaultChannelKey,
+                YamlModelUniquenessKeys.GetDefaultChannelKey,
                 new DefaultChannelYamlComparer(),
                 $"Delete default channel {dc.Repository} ({dc.Branch}) => {dc.Channel}"),
             $"Successfully deleted default channel '{defaultChannel.Repository}' ({defaultChannel.Branch}) => '{defaultChannel.Channel}' from branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
@@ -175,7 +211,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         string workingBranch,
         TModel yamlModel,
         Func<TModel, string> getDefaultFilePath,
-        Func<TModel, TModel, bool> isEquivalent,
+        Func<TModel, TKey> getFunctionalKey,
         IComparer<TModel> modelComparer,
         string commitMessage)
         where TModel : IYamlModel
@@ -192,10 +228,11 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             workingBranch,
             filePath);
 
-        var equivalentInFile = yamlModelsInFile.FirstOrDefault(m => isEquivalent(m, yamlModel));
+        var yamlModelKey = getFunctionalKey(yamlModel);
+        var equivalentInFile = yamlModelsInFile.FirstOrDefault(m => getFunctionalKey(m).Equals(yamlModelKey));
         if (equivalentInFile != null)
         {
-            throw new DuplicateConfigurationObjectException(filePath);
+            throw new DuplicateConfigurationObjectException(filePath, parameters.RepositoryUri, parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch);
         }
 
         yamlModelsInFile.Add(yamlModel);
@@ -217,7 +254,7 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
         IGitRepo configurationRepo,
         string workingBranch,
         TModel yamlModel,
-        Func<TModel, TKey> getModelId,
+        Func<TModel, TKey> getUniquenessKey,
         IComparer<TModel> modelComparer,
         string commitMessage)
         where TModel : IYamlModel
@@ -228,10 +265,10 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             configurationRepo,
             workingBranch,
             yamlModel,
-            getModelId);
+            getUniquenessKey);
 
-        var yamlModelKey = getModelId(yamlModel);
-        var yamlModelsWithoutDeleted = yamlModelsInFile.Where(m => !getModelId(m).Equals(yamlModelKey)).ToList();
+        var yamlModelKey = getUniquenessKey(yamlModel);
+        var yamlModelsWithoutDeleted = yamlModelsInFile.Where(m => !getUniquenessKey(m).Equals(yamlModelKey)).ToList();
 
         if (yamlModelsInFile.Count == yamlModelsWithoutDeleted.Count)
         {
@@ -255,26 +292,28 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
     /// <summary>
     /// Generic method to update an existing configuration object in the configuration repository.
     /// </summary>
-    private async Task UpdateModelInternalAsync<TModel, TKey>(
+    private async Task UpdateModelInternalAsync<TModel, TUniqueKey, TFunctionalKey>(
         ConfigurationRepositoryOperationParameters parameters,
         IGitRepo configurationRepo,
         string workingBranch,
         TModel updatedYamlModel,
-        Func<TModel, TKey> getModelId,
+        Func<TModel, TUniqueKey> getUniquenessKey,
+        Func<TModel, TFunctionalKey> getFunctionalKey,
         IComparer<TModel> modelComparer,
         string commitMessage)
         where TModel : IYamlModel
-        where TKey : IEquatable<TKey>
+        where TUniqueKey : IEquatable<TUniqueKey>
+        where TFunctionalKey : IEquatable<TFunctionalKey>
     {
         var (filePath, yamlModelsInFile) = await GetFilePathAndModels(
             parameters,
             configurationRepo,
             workingBranch,
             updatedYamlModel,
-            getModelId);
+            getUniquenessKey);
 
-        var yamlModelKey = getModelId(updatedYamlModel);
-        var existingYamlModel = yamlModelsInFile.FirstOrDefault(m => getModelId(m).Equals(yamlModelKey));
+        var yamlModelKey = getUniquenessKey(updatedYamlModel);
+        var existingYamlModel = yamlModelsInFile.FirstOrDefault(m => getUniquenessKey(m).Equals(yamlModelKey));
         if (existingYamlModel == null)
         {
             var branchName = parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch;
@@ -286,6 +325,13 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
 
         var index = yamlModelsInFile.IndexOf(existingYamlModel);
         yamlModelsInFile[index] = updatedYamlModel;
+
+        // check that after the update we don't have two functionally equivalent models
+        var yamlModelFunctionalKey = getFunctionalKey(updatedYamlModel);
+        if (yamlModelsInFile.Where(m => getFunctionalKey(m).Equals(yamlModelFunctionalKey)).Count() > 1)
+        {
+            throw new DuplicateConfigurationObjectException(filePath, parameters.RepositoryUri, parameters.ConfigurationBranch ?? parameters.ConfigurationBaseBranch);
+        }
 
         await CommitConfigurationDataAsync(
             configurationRepo,
@@ -532,5 +578,24 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
 
         throw new ArgumentException($"No object with key {searchKey} was found on branch {workingBranch}");
     }
+
+    private SubscriptionYaml RegenerateSubscriptionId(SubscriptionYaml subscription)
+        => new SubscriptionYaml
+        {
+            Id = Guid.NewGuid(),
+            Enabled = subscription.Enabled,
+            Channel = subscription.Channel,
+            SourceRepository = subscription.SourceRepository,
+            TargetRepository = subscription.TargetRepository,
+            TargetBranch = subscription.TargetBranch,
+            UpdateFrequency = subscription.UpdateFrequency,
+            Batchable = subscription.Batchable,
+            ExcludedAssets = subscription.ExcludedAssets,
+            MergePolicies = subscription.MergePolicies,
+            FailureNotificationTags = subscription.FailureNotificationTags,
+            SourceEnabled = subscription.SourceEnabled,
+            SourceDirectory = subscription.SourceDirectory,
+            TargetDirectory = subscription.TargetDirectory
+        };
     #endregion
 }

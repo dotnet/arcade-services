@@ -85,7 +85,7 @@ public class ConfigurationIngestorTests
         var configData = CreateBasicConfigurationData();
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.Channels.Creations.Should().HaveCount(1);
@@ -120,7 +120,7 @@ public class ConfigurationIngestorTests
         var configData = CreateBasicConfigurationData();
 
         // Act
-        await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         var namespaceEntity = await _context.Namespaces
@@ -156,7 +156,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.Channels.Updates.Should().HaveCount(1);
@@ -213,7 +213,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         result.Subscriptions.Updates.Should().HaveCount(1);
     }
@@ -267,7 +267,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.Subscriptions.Updates.Should().HaveCount(1);
@@ -332,7 +332,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.Subscriptions.Updates.Should().HaveCount(1);
@@ -391,7 +391,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.Subscriptions.Updates.Should().HaveCount(1);
@@ -456,7 +456,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.Subscriptions.Updates.Should().HaveCount(1);
@@ -515,7 +515,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.DefaultChannels.Updates.Should().HaveCount(1);
@@ -563,7 +563,7 @@ public class ConfigurationIngestorTests
             [updatedBranchYaml]);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.RepositoryBranches.Updates.Should().HaveCount(1);
@@ -597,7 +597,7 @@ public class ConfigurationIngestorTests
         var configData = new ConfigurationData([], [], [], []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.Channels.Removals.Should().HaveCount(1);
@@ -633,7 +633,7 @@ public class ConfigurationIngestorTests
 
         var configData = new ConfigurationData([subscription], [], [], []);
 
-        var act = async () => await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var act = async () => await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
@@ -684,7 +684,7 @@ public class ConfigurationIngestorTests
         // Channel names are immutable.
         // During ingestion, the channel name update results in channel removal + creation.
         // This should fail because the channel is still referenced by the existing subscription in the DB.
-        var act = async () => await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var act = async () => await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
@@ -716,7 +716,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.Subscriptions.Removals.Should().HaveCount(1);
@@ -755,7 +755,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.DefaultChannels.Removals.Should().HaveCount(1);
@@ -786,7 +786,7 @@ public class ConfigurationIngestorTests
         var configData = new ConfigurationData([], [], [], []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.RepositoryBranches.Removals.Should().HaveCount(1);
@@ -830,7 +830,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.Channels.Creations.Should().HaveCount(1);
@@ -912,7 +912,7 @@ public class ConfigurationIngestorTests
             ]);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.Channels.Updates.Should().HaveCount(2); // .NET 8
@@ -948,7 +948,7 @@ public class ConfigurationIngestorTests
         var configData = CreateBasicConfigurationData();
 
         // Act
-        await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         var namespaceEntity = await _context.Namespaces
@@ -977,8 +977,8 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        await _ingestor.IngestConfigurationAsync(configData1, namespace1);
-        await _ingestor.IngestConfigurationAsync(configData2, namespace2);
+        await _ingestor.IngestConfigurationAsync(configData1, namespace1, saveChanges: true);
+        await _ingestor.IngestConfigurationAsync(configData2, namespace2, saveChanges: true);
 
         // Assert
         var namespaces = await _context.Namespaces

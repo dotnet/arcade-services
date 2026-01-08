@@ -344,15 +344,17 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 try
                 {
                     await _configurationRepositoryManager.AddSubscriptionAsync(
-                                _options.ToConfigurationRepositoryOperationParameters(),
-                                subscriptionYaml);
+                        _options.ToConfigurationRepositoryOperationParameters(),
+                        subscriptionYaml);
                 }
-                // TODO drop to the "global try-catch" when configuration repo is the only behavior
+                // TODO https://github.com/dotnet/arcade-services/issues/5693 drop to the "global try-catch" when configuration repo is the only behavior
                 catch (MaestroConfiguration.Client.DuplicateConfigurationObjectException ex)
                 {
-                    _logger.LogError("Subscription {id} with equivalent parameters already exists in '{filePath}'.",
+                    _logger.LogError("Subscription {id} with equivalent parameters already exists in '{filePath}' in repo {repo} on branch {branch}.",
                         subscriptionYaml.Id,
-                        ex.FilePath);
+                        ex.FilePath,
+                        ex.Repository,
+                        ex.Branch);
                     return Constants.ErrorCode;
                 }
             }

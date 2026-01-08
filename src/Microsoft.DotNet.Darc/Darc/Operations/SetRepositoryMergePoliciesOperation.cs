@@ -11,6 +11,8 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.MaestroConfiguration.Client;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -23,17 +25,20 @@ internal class SetRepositoryMergePoliciesOperation : Operation
     private readonly SetRepositoryMergePoliciesCommandLineOptions _options;
     private readonly IBarApiClient _barClient;
     private readonly IRemoteFactory _remoteFactory;
+    private readonly IConfigurationRepositoryManager _configurationRepositoryManager;
     private readonly ILogger<SetRepositoryMergePoliciesOperation> _logger;
 
     public SetRepositoryMergePoliciesOperation(
         SetRepositoryMergePoliciesCommandLineOptions options,
         IBarApiClient barClient,
         IRemoteFactory remoteFactory,
+        IConfigurationRepositoryManager configurationRepositoryManager,
         ILogger<SetRepositoryMergePoliciesOperation> logger)
     {
         _options = options;
         _barClient = barClient;
         _remoteFactory = remoteFactory;
+        _configurationRepositoryManager = configurationRepositoryManager;
         _logger = logger;
     }
 
@@ -158,8 +163,92 @@ internal class SetRepositoryMergePoliciesOperation : Operation
 
         try
         {
-            await _barClient.SetRepositoryMergePoliciesAsync(repository, branch, mergePolicies);
-            Console.WriteLine($"Successfully updated merge policies for {repository}@{branch}.");
+            if (_options.ShouldUseConfigurationRepository)
+            {
+                BranchMergePoliciesYaml branchMergePoliciesYaml = new()
+                {
+                    Repository = repository,
+                    Branch = branch,
+                    MergePolicies = MergePolicyYaml.FromClientModels(mergePolicies)
+                };
+
+                var policies = await _barClient.GetRepositoryMergePoliciesAsync(repository, branch);
+                if (policies != null && policies.Any())
+                {
+                    if (branchMergePoliciesYaml.MergePolicies.Any())
+                    {
+                        try
+                        {
+                            await _configurationRepositoryManager.UpdateRepositoryMergePoliciesAsync(
+                                _options.ToConfigurationRepositoryOperationParameters(),
+                                branchMergePoliciesYaml);
+                        }
+                        // TODO https://github.com/dotnet/arcade-services/issues/5693 drop to the "global try-catch" when configuration repo is the only behavior
+                        catch (ConfigurationObjectNotFoundException ex)
+                        {
+                            _logger.LogError("No existing repository branch configuration found for {repo}@{branch} in file {filePath} of repo {configRepo} on branch {configBranch}",
+                                branchMergePoliciesYaml.Repository,
+                                branchMergePoliciesYaml.Branch,
+                                ex.FilePath,
+                                ex.RepositoryUri,
+                                ex.BranchName);
+                            return Constants.ErrorCode;
+                        } 
+                    }
+                    else
+                    {
+                        try
+                        {
+                            await _configurationRepositoryManager.DeleteRepositoryMergePoliciesAsync(
+                                _options.ToConfigurationRepositoryOperationParameters(),
+                                branchMergePoliciesYaml);
+                        }
+                        // TODO https://github.com/dotnet/arcade-services/issues/5693 drop to the "global try-catch" when configuration repo is the only behavior
+                        catch (ConfigurationObjectNotFoundException ex)
+                        {
+                            _logger.LogError("No existing repository branch configuration found for {repo}@{branch} in file {filePath} of repo {configRepo} on branch {configBranch}",
+                                branchMergePoliciesYaml.Repository,
+                                branchMergePoliciesYaml.Branch,
+                                ex.FilePath,
+                                ex.RepositoryUri,
+                                ex.BranchName);
+                            return Constants.ErrorCode;
+                        }
+                    }
+                }
+                else
+                {
+                    if (!branchMergePoliciesYaml.MergePolicies.Any())
+                    {
+                        _logger.LogWarning("No merge policies specified for {repo}@{branch}, nothing to add.", 
+                            branchMergePoliciesYaml.Repository, 
+                            branchMergePoliciesYaml.Branch);
+                        return Constants.SuccessCode;
+                    }
+                    try
+                    {
+                        await _configurationRepositoryManager.AddRepositoryMergePoliciesAsync(
+                                        _options.ToConfigurationRepositoryOperationParameters(),
+                                        branchMergePoliciesYaml);
+                    }
+                    // TODO https://github.com/dotnet/arcade-services/issues/5693 drop to the "global try-catch" when configuration repo is the only behavior
+                    catch (DuplicateConfigurationObjectException ex)
+                    {
+                        _logger.LogError("Repository branch merge policies for {repo}@{branch} already exist in '{filePath}' in repo {repo} on branch {branch}.",
+                            branchMergePoliciesYaml.Repository,
+                            branchMergePoliciesYaml.Branch,
+                            ex.FilePath,
+                            ex.Repository,
+                            ex.Branch);
+                        return Constants.ErrorCode;
+                    }
+                }
+            }
+            else
+            {
+                await _barClient.SetRepositoryMergePoliciesAsync(repository, branch, mergePolicies);
+                Console.WriteLine($"Successfully updated merge policies for {repository}@{branch}.");
+            }
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)
