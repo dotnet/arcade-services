@@ -10,7 +10,12 @@ internal class IngestedBranchMergePolicies : IExternallySyncedEntity<(string Rep
 {
     public IngestedBranchMergePolicies(BranchMergePoliciesYaml values) => Values = values;
 
-    public (string, string) UniqueId => (Values.Repository, Values.Branch);
+    public override (string, string) UniqueId => (Values.Repository, Values.Branch);
 
     public BranchMergePoliciesYaml Values { init; get; }
+
+    public override string ToString()
+    {
+        return $"BranchMergePolicies (Repository: '{Values.Repository}', Branch: '{Values.Branch}')";
+    }
 }
