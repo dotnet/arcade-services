@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using YamlDotNet.Serialization;
 
@@ -28,4 +30,27 @@ public record BranchMergePoliciesYaml : IYamlModel
         Branch = repositoryBranch.Branch,
         MergePolicies = MergePolicyYaml.FromClientModels(repositoryBranch.MergePolicies),
     };
+
+    public static ClientBranchMergePoliciesYaml ToPcsClient(BranchMergePoliciesYaml bmp)
+    {
+        return new ClientBranchMergePoliciesYaml(
+            branch: bmp.Branch,
+            repository: bmp.Repository)
+        {
+            MergePolicies = MergePolicyYaml.ToPcsClientList(bmp.MergePolicies)
+        };
+    }
+
+    public static IImmutableList<ClientBranchMergePoliciesYaml> ToPcsClientList(
+        IReadOnlyCollection<BranchMergePoliciesYaml>? branchMergePolicies)
+    {
+        if (branchMergePolicies == null || branchMergePolicies.Count == 0)
+        {
+            return ImmutableList<ClientBranchMergePoliciesYaml>.Empty;
+        }
+
+        return branchMergePolicies
+            .Select(ToPcsClient)
+            .ToImmutableList();
+    }
 }

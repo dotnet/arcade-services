@@ -52,7 +52,7 @@ internal class BranchMergePolicyValidator
             && mergePolicies.Any(SubscriptionValidator.StandardMergePolicies.Contains))
         {
             throw new ArgumentException(
-                "One or more of the following merge policies could not be added because it is already included "
+                $"One or more of the following merge policies for {branchMergePolicy.Values.Repository}/{branchMergePolicy.Values.Branch} could not be added because it is already included "
                 + $"in the standard merge policy: {string.Join(", ", SubscriptionValidator.StandardMergePolicies)}");
         }
     }
