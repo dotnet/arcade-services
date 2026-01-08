@@ -26,12 +26,6 @@ internal class ScenarioTests_RepoPolicies : ScenarioTestBase
         // so it's important that this branch name not be a substring or superstring of another branch name
         var branchName = GetTestBranchName();
 
-        TestContext.WriteLine("Setting repository merge policy to empty");
-        await SetRepositoryPolicies(repoUrl, branchName);
-        var emptyPolicies = await GetRepositoryPolicies(repoUrl, branchName);
-        var expectedEmpty = $"{repoUrl} @ {branchName}\r\n- Merge Policies: []\r\n";
-        emptyPolicies.Should().BeEquivalentTo(expectedEmpty, "Repository merge policy is not empty");
-
         TestContext.WriteLine("Setting repository merge policy to standard");
         await SetRepositoryPolicies(repoUrl, branchName, ["--standard-automerge"]);
         var standardPolicies = await GetRepositoryPolicies(repoUrl, branchName);
@@ -47,5 +41,10 @@ internal class ScenarioTests_RepoPolicies : ScenarioTestBase
             "                     \"B\"\r\n" +
             "                   ]\r\n";
         allChecksPolicies.Should().BeEquivalentTo(expectedAllChecksPolicies, "Repository policy is incorrect for all checks successful case");
+
+        TestContext.WriteLine("Deleting the repository merge policies");
+        await SetRepositoryPolicies(repoUrl, branchName);
+        var emptyPolicies = await GetRepositoryPolicies(repoUrl, branchName);
+        emptyPolicies.Should().BeEquivalentTo(string.Empty, "Repository merge policy is not empty");
     }
 }

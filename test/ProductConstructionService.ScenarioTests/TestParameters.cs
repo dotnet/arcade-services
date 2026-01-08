@@ -3,12 +3,15 @@
 
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Internal.Testing.Utility;
+using Microsoft.DotNet.MaestroConfiguration.Client;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
@@ -47,6 +50,8 @@ public class TestParameters : IDisposable
     public static bool IsCI { get; }
     public static string GitExePath => _gitHubPath!;
     public static List<string> BaseDarcRunArgs { get => field!; private set; }
+    public static IServiceProvider ServiceProvider { get => field!; private set; }
+    public static IConfigurationRepositoryParser ConfigRepoParser { get => field!; private set; }
 
     static TestParameters()
     {
@@ -81,6 +86,25 @@ public class TestParameters : IDisposable
         PcsApi = PcsBaseUri.Contains("localhost") || PcsBaseUri.Contains("127.0.0.1")
             ? PcsApiFactory.GetAnonymous(PcsBaseUri)
             : PcsApiFactory.GetAuthenticated(PcsBaseUri, accessToken: null, managedIdentityId: null, disableInteractiveAuth: IsCI);
+
+        IServiceCollection services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<ILogger, NUnitLogger>();
+        services.AddSingleton<IFileSystem, FileSystem>();
+        services.AddSingleton<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
+        services.AddSingleton<IRemoteTokenProvider>(new RemoteTokenProvider(AzDoToken, GitHubToken));
+        services.AddSingleton<IAzureDevOpsTokenProvider>(_azDoTokenProvider);
+        services.AddSingleton<ITelemetryRecorder, NoTelemetryRecorder>();
+        services.AddSingleton<Microsoft.DotNet.DarcLib.IGitRepoFactory>(sp => ActivatorUtilities.CreateInstance<GitRepoFactory>(sp, Path.GetTempPath()));
+        services.AddSingleton<IRemoteFactory, NoRemoteFactory>();
+        services.AddSingleton<ILocalGitRepoFactory, LocalGitRepoFactory>();
+        services.AddSingleton<ILocalGitClient, LocalGitClient>();
+        services.AddSingleton<Microsoft.DotNet.MaestroConfiguration.Client.IGitRepoFactory, Microsoft.DotNet.DarcLib.ConfigurationRepository.GitRepoFactory>();
+        services.AddSingleton<IConfigurationRepositoryParser, ConfigurationRepositoryParser>();
+        ServiceProvider = services.BuildServiceProvider();
+        ConfigRepoParser = ServiceProvider.GetRequiredService<IConfigurationRepositoryParser>();
+
+        Environment.SetEnvironmentVariable("DARC_USE_CONFIGURATION_REPOSITORY", "true");
     }
 
     [OneTimeSetUp]

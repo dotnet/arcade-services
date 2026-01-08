@@ -39,45 +39,44 @@ internal class ScenarioTests_Dependencies : ScenarioTestBase
         var targetRepoUri = GetGitHubRepoUrl(targetRepoName);
 
         TestContext.WriteLine($"Creating test channel {testChannelName}");
-        await using (await CreateTestChannelAsync(testChannelName))
-        {
-            TestContext.WriteLine("Set up build1 for intake into target repository");
-            Build build1 = await CreateBuildAsync(source1RepoUri, sourceBranch, sourceCommit, sourceBuildNumber, source1Assets);
-            await AddBuildToChannelAsync(build1.Id, testChannelName);
+        await CreateTestChannelAsync(testChannelName);
 
-            TestContext.WriteLine("Set up build2 for intake into target repository");
-            Build build2 = await CreateBuildAsync(source2RepoUri, sourceBranch, sourceCommit, sourceBuildNumber, source2Assets);
-            await AddBuildToChannelAsync(build2.Id, testChannelName);
+        TestContext.WriteLine("Set up build1 for intake into target repository");
+        Build build1 = await CreateBuildAsync(source1RepoUri, sourceBranch, sourceCommit, sourceBuildNumber, source1Assets);
+        await AddBuildToChannelAsync(build1.Id, testChannelName);
 
-            List<BuildRef> dependencies =
-            [
-                new BuildRef(build1.Id, true, 1),
-                new BuildRef(build2.Id, true, 2)
-            ];
+        TestContext.WriteLine("Set up build2 for intake into target repository");
+        Build build2 = await CreateBuildAsync(source2RepoUri, sourceBranch, sourceCommit, sourceBuildNumber, source2Assets);
+        await AddBuildToChannelAsync(build2.Id, testChannelName);
 
-            // Add the target build once, should populate the BuildDependencies table and calculate TimeToInclusion
-            TestContext.WriteLine("Set up targetBuild in target repository");
-            Build targetBuild1 = await CreateBuildAsync(targetRepoUri, targetBranch, targetCommit, target1BuildNumber, targetAssets, dependencies);
-            await AddBuildToChannelAsync(targetBuild1.Id, testChannelName);
-            var newTargetBuild1 = new Build(targetBuild1.Id, targetBuild1.DateProduced, targetBuild1.Staleness, targetBuild1.Released,
-                targetBuild1.Stable, targetBuild1.Commit, targetBuild1.Channels, targetBuild1.Assets, dependencies, incoherencies: null);
+        List<BuildRef> dependencies =
+        [
+            new BuildRef(build1.Id, true, 1),
+            new BuildRef(build2.Id, true, 2)
+        ];
 
-            // Add the target build a second time, should populate the BuildDependencies table and use the previous TimeToInclusion
-            Build targetBuild2 = await CreateBuildAsync(targetRepoUri, targetBranch, targetCommit, target2BuildNumber, targetAssets, dependencies);
-            await AddBuildToChannelAsync(targetBuild2.Id, testChannelName);
-            var newTargetBuild2 = new Build(targetBuild2.Id, targetBuild2.DateProduced, targetBuild2.Staleness, targetBuild2.Released,
-                targetBuild2.Stable, targetBuild2.Commit, targetBuild2.Channels, targetBuild2.Assets, dependencies, incoherencies: null);
+        // Add the target build once, should populate the BuildDependencies table and calculate TimeToInclusion
+        TestContext.WriteLine("Set up targetBuild in target repository");
+        Build targetBuild1 = await CreateBuildAsync(targetRepoUri, targetBranch, targetCommit, target1BuildNumber, targetAssets, dependencies);
+        await AddBuildToChannelAsync(targetBuild1.Id, testChannelName);
+        var newTargetBuild1 = new Build(targetBuild1.Id, targetBuild1.DateProduced, targetBuild1.Staleness, targetBuild1.Released,
+            targetBuild1.Stable, targetBuild1.Commit, targetBuild1.Channels, targetBuild1.Assets, dependencies, incoherencies: null);
 
-            Build retrievedBuild1 = await PcsApi.Builds.GetBuildAsync(targetBuild1.Id);
-            Build retrievedBuild2 = await PcsApi.Builds.GetBuildAsync(targetBuild2.Id);
+        // Add the target build a second time, should populate the BuildDependencies table and use the previous TimeToInclusion
+        Build targetBuild2 = await CreateBuildAsync(targetRepoUri, targetBranch, targetCommit, target2BuildNumber, targetAssets, dependencies);
+        await AddBuildToChannelAsync(targetBuild2.Id, testChannelName);
+        var newTargetBuild2 = new Build(targetBuild2.Id, targetBuild2.DateProduced, targetBuild2.Staleness, targetBuild2.Released,
+            targetBuild2.Stable, targetBuild2.Commit, targetBuild2.Channels, targetBuild2.Assets, dependencies, incoherencies: null);
 
-            retrievedBuild1.Dependencies.Should().HaveCount(newTargetBuild1.Dependencies.Count);
-            retrievedBuild2.Dependencies.Should().HaveCount(newTargetBuild2.Dependencies.Count);
+        Build retrievedBuild1 = await PcsApi.Builds.GetBuildAsync(targetBuild1.Id);
+        Build retrievedBuild2 = await PcsApi.Builds.GetBuildAsync(targetBuild2.Id);
 
-            var buildRefComparer = new BuildRefComparer();
+        retrievedBuild1.Dependencies.Should().HaveCount(newTargetBuild1.Dependencies.Count);
+        retrievedBuild2.Dependencies.Should().HaveCount(newTargetBuild2.Dependencies.Count);
 
-            CollectionAssert.AreEqual(retrievedBuild1.Dependencies, newTargetBuild1.Dependencies, buildRefComparer);
-            CollectionAssert.AreEqual(retrievedBuild2.Dependencies, newTargetBuild2.Dependencies, buildRefComparer);
-        }
+        var buildRefComparer = new BuildRefComparer();
+
+        CollectionAssert.AreEqual(retrievedBuild1.Dependencies, newTargetBuild1.Dependencies, buildRefComparer);
+        CollectionAssert.AreEqual(retrievedBuild2.Dependencies, newTargetBuild2.Dependencies, buildRefComparer);
     }
 }
