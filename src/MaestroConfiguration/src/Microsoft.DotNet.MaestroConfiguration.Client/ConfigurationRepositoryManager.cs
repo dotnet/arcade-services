@@ -82,6 +82,18 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
                 $"Add new channel '{c.Name}'"),
             $"Successfully added channel '{channel.Name}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
 
+    public async Task UpdateChannelAsync(ConfigurationRepositoryOperationParameters parameters, ChannelYaml updatedChannel)
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            updatedChannel,
+            (p, repo, branch, c) => UpdateModelInternalAsync(
+                p, repo, branch, c,
+                YamlModelUniquenessKeys.GetChannelKey,
+                YamlModelFunctionalKey.GetChannelKey,
+                new ChannelYamlComparer(),
+                $"Update channel '{c.Name}'"),
+            $"Successfully updated channel '{updatedChannel.Name}' on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+
     public async Task DeleteChannelAsync(ConfigurationRepositoryOperationParameters parameters, ChannelYaml channel)
         => await PerformConfigurationRepositoryOperationInternal(
             parameters,
@@ -139,6 +151,27 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
                 new BranchMergePoliciesYamlComparer(),
                 $"Delete merge policies for {bmp.Repository}@{bmp.Branch}"),
             $"Successfully deleted merge policies for {branchMergePoliciesYaml.Repository}@{branchMergePoliciesYaml.Branch} from branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+    public async Task UpdateDefaultChannelAsync(ConfigurationRepositoryOperationParameters parameters, DefaultChannelYaml updatedDefaultChannel)
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            updatedDefaultChannel,
+            (p, repo, branch, dc) => UpdateModelInternalAsync(
+                p, repo, branch, dc,
+                YamlModelUniquenessKeys.GetDefaultChannelKey,
+                YamlModelFunctionalKey.GetDefaultChannelKey,
+                new DefaultChannelYamlComparer(),
+                $"Update default channel ({dc.Channel}) {dc.Repository} ({dc.Branch})"),
+            $"Successfully updated default channel on branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
+    public async Task DeleteDefaultChannelAsync(ConfigurationRepositoryOperationParameters parameters, DefaultChannelYaml defaultChannel)
+        => await PerformConfigurationRepositoryOperationInternal(
+            parameters,
+            defaultChannel,
+            (p, repo, branch, dc) => DeleteModelInternalAsync(
+                p, repo, branch, dc,
+                YamlModelUniquenessKeys.GetDefaultChannelKey,
+                new DefaultChannelYamlComparer(),
+                $"Delete default channel {dc.Repository} ({dc.Branch}) => {dc.Channel}"),
+            $"Successfully deleted default channel '{defaultChannel.Repository}' ({defaultChannel.Branch}) => '{defaultChannel.Channel}' from branch '{parameters.ConfigurationBranch}' of the configuration repository {parameters.RepositoryUri}");
 
     private async Task PerformConfigurationRepositoryOperationInternal<TModel>(
         ConfigurationRepositoryOperationParameters parameters,
@@ -527,7 +560,8 @@ public class ConfigurationRepositoryManager : IConfigurationRepositoryManager
             try
             {
                 var fileContent = await gitRepo.GetFileContentsAsync(repositoryUri, workingBranch, filePath);
-                var deserializedYamls = _yamlDeserializer.Deserialize<List<TModel>>(fileContent);
+                var deserializedYamls = _yamlDeserializer.Deserialize<List<TModel>>(fileContent)
+                    ?? [];
 
                 if (deserializedYamls.Any(y => searchKey.Equals(getUniqueKey(y))))
                 {

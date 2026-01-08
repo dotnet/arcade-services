@@ -43,11 +43,15 @@ public class LocalGitRepo : MaestroConfiguration.Client.IGitRepo
     }
 
     public async Task DeleteFileAsync(string repositoryUri, string branch, string filePath, string commitMessage)
-        => await _gitRepo.CommitFilesAsync(
+    {
+        await _gitRepo.CommitFilesAsync(
             [new Helpers.GitFile(new UnixPath(repositoryUri) / filePath, string.Empty, ContentEncoding.Utf8, operation: GitFileOperation.Delete)],
             repositoryUri,
             branch,
             commitMessage);
+        await _localGitRepo.StageAsync(["."]);
+        await _localGitRepo.CommitAsync(commitMessage, allowEmpty: false);
+    }
 
     public async Task<bool> DoesBranchExistAsync(string repositoryUri, string branchName)
         => await _gitRepo.DoesBranchExistAsync(repositoryUri, branchName);

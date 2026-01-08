@@ -23,6 +23,10 @@ elseif ($prDetail.title -match "\[automated\]") {
 	Write-Host "Automated PRs don't need release notes. Check passed."
 	exit 0
 }
+elseif ($prDetail.title -match "Bump") {
+	Write-Host "Automated PRs don't need release notes. Check passed."
+	exit 0
+}
 
 
 $issuePatterns = @{

@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
+using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -36,6 +37,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 #endif
 
     private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
+    private readonly BuildAssetRegistryContext _context;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IPullRequestUpdaterFactory _updaterFactory;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
@@ -61,6 +63,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     public PullRequestUpdater(
         PullRequestUpdaterId id,
         IMergePolicyEvaluator mergePolicyEvaluator,
+        BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
         IPullRequestUpdaterFactory updaterFactory,
         ICoherencyUpdateResolver coherencyUpdateResolver,
@@ -80,6 +83,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     {
         Id = id;
         _mergePolicyEvaluator = mergePolicyEvaluator;
+        _context = context;
         _remoteFactory = remoteFactory;
         _updaterFactory = updaterFactory;
         _coherencyUpdateResolver = coherencyUpdateResolver;
@@ -518,11 +522,28 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _logger.LogInformation("Updating subscriptions for merged PR");
         foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
         {
-            ISubscriptionTriggerer triggerer = _updaterFactory.CreateSubscriptionTrigerrer(update.SubscriptionId);
-            if (!await triggerer.UpdateForMergedPullRequestAsync(update.BuildId))
-            {
-                _logger.LogWarning("Failed to update subscription {subscriptionId} for merged PR", update.SubscriptionId);
-            }
+            await UpdateForMergedPullRequestAsync(update);
+        }
+    }
+
+    private async Task UpdateForMergedPullRequestAsync(SubscriptionPullRequestUpdate update)
+    {
+        _logger.LogInformation("Updating {subscriptionId} with latest build id {buildId}", update.SubscriptionId, update.BuildId);
+        Subscription? subscription = await _context.Subscriptions.FindAsync(update.SubscriptionId);
+
+        if (subscription != null)
+        {
+            subscription.LastAppliedBuildId = subscription.SourceEnabled
+                // We must check if the build really got applied or if someone merged an earlier build without resolving conflicts
+                ? await GetLastCodeflownBuild(subscription)
+                : update.BuildId;
+            _context.Subscriptions.Update(subscription);
+            await _context.SaveChangesAsync();
+        }
+        else
+        {
+            // This happens for deleted subscriptions (such as scenario tests)
+            _logger.LogInformation("Could not find subscription with ID {subscriptionId}. Skipping latestBuild update.", update.SubscriptionId);
         }
     }
 
@@ -1671,6 +1692,29 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         // We know for sure that we will fail the codeflow checks (codeflow metadata will be expected to match the new build)
         // So we trigger the evaluation right away
         await RunMergePolicyEvaluation(pr, prInfo, remote);
+    }
+
+    private async Task<int> GetLastCodeflownBuild(Subscription subscription)
+    {
+        var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
+        if (!string.IsNullOrEmpty(subscription.SourceDirectory))
+        {
+            // Backflow
+            var sourceTag = await remote.GetSourceDependencyAsync(subscription.TargetRepository, subscription.TargetBranch);
+
+            return sourceTag?.BarId
+                ?? throw new DarcException($"Failed to determine last flown VMR build " +
+                                           $"to {subscription.TargetRepository} @ {subscription.TargetBranch}");
+        }
+        else
+        {
+            // Forward flow
+            var sourceManifest = await remote.GetSourceManifestAsync(subscription.TargetRepository, subscription.TargetBranch);
+
+            return sourceManifest.GetRepositoryRecord(subscription.TargetDirectory)?.BarId
+                ?? throw new DarcException($"Failed to determine last flown build of {subscription.TargetDirectory} " +
+                                           $"to {subscription.TargetRepository} @ {subscription.TargetBranch}");
+        }
     }
 
     #endregion
