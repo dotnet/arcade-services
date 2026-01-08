@@ -1,10 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Threading.Tasks;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.Extensions.Logging;
 using Octokit;
 
-namespace ProductConstructionService.Api.Api;
+#nullable enable
+namespace Microsoft.DotNet.DarcLib;
 
 public interface IGitHubInstallationIdResolver
 {
@@ -28,9 +31,9 @@ public class GitHubInstallationIdResolver : IGitHubInstallationIdResolver
     {
         _logger.LogInformation("Getting installation ID for {repoUri}", repoUri);
 
-        var (owner, repo) = Microsoft.DotNet.DarcLib.GitHubClient.ParseRepoUri(repoUri);
+        var (owner, repo) = GitHubClient.ParseRepoUri(repoUri);
         var token = _gitHubTokenProvider.GetTokenForApp();
-        var client = new GitHubClient(new ProductHeaderValue(nameof(ProductConstructionService)))
+        var client = new Octokit.GitHubClient(new ProductHeaderValue(nameof(ProductConstructionService)))
         {
             Credentials = new Credentials(token, AuthenticationType.Bearer)
         };
