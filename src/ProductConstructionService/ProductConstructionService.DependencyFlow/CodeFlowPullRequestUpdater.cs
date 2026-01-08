@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data;
-using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
@@ -21,7 +20,7 @@ using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Model
 
 namespace ProductConstructionService.DependencyFlow;
 
-internal class CodeFlowPullRequestUpdater : PullRequestUpdaterBase
+internal abstract class CodeFlowPullRequestUpdater : PullRequestUpdaterBase
 {
     private readonly IRemoteFactory _remoteFactory;
     private readonly IPullRequestBuilder _pullRequestBuilder;
@@ -31,11 +30,11 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdaterBase
     private readonly IPcsVmrForwardFlower _vmrForwardFlower;
     private readonly IPcsVmrBackFlower _vmrBackFlower;
     private readonly ITelemetryRecorder _telemetryRecorder;
-    private readonly ILogger<CodeFlowPullRequestUpdater> _logger;
+    private readonly ILogger _logger;
     private readonly ICommentCollector _commentCollector;
     private readonly IFeatureFlagService _featureFlagService;
 
-    public CodeFlowPullRequestUpdater(
+    protected CodeFlowPullRequestUpdater(
         PullRequestUpdaterId id,
         IMergePolicyEvaluator mergePolicyEvaluator,
         BuildAssetRegistryContext context,
@@ -51,7 +50,7 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdaterBase
         IPcsVmrForwardFlower vmrForwardFlower,
         IPcsVmrBackFlower vmrBackFlower,
         ITelemetryRecorder telemetryRecorder,
-        ILogger<CodeFlowPullRequestUpdater> logger,
+        ILogger logger,
         ICommentCollector commentCollector,
         IPullRequestCommenter pullRequestCommenter,
         IFeatureFlagService featureFlagService)
@@ -332,11 +331,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdaterBase
         }
     }
 
-    protected override Task<PullRequest?> CreatePullRequestAsync(SubscriptionUpdateWorkItem update, BuildDTO build)
-    {
-
-    }
-
     private async Task<(InProgressPullRequest, PullRequest)> CreateCodeFlowPullRequestAsync(
         SubscriptionUpdateWorkItem update,
         string? previousSourceSha,
@@ -572,8 +566,8 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdaterBase
         string newFileContents = await _gitClient.GetFileFromGitAsync(_vmrInfo.VmrPath, VmrInfo.DefaultRelativeSourceManifestPath, currentFlowSha)
             ?? throw new DependencyFileNotFoundException($"Could not find {VmrInfo.DefaultRelativeSourceManifestPath} in {_vmrInfo.VmrPath} at commit {currentFlowSha}");
 
-        SourceManifest oldSrcManifest = SourceManifest.FromJson(oldFileContents);
-        SourceManifest newSrcManifest = SourceManifest.FromJson(newFileContents);
+        var oldSrcManifest = SourceManifest.FromJson(oldFileContents);
+        var newSrcManifest = SourceManifest.FromJson(newFileContents);
 
         var oldRepos = oldSrcManifest.Repositories.ToDictionary(r => r.RemoteUri, r => r.CommitSha);
         var newRepos = newSrcManifest.Repositories.ToDictionary(r => r.RemoteUri, r => r.CommitSha);

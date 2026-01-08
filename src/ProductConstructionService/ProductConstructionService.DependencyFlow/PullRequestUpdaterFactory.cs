@@ -24,8 +24,8 @@ internal class PullRequestUpdaterFactory : IPullRequestUpdaterFactory
 
     public IPullRequestUpdater CreatePullRequestUpdater(PullRequestUpdaterId updaterId) => updaterId switch
     {
-        BatchedPullRequestUpdaterId batched => ActivatorUtilities.CreateInstance<BatchedPullRequestUpdater>(_serviceProvider, batched),
-        NonBatchedPullRequestUpdaterId nonBatched => ActivatorUtilities.CreateInstance<NonBatchedPullRequestUpdater>(_serviceProvider, nonBatched),
+        BatchedPullRequestUpdaterId batched => ActivatorUtilities.CreateInstance<BatchedDependencyPullRequestUpdater>(_serviceProvider, batched),
+        NonBatchedPullRequestUpdaterId nonBatched => ActivatorUtilities.CreateInstance<NonBatchedDependencyPullRequestUpdater>(_serviceProvider, nonBatched),
         _ => throw new NotImplementedException()
     };
 

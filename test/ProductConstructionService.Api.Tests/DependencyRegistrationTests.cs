@@ -21,9 +21,9 @@ public class DependencyRegistrationTests
             authRedis: false,
             addSwagger: true);
 
-        builder.Services.AddTransient<NonBatchedPullRequestUpdater>();
+        builder.Services.AddTransient<NonBatchedDependencyPullRequestUpdater>();
         builder.Services.AddSingleton(new NonBatchedPullRequestUpdaterId(Guid.NewGuid()));
-        builder.Services.AddTransient<BatchedPullRequestUpdater>();
+        builder.Services.AddTransient<BatchedDependencyPullRequestUpdater>();
         builder.Services.AddSingleton(new BatchedPullRequestUpdaterId("repo", "branch"));
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(

@@ -13,12 +13,12 @@ using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 
-internal class BatchedPullRequestUpdater : PullRequestUpdater
+internal class BatchedDependencyPullRequestUpdater : DependencyPullRequestUpdater
 {
     private readonly BatchedPullRequestUpdaterId _id;
     private readonly BuildAssetRegistryContext _context;
 
-    public BatchedPullRequestUpdater(
+    public BatchedDependencyPullRequestUpdater(
         BatchedPullRequestUpdaterId id,
         IMergePolicyEvaluator mergePolicyEvaluator,
         BuildAssetRegistryContext context,
@@ -34,7 +34,7 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
         IPcsVmrForwardFlower vmrForwardFlower,
         IPcsVmrBackFlower vmrBackFlower,
         ITelemetryRecorder telemetryRecorder,
-        ILogger<BatchedPullRequestUpdater> logger,
+        ILogger<BatchedDependencyPullRequestUpdater> logger,
         ICommentCollector commentCollector,
         IPullRequestCommenter pullRequestCommenter,
         IFeatureFlagService featureFlagService)

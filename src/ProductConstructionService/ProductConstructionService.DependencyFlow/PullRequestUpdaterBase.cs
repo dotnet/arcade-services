@@ -220,10 +220,6 @@ internal abstract class PullRequestUpdaterBase
         BuildDTO build,
         bool forceUpdate);
 
-    protected abstract Task<PullRequest?> CreatePullRequestAsync(
-        SubscriptionUpdateWorkItem update,
-        BuildDTO build);
-
     protected abstract Task<int> GetLastFlownBuild(Subscription subscription, SubscriptionPullRequestUpdate update);
 
     protected abstract Task<(string repository, string branch)> GetTargetAsync();
@@ -741,7 +737,7 @@ internal abstract class PullRequestUpdaterBase
         }
     }
 
-    protected static TimeSpan GetReminderDelay(DateTimeOffset updatedAt)
+    private static TimeSpan GetReminderDelay(DateTimeOffset updatedAt)
     {
         TimeSpan difference = DateTimeOffset.UtcNow - updatedAt;
         return difference.TotalDays switch

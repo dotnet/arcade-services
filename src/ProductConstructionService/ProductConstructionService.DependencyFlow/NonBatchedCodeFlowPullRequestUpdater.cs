@@ -13,36 +13,36 @@ using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow;
 
-internal class NonBatchedPullRequestUpdater : PullRequestUpdater
+internal class NonBatchedCodeFlowPullRequestUpdater : CodeFlowPullRequestUpdater
 {
     private readonly Lazy<Task<Subscription?>> _lazySubscription;
     private readonly NonBatchedPullRequestUpdaterId _id;
     private readonly BuildAssetRegistryContext _context;
-    private readonly ILogger<NonBatchedPullRequestUpdater> _logger;
+    private readonly ILogger<NonBatchedCodeFlowPullRequestUpdater> _logger;
     private readonly ICommentCollector _commentCollector;
     private readonly IPullRequestCommentBuilder _commentBuilder;
 
-    public NonBatchedPullRequestUpdater(
-        NonBatchedPullRequestUpdaterId id,
-        IMergePolicyEvaluator mergePolicyEvaluator,
-        BuildAssetRegistryContext context,
-        IRemoteFactory remoteFactory,
-        IPullRequestUpdaterFactory updaterFactory,
-        ICoherencyUpdateResolver coherencyUpdateResolver,
-        IPullRequestBuilder pullRequestBuilder,
-        IRedisCacheFactory cacheFactory,
-        IReminderManagerFactory reminderManagerFactory,
-        ISqlBarClient sqlClient,
-        ILocalLibGit2Client gitClient,
-        IVmrInfo vmrInfo,
-        IPcsVmrForwardFlower vmrForwardFlower,
-        IPcsVmrBackFlower vmrBackFlower,
-        ITelemetryRecorder telemetryRecorder,
-        ILogger<NonBatchedPullRequestUpdater> logger,
-        ICommentCollector commentCollector,
-        IPullRequestCommenter pullRequestCommenter,
-        IPullRequestCommentBuilder commentBuilder,
-        IFeatureFlagService featureFlagService)
+    public NonBatchedCodeFlowPullRequestUpdater(
+            NonBatchedPullRequestUpdaterId id,
+            IMergePolicyEvaluator mergePolicyEvaluator,
+            BuildAssetRegistryContext context,
+            IRemoteFactory remoteFactory,
+            IPullRequestUpdaterFactory updaterFactory,
+            ICoherencyUpdateResolver coherencyUpdateResolver,
+            IPullRequestBuilder pullRequestBuilder,
+            IRedisCacheFactory cacheFactory,
+            IReminderManagerFactory reminderManagerFactory,
+            ISqlBarClient sqlClient,
+            ILocalLibGit2Client gitClient,
+            IVmrInfo vmrInfo,
+            IPcsVmrForwardFlower vmrForwardFlower,
+            IPcsVmrBackFlower vmrBackFlower,
+            ITelemetryRecorder telemetryRecorder,
+            ILogger<NonBatchedCodeFlowPullRequestUpdater> logger,
+            ICommentCollector commentCollector,
+            IPullRequestCommenter pullRequestCommenter,
+            IPullRequestCommentBuilder commentBuilder,
+            IFeatureFlagService featureFlagService)
         : base(
             id,
             mergePolicyEvaluator,
@@ -80,16 +80,12 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         // while some PRs have just been closed and there's a reminder on those still
         if (subscription == null)
         {
-            _logger.LogInformation(
-                $"Failed to find a subscription {_id.SubscriptionId}. " +
-                "Possibly it was deleted while an existing PR is still tracked. Untracking PR...");
+            _logger.LogWarning(
+                "Failed to find a subscription {subscriptionId}. " +
+                "Possibly it was deleted while an existing PR is still tracked. Untracking PR...",
+                _id.SubscriptionId);
 
-            // We don't know if the subscription was a code flow one, so just unset both
-            await _pullRequestState.TryDeleteAsync();
-            await _pullRequestCheckReminders.UnsetReminderAsync();
-            await _pullRequestCheckReminders.UnsetReminderAsync();
-            await _pullRequestUpdateReminders.UnsetReminderAsync();
-            await _pullRequestUpdateReminders.UnsetReminderAsync();
+            await ClearAllStateAsync(clearPendingUpdates: true);
             return null;
         }
 
@@ -135,4 +131,5 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
 
         return await base.CheckInProgressPullRequestAsync(pullRequestCheck);
     }
+
 }

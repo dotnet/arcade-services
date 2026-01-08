@@ -21,13 +21,13 @@ namespace ProductConstructionService.DependencyFlow;
 /// <summary>
 ///     A class responsible for creating and updating pull requests for dependency updates.
 /// </summary>
-internal abstract class PullRequestUpdater : PullRequestUpdaterBase, IPullRequestUpdater
+internal abstract class DependencyPullRequestUpdater : PullRequestUpdaterBase, IPullRequestUpdater
 {
     private readonly IRemoteFactory _remoteFactory;
     private readonly IPullRequestBuilder _pullRequestBuilder;
     private readonly ILogger _logger;
 
-    protected PullRequestUpdater(
+    protected DependencyPullRequestUpdater(
             PullRequestUpdaterId id,
             IMergePolicyEvaluator mergePolicyEvaluator,
             BuildAssetRegistryContext context,
@@ -124,7 +124,7 @@ internal abstract class PullRequestUpdater : PullRequestUpdaterBase, IPullReques
     ///     Creates a pull request from the given updates.
     /// </summary>
     /// <returns>The pull request url when a pr was created; <see langref="null" /> if no PR is necessary</returns>
-    protected override async Task<PullRequest?> CreatePullRequestAsync(SubscriptionUpdateWorkItem update, BuildDTO build)
+    private async Task<PullRequest?> CreatePullRequestAsync(SubscriptionUpdateWorkItem update, BuildDTO build)
     {
         (var targetRepository, var targetBranch) = await GetTargetAsync();
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
