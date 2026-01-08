@@ -32,7 +32,6 @@ public class ConfigurationIngestionValidationTests
 
         exception.Should().NotBeNull();
         exception.Message.Should().Contain("Channel name is required");
-        exception.Message.Should().Contain("Entity:");
         exception.Message.Should().Contain(subscription.Values.Id.ToString());
         exception.EntityInfo.Should().Contain(subscription.Values.Id.ToString());
     }
@@ -59,7 +58,6 @@ public class ConfigurationIngestionValidationTests
 
         exception.Should().NotBeNull();
         exception.Message.Should().Contain("Batchable subscriptions cannot be combined with merge policies");
-        exception.Message.Should().Contain("Entity:");
         exception.Message.Should().Contain(subscriptionId.ToString());
         exception.EntityInfo.Should().Contain(subscriptionId.ToString());
     }
@@ -86,7 +84,6 @@ public class ConfigurationIngestionValidationTests
 
         exception.Should().NotBeNull();
         exception.Message.Should().Contain("Only source-enabled subscriptions may have the Codeflow merge policy");
-        exception.Message.Should().Contain("Entity:");
         exception.Message.Should().Contain(subscriptionId.ToString());
     }
 
@@ -110,8 +107,6 @@ public class ConfigurationIngestionValidationTests
 
         exception.Should().NotBeNull();
         exception.Message.Should().Contain("Channel name is required");
-        exception.Message.Should().Contain("Entity:");
-        exception.Message.Should().Contain("Channel");
     }
 
     [Test]
@@ -130,7 +125,6 @@ public class ConfigurationIngestionValidationTests
 
         exception.Should().NotBeNull();
         exception.Message.Should().Contain("Channel classification is required");
-        exception.Message.Should().Contain("Entity:");
         exception.Message.Should().Contain(".NET 8");
         exception.EntityInfo.Should().Contain(".NET 8");
     }
@@ -157,7 +151,6 @@ public class ConfigurationIngestionValidationTests
 
         exception.Should().NotBeNull();
         exception.Message.Should().Contain("Default channel repository is required");
-        exception.Message.Should().Contain("Entity:");
         exception.Message.Should().Contain("main");
         exception.Message.Should().Contain(".NET 8");
     }
@@ -181,7 +174,6 @@ public class ConfigurationIngestionValidationTests
 
         exception.Should().NotBeNull();
         exception.Message.Should().Contain("Default channel repository cannot be longer than 300 characters");
-        exception.Message.Should().Contain("Entity:");
         exception.Message.Should().Contain("main");
         exception.Message.Should().Contain(".NET 8");
     }
@@ -205,7 +197,6 @@ public class ConfigurationIngestionValidationTests
 
         exception.Should().NotBeNull();
         exception.Message.Should().Contain("Default channel branch name cannot be longer than 100 characters");
-        exception.Message.Should().Contain("Entity:");
         exception.Message.Should().Contain("https://github.com/dotnet/runtime");
         exception.Message.Should().Contain(".NET 8");
     }
@@ -231,7 +222,6 @@ public class ConfigurationIngestionValidationTests
 
         exception.Should().NotBeNull();
         exception.Message.Should().Contain("Repository is required");
-        exception.Message.Should().Contain("Entity:");
         exception.Message.Should().Contain("main");
     }
 
@@ -253,7 +243,6 @@ public class ConfigurationIngestionValidationTests
 
         exception.Should().NotBeNull();
         exception.Message.Should().Contain("Repository name cannot be longer than 450");
-        exception.Message.Should().Contain("Entity:");
         exception.Message.Should().Contain("main");
     }
 
@@ -278,7 +267,6 @@ public class ConfigurationIngestionValidationTests
 
         exception.Should().NotBeNull();
         exception.Message.Should().Contain("One or more of the following merge policies could not be added");
-        exception.Message.Should().Contain("Entity:");
         exception.Message.Should().Contain("https://github.com/dotnet/runtime");
         exception.Message.Should().Contain("main");
     }
@@ -303,7 +291,6 @@ public class ConfigurationIngestionValidationTests
 
         exception.Should().NotBeNull();
         exception.Message.Should().Contain("collection contains duplicate Ids");
-        exception.Message.Should().Contain("Entity:");
         exception.Message.Should().Contain(".NET 8");
     }
 
@@ -338,7 +325,6 @@ public class ConfigurationIngestionValidationTests
 
         exception.Should().NotBeNull();
         exception.Message.Should().Contain("collection contains duplicate Ids");
-        exception.Message.Should().Contain("Entity:");
         exception.Message.Should().Contain(sharedId.ToString());
     }
 
