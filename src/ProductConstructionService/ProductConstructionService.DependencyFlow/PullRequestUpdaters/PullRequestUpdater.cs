@@ -9,6 +9,7 @@ using Maestro.MergePolicies;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
@@ -213,9 +214,22 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
     protected abstract Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitions();
 
-    protected virtual async Task<bool> CheckInProgressPullRequestAsync(InProgressPullRequest pullRequestCheck)
+    private async Task<bool> CheckInProgressPullRequestAsync(InProgressPullRequest pullRequestCheck)
     {
         _logger.LogInformation("Checking in-progress pull request {url}", pullRequestCheck.Url);
+
+        List<Subscription> subscriptions = await _context.Subscriptions
+            .Where(s => pullRequestCheck.ContainedSubscriptions.Any(ss => s.Id == ss.SubscriptionId))
+            .ToListAsync();
+
+        if (subscriptions.Count < pullRequestCheck.ContainedSubscriptions.Count)
+        {
+            // If the subscription was deleted during tests (a frequent occurrence when we delete subscriptions at the end),
+            // we don't want to report this as a failure. For real PRs, it might be good to learn about this.
+            await ClearAllStateAsync(clearPendingUpdates: true);
+            return false;
+        }
+
         var pr = await GetPullRequestStatusAsync(pullRequestCheck, tryingToUpdate: false);
         return pr.Status != PullRequestStatus.Invalid;
     }

@@ -728,19 +728,6 @@ internal class CodeFlowPullRequestUpdater : PullRequestUpdater
         Subscription? subscription = await _subscription.Value;
         return subscription?.PolicyObject?.MergePolicies ?? [];
     }
-
-    protected override async Task<bool> CheckInProgressPullRequestAsync(InProgressPullRequest pullRequestCheck)
-    {
-        Subscription? subscription = await _subscription.Value;
-        if (subscription == null)
-        {
-            // If the subscription was deleted during tests (a frequent occurrence when we delete subscriptions at the end),
-            // we don't want to report this as a failure. For real PRs, it might be good to learn about this. 
-            return pullRequestCheck.Url?.Contains("maestro-auth-test") ?? false;
-        }
-
-        return await base.CheckInProgressPullRequestAsync(pullRequestCheck);
-    }
 }
 
 // <summary>
