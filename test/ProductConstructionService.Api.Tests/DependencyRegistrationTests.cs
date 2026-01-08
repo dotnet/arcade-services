@@ -22,9 +22,9 @@ public class DependencyRegistrationTests
             addSwagger: true);
 
         builder.Services.AddTransient<NonBatchedDependencyPullRequestUpdater>();
-        builder.Services.AddSingleton(new NonBatchedPullRequestUpdaterId(Guid.NewGuid()));
+        builder.Services.AddSingleton(new NonBatchedPullRequestUpdaterId(Guid.NewGuid(), false));
         builder.Services.AddTransient<BatchedDependencyPullRequestUpdater>();
-        builder.Services.AddSingleton(new BatchedPullRequestUpdaterId("repo", "branch"));
+        builder.Services.AddSingleton(new BatchedPullRequestUpdaterId("repo", "branch", false));
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(
             s =>

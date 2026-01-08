@@ -81,31 +81,6 @@ internal abstract class CodeFlowPullRequestUpdater : PullRequestUpdaterBase
         _featureFlagService = featureFlagService;
     }
 
-    protected override bool IsCodeFlowWorkItem => true;
-
-    protected override async Task<int> GetLastFlownBuild(Maestro.Data.Models.Subscription subscription, SubscriptionPullRequestUpdate update)
-    {
-        var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
-        if (!string.IsNullOrEmpty(subscription.SourceDirectory))
-        {
-            // Backflow
-            var sourceTag = await remote.GetSourceDependencyAsync(subscription.TargetRepository, subscription.TargetBranch);
-
-            return sourceTag?.BarId
-                ?? throw new DarcException($"Failed to determine last flown VMR build " +
-                                           $"to {subscription.TargetRepository} @ {subscription.TargetBranch}");
-        }
-        else
-        {
-            // Forward flow
-            var sourceManifest = await remote.GetSourceManifestAsync(subscription.TargetRepository, subscription.TargetBranch);
-
-            return sourceManifest.GetRepositoryRecord(subscription.TargetDirectory)?.BarId
-                ?? throw new DarcException($"Failed to determine last flown build of {subscription.TargetDirectory} " +
-                                           $"to {subscription.TargetRepository} @ {subscription.TargetBranch}");
-        }
-    }
-
     /// <summary>
     /// Alternative to ProcessPendingUpdatesAsync that is used in the code flow (VMR) scenario.
     /// </summary>
@@ -245,6 +220,29 @@ internal abstract class CodeFlowPullRequestUpdater : PullRequestUpdaterBase
                     codeFlowRes.ConflictedFiles,
                     build),
                 CommentType.Caution);
+        }
+    }
+
+    protected override async Task<int> GetLastFlownBuild(Maestro.Data.Models.Subscription subscription, SubscriptionPullRequestUpdate update)
+    {
+        var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
+        if (!string.IsNullOrEmpty(subscription.SourceDirectory))
+        {
+            // Backflow
+            var sourceTag = await remote.GetSourceDependencyAsync(subscription.TargetRepository, subscription.TargetBranch);
+
+            return sourceTag?.BarId
+                ?? throw new DarcException($"Failed to determine last flown VMR build " +
+                                           $"to {subscription.TargetRepository} @ {subscription.TargetBranch}");
+        }
+        else
+        {
+            // Forward flow
+            var sourceManifest = await remote.GetSourceManifestAsync(subscription.TargetRepository, subscription.TargetBranch);
+
+            return sourceManifest.GetRepositoryRecord(subscription.TargetDirectory)?.BarId
+                ?? throw new DarcException($"Failed to determine last flown build of {subscription.TargetDirectory} " +
+                                           $"to {subscription.TargetRepository} @ {subscription.TargetBranch}");
         }
     }
 

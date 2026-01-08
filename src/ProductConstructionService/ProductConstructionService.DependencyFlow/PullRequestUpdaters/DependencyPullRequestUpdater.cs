@@ -21,7 +21,7 @@ namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 /// <summary>
 ///     A class responsible for creating and updating pull requests for dependency updates.
 /// </summary>
-internal abstract class DependencyPullRequestUpdater : PullRequestUpdaterBase, IPullRequestUpdater
+internal abstract class DependencyPullRequestUpdater : PullRequestUpdaterBase
 {
     private readonly IRemoteFactory _remoteFactory;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
@@ -64,8 +64,6 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdaterBase, I
         _logger = logger;
     }
 
-    protected override bool IsCodeFlowWorkItem => false;
-
     protected override Task<int> GetLastFlownBuild(Maestro.Data.Models.Subscription subscription, SubscriptionPullRequestUpdate update)
         => Task.FromResult(update.BuildId);
 
@@ -95,21 +93,6 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdaterBase, I
         }
 
         await _pullRequestUpdateReminders.UnsetReminderAsync();
-    }
-
-    public async Task<bool> CheckPullRequestAsync(PullRequestCheck pullRequestCheck)
-    {
-        var inProgressPr = await _pullRequestState.TryGetStateAsync();
-
-        if (inProgressPr == null)
-        {
-            _logger.LogInformation("No in-progress pull request found for a PR check");
-            await ClearAllStateAsync(clearPendingUpdates: true);
-            await ClearAllStateAsync(clearPendingUpdates: true);
-            return false;
-        }
-
-        return await CheckInProgressPullRequestAsync(inProgressPr);
     }
 
     /// <summary>

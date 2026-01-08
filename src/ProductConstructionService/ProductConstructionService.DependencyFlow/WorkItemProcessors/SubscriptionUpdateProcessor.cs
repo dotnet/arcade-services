@@ -29,7 +29,14 @@ public class SubscriptionUpdateProcessor(
             _logger.LogError("Build with buildId {BuildId} not found in the DB.", workItem.BuildId);
             return false;
         }
-        var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.UpdaterId));
+
+        var subscription = await _sqlClient.GetSubscriptionAsync(workItem.SubscriptionId);
+        if (subscription == null) {
+            _logger.LogError("Subscription with subscriptionId {SubscriptionId} not found in the DB.", workItem.SubscriptionId);
+            return false;
+        }
+
+        var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.UpdaterId, subscription.SourceEnabled));
         await updater.ProcessPendingUpdatesAsync(workItem, applyNewestOnly: true, forceUpdate: false, build);
         return true;
     }

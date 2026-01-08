@@ -6,28 +6,12 @@ using Maestro.Data.Models;
 
 namespace ProductConstructionService.DependencyFlow.Model;
 
-public class UpdaterId
-{
-    public string Id { get; }
-
-    public UpdaterId(string id)
-    {
-        Id = id;
-    }
-
-    public override string ToString() => Id.ToString();
-
-    public override bool Equals(object? obj) => Id.Equals((obj as UpdaterId)?.Id);
-
-    public override int GetHashCode() => Id.GetHashCode();
-}
-
 public class NonBatchedPullRequestUpdaterId : PullRequestUpdaterId
 {
     public Guid SubscriptionId { get; }
 
-    public NonBatchedPullRequestUpdaterId(Guid subscriptionId)
-        : base(subscriptionId.ToString())
+    public NonBatchedPullRequestUpdaterId(Guid subscriptionId, bool isCodeFlow)
+        : base(subscriptionId.ToString(), isCodeFlow)
     {
         SubscriptionId = subscriptionId;
     }
@@ -38,30 +22,35 @@ public class BatchedPullRequestUpdaterId : PullRequestUpdaterId
     public string Repository { get; }
     public string Branch { get; }
 
-    public BatchedPullRequestUpdaterId(string repository, string branch)
-        : base(Encode(repository) + ":" + Encode(branch))
+    public BatchedPullRequestUpdaterId(string repository, string branch, bool isCodeFlow)
+        : base(Encode(repository) + ":" + Encode(branch), isCodeFlow)
     {
         Repository = repository;
         Branch = branch;
     }
 }
 
-public abstract class PullRequestUpdaterId : UpdaterId
+public abstract class PullRequestUpdaterId
 {
-    protected PullRequestUpdaterId(string id)
-        : base(id)
+    public string Id { get; }
+
+    public bool IsCodeFlow { get; }
+
+    protected PullRequestUpdaterId(string id, bool isCodeFlow)
     {
+        Id = id;
+        IsCodeFlow = isCodeFlow;
     }
 
     /// <summary>
     ///     Parses an <see cref="UpdaterId" /> created by <see cref="Create(string, string)" /> into the (repository, branch)
     ///     pair that created it.
     /// </summary>
-    public static PullRequestUpdaterId Parse(string id)
+    public static PullRequestUpdaterId Parse(string id, bool isCodeFlow)
     {
         if (Guid.TryParse(id, out var guid))
         {
-            return new NonBatchedPullRequestUpdaterId(guid);
+            return new NonBatchedPullRequestUpdaterId(guid, isCodeFlow);
         }
 
         var colonIndex = id.IndexOf(':');
@@ -72,7 +61,7 @@ public abstract class PullRequestUpdaterId : UpdaterId
 
         var repository = Decode(id.Substring(0, colonIndex));
         var branch = Decode(id.Substring(colonIndex + 1));
-        return new BatchedPullRequestUpdaterId(repository, branch);
+        return new BatchedPullRequestUpdaterId(repository, branch, isCodeFlow);
     }
 
     protected static string Encode(string repository)
@@ -90,7 +79,13 @@ public abstract class PullRequestUpdaterId : UpdaterId
         ArgumentNullException.ThrowIfNull(subscription);
 
         return subscription.PolicyObject.Batchable
-            ? new BatchedPullRequestUpdaterId(subscription.TargetRepository, subscription.TargetBranch)
-            : new NonBatchedPullRequestUpdaterId(subscription.Id);
+            ? new BatchedPullRequestUpdaterId(subscription.TargetRepository, subscription.TargetBranch, subscription.SourceEnabled)
+            : new NonBatchedPullRequestUpdaterId(subscription.Id, subscription.SourceEnabled);
     }
+
+    public override string ToString() => Id.ToString();
+
+    public override bool Equals(object? obj) => Id.Equals((obj as PullRequestUpdaterId)?.Id);
+
+    public override int GetHashCode() => Id.GetHashCode();
 }

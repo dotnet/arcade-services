@@ -16,7 +16,7 @@ public class PullRequestCheckProcessor(IPullRequestUpdaterFactory updaterFactory
         PullRequestCheck workItem,
         CancellationToken cancellationToken)
     {
-        var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.UpdaterId));
+        var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.UpdaterId, workItem.IsCodeFlow));
         return await updater.CheckPullRequestAsync(workItem);
     }
 

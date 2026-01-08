@@ -19,7 +19,7 @@ using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build
 
 namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
-internal abstract class PullRequestUpdaterBase
+internal abstract class PullRequestUpdaterBase : IPullRequestUpdater
 {
 #if DEBUG
     protected static readonly TimeSpan DefaultReminderDelay = TimeSpan.FromMinutes(1);
@@ -73,6 +73,21 @@ internal abstract class PullRequestUpdaterBase
         _mergePolicyEvaluationState = cacheFactory.Create<MergePolicyEvaluationResults>(cacheKey);
         _pullRequestCommenter = pullRequestCommenter;
         _featureFlagService = featureFlagService;
+    }
+
+    public async Task<bool> CheckPullRequestAsync(PullRequestCheck pullRequestCheck)
+    {
+        var inProgressPr = await _pullRequestState.TryGetStateAsync();
+
+        if (inProgressPr == null)
+        {
+            _logger.LogInformation("No in-progress pull request found for a PR check");
+            await ClearAllStateAsync(clearPendingUpdates: true);
+            await ClearAllStateAsync(clearPendingUpdates: true);
+            return false;
+        }
+
+        return await CheckInProgressPullRequestAsync(inProgressPr);
     }
 
     /// <summary>
@@ -198,8 +213,6 @@ internal abstract class PullRequestUpdaterBase
 
     protected abstract Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitions();
 
-    protected abstract bool IsCodeFlowWorkItem { get; }
-
     protected virtual async Task<bool> CheckInProgressPullRequestAsync(InProgressPullRequest pullRequestCheck)
     {
         _logger.LogInformation("Checking in-progress pull request {url}", pullRequestCheck.Url);
@@ -273,7 +286,7 @@ internal abstract class PullRequestUpdaterBase
                         // Check if we think the PR has a conflict
                         // If we think so, check if the PR head branch still has the same commit as the one we remembered.
                         // If it doesn't, we should try to update the PR again, the conflicts might be resolved
-                        if (pr.MergeState == InProgressPullRequestState.Conflict && pr.HeadBranchSha == prInfo.HeadBranchSha && IsCodeFlowWorkItem) // TODO: This if can be removed when keeping only the rebase strategy
+                        if (pr.MergeState == InProgressPullRequestState.Conflict && pr.HeadBranchSha == prInfo.HeadBranchSha && Id.IsCodeFlow) // TODO: This if can be removed when keeping only the rebase strategy
                         {
                             bool featureEnabled = await _featureFlagService.IsFeatureOnAsync(
                                 pr.ContainedSubscriptions.First().SubscriptionId,
@@ -513,7 +526,7 @@ internal abstract class PullRequestUpdaterBase
         {
             UpdaterId = Id.ToString(),
             Url = prState.Url,
-            IsCodeFlow = IsCodeFlowWorkItem,
+            IsCodeFlow = Id.IsCodeFlow,
         };
 
         prState.LastCheck = DateTime.UtcNow;
