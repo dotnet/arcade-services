@@ -273,7 +273,8 @@ public class PullRequestCommentBuilderTests
             update,
             forwardFlowSubscription,
             conflictedFiles,
-            "pr-head-branch");
+            "pr-head-branch",
+            true);
 
         // Verify only files under src/sdk/ are included
         comment.Should().Contain("file1.cs");

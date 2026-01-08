@@ -26,5 +26,7 @@ public interface ISqlBarClient : IBasicBarClient
 
     Task DeleteSubscriptionsAsync(IEnumerable<Subscription> subscriptions, bool andSaveContext = true);
 
+    Task DeleteNamespaceAsync(string namespaceName, bool andSaveContext = true);
+
     #endregion Configuration Data ingestion
 }

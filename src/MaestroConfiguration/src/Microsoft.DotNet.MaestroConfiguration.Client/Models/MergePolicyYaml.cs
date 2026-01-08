@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Newtonsoft.Json.Linq;
@@ -34,4 +35,39 @@ public class MergePolicyYaml
 
     public static List<MergePolicyYaml> FromClientModels(IEnumerable<MergePolicy>? mergePolicies)
         => mergePolicies?.Select(FromClientModel).ToList() ?? [];
+
+    public static ClientMergePolicyYaml ToPcsClient(MergePolicyYaml mp)
+    {
+        return new ClientMergePolicyYaml(name: mp.Name)
+        {
+            Properties = ConvertProperties(mp.Properties)
+        };
+    }
+
+    public static IImmutableList<ClientMergePolicyYaml> ToPcsClientList(
+        IReadOnlyCollection<MergePolicyYaml>? mergePolicies)
+    {
+        if (mergePolicies == null || mergePolicies.Count == 0)
+        {
+            return ImmutableList<ClientMergePolicyYaml>.Empty;
+        }
+
+        return mergePolicies
+            .Select(ToPcsClient)
+            .ToImmutableList();
+    }
+
+    public static IImmutableDictionary<string, JToken> ConvertProperties(
+        IDictionary<string, object>? properties)
+    {
+        if (properties == null || properties.Count == 0)
+        {
+            return ImmutableDictionary<string, JToken>.Empty;
+        }
+
+        return properties
+            .ToImmutableDictionary(
+                kvp => kvp.Key,
+                kvp => JToken.FromObject(kvp.Value));
+    }
 }

@@ -85,7 +85,7 @@ public class ConfigurationIngestorTests
         var configData = CreateBasicConfigurationData();
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.Channels.Creations.Should().HaveCount(1);
@@ -120,7 +120,7 @@ public class ConfigurationIngestorTests
         var configData = CreateBasicConfigurationData();
 
         // Act
-        await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         var namespaceEntity = await _context.Namespaces
@@ -156,7 +156,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.Channels.Updates.Should().HaveCount(1);
@@ -213,7 +213,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         result.Subscriptions.Updates.Should().HaveCount(1);
     }
@@ -267,7 +267,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.Subscriptions.Updates.Should().HaveCount(1);
@@ -332,7 +332,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.Subscriptions.Updates.Should().HaveCount(1);
@@ -391,7 +391,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.Subscriptions.Updates.Should().HaveCount(1);
@@ -456,7 +456,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.Subscriptions.Updates.Should().HaveCount(1);
@@ -515,7 +515,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.DefaultChannels.Updates.Should().HaveCount(1);
@@ -563,7 +563,7 @@ public class ConfigurationIngestorTests
             [updatedBranchYaml]);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.RepositoryBranches.Updates.Should().HaveCount(1);
@@ -597,7 +597,7 @@ public class ConfigurationIngestorTests
         var configData = new ConfigurationData([], [], [], []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.Channels.Removals.Should().HaveCount(1);
@@ -633,7 +633,7 @@ public class ConfigurationIngestorTests
 
         var configData = new ConfigurationData([subscription], [], [], []);
 
-        var act = async () => await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var act = async () => await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
@@ -684,7 +684,7 @@ public class ConfigurationIngestorTests
         // Channel names are immutable.
         // During ingestion, the channel name update results in channel removal + creation.
         // This should fail because the channel is still referenced by the existing subscription in the DB.
-        var act = async () => await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var act = async () => await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
@@ -716,7 +716,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.Subscriptions.Removals.Should().HaveCount(1);
@@ -755,7 +755,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.DefaultChannels.Removals.Should().HaveCount(1);
@@ -786,7 +786,7 @@ public class ConfigurationIngestorTests
         var configData = new ConfigurationData([], [], [], []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.RepositoryBranches.Removals.Should().HaveCount(1);
@@ -830,7 +830,7 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.Channels.Creations.Should().HaveCount(1);
@@ -912,7 +912,7 @@ public class ConfigurationIngestorTests
             ]);
 
         // Act
-        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         result.Channels.Updates.Should().HaveCount(2); // .NET 8
@@ -933,6 +933,73 @@ public class ConfigurationIngestorTests
         channels.Should().Contain(c => c.Name == ".NET 9");
     }
 
+    [Test]
+    public async Task IngestConfigurationAsync_LargeScaleMixedOperations_HandlesAllCorrectly()
+    {
+        // Arrange
+        var namespaceEntity = await CreateNamespace();
+        var testData = new LargeScaleTestDataBuilder(namespaceEntity);
+        
+        await testData.SeedDatabaseAsync(_context);
+
+        var configData = testData.BuildConfigurationData();
+
+        // Act
+        var result = await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+
+        // Assert
+        result.Channels.Creations.Should().HaveCount(2);
+        result.Channels.Updates.Should().HaveCount(4);
+        result.Channels.Removals.Should().HaveCount(2);
+
+        result.Subscriptions.Creations.Should().HaveCount(2);
+        result.Subscriptions.Updates.Should().HaveCount(2);
+        result.Subscriptions.Removals.Should().HaveCount(1);
+
+        result.DefaultChannels.Creations.Should().HaveCount(2);
+        result.DefaultChannels.Updates.Should().HaveCount(2);
+        result.DefaultChannels.Removals.Should().HaveCount(1);
+
+        result.RepositoryBranches.Creations.Should().HaveCount(2);
+        result.RepositoryBranches.Updates.Should().HaveCount(2);
+        result.RepositoryBranches.Removals.Should().HaveCount(1);
+
+        namespaceEntity = await _context.Namespaces
+            .Include(n => n.Channels)
+            .Include(n => n.Subscriptions)
+            .Include(n => n.DefaultChannels)
+            .Include(n => n.RepositoryBranches)
+            .FirstOrDefaultAsync(n => n.Name == _testNamespace);
+
+        namespaceEntity.Should().NotBeNull();
+        
+        namespaceEntity.Channels.Should().HaveCount(6);
+        namespaceEntity.Channels.Should().Contain(c => c.Name == "Channel-Create-1");
+        namespaceEntity.Channels.Should().Contain(c => c.Name == "Channel-Create-2");
+        namespaceEntity.Channels.Should().NotContain(c => c.Name == "Channel-Delete-1");
+        namespaceEntity.Channels.Should().NotContain(c => c.Name == "Channel-Delete-2");
+        
+        var updatedChannel = namespaceEntity.Channels.First(c => c.Name == "Channel-Update-1");
+        updatedChannel.Classification.Should().Be("production");
+
+        namespaceEntity.Subscriptions.Should().HaveCount(4);
+        
+        var updatedSubscription = namespaceEntity.Subscriptions.First(s => s.Id == testData.SubscriptionUpdate1Id);
+        updatedSubscription.Enabled.Should().BeFalse();
+
+        namespaceEntity.DefaultChannels.Should().HaveCount(4);
+        
+        var updatedDefaultChannel = namespaceEntity.DefaultChannels.First(dc => 
+            dc.Repository == "https://github.com/dotnet/repo-update-1" && dc.Branch == "main");
+        updatedDefaultChannel.Enabled.Should().BeFalse();
+
+        namespaceEntity.RepositoryBranches.Should().HaveCount(4);
+        
+        var updatedBranch = namespaceEntity.RepositoryBranches.First(rb => 
+            rb.RepositoryName == "https://github.com/dotnet/repo-update-1" && rb.BranchName == "release");
+        updatedBranch.PolicyObject.MergePolicies.Should().HaveCount(2);
+    }
+
     #endregion
 
     #region Namespace Tests
@@ -948,7 +1015,7 @@ public class ConfigurationIngestorTests
         var configData = CreateBasicConfigurationData();
 
         // Act
-        await _ingestor.IngestConfigurationAsync(configData, _testNamespace);
+        await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
         var namespaceEntity = await _context.Namespaces
@@ -977,8 +1044,8 @@ public class ConfigurationIngestorTests
             []);
 
         // Act
-        await _ingestor.IngestConfigurationAsync(configData1, namespace1);
-        await _ingestor.IngestConfigurationAsync(configData2, namespace2);
+        await _ingestor.IngestConfigurationAsync(configData1, namespace1, saveChanges: true);
+        await _ingestor.IngestConfigurationAsync(configData2, namespace2, saveChanges: true);
 
         // Assert
         var namespaces = await _context.Namespaces
@@ -1149,4 +1216,350 @@ public class ConfigurationIngestorTests
     }
 
     #endregion
+}
+
+internal class LargeScaleTestDataBuilder
+{
+    private readonly Namespace _namespace;
+    
+    // Channel IDs
+    private Channel _channelUpdate1 = null!;
+    private Channel _channelUpdate2 = null!;
+    private Channel _channelUpdate3 = null!;
+    private Channel _channelDelete1 = null!;
+    private Channel _channelDelete2 = null!;
+
+    // Subscription IDs
+    public Guid SubscriptionUpdate1Id { get; } = Guid.Parse("43f4590a-90f3-488f-8cf1-6acdd6806bfa");
+    public Guid SubscriptionUpdate2Id { get; } = Guid.Parse("523eda25-59ee-4035-9446-cb5f3843fbb2");
+    private readonly Guid _subscriptionDeleteId = Guid.Parse("cce72564-66da-4416-9267-91beb4420553");
+
+    public LargeScaleTestDataBuilder(Namespace namespaceEntity)
+    {
+        _namespace = namespaceEntity;
+    }
+
+    public async Task SeedDatabaseAsync(BuildAssetRegistryContext context)
+    {
+        // Ensure repositories exist
+        await EnsureRepositoriesExist(context,
+            "https://github.com/dotnet/repo-update-1",
+            "https://github.com/dotnet/repo-update-2",
+            "https://github.com/dotnet/repo-delete-1",
+            "https://github.com/dotnet/repo-create-1",
+            "https://github.com/dotnet/repo-create-2",
+            "https://github.com/dotnet/source-1",
+            "https://github.com/dotnet/source-2",
+            "https://github.com/dotnet/target-1",
+            "https://github.com/dotnet/target-2");
+
+        // Seed 6 channels: 3 to update, 1 to keep unchanged, 2 to delete
+        _channelUpdate1 = new Channel { Name = "Channel-Update-1", Classification = "dev", Namespace = _namespace };
+        _channelUpdate2 = new Channel { Name = "Channel-Update-2", Classification = "test", Namespace = _namespace };
+        _channelUpdate3 = new Channel { Name = "Channel-Update-3", Classification = "preview", Namespace = _namespace };
+        var channelKeep = new Channel { Name = "Channel-Keep-1", Classification = "release", Namespace = _namespace };
+        _channelDelete1 = new Channel { Name = "Channel-Delete-1", Classification = "dev", Namespace = _namespace };
+        _channelDelete2 = new Channel { Name = "Channel-Delete-2", Classification = "test", Namespace = _namespace };
+
+        await context.Channels.AddRangeAsync(
+            _channelUpdate1, _channelUpdate2, _channelUpdate3, channelKeep, _channelDelete1, _channelDelete2);
+        await context.SaveChangesAsync();
+
+        // Seed 3 subscriptions: 2 to update, 1 to delete
+        var subscriptionUpdate1 = new Subscription
+        {
+            Id = SubscriptionUpdate1Id,
+            Channel = _channelUpdate1,
+            ChannelId = _channelUpdate1.Id,
+            SourceRepository = "https://github.com/dotnet/source-1",
+            TargetRepository = "https://github.com/dotnet/target-1",
+            TargetBranch = "main",
+            Enabled = true,
+            PolicyObject = new SubscriptionPolicy
+            {
+                UpdateFrequency = UpdateFrequency.EveryBuild,
+                Batchable = false,
+                MergePolicies = [],
+            },
+            Namespace = _namespace,
+            ExcludedAssets = [new AssetFilter { Filter = "Old.Package" }],
+        };
+
+        var subscriptionUpdate2 = new Subscription
+        {
+            Id = SubscriptionUpdate2Id,
+            Channel = _channelUpdate2,
+            ChannelId = _channelUpdate2.Id,
+            SourceRepository = "https://github.com/dotnet/source-2",
+            TargetRepository = "https://github.com/dotnet/target-2",
+            TargetBranch = "release",
+            Enabled = true,
+            PolicyObject = new SubscriptionPolicy
+            {
+                UpdateFrequency = UpdateFrequency.EveryDay,
+                Batchable = true,
+                MergePolicies = [],
+            },
+            Namespace = _namespace,
+            ExcludedAssets = [],
+        };
+
+        var subscriptionDelete = new Subscription
+        {
+            Id = _subscriptionDeleteId,
+            Channel = _channelDelete1,
+            ChannelId = _channelDelete1.Id,
+            SourceRepository = "https://github.com/dotnet/source-1",
+            TargetRepository = "https://github.com/dotnet/target-1",
+            TargetBranch = "dev",
+            Enabled = true,
+            PolicyObject = new SubscriptionPolicy
+            {
+                UpdateFrequency = UpdateFrequency.EveryBuild,
+                Batchable = false,
+                MergePolicies = [],
+            },
+            Namespace = _namespace,
+            ExcludedAssets = [],
+        };
+
+        await context.Subscriptions.AddRangeAsync(subscriptionUpdate1, subscriptionUpdate2, subscriptionDelete);
+        await context.SaveChangesAsync();
+
+        // Seed 3 default channels: 2 to update, 1 to delete
+        var defaultChannelUpdate1 = new DefaultChannel
+        {
+            Channel = _channelUpdate1,
+            ChannelId = _channelUpdate1.Id,
+            Repository = "https://github.com/dotnet/repo-update-1",
+            Branch = "main",
+            Enabled = true,
+            Namespace = _namespace,
+        };
+
+        var defaultChannelUpdate2 = new DefaultChannel
+        {
+            Channel = _channelUpdate2,
+            ChannelId = _channelUpdate2.Id,
+            Repository = "https://github.com/dotnet/repo-update-2",
+            Branch = "main",
+            Enabled = true,
+            Namespace = _namespace,
+        };
+
+        var defaultChannelDelete = new DefaultChannel
+        {
+            Channel = _channelDelete1,
+            ChannelId = _channelDelete1.Id,
+            Repository = "https://github.com/dotnet/repo-delete-1",
+            Branch = "main",
+            Enabled = true,
+            Namespace = _namespace,
+        };
+
+        await context.DefaultChannels.AddRangeAsync(defaultChannelUpdate1, defaultChannelUpdate2, defaultChannelDelete);
+        await context.SaveChangesAsync();
+
+        // Seed 3 repository branches: 2 to update, 1 to delete
+        var repoUpdate1 = await context.Repositories.FirstAsync(r => r.RepositoryName == "https://github.com/dotnet/repo-update-1");
+        var repoUpdate2 = await context.Repositories.FirstAsync(r => r.RepositoryName == "https://github.com/dotnet/repo-update-2");
+        var repoDelete1 = await context.Repositories.FirstAsync(r => r.RepositoryName == "https://github.com/dotnet/repo-delete-1");
+
+        var branchUpdate1 = new RepositoryBranch
+        {
+            Repository = repoUpdate1,
+            RepositoryName = repoUpdate1.RepositoryName,
+            BranchName = "release",
+            PolicyString = Newtonsoft.Json.JsonConvert.SerializeObject(new RepositoryBranch.Policy
+            {
+                MergePolicies = [new MergePolicyDefinition { Name = "AllChecksSuccessful" }],
+            }),
+            Namespace = _namespace,
+        };
+
+        var branchUpdate2 = new RepositoryBranch
+        {
+            Repository = repoUpdate2,
+            RepositoryName = repoUpdate2.RepositoryName,
+            BranchName = "main",
+            PolicyString = Newtonsoft.Json.JsonConvert.SerializeObject(new RepositoryBranch.Policy
+            {
+                MergePolicies = [new MergePolicyDefinition { Name = "RequireReviews" }],
+            }),
+            Namespace = _namespace,
+        };
+
+        var branchDelete = new RepositoryBranch
+        {
+            Repository = repoDelete1,
+            RepositoryName = repoDelete1.RepositoryName,
+            BranchName = "main",
+            PolicyString = Newtonsoft.Json.JsonConvert.SerializeObject(new RepositoryBranch.Policy
+            {
+                MergePolicies = [new MergePolicyDefinition { Name = "AllChecksSuccessful" }],
+            }),
+            Namespace = _namespace,
+        };
+
+        await context.RepositoryBranches.AddRangeAsync(branchUpdate1, branchUpdate2, branchDelete);
+        await context.SaveChangesAsync();
+    }
+
+    public ConfigurationData BuildConfigurationData()
+    {
+        // Channels: Keep 1, Update 3 (with classification changes), Create 2, Delete 2
+        var channels = new List<ChannelYaml>
+        {
+            // Updates
+            new() { Name = "Channel-Update-1", Classification = "production" },
+            new() { Name = "Channel-Update-2", Classification = "release" },
+            new() { Name = "Channel-Update-3", Classification = "dev" },
+            // Keeps
+            new() { Name = "Channel-Keep-1", Classification = "release" },
+            // Creates
+            new() { Name = "Channel-Create-1", Classification = "dev" },
+            new() { Name = "Channel-Create-2", Classification = "test" },
+            // Channel-Delete-1 and Channel-Delete-2 are not included (will be deleted)
+        };
+
+        // Subscriptions: Update 2, Create 2, Delete 1
+        var subscriptions = new List<SubscriptionYaml>
+        {
+            // Updates
+            new()
+            {
+                Id = SubscriptionUpdate1Id,
+                Channel = "Channel-Update-1",
+                SourceRepository = "https://github.com/dotnet/source-1",
+                TargetRepository = "https://github.com/dotnet/target-1",
+                TargetBranch = "main",
+                Enabled = false,
+                ExcludedAssets = ["Old.Package", "New.Package.*"],
+            },
+            new()
+            {
+                Id = SubscriptionUpdate2Id,
+                Channel = "Channel-Update-2",
+                SourceRepository = "https://github.com/dotnet/source-2",
+                TargetRepository = "https://github.com/dotnet/target-2",
+                TargetBranch = "release",
+                Enabled = true,
+                ExcludedAssets = ["System.*"],
+                MergePolicies = [],
+                Batchable = true,
+                UpdateFrequency = Microsoft.DotNet.ProductConstructionService.Client.Models.UpdateFrequency.EveryWeek,
+            },
+            // Creates
+            new()
+            {
+                Id = Guid.Parse("42f620e1-790c-426d-b72e-f3fd067cbe57"),
+                Channel = "Channel-Create-1",
+                SourceRepository = "https://github.com/dotnet/source-1",
+                TargetRepository = "https://github.com/dotnet/target-2",
+                TargetBranch = "main",
+                Enabled = true,
+            },
+            new()
+            {
+                Id = Guid.Parse("e2f3e8a7-4c3b-4f8e-9f3a-2b6d7e8c9f0b"),
+                Channel = "Channel-Create-2",
+                SourceRepository = "https://github.com/dotnet/source-2",
+                TargetRepository = "https://github.com/dotnet/target-1",
+                TargetBranch = "dev",
+                Enabled = false,
+            },
+            // subscriptionDelete is not included (will be deleted)
+        };
+
+        // Default Channels: Update 2, Create 2, Delete 1
+        var defaultChannels = new List<DefaultChannelYaml>
+        {
+            // Updates
+            new()
+            {
+                Repository = "https://github.com/dotnet/repo-update-1",
+                Branch = "main",
+                Channel = "Channel-Update-1",
+                Enabled = false,
+            },
+            new()
+            {
+                Repository = "https://github.com/dotnet/repo-update-2",
+                Branch = "main",
+                Channel = "Channel-Update-2",
+                Enabled = false,
+            },
+            // Creates
+            new()
+            {
+                Repository = "https://github.com/dotnet/repo-create-1",
+                Branch = "main",
+                Channel = "Channel-Create-1",
+                Enabled = true,
+            },
+            new()
+            {
+                Repository = "https://github.com/dotnet/repo-create-2",
+                Branch = "release",
+                Channel = "Channel-Create-2",
+                Enabled = true,
+            },
+            // defaultChannelDelete is not included (will be deleted)
+        };
+
+        // Repository Branches: Update 2, Create 2, Delete 1
+        var branchPolicies = new List<BranchMergePoliciesYaml>
+        {
+            // Updates
+            new()
+            {
+                Repository = "https://github.com/dotnet/repo-update-1",
+                Branch = "release",
+                MergePolicies =
+                [
+                    new MergePolicyYaml { Name = "AllChecksSuccessful" },
+                    new MergePolicyYaml { Name = "RequireReviews" },
+                ],
+            },
+            new()
+            {
+                Repository = "https://github.com/dotnet/repo-update-2",
+                Branch = "main",
+                MergePolicies =
+                [
+                    new MergePolicyYaml { Name = "RequireReviews" },
+                    new MergePolicyYaml { Name = "NoExtraCommits" },
+                ],
+            },
+            // Creates
+            new()
+            {
+                Repository = "https://github.com/dotnet/repo-create-1",
+                Branch = "main",
+                MergePolicies = [new MergePolicyYaml { Name = "AllChecksSuccessful" }],
+            },
+            new()
+            {
+                Repository = "https://github.com/dotnet/repo-create-2",
+                Branch = "dev",
+                MergePolicies = [new MergePolicyYaml { Name = "RequireReviews" }],
+            },
+            // branchDelete is not included (will be deleted)
+        };
+
+        return new ConfigurationData(subscriptions, channels, defaultChannels, branchPolicies);
+    }
+
+    private static async Task EnsureRepositoriesExist(BuildAssetRegistryContext context, params string[] repositoryNames)
+    {
+        foreach (var repositoryName in repositoryNames)
+        {
+            var exists = await context.Repositories.AnyAsync(r => r.RepositoryName == repositoryName);
+            if (!exists)
+            {
+                await context.Repositories.AddAsync(new Repository { RepositoryName = repositoryName });
+            }
+        }
+        await context.SaveChangesAsync();
+    }
 }
