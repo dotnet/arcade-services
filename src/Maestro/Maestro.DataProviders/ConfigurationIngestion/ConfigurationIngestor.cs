@@ -191,7 +191,7 @@ internal partial class ConfigurationIngestor(
 
     private async Task DeleteSubscriptions(IEnumerable<IngestedSubscription> subscriptionRemovals)
     {
-        var subscriptionIds = subscriptionRemovals.Select(sub => sub.Values.Id).ToHashSet();
+        var subscriptionIds = subscriptionRemovals.Select(sub => sub._values.Id).ToHashSet();
 
         _context.SubscriptionUpdates.RemoveRange(
             _context.SubscriptionUpdates
@@ -222,8 +222,8 @@ internal partial class ConfigurationIngestor(
 
         foreach (var channel in updatedChannels)
         {
-            var dbChannel = dbChannelsByName[channel.Values.Name];
-            dbChannel!.Classification = channel.Values.Classification;
+            var dbChannel = dbChannelsByName[channel._values.Name];
+            dbChannel!.Classification = channel._values.Classification;
 
             _context.Channels.Update(dbChannel);
         }
@@ -232,7 +232,7 @@ internal partial class ConfigurationIngestor(
     private async Task DeleteChannels(IEnumerable<IngestedChannel> removedChannels)
     {
 
-        var channelNames = removedChannels.Select(c => c.Values.Name);
+        var channelNames = removedChannels.Select(c => c._values.Name);
 
         var channelRemovals = await _context.Channels
             .Where(channel => channelNames.Contains(channel.Name))
@@ -274,13 +274,13 @@ internal partial class ConfigurationIngestor(
 
         foreach (var defaultChannel in updatedDefaultChannels)
         {
-            var key = (defaultChannel.Values.Repository,
-                defaultChannel.Values.Branch,
-                defaultChannel.Values.Channel);
+            var key = (defaultChannel._values.Repository,
+                defaultChannel._values.Branch,
+                defaultChannel._values.Channel);
 
             var dbDefaultChannel = dbDefaultChannels[key];
 
-            dbDefaultChannel.Enabled = defaultChannel.Values.Enabled;
+            dbDefaultChannel.Enabled = defaultChannel._values.Enabled;
 
             _context.DefaultChannels.Update(dbDefaultChannel);
         }
@@ -298,7 +298,7 @@ internal partial class ConfigurationIngestor(
 
         foreach (var dc in removedDefaultChannels)
         {
-            var key = (dc.Values.Repository, dc.Values.Branch, dc.Values.Channel);
+            var key = (dc._values.Repository, dc._values.Branch, dc._values.Channel);
             if (dbDefaultChannels.TryGetValue(key, out DefaultChannel? dbDefaultChannel))
             {
                 defaultChannelRemovals.Add(dbDefaultChannel);
@@ -328,7 +328,7 @@ internal partial class ConfigurationIngestor(
 
         foreach (var bmp in updatedBranchMergePolicies)
         {
-            var dbRepositoryBranch = dbRepositoryBranches[(bmp.Values.Repository, bmp.Values.Branch)];
+            var dbRepositoryBranch = dbRepositoryBranches[(bmp._values.Repository, bmp._values.Branch)];
 
             var updatedBranchMergePoliciesDao =
                 ConvertIngestedBranchMergePoliciesToDao(bmp, namespaceEntity);
@@ -351,7 +351,7 @@ internal partial class ConfigurationIngestor(
 
         foreach (var bmp in removedBRanchMergePolicies)
         {
-            if (dbRepositoryBranches.TryGetValue(bmp.Values.Repository + "|" + bmp.Values.Branch, out RepositoryBranch? dbRepositoryBranch))
+            if (dbRepositoryBranches.TryGetValue(bmp._values.Repository + "|" + bmp._values.Branch, out RepositoryBranch? dbRepositoryBranch))
             {
                 branchRemovals.Add(dbRepositoryBranch);
             }

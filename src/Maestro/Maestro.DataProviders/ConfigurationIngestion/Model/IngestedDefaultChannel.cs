@@ -9,14 +9,16 @@ namespace Maestro.DataProviders.ConfigurationIngestion.Model;
 internal class IngestedDefaultChannel :
     IExternallySyncedEntity<(string Repository, string Branch, string Channel)>
 {
-    public IngestedDefaultChannel(DefaultChannelYaml values) => Values = values;
+    public IngestedDefaultChannel(DefaultChannelYaml values) => _values = values;
 
-    public override (string, string, string) UniqueId => (Values.Repository, Values.Branch, Values.Channel);
+    public override (string, string, string) UniqueId => (_values.Repository, _values.Branch, _values.Channel);
 
-    public DefaultChannelYaml Values { init; get; }
+    public DefaultChannelYaml _values { init; get; }
+
+    public override IYamlModel Values => _values;
 
     public override string ToString()
     {
-        return $"DefaultChannel (Repository: '{Values.Repository}', Branch: '{Values.Branch}', Channel: '{Values.Channel}')";
+        return $"DefaultChannel (Repository: '{_values.Repository}', Branch: '{_values.Branch}', Channel: '{_values.Channel}')";
     }
 }

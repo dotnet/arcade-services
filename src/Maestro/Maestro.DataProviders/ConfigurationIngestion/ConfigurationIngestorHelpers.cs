@@ -105,32 +105,32 @@ internal partial class ConfigurationIngestor
         Namespace namespaceEntity,
         Dictionary<string, Channel> existingChannelsByName)
     {
-        if (!existingChannelsByName.TryGetValue(subscription.Values.Channel, out Channel? existingChannel))
+        if (!existingChannelsByName.TryGetValue(subscription._values.Channel, out Channel? existingChannel))
         {
             throw new InvalidOperationException(
-                $"Channel '{subscription.Values.Channel}' not found for subscription creation.");
+                $"Channel '{subscription._values.Channel}' not found for subscription creation.");
         }
 
         return new Subscription
         {
-            Id = subscription.Values.Id,
+            Id = subscription._values.Id,
             ChannelId = existingChannel.Id,
             Channel = existingChannel,
-            SourceRepository = subscription.Values.SourceRepository,
-            TargetRepository = subscription.Values.TargetRepository,
-            TargetBranch = subscription.Values.TargetBranch,
+            SourceRepository = subscription._values.SourceRepository,
+            TargetRepository = subscription._values.TargetRepository,
+            TargetBranch = subscription._values.TargetBranch,
             PolicyObject = new SubscriptionPolicy
             {
-                UpdateFrequency = (UpdateFrequency)(int)subscription.Values.UpdateFrequency,
-                Batchable = subscription.Values.Batchable,
-                MergePolicies = [.. subscription.Values.MergePolicies.Select(ConvertMergePolicyYamlToDao)],
+                UpdateFrequency = (UpdateFrequency)(int)subscription._values.UpdateFrequency,
+                Batchable = subscription._values.Batchable,
+                MergePolicies = [.. subscription._values.MergePolicies.Select(ConvertMergePolicyYamlToDao)],
             },
-            Enabled = subscription.Values.Enabled,
-            SourceEnabled = subscription.Values.SourceEnabled,
-            SourceDirectory = subscription.Values.SourceDirectory,
-            TargetDirectory = subscription.Values.TargetDirectory,
-            PullRequestFailureNotificationTags = subscription.Values.FailureNotificationTags,
-            ExcludedAssets = subscription.Values.ExcludedAssets == null ? [] : [.. subscription.Values.ExcludedAssets.Select(asset => new AssetFilter() { Filter = asset })],
+            Enabled = subscription._values.Enabled,
+            SourceEnabled = subscription._values.SourceEnabled,
+            SourceDirectory = subscription._values.SourceDirectory,
+            TargetDirectory = subscription._values.TargetDirectory,
+            PullRequestFailureNotificationTags = subscription._values.FailureNotificationTags,
+            ExcludedAssets = subscription._values.ExcludedAssets == null ? [] : [.. subscription._values.ExcludedAssets.Select(asset => new AssetFilter() { Filter = asset })],
             Namespace = namespaceEntity,
         };
     }
@@ -140,8 +140,8 @@ internal partial class ConfigurationIngestor
         Namespace namespaceEntity)
         =>  new()
         {
-            Name = channel.Values.Name,
-            Classification = channel.Values.Classification,
+            Name = channel._values.Name,
+            Classification = channel._values.Classification,
             Namespace = namespaceEntity,
         };
 
@@ -150,22 +150,22 @@ internal partial class ConfigurationIngestor
         Namespace namespaceEntity,
         Dictionary<string, Channel> existingChannelsByName)
     {
-        if (existingChannelsByName.TryGetValue(defaultChannel.Values.Channel, out Channel? existingChannel))
+        if (existingChannelsByName.TryGetValue(defaultChannel._values.Channel, out Channel? existingChannel))
         {
             return new DefaultChannel
             {
                 ChannelId = existingChannel.Id,
                 Channel = existingChannel,
-                Repository = defaultChannel.Values.Repository,
+                Repository = defaultChannel._values.Repository,
                 Namespace = namespaceEntity,
-                Branch = defaultChannel.Values.Branch,
-                Enabled = defaultChannel.Values.Enabled,
+                Branch = defaultChannel._values.Branch,
+                Enabled = defaultChannel._values.Enabled,
             };
         }
         else
         {
             throw new InvalidOperationException(
-                $"Channel '{defaultChannel.Values.Channel}' not found for default channel creation.");
+                $"Channel '{defaultChannel._values.Channel}' not found for default channel creation.");
         }
     }
 
@@ -175,13 +175,13 @@ internal partial class ConfigurationIngestor
     {
         var policyObject = new RepositoryBranch.Policy
         {
-            MergePolicies = [.. branchMergePolicies.Values.MergePolicies.Select(ConvertMergePolicyYamlToDao)],
+            MergePolicies = [.. branchMergePolicies._values.MergePolicies.Select(ConvertMergePolicyYamlToDao)],
         };
 
         var branchMergePolicyDao = new RepositoryBranch
         {
-            RepositoryName = branchMergePolicies.Values.Repository,
-            BranchName = branchMergePolicies.Values.Branch,
+            RepositoryName = branchMergePolicies._values.Repository,
+            BranchName = branchMergePolicies._values.Branch,
             PolicyString = JsonConvert.SerializeObject(policyObject),
             Namespace = namespaceEntity,
         };

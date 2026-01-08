@@ -9,14 +9,16 @@ namespace Maestro.DataProviders.ConfigurationIngestion.Model;
 
 internal class IngestedSubscription : IExternallySyncedEntity<Guid>
 {
-    public IngestedSubscription(SubscriptionYaml values) => Values = values;
+    public IngestedSubscription(SubscriptionYaml values) => _values = values;
 
-    public override Guid UniqueId => Values.Id;
+    public override Guid UniqueId => _values.Id;
 
-    public SubscriptionYaml Values { init; get; }
+    public SubscriptionYaml _values { init; get; }
+
+    public override IYamlModel Values => _values;
 
     public override string ToString()
     {
-        return $"Subscription (Id: {Values.Id}, Channel: '{Values.Channel}', Source: '{Values.SourceRepository}', Target: '{Values.TargetRepository}', Branch: '{Values.TargetBranch}')";
+        return $"Subscription (Id: {_values.Id}, Channel: '{_values.Channel}', Source: '{_values.SourceRepository}', Target: '{_values.TargetRepository}', Branch: '{_values.TargetBranch}')";
     }
 }

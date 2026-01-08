@@ -42,34 +42,34 @@ internal static class SubscriptionValidator
     {
         ArgumentNullException.ThrowIfNull(subscription);
 
-        if (string.IsNullOrWhiteSpace(subscription.Values.Channel))
+        if (string.IsNullOrWhiteSpace(subscription._values.Channel))
         {
             throw new IngestionEntityValidationException("Channel name is required.", subscription);
         }
 
-        if (string.IsNullOrWhiteSpace(subscription.Values.SourceRepository))
+        if (string.IsNullOrWhiteSpace(subscription._values.SourceRepository))
         {
             throw new IngestionEntityValidationException("Source repository is required.", subscription);
         }
 
-        if (string.IsNullOrWhiteSpace(subscription.Values.TargetRepository))
+        if (string.IsNullOrWhiteSpace(subscription._values.TargetRepository))
         {
             throw new IngestionEntityValidationException("Target repository is required.", subscription);
         }
 
-        if (string.IsNullOrWhiteSpace(subscription.Values.TargetBranch))
+        if (string.IsNullOrWhiteSpace(subscription._values.TargetBranch))
         {
             throw new IngestionEntityValidationException("Target branch is required.", subscription);
         }
 
-        if (subscription.Values.MergePolicies == null)
+        if (subscription._values.MergePolicies == null)
         {
             throw new IngestionEntityValidationException("Merge policies cannot be null.", subscription);
         }
 
-        List<string> mergePolicies = [.. subscription.Values.MergePolicies.Select(mp => mp.Name)];
+        List<string> mergePolicies = [.. subscription._values.MergePolicies.Select(mp => mp.Name)];
 
-        if (!subscription.Values.SourceEnabled
+        if (!subscription._values.SourceEnabled
             && mergePolicies.Contains(MergePolicyConstants.CodeflowMergePolicyName))
         {
             throw new IngestionEntityValidationException("Only source-enabled subscriptions may have the Codeflow merge policy.", subscription);
@@ -83,28 +83,28 @@ internal static class SubscriptionValidator
                 + $"in the policy `{MergePolicyConstants.StandardMergePolicyName}`: {string.Join(", ", StandardMergePolicies)}.", subscription);
         }
 
-        if (subscription.Values.Batchable && subscription.Values.SourceEnabled)
+        if (subscription._values.Batchable && subscription._values.SourceEnabled)
         {
             throw new IngestionEntityValidationException("Batched codeflow subscriptions are not supported.", subscription);
         }
 
-        if (subscription.Values.Batchable && mergePolicies.Count > 0)
+        if (subscription._values.Batchable && mergePolicies.Count > 0)
         {
             throw new IngestionEntityValidationException(
                 "Batchable subscriptions cannot be combined with merge policies. " +
                 "Merge policies are specified at a repository+branch level.", subscription);
         }
 
-        if (!string.IsNullOrEmpty(subscription.Values.SourceDirectory)
-            && !string.IsNullOrEmpty(subscription.Values.TargetDirectory))
+        if (!string.IsNullOrEmpty(subscription._values.SourceDirectory)
+            && !string.IsNullOrEmpty(subscription._values.TargetDirectory))
         {
             throw new IngestionEntityValidationException(
                 "Only one of source or target directory can be specified for source-enabled subscriptions.", subscription);
         }
 
-        if (subscription.Values.SourceEnabled
-            && string.IsNullOrEmpty(subscription.Values.SourceDirectory)
-            && string.IsNullOrEmpty(subscription.Values.TargetDirectory))
+        if (subscription._values.SourceEnabled
+            && string.IsNullOrEmpty(subscription._values.SourceDirectory)
+            && string.IsNullOrEmpty(subscription._values.TargetDirectory))
         {
             throw new IngestionEntityValidationException(
                 "One of source or target directory is required for source-enabled subscriptions.", subscription);

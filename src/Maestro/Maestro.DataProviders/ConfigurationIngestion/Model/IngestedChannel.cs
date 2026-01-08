@@ -8,14 +8,16 @@ namespace Maestro.DataProviders.ConfigurationIngestion.Model;
 
 internal class IngestedChannel : IExternallySyncedEntity<string>
 {
-    public IngestedChannel(ChannelYaml values) => Values = values;
+    public IngestedChannel(ChannelYaml values) => _values = values;
 
-    public override string UniqueId => Values.Name;
+    public override string UniqueId => _values.Name;
 
-    public ChannelYaml Values { init; get; }
+    public ChannelYaml _values { init; get; }
+
+    public override IYamlModel Values => _values;
 
     public override string ToString()
     {
-        return $"Channel (Name: '{Values.Name}')";
+        return $"Channel (Name: '{_values.Name}')";
     }
 }

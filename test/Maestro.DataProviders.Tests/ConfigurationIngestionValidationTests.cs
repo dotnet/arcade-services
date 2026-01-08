@@ -32,8 +32,8 @@ public class ConfigurationIngestionValidationTests
 
         exception.Should().NotBeNull();
         exception.Message.Should().Contain("Channel name is required");
-        exception.Message.Should().Contain(subscription.Values.Id.ToString());
-        exception.EntityInfo.Should().Contain(subscription.Values.Id.ToString());
+        exception.Message.Should().Contain(subscription._values.Id.ToString());
+        exception.EntityInfo.Should().Contain(subscription._values.Id.ToString());
     }
 
     [Test]

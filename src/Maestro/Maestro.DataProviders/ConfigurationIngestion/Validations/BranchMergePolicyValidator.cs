@@ -32,32 +32,32 @@ internal class BranchMergePolicyValidator
     {
         ArgumentNullException.ThrowIfNull(branchMergePolicy);
 
-        if (string.IsNullOrWhiteSpace(branchMergePolicy.Values.Repository))
+        if (string.IsNullOrWhiteSpace(branchMergePolicy._values.Repository))
         {
             throw new IngestionEntityValidationException("Repository is required.", branchMergePolicy);
         }
 
-        if (string.IsNullOrWhiteSpace(branchMergePolicy.Values.Branch))
+        if (string.IsNullOrWhiteSpace(branchMergePolicy._values.Branch))
         {
             throw new IngestionEntityValidationException("Branch is required.", branchMergePolicy);
         }
 
-        if (branchMergePolicy.Values.MergePolicies == null)
+        if (branchMergePolicy._values.MergePolicies == null)
         {
             throw new IngestionEntityValidationException("Merge policies cannot be null.", branchMergePolicy);
         }
 
-        if (branchMergePolicy.Values.Repository.Length > Data.Models.Repository.RepositoryNameLength)
+        if (branchMergePolicy._values.Repository.Length > Data.Models.Repository.RepositoryNameLength)
         {
             throw new IngestionEntityValidationException($"Repository name cannot be longer than {Data.Models.Repository.RepositoryNameLength} characters.", branchMergePolicy);
         }
 
-        if (branchMergePolicy.Values.Branch.Length > Data.Models.Repository.BranchNameLength)
+        if (branchMergePolicy._values.Branch.Length > Data.Models.Repository.BranchNameLength)
         {
             throw new IngestionEntityValidationException($"Branch name cannot be longer than {Data.Models.Repository.BranchNameLength} characters.", branchMergePolicy);
         }
 
-        var mergePolicies = branchMergePolicy.Values.MergePolicies.Select(mp => mp.Name);
+        var mergePolicies = branchMergePolicy._values.MergePolicies.Select(mp => mp.Name);
 
         if (mergePolicies.Contains(MergePolicyConstants.StandardMergePolicyName)
             && mergePolicies.Any(SubscriptionValidator.StandardMergePolicies.Contains))

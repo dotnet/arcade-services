@@ -8,14 +8,16 @@ namespace Maestro.DataProviders.ConfigurationIngestion.Model;
 
 internal class IngestedBranchMergePolicies : IExternallySyncedEntity<(string Repository, string Branch)>
 {
-    public IngestedBranchMergePolicies(BranchMergePoliciesYaml values) => Values = values;
+    public IngestedBranchMergePolicies(BranchMergePoliciesYaml values) => _values = values;
 
-    public override (string, string) UniqueId => (Values.Repository, Values.Branch);
+    public override (string, string) UniqueId => (_values.Repository, _values.Branch);
 
-    public BranchMergePoliciesYaml Values { init; get; }
+    public BranchMergePoliciesYaml _values { init; get; }
+
+    public override IYamlModel Values => _values;
 
     public override string ToString()
     {
-        return $"BranchMergePolicies (Repository: '{Values.Repository}', Branch: '{Values.Branch}')";
+        return $"BranchMergePolicies (Repository: '{_values.Repository}', Branch: '{_values.Branch}')";
     }
 }
