@@ -538,7 +538,7 @@ public class SqlBarClient : ISqlBarClient
 
     public async Task CreateSubscriptionsAsync(
         IEnumerable<Data.Models.Subscription> subscriptionsToCreate,
-        bool andSaveContext)
+        bool andSaveContext = true)
     {
         var existingSubscriptions = await _context.Subscriptions.ToListAsync();
 
@@ -593,10 +593,9 @@ public class SqlBarClient : ISqlBarClient
                     + "because the subscription could not be found in the database.");
             }
 
-            await UpdateSubscriptionAsync(
+            UpdateSubscription(
                 subscription,
-                existingSubscription,
-                false);
+                existingSubscription);
         }
 
         if (andSaveContext)
@@ -605,10 +604,9 @@ public class SqlBarClient : ISqlBarClient
         }
     }
 
-    private async Task UpdateSubscriptionAsync(
+    private void UpdateSubscription(
         Data.Models.Subscription subscription,
-        Data.Models.Subscription existingSubscription,
-        bool andSaveContext)
+        Data.Models.Subscription existingSubscription)
     {
         List<string> illegalFieldChanges = [];
 
@@ -649,15 +647,10 @@ public class SqlBarClient : ISqlBarClient
         existingSubscription.ExcludedAssets = updatedFilters;
 
         _context.Subscriptions.Update(existingSubscription);
-
-        if (andSaveContext)
-        {
-            await _context.SaveChangesAsync();
-        }
     }
 
     public async Task DeleteSubscriptionsAsync(
-        IEnumerable<Data.Models.Subscription> subscriptionsToDelete, bool andSaveContext)
+        IEnumerable<Data.Models.Subscription> subscriptionsToDelete, bool andSaveContext = true)
     {
         var subscriptionLookups = subscriptionsToDelete.ToDictionary(s => s.Id);
 
@@ -734,7 +727,7 @@ public class SqlBarClient : ISqlBarClient
         }
     }
 
-    public async Task DeleteNamespaceAsync(string namespaceName, bool andSaveContext)
+    public async Task DeleteNamespaceAsync(string namespaceName, bool andSaveContext = true)
     {
         var barNamespace = await _context.Namespaces
             .Include(n => n.Subscriptions)

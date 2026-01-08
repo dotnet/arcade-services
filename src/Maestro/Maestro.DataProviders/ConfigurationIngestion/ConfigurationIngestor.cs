@@ -43,7 +43,7 @@ internal partial class ConfigurationIngestor(
     private async Task<ConfigurationUpdates> IngestConfigurationInternalAsync(
         ConfigurationData configurationData,
         string configurationNamespace,
-        bool saveChanges)
+        bool saveChanges = true)
     {
         var ingestionData = IngestedConfigurationData.FromYamls(configurationData);
         ValidateEntityFields(ingestionData);

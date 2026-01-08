@@ -18,7 +18,7 @@ public interface IConfigurationIngestor
     Task<ConfigurationUpdates> IngestConfigurationAsync(
         ConfigurationData configurationData,
         string configurationNamespace,
-        bool saveChanges);
+        bool saveChanges = true);
 }
 
 public record ConfigurationUpdates(

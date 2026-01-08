@@ -20,13 +20,13 @@ public interface ISqlBarClient : IBasicBarClient
 
     #region Configuration Data ingestion
 
-    Task CreateSubscriptionsAsync(IEnumerable<Subscription> subscriptions, bool andSaveContext);
+    Task CreateSubscriptionsAsync(IEnumerable<Subscription> subscriptions, bool andSaveContext = true);
 
-    Task UpdateSubscriptionsAsync(IEnumerable<Subscription> subscription, bool andSaveContext);
+    Task UpdateSubscriptionsAsync(IEnumerable<Subscription> subscription, bool andSaveContext = true);
 
-    Task DeleteSubscriptionsAsync(IEnumerable<Subscription> subscriptions, bool andSaveContext);
+    Task DeleteSubscriptionsAsync(IEnumerable<Subscription> subscriptions, bool andSaveContext = true);
 
-    Task DeleteNamespaceAsync(string namespaceName, bool andSaveContext);
+    Task DeleteNamespaceAsync(string namespaceName, bool andSaveContext = true);
 
     #endregion Configuration Data ingestion
 }
