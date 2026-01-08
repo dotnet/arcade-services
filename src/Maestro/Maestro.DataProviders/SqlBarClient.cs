@@ -33,10 +33,12 @@ public class SqlBarClient : ISqlBarClient
 
     public SqlBarClient(
         BuildAssetRegistryContext context,
-        IKustoClientProvider kustoClientProvider)
+        IKustoClientProvider kustoClientProvider,
+        IGitHubInstallationIdResolver installationIdResolver)
     {
         _context = context;
         _kustoClientProvider = kustoClientProvider;
+        _installationIdResolver = installationIdResolver;
     }
 
     public async Task<Subscription> GetSubscriptionAsync(Guid subscriptionId)
