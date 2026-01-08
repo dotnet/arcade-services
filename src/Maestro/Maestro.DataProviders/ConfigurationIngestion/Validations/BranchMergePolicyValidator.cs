@@ -49,12 +49,12 @@ internal class BranchMergePolicyValidator
 
         if (branchMergePolicy.Values.Repository.Length > Data.Models.Repository.RepositoryNameLength)
         {
-            throw new IngestionEntityValidationException($"Repository name cannot be longer than {Data.Models.Repository.RepositoryNameLength}.", branchMergePolicy);
+            throw new IngestionEntityValidationException($"Repository name cannot be longer than {Data.Models.Repository.RepositoryNameLength} characters.", branchMergePolicy);
         }
 
         if (branchMergePolicy.Values.Branch.Length > Data.Models.Repository.BranchNameLength)
         {
-            throw new IngestionEntityValidationException($"Branch name cannot be longer than {Data.Models.Repository.BranchNameLength}.", branchMergePolicy);
+            throw new IngestionEntityValidationException($"Branch name cannot be longer than {Data.Models.Repository.BranchNameLength} characters.", branchMergePolicy);
         }
 
         var mergePolicies = branchMergePolicy.Values.MergePolicies.Select(mp => mp.Name);

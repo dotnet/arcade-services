@@ -30,8 +30,7 @@ internal class EntityValidator
             var entityTypeName = entities.First().GetType().Name;
 
             throw new IngestionEntityValidationException(
-                $"{entityTypeName} collection contains duplicate Ids.",
-                duplicateInfo);
+                $"{entityTypeName} collection contains duplicate Ids: {duplicateInfo}");
         }
     }
 }
