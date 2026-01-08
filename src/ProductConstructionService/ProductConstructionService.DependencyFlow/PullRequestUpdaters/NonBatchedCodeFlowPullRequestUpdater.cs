@@ -38,11 +38,11 @@ internal class NonBatchedCodeFlowPullRequestUpdater : CodeFlowPullRequestUpdater
             IPcsVmrForwardFlower vmrForwardFlower,
             IPcsVmrBackFlower vmrBackFlower,
             ITelemetryRecorder telemetryRecorder,
-            ILogger<NonBatchedCodeFlowPullRequestUpdater> logger,
             ICommentCollector commentCollector,
             IPullRequestCommenter pullRequestCommenter,
             IPullRequestCommentBuilder commentBuilder,
-            IFeatureFlagService featureFlagService)
+            IFeatureFlagService featureFlagService,
+            ILogger<NonBatchedCodeFlowPullRequestUpdater> logger)
         : base(
             id,
             mergePolicyEvaluator,
@@ -59,10 +59,10 @@ internal class NonBatchedCodeFlowPullRequestUpdater : CodeFlowPullRequestUpdater
             vmrForwardFlower,
             vmrBackFlower,
             telemetryRecorder,
-            logger,
             commentCollector,
             pullRequestCommenter,
-            featureFlagService)
+            featureFlagService,
+            logger)
     {
         _lazySubscription = new Lazy<Task<Subscription?>>(RetrieveSubscription);
         _id = id;

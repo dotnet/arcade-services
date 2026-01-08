@@ -5,7 +5,6 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
@@ -33,16 +32,11 @@ internal class NonBatchedDependencyPullRequestUpdater : DependencyPullRequestUpd
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
         ISqlBarClient sqlClient,
-        ILocalLibGit2Client gitClient,
-        IVmrInfo vmrInfo,
-        IPcsVmrForwardFlower vmrForwardFlower,
-        IPcsVmrBackFlower vmrBackFlower,
-        ITelemetryRecorder telemetryRecorder,
-        ILogger<NonBatchedDependencyPullRequestUpdater> logger,
         ICommentCollector commentCollector,
         IPullRequestCommenter pullRequestCommenter,
         IPullRequestCommentBuilder commentBuilder,
-        IFeatureFlagService featureFlagService)
+        IFeatureFlagService featureFlagService,
+        ILogger<NonBatchedDependencyPullRequestUpdater> logger)
         : base(
             id,
             mergePolicyEvaluator,
@@ -54,13 +48,7 @@ internal class NonBatchedDependencyPullRequestUpdater : DependencyPullRequestUpd
             cacheFactory,
             reminderManagerFactory,
             sqlClient,
-            gitClient,
-            vmrInfo,
-            vmrForwardFlower,
-            vmrBackFlower,
-            telemetryRecorder,
             logger,
-            commentCollector,
             pullRequestCommenter,
             featureFlagService)
     {

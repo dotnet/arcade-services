@@ -34,10 +34,10 @@ internal class BatchedCodeFlowPullRequestUpdater : CodeFlowPullRequestUpdater
             IPcsVmrForwardFlower vmrForwardFlower,
             IPcsVmrBackFlower vmrBackFlower,
             ITelemetryRecorder telemetryRecorder,
-            ILogger<BatchedDependencyPullRequestUpdater> logger,
             ICommentCollector commentCollector,
             IPullRequestCommenter pullRequestCommenter,
-            IFeatureFlagService featureFlagService)
+            IFeatureFlagService featureFlagService,
+            ILogger<BatchedDependencyPullRequestUpdater> logger)
         : base(
             id,
             mergePolicyEvaluator,
@@ -54,10 +54,10 @@ internal class BatchedCodeFlowPullRequestUpdater : CodeFlowPullRequestUpdater
             vmrForwardFlower,
             vmrBackFlower,
             telemetryRecorder,
-            logger,
             commentCollector,
             pullRequestCommenter,
-            featureFlagService)
+            featureFlagService,
+            logger)
     {
         _id = id;
         _context = context;
