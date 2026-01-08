@@ -19,7 +19,7 @@ using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build
 
 namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
-internal abstract class PullRequestUpdaterBase : IPullRequestUpdater
+internal abstract class PullRequestUpdater : IPullRequestUpdater
 {
 #if DEBUG
     protected static readonly TimeSpan DefaultReminderDelay = TimeSpan.FromMinutes(1);
@@ -43,7 +43,7 @@ internal abstract class PullRequestUpdaterBase : IPullRequestUpdater
 
     public PullRequestUpdaterId Id { get; }
 
-    protected PullRequestUpdaterBase(
+    protected PullRequestUpdater(
         PullRequestUpdaterId id,
         IMergePolicyEvaluator mergePolicyEvaluator,
         BuildAssetRegistryContext context,

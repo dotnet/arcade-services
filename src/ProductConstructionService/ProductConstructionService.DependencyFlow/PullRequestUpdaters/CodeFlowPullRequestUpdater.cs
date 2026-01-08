@@ -20,7 +20,7 @@ using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Model
 
 namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
-internal abstract class CodeFlowPullRequestUpdater : PullRequestUpdaterBase
+internal abstract class CodeFlowPullRequestUpdater : PullRequestUpdater
 {
     private readonly IRemoteFactory _remoteFactory;
     private readonly IPullRequestBuilder _pullRequestBuilder;

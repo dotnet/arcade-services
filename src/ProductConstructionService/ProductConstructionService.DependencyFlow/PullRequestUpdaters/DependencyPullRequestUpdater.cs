@@ -21,7 +21,7 @@ namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 /// <summary>
 ///     A class responsible for creating and updating pull requests for dependency updates.
 /// </summary>
-internal abstract class DependencyPullRequestUpdater : PullRequestUpdaterBase
+internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
 {
     private readonly IRemoteFactory _remoteFactory;
     private readonly ICoherencyUpdateResolver _coherencyUpdateResolver;
