@@ -72,26 +72,24 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         _commentBuilder = commentBuilder;
     }
 
-    public Guid SubscriptionId => _id.SubscriptionId;
-
     private async Task<Subscription?> RetrieveSubscription()
     {
-        Subscription? subscription = await _context.Subscriptions.FindAsync(SubscriptionId);
+        Subscription? subscription = await _context.Subscriptions.FindAsync(_id.SubscriptionId);
 
         // This can mainly happen during E2E tests where we delete a subscription
         // while some PRs have just been closed and there's a reminder on those still
         if (subscription == null)
         {
             _logger.LogInformation(
-                $"Failed to find a subscription {SubscriptionId}. " +
+                $"Failed to find a subscription {_id.SubscriptionId}. " +
                 "Possibly it was deleted while an existing PR is still tracked. Untracking PR...");
 
             // We don't know if the subscription was a code flow one, so just unset both
             await _pullRequestState.TryDeleteAsync();
-            await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);
-            await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: false);
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: false);
+            await _pullRequestCheckReminders.UnsetReminderAsync();
+            await _pullRequestCheckReminders.UnsetReminderAsync();
+            await _pullRequestUpdateReminders.UnsetReminderAsync();
+            await _pullRequestUpdateReminders.UnsetReminderAsync();
             return null;
         }
 
@@ -115,7 +113,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
     protected override async Task<(string repository, string branch)> GetTargetAsync()
     {
         Subscription subscription = await GetSubscription()
-            ?? throw new SubscriptionException($"Subscription '{SubscriptionId}' was not found...");
+            ?? throw new SubscriptionException($"Subscription '{_id.SubscriptionId}' was not found...");
         return (subscription.TargetRepository, subscription.TargetBranch);
     }
 
@@ -125,9 +123,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         return subscription?.PolicyObject?.MergePolicies ?? [];
     }
 
-    protected override async Task<bool> CheckInProgressPullRequestAsync(
-        InProgressPullRequest pullRequestCheck,
-        bool isCodeFlow)
+    protected override async Task<bool> CheckInProgressPullRequestAsync(InProgressPullRequest pullRequestCheck)
     {
         Subscription? subscription = await GetSubscription();
         if (subscription == null)
@@ -137,6 +133,6 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
             return pullRequestCheck.Url?.Contains("maestro-auth-test") ?? false;
         }
 
-        return await base.CheckInProgressPullRequestAsync(pullRequestCheck, isCodeFlow);
+        return await base.CheckInProgressPullRequestAsync(pullRequestCheck);
     }
 }
