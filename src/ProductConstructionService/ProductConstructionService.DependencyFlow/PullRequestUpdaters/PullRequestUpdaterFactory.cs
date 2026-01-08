@@ -25,10 +25,10 @@ internal class PullRequestUpdaterFactory : IPullRequestUpdaterFactory
     public IPullRequestUpdater CreatePullRequestUpdater(PullRequestUpdaterId updaterId) => updaterId switch
     {
         BatchedPullRequestUpdaterId batchedId => updaterId.IsCodeFlow
-            ? ActivatorUtilities.CreateInstance<BatchedCodeFlowPullRequestUpdater>(_serviceProvider, batchedId)
+            ? throw new InvalidOperationException("Batched code flow pull request updaters are not supported.")
             : ActivatorUtilities.CreateInstance<BatchedDependencyPullRequestUpdater>(_serviceProvider, batchedId),
         NonBatchedPullRequestUpdaterId nonBatchedId => updaterId.IsCodeFlow
-            ? ActivatorUtilities.CreateInstance<NonBatchedCodeFlowPullRequestUpdater>(_serviceProvider, nonBatchedId)
+            ? ActivatorUtilities.CreateInstance<CodeFlowPullRequestUpdater>(_serviceProvider, nonBatchedId)
             : ActivatorUtilities.CreateInstance<NonBatchedDependencyPullRequestUpdater>(_serviceProvider, nonBatchedId),
         _ => throw new NotImplementedException()
     };

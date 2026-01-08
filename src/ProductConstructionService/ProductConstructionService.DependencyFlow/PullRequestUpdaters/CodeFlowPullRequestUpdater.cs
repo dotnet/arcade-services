@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data;
+using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
@@ -21,10 +22,14 @@ using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Model
 
 namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
-internal abstract class CodeFlowPullRequestUpdater : PullRequestUpdater
+internal class CodeFlowPullRequestUpdater : PullRequestUpdater
 {
+    private readonly NonBatchedPullRequestUpdaterId _id;
+    private readonly BuildAssetRegistryContext _context;
+    private readonly Lazy<Task<Subscription?>> _subscription;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IPullRequestBuilder _pullRequestBuilder;
+    private readonly IPullRequestCommentBuilder _commentBuilder;
     private readonly ISqlBarClient _sqlClient;
     private readonly ILocalLibGit2Client _gitClient;
     private readonly IVmrInfo _vmrInfo;
@@ -35,14 +40,14 @@ internal abstract class CodeFlowPullRequestUpdater : PullRequestUpdater
     private readonly ICommentCollector _commentCollector;
     private readonly IFeatureFlagService _featureFlagService;
 
-    protected CodeFlowPullRequestUpdater(
-            PullRequestUpdaterId id,
+    public CodeFlowPullRequestUpdater(
+            NonBatchedPullRequestUpdaterId id,
             IMergePolicyEvaluator mergePolicyEvaluator,
             BuildAssetRegistryContext context,
             IRemoteFactory remoteFactory,
             IPullRequestUpdaterFactory updaterFactory,
-            ICoherencyUpdateResolver coherencyUpdateResolver,
             IPullRequestBuilder pullRequestBuilder,
+            IPullRequestCommentBuilder commentBuilder,
             IRedisCacheFactory cacheFactory,
             IReminderManagerFactory reminderManagerFactory,
             ISqlBarClient sqlClient,
@@ -69,8 +74,12 @@ internal abstract class CodeFlowPullRequestUpdater : PullRequestUpdater
             reminderManagerFactory.CreateReminderManager<PullRequestCheck>(id.ToString(), isCodeFlow: true),
             logger)
     {
+        _id = id;
+        _context = context;
+        _subscription = new Lazy<Task<Subscription?>>(RetrieveSubscription);
         _remoteFactory = remoteFactory;
         _pullRequestBuilder = pullRequestBuilder;
+        _commentBuilder = commentBuilder;
         _sqlClient = sqlClient;
         _gitClient = gitClient;
         _vmrInfo = vmrInfo;
@@ -676,6 +685,61 @@ internal abstract class CodeFlowPullRequestUpdater : PullRequestUpdater
         await _gitClient.CreateBranchAsync(localRepo, prBranchName, overwriteExistingBranch: true);
         await _gitClient.CommitAsync(localRepo, initialCommitMessage, allowEmpty: true);
         await _gitClient.Push(localRepo, prBranchName, subscription.TargetRepository, force: true);
+    }
+
+    private async Task<Subscription?> RetrieveSubscription()
+    {
+        Subscription? subscription = await _context.Subscriptions.FindAsync(_id.SubscriptionId);
+
+        // This can mainly happen during E2E tests where we delete a subscription
+        // while some PRs have just been closed and there's a reminder on those still
+        if (subscription == null)
+        {
+            _logger.LogWarning(
+                "Failed to find a subscription {subscriptionId}. " +
+                "Possibly it was deleted while an existing PR is still tracked. Untracking PR...",
+                _id.SubscriptionId);
+
+            await ClearAllStateAsync(clearPendingUpdates: true);
+            return null;
+        }
+
+        return subscription;
+    }
+
+    protected override async Task TagSourceRepositoryGitHubContactsIfPossibleAsync(InProgressPullRequest pr)
+    {
+        var comment = await _commentBuilder.BuildTagSourceRepositoryGitHubContactsCommentAsync(pr);
+        if (!string.IsNullOrEmpty(comment))
+        {
+            _commentCollector.AddComment(comment, CommentType.Warning);
+        }
+    }
+
+    protected override async Task<(string repository, string branch)> GetTargetAsync()
+    {
+        Subscription subscription = await _subscription.Value
+            ?? throw new SubscriptionException($"Subscription '{_id.SubscriptionId}' was not found...");
+        return (subscription.TargetRepository, subscription.TargetBranch);
+    }
+
+    protected override async Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitions()
+    {
+        Subscription? subscription = await _subscription.Value;
+        return subscription?.PolicyObject?.MergePolicies ?? [];
+    }
+
+    protected override async Task<bool> CheckInProgressPullRequestAsync(InProgressPullRequest pullRequestCheck)
+    {
+        Subscription? subscription = await _subscription.Value;
+        if (subscription == null)
+        {
+            // If the subscription was deleted during tests (a frequent occurrence when we delete subscriptions at the end),
+            // we don't want to report this as a failure. For real PRs, it might be good to learn about this. 
+            return pullRequestCheck.Url?.Contains("maestro-auth-test") ?? false;
+        }
+
+        return await base.CheckInProgressPullRequestAsync(pullRequestCheck);
     }
 }
 
