@@ -83,7 +83,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         {
             _logger.LogInformation("No in-progress pull request found for a PR check");
             await ClearAllStateAsync(clearPendingUpdates: true);
-            await ClearAllStateAsync(clearPendingUpdates: true);
+
             return false;
         }
 
@@ -537,8 +537,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         await _pullRequestState.SetAsync(prState);
     }
 
-    protected async Task SetPullRequestCheckReminder(InProgressPullRequest prSate, PullRequest prInfo) =>
-         await SetPullRequestCheckReminder(prSate, prInfo, DefaultReminderDelay);
+    protected async Task SetPullRequestCheckReminder(InProgressPullRequest prState, PullRequest prInfo) =>
+         await SetPullRequestCheckReminder(prState, prInfo, DefaultReminderDelay);
 
     protected async Task ClearAllStateAsync(bool clearPendingUpdates)
     {
@@ -546,7 +546,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         await _pullRequestCheckReminders.UnsetReminderAsync();
         // If the pull request we deleted from the cache had a conflict, we shouldn't unset the update reminder
         // as there was an update that was previously blocked
-        if (!clearPendingUpdates)
+        if (clearPendingUpdates)
         {
             await _pullRequestUpdateReminders.UnsetReminderAsync();
         }

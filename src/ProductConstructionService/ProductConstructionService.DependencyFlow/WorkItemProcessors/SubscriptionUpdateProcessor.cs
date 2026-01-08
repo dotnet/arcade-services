@@ -31,7 +31,8 @@ public class SubscriptionUpdateProcessor(
         }
 
         var subscription = await _sqlClient.GetSubscriptionAsync(workItem.SubscriptionId);
-        if (subscription == null) {
+        if (subscription == null)
+        {
             _logger.LogError("Subscription with subscriptionId {SubscriptionId} not found in the DB.", workItem.SubscriptionId);
             return false;
         }

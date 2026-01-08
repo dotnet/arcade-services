@@ -65,8 +65,8 @@ internal abstract class CodeFlowPullRequestUpdater : PullRequestUpdater
             sqlClient,
             pullRequestCommenter,
             featureFlagService,
-            reminderManagerFactory.CreateReminderManager<SubscriptionUpdateWorkItem>(id.ToString(), isCodeFlow: false),
-            reminderManagerFactory.CreateReminderManager<PullRequestCheck>(id.ToString(), isCodeFlow: false),
+            reminderManagerFactory.CreateReminderManager<SubscriptionUpdateWorkItem>(id.ToString(), isCodeFlow: true),
+            reminderManagerFactory.CreateReminderManager<PullRequestCheck>(id.ToString(), isCodeFlow: true),
             logger)
     {
         _remoteFactory = remoteFactory;

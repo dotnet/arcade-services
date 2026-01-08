@@ -102,7 +102,7 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdater
     private async Task<PullRequest?> CreatePullRequestAsync(SubscriptionUpdateWorkItem update, BuildDTO build)
     {
         (var targetRepository, var targetBranch) = await GetTargetAsync();
-        bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
+
 
         IRemote darcRemote = await _remoteFactory.CreateRemoteAsync(targetRepository);
         TargetRepoDependencyUpdates repoDependencyUpdates;
