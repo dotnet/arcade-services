@@ -91,20 +91,4 @@ public record SubscriptionYaml : IYamlModel
         TargetDirectory = subscription.TargetDirectory,
         ExcludedAssets = subscription.ExcludedAssets.ToList(),
     };
-
-    /// <summary>
-    /// Checks if two subscriptions are equivalent (same source, channel, target, and directories).
-    /// </summary>
-    public bool IsEquivalentTo(SubscriptionYaml other)
-    {
-        if (other is null) return false;
-
-        return string.Equals(SourceRepository, other.SourceRepository, StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(Channel, other.Channel, StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(TargetRepository, other.TargetRepository, StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(TargetBranch, other.TargetBranch, StringComparison.OrdinalIgnoreCase) &&
-               SourceEnabled == other.SourceEnabled &&
-               string.Equals(SourceDirectory, other.SourceDirectory, StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(TargetDirectory, other.TargetDirectory, StringComparison.OrdinalIgnoreCase);
-    }
 }

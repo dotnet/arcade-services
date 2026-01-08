@@ -350,7 +350,7 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                                 _options.ToConfigurationRepositoryOperationParameters(),
                                 updatedSubscriptionYaml);
                 }
-                // TODO drop to the "global try-catch" when configuration repo is the only behavior
+                // TODO https://github.com/dotnet/arcade-services/issues/5693 drop to the "global try-catch" when configuration repo is the only behavior
                 catch (MaestroConfiguration.Client.ConfigurationObjectNotFoundException ex)
                 {
                     _logger.LogError("No existing subscription with id {id} found in file {filePath} of repo {repo} on branch {branch}",
@@ -359,6 +359,10 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                         ex.RepositoryUri,
                         ex.BranchName);
                     return Constants.ErrorCode;
+                }
+                catch (MaestroConfiguration.Client.DuplicateConfigurationObjectException ex)
+                {
+                    _logger.LogError("Subscription with equivalent parameters already exists in file {filePath}", ex.FilePath);
                 }
             }
             else

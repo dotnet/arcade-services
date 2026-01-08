@@ -18,4 +18,7 @@ public interface IConfigurationRepositoryManager
     Task AddDefaultChannelAsync(ConfigurationRepositoryOperationParameters parameters, DefaultChannelYaml defaultChannel);
     Task UpdateDefaultChannelAsync(ConfigurationRepositoryOperationParameters parameters, DefaultChannelYaml updatedDefaultChannel);
     Task DeleteDefaultChannelAsync(ConfigurationRepositoryOperationParameters parameters, DefaultChannelYaml defaultChannel);
+    Task AddRepositoryMergePoliciesAsync(ConfigurationRepositoryOperationParameters parameters, BranchMergePoliciesYaml branchMergePolicies);
+    Task UpdateRepositoryMergePoliciesAsync(ConfigurationRepositoryOperationParameters parameters, BranchMergePoliciesYaml branchMergePolicies);
+    Task DeleteRepositoryMergePoliciesAsync(ConfigurationRepositoryOperationParameters parameters, BranchMergePoliciesYaml branchMergePoliciesYaml);
 }

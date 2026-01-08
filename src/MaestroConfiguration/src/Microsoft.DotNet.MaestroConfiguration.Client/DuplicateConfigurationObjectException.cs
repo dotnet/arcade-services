@@ -11,10 +11,14 @@ namespace Microsoft.DotNet.MaestroConfiguration.Client;
 public class DuplicateConfigurationObjectException : Exception
 {
     public string FilePath { get; }
+    public string Repository { get; set; }
+    public string Branch { get; set; }
 
-    public DuplicateConfigurationObjectException(string filePath)
-        : base($"Configuration object with equivalent parameters already exists in '{filePath}'.")
+    public DuplicateConfigurationObjectException(string filePath, string repository, string branch)
+        : base($"Configuration object with equivalent parameters already exists in '{filePath}' of repo {repository} on branch {branch}.")
     {
         FilePath = filePath;
+        Repository = repository;
+        Branch = branch;
     }
 }
