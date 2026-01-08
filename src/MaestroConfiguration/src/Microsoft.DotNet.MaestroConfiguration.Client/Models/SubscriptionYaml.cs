@@ -15,7 +15,7 @@ namespace Microsoft.DotNet.MaestroConfiguration.Client.Models;
 /// Helper class for YAML encoding/decoding purposes.
 /// This is used so that we can have friendly alias names for elements.
 /// </summary>
-public class SubscriptionYaml : IYamlModel
+public record SubscriptionYaml : IYamlModel
 {
     public const string IdElement = "Id";
     public const string EnabledElement = "Enabled";
@@ -92,22 +92,6 @@ public class SubscriptionYaml : IYamlModel
         TargetDirectory = subscription.TargetDirectory,
         ExcludedAssets = subscription.ExcludedAssets?.ToList() ?? [],
     };
-
-    /// <summary>
-    /// Checks if two subscriptions are equivalent (same source, channel, target, and directories).
-    /// </summary>
-    public bool IsEquivalentTo(SubscriptionYaml other)
-    {
-        if (other is null) return false;
-
-        return string.Equals(SourceRepository, other.SourceRepository, StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(Channel, other.Channel, StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(TargetRepository, other.TargetRepository, StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(TargetBranch, other.TargetBranch, StringComparison.OrdinalIgnoreCase) &&
-               SourceEnabled == other.SourceEnabled &&
-               string.Equals(SourceDirectory, other.SourceDirectory, StringComparison.OrdinalIgnoreCase) &&
-               string.Equals(TargetDirectory, other.TargetDirectory, StringComparison.OrdinalIgnoreCase);
-    }
 
     public static ClientSubscriptionYaml ToPcsClient(SubscriptionYaml s)
     {
