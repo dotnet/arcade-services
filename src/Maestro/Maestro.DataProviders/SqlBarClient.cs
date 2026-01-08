@@ -724,7 +724,7 @@ public class SqlBarClient : ISqlBarClient
         {
             return string.Join(
                 "|", new string[] {
-                    subscription.ChannelId.ToString(),
+                    subscription.Channel.Name,
                     subscription.SourceRepository,
                     subscription.TargetBranch,
                     subscription.TargetRepository,

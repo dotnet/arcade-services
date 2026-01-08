@@ -37,7 +37,7 @@ public class ConfigurationIngestionController : Controller
     public async Task<IActionResult> IngestNamespace(
         [FromQuery] string namespaceName,
         [FromBody] YamlConfiguration yamlConfiguration,
-        [FromBody] bool saveChanges = true)
+        [FromQuery] bool saveChanges = true)
     {
         if (namespaceName == ProductionNamespaceName)
         {
