@@ -1224,7 +1224,7 @@ internal class LargeScaleTestDataBuilder
     // Subscription IDs
     public Guid SubscriptionUpdate1Id { get; } = Guid.Parse("43f4590a-90f3-488f-8cf1-6acdd6806bfa");
     public Guid SubscriptionUpdate2Id { get; } = Guid.Parse("523eda25-59ee-4035-9446-cb5f3843fbb2");
-    private Guid _subscriptionDeleteId = Guid.Parse("cce72564-66da-4416-9267-91beb4420553");
+    private readonly Guid _subscriptionDeleteId = Guid.Parse("cce72564-66da-4416-9267-91beb4420553");
 
     public LargeScaleTestDataBuilder(Namespace namespaceEntity)
     {
