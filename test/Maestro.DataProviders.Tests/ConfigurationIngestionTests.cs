@@ -925,10 +925,8 @@ public class ConfigurationIngestorTests
         var namespaceEntity = await CreateNamespace();
         var testData = new LargeScaleTestDataBuilder(namespaceEntity);
         
-        // Seed the database with initial entities
         await testData.SeedDatabaseAsync(_context);
 
-        // Build configuration with mixed CRUD operations
         var configData = testData.BuildConfigurationData();
 
         // Act
@@ -951,7 +949,6 @@ public class ConfigurationIngestorTests
         result.RepositoryBranches.Updates.Should().HaveCount(2);
         result.RepositoryBranches.Removals.Should().HaveCount(1);
 
-        // Verify final state in database
         namespaceEntity = await _context.Namespaces
             .Include(n => n.Channels)
             .Include(n => n.Subscriptions)
@@ -961,7 +958,6 @@ public class ConfigurationIngestorTests
 
         namespaceEntity.Should().NotBeNull();
         
-        // Verify channels: 6 seeded - 2 removed + 2 created = 6 total
         namespaceEntity.Channels.Should().HaveCount(6);
         namespaceEntity.Channels.Should().Contain(c => c.Name == "Channel-Create-1");
         namespaceEntity.Channels.Should().Contain(c => c.Name == "Channel-Create-2");
@@ -971,20 +967,17 @@ public class ConfigurationIngestorTests
         var updatedChannel = namespaceEntity.Channels.First(c => c.Name == "Channel-Update-1");
         updatedChannel.Classification.Should().Be("production");
 
-        // Verify subscriptions: 3 seeded - 1 removed + 2 created = 4 total
         namespaceEntity.Subscriptions.Should().HaveCount(4);
         
         var updatedSubscription = namespaceEntity.Subscriptions.First(s => s.Id == testData.SubscriptionUpdate1Id);
         updatedSubscription.Enabled.Should().BeFalse();
 
-        // Verify default channels: 3 seeded - 1 removed + 2 created = 4 total
         namespaceEntity.DefaultChannels.Should().HaveCount(4);
         
         var updatedDefaultChannel = namespaceEntity.DefaultChannels.First(dc => 
             dc.Repository == "https://github.com/dotnet/repo-update-1" && dc.Branch == "main");
         updatedDefaultChannel.Enabled.Should().BeFalse();
 
-        // Verify repository branches: 3 seeded - 1 removed + 2 created = 4 total
         namespaceEntity.RepositoryBranches.Should().HaveCount(4);
         
         var updatedBranch = namespaceEntity.RepositoryBranches.First(rb => 
