@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using ProductConstructionService.Common;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders.ConfigurationIngestion.Model;
@@ -17,15 +18,32 @@ namespace Maestro.DataProviders.ConfigurationIngestion;
 
 internal partial class ConfigurationIngestor(
         BuildAssetRegistryContext context,
-        ISqlBarClient sqlBarClient)
+        ISqlBarClient sqlBarClient,
+        IDistributedLock distributedLock)
     : IConfigurationIngestor
 {
     private readonly BuildAssetRegistryContext _context = context;
     private readonly ISqlBarClient _sqlBarClient = sqlBarClient;
+    private readonly IDistributedLock _distributedLock = distributedLock;
 
     public async Task<ConfigurationUpdates> IngestConfigurationAsync(
         ConfigurationData configurationData,
-        string configurationNamespace)
+        string configurationNamespace,
+        bool saveChanges)
+    {
+        var ingestionResult =
+            await _distributedLock.ExecuteWithLockAsync("ConfigurationIngestion", async () =>
+            {
+                return await IngestConfigurationInternalAsync(configurationData, configurationNamespace, saveChanges);
+            });
+
+        return ingestionResult;
+    }
+
+    private async Task<ConfigurationUpdates> IngestConfigurationInternalAsync(
+        ConfigurationData configurationData,
+        string configurationNamespace,
+        bool saveChanges = true)
     {
         var ingestionData = IngestedConfigurationData.FromYamls(configurationData);
         ValidateEntityFields(ingestionData);
@@ -39,7 +57,7 @@ internal partial class ConfigurationIngestor(
             ingestionData,
             existingConfigurationData);
 
-        await SaveConfigurationData(configurationDataUpdate, namespaceEntity);
+        await SaveConfigurationData(configurationDataUpdate, namespaceEntity, saveChanges);
 
         return configurationDataUpdate.ToYamls();
     }
@@ -52,7 +70,10 @@ internal partial class ConfigurationIngestor(
         BranchMergePolicyValidator.ValidateBranchMergePolicies(newConfigurationData.BranchMergePolicies);
     }
 
-    private async Task SaveConfigurationData(IngestedConfigurationUpdates configurationDataUpdate, Namespace namespaceEntity)
+    private async Task SaveConfigurationData(
+        IngestedConfigurationUpdates configurationDataUpdate,
+        Namespace namespaceEntity,
+        bool saveChanges)
     {
         // Deletions
         await DeleteSubscriptions(configurationDataUpdate.Subscriptions.Removals);
@@ -108,7 +129,10 @@ internal partial class ConfigurationIngestor(
             configurationDataUpdate.RepositoryBranches.Updates,
             namespaceEntity);
 
-        await _context.SaveChangesAsync();
+        if (saveChanges)
+        {
+            await _context.SaveChangesAsync();
+        }
     }
 
     private async Task<Namespace> FetchOrCreateNamespace(string configurationNamespace)
@@ -132,7 +156,6 @@ internal partial class ConfigurationIngestor(
                 RepositoryBranches = [],
             };
             _context.Namespaces.Add(namespaceEntity);
-            await _context.SaveChangesAsync();
         }
 
         return namespaceEntity;
@@ -168,7 +191,11 @@ internal partial class ConfigurationIngestor(
 
     private async Task DeleteSubscriptions(IEnumerable<IngestedSubscription> subscriptionRemovals)
     {
-        var subscriptionIds = subscriptionRemovals.Select(sub => sub.Values.Id).ToList();
+        var subscriptionIds = subscriptionRemovals.Select(sub => sub.Values.Id).ToHashSet();
+
+        _context.SubscriptionUpdates.RemoveRange(
+            _context.SubscriptionUpdates
+                .Where(s => subscriptionIds.Contains(s.SubscriptionId)));
 
         var subscriptionDaos = await _context.Subscriptions
             .Where(sub => subscriptionIds.Contains(sub.Id))
@@ -298,7 +325,7 @@ internal partial class ConfigurationIngestor(
     {
         var dbRepositoryBranches = await _context.RepositoryBranches
             .Where(rb => rb.Namespace.Name == namespaceEntity.Name)
-            .ToDictionaryAsync(rb => (rb.Repository.RepositoryName, rb.BranchName));
+            .ToDictionaryAsync(rb => (rb.RepositoryName, rb.BranchName));
 
         foreach (var bmp in updatedBranchMergePolicies)
         {

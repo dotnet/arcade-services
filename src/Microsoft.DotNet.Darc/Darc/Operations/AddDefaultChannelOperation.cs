@@ -73,14 +73,16 @@ internal class AddDefaultChannelOperation : Operation
                                 _options.ToConfigurationRepositoryOperationParameters(),
                                 defaultChannelYaml);
                 }
-                // TODO drop to the "global try-catch" when configuration repo is the only behavior
+                // TODO https://github.com/dotnet/arcade-services/issues/5693 drop to the "global try-catch" when configuration repo is the only behavior
                 catch (MaestroConfiguration.Client.DuplicateConfigurationObjectException e)
                 {
-                    _logger.LogError("Default channel with repository '{repo}', branch '{branch}', and channel '{channel}' already exists in '{filePath}'.",
+                    _logger.LogError("Default channel with repository '{repo}', branch '{branch}', and channel '{channel}' already exists in '{filePath}' in repo {repo} on branch {branch}.",
                         defaultChannelYaml.Repository,
                         defaultChannelYaml.Branch,
                         defaultChannelYaml.Channel,
-                        e.FilePath);
+                        e.FilePath,
+                        e.Repository,
+                        e.Branch);
                     return Constants.ErrorCode;
                 }
             }

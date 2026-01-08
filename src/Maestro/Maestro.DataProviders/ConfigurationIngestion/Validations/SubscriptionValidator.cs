@@ -60,13 +60,13 @@ internal static class SubscriptionValidator
             && mergePolicies.Any(StandardMergePolicies.Contains))
         {
             throw new ArgumentException(
-                "One or more of the following merge policies could not be added because it is already included "
+                $"One or more of the following merge policies could not be added to subscription {subscription.Values.Id} because it is already included "
                 + $"in the policy `{MergePolicyConstants.StandardMergePolicyName}`: {string.Join(", ", StandardMergePolicies)}.");
         }
 
         if (subscription.Values.Batchable && subscription.Values.SourceEnabled)
         {
-            throw new ArgumentException("Batched codeflow subscriptions are not supported.");
+            throw new ArgumentException($"({subscription.Values.Id}) Batched codeflow subscriptions are not supported.");
         }
 
         if (subscription.Values.Batchable && mergePolicies.Count > 0)

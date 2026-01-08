@@ -2,13 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data;
-using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using StackExchange.Redis;
@@ -29,7 +27,6 @@ public static class ProductConstructionServiceExtension
         string databaseConnectionString = builder.Configuration.GetRequiredValue(DatabaseConnectionString)
             .Replace(SqlConnectionStringUserIdPlaceholder, managedIdentityClientId);
 
-        builder.Services.TryAddTransient<IBasicBarClient, SqlBarClient>();
         builder.Services.AddDbContext<BuildAssetRegistryContext>(options =>
         {
             // Do not log DB context initialization and command executed events
@@ -79,6 +76,7 @@ public static class ProductConstructionServiceExtension
         builder.Services.AddSingleton<IRedisCacheFactory, RedisCacheFactory>();
         builder.Services.AddSingleton<IRedisCacheClient, RedisCacheClient>();
         builder.Services.AddScoped<IFeatureFlagService, FeatureFlagService>();
+        builder.Services.AddSingleton<IDistributedLock, DistributedLock>();
     }
 
     public static void AddMetricRecorder(this IHostApplicationBuilder builder)
