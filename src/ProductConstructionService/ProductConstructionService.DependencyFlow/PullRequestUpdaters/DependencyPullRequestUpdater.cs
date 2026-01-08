@@ -16,7 +16,7 @@ using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
 
-namespace ProductConstructionService.DependencyFlow;
+namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
 /// <summary>
 ///     A class responsible for creating and updating pull requests for dependency updates.
@@ -73,6 +73,8 @@ internal abstract class DependencyPullRequestUpdater : PullRequestUpdaterBase, I
         _pullRequestBuilder = pullRequestBuilder;
         _logger = logger;
     }
+
+    protected override bool IsCodeFlowWorkItem => false;
 
     protected override Task<int> GetLastFlownBuild(Subscription subscription, SubscriptionPullRequestUpdate update)
         => Task.FromResult(update.BuildId);

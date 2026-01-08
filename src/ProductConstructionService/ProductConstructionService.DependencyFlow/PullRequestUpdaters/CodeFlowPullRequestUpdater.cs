@@ -18,7 +18,7 @@ using ProductConstructionService.WorkItems;
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
 using SubscriptionDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription;
 
-namespace ProductConstructionService.DependencyFlow;
+namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
 internal abstract class CodeFlowPullRequestUpdater : PullRequestUpdaterBase
 {
@@ -88,6 +88,8 @@ internal abstract class CodeFlowPullRequestUpdater : PullRequestUpdaterBase
         _commentCollector = commentCollector;
         _featureFlagService = featureFlagService;
     }
+
+    protected override bool IsCodeFlowWorkItem => true;
 
     protected override async Task<int> GetLastFlownBuild(Maestro.Data.Models.Subscription subscription, SubscriptionPullRequestUpdate update)
     {

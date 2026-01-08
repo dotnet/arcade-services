@@ -5,6 +5,7 @@ using Maestro.DataProviders;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.Model;
+using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
 namespace ProductConstructionService.DependencyFlow.WorkItemProcessors;
 

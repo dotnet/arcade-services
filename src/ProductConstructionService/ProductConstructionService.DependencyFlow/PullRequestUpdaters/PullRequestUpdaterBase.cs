@@ -21,7 +21,7 @@ using ProductConstructionService.WorkItems;
 using AssetData = Microsoft.DotNet.ProductConstructionService.Client.Models.AssetData;
 using BuildDTO = Microsoft.DotNet.ProductConstructionService.Client.Models.Build;
 
-namespace ProductConstructionService.DependencyFlow;
+namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
 internal abstract class PullRequestUpdaterBase
 {
@@ -225,6 +225,8 @@ internal abstract class PullRequestUpdaterBase
     protected abstract Task<(string repository, string branch)> GetTargetAsync();
 
     protected abstract Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitions();
+
+    protected abstract bool IsCodeFlowWorkItem { get; }
 
     protected virtual async Task<bool> CheckInProgressPullRequestAsync(InProgressPullRequest pullRequestCheck)
     {
@@ -686,7 +688,7 @@ internal abstract class PullRequestUpdaterBase
         {
             UpdaterId = Id.ToString(),
             Url = prState.Url,
-            IsCodeFlow = isCodeFlow,
+            IsCodeFlow = IsCodeFlowWorkItem,
         };
 
         prState.LastCheck = DateTime.UtcNow;

@@ -11,7 +11,7 @@ using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.WorkItems;
 
-namespace ProductConstructionService.DependencyFlow;
+namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
 internal class BatchedDependencyPullRequestUpdater : DependencyPullRequestUpdater
 {

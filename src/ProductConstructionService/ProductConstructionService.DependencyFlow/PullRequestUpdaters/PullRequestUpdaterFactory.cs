@@ -4,7 +4,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.DependencyFlow.Model;
 
-namespace ProductConstructionService.DependencyFlow;
+namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
 public interface IPullRequestUpdaterFactory
 {

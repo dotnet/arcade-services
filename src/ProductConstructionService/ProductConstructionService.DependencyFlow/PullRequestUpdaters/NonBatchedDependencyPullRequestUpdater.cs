@@ -11,38 +11,38 @@ using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.WorkItems;
 
-namespace ProductConstructionService.DependencyFlow;
+namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
-internal class NonBatchedCodeFlowPullRequestUpdater : CodeFlowPullRequestUpdater
+internal class NonBatchedDependencyPullRequestUpdater : DependencyPullRequestUpdater
 {
     private readonly Lazy<Task<Subscription?>> _lazySubscription;
     private readonly NonBatchedPullRequestUpdaterId _id;
     private readonly BuildAssetRegistryContext _context;
-    private readonly ILogger<NonBatchedCodeFlowPullRequestUpdater> _logger;
+    private readonly ILogger<NonBatchedDependencyPullRequestUpdater> _logger;
     private readonly ICommentCollector _commentCollector;
     private readonly IPullRequestCommentBuilder _commentBuilder;
 
-    public NonBatchedCodeFlowPullRequestUpdater(
-            NonBatchedPullRequestUpdaterId id,
-            IMergePolicyEvaluator mergePolicyEvaluator,
-            BuildAssetRegistryContext context,
-            IRemoteFactory remoteFactory,
-            IPullRequestUpdaterFactory updaterFactory,
-            ICoherencyUpdateResolver coherencyUpdateResolver,
-            IPullRequestBuilder pullRequestBuilder,
-            IRedisCacheFactory cacheFactory,
-            IReminderManagerFactory reminderManagerFactory,
-            ISqlBarClient sqlClient,
-            ILocalLibGit2Client gitClient,
-            IVmrInfo vmrInfo,
-            IPcsVmrForwardFlower vmrForwardFlower,
-            IPcsVmrBackFlower vmrBackFlower,
-            ITelemetryRecorder telemetryRecorder,
-            ILogger<NonBatchedCodeFlowPullRequestUpdater> logger,
-            ICommentCollector commentCollector,
-            IPullRequestCommenter pullRequestCommenter,
-            IPullRequestCommentBuilder commentBuilder,
-            IFeatureFlagService featureFlagService)
+    public NonBatchedDependencyPullRequestUpdater(
+        NonBatchedPullRequestUpdaterId id,
+        IMergePolicyEvaluator mergePolicyEvaluator,
+        BuildAssetRegistryContext context,
+        IRemoteFactory remoteFactory,
+        IPullRequestUpdaterFactory updaterFactory,
+        ICoherencyUpdateResolver coherencyUpdateResolver,
+        IPullRequestBuilder pullRequestBuilder,
+        IRedisCacheFactory cacheFactory,
+        IReminderManagerFactory reminderManagerFactory,
+        ISqlBarClient sqlClient,
+        ILocalLibGit2Client gitClient,
+        IVmrInfo vmrInfo,
+        IPcsVmrForwardFlower vmrForwardFlower,
+        IPcsVmrBackFlower vmrBackFlower,
+        ITelemetryRecorder telemetryRecorder,
+        ILogger<NonBatchedDependencyPullRequestUpdater> logger,
+        ICommentCollector commentCollector,
+        IPullRequestCommenter pullRequestCommenter,
+        IPullRequestCommentBuilder commentBuilder,
+        IFeatureFlagService featureFlagService)
         : base(
             id,
             mergePolicyEvaluator,
@@ -131,5 +131,4 @@ internal class NonBatchedCodeFlowPullRequestUpdater : CodeFlowPullRequestUpdater
 
         return await base.CheckInProgressPullRequestAsync(pullRequestCheck);
     }
-
 }
