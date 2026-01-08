@@ -85,7 +85,9 @@ internal partial class ConfigurationIngestor
         where T : IExternallySyncedEntity<TId>
         where TId : notnull
     {
-        var dbIds = dbEntities.Select(e => e.UniqueId).ToHashSet();
+        var dbById = dbEntities.ToDictionary(e => e.UniqueId);
+
+        var dbIds = dbById.Keys.ToHashSet();
         var externalIds = externalEntities.Select(e => e.UniqueId).ToHashSet();
 
         IReadOnlyCollection<T> creations = [.. externalEntities
@@ -95,7 +97,9 @@ internal partial class ConfigurationIngestor
             .Where(e => !externalIds.Contains(e.UniqueId))];
 
         IReadOnlyCollection<T> updates = [.. externalEntities
-            .Where(e => dbIds.Contains(e.UniqueId))];
+            .Where(e =>
+                dbById.TryGetValue(e.UniqueId, out var dbEntity)
+                && !e.Equals(dbEntity))];
 
         return new EntityChanges<T>(creations, updates, removals);
     }
