@@ -374,10 +374,9 @@ internal partial class ConfigurationIngestor(
     /// </summary>
     private async Task EnsureRepositoryRegistrationForCreatedSubscriptionsAsync(IReadOnlyList<string> targetRepositories)
     {
-        List<Repository> existing = _context.Repositories
-            .Local
+        List<Repository> existing = await _context.Repositories
             .Where(r => targetRepositories.Contains(r.RepositoryName))
-            .ToList();
+            .ToListAsync();
 
         async Task<long> GetInstallationId(string repoUri)
         {
