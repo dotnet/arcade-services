@@ -12,6 +12,7 @@ using Maestro.DataProviders.ConfigurationIngestion.Model;
 using Maestro.DataProviders.ConfigurationIngestion.Validations;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.DotNet.DarcLib;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion;
@@ -19,12 +20,14 @@ namespace Maestro.DataProviders.ConfigurationIngestion;
 internal partial class ConfigurationIngestor(
         BuildAssetRegistryContext context,
         ISqlBarClient sqlBarClient,
-        IDistributedLock distributedLock)
+        IDistributedLock distributedLock,
+        IGitHubInstallationIdResolver installationIdResolver)
     : IConfigurationIngestor
 {
     private readonly BuildAssetRegistryContext _context = context;
     private readonly ISqlBarClient _sqlBarClient = sqlBarClient;
     private readonly IDistributedLock _distributedLock = distributedLock;
+    private readonly IGitHubInstallationIdResolver _installationIdResolver = installationIdResolver;
 
     public async Task<ConfigurationUpdates> IngestConfigurationAsync(
         ConfigurationData configurationData,
@@ -106,6 +109,11 @@ internal partial class ConfigurationIngestor(
             configurationDataUpdate.Subscriptions.Creations,
             namespaceEntity,
             existingChannels);
+
+        await EnsureRepositoryRegistrationForCreatedSubscriptionsAsync(configurationDataUpdate.Subscriptions.Creations
+                .Select(s => s.Values.TargetRepository)
+                .Distinct()
+                .ToList());
 
         await UpdateSubscriptions(
             configurationDataUpdate.Subscriptions.Updates,
@@ -339,7 +347,7 @@ internal partial class ConfigurationIngestor(
             _context.RepositoryBranches.Update(dbRepositoryBranch);
         }
     }
-    
+
     private async Task DeleteRepositoryBranches(
         IEnumerable<IngestedBranchMergePolicies> removedBRanchMergePolicies,
         Namespace namespaceEntity)
@@ -359,5 +367,69 @@ internal partial class ConfigurationIngestor(
         }
 
         _context.RepositoryBranches.RemoveRange(branchRemovals);
+    }
+
+    private async Task EnsureRepositoryRegistrationForCreatedSubscriptionsAsync(IReadOnlyList<string> targetRepositories)
+    {
+        List<Repository> existing = _context.Repositories
+            .Local
+            .Where(r => targetRepositories.Contains(r.RepositoryName))
+            .ToList();
+
+        async Task<long> GetInstallationId(string repoUri)
+        {
+            if (repoUri.Contains("github.com"))
+            {
+                var installationId = await _installationIdResolver.GetInstallationIdForRepository(repoUri);
+
+                if (!installationId.HasValue)
+                {
+                    throw new Exception();
+                }
+
+                return installationId.Value; 
+            }
+            else if (repoUri.Contains("dev.azure.com"))
+            {
+                return default;
+            }
+            else
+            {
+                throw new NotSupportedException($"Repository '{repoUri}' is not supported for ingestion.");
+            }
+        }
+
+        List<Repository> newRepositories = [];
+        foreach (var newRepositoryUri in targetRepositories.Except(existing.Select(r => r.RepositoryName)))
+        {
+            var installationId = await GetInstallationId(newRepositoryUri);
+
+            newRepositories.Add(new Repository
+            {
+                RepositoryName = newRepositoryUri,
+                InstallationId = installationId
+            });
+        }
+
+        List<Repository> updatedRepositories = [];
+        foreach (var existingRepo in existing)
+        {
+            if (existingRepo.InstallationId > 0 || existingRepo.RepositoryName.Contains("dev.azure.com"))
+            {
+                continue;
+            }
+
+            existingRepo.InstallationId = await GetInstallationId(existingRepo.RepositoryName);
+            updatedRepositories.Add(existingRepo);
+        }
+
+        if (newRepositories.Count > 0)
+        {
+            _context.Repositories.AddRange(newRepositories);
+        }
+        if (updatedRepositories.Count > 0)
+        {
+            _context.Repositories.UpdateRange(updatedRepositories);
+        }
     }
 }

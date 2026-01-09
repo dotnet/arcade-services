@@ -56,8 +56,9 @@ public class ConfigurationIngestorTests
 
         var services = new ServiceCollection()
             .AddSingleton(_context)
-            .AddSingleton<ISqlBarClient>(new SqlBarClient(_context, null, installationIdResolver.Object))
+            .AddSingleton<ISqlBarClient>(new SqlBarClient(_context, null))
             .AddSingleton(distributedLockMock.Object)
+            .AddSingleton(installationIdResolver.Object)
             .AddConfigurationIngestion();
 
         _ingestor = services.BuildServiceProvider()
