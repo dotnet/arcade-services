@@ -149,14 +149,6 @@ code {
     color: #c02d76;
 }
 
-.channel-menu-heading {
-    padding-left: 5px;
-}
-
-.channel-menu-heading-channels {
-    padding-top: 10px;
-}
-
 .channel-menu-icon {
     display: none;
 }
@@ -173,7 +165,8 @@ code {
     }
 
 nav.channel-nav-menu h4 {
-    margin-top: 15px;
+    padding-top: 10px;
+    padding-left: 5px;
 }
 
 @media (max-width: 600px) {
