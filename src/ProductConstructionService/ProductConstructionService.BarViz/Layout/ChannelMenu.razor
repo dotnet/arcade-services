@@ -6,34 +6,45 @@
 @inject IProductConstructionServiceApi PcsApi
 @inject NavigationManager NavManager
 
-<div class="navmenu">
-  <nav class="sitenav" aria-labelledby="main-menu">
-    <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
+<div class="channel-menu @(menuCollapsed ? "collapsed" : "")">
+  @if (!menuCollapsed)
+  {
+    <nav class="channel-nav-menu" aria-labelledby="channel-menu">
+      <input type="checkbox" title="Menu expand/collapse toggle" id="channel-menu-toggle" class="channel-menu-icon" />
 
-    <PinnedChannels AvailableChannels="@AvailableChannels"
-                      PrePinnedChannels="@PrePinnedChannels" />
-    <h4 class="navmenu-heading navmenu-heading-channels">Channels</h4>
+      <PinnedChannels AvailableChannels="@AvailableChannels"
+                        PrePinnedChannels="@PrePinnedChannels" />
 
-    <FluentNavMenu Id="main-menu" Width="300" Collapsible="false" Title="Navigation menu" @bind-Expanded="expanded" CustomToggle="true">
-      @foreach (var category in Categories)
-      {
-        <FluentNavGroup Title="@category.Name" Icon="@(new Icons.Regular.Size20.FolderList())">
-          @foreach (var channel in category.Channels)
-          {
-            <ChannelNavMenuItem Channel="@channel" />
-          }
-        </FluentNavGroup>
-      }
+      <h4>Channels</h4>
 
-    </FluentNavMenu>
-  </nav>
+      <FluentNavMenu Id="main-menu" Width="300" Collapsible="false" Title="Channels" CustomToggle="true">
+        @foreach (var category in Categories)
+        {
+          <FluentNavGroup Title="@category.Name" Icon="@(new Icons.Regular.Size20.FolderList())">
+            @foreach (var channel in category.Channels)
+            {
+              <ChannelNavMenuItem Channel="@channel" />
+            }
+          </FluentNavGroup>
+        }
+
+      </FluentNavMenu>
+    </nav>
+  }
+
+  <div>
+    <FluentButton IconStart="@(menuCollapsed ? new Icons.Regular.Size20.PanelLeftExpand() : new Icons.Regular.Size20.PanelRightExpand())"
+                  Appearance="Appearance.Lightweight"
+                  Title="@(menuCollapsed ? "Expand channel's menu" : "Collapse channel's menu")"
+                  OnClick="@(() => menuCollapsed = !menuCollapsed)" />
+  </div>
 </div>
 
 @code {
     [SupplyParameterFromQuery(Name = "channel")]
     private long[]? channelFilterQuery { get; set; }
 
-    private bool expanded = true;
+    private bool menuCollapsed = false;
 
     private List<Channel> AvailableChannels = [];
     private List<ChannelCategorizer.ChannelCategory> Categories = [];
