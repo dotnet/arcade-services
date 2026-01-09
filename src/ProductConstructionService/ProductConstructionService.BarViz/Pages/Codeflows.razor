@@ -46,7 +46,7 @@
 
 <PageTitle>Codeflows – Maestro++</PageTitle>
 
-<GridViewTemplate Title="VMR subscriptions" ShowSkeleton="CodeFlows == null">
+<GridViewTemplate Title="Codeflows" ShowSkeleton="CodeFlows == null">
     <Header>
         <FluentSelect TOption="DefaultChannel"
                       Items="@DefaultChannels"
@@ -193,7 +193,7 @@
 
         // Get all unique mappings
         var allMappings = subscriptions
-            .Select(s => s.SourceDirectory ?? s.TargetDirectory)
+            .Select(s => string.IsNullOrEmpty(s.TargetDirectory) ? s.SourceDirectory : s.TargetDirectory)
             .Where(s => !string.IsNullOrEmpty(s))
             .Distinct()
             .ToList();
