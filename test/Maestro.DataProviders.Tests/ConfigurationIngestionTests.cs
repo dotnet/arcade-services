@@ -1165,7 +1165,7 @@ public class ConfigurationIngestorTests
 
         // Assert
         result.Channels.Creations.Should().HaveCount(2);
-        result.Channels.Updates.Should().HaveCount(4);
+        result.Channels.Updates.Should().HaveCount(3);
         result.Channels.Removals.Should().HaveCount(2);
 
         result.Subscriptions.Creations.Should().HaveCount(2);

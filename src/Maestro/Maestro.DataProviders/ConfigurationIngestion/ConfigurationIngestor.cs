@@ -12,6 +12,7 @@ using Maestro.DataProviders.ConfigurationIngestion.Model;
 using Maestro.DataProviders.ConfigurationIngestion.Validations;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion;
@@ -57,9 +58,16 @@ internal partial class ConfigurationIngestor(
             ingestionData,
             existingConfigurationData);
 
-        await SaveConfigurationData(configurationDataUpdate, namespaceEntity, saveChanges);
+        await SaveConfigurationData(configurationDataUpdate, namespaceEntity);
 
-        return configurationDataUpdate.ToYamls();
+        var finalUpdates = FilterNonUpdates(configurationDataUpdate.ToYamls());
+
+        if (saveChanges)
+        {
+            await _context.SaveChangesAsync();
+        }
+
+        return finalUpdates;
     }
 
     private static void ValidateEntityFields(IngestedConfigurationData newConfigurationData)
@@ -72,8 +80,7 @@ internal partial class ConfigurationIngestor(
 
     private async Task SaveConfigurationData(
         IngestedConfigurationUpdates configurationDataUpdate,
-        Namespace namespaceEntity,
-        bool saveChanges)
+        Namespace namespaceEntity)
     {
         // Deletions
         await DeleteSubscriptions(configurationDataUpdate.Subscriptions.Removals);
@@ -128,11 +135,6 @@ internal partial class ConfigurationIngestor(
         await UpdateRepositoryBranches(
             configurationDataUpdate.RepositoryBranches.Updates,
             namespaceEntity);
-
-        if (saveChanges)
-        {
-            await _context.SaveChangesAsync();
-        }
     }
 
     private async Task<Namespace> FetchOrCreateNamespace(string configurationNamespace)
@@ -224,8 +226,6 @@ internal partial class ConfigurationIngestor(
         {
             var dbChannel = dbChannelsByName[channel.Values.Name];
             dbChannel!.Classification = channel.Values.Classification;
-
-            _context.Channels.Update(dbChannel);
         }
     }
 
@@ -282,8 +282,6 @@ internal partial class ConfigurationIngestor(
             var dbDefaultChannel = dbDefaultChannels[key];
 
             dbDefaultChannel.Enabled = defaultChannel.Values.Enabled;
-
-            _context.DefaultChannels.Update(dbDefaultChannel);
         }
     }
 
@@ -335,8 +333,6 @@ internal partial class ConfigurationIngestor(
                 ConvertIngestedBranchMergePoliciesToDao(bmp, namespaceEntity);
 
             dbRepositoryBranch.PolicyString = updatedBranchMergePoliciesDao.PolicyString;
-
-            _context.RepositoryBranches.Update(dbRepositoryBranch);
         }
     }
     
@@ -359,5 +355,55 @@ internal partial class ConfigurationIngestor(
         }
 
         _context.RepositoryBranches.RemoveRange(branchRemovals);
+    }
+
+    private ConfigurationUpdates FilterNonUpdates(ConfigurationUpdates update)
+    {
+        var subscriptionUpdates = _context.ChangeTracker.Entries<Subscription>()
+            .Where(e => e.State == EntityState.Modified)
+            .Select(e => e.Entity)
+            .Select(sub => SqlBarClient.ToClientModelSubscription(sub))
+            .Select(SubscriptionYaml.FromClientModel)
+            .ToList();
+
+        var channelUpdates = _context.ChangeTracker.Entries<Channel>()
+            .Where(e => e.State == EntityState.Modified)
+            .Select(e => e.Entity)
+            .Select(ch => SqlBarClient.ToClientModelChannel(ch))
+            .Select(ChannelYaml.FromClientModel)
+            .ToList();
+
+        var defaultChannelUpdates = _context.ChangeTracker.Entries<DefaultChannel>()
+            .Where(e => e.State == EntityState.Modified)
+            .Select(e => e.Entity)
+            .Select(dc => SqlBarClient.ToClientModelDefaultChannel(dc))
+            .Select(DefaultChannelYaml.FromClientModel)
+            .ToList();
+
+        var repositoryBranchUpdates = _context.ChangeTracker.Entries<RepositoryBranch>()
+            .Where(e => e.State == EntityState.Modified)
+            .Select(e => e.Entity)
+            .Select(rb => SqlBarClient.ToClientModelRepositoryBranch(rb))
+            .Select(BranchMergePoliciesYaml.FromClientModel)
+            .ToList();
+
+        return new ConfigurationUpdates(
+            update.Subscriptions with
+            {
+                Updates = subscriptionUpdates
+            },
+            update.Channels with
+            {
+                Updates = channelUpdates
+            },
+            update.DefaultChannels with
+            {
+                Updates = defaultChannelUpdates
+            },
+            update.RepositoryBranches with
+            {
+                Updates = repositoryBranchUpdates
+            }
+        );
     }
 }
