@@ -8,7 +8,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Maestro.Data;
 using Maestro.DataProviders.Exceptions;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ProductConstructionService.Client;
