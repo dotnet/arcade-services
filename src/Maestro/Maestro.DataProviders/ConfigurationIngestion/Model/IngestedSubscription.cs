@@ -11,7 +11,12 @@ internal class IngestedSubscription : IExternallySyncedEntity<Guid>
 {
     public IngestedSubscription(SubscriptionYaml values) => Values = values;
 
-    public Guid UniqueId => Values.Id;
+    public override Guid UniqueId => Values.Id;
 
     public SubscriptionYaml Values { init; get; }
+
+    public override string ToString()
+    {
+        return $"Subscription (Id: {Values.Id}, Channel: '{Values.Channel}', Source: '{Values.SourceRepository}', Target: '{Values.TargetRepository}', Branch: '{Values.TargetBranch}')";
+    }
 }

@@ -11,6 +11,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 
 namespace Maestro.MergePolicies;
+
 internal class BackFlowMergePolicy : CodeFlowMergePolicy
 {
     public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote remote)
@@ -27,7 +28,7 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
         {
             return FailDecisively($"Error reading file `{VersionFiles.VersionDetailsXml}`",
                 $"""
-                ### Error: failed to parse file `{VersionFiles.VersionDetailsXml}`.
+                ### :warning: Error: failed to parse file `{VersionFiles.VersionDetailsXml}`.
                 The file `{VersionFiles.VersionDetailsXml}` is corrupted or improperly structured.
                 > XML Error: {e.Message}
                 """
@@ -39,7 +40,7 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
             // messasges from DarcException types should be safe to expose to the client
             return FailDecisively($"Failed to parse file `{VersionFiles.VersionDetailsXml}`",
                 $"""
-                ### Error: failed to parse file `{VersionFiles.VersionDetailsXml}`.
+                ### :warning: Error: failed to parse file `{VersionFiles.VersionDetailsXml}`.
                 There was some unexpected or missing information in the file.
                 > Error: {e.Message}
                 """
@@ -50,7 +51,7 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
             return FailTransiently(
                 $"Failed to retrieve file `{VersionFiles.VersionDetailsXml}`",
                 $"""
-                ### Error: unexpected server error.
+                ### :warning: Error: unexpected server error.
                 An unexpected error occurred in the server while trying to read files from the branch.
                 This could be due to a temporary exception and may be resolved automatically within 5-10 minutes.
                 If the error persists, please follow the instructions below to ask for support.
@@ -66,10 +67,10 @@ internal class BackFlowMergePolicy : CodeFlowMergePolicy
                 ConfigurationErrorsHeader,
                 string.Join(Environment.NewLine, configurationErrors),
                 SeekHelpMsg);
-            return FailDecisively($"Missing or mismatched values found in `{VersionFiles.VersionDetailsXml}`", failureMessage);
+            return FailDecisively($"Unexpected codeflow metadata found in `{VersionFiles.VersionDetailsXml}`", failureMessage);
         }
 
-        return SucceedDecisively($"Backflow checks succeeded.");
+        return SucceedDecisively("Backflow checks succeeded.");
     }
 
     private static List<string> CalculateConfigurationErrors(

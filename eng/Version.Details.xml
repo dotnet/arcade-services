@@ -83,5 +83,9 @@
       <Uri>https://github.com/dotnet/dnceng</Uri>
       <Sha>6b49135c494c814a01232e423244f14241cf09b4</Sha>
     </Dependency>
+    <Dependency Name="Microsoft.DotNet.MaestroConfiguration.Client" Version="1.1.0-beta.26058.4">
+      <Uri>https://github.com/dotnet/arcade-services</Uri>
+      <Sha>f081e2839795a3f7b87cc8c510b4614b30fba402</Sha>
+    </Dependency>
   </ToolsetDependencies>
 </Dependencies>

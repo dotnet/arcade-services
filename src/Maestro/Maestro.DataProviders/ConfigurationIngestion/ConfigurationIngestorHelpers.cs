@@ -82,7 +82,7 @@ internal partial class ConfigurationIngestor
     private static EntityChanges<T> ComputeUpdatesForEntity<T, TId>(
         IReadOnlyCollection<T> dbEntities,
         IReadOnlyCollection<T> externalEntities)
-        where T : class, IExternallySyncedEntity<TId>
+        where T : IExternallySyncedEntity<TId>
         where TId : notnull
     {
         var dbIds = dbEntities.Select(e => e.UniqueId).ToHashSet();

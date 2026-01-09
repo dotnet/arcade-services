@@ -228,7 +228,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             Times.Once);
 
         _gitClient.Verify(
-            g => g.Push(VmrPath, It.IsAny<string>(), VmrUri, It.IsAny<LibGit2Sharp.Identity>()),
+            g => g.Push(VmrPath, It.IsAny<string>(), VmrUri, It.IsAny<LibGit2Sharp.Identity>(), It.IsAny<bool>()),
             Times.Once);
     }
 
@@ -561,7 +561,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.Is<string>(uri => uri.StartsWith(Subscription.TargetDirectory != null ? VmrUri + "/pulls/" : InProgressPrUrl)),
                 It.Is<string>(content => content.Contains(rebaseStrategy
                     ? "The conflicts in the following files need to be manually resolved"
-                    : "There was a conflict in the PR branch when flowing source"))))
+                    : "Maestro attempted to flow new changes from"))))
             .Returns(Task.CompletedTask);
 
         // We re-evaulate checks after we push changes

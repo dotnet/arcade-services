@@ -240,9 +240,10 @@ internal partial class ConfigurationIngestor(
 
         var channelRemovalIds = channelRemovals.Select(c => c.Id);
 
-        var linkedSubscriptions = await _context.Subscriptions
+        var linkedSubscriptions = _context.Subscriptions
+            .Local
             .Where(s => channelRemovalIds.Contains(s.ChannelId))
-            .ToListAsync();
+            .ToList();
 
         if (linkedSubscriptions.Any())
         {

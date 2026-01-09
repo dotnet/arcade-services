@@ -10,7 +10,12 @@ internal class IngestedChannel : IExternallySyncedEntity<string>
 {
     public IngestedChannel(ChannelYaml values) => Values = values;
 
-    public string UniqueId => Values.Name;
+    public override string UniqueId => Values.Name;
 
     public ChannelYaml Values { init; get; }
+
+    public override string ToString()
+    {
+        return $"Channel (Name: '{Values.Name}')";
+    }
 }

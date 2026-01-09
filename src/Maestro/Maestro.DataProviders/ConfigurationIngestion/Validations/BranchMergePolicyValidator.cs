@@ -32,18 +32,29 @@ internal class BranchMergePolicyValidator
     {
         ArgumentNullException.ThrowIfNull(branchMergePolicy);
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(branchMergePolicy.Values.Repository);
-        ArgumentException.ThrowIfNullOrWhiteSpace(branchMergePolicy.Values.Branch);
-        ArgumentNullException.ThrowIfNull(branchMergePolicy.Values.MergePolicies);
+        if (string.IsNullOrWhiteSpace(branchMergePolicy.Values.Repository))
+        {
+            throw new IngestionEntityValidationException("Repository is required.", branchMergePolicy);
+        }
+
+        if (string.IsNullOrWhiteSpace(branchMergePolicy.Values.Branch))
+        {
+            throw new IngestionEntityValidationException("Branch is required.", branchMergePolicy);
+        }
+
+        if (branchMergePolicy.Values.MergePolicies == null)
+        {
+            throw new IngestionEntityValidationException("Merge policies cannot be null.", branchMergePolicy);
+        }
 
         if (branchMergePolicy.Values.Repository.Length > Data.Models.Repository.RepositoryNameLength)
         {
-            throw new ArgumentException($"Repository name cannot be longer than {Data.Models.Repository.RepositoryNameLength}.");
+            throw new IngestionEntityValidationException($"Repository name cannot be longer than {Data.Models.Repository.RepositoryNameLength} characters.", branchMergePolicy);
         }
 
         if (branchMergePolicy.Values.Branch.Length > Data.Models.Repository.BranchNameLength)
         {
-            throw new ArgumentException($"Branch name cannot be longer than {Data.Models.Repository.BranchNameLength}.");
+            throw new IngestionEntityValidationException($"Branch name cannot be longer than {Data.Models.Repository.BranchNameLength} characters.", branchMergePolicy);
         }
 
         var mergePolicies = branchMergePolicy.Values.MergePolicies.Select(mp => mp.Name);
@@ -51,9 +62,9 @@ internal class BranchMergePolicyValidator
         if (mergePolicies.Contains(MergePolicyConstants.StandardMergePolicyName)
             && mergePolicies.Any(SubscriptionValidator.StandardMergePolicies.Contains))
         {
-            throw new ArgumentException(
-                $"One or more of the following merge policies for {branchMergePolicy.Values.Repository}/{branchMergePolicy.Values.Branch} could not be added because it is already included "
-                + $"in the standard merge policy: {string.Join(", ", SubscriptionValidator.StandardMergePolicies)}");
+            throw new IngestionEntityValidationException(
+                "One or more of the following merge policies could not be added because it is already included "
+                + $"in the standard merge policy: {string.Join(", ", SubscriptionValidator.StandardMergePolicies)}", branchMergePolicy);
         }
     }
 }
