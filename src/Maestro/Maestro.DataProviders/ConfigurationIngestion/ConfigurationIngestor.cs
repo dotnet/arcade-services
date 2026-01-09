@@ -369,6 +369,9 @@ internal partial class ConfigurationIngestor(
         _context.RepositoryBranches.RemoveRange(branchRemovals);
     }
 
+    /// <summary>
+    /// Verifies that the repositories are registered in the database (and that they have a valid installation ID).
+    /// </summary>
     private async Task EnsureRepositoryRegistrationForCreatedSubscriptionsAsync(IReadOnlyList<string> targetRepositories)
     {
         List<Repository> existing = _context.Repositories
@@ -392,6 +395,9 @@ internal partial class ConfigurationIngestor(
             }
             else
             {
+                // In the case of a non github repository, we don't have an app installation,
+                // but we should add an entry in the repositories table, as this is required when
+                // adding a new subscription policy.
                 return default;
             }
         }
