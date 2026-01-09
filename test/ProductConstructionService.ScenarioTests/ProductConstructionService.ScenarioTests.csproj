@@ -11,8 +11,7 @@
     <PackageReference Include="Microsoft.DotNet.Internal.Testing.Utility" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" />
     <PackageReference Include="Octokit" />
-    <ProjectReference Include="..\..\src\MaestroConfiguration\src\Microsoft.DotNet.MaestroConfiguration.Client\Microsoft.DotNet.MaestroConfiguration.Client.csproj" />
-
+    
     <ProjectReference Include="..\..\src\Maestro\Maestro.MergePolicies\Maestro.MergePolicies.csproj" />
     <ProjectReference Include="..\..\src\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\..\src\Microsoft.DotNet.Darc\Darc\Microsoft.DotNet.Darc.csproj" />
