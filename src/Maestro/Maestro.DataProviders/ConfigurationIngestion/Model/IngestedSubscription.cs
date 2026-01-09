@@ -15,7 +15,7 @@ internal class IngestedSubscription : IExternallySyncedEntity<Guid>
 
     public SubscriptionYaml _values { init; get; }
 
-    public override IYamlModel Values => _values;
+    public override string SerializedData => _yamlSerializer.Serialize(_values);
 
     public override string ToString()
     {

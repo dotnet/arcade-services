@@ -1,7 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.MaestroConfiguration.Client.Models;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 #nullable enable
 
@@ -9,12 +10,17 @@ namespace Maestro.DataProviders.ConfigurationIngestion.Model;
 
 public abstract class IExternallySyncedEntity
 {
+    protected static readonly ISerializer _yamlSerializer = new SerializerBuilder()
+        .WithNamingConvention(NullNamingConvention.Instance)
+        .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitDefaults | DefaultValuesHandling.OmitEmptyCollections)
+        .Build();
+
     /// <summary>
     /// Returns a string representation of the entity that includes identifying information.
     /// </summary>
     public abstract override string ToString();
 
-    public abstract IYamlModel Values { get; }
+    public abstract string SerializedData { get; }
 }
 
 /// <summary>

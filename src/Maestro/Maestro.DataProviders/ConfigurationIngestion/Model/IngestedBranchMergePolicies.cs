@@ -14,7 +14,7 @@ internal class IngestedBranchMergePolicies : IExternallySyncedEntity<(string Rep
 
     public BranchMergePoliciesYaml _values { init; get; }
 
-    public override IYamlModel Values => _values;
+    public override string SerializedData => _yamlSerializer.Serialize(_values);
 
     public override string ToString()
     {
