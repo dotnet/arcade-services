@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.Api.Tests;
 using Moq;
+using Microsoft.DotNet.DarcLib;
 
 namespace Maestro.DataProviders.Tests;
 
@@ -49,11 +50,15 @@ public class ConfigurationIngestorTests
             .Returns<string, Func<Task<ConfigurationUpdates>>, TimeSpan?, CancellationToken>(
                 async (_, action, _, _) => await action());
 
+        var installationIdResolver = new Mock<IGitHubInstallationIdResolver>();
+        installationIdResolver.Setup(r => r.GetInstallationIdForRepository(It.IsAny<string>()))
+            .Returns(Task.FromResult((long?)1));
 
         var services = new ServiceCollection()
             .AddSingleton(_context)
             .AddSingleton<ISqlBarClient>(new SqlBarClient(_context, null))
             .AddSingleton(distributedLockMock.Object)
+            .AddSingleton(installationIdResolver.Object)
             .AddConfigurationIngestion();
 
         _ingestor = services.BuildServiceProvider()
