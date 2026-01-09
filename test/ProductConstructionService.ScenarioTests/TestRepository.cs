@@ -12,6 +12,7 @@ internal class TestRepository
     internal const string VmrTestRepoName = "maestro-test-vmr";
     internal const string SourceBranch = "master";
     internal const string TestArcadeName = "maestro-test-arcade";
+    internal const string MaestroConfigurationRepoName = "maestro-configuration";
 
     // This branch and commit data is special for the coherency test
     // It's required to make sure that the dependency tree is set up correctly in the repo without conflicting with other test cases

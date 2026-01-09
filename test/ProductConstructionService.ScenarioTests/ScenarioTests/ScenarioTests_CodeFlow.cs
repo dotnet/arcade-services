@@ -44,9 +44,9 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         var targetBranchName = GetTestBranchName();
         var testPrNumber = 23;
 
-        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(channelName);
+        await CreateTestChannelAsync(channelName);
 
-        await using AsyncDisposableValue<string> subscriptionId = await CreateForwardFlowSubscriptionAsync(
+        var subscriptionId = await CreateForwardFlowSubscriptionAsync(
             channelName,
             TestRepository.TestRepo1Name,
             TestRepository.VmrTestRepoName,
@@ -90,7 +90,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
                         TestContext.WriteLine("Triggering the subscription");
                         // Now trigger the subscription
-                        await TriggerSubscriptionAsync(subscriptionId.Value);
+                        await TriggerSubscriptionAsync(subscriptionId);
 
                         TestContext.WriteLine("Verifying subscription PR");
                         var pr = await CheckForwardFlowGitHubPullRequest(
@@ -118,9 +118,9 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         var productRepo = GetGitHubRepoUrl(TestRepository.TestRepo2Name);
         var targetBranchName = GetTestBranchName();
 
-        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(channelName);
+        await CreateTestChannelAsync(channelName);
 
-        await using AsyncDisposableValue<string> subscriptionId = await CreateBackwardFlowSubscriptionAsync(
+        var subscriptionId = await CreateBackwardFlowSubscriptionAsync(
             channelName,
             TestRepository.VmrTestRepoName,
             TestRepository.TestRepo2Name,
@@ -183,7 +183,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
                             TestContext.WriteLine("Triggering the subscription");
                             // Now trigger the subscription
-                            await TriggerSubscriptionAsync(subscriptionId.Value);
+                            await TriggerSubscriptionAsync(subscriptionId);
 
                             TestContext.WriteLine("Verifying subscription PR");
                             var assetsToVerify = pinnedAssets

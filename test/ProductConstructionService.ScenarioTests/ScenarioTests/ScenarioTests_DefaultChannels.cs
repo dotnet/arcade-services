@@ -30,24 +30,21 @@ internal class ScenarioTests_DefaultChannels : ScenarioTestBase
         var testChannelName1 = GetTestChannelName();
         var testChannelName2 = GetTestChannelName();
 
-        await using (AsyncDisposableValue<string> channel1 = await CreateTestChannelAsync(testChannelName1))
-        {
-            await using (AsyncDisposableValue<string> channel2 = await CreateTestChannelAsync(testChannelName2))
-            {
-                await AddDefaultTestChannelAsync(testChannelName1, repoUrl, _branchNameWithRefsHeads);
-                await AddDefaultTestChannelAsync(testChannelName2, repoUrl, _branchNameWithRefsHeads);
+        await CreateTestChannelAsync(testChannelName1);
+        await CreateTestChannelAsync(testChannelName2);
+            
+        await AddDefaultTestChannelAsync(testChannelName1, repoUrl, _branchNameWithRefsHeads);
+        await AddDefaultTestChannelAsync(testChannelName2, repoUrl, _branchNameWithRefsHeads);
 
-                var defaultChannels = await GetDefaultTestChannelsAsync(repoUrl, _branchName);
-                defaultChannels.Should().Contain(testChannelName1, $"{testChannelName1} is not a default channel");
-                defaultChannels.Should().Contain(testChannelName2, $"{testChannelName2} is not a default channel");
+        var defaultChannels = await GetDefaultTestChannelsAsync(repoUrl, _branchName);
+        defaultChannels.Should().Contain(testChannelName1, $"{testChannelName1} is not a default channel");
+        defaultChannels.Should().Contain(testChannelName2, $"{testChannelName2} is not a default channel");
 
-                await DeleteDefaultTestChannelAsync(testChannelName1, repoUrl, _branchName);
-                await DeleteDefaultTestChannelAsync(testChannelName2, repoUrl, _branchName);
+        await DeleteDefaultTestChannelAsync(testChannelName1, repoUrl, _branchName);
+        await DeleteDefaultTestChannelAsync(testChannelName2, repoUrl, _branchName);
 
-                defaultChannels = await GetDefaultTestChannelsAsync(repoUrl, _branchName);
-                defaultChannels.Should().NotContain(testChannelName1, $"{testChannelName1} was not deleted from default channels");
-                defaultChannels.Should().NotContain(testChannelName2, $"{testChannelName2} was not deleted from default channels");
-            }
-        }
+        defaultChannels = await GetDefaultTestChannelsAsync(repoUrl, _branchName);
+        defaultChannels.Should().NotContain(testChannelName1, $"{testChannelName1} was not deleted from default channels");
+        defaultChannels.Should().NotContain(testChannelName2, $"{testChannelName2} was not deleted from default channels");
     }
 }

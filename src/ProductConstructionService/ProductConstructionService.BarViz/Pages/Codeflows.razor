@@ -135,6 +135,9 @@
 </GridViewTemplate>
 
 @code {
+    [SupplyParameterFromQuery(Name = "branch")]
+    private string? branchQuery { get; set; }
+
     string? VmrBranch = null;
     DefaultChannel? DefaultChannel = null;
     List<DefaultChannel> DefaultChannels = [];
@@ -164,7 +167,17 @@
             }
         }
 
-        DefaultChannel = DefaultChannels.FirstOrDefault(c => c.Branch == "main");
+        // Try to set the default channel from query parameter first, then fall back to "main"
+        if (!string.IsNullOrEmpty(branchQuery))
+        {
+            DefaultChannel = DefaultChannels.FirstOrDefault(c => c.Branch == branchQuery);
+        }
+        
+        if (DefaultChannel == null)
+        {
+            DefaultChannel = DefaultChannels.FirstOrDefault(c => c.Branch == "main");
+        }
+        
         VmrBranch = DefaultChannel?.Branch;
 
         await GenerateCodeflows();
@@ -212,7 +225,18 @@
     {
         DefaultChannel = channel;
         VmrBranch = channel.Branch;
+        UpdateQueryParams();
         await GenerateCodeflows();
+    }
+
+    private void UpdateQueryParams()
+    {
+        var newUri = NavManager.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["branch"] = VmrBranch
+        });
+
+        NavManager.NavigateTo(newUri);
     }
 
     async Task ShowDetails(Subscription subscription)
