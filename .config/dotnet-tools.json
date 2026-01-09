@@ -15,7 +15,7 @@
       ]
     },
     "microsoft.dnceng.configuration.bootstrap": {
-      "version": "1.1.0-beta.25608.3",
+      "version": "1.1.0-beta.26057.3",
       "commands": [
         "bootstrap-dnceng-configuration"
       ]
