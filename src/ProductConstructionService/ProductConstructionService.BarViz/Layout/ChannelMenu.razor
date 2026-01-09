@@ -3,6 +3,7 @@
 @using Microsoft.DotNet.ProductConstructionService.Client.Models;
 @using Microsoft.DotNet.ProductConstructionService.Client.Helpers;
 @using System.Collections.Immutable
+@inject Blazored.SessionStorage.ISyncSessionStorageService SessionStorage
 @inject IProductConstructionServiceApi PcsApi
 @inject NavigationManager NavManager
 
@@ -36,7 +37,7 @@
     <FluentButton IconStart="@(menuCollapsed ? new Icons.Regular.Size20.PanelLeftExpand() : new Icons.Regular.Size20.PanelRightExpand())"
                   Appearance="Appearance.Lightweight"
                   Title="@(menuCollapsed ? "Expand channel's menu" : "Collapse channel's menu")"
-                  OnClick="@(() => menuCollapsed = !menuCollapsed)" />
+                  OnClick="@ToggleMenu" />
   </div>
 </div>
 
@@ -44,14 +45,18 @@
     [SupplyParameterFromQuery(Name = "channel")]
     private long[]? channelFilterQuery { get; set; }
 
+    private const string MenuCollapsedKey = "channel-menu-collapsed";
     private bool menuCollapsed = false;
 
     private List<Channel> AvailableChannels = [];
     private List<ChannelCategorizer.ChannelCategory> Categories = [];
     private List<Channel> PrePinnedChannels = [];
-    
+
     protected override async Task OnInitializedAsync()
     {
+        // Load saved preference
+        menuCollapsed = SessionStorage.GetItem<bool>(MenuCollapsedKey);
+
         AvailableChannels = await PcsApi.Channels.ListChannelsAsync();
         Categories = ChannelCategorizer.CategorizeChannels(AvailableChannels);
 
@@ -70,5 +75,11 @@
               .Select(f => AvailableChannels.First(channel => channel.Id == f))
               .ToList();
         }
+    }
+
+    private void ToggleMenu()
+    {
+        menuCollapsed = !menuCollapsed;
+        SessionStorage.SetItem(MenuCollapsedKey, menuCollapsed);
     }
 }
