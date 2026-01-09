@@ -384,18 +384,15 @@ internal partial class ConfigurationIngestor(
 
                 if (!installationId.HasValue)
                 {
-                    throw new Exception();
+                    throw new IngestionEntityValidationException($"No Maestro GitHub application installation found for repository '{repoUri}'. " +
+                        "The Maestro github application must be installed by the repository's owner and given access to the repository.");
                 }
 
                 return installationId.Value; 
             }
-            else if (repoUri.Contains("dev.azure.com"))
-            {
-                return default;
-            }
             else
             {
-                throw new NotSupportedException($"Repository '{repoUri}' is not supported for ingestion.");
+                return default;
             }
         }
 
