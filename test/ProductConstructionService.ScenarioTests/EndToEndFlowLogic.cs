@@ -439,7 +439,7 @@ internal abstract class TestLogic : ScenarioTestBase
                 {
                     TestContext.WriteLine("Trigger the dependency update");
                     await TriggerSubscriptionAsync(subscription1Id);
-                        
+
                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
                     await CheckNonBatchedAzDoPullRequest(
                         sourceRepoName,

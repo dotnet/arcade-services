@@ -105,7 +105,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
 
         // Mass delete the subscriptions. Delete the first two but not the third.
         TestContext.WriteLine("Delete the subscriptions for test channel 1");
-        var message = await DeleteSubscriptionsForChannel(channel1Name);
+        await DeleteSubscriptionsForChannel(channel1Name);
 
         // Check that there are no subscriptions against channel1 now
         TestContext.WriteLine("Verify that there are no subscriptions in test channel 1");
@@ -114,7 +114,7 @@ internal class ScenarioTests_Subscriptions : ScenarioTestBase
         // Validate the third subscription, which should still exist
         TestContext.WriteLine("Verify that the third subscription still exists, then delete it");
         await ValidateSubscriptionInfo(subscription3Id, expectedSubscription3Info);
-        var message2 = await DeleteSubscriptionById(subscription3Id);
+        await DeleteSubscriptionById(subscription3Id);
 
         // Attempt to create a batchable subscription with merge policies.
         // Should fail, merge policies are set separately for batched subs

@@ -34,10 +34,7 @@ internal abstract partial class ScenarioTestBase
     private string[] _configRepoDarcParams = [];
     private const string ScenarioTestBaseBranch = "origin/scenario-test";
     private bool _namespaceIngested = false;
-    private TemporaryDirectory _temporaryDirectory = null!;
-
-    protected string TemporaryDirectoryPath => _temporaryDirectory?.Directory 
-        ?? throw new InvalidOperationException("TemporaryDirectory not initialized. Ensure test setup has run.");
+    protected TemporaryDirectory _temporaryDirectory = null!;
 
     // We need this for tests where we have multiple updates
     private readonly Dictionary<long, DateTimeOffset> _lastUpdatedPrTimes = [];
