@@ -169,10 +169,10 @@ internal class GitOperationsHelper
         string[]? expectedConflictingFiles = null,
         bool? mergeTheirs = null,
         string targetBranch = "main",
-        bool enableRebase = false)
+        bool changesStagedOnly = true)
     {
         ProcessExecutionResult result = null!;
-        if (!enableRebase)
+        if (!changesStagedOnly)
         {
             result = await ExecuteGitCommand(repo, "checkout", targetBranch);
             result.ThrowIfFailed($"Could not checkout main branch in {repo}");
@@ -183,7 +183,7 @@ internal class GitOperationsHelper
 
         if (expectedConflictingFiles != null)
         {
-            if (enableRebase)
+            if (changesStagedOnly)
             {
                 result = await ExecuteGitCommand(repo, "diff", "--name-only", "--diff-filter=U");
                 var conflictedFiles = result.GetOutputLines();
@@ -243,7 +243,7 @@ internal class GitOperationsHelper
 
         await CommitAll(repo, $"Merged {branch} into {targetBranch} using {(mergeTheirs.Value ? targetBranch : branch)}");
 
-        if (enableRebase)
+        if (changesStagedOnly)
         {
             await Checkout(repo, targetBranch);
             await ExecuteGitCommand(repo, "merge", branch);

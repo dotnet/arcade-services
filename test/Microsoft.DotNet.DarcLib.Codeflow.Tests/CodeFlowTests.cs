@@ -120,20 +120,15 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
             })
             .ToList();
 
-    protected async Task<CodeFlowResult> ChangeRepoFileAndFlowIt(string newContent, string branchName, bool enableRebase = false)
+    protected async Task<CodeFlowResult> ChangeRepoFileAndFlowIt(string newContent, string branchName)
     {
         await GitOperations.Checkout(ProductRepoPath, "main");
         await File.WriteAllTextAsync(_productRepoFilePath, newContent);
         await GitOperations.CommitAll(ProductRepoPath, $"Changing a repo file to '{newContent}'");
 
-        var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);
+        var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
 
-        if (!enableRebase)
-        {
-            await GitOperations.CheckAllIsCommitted(VmrPath);
-        }
-
-        if (enableRebase && !codeFlowResult.ConflictedFiles.Any(f => f.Path == VmrInfo.GetRelativeRepoSourcesPath(Constants.ProductRepoName) / _productRepoFileName))
+        if (!codeFlowResult.ConflictedFiles.Any(f => f.Path == VmrInfo.GetRelativeRepoSourcesPath(Constants.ProductRepoName) / _productRepoFileName))
         {
             CheckFileContents(_productRepoVmrFilePath, newContent);
         }
@@ -141,20 +136,15 @@ internal abstract class CodeFlowTests : CodeFlowTestsBase
         return codeFlowResult;
     }
 
-    protected async Task<CodeFlowResult> ChangeVmrFileAndFlowIt(string newContent, string branchName, bool enableRebase = false)
+    protected async Task<CodeFlowResult> ChangeVmrFileAndFlowIt(string newContent, string branchName)
     {
         await GitOperations.Checkout(VmrPath, "main");
         await File.WriteAllTextAsync(_productRepoVmrPath / _productRepoFileName, newContent);
         await GitOperations.CommitAll(VmrPath, $"Changing a VMR file to '{newContent}'");
 
-        var codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName, enableRebase: enableRebase);
+        var codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
 
-        if (!enableRebase)
-        {
-            await GitOperations.CheckAllIsCommitted(ProductRepoPath);
-        }
-
-        if (enableRebase && !codeFlowResult.ConflictedFiles.Any(f => f.Path == _productRepoFileName))
+        if (!codeFlowResult.ConflictedFiles.Any(f => f.Path == _productRepoFileName))
         {
             CheckFileContents(_productRepoFilePath, newContent);
         }
