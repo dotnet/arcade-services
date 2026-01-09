@@ -46,7 +46,7 @@
 
 <PageTitle>Codeflows – Maestro++</PageTitle>
 
-<GridViewTemplate Title="VMR subscriptions" ShowSkeleton="CodeFlows == null">
+<GridViewTemplate Title="Codeflows" ShowSkeleton="CodeFlows == null">
     <Header>
         <FluentSelect TOption="DefaultChannel"
                       Items="@DefaultChannels"
@@ -74,7 +74,7 @@
                 <TemplateColumn Title="Repository" Sortable="true" SortBy="SortBy(sub => sub.MappingName)" Align="Align.Start">
                     <FluentAnchor Href="@context.RepositoryUrl" Target="_blank" Appearance="Appearance.Hypertext">@context.MappingName</FluentAnchor>
                 </TemplateColumn>
-                <TemplateColumn Title="Repo branch" Sortable="true" SortBy="SortBy(sub => sub.RepositoryBranch)" Align="Align.Center">
+                <TemplateColumn Title="Backflow branch" Sortable="true" SortBy="SortBy(sub => sub.RepositoryBranch)" Align="Align.Center">
                     <FluentLabel>@context.RepositoryBranch</FluentLabel>
                 </TemplateColumn>
                 <TemplateColumn Title="Forward flow channel" Sortable="true" SortBy="SortBy(sub => sub.ForwardflowSubscription != null ? sub.ForwardflowSubscription.Channel.Name : null)" Align="Align.Center">
@@ -193,7 +193,7 @@
 
         // Get all unique mappings
         var allMappings = subscriptions
-            .Select(s => s.SourceDirectory ?? s.TargetDirectory)
+            .Select(s => string.IsNullOrEmpty(s.TargetDirectory) ? s.SourceDirectory : s.TargetDirectory)
             .Where(s => !string.IsNullOrEmpty(s))
             .Distinct()
             .ToList();
