@@ -5,39 +5,32 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.WorkItems;
 
-namespace ProductConstructionService.DependencyFlow;
+namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
-internal class BatchedPullRequestUpdater : PullRequestUpdater
+internal class BatchedDependencyPullRequestUpdater : DependencyPullRequestUpdater
 {
     private readonly BatchedPullRequestUpdaterId _id;
     private readonly BuildAssetRegistryContext _context;
 
-    public BatchedPullRequestUpdater(
-        BatchedPullRequestUpdaterId id,
-        IMergePolicyEvaluator mergePolicyEvaluator,
-        BuildAssetRegistryContext context,
-        IRemoteFactory remoteFactory,
-        IPullRequestUpdaterFactory updaterFactory,
-        ICoherencyUpdateResolver coherencyUpdateResolver,
-        IPullRequestBuilder pullRequestBuilder,
-        IRedisCacheFactory cacheFactory,
-        IReminderManagerFactory reminderManagerFactory,
-        ISqlBarClient sqlClient,
-        ILocalLibGit2Client gitClient,
-        IVmrInfo vmrInfo,
-        IPcsVmrForwardFlower vmrForwardFlower,
-        IPcsVmrBackFlower vmrBackFlower,
-        ITelemetryRecorder telemetryRecorder,
-        ILogger<BatchedPullRequestUpdater> logger,
-        ICommentCollector commentCollector,
-        IPullRequestCommenter pullRequestCommenter,
-        IFeatureFlagService featureFlagService)
+    public BatchedDependencyPullRequestUpdater(
+            BatchedPullRequestUpdaterId id,
+            IMergePolicyEvaluator mergePolicyEvaluator,
+            BuildAssetRegistryContext context,
+            IRemoteFactory remoteFactory,
+            IPullRequestUpdaterFactory updaterFactory,
+            ICoherencyUpdateResolver coherencyUpdateResolver,
+            IPullRequestBuilder pullRequestBuilder,
+            IRedisCacheFactory cacheFactory,
+            IReminderManagerFactory reminderManagerFactory,
+            ISqlBarClient sqlClient,
+            ILogger<BatchedDependencyPullRequestUpdater> logger,
+            IPullRequestCommenter pullRequestCommenter,
+            IFeatureFlagService featureFlagService)
         : base(
             id,
             mergePolicyEvaluator,
@@ -49,13 +42,7 @@ internal class BatchedPullRequestUpdater : PullRequestUpdater
             cacheFactory,
             reminderManagerFactory,
             sqlClient,
-            gitClient,
-            vmrInfo,
-            vmrForwardFlower,
-            vmrBackFlower,
-            telemetryRecorder,
             logger,
-            commentCollector,
             pullRequestCommenter,
             featureFlagService)
     {

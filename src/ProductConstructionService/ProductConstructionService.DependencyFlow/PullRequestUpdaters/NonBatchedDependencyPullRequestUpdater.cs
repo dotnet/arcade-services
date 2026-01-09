@@ -5,24 +5,23 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.WorkItems;
 
-namespace ProductConstructionService.DependencyFlow;
+namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
-internal class NonBatchedPullRequestUpdater : PullRequestUpdater
+internal class NonBatchedDependencyPullRequestUpdater : DependencyPullRequestUpdater
 {
     private readonly Lazy<Task<Subscription?>> _lazySubscription;
     private readonly NonBatchedPullRequestUpdaterId _id;
     private readonly BuildAssetRegistryContext _context;
-    private readonly ILogger<NonBatchedPullRequestUpdater> _logger;
+    private readonly ILogger<NonBatchedDependencyPullRequestUpdater> _logger;
     private readonly ICommentCollector _commentCollector;
     private readonly IPullRequestCommentBuilder _commentBuilder;
 
-    public NonBatchedPullRequestUpdater(
+    public NonBatchedDependencyPullRequestUpdater(
         NonBatchedPullRequestUpdaterId id,
         IMergePolicyEvaluator mergePolicyEvaluator,
         BuildAssetRegistryContext context,
@@ -33,16 +32,11 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         IRedisCacheFactory cacheFactory,
         IReminderManagerFactory reminderManagerFactory,
         ISqlBarClient sqlClient,
-        ILocalLibGit2Client gitClient,
-        IVmrInfo vmrInfo,
-        IPcsVmrForwardFlower vmrForwardFlower,
-        IPcsVmrBackFlower vmrBackFlower,
-        ITelemetryRecorder telemetryRecorder,
-        ILogger<NonBatchedPullRequestUpdater> logger,
         ICommentCollector commentCollector,
         IPullRequestCommenter pullRequestCommenter,
         IPullRequestCommentBuilder commentBuilder,
-        IFeatureFlagService featureFlagService)
+        IFeatureFlagService featureFlagService,
+        ILogger<NonBatchedDependencyPullRequestUpdater> logger)
         : base(
             id,
             mergePolicyEvaluator,
@@ -54,13 +48,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
             cacheFactory,
             reminderManagerFactory,
             sqlClient,
-            gitClient,
-            vmrInfo,
-            vmrForwardFlower,
-            vmrBackFlower,
-            telemetryRecorder,
             logger,
-            commentCollector,
             pullRequestCommenter,
             featureFlagService)
     {
@@ -72,26 +60,20 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         _commentBuilder = commentBuilder;
     }
 
-    public Guid SubscriptionId => _id.SubscriptionId;
-
     private async Task<Subscription?> RetrieveSubscription()
     {
-        Subscription? subscription = await _context.Subscriptions.FindAsync(SubscriptionId);
+        Subscription? subscription = await _context.Subscriptions.FindAsync(_id.SubscriptionId);
 
         // This can mainly happen during E2E tests where we delete a subscription
         // while some PRs have just been closed and there's a reminder on those still
         if (subscription == null)
         {
-            _logger.LogInformation(
-                $"Failed to find a subscription {SubscriptionId}. " +
-                "Possibly it was deleted while an existing PR is still tracked. Untracking PR...");
+            _logger.LogWarning(
+                "Failed to find a subscription {subscriptionId}. " +
+                "Possibly it was deleted while an existing PR is still tracked. Untracking PR...",
+                _id.SubscriptionId);
 
-            // We don't know if the subscription was a code flow one, so just unset both
-            await _pullRequestState.TryDeleteAsync();
-            await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);
-            await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: false);
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
-            await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: false);
+            await ClearAllStateAsync(clearPendingUpdates: true);
             return null;
         }
 
@@ -115,7 +97,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
     protected override async Task<(string repository, string branch)> GetTargetAsync()
     {
         Subscription subscription = await GetSubscription()
-            ?? throw new SubscriptionException($"Subscription '{SubscriptionId}' was not found...");
+            ?? throw new SubscriptionException($"Subscription '{_id.SubscriptionId}' was not found...");
         return (subscription.TargetRepository, subscription.TargetBranch);
     }
 
@@ -123,20 +105,5 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
     {
         Subscription? subscription = await GetSubscription();
         return subscription?.PolicyObject?.MergePolicies ?? [];
-    }
-
-    protected override async Task<bool> CheckInProgressPullRequestAsync(
-        InProgressPullRequest pullRequestCheck,
-        bool isCodeFlow)
-    {
-        Subscription? subscription = await GetSubscription();
-        if (subscription == null)
-        {
-            // If the subscription was deleted during tests (a frequent occurrence when we delete subscriptions at the end),
-            // we don't want to report this as a failure. For real PRs, it might be good to learn about this. 
-            return pullRequestCheck.Url?.Contains("maestro-auth-test") ?? false;
-        }
-
-        return await base.CheckInProgressPullRequestAsync(pullRequestCheck, isCodeFlow);
     }
 }

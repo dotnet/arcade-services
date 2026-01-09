@@ -181,7 +181,7 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
     protected PullRequestUpdaterId GetPullRequestUpdaterId()
     {
         return Subscription.PolicyObject.Batchable
-            ? new BatchedPullRequestUpdaterId(Subscription.TargetRepository, Subscription.TargetBranch)
-            : new NonBatchedPullRequestUpdaterId(Subscription.Id);
+            ? new BatchedPullRequestUpdaterId(Subscription.TargetRepository, Subscription.TargetBranch, Subscription.SourceEnabled)
+            : new NonBatchedPullRequestUpdaterId(Subscription.Id, Subscription.SourceEnabled);
     }
 }
