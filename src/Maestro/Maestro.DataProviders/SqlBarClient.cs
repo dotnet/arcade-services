@@ -645,8 +645,6 @@ public class SqlBarClient : ISqlBarClient
         existingSubscription.PullRequestFailureNotificationTags = subscription.PullRequestFailureNotificationTags;
         existingSubscription.Channel = subscription.Channel;
         existingSubscription.ExcludedAssets = updatedFilters;
-
-        _context.Subscriptions.Update(existingSubscription);
     }
 
     public async Task DeleteSubscriptionsAsync(
