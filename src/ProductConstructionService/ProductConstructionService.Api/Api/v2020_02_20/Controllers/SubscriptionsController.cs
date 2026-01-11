@@ -14,6 +14,7 @@ using Microsoft.Extensions.Options;
 using ProductConstructionService.Api.v2020_02_20.Models;
 using ProductConstructionService.Common.CodeflowHistory;
 using ProductConstructionService.WorkItems;
+using ProductConstructionService.Api.Controllers.Models;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
@@ -151,9 +152,9 @@ public class SubscriptionsController : v2019_01_16.Controllers.SubscriptionsCont
     }
 
     [HttpGet("{id}/codeflowhistory")]
-    [SwaggerApiResponse(HttpStatusCode.Accepted, Type = typeof(Subscription), Description = "Subscription update has been triggered")]
+    [SwaggerApiResponse(HttpStatusCode.Accepted, Type = typeof(Subscription), Description = "The codeflow history")]
     [ValidateModelState]
-    public override async Task<IActionResult> GetCodeflowHistory(Guid id)
+    public async Task<IActionResult> GetCodeflowHistory(Guid id)
     {
         return await GetCodeflowHistoryCore(id);
     }

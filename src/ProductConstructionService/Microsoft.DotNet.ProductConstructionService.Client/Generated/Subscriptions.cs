@@ -71,6 +71,11 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             CancellationToken cancellationToken = default
         );
 
+
+        Task<Models.CodeflowHistory> GetCodeflowHistoryAsync(
+            Guid id,
+            CancellationToken cancellationToken = default
+        );
     }
 
     internal partial class Subscriptions : IServiceOperations<ProductConstructionServiceApi>, ISubscriptions
@@ -749,6 +754,76 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                 Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedGetSubscriptionHistoryRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
+        }
+    
+        partial void HandleFailedGetCodeflowHistoryRequest(RestApiException ex);
+
+        public async Task<Models.CodeflowHistory> GetCodeflowHistoryAsync(
+            Guid id,
+            CancellationToken cancellationToken = default
+        )
+        {
+
+            const string apiVersion = "2020-02-20";
+
+            var _baseUri = Client.Options.BaseUri;
+            var _url = new RequestUriBuilder();
+            _url.Reset(_baseUri);
+            _url.AppendPath(
+                "/api/subscriptions/{id}/codeflowhistory".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
+                false);
+
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+
+
+            using (var _req = Client.Pipeline.CreateRequest())
+            {
+                _req.Uri = _url;
+                _req.Method = RequestMethod.Get;
+
+                using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
+                {
+                    if (_res.Status < 200 || _res.Status >= 300)
+                    {
+                        await OnGetCodeflowHistoryFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    if (_res.ContentStream == null)
+                    {
+                        await OnGetCodeflowHistoryFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    using (var _reader = new StreamReader(_res.ContentStream))
+                    {
+                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
+                        var _body = Client.Deserialize<Models.CodeflowHistory>(_content);
+                        return _body;
+                    }
+                }
+            }
+        }
+
+        internal async Task OnGetCodeflowHistoryFailed(Request req, Response res)
+        {
+            string content = null;
+            if (res.ContentStream != null)
+            {
+                using (var reader = new StreamReader(res.ContentStream))
+                {
+                    content = await reader.ReadToEndAsync().ConfigureAwait(false);
+                }
+            }
+
+            var ex = new RestApiException<Models.ApiError>(
+                req,
+                res,
+                content,
+                Client.Deserialize<Models.ApiError>(content)
+                );
+            HandleFailedGetCodeflowHistoryRequest(ex);
             HandleFailedRequest(ex);
             Client.OnFailedRequest(ex);
             throw ex;

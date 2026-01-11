@@ -1,8 +1,19 @@
-﻿@inherits ComponentBase
+﻿@using System.Linq.Expressions
+@using System.Text
+@using Microsoft.DotNet.ProductConstructionService.Client
+@using Microsoft.DotNet.ProductConstructionService.Client.Models
+@using Microsoft.FluentUI.AspNetCore.Components.Extensions
+@using ProductConstructionService.BarViz.Code.Helpers
+@using ProductConstructionService.BarViz.Components
+@using TextCopy
+@inject NavigationManager NavManager
+@inject IProductConstructionServiceApi PcsApi
+
+@inherits ComponentBase
 
 <h3>CodeflowHistoryGraph</h3>
 
-<svg viewBox="0 0 800 600" width="100%" height="auto" style="display:block; font-family:system-ui, sans-serif;">
+<svg viewBox="0 0 1000 600" width="100%" height="auto" style="display:block; font-family:system-ui, sans-serif;">
     <defs>
         <marker id="redarrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
             <path d="M0 0 L10 5 L0 10 Z" fill="#FA3755" />
@@ -15,179 +26,108 @@
 
     <!-- LEFT COLUMN -->
     <g class="column left" transform="translate(80, 50)">
-        <line x1="40" y1="0" x2="40" y2="@((leftColumn.Count - 1) * (BOX_HEIGHT + BOX_Y_MARGIN))" stroke="#bbb" stroke-width="1.5" />
-        @for (int i = 0; i < leftColumn.Count; i++)
+        @((MarkupString)$"<text x=\"0\" y=\"-10\" fill=\"#000\">{_leftColumnName}</text>")
+        <line x1="40" y1="0" x2="40" y2="@((_leftColumn.Count - 1) * (BOX_HEIGHT + BOX_Y_MARGIN))" stroke="#bbb" stroke-width="1.5" />
+        @for (int i = 0; i < _leftColumn.Count; i++)
         {
             <use href="#commitBox" x="0" y="@(i * (BOX_HEIGHT + BOX_Y_MARGIN))" />
-            @((MarkupString)$"<text x=\"{BOX_WIDTH/2}\" y=\"{i * (BOX_HEIGHT + BOX_Y_MARGIN) + 32}\" text-anchor=\"middle\" fill=\"#000\">{leftColumn[i]}</text>")
+            @((MarkupString)$"<text x=\"{BOX_WIDTH/2}\" y=\"{i * (BOX_HEIGHT + BOX_Y_MARGIN) + 32}\" text-anchor=\"middle\" fill=\"#000\">{_leftColumn[i]}</text>")
 
         }
     </g>
 
     <!-- RIGHT COLUMN -->
     <g class="column right" transform="translate(@(COL_SPACE), 50)">
-        <line x1="40" y1="0" x2="40" y2="@((rightColumn.Count - 1) * (BOX_HEIGHT + BOX_Y_MARGIN))" stroke="#bbb" stroke-width="1.5" />
-        @for (int i = 0; i < rightColumn.Count; i++)
+        @((MarkupString)$"<text x=\"0\" y=\"-10\" fill=\"#000\">{_rightColumnName}</text>")
+        <line x1="40" y1="0" x2="40" y2="@((_rightColumn.Count - 1) * (BOX_HEIGHT + BOX_Y_MARGIN))" stroke="#bbb" stroke-width="1.5" />
+        @for (int i = 0; i < _rightColumn.Count; i++)
         {
             <use href="#commitBox" x="0" y="@(i * (BOX_HEIGHT + BOX_Y_MARGIN))" />
-            @((MarkupString)$"<text x=\"{BOX_WIDTH / 2}\" y=\"{i * (BOX_HEIGHT + BOX_Y_MARGIN) + 32}\" text-anchor=\"middle\" fill=\"#000\">{rightColumn[i]}</text>")
+            @((MarkupString)$"<text x=\"{BOX_WIDTH / 2}\" y=\"{i * (BOX_HEIGHT + BOX_Y_MARGIN) + 32}\" text-anchor=\"middle\" fill=\"#000\">{_rightColumn[i]}</text>")
             ;
         }
     </g>
 
     <!-- ARROWS -->
-    @foreach (var ff in ForwardFlows)
+    @foreach (var ff in _forwardFlows)
     {
-        <line x1="@(80 + BOX_WIDTH)" y1="@(ff.Item1 * (BOX_HEIGHT + BOX_Y_MARGIN))" x2="@(COL_SPACE)" y2="@(ff.Item2 * (BOX_HEIGHT + BOX_Y_MARGIN))"
+        <line x1="@(80 + BOX_WIDTH)" y1="@((ff.Item1 + 1) * (BOX_HEIGHT + BOX_Y_MARGIN))" x2="@(COL_SPACE)" y2="@((ff.Item2 + 1) * (BOX_HEIGHT + BOX_Y_MARGIN))"
               stroke="#55FA37" stroke-width="3" marker-end="url(#greenarrow)" />
     }
 
-    @foreach (var ff in Backflows)
+    @foreach (var ff in _backflows)
     {
-        <line x1="@(COL_SPACE)" y1="@(ff.Item2 * (BOX_HEIGHT + BOX_Y_MARGIN))" x2="@(80 + BOX_WIDTH)" y2="@(ff.Item1 * (BOX_HEIGHT + BOX_Y_MARGIN))"
+        <line x1="@(COL_SPACE)" y1="@((ff.Item1 + 1) * (BOX_HEIGHT + BOX_Y_MARGIN))" x2="@(80 + BOX_WIDTH)" y2="@((ff.Item2 + 1) * (BOX_HEIGHT + BOX_Y_MARGIN))"
               stroke="#FA3755" stroke-width="3" marker-end="url(#redarrow)" />
     }
 </svg>
 
 @code {
+    [Parameter]
+    public Guid SubscriptionId { get; set; } = default!;
+
     private const int BOX_HEIGHT = 50;
     private const int BOX_WIDTH = 120;
     private const int BOX_Y_MARGIN = 30;
     private const int COL_SPACE = 500;
 
-    private CodeflowHistory codeflowGraph = new CodeflowHistory();
+    private string _leftColumnName = "Repo";
+    private string _rightColumnName = "VMR";
 
-    private List<string> leftColumn = ["abc123", "cbf123", "...[21 more \n commits]...", "xcv123", "zvn123"];
-    private List<string> rightColumn = ["wer865", "uwe765", "wet843", "wet845", "wry865", "iet854", "ery854"];
+    private List<string> _leftColumn = ["abc123", "cbf123", "...[21 more \n commits]...", "xcv123", "zvn123"];
+    private List<string> _rightColumn = ["wer865", "uwe765", "wet843", "wet845", "wry865", "iet854", "ery854"];
 
-    private List<(int, int)> ForwardFlows = [(1, 2), (4, 3)];
-    private List<(int, int)> Backflows = [(6, 2)];
+    private List<(int, int)> _forwardFlows = [(1, 2), (4, 3)];
+    private List<(int, int)> _backflows = [(6, 2)];
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        codeflowGraph = new CodeflowHistory();
-
-    }
-    public class CodeflowHistory
-    {
-        public IReadOnlyCollection<CodeflowGraphCommit> ForwardFlowHistory { get; set; } = [];
-        public IReadOnlyCollection<CodeflowGraphCommit> BackflowHistory { get; set; } = [];
-        public string RepoName { get; set; } = "";
-        public string VmrName { get; set; } = "";
-        public bool ResultIsOutdated { get; set; }
+        var codeflowHistory = await PcsApi.Subscriptions.GetCodeflowHistoryAsync(SubscriptionId);
+        //var codeflowHistory = new CodeflowHistory(_vmrCommits, _repoCommits, "SampleRepo", "SampleVMR", false);
+        BuildGraphVisualization(codeflowHistory);
     }
 
-    private static CodeflowLayoutModel BuildLayout(CodeflowHistory history)
+    public void BuildGraphVisualization(CodeflowHistory codeflowHistory)
     {
-        var leftCommits = history.ForwardFlowHistory
-            .Select((commit, index) =>
-                new LayoutCommit(
-                    commit.CommitSha,
-                    commit.Author,
-                    commit.Description,
-                    RowIndex: index,
-                    Column: GraphColumn.Left))
+        _leftColumnName = codeflowHistory.RepoName;
+        _rightColumnName = codeflowHistory.VmrName;
+
+        // 1. Columns
+        _leftColumn = codeflowHistory.BackflowHistory
+        .Where(c => !string.IsNullOrEmpty(c.CommitSha))
+        .Select(c => c.CommitSha[..7])
+        .ToList();
+
+        _rightColumn = codeflowHistory.ForwardFlowHistory
+        .Where(c => !string.IsNullOrEmpty(c.CommitSha))
+        .Select(c => c.CommitSha[..7])
+        .ToList();
+
+        HashSet<string> codeflowCommits = codeflowHistory.BackflowHistory.Select(c => c.SourceRepoFlowSha)
+            .Concat(codeflowHistory.ForwardFlowHistory.Select(c => c.SourceRepoFlowSha))
+            .Where(val => val is not null)
+            .ToHashSet();
+
+        // 2. SHA -> 0-based index maps
+        var leftMap = _leftColumn
+            .Select((sha, idx) => (sha, idx))
+            .ToDictionary(t => t.sha, t => t.idx);
+
+        var rightMap = _rightColumn
+            .Select((sha, idx) => (sha, idx))
+            .ToDictionary(t => t.sha, t => t.idx);
+
+        // 3. Build BF (vmr -> repo)
+        _backflows = codeflowHistory.BackflowHistory
+            .Where(c => !string.IsNullOrEmpty(c.SourceRepoFlowSha) && rightMap.ContainsKey(c.SourceRepoFlowSha))
+            .Select(c => (leftMap[c.CommitSha], rightMap[c.SourceRepoFlowSha!]))
             .ToList();
 
-        var rightCommits = history.BackflowHistory
-            .Select((commit, index) =>
-                new LayoutCommit(
-                    commit.CommitSha,
-                    commit.Author,
-                    commit.Description,
-                    RowIndex: index,
-                    Column: GraphColumn.Right))
+        // 4. Build FF (repo -> vmr)
+        _forwardFlows = codeflowHistory.ForwardFlowHistory
+            .Where(c => !string.IsNullOrEmpty(c.SourceRepoFlowSha) && leftMap.ContainsKey(c.SourceRepoFlowSha))
+            .Select(c => (rightMap[c.CommitSha], leftMap[c.SourceRepoFlowSha!]))
             .ToList();
-
-        var leftCommitBySha = leftCommits.ToDictionary(c => c.CommitSha);
-        var rightCommitBySha = rightCommits.ToDictionary(c => c.CommitSha);
-
-        var leftToRightArrows = new List<LayoutArrow>();
-        var rightToLeftArrows = new List<LayoutArrow>();
-
-        // Arrows originating from LEFT column
-        foreach (var commit in history.ForwardFlowHistory)
-        {
-            if (commit.SourceRepoFlowSha is null)
-            {
-                continue;
-            }
-
-            if (rightCommitBySha.ContainsKey(commit.SourceRepoFlowSha))
-            {
-                leftToRightArrows.Add(new LayoutArrow(
-                    FromCommitSha: commit.SourceRepoFlowSha,
-                    ToCommitSha: commit.CommitSha,
-                    FromColumn: GraphColumn.Right,
-                    ToColumn: GraphColumn.Left));
-            }
-        }
-
-        // Arrows originating from RIGHT column
-        foreach (var commit in history.BackflowHistory)
-        {
-            if (commit.SourceRepoFlowSha is null)
-            {
-                continue;
-            }
-
-            if (leftCommitBySha.ContainsKey(commit.SourceRepoFlowSha))
-            {
-                rightToLeftArrows.Add(new LayoutArrow(
-                    FromCommitSha: commit.SourceRepoFlowSha,
-                    ToCommitSha: commit.CommitSha,
-                    FromColumn: GraphColumn.Left,
-                    ToColumn: GraphColumn.Right));
-            }
-        }
-
-        return new CodeflowLayoutModel
-        {
-            LeftColumnName = history.RepoName,
-            RightColumnName = history.VmrName,
-
-            LeftCommits = leftCommits,
-            RightCommits = rightCommits,
-
-            LeftToRightArrows = leftToRightArrows,
-            RightToLeftArrows = rightToLeftArrows
-        };
     }
 
-    public record CodeflowGraphCommit(
-        string CommitSha,
-        string Author,
-        string Description,
-        string? SourceRepoFlowSha);
-
-    public enum GraphColumn
-    {
-        Left,
-        Right
-    }
-
-    public record LayoutCommit(
-        string CommitSha,
-        string Author,
-        string Description,
-        int RowIndex,
-        GraphColumn Column);
-
-    public record LayoutArrow(
-        string FromCommitSha,
-        string ToCommitSha,
-        GraphColumn FromColumn,
-        GraphColumn ToColumn);
-
-    private class CodeflowLayoutModel
-    {
-        public string LeftColumnName { get; init; } = "";
-        public string RightColumnName { get; init; } = "";
-
-        public IReadOnlyList<LayoutCommit> LeftCommits { get; init; } = [];
-        public IReadOnlyList<LayoutCommit> RightCommits { get; init; } = [];
-
-        public IReadOnlyList<LayoutArrow> LeftToRightArrows { get; init; } = [];
-        public IReadOnlyList<LayoutArrow> RightToLeftArrows { get; init; } = [];
-    }
 }

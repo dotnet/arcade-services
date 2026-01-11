@@ -18,6 +18,7 @@ using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 using Channel = Maestro.Data.Models.Channel;
 using SubscriptionDAO = Maestro.Data.Models.Subscription;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace ProductConstructionService.Api.Api.v2018_07_16.Controllers;
 
@@ -112,15 +113,15 @@ public class SubscriptionsController : ControllerBase
 
         return Ok(new Subscription(subscription));
     }
-
-    [HttpPost("{id}/codeflowhistory")]
-    [SwaggerApiResponse(HttpStatusCode.Accepted, Type = typeof(Subscription), Description = "Subscription update has been triggered")]
+    /*
+    [HttpGet("{id}/codeflowhistory")]
+    [SwaggerApiResponse(HttpStatusCode.Accepted, Type = typeof(CodeflowHistoryResult), Description = "The codeflow history")]
     [ValidateModelState]
     public virtual async Task<IActionResult> GetCodeflowHistory(Guid id)
     {
         return await GetCodeflowHistoryCore(id, false);
     }
-
+    */
     /// <summary>
     ///   Trigger a <see cref="Subscription"/> manually by id
     /// </summary>
@@ -208,16 +209,15 @@ public class SubscriptionsController : ControllerBase
         bool resultIsOutdated = IsCodeflowHistoryOutdated(subscription, cachedFlows) ||
             IsCodeflowHistoryOutdated(oppositeDirectionSubscription, oppositeCachedFlows);
 
-        var result = new CodeflowHistoryResult
-        {
-            ResultIsOutdated = resultIsOutdated,
-            ForwardFlowHistory = isForwardFlow
-            ? cachedFlows
-            : oppositeCachedFlows,
-            BackflowHistory = isForwardFlow
-            ? oppositeCachedFlows
-            : cachedFlows,
-        };
+        var forwardFlowHistory = isForwardFlow ? cachedFlows : oppositeCachedFlows;
+        var backflowHistory = isForwardFlow ? oppositeCachedFlows : cachedFlows;
+
+        var result = new CodeflowHistoryResult(
+            forwardFlowHistory,
+            backflowHistory,
+            subscription.TargetDirectory ?? subscription.SourceDirectory,
+            "VMR",
+            resultIsOutdated);
 
         return Ok(result);
     }
