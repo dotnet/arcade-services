@@ -8,9 +8,9 @@ namespace ProductConstructionService.WorkItems;
 
 public interface IReminderManager<T> where T : WorkItem
 {
-    Task SetReminderAsync(T reminder, TimeSpan dueTime, bool isCodeFlow);
+    Task SetReminderAsync(T reminder, TimeSpan dueTime);
 
-    Task UnsetReminderAsync(bool isCodeFlow);
+    Task UnsetReminderAsync();
 
     Task ReminderReceivedAsync();
 }
@@ -18,29 +18,32 @@ public interface IReminderManager<T> where T : WorkItem
 public class ReminderManager<T> : IReminderManager<T> where T : WorkItem
 {
     private readonly IWorkItemProducerFactory _workItemProducerFactory;
+    private readonly bool _isCodeFlow;
     private readonly IRedisCache<ReminderArguments> _receiptCache;
 
     public ReminderManager(
         IWorkItemProducerFactory workItemProducerFactory,
         IRedisCacheFactory cacheFactory,
-        string key)
+        string key,
+        bool isCodeFlow)
     {
         _workItemProducerFactory = workItemProducerFactory;
+        _isCodeFlow = isCodeFlow;
         _receiptCache = cacheFactory.Create<ReminderArguments>($"Reminder_{key}", includeTypeInKey: false);
     }
 
-    public async Task SetReminderAsync(T payload, TimeSpan visibilityTimeout, bool isCodeFlow)
+    public async Task SetReminderAsync(T payload, TimeSpan visibilityTimeout)
     {
         // Check if the updater already has a reminder. If it doesn't, we don't need to add another one
         if ((await _receiptCache.TryGetStateAsync()) == null)
         {
-            var client = _workItemProducerFactory.CreateProducer<T>(isCodeFlow);
+            var client = _workItemProducerFactory.CreateProducer<T>(_isCodeFlow);
             var sendReceipt = await client.ProduceWorkItemAsync(payload, visibilityTimeout);
             await _receiptCache.SetAsync(new ReminderArguments(sendReceipt.PopReceipt, sendReceipt.MessageId), visibilityTimeout);
         }
     }
 
-    public async Task UnsetReminderAsync(bool isCodeFlow)
+    public async Task UnsetReminderAsync()
     {
         var receipt = await _receiptCache.TryDeleteAsync();
         if (receipt == null)
@@ -48,7 +51,7 @@ public class ReminderManager<T> : IReminderManager<T> where T : WorkItem
             return;
         }
 
-        var client = _workItemProducerFactory.CreateProducer<T>(isCodeFlow);
+        var client = _workItemProducerFactory.CreateProducer<T>(_isCodeFlow);
 
         try
         {

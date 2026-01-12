@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using ProductConstructionService.DependencyFlow.Model;
+using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 using ProductConstructionService.DependencyFlow.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.WorkItemProcessors;
@@ -15,7 +16,7 @@ public class PullRequestCheckProcessor(IPullRequestUpdaterFactory updaterFactory
         PullRequestCheck workItem,
         CancellationToken cancellationToken)
     {
-        var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.UpdaterId));
+        var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.UpdaterId, workItem.IsCodeFlow));
         return await updater.CheckPullRequestAsync(workItem);
     }
 

@@ -9,7 +9,7 @@ internal class MockReminderManagerFactory : IReminderManagerFactory
 {
     public Dictionary<string, object> Reminders { get; } = [];
 
-    public IReminderManager<T> CreateReminderManager<T>(string key) where T : WorkItem
+    public IReminderManager<T> CreateReminderManager<T>(string key, bool isCodeFlow) where T : WorkItem
     {
         key = $"{typeof(T).Name}_{key}";
         return new MockReminderManager<T>(key, Reminders);
