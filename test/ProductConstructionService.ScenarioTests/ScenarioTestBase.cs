@@ -911,14 +911,11 @@ internal abstract partial class ScenarioTestBase
         var fetchUrl = GetRepoFetchUrl(org, repository);
         await RunGitAsync("clone", "--quiet", fetchUrl, directory);
 
-        using (ChangeDirectory(directory))
-        {
-            await RunGitAsync("config", "user.email", $"{TestParameters.GitHubUser}@test.com");
-            await RunGitAsync("config", "user.name", TestParameters.GitHubUser);
-            await RunGitAsync("config", "gc.auto", "0");
-            await RunGitAsync("config", "advice.detachedHead", "false");
-            await RunGitAsync("config", "color.ui", "false");
-        }
+        await RunGitAsync("-C", directory, "config", "user.email", $"{TestParameters.GitHubUser}@test.com");
+        await RunGitAsync("-C", directory, "config", "user.name", TestParameters.GitHubUser);
+        await RunGitAsync("-C", directory, "config", "gc.auto", "0");
+        await RunGitAsync("-C", directory, "config", "advice.detachedHead", "false");
+        await RunGitAsync("-C", directory, "config", "color.ui", "false");
 
         return shareable.TryTake()!;
     }
@@ -936,12 +933,9 @@ internal abstract partial class ScenarioTestBase
         var authUrl = GetAzDoRepoAuthUrl(repoName);
         await RunGitAsync("clone", "--quiet", authUrl, directory);
 
-        using (ChangeDirectory(directory))
-        {
-            // The GitHubUser and AzDoUser have the same user name so this uses the existing parameter
-            await RunGitAsync("config", "user.email", $"{TestParameters.GitHubUser}@test.com");
-            await RunGitAsync("config", "user.name", TestParameters.GitHubUser);
-        }
+        // The GitHubUser and AzDoUser have the same user name so this uses the existing parameter
+        await RunGitAsync("-C", directory, "config", "user.email", $"{TestParameters.GitHubUser}@test.com");
+        await RunGitAsync("-C", directory, "config", "user.name", TestParameters.GitHubUser);
 
         return shareable.TryTake()!;
     }
@@ -1264,6 +1258,7 @@ internal abstract partial class ScenarioTestBase
     {
         _namespaceIngested = true;
         var configuration = await TestParameters.ConfigRepoParser.ParseAsync(_temporaryDirectory.Directory, _testNamespace);
+        
         await PcsApi.Ingestion.IngestNamespaceAsync(
             _testNamespace,
             true,
