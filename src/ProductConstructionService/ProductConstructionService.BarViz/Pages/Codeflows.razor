@@ -46,7 +46,7 @@
 
 <PageTitle>Codeflows – Maestro++</PageTitle>
 
-<GridViewTemplate Title="VMR subscriptions" ShowSkeleton="CodeFlows == null">
+<GridViewTemplate Title="Codeflows" ShowSkeleton="CodeFlows == null">
     <Header>
         <FluentSelect TOption="DefaultChannel"
                       Items="@DefaultChannels"
@@ -74,7 +74,7 @@
                 <TemplateColumn Title="Repository" Sortable="true" SortBy="SortBy(sub => sub.MappingName)" Align="Align.Start">
                     <FluentAnchor Href="@context.RepositoryUrl" Target="_blank" Appearance="Appearance.Hypertext">@context.MappingName</FluentAnchor>
                 </TemplateColumn>
-                <TemplateColumn Title="Repo branch" Sortable="true" SortBy="SortBy(sub => sub.RepositoryBranch)" Align="Align.Center">
+                <TemplateColumn Title="Backflow branch" Sortable="true" SortBy="SortBy(sub => sub.RepositoryBranch)" Align="Align.Center">
                     <FluentLabel>@context.RepositoryBranch</FluentLabel>
                 </TemplateColumn>
                 <TemplateColumn Title="Forward flow channel" Sortable="true" SortBy="SortBy(sub => sub.ForwardflowSubscription != null ? sub.ForwardflowSubscription.Channel.Name : null)" Align="Align.Center">
@@ -135,6 +135,9 @@
 </GridViewTemplate>
 
 @code {
+    [SupplyParameterFromQuery(Name = "branch")]
+    private string? branchQuery { get; set; }
+
     string? VmrBranch = null;
     DefaultChannel? DefaultChannel = null;
     List<DefaultChannel> DefaultChannels = [];
@@ -164,7 +167,17 @@
             }
         }
 
-        DefaultChannel = DefaultChannels.FirstOrDefault(c => c.Branch == "main");
+        // Try to set the default channel from query parameter first, then fall back to "main"
+        if (!string.IsNullOrEmpty(branchQuery))
+        {
+            DefaultChannel = DefaultChannels.FirstOrDefault(c => c.Branch == branchQuery);
+        }
+        
+        if (DefaultChannel == null)
+        {
+            DefaultChannel = DefaultChannels.FirstOrDefault(c => c.Branch == "main");
+        }
+        
         VmrBranch = DefaultChannel?.Branch;
 
         await GenerateCodeflows();
@@ -180,7 +193,7 @@
 
         // Get all unique mappings
         var allMappings = subscriptions
-            .Select(s => s.SourceDirectory ?? s.TargetDirectory)
+            .Select(s => string.IsNullOrEmpty(s.TargetDirectory) ? s.SourceDirectory : s.TargetDirectory)
             .Where(s => !string.IsNullOrEmpty(s))
             .Distinct()
             .ToList();
@@ -212,7 +225,18 @@
     {
         DefaultChannel = channel;
         VmrBranch = channel.Branch;
+        UpdateQueryParams();
         await GenerateCodeflows();
+    }
+
+    private void UpdateQueryParams()
+    {
+        var newUri = NavManager.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["branch"] = VmrBranch
+        });
+
+        NavManager.NavigateTo(newUri);
     }
 
     async Task ShowDetails(Subscription subscription)

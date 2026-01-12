@@ -15,8 +15,8 @@
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.5.1" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.6.1" />
     <PackageVersion Include="Azure.Identity" Version="1.17.1" />
-    <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.4.0" />
-    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.5.0" />
+    <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.4.0-beta.1" />
+    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.5.0-beta.1" />
     <PackageVersion Include="Azure.ResourceManager.AppContainers" Version="1.5.0" />
     <PackageVersion Include="Azure.Storage.Queues" Version="12.24.0" />
     <PackageVersion Include="Blazored.SessionStorage" Version="2.4.0" />
@@ -30,11 +30,11 @@
     <PackageVersion Include="Microsoft.AspNetCore.ApiVersioning.Swashbuckle" Version="$(MicrosoftAspNetCoreApiVersioningSwashbuckleVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.ApiVersioning" Version="$(MicrosoftAspNetCoreApiVersioningVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.1" />
     <PackageVersion Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" Version="1.0.0-preview2-final" />
     <PackageVersion Include="Microsoft.AspNetCore.WebHooks.Receivers" Version="1.0.0-preview2-final" />
-    <PackageVersion Include="Microsoft.Azure.StackExchangeRedis" Version="3.1.0" />
+    <PackageVersion Include="Microsoft.Azure.StackExchangeRedis" Version="3.3.1" />
     <PackageVersion Include="Microsoft.Build.Tasks.Core" Version="18.0.2" />
     <PackageVersion Include="Microsoft.Build.Utilities.Core" Version="18.0.2" />
     <PackageVersion Include="Microsoft.Build" Version="18.0.2" />
@@ -47,13 +47,14 @@
     <PackageVersion Include="Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen" Version="$(MicrosoftDotNetInternalTestingDependencyInjectionCodeGenVersion)" />
     <PackageVersion Include="Microsoft.DotNet.Internal.Testing.Utility" Version="$(MicrosoftDotNetInternalTestingUtilityVersion)" />
     <PackageVersion Include="Microsoft.DotNet.Kusto" Version="$(MicrosoftDotNetKustoVersion)" />
+    <PackageVersion Include="Microsoft.DotNet.MaestroConfiguration.Client" Version="$(MicrosoftDotNetMaestroConfigurationClientPackageVersion)" />
     <PackageVersion Include="Microsoft.DotNet.Services.Utility" Version="$(MicrosoftDotNetServicesUtilityVersion)" />
     <PackageVersion Include="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="$(MicrosoftDotNetSwaggerGeneratorMSBuildVersion)" />
     <PackageVersion Include="Microsoft.DotNet.VersionTools" Version="$(MicrosoftDotNetVersionToolsVersion)" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.1" />
@@ -77,17 +78,17 @@
     <PackageVersion Include="Moq" Version="4.18.4" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageVersion Include="NRedisStack" Version="0.12.0" />
-    <PackageVersion Include="NuGet.Packaging" Version="7.0.0" />
+    <PackageVersion Include="NuGet.Packaging" Version="7.0.1" />
     <PackageVersion Include="NUnit" Version="4.4.0" />
     <PackageVersion Include="NUnit3TestAdapter" Version="5.0.0" />
     <PackageVersion Include="Octokit" Version="14.0.0" />
     <PackageVersion Include="Octokit.Webhooks.AspNetCore" Version="2.4.1" />
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.13.1" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.14.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.14.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.14.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.12.0-beta.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.14.0-beta.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.14.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.13.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.14.0" />
     <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerGen" Version="9.0.6" />
     <PackageVersion Include="Swashbuckle.AspNetCore.Newtonsoft" Version="8.1.1" />
     <PackageVersion Include="System.Drawing.Common" Version="10.0.0" />
