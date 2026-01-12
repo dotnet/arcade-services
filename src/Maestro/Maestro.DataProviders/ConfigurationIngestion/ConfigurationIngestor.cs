@@ -12,6 +12,7 @@ using Maestro.DataProviders.ConfigurationIngestion.Model;
 using Maestro.DataProviders.ConfigurationIngestion.Validations;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.DotNet.DarcLib;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion;
@@ -19,12 +20,14 @@ namespace Maestro.DataProviders.ConfigurationIngestion;
 internal partial class ConfigurationIngestor(
         BuildAssetRegistryContext context,
         ISqlBarClient sqlBarClient,
-        IDistributedLock distributedLock)
+        IDistributedLock distributedLock,
+        IGitHubInstallationIdResolver installationIdResolver)
     : IConfigurationIngestor
 {
     private readonly BuildAssetRegistryContext _context = context;
     private readonly ISqlBarClient _sqlBarClient = sqlBarClient;
     private readonly IDistributedLock _distributedLock = distributedLock;
+    private readonly IGitHubInstallationIdResolver _installationIdResolver = installationIdResolver;
 
     public async Task<ConfigurationUpdates> IngestConfigurationAsync(
         ConfigurationData configurationData,
@@ -94,6 +97,10 @@ internal partial class ConfigurationIngestor(
 
         // Update the rest of the entities
         await CreateSubscriptions(configurationDataUpdate.Subscriptions.Creations, namespaceEntity, existingChannels);
+        await EnsureRepositoryRegistrationForCreatedSubscriptionsAsync(configurationDataUpdate.Subscriptions.Creations
+                .Select(s => s.Values.TargetRepository)
+                .Distinct()
+                .ToList());
         await UpdateSubscriptions(configurationDataUpdate.Subscriptions.Updates, namespaceEntity, existingChannels);
 
         CreateDefaultChannels(configurationDataUpdate.DefaultChannels.Creations, namespaceEntity, existingChannels);
@@ -312,7 +319,7 @@ internal partial class ConfigurationIngestor(
             _context.RepositoryBranches.Update(dbRepositoryBranch);
         }
     }
-    
+
     private async Task DeleteRepositoryBranches(
         IEnumerable<IngestedBranchMergePolicies> removedBRanchMergePolicies,
         Namespace namespaceEntity)
@@ -332,5 +339,65 @@ internal partial class ConfigurationIngestor(
         }
 
         _context.RepositoryBranches.RemoveRange(branchRemovals);
+    }
+
+    /// <summary>
+    /// Verifies that the repositories are registered in the database (and that they have a valid installation ID).
+    /// </summary>
+    private async Task EnsureRepositoryRegistrationForCreatedSubscriptionsAsync(IReadOnlyList<string> targetRepositories)
+    {
+        List<Repository> existing = await _context.Repositories
+            .Where(r => targetRepositories.Contains(r.RepositoryName))
+            .ToListAsync();
+
+        async Task<long> GetInstallationId(string repoUri)
+        {
+            if (repoUri.Contains("github.com"))
+            {
+                var installationId = await _installationIdResolver.GetInstallationIdForRepository(repoUri);
+
+                if (!installationId.HasValue)
+                {
+                    throw new IngestionEntityValidationException($"No Maestro GitHub application installation found for repository '{repoUri}'. " +
+                        "The Maestro github application must be installed by the repository's owner and given access to the repository.");
+                }
+
+                return installationId.Value; 
+            }
+            else
+            {
+                // In the case of a non github repository, we don't have an app installation,
+                // but we should add an entry in the repositories table, as this is required when
+                // adding a new subscription policy.
+                return default;
+            }
+        }
+
+        List<Repository> newRepositories = [];
+        foreach (var newRepositoryUri in targetRepositories.Except(existing.Select(r => r.RepositoryName)))
+        {
+            var installationId = await GetInstallationId(newRepositoryUri);
+
+            newRepositories.Add(new Repository
+            {
+                RepositoryName = newRepositoryUri,
+                InstallationId = installationId
+            });
+        }
+        if (newRepositories.Count > 0)
+        {
+            _context.Repositories.AddRange(newRepositories);
+        }
+
+        // we don't need to call context.UpdateRange since these area already tracked by EF
+        foreach (var existingRepo in existing)
+        {
+            if (existingRepo.InstallationId > 0 || existingRepo.RepositoryName.Contains("dev.azure.com"))
+            {
+                continue;
+            }
+
+            existingRepo.InstallationId = await GetInstallationId(existingRepo.RepositoryName);
+        }
     }
 }
