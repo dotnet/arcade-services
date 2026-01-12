@@ -389,7 +389,7 @@ internal partial class ConfigurationIngestor(
             _context.Repositories.AddRange(newRepositories);
         }
 
-        // we don't need to call context.UpdateRange since these area already tracked EF
+        // we don't need to call context.UpdateRange since these area already tracked by EF
         foreach (var existingRepo in existing)
         {
             if (existingRepo.InstallationId > 0 || existingRepo.RepositoryName.Contains("dev.azure.com"))
