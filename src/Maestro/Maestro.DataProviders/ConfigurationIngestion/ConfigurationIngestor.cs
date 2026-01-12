@@ -78,7 +78,7 @@ internal partial class ConfigurationIngestor(
         // Deletions
         await DeleteSubscriptions(configurationDataUpdate.Subscriptions.Removals);
         await DeleteDefaultChannels(configurationDataUpdate.DefaultChannels.Removals, namespaceEntity);
-        await DeleteRepositoryBranches( configurationDataUpdate.RepositoryBranches.Removals, namespaceEntity);
+        await DeleteRepositoryBranches(configurationDataUpdate.RepositoryBranches.Removals, namespaceEntity);
         await DeleteChannels(configurationDataUpdate.Channels.Removals);
 
         var existingChannels = _context.Channels.ToDictionary(c => c.Name);
