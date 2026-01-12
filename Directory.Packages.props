@@ -30,11 +30,11 @@
     <PackageVersion Include="Microsoft.AspNetCore.ApiVersioning.Swashbuckle" Version="$(MicrosoftAspNetCoreApiVersioningSwashbuckleVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.ApiVersioning" Version="$(MicrosoftAspNetCoreApiVersioningVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.1" />
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.1" />
     <PackageVersion Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" Version="1.0.0-preview2-final" />
     <PackageVersion Include="Microsoft.AspNetCore.WebHooks.Receivers" Version="1.0.0-preview2-final" />
-    <PackageVersion Include="Microsoft.Azure.StackExchangeRedis" Version="3.1.0" />
+    <PackageVersion Include="Microsoft.Azure.StackExchangeRedis" Version="3.3.1" />
     <PackageVersion Include="Microsoft.Build.Tasks.Core" Version="18.0.2" />
     <PackageVersion Include="Microsoft.Build.Utilities.Core" Version="18.0.2" />
     <PackageVersion Include="Microsoft.Build" Version="18.0.2" />
@@ -51,10 +51,10 @@
     <PackageVersion Include="Microsoft.DotNet.Services.Utility" Version="$(MicrosoftDotNetServicesUtilityVersion)" />
     <PackageVersion Include="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="$(MicrosoftDotNetSwaggerGeneratorMSBuildVersion)" />
     <PackageVersion Include="Microsoft.DotNet.VersionTools" Version="$(MicrosoftDotNetVersionToolsVersion)" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.1" />
@@ -78,7 +78,7 @@
     <PackageVersion Include="Moq" Version="4.18.4" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageVersion Include="NRedisStack" Version="0.12.0" />
-    <PackageVersion Include="NuGet.Packaging" Version="7.0.0" />
+    <PackageVersion Include="NuGet.Packaging" Version="7.0.1" />
     <PackageVersion Include="NUnit" Version="4.4.0" />
     <PackageVersion Include="NUnit3TestAdapter" Version="5.0.0" />
     <PackageVersion Include="Octokit" Version="14.0.0" />

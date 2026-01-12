@@ -51,7 +51,14 @@
             </span>
         </FluentMenuItem>
 
-        <FluentMenuItem OnClick="@(() => Enable(false))">
+        <FluentMenuItem OnClick="@ForceTrigger">
+            Force-trigger subscription
+            <span slot="start">
+                <FluentIcon Value="@(new Icons.Regular.Size16.FlashSparkle())" Color="@Color.Neutral" />
+            </span>
+        </FluentMenuItem>
+
+        <FluentMenuItem OnClick="@Disable">
             Disable subscription
             <span slot="start">
                 <FluentIcon Value="@(new Icons.Regular.Size16.ArrowSyncOff())" Color="@Color.Neutral" />
@@ -60,7 +67,7 @@
     }
     else
     {
-        <FluentMenuItem OnClick="@(() => Enable(true))">
+        <FluentMenuItem OnClick="@Enable">
             Enable subscription
             <span slot="start">
                 <FluentIcon Value="@(new Icons.Regular.Size16.ArrowSync())" Color="@Color.Neutral" />
@@ -80,13 +87,17 @@
 
     [Parameter, EditorRequired]
     public required Func<Subscription, Task> ShowDetails { get; set; }
+    
+    async Task Trigger() => await Trigger(false);
 
-    async Task Trigger()
+    async Task ForceTrigger() => await Trigger(true);
+
+    async Task Trigger(bool force)
     {
         try
         {
-            await PcsApi.Subscriptions.TriggerSubscriptionAsync(Subscription.Id);
-            ToastService.ShowProgress("Subscription triggered");
+            await PcsApi.Subscriptions.TriggerSubscriptionAsync(Subscription.Id, force);
+            ToastService.ShowProgress($"Subscription {(force ? "force-" : "")}triggered");
         }
         catch
         {
@@ -94,11 +105,19 @@
         }
     }
 
-    async Task Enable(bool enable)
+    async Task Enable()
     {
         await UpdateSubscription(sub =>
         {
-            sub.Enabled = enable;
+            sub.Enabled = true;
+        });
+    }
+
+    async Task Disable()
+    {
+        await UpdateSubscription(sub =>
+        {
+            sub.Enabled = false;
         });
     }
 

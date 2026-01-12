@@ -21,9 +21,9 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         var productRepo = GetGitHubRepoUrl(TestRepository.TestRepo1Name);
         var targetBranchName = GetTestBranchName();
 
-        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(channelName);
+        await CreateTestChannelAsync(channelName);
 
-        await using AsyncDisposableValue<string> subscriptionId = await CreateForwardFlowSubscriptionAsync(
+        var subscriptionId = await CreateForwardFlowSubscriptionAsync(
             channelName,
             TestRepository.TestRepo1Name,
             TestRepository.VmrTestRepoName,
@@ -49,7 +49,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             newFileInVmrPath1,
             newFileInVmrPath2,
             channelName,
-            subscriptionId.Value,
+            subscriptionId,
             async () =>
             {
                 var pr = await WaitForPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
@@ -79,9 +79,9 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         var productRepo = GetGitHubRepoUrl(TestRepository.TestRepo1Name);
         var targetBranchName = GetTestBranchName();
 
-        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(channelName);
+        await CreateTestChannelAsync(channelName);
 
-        await using AsyncDisposableValue<string> subscriptionId = await CreateForwardFlowSubscriptionAsync(
+        var subscriptionId = await CreateForwardFlowSubscriptionAsync(
             channelName,
             TestRepository.TestRepo1Name,
             TestRepository.VmrTestRepoName,
@@ -107,7 +107,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             newFileInVmrPath1,
             newFileInVmrPath2,
             channelName,
-            subscriptionId.Value,
+            subscriptionId,
             async () =>
             {
                 var pr = await WaitForPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
@@ -250,9 +250,9 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         var productRepo = GetGitHubRepoUrl(TestRepository.TestRepo1Name);
         var targetBranchName = GetTestBranchName();
 
-        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(channelName);
+        await CreateTestChannelAsync(channelName);
 
-        await using AsyncDisposableValue<string> subscriptionId = await CreateForwardFlowSubscriptionAsync(
+        var subscriptionId = await CreateForwardFlowSubscriptionAsync(
             channelName,
             TestRepository.TestRepo1Name,
             TestRepository.VmrTestRepoName,
@@ -278,7 +278,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
            newFileInVmrPath1,
            newFileInVmrPath2,
            channelName,
-           subscriptionId.Value,
+           subscriptionId,
            async () =>
            {
                var pr = await WaitForPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
@@ -287,7 +287,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                await MergePullRequestAsync(TestRepository.VmrTestRepoName, pr);
 
                TestContext.WriteLine("Triggering the subscription again (to speed things up)");
-               await TriggerSubscriptionAsync(subscriptionId.Value);
+               await TriggerSubscriptionAsync(subscriptionId);
 
                try
                {
@@ -325,9 +325,9 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         var productRepo = GetGitHubRepoUrl(TestRepository.TestRepo1Name);
         var targetBranchName = GetTestBranchName();
 
-        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(channelName);
+        await CreateTestChannelAsync(channelName);
 
-        await using AsyncDisposableValue<string> subscriptionId = await CreateBackwardFlowSubscriptionAsync(
+        var subscriptionId = await CreateBackwardFlowSubscriptionAsync(
             channelName,
             TestRepository.VmrTestRepoName,
             TestRepository.TestRepo1Name,
@@ -373,7 +373,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
 
                         TestContext.WriteLine("Triggering the subscription");
                         // Now trigger the subscription
-                        await TriggerSubscriptionAsync(subscriptionId.Value);
+                        await TriggerSubscriptionAsync(subscriptionId);
 
                         TestContext.WriteLine("Waiting for the PR to show up");
                         Octokit.PullRequest pr = await WaitForPullRequestAsync(TestRepository.TestRepo1Name, targetBranchName);
@@ -408,7 +408,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         await AddBuildToChannelAsync(build.Id, channelName);
 
                         TestContext.WriteLine("Triggering the subscription");
-                        await TriggerSubscriptionAsync(subscriptionId.Value);
+                        await TriggerSubscriptionAsync(subscriptionId);
 
                         TestContext.WriteLine("Waiting for conflict comment to show up on the PR");
                         pr = await WaitForPullRequestComment(TestRepository.TestRepo1Name, targetBranchName, "conflict");
@@ -417,7 +417,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                         await MergePullRequestAsync(TestRepository.TestRepo1Name, pr);
 
                         TestContext.WriteLine("Triggering the subscription again (to speed things up)");
-                        await TriggerSubscriptionAsync(subscriptionId.Value);
+                        await TriggerSubscriptionAsync(subscriptionId);
 
                         try
                         {

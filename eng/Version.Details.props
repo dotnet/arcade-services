@@ -28,8 +28,8 @@ This file should be imported by eng/Versions.props
     <!-- dotnet/dnceng dependencies -->
     <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.25608.3</MicrosoftDncEngConfigurationBootstrapPackageVersion>
     <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.25608.3</MicrosoftDncEngSecretManagerPackageVersion>
-    <!-- dotnet/arcade-services dependencies -->
-    <MicrosoftDotNetMaestroConfigurationClientPackageVersion>1.1.0-beta.26058.4</MicrosoftDotNetMaestroConfigurationClientPackageVersion>
+    <!-- _git/maestro-configuration dependencies -->
+    <MicrosoftDotNetMaestroConfigurationClientPackageVersion>1.1.0-beta.26059.2</MicrosoftDotNetMaestroConfigurationClientPackageVersion>
   </PropertyGroup>
   <!--Property group for alternate package version names-->
   <PropertyGroup>
@@ -56,7 +56,7 @@ This file should be imported by eng/Versions.props
     <!-- dotnet/dnceng dependencies -->
     <MicrosoftDncEngConfigurationBootstrapVersion>$(MicrosoftDncEngConfigurationBootstrapPackageVersion)</MicrosoftDncEngConfigurationBootstrapVersion>
     <MicrosoftDncEngSecretManagerVersion>$(MicrosoftDncEngSecretManagerPackageVersion)</MicrosoftDncEngSecretManagerVersion>
-    <!-- dotnet/arcade-services dependencies -->
+    <!-- _git/maestro-configuration dependencies -->
     <MicrosoftDotNetMaestroConfigurationClientVersion>$(MicrosoftDotNetMaestroConfigurationClientPackageVersion)</MicrosoftDotNetMaestroConfigurationClientVersion>
   </PropertyGroup>
 </Project>
