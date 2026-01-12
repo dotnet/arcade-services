@@ -21,29 +21,59 @@
             <path d="M0 0 L10 5 L0 10 Z" fill="#55FA37" />
         </marker>
         <rect id="commitBox" width="@(BOX_WIDTH)" height="@(BOX_HEIGHT)" rx="4" fill="#f5f5f5" stroke="#333" />
+        <rect id="whiteBox" width="@(BOX_WIDTH_2)" height="@(BOX_HEIGHT)" rx="4" fill="#f5f5f5" stroke="#333" />
     </defs>
 
     <!-- LEFT COLUMN -->
     <g class="column left" transform="translate(80, 50)">
         @((MarkupString)$"<text x=\"0\" y=\"-10\" fill=\"#000\">{_leftColumnName}</text>")
-        <line x1="60" y1="0" x2="40" y2="@((_leftColumn.Count - 1) * (BOX_HEIGHT + BOX_Y_MARGIN))" stroke="#bbb" stroke-width="1.5" />
+        <line x1="60" y1="0" x2="60" y2="@((_leftColumn.Count - 1) * (BOX_HEIGHT + BOX_Y_MARGIN))" stroke="#bbb" stroke-width="1.5" />
         @for (int i = 0; i < _leftColumn.Count; i++)
         {
-            <use href="#commitBox" x="0" y="@(i * (BOX_HEIGHT + BOX_Y_MARGIN))" />
-            @((MarkupString)$"<text x=\"{BOX_WIDTH / 2}\" y=\"{i * (BOX_HEIGHT + BOX_Y_MARGIN) + 32}\" text-anchor=\"middle\" fill=\"#000\">{_leftColumn[i]}</text>")
+            if (!_leftColumn[i].Contains("hidden"))
+            {
+                <use href="#commitBox" x="0" y="@(i * (BOX_HEIGHT + BOX_Y_MARGIN))" />
+                @((MarkupString)$"<text x=\"{BOX_WIDTH / 2}\" y=\"{i * (BOX_HEIGHT + BOX_Y_MARGIN) + 32}\" text-anchor=\"middle\" fill=\"#000\">{_leftColumn[i]}</text>")
+                ;
+            }
+            else
+            {
 
+                <use href="#whiteBox" x="-20" y="@(i * (BOX_HEIGHT + BOX_Y_MARGIN))" />
+                var firstLine = _leftColumn[i].Split('(')[0];
+                var secondLine = "(" + _leftColumn[i].Split('(')[1];
+                @((MarkupString)$"<text x=\"{BOX_WIDTH / 2}\" y=\"{i * (BOX_HEIGHT + BOX_Y_MARGIN) + 22}\" text-anchor=\"middle\" fill=\"#000\">{firstLine}</text>")
+                ;
+                @((MarkupString)$"<text x=\"{BOX_WIDTH / 2}\" y=\"{i * (BOX_HEIGHT + BOX_Y_MARGIN) + 42}\" text-anchor=\"middle\" fill=\"#000\">{secondLine}</text>")
+                ;
+            }
         }
     </g>
 
     <!-- RIGHT COLUMN -->
     <g class="column right" transform="translate(@(COL_SPACE), 50)">
         @((MarkupString)$"<text x=\"0\" y=\"-10\" fill=\"#000\">{_rightColumnName}</text>")
-        <line x1="60" y1="0" x2="40" y2="@((_rightColumn.Count - 1) * (BOX_HEIGHT + BOX_Y_MARGIN))" stroke="#bbb" stroke-width="1.5" />
+        <line x1="60" y1="0" x2="60" y2="@((_rightColumn.Count - 1) * (BOX_HEIGHT + BOX_Y_MARGIN))" stroke="#bbb" stroke-width="1.5" />
         @for (int i = 0; i < _rightColumn.Count; i++)
         {
-            <use href="#commitBox" x="0" y="@(i * (BOX_HEIGHT + BOX_Y_MARGIN))" />
-            @((MarkupString)$"<text x=\"{BOX_WIDTH / 2}\" y=\"{i * (BOX_HEIGHT + BOX_Y_MARGIN) + 32}\" text-anchor=\"middle\" fill=\"#000\">{_rightColumn[i]}</text>")
-            ;
+            if (!_rightColumn[i].Contains("hidden"))
+            {
+                <use href="#commitBox" x="0" y="@(i * (BOX_HEIGHT + BOX_Y_MARGIN))" />
+                @((MarkupString)$"<text x=\"{BOX_WIDTH / 2}\" y=\"{i * (BOX_HEIGHT + BOX_Y_MARGIN) + 32}\" text-anchor=\"middle\" fill=\"#000\">{_rightColumn[i]}</text>")
+                ;
+
+            }
+            else
+            {
+                <use href="#whiteBox" x="-20" y="@(i * (BOX_HEIGHT + BOX_Y_MARGIN))" />
+                var firstLine = _rightColumn[i].Split('(')[0];
+                var secondLine = "(" + _rightColumn[i].Split('(')[1];
+                @((MarkupString)$"<text x=\"{BOX_WIDTH / 2}\" y=\"{i * (BOX_HEIGHT + BOX_Y_MARGIN) + 22}\" text-anchor=\"middle\" fill=\"#000\">{firstLine}</text>")
+                ;
+                @((MarkupString)$"<text x=\"{BOX_WIDTH / 2}\" y=\"{i * (BOX_HEIGHT + BOX_Y_MARGIN) + 42}\" text-anchor=\"middle\" fill=\"#000\">{secondLine}</text>")
+                ;
+
+            }
         }
     </g>
 
@@ -65,8 +95,9 @@
     [Parameter]
     public Guid SubscriptionId { get; set; } = default!;
 
-    private const int BOX_HEIGHT = 50;
+    private const int BOX_HEIGHT = 55;
     private const int BOX_WIDTH = 120;
+    private const int BOX_WIDTH_2 = 160;
     private const int BOX_Y_MARGIN = 30;
     private const int COL_SPACE = 500;
 
@@ -81,8 +112,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        //var codeflowHistory = await PcsApi.Subscriptions.GetCodeflowHistoryAsync(SubscriptionId);
-        var codeflowHistory = new CodeflowHistory(_vmrCommits, _repoCommits, "SampleRepo", "SampleVMR", false);
+        var codeflowHistory = await PcsApi.Subscriptions.GetCodeflowHistoryAsync(SubscriptionId);
+        // var codeflowHistory = new CodeflowHistory(_vmrCommits, _repoCommits, "SampleRepo", "SampleVMR", false);
         BuildGraphVisualization(codeflowHistory);
     }
 
@@ -137,7 +168,7 @@
 
     public static List<string> CompactifyCommitsColumn(List<string> commits, HashSet<string> codeflowCommits)
     {
-        string CommitsHiddenString(string commitA, string commitB, int num) => $"({compactedCommits} commits hidden)";
+        string CommitsHiddenString(string commitA, string commitB, int num) => $"{commitA}...{commitB} ({num} commits hidden)";
         // $"[{firstCompactedCommit}]...[{lastCompactedCommit}]\n({compactedCommits} commits hidden)"
         string firstCompactedCommit = "";
         string lastCompactedCommit = "";
@@ -152,11 +183,7 @@
             var d = Math.Min(commits.Count - 1, i + 1);
 
             // check if there's no codeflows +/- 2 commits around current commit
-            if (!codeflowCommits.Contains(commits[i]) &&
-                !codeflowCommits.Contains(commits[a]) &&
-                !codeflowCommits.Contains(commits[b]) &&
-                !codeflowCommits.Contains(commits[c]) &&
-                !codeflowCommits.Contains(commits[d]))
+            if (!codeflowCommits.Contains(commits[i]))
             {
                 if (compactedCommits == 0)
                 {
@@ -194,10 +221,10 @@
         new("a1b2c3", "Alice", "Fix login bug", null),
         new("d4e5f6", "Bob", "Add unit tests", "w1x2y3"),
         new("g7h8i9", "Carol", "Refactor auth module", null),
-        new("dontcompactmeyet", "Carol", "Refactor auth module", null),
-        new("compactMePlease", "Carol", "Refactor auth module", null),
-        new("metoomenotsocompacted", "Carol", "Refactor auth module", null),
-        new("imnotcompacted:)", "Carol", "Refactor auth module", null),
+        new("k2d9n0", "Carol", "Refactor auth module", null),
+        new("sh7d66e", "Carol", "Refactor auth module", null),
+        new("uej367", "Carol", "Refactor auth module", null),
+        new("xj39tt)", "Carol", "Refactor auth module", null),
         new("j1k2l3", "Dave", "Update README", null),
         new("m4n5o6", "Eve", "Optimize query", null),
         new("p7q8r9", "Frank", "Fix typo", "w4x5y6"),
