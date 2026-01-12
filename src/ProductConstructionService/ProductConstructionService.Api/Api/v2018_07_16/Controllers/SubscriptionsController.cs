@@ -189,8 +189,8 @@ public class SubscriptionsController : ControllerBase
             .Include(sub => sub.LastAppliedBuild)
             .Include(sub => sub.Channel)
             .Where(sub =>
-                sub.SourceRepository == subscription.TargetRepository ||
-                sub.TargetRepository == subscription.SourceRepository)
+                sub.SourceRepository == subscription.TargetRepository
+                && sub.TargetRepository == subscription.SourceRepository)
             .FirstOrDefaultAsync(sub => sub.SourceEnabled == true);
 
         bool isForwardFlow = !string.IsNullOrEmpty(subscription.TargetDirectory);
@@ -213,17 +213,29 @@ public class SubscriptionsController : ControllerBase
         var backflowHistory = isForwardFlow ? oppositeCachedFlows : cachedFlows;
 
         forwardFlowHistory = forwardFlowHistory
-           .Select(commitGraph => commitGraph with { CommitSha = Commit.GetShortSha(commitGraph.CommitSha)})
-           .ToList();
+           .Select(commitGraph => commitGraph with
+           {
+               CommitSha = Commit.GetShortSha(commitGraph.CommitSha),
+               SourceRepoFlowSha = !string.IsNullOrEmpty(commitGraph.SourceRepoFlowSha)
+               ? Commit.GetShortSha(commitGraph.SourceRepoFlowSha)
+               : ""
+           }).ToList();
 
         backflowHistory = backflowHistory
-           .Select(commitGraph => commitGraph with { CommitSha = Commit.GetShortSha(commitGraph.CommitSha) })
+           .Select(commitGraph => commitGraph with {
+               CommitSha = Commit.GetShortSha(commitGraph.CommitSha),
+               SourceRepoFlowSha = !string.IsNullOrEmpty(commitGraph.SourceRepoFlowSha)
+               ? Commit.GetShortSha(commitGraph.SourceRepoFlowSha)
+               : ""
+           })
            .ToList();
 
         var result = new CodeflowHistoryResult(
             forwardFlowHistory,
             backflowHistory,
-            subscription.TargetDirectory ?? subscription.SourceDirectory,
+            string.IsNullOrEmpty(subscription.TargetDirectory)
+            ? subscription.SourceDirectory
+            : subscription.TargetBranch,
             "VMR",
             resultIsOutdated);
 
