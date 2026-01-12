@@ -6,14 +6,13 @@
 @using ProductConstructionService.BarViz.Code.Helpers
 @using ProductConstructionService.BarViz.Components
 @using TextCopy
-@inject NavigationManager NavManager
 @inject IProductConstructionServiceApi PcsApi
 
 @inherits ComponentBase
 
 <h3>CodeflowHistoryGraph</h3>
 
-<svg viewBox="0 0 1000 600" width="100%" height="auto" style="display:block; font-family:system-ui, sans-serif;">
+<svg viewBox="0 0 800 1300" width="100%">
     <defs>
         <marker id="redarrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
             <path d="M0 0 L10 5 L0 10 Z" fill="#FA3755" />
@@ -27,11 +26,11 @@
     <!-- LEFT COLUMN -->
     <g class="column left" transform="translate(80, 50)">
         @((MarkupString)$"<text x=\"0\" y=\"-10\" fill=\"#000\">{_leftColumnName}</text>")
-        <line x1="40" y1="0" x2="40" y2="@((_leftColumn.Count - 1) * (BOX_HEIGHT + BOX_Y_MARGIN))" stroke="#bbb" stroke-width="1.5" />
+        <line x1="60" y1="0" x2="40" y2="@((_leftColumn.Count - 1) * (BOX_HEIGHT + BOX_Y_MARGIN))" stroke="#bbb" stroke-width="1.5" />
         @for (int i = 0; i < _leftColumn.Count; i++)
         {
             <use href="#commitBox" x="0" y="@(i * (BOX_HEIGHT + BOX_Y_MARGIN))" />
-            @((MarkupString)$"<text x=\"{BOX_WIDTH/2}\" y=\"{i * (BOX_HEIGHT + BOX_Y_MARGIN) + 32}\" text-anchor=\"middle\" fill=\"#000\">{_leftColumn[i]}</text>")
+            @((MarkupString)$"<text x=\"{BOX_WIDTH / 2}\" y=\"{i * (BOX_HEIGHT + BOX_Y_MARGIN) + 32}\" text-anchor=\"middle\" fill=\"#000\">{_leftColumn[i]}</text>")
 
         }
     </g>
@@ -39,7 +38,7 @@
     <!-- RIGHT COLUMN -->
     <g class="column right" transform="translate(@(COL_SPACE), 50)">
         @((MarkupString)$"<text x=\"0\" y=\"-10\" fill=\"#000\">{_rightColumnName}</text>")
-        <line x1="40" y1="0" x2="40" y2="@((_rightColumn.Count - 1) * (BOX_HEIGHT + BOX_Y_MARGIN))" stroke="#bbb" stroke-width="1.5" />
+        <line x1="60" y1="0" x2="40" y2="@((_rightColumn.Count - 1) * (BOX_HEIGHT + BOX_Y_MARGIN))" stroke="#bbb" stroke-width="1.5" />
         @for (int i = 0; i < _rightColumn.Count; i++)
         {
             <use href="#commitBox" x="0" y="@(i * (BOX_HEIGHT + BOX_Y_MARGIN))" />
@@ -82,8 +81,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var codeflowHistory = await PcsApi.Subscriptions.GetCodeflowHistoryAsync(SubscriptionId);
-        //var codeflowHistory = new CodeflowHistory(_vmrCommits, _repoCommits, "SampleRepo", "SampleVMR", false);
+        //var codeflowHistory = await PcsApi.Subscriptions.GetCodeflowHistoryAsync(SubscriptionId);
+        var codeflowHistory = new CodeflowHistory(_vmrCommits, _repoCommits, "SampleRepo", "SampleVMR", false);
         BuildGraphVisualization(codeflowHistory);
     }
 
@@ -94,19 +93,24 @@
 
         // 1. Columns
         _leftColumn = codeflowHistory.BackflowHistory
-        .Where(c => !string.IsNullOrEmpty(c.CommitSha))
-        .Select(c => c.CommitSha[..7])
+        .Select(c => c.CommitSha)
         .ToList();
 
         _rightColumn = codeflowHistory.ForwardFlowHistory
-        .Where(c => !string.IsNullOrEmpty(c.CommitSha))
-        .Select(c => c.CommitSha[..7])
+        .Select(c => c.CommitSha)
         .ToList();
 
-        HashSet<string> codeflowCommits = codeflowHistory.BackflowHistory.Select(c => c.SourceRepoFlowSha)
-            .Concat(codeflowHistory.ForwardFlowHistory.Select(c => c.SourceRepoFlowSha))
-            .Where(val => val is not null)
-            .ToHashSet();
+        HashSet<string> codeflowCommits = codeflowHistory.BackflowHistory
+        .Where(c => !string.IsNullOrEmpty(c.SourceRepoFlowSha))
+        .SelectMany(c => new[] { c.SourceRepoFlowSha, c.CommitSha })
+        .Concat(codeflowHistory.ForwardFlowHistory
+            .Where(c => !string.IsNullOrEmpty(c.SourceRepoFlowSha))
+            .SelectMany(c => new[] { c.SourceRepoFlowSha, c.CommitSha }))
+        .Where(val => val is not null)
+        .ToHashSet();
+
+        _leftColumn = CompactifyCommitsColumn(_leftColumn, codeflowCommits);
+        _rightColumn = CompactifyCommitsColumn(_rightColumn, codeflowCommits);
 
         // 2. SHA -> 0-based index maps
         var leftMap = _leftColumn
@@ -120,14 +124,95 @@
         // 3. Build BF (vmr -> repo)
         _backflows = codeflowHistory.BackflowHistory
             .Where(c => !string.IsNullOrEmpty(c.SourceRepoFlowSha) && rightMap.ContainsKey(c.SourceRepoFlowSha))
-            .Select(c => (leftMap[c.CommitSha], rightMap[c.SourceRepoFlowSha!]))
+            .Select(c => (rightMap[c.SourceRepoFlowSha!], leftMap[c.CommitSha]))
             .ToList();
 
         // 4. Build FF (repo -> vmr)
         _forwardFlows = codeflowHistory.ForwardFlowHistory
             .Where(c => !string.IsNullOrEmpty(c.SourceRepoFlowSha) && leftMap.ContainsKey(c.SourceRepoFlowSha))
-            .Select(c => (rightMap[c.CommitSha], leftMap[c.SourceRepoFlowSha!]))
+            .Select(c => (leftMap[c.SourceRepoFlowSha!], rightMap[c.CommitSha]))
             .ToList();
+
     }
 
+    public static List<string> CompactifyCommitsColumn(List<string> commits, HashSet<string> codeflowCommits)
+    {
+        string CommitsHiddenString(string commitA, string commitB, int num) => $"({compactedCommits} commits hidden)";
+        // $"[{firstCompactedCommit}]...[{lastCompactedCommit}]\n({compactedCommits} commits hidden)"
+        string firstCompactedCommit = "";
+        string lastCompactedCommit = "";
+        int compactedCommits = 0;
+        List<string> result = [];
+
+        for (int i = 0; i < commits.Count; i++)
+        {
+            var a = Math.Max(0, i - 1);
+            var b = Math.Max(0, i - 1);
+            var c = Math.Min(commits.Count - 1, i + 1);
+            var d = Math.Min(commits.Count - 1, i + 1);
+
+            // check if there's no codeflows +/- 2 commits around current commit
+            if (!codeflowCommits.Contains(commits[i]) &&
+                !codeflowCommits.Contains(commits[a]) &&
+                !codeflowCommits.Contains(commits[b]) &&
+                !codeflowCommits.Contains(commits[c]) &&
+                !codeflowCommits.Contains(commits[d]))
+            {
+                if (compactedCommits == 0)
+                {
+                    firstCompactedCommit = commits[i];
+                }
+                compactedCommits++;
+                lastCompactedCommit = commits[i];
+            }
+            else
+            {
+                if (compactedCommits == 1)
+                {
+                    result.Add(firstCompactedCommit);
+                    compactedCommits = 0;
+                    firstCompactedCommit = "";
+                }
+                else if (compactedCommits > 0)
+                {
+                    result.Add(CommitsHiddenString(firstCompactedCommit, lastCompactedCommit, compactedCommits));
+                    compactedCommits = 0;
+                    firstCompactedCommit = "";
+                }
+                result.Add(commits[i]);
+            }
+        }
+        if (compactedCommits > 0)
+        {
+            result.Add(CommitsHiddenString(firstCompactedCommit, lastCompactedCommit, compactedCommits));
+        }
+        return result;
+    }
+
+    private List<CodeflowGraphCommit> _repoCommits = new List<CodeflowGraphCommit>
+    {
+        new("a1b2c3", "Alice", "Fix login bug", null),
+        new("d4e5f6", "Bob", "Add unit tests", "w1x2y3"),
+        new("g7h8i9", "Carol", "Refactor auth module", null),
+        new("dontcompactmeyet", "Carol", "Refactor auth module", null),
+        new("compactMePlease", "Carol", "Refactor auth module", null),
+        new("metoomenotsocompacted", "Carol", "Refactor auth module", null),
+        new("imnotcompacted:)", "Carol", "Refactor auth module", null),
+        new("j1k2l3", "Dave", "Update README", null),
+        new("m4n5o6", "Eve", "Optimize query", null),
+        new("p7q8r9", "Frank", "Fix typo", "w4x5y6"),
+        new("u6i7o7", "Grace", "Remove unused code", null),
+        new("b3n5n7", "Grace", "Remove unused code", null),
+    };
+
+    private List<CodeflowGraphCommit> _vmrCommits = new List<CodeflowGraphCommit>
+    {
+        new("w1x2y3", "Henry", "Merge feature branch", null),
+        new("w4x5y6", "Ivy", "Hotfix production bug", null),
+        new("w7x8y9", "Jack", "Update docs", "a1b2c3"),
+        new("w0x1y2", "Kate", "Add CI pipeline", null),
+        new("w3x4y5", "Leo", "Refactor build scripts", "g7h8i9"),
+        new("w6x7y8", "Mona", "Improve logging", null),
+        new("w9x0y1", "Nina", "Update dependencies", null),
+    };
 }

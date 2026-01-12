@@ -212,6 +212,14 @@ public class SubscriptionsController : ControllerBase
         var forwardFlowHistory = isForwardFlow ? cachedFlows : oppositeCachedFlows;
         var backflowHistory = isForwardFlow ? oppositeCachedFlows : cachedFlows;
 
+        forwardFlowHistory = forwardFlowHistory
+           .Select(commitGraph => commitGraph with { CommitSha = Commit.GetShortSha(commitGraph.CommitSha)})
+           .ToList();
+
+        backflowHistory = backflowHistory
+           .Select(commitGraph => commitGraph with { CommitSha = Commit.GetShortSha(commitGraph.CommitSha) })
+           .ToList();
+
         var result = new CodeflowHistoryResult(
             forwardFlowHistory,
             backflowHistory,
