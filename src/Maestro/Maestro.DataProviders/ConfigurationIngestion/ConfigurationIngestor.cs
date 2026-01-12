@@ -412,8 +412,12 @@ internal partial class ConfigurationIngestor(
                 InstallationId = installationId
             });
         }
+        if (newRepositories.Count > 0)
+        {
+            _context.Repositories.AddRange(newRepositories);
+        }
 
-        List<Repository> updatedRepositories = [];
+        // we don't need to call context.UpdateRange since these area already tracked EF
         foreach (var existingRepo in existing)
         {
             if (existingRepo.InstallationId > 0 || existingRepo.RepositoryName.Contains("dev.azure.com"))
@@ -422,16 +426,6 @@ internal partial class ConfigurationIngestor(
             }
 
             existingRepo.InstallationId = await GetInstallationId(existingRepo.RepositoryName);
-            updatedRepositories.Add(existingRepo);
-        }
-
-        if (newRepositories.Count > 0)
-        {
-            _context.Repositories.AddRange(newRepositories);
-        }
-        if (updatedRepositories.Count > 0)
-        {
-            _context.Repositories.UpdateRange(updatedRepositories);
         }
     }
 }
