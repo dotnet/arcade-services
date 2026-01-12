@@ -30,6 +30,11 @@ internal abstract partial class ScenarioTestBase
     private static readonly TimeSpan WAIT_DELAY = TimeSpan.FromSeconds(25);
 
     private string _packageNameSalt = null!;
+    private string _testNamespace = null!;
+    private string[] _configRepoDarcParams = [];
+    private const string ScenarioTestBaseBranch = "origin/scenario-test";
+    private bool _namespaceIngested = false;
+    protected TemporaryDirectory _temporaryDirectory = null!;
 
     // We need this for tests where we have multiple updates
     private readonly Dictionary<long, DateTimeOffset> _lastUpdatedPrTimes = [];
@@ -41,9 +46,33 @@ internal abstract partial class ScenarioTestBase
     protected static AzureDevOpsClient AzDoClient => TestParameters.AzDoClient;
 
     [SetUp]
-    public void BaseSetup()
+    public async Task BaseSetup()
     {
         _packageNameSalt = Guid.NewGuid().ToString().Substring(0, 8);
+        _testNamespace = $"pcs-scenario-{Guid.NewGuid().ToString().Substring(0, 8)}";
+        _temporaryDirectory = await CloneAzDoRepositoryAsync(TestRepository.MaestroConfigurationRepoName);
+        _configRepoDarcParams = [
+            "--configuration-repository", _temporaryDirectory.Directory,
+            "--configuration-base-branch", ScenarioTestBaseBranch,
+            "--configuration-branch", _testNamespace,
+            "--no-pr"
+        ];
+        _namespaceIngested = false;
+        await RunGitAsync("-C", _temporaryDirectory.Directory, "config", "user.email", $"{TestParameters.GitHubUser}@test.com");
+        await RunGitAsync("-C", _temporaryDirectory.Directory, "config", "user.name", TestParameters.GitHubUser);
+    }
+
+    [TearDown]
+    public async Task BaseTearDown()
+    {
+        if (_namespaceIngested)
+        {
+            await PcsApi.Ingestion.DeleteNamespaceAsync(_testNamespace, saveChanges: true);
+            await RunGitAsync("-C", _temporaryDirectory.Directory, "checkout", ScenarioTestBaseBranch);
+            await RunGitAsync("-C", _temporaryDirectory.Directory, "branch", "-D", _testNamespace); 
+        }
+
+        _temporaryDirectory.Dispose();
     }
 
     protected async Task<Octokit.PullRequest> WaitForPullRequestAsync(string targetRepo, string targetBranch)
@@ -318,7 +347,7 @@ internal abstract partial class ScenarioTestBase
         }
     }
 
-    private static async Task ValidatePullRequestDependenciesInDirectories(string pullRequestBaseBranch, Dictionary<string, List<DependencyDetail>> expectedDependenciesByDirectory, int tries = 1)
+    private async Task ValidatePullRequestDependenciesInDirectories(string pullRequestBaseBranch, Dictionary<string, List<DependencyDetail>> expectedDependenciesByDirectory, int tries = 1)
     {
         var triesRemaining = tries;
         while (triesRemaining-- > 0)
@@ -330,7 +359,7 @@ internal abstract partial class ScenarioTestBase
             {
                 TestContext.WriteLine($"Validating dependencies in directory: {directory}");
                 
-                var actualDependencies = await RunDarcAsync("get-dependencies", "--relative-base-path", directory);
+                var actualDependencies = await RunDarcAsync(includeConfigurationRepoParams: false, "get-dependencies", "--relative-base-path", directory);
                 var expectedDependenciesString = DependencyCollectionStringBuilder.GetString(expectedDependencies);
 
                 actualDependencies.Should().Be(expectedDependenciesString);
@@ -375,7 +404,7 @@ internal abstract partial class ScenarioTestBase
         }
     }
 
-    protected static async Task CheckBatchedAzDoPullRequest(
+    protected async Task CheckBatchedAzDoPullRequest(
         string[] sourceRepoNames,
         string targetRepoName,
         string targetBranch,
@@ -401,7 +430,7 @@ internal abstract partial class ScenarioTestBase
             notExpectedFeeds: null);
     }
 
-    protected static async Task CheckNonBatchedAzDoPullRequest(
+    protected async Task CheckNonBatchedAzDoPullRequest(
         string sourceRepoName,
         string targetRepoName,
         string targetBranch,
@@ -428,7 +457,7 @@ internal abstract partial class ScenarioTestBase
             notExpectedFeeds);
     }
 
-    protected static async Task<string> CheckAzDoPullRequest(
+    protected async Task<string> CheckAzDoPullRequest(
         string expectedPRTitle,
         string targetRepoName,
         string targetBranch,
@@ -472,7 +501,7 @@ internal abstract partial class ScenarioTestBase
         return pullRequest.Value.HeadBranch;
     }
 
-    private static async Task ValidatePullRequestDependencies(string pullRequestBaseBranch, List<DependencyDetail> expectedDependencies, int tries = 1)
+    private async Task ValidatePullRequestDependencies(string pullRequestBaseBranch, List<DependencyDetail> expectedDependencies, int tries = 1)
     {
         var triesRemaining = tries;
         while (triesRemaining-- > 0)
@@ -480,7 +509,7 @@ internal abstract partial class ScenarioTestBase
             await CheckoutRemoteBranchAsync(pullRequestBaseBranch);
             await RunGitAsync("pull");
 
-            var actualDependencies = await RunDarcAsync("get-dependencies");
+            var actualDependencies = await RunDarcAsync(includeConfigurationRepoParams: false, "get-dependencies");
             var expectedDependenciesString = DependencyCollectionStringBuilder.GetString(expectedDependencies);
 
             actualDependencies.Should().Be(expectedDependenciesString);
@@ -544,22 +573,36 @@ internal abstract partial class ScenarioTestBase
         return $"https://dev.azure.com/{azdoAccount}/{azdoProject}/_apis/git/repositories/{repoName}";
     }
 
-    protected static Task<string> RunDarcAsyncWithInput(string input, params string[] args)
+    protected async Task<string> RunDarcAsyncWithInput(string input, params string[] args)
     {
-        return TestHelpers.RunExecutableAsyncWithInput(TestParameters.DarcExePath, input,
+        var ret = await TestHelpers.RunExecutableAsyncWithInput(TestParameters.DarcExePath, input,
         [
             .. args,
             .. TestParameters.BaseDarcRunArgs,
+            .. _configRepoDarcParams
         ]);
+
+        await IngestNamespace();
+
+        return ret;
     }
 
-    protected static Task<string> RunDarcAsync(params string[] args)
+    protected async Task<string> RunDarcAsync(bool includeConfigurationRepoParams = false, params string[] args)
     {
-        return TestHelpers.RunExecutableAsync(TestParameters.DarcExePath,
+        var configRepoArgs = includeConfigurationRepoParams ? _configRepoDarcParams : [];
+        var ret = await TestHelpers.RunExecutableAsync(TestParameters.DarcExePath,
         [
             .. args,
+            .. configRepoArgs,
             .. TestParameters.BaseDarcRunArgs,
         ]);
+
+        if (includeConfigurationRepoParams)
+        {
+            await IngestNamespace();
+        }
+
+        return ret;
     }
 
     protected static Task<string> RunGitAsync(params string[] args)
@@ -567,55 +610,18 @@ internal abstract partial class ScenarioTestBase
         return TestHelpers.RunExecutableAsync(TestParameters.GitExePath, args);
     }
 
-    protected static async Task<AsyncDisposableValue<string>> CreateTestChannelAsync(string testChannelName)
-    {
-        var message = "";
+    protected async Task CreateTestChannelAsync(string testChannelName)
+        => await RunDarcAsync(includeConfigurationRepoParams: true, "add-channel", "--name", testChannelName, "--classification", "test");
 
-        try
-        {
-            message = await DeleteTestChannelAsync(testChannelName);
-        }
-        catch (ScenarioTestException)
-        {
-            // If there are subscriptions associated the the channel then a previous test clean up failed
-            // Run a subscription clean up and try again
-            try
-            {
-                await DeleteSubscriptionsForChannel(testChannelName);
-                await DeleteTestChannelAsync(testChannelName);
-            }
-            catch (ScenarioTestException)
-            {
-                // Otherwise ignore failures from delete-channel, its just a pre-cleanup that isn't really part of the test
-                // And if the test previously succeeded then it'll fail because the channel doesn't exist
-            }
-        }
-
-        await RunDarcAsync("add-channel", "--name", testChannelName, "--classification", "test");
-
-        return AsyncDisposableValue.Create(testChannelName, async () =>
-        {
-            TestContext.WriteLine($"Cleaning up Test Channel {testChannelName}");
-            try
-            {
-                var doubleDelete = await DeleteTestChannelAsync(testChannelName);
-            }
-            catch (ScenarioTestException)
-            {
-                // Ignore failures from delete-channel on cleanup, this delete is here to ensure that the channel is deleted
-                // even if the test does not do an explicit delete as part of the test. Other failures are typical that the channel has already been deleted.
-            }
-        });
-    }
-    protected static async Task AddDependenciesToLocalRepo(string repoPath, string name, string repoUri, bool isToolset = false)
+    protected async Task AddDependenciesToLocalRepo(string repoPath, string name, string repoUri, bool isToolset = false)
     {
         using (ChangeDirectory(repoPath))
         {
-            await RunDarcAsync(["add-dependency", "--name", name, "--type", isToolset ? "toolset" : "product", "--repo", repoUri, "--version", "0.0.1"]);
+            await RunDarcAsync(includeConfigurationRepoParams: false, ["add-dependency", "--name", name, "--type", isToolset ? "toolset" : "product", "--repo", repoUri, "--version", "0.0.1"]);
         }
     }
 
-    protected static async Task AddDependenciesToLocalRepoWithDirectory(
+    protected async Task AddDependenciesToLocalRepoWithDirectory(
         string repoPath,
         List<AssetData> dependencies,
         string repoUri,
@@ -654,36 +660,36 @@ internal abstract partial class ScenarioTestBase
 
                 var parameterArr = parameters.ToArray();
 
-                await RunDarcAsync(parameterArr);
+                await RunDarcAsync(includeConfigurationRepoParams: false, parameterArr);
             }
         }
     }
-    protected static async Task<string> GetTestChannelsAsync()
+    protected async Task<string> GetTestChannelsAsync()
     {
-        return await RunDarcAsync("get-channels");
+        return await RunDarcAsync(includeConfigurationRepoParams: false, "get-channels");
     }
 
-    protected static async Task<string?> DeleteTestChannelAsync(string testChannelName)
+    protected async Task<string?> DeleteTestChannelAsync(string testChannelName)
     {
-        return await RunDarcAsync("delete-channel", "--name", testChannelName);
+        return await RunDarcAsync(includeConfigurationRepoParams: true, "delete-channel", "--name", testChannelName);
     }
 
-    protected static async Task<string> AddDefaultTestChannelAsync(string testChannelName, string repoUri, string branchName)
+    protected async Task<string> AddDefaultTestChannelAsync(string testChannelName, string repoUri, string branchName)
     {
-        return await RunDarcAsync("add-default-channel", "--channel", testChannelName, "--repo", repoUri, "--branch", branchName, "-q");
+        return await RunDarcAsync(includeConfigurationRepoParams: true, "add-default-channel", "--channel", testChannelName, "--repo", repoUri, "--branch", branchName, "-q");
     }
 
-    protected static async Task<string> GetDefaultTestChannelsAsync(string repoUri, string branch)
+    protected async Task<string> GetDefaultTestChannelsAsync(string repoUri, string branch)
     {
-        return await RunDarcAsync("get-default-channels", "--source-repo", repoUri, "--branch", branch);
+        return await RunDarcAsync(includeConfigurationRepoParams: false, "get-default-channels", "--source-repo", repoUri, "--branch", branch);
     }
 
-    protected static async Task DeleteDefaultTestChannelAsync(string testChannelName, string repoUri, string branch)
+    protected async Task DeleteDefaultTestChannelAsync(string testChannelName, string repoUri, string branch)
     {
-        await RunDarcAsync("delete-default-channel", "--channel", testChannelName, "--repo", repoUri, "--branch", branch);
+        await RunDarcAsync(includeConfigurationRepoParams: true, "delete-default-channel", "--channel", testChannelName, "--repo", repoUri, "--branch", branch);
     }
 
-    protected static async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(
+    protected async Task<string> CreateSubscriptionAsync(
         string sourceChannelName,
         string sourceRepo,
         string targetRepo,
@@ -710,82 +716,58 @@ internal abstract partial class ScenarioTestBase
             .. additionalOptions ?? []
         ];
 
-        var output = await RunDarcAsync(command);
+        var output = await RunDarcAsync(includeConfigurationRepoParams: true, command);
 
-        Match match = Regex.Match(output, "Successfully created new subscription with id '([a-f0-9-]+)'");
+        Match match = Regex.Match(output, "Successfully added subscription with id '([a-f0-9-]+)' on branch");
         if (!match.Success)
         {
             throw new ScenarioTestException("Unable to create subscription.");
         }
 
-        var subscriptionId = match.Groups[1].Value;
-        return AsyncDisposableValue.Create(subscriptionId, async () =>
-        {
-            TestContext.WriteLine($"Cleaning up Test Subscription {subscriptionId}");
-            try
-            {
-                await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet");
-            }
-            catch (ScenarioTestException)
-            {
-                // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
-            }
-        });
+        return match.Groups[1].Value;
     }
 
-    protected static async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string yamlDefinition)
+    protected async Task<string> CreateSubscriptionAsync(string yamlDefinition)
     {
-        var output = await RunDarcAsyncWithInput(yamlDefinition, "add-subscription", "-q", "--read-stdin", "--no-trigger");
+        var output = await RunDarcAsyncWithInput(yamlDefinition, ["add-subscription", "-q", "--read-stdin", "--no-trigger"]);
 
-        Match match = Regex.Match(output, "Successfully created new subscription with id '([a-f0-9-]+)'");
-        if (match.Success)
+        Match match = Regex.Match(output, "Successfully added subscription with id '([a-f0-9-]+)' on branch");
+        if (!match.Success)
         {
-            var subscriptionId = match.Groups[1].Value;
-            return AsyncDisposableValue.Create(subscriptionId, async () =>
-            {
-                TestContext.WriteLine($"Cleaning up Test Subscription {subscriptionId}");
-                try
-                {
-                    await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet");
-                }
-                catch (ScenarioTestException)
-                {
-                    // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
-                }
-            });
+            throw new ScenarioTestException("Unable to create subscription.");
         }
 
-        throw new ScenarioTestException("Unable to create subscription.");
+        return match.Groups[1].Value;
     }
 
-    protected static async Task<string> GetSubscriptionInfo(string subscriptionId)
+    protected async Task<string> GetSubscriptionInfo(string subscriptionId)
     {
-        return await RunDarcAsync("get-subscriptions", "--ids", subscriptionId);
+        return await RunDarcAsync(includeConfigurationRepoParams: false, "get-subscriptions", "--ids", subscriptionId);
     }
 
-    protected static async Task<string> GetSubscriptions(string channelName)
+    protected async Task<string> GetSubscriptions(string channelName)
     {
-        return await RunDarcAsync("get-subscriptions", "--channel", channelName);
+        return await RunDarcAsync(includeConfigurationRepoParams: false, "get-subscriptions", "--channel", channelName);
     }
 
-    protected static async Task SetSubscriptionStatusByChannel(bool enableSub, string channelName)
+    protected async Task SetSubscriptionStatusByChannel(bool enableSub, string channelName)
     {
-        await RunDarcAsync("subscription-status", enableSub ? "--enable" : "-d", "--channel", channelName, "--quiet");
+        await RunDarcAsync(includeConfigurationRepoParams: true, "subscription-status", enableSub ? "--enable" : "-d", "--channel", channelName, "--quiet");
     }
 
-    protected static async Task SetSubscriptionStatusById(bool enableSub, string subscriptionId)
+    protected async Task SetSubscriptionStatusById(bool enableSub, string subscriptionId)
     {
-        await RunDarcAsync("subscription-status", "--id", subscriptionId, enableSub ? "--enable" : "-d", "--quiet");
+        await RunDarcAsync(includeConfigurationRepoParams: true, "subscription-status", "--id", subscriptionId, enableSub ? "--enable" : "-d", "--quiet");
     }
 
-    protected static async Task<string> DeleteSubscriptionsForChannel(string channelName)
+    protected async Task<string> DeleteSubscriptionsForChannel(string channelName)
     {
-        return await RunDarcAsync("delete-subscriptions", "--channel", channelName, "--quiet");
+        return await RunDarcAsync(includeConfigurationRepoParams: true, "delete-subscriptions", "--channel", channelName, "--quiet");
     }
 
-    protected static async Task<string> DeleteSubscriptionById(string subscriptionId)
+    protected async Task<string> DeleteSubscriptionById(string subscriptionId)
     {
-        return await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet");
+        return await RunDarcAsync(includeConfigurationRepoParams: true, "delete-subscriptions", "--id", subscriptionId, "--quiet");
     }
 
     protected static Task<Build> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, List<AssetData> assets)
@@ -816,19 +798,19 @@ internal abstract partial class ScenarioTestBase
         return build;
     }
 
-    protected static async Task<string> GetDarcBuildAsync(int buildId)
+    protected async Task<string> GetDarcBuildAsync(int buildId)
     {
-        var buildString = await RunDarcAsync("get-build", "--id", buildId.ToString());
+        var buildString = await RunDarcAsync(includeConfigurationRepoParams: false, "get-build", "--id", buildId.ToString());
         return buildString;
     }
 
-    protected static async Task<string> UpdateBuildAsync(int buildId, string updateParams)
+    protected async Task<string> UpdateBuildAsync(int buildId, string updateParams)
     {
-        var buildString = await RunDarcAsync("update-build", "--id", buildId.ToString(), updateParams);
+        var buildString = await RunDarcAsync(includeConfigurationRepoParams: false, "update-build", "--id", buildId.ToString(), updateParams);
         return buildString;
     }
 
-    protected static async Task AddDependenciesToLocalRepo(
+    protected async Task AddDependenciesToLocalRepo(
         string repoPath,
         List<AssetData> dependencies,
         string repoUri,
@@ -860,12 +842,12 @@ internal abstract partial class ScenarioTestBase
 
                 var parameterArr = parameters.ToArray();
 
-                await RunDarcAsync(parameterArr);
+                await RunDarcAsync(includeConfigurationRepoParams: false, parameterArr);
             }
         }
     }
 
-    protected static async Task<string> GatherDrop(int buildId, string outputDir, bool includeReleased, string extraAssetsRegex)
+    protected async Task<string> GatherDrop(int buildId, string outputDir, bool includeReleased, string extraAssetsRegex)
     {
         string[] args = ["gather-drop", "--id", buildId.ToString(), "--dry-run", "--output-dir", outputDir];
 
@@ -879,7 +861,7 @@ internal abstract partial class ScenarioTestBase
             args = [.. args, "--always-download-asset-filters", extraAssetsRegex];
         }
 
-        return await RunDarcAsync(args);
+        return await RunDarcAsync(includeConfigurationRepoParams: false, args);
     }
 
     protected static async Task TriggerSubscriptionAsync(string subscriptionId)
@@ -888,20 +870,20 @@ internal abstract partial class ScenarioTestBase
         await PcsApi.Subscriptions.TriggerSubscriptionAsync(0, force: false, Guid.Parse(subscriptionId));
     }
 
-    protected static async Task<IAsyncDisposable> AddBuildToChannelAsync(int buildId, string channelName)
+    protected async Task<IAsyncDisposable> AddBuildToChannelAsync(int buildId, string channelName)
     {
         TestContext.WriteLine($"Adding build {buildId} to channel");
-        await RunDarcAsync("add-build-to-channel", "--id", buildId.ToString(), "--channel", channelName, "--skip-assets-publishing");
+        await RunDarcAsync(includeConfigurationRepoParams: false, "add-build-to-channel", "--id", buildId.ToString(), "--channel", channelName, "--skip-assets-publishing");
         return AsyncDisposable.Create(async () =>
         {
             TestContext.WriteLine($"Removing build {buildId} from channel {channelName}");
-            await RunDarcAsync("delete-build-from-channel", "--id", buildId.ToString(), "--channel", channelName);
+            await RunDarcAsync(includeConfigurationRepoParams: false, "delete-build-from-channel", "--id", buildId.ToString(), "--channel", channelName);
         });
     }
 
-    protected static async Task DeleteBuildFromChannelAsync(string buildId, string channelName)
+    protected async Task DeleteBuildFromChannelAsync(string buildId, string channelName)
     {
-        await RunDarcAsync("delete-build-from-channel", "--id", buildId, "--channel", channelName);
+        await RunDarcAsync(includeConfigurationRepoParams: false, "delete-build-from-channel", "--id", buildId, "--channel", channelName);
     }
 
     protected static IDisposable ChangeDirectory(string directory)
@@ -964,7 +946,7 @@ internal abstract partial class ScenarioTestBase
         return shareable.TryTake()!;
     }
 
-    protected static async Task<TemporaryDirectory> CloneRepositoryWithDarc(string repoName, string version, string reposToIgnore, bool includeToolset, int depth)
+    protected async Task<TemporaryDirectory> CloneRepositoryWithDarc(string repoName, string version, string reposToIgnore, bool includeToolset, int depth)
     {
         var sourceRepoUri = GetRepoUrl("dotnet", repoName);
 
@@ -975,7 +957,7 @@ internal abstract partial class ScenarioTestBase
         var gitDirFolder = Path.Join(directory, "git-dirs");
 
         // Clone repo
-        await RunDarcAsync("clone", "--repo", sourceRepoUri, "--version", version, "--git-dir-folder", gitDirFolder, "--ignore-repos", reposToIgnore, "--repos-folder", reposFolder, "--depth", depth.ToString(), includeToolset ? "--include-toolset" : "");
+        await RunDarcAsync(includeConfigurationRepoParams: false, "clone", "--repo", sourceRepoUri, "--version", version, "--git-dir-folder", gitDirFolder, "--ignore-repos", reposToIgnore, "--repos-folder", reposFolder, "--depth", depth.ToString(), includeToolset ? "--include-toolset" : "");
 
         return shareable.TryTake()!;
     }
@@ -1076,16 +1058,16 @@ internal abstract partial class ScenarioTestBase
         return asset;
     }
 
-    protected static async Task SetRepositoryPolicies(string repoUri, string branchName, string[]? policyParams = null)
+    protected async Task SetRepositoryPolicies(string repoUri, string branchName, string[]? policyParams = null)
     {
         string[] commandParams = ["set-repository-policies", "-q", "--repo", repoUri, "--branch", branchName, .. policyParams ?? []];
 
-        await RunDarcAsync(commandParams);
+        await RunDarcAsync(includeConfigurationRepoParams: true, commandParams);
     }
 
-    protected static async Task<string> GetRepositoryPolicies(string repoUri, string branchName)
+    protected async Task<string> GetRepositoryPolicies(string repoUri, string branchName)
     {
-        return await RunDarcAsync("get-repository-policies", "--all", "--repo", repoUri, "--branch", branchName);
+        return await RunDarcAsync(includeConfigurationRepoParams: false, "get-repository-policies", "--all", "--repo", repoUri, "--branch", branchName);
     }
 
     protected static async Task WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, Octokit.PullRequest pr, Octokit.Repository repo, int attempts = 40)
@@ -1276,5 +1258,15 @@ internal abstract partial class ScenarioTestBase
         pr.Mergeable.Should().BeFalse("PR " + pr.HtmlUrl + " should have conflicts");
         pr.MergeableState.ToString().Should().Be("dirty", "PR " + pr.HtmlUrl + " should be dirty");
         return pr;
+    }
+
+    protected async Task IngestNamespace()
+    {
+        _namespaceIngested = true;
+        var configuration = await TestParameters.ConfigRepoParser.ParseAsync(_temporaryDirectory.Directory, _testNamespace);
+        await PcsApi.Ingestion.IngestNamespaceAsync(
+            _testNamespace,
+            true,
+            configuration.ToPcsClient());
     }
 }

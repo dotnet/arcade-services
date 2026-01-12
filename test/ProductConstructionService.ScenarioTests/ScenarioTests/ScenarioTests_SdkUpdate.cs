@@ -39,10 +39,8 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
             }
         ];
 
-        await using AsyncDisposableValue<string> channel =
-            await CreateTestChannelAsync(testChannelName);
-        await using AsyncDisposableValue<string> sub =
-            await CreateSubscriptionAsync(testChannelName, TestRepository.TestArcadeName, TestRepository.TestRepo2Name, targetBranch, "none", TestRepository.TestOrg, targetIsAzDo: targetAzDO);
+        await CreateTestChannelAsync(testChannelName);
+        var sub = await CreateSubscriptionAsync(testChannelName, TestRepository.TestArcadeName, TestRepository.TestRepo2Name, targetBranch, "none", TestRepository.TestOrg, targetIsAzDo: targetAzDO);
         Build build =
             await CreateBuildAsync(GetRepoUrl(TestRepository.TestOrg, TestRepository.TestArcadeName), sourceBranch, TestRepository.ArcadeTestRepoCommit, sourceBuildNumber, sourceAssets);
 
@@ -55,13 +53,13 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
         using (ChangeDirectory(repo.Directory))
         {
             await RunGitAsync("checkout", "-b", targetBranch);
-            await RunDarcAsync("add-dependency",
+            await RunDarcAsync(includeConfigurationRepoParams: false, "add-dependency",
                 "--name", DependencyFileManager.ArcadeSdkPackageName,
                 "--type", "toolset",
                 "--repo", sourceRepoUri);
             await RunGitAsync("commit", "-am", "Add dependencies.");
             await using IAsyncDisposable __ = await PushGitBranchAsync("origin", targetBranch);
-            await TriggerSubscriptionAsync(sub.Value);
+            await TriggerSubscriptionAsync(sub);
 
             var expectedTitle = $"[{targetBranch}] Update dependencies from {TestRepository.TestOrg}/{TestRepository.TestArcadeName}";
             DependencyDetail expectedDependency = new()
@@ -108,7 +106,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
             {
                 await CheckoutRemoteRefAsync(prHead);
 
-                var dependencies = await RunDarcAsync("get-dependencies");
+                var dependencies = await RunDarcAsync(includeConfigurationRepoParams: false, "get-dependencies");
                 var dependencyLines = dependencies.Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries);
                 dependencyLines.Should().BeEquivalentTo(
                     [
@@ -178,9 +176,8 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
             }
         ];
 
-        await using AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName);
-        await using AsyncDisposableValue<string> sub =
-            await CreateSubscriptionAsync(testChannelName, sourceRepo, TestRepository.TestRepo1Name, targetBranch, "none", TestRepository.TestOrg);
+        await CreateTestChannelAsync(testChannelName);
+        var sub = await CreateSubscriptionAsync(testChannelName, sourceRepo, TestRepository.TestRepo1Name, targetBranch, "none", TestRepository.TestOrg);
 
         TemporaryDirectory testRepoFolder = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
         TemporaryDirectory vmrFolder = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
@@ -207,7 +204,7 @@ internal class ScenarioTests_SdkUpdate : ScenarioTestBase
                     // and push it to GH
                     await using (await PushGitBranchAsync("origin", vmrBranch))
                     {
-                        await TriggerSubscriptionAsync(sub.Value);
+                        await TriggerSubscriptionAsync(sub);
 
                         var expectedTitle = $"[{targetBranch}] Update dependencies from {TestRepository.TestOrg}/{sourceRepo}";
 

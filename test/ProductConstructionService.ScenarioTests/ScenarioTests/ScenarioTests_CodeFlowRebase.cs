@@ -35,9 +35,9 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         var sourceBranchName = GetTestBranchName();
         var targetBranchName = GetTestBranchName();
 
-        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(channelName);
+        await CreateTestChannelAsync(channelName);
 
-        await using AsyncDisposableValue<string> subscriptionId = await CreateForwardFlowSubscriptionAsync(
+        var subscriptionId = await CreateForwardFlowSubscriptionAsync(
             channelName,
             TestRepository.TestRepo1Name,
             TestRepository.VmrTestRepoName,
@@ -46,7 +46,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             TestParameters.GitHubTestOrg,
             targetDirectory: TestRepository.TestRepo1Name);
 
-        await using IAsyncDisposable _ = await EnableRebaseStrategy(subscriptionId.Value);
+        await using IAsyncDisposable _ = await EnableRebaseStrategy(subscriptionId);
 
         using TemporaryDirectory vmrDirectory = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
         using TemporaryDirectory repoDirectory = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
@@ -91,7 +91,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 []);
 
             await AddBuildToChannelAsync(build.Id, channelName);
-            await TriggerSubscriptionAsync(subscriptionId.Value);
+            await TriggerSubscriptionAsync(subscriptionId);
 
             TestContext.WriteLine("Waiting for the PR to show up");
             PullRequest pr = await WaitForPullRequestComment(TestRepository.VmrTestRepoName, targetBranchName, "darc vmr resolve-conflict");
@@ -107,9 +107,9 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             });
 
             await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, false);
-            await ResolveConflict(subscriptionId.Value, vmrDir, pr.Head.Ref, [newFileInVmrPath1]);
+            await ResolveConflict(subscriptionId, vmrDir, pr.Head.Ref, [newFileInVmrPath1]);
             (await File.ReadAllTextAsync(newFileInVmrPath2)).Should().Be("content #2 from the repository");
-            await TriggerSubscriptionAsync(subscriptionId.Value);
+            await TriggerSubscriptionAsync(subscriptionId);
 
             // The codeflow verification checks should pass now
             pr = await WaitForUpdatedPullRequestAsync(TestRepository.VmrTestRepoName, targetBranchName);
@@ -130,7 +130,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 []);
 
             await AddBuildToChannelAsync(build.Id, channelName);
-            await TriggerSubscriptionAsync(subscriptionId.Value);
+            await TriggerSubscriptionAsync(subscriptionId);
 
             // We verify the file got there + make a conflicting change for future
             pr = await WaitForFileContentInPullRequest(
@@ -165,7 +165,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 []);
 
             await AddBuildToChannelAsync(build.Id, channelName);
-            await TriggerSubscriptionAsync(subscriptionId.Value);
+            await TriggerSubscriptionAsync(subscriptionId);
 
             // This time we should get a conflict comment for the second file
             TestContext.WriteLine("Waiting for conflict comment to show up on the PR");
@@ -173,10 +173,10 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, false);
 
             // We resolve the conflict manually
-            await ResolveConflict(subscriptionId.Value, vmrDir, pr.Head.Ref, [newFileInVmrPath2]);
+            await ResolveConflict(subscriptionId, vmrDir, pr.Head.Ref, [newFileInVmrPath2]);
             (await File.ReadAllTextAsync(newFileInVmrPath2)).Should().Be("content #4 from the repository");
 
-            await TriggerSubscriptionAsync(subscriptionId.Value);
+            await TriggerSubscriptionAsync(subscriptionId);
 
             // The codeflow verification checks should pass now
             await VerifyCodeFlowCheck(pr, TestRepository.VmrTestRepoName, true);   
@@ -201,9 +201,9 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
         var sourceBranchName = GetTestBranchName();
         var targetBranchName = GetTestBranchName();
 
-        await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(channelName);
+        await CreateTestChannelAsync(channelName);
 
-        await using AsyncDisposableValue<string> subscriptionId = await CreateBackwardFlowSubscriptionAsync(
+        var subscriptionId = await CreateBackwardFlowSubscriptionAsync(
             channelName,
             TestRepository.VmrTestRepoName,
             TestRepository.TestRepo1Name,
@@ -212,7 +212,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             TestParameters.GitHubTestOrg,
             sourceDirectory: TestRepository.TestRepo1Name);
 
-        await using IAsyncDisposable _ = await EnableRebaseStrategy(subscriptionId.Value);
+        await using IAsyncDisposable _ = await EnableRebaseStrategy(subscriptionId);
 
         using TemporaryDirectory vmrDirectory = await CloneRepositoryAsync(TestRepository.VmrTestRepoName);
         using TemporaryDirectory repoDirectory = await CloneRepositoryAsync(TestRepository.TestRepo1Name);
@@ -257,7 +257,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 []);
 
             await AddBuildToChannelAsync(build.Id, channelName);
-            await TriggerSubscriptionAsync(subscriptionId.Value);
+            await TriggerSubscriptionAsync(subscriptionId);
 
             TestContext.WriteLine("Waiting for the PR to show up");
             PullRequest pr = await WaitForPullRequestComment(TestRepository.TestRepo1Name, targetBranchName, "darc vmr resolve-conflict");
@@ -273,9 +273,9 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             });
 
             await VerifyCodeFlowCheck(pr, TestRepository.TestRepo1Name, false);
-            await ResolveConflict(subscriptionId.Value, repoDir, pr.Head.Ref, [newFilePath1]);
+            await ResolveConflict(subscriptionId, repoDir, pr.Head.Ref, [newFilePath1]);
             (await File.ReadAllTextAsync(newFilePath2)).Should().Be("content #2 from the VMR");
-            await TriggerSubscriptionAsync(subscriptionId.Value);
+            await TriggerSubscriptionAsync(subscriptionId);
 
             // The codeflow verification checks should pass now
             pr = await WaitForUpdatedPullRequestAsync(TestRepository.TestRepo1Name, targetBranchName);
@@ -296,7 +296,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 []);
 
             await AddBuildToChannelAsync(build.Id, channelName);
-            await TriggerSubscriptionAsync(subscriptionId.Value);
+            await TriggerSubscriptionAsync(subscriptionId);
 
             // We verify the file got there + make a conflicting change for future
             pr = await WaitForFileContentInPullRequest(
@@ -331,7 +331,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
                 []);
 
             await AddBuildToChannelAsync(build.Id, channelName);
-            await TriggerSubscriptionAsync(subscriptionId.Value);
+            await TriggerSubscriptionAsync(subscriptionId);
 
             // This time we should get a conflict comment for the second file
             TestContext.WriteLine("Waiting for conflict comment to show up on the PR");
@@ -339,22 +339,22 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
             await VerifyCodeFlowCheck(pr, TestRepository.TestRepo1Name, false);
 
             // We resolve the conflict manually
-            await ResolveConflict(subscriptionId.Value, repoDir, pr.Head.Ref, [newFilePath2]);
+            await ResolveConflict(subscriptionId, repoDir, pr.Head.Ref, [newFilePath2]);
             (await File.ReadAllTextAsync(newFilePath2)).Should().Be("content #4 from the VMR");
 
-            await TriggerSubscriptionAsync(subscriptionId.Value);
+            await TriggerSubscriptionAsync(subscriptionId);
 
             // The codeflow verification checks should pass now
             await VerifyCodeFlowCheck(pr, TestRepository.TestRepo1Name, true);   
         });
     }
 
-    private static async Task ResolveConflict(string subscriptionId, string targetDir, string prBranch, IEnumerable<string> filesToResolve, bool useOurs = false)
+    private async Task ResolveConflict(string subscriptionId, string targetDir, string prBranch, IEnumerable<string> filesToResolve, bool useOurs = false)
     {
         using var _ = ChangeDirectory(targetDir);
         await CheckoutRemoteRefAsync(prBranch);
 
-        await RunDarcAsync("vmr", "resolve-conflict", "--subscription", subscriptionId);
+        await RunDarcAsync(includeConfigurationRepoParams: false, "vmr", "resolve-conflict", "--subscription", subscriptionId);
 
         foreach (string file in filesToResolve)
         {

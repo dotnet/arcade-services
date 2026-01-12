@@ -14,6 +14,7 @@
     <PackageReference Include="LibGit2Sharp" />
     <PackageReference Include="Microsoft.DotNet.GitHub.Authentication" />
     <PackageReference Include="Microsoft.DotNet.Internal.Logging" />
+    <PackageReference Include="Microsoft.DotNet.MaestroConfiguration.Client" />
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Http" />
     <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" />
@@ -27,7 +28,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\MaestroConfiguration\src\Microsoft.DotNet.MaestroConfiguration.Client\Microsoft.DotNet.MaestroConfiguration.Client.csproj" />
     <ProjectReference Include="..\..\Maestro\Maestro.MergePolicyEvaluation\Maestro.MergePolicyEvaluation.csproj" />
     <ProjectReference Include="..\..\ProductConstructionService\Microsoft.DotNet.ProductConstructionService.Client\Microsoft.DotNet.ProductConstructionService.Client.csproj" />
   </ItemGroup>

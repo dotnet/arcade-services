@@ -51,7 +51,7 @@ internal partial class ConfigurationIngestor(
         var ingestionData = IngestedConfigurationData.FromYamls(configurationData);
         ValidateEntityFields(ingestionData);
 
-        var namespaceEntity = await FetchOrCreateNamespace(configurationNamespace);
+        var namespaceEntity = await FetchOrCreateNamespaceAsync(configurationNamespace);
 
         var existingConfigurationData =
             CreateConfigurationDataObject(namespaceEntity);
@@ -60,7 +60,7 @@ internal partial class ConfigurationIngestor(
             ingestionData,
             existingConfigurationData);
 
-        await SaveConfigurationData(configurationDataUpdate, namespaceEntity, saveChanges);
+        await PerformEntityChangesAsync(configurationDataUpdate, namespaceEntity, saveChanges);
 
         return configurationDataUpdate.ToYamls();
     }
@@ -73,31 +73,22 @@ internal partial class ConfigurationIngestor(
         BranchMergePolicyValidator.ValidateBranchMergePolicies(newConfigurationData.BranchMergePolicies);
     }
 
-    private async Task SaveConfigurationData(
+    private async Task PerformEntityChangesAsync(
         IngestedConfigurationUpdates configurationDataUpdate,
         Namespace namespaceEntity,
         bool saveChanges)
     {
         // Deletions
         await DeleteSubscriptions(configurationDataUpdate.Subscriptions.Removals);
-        await DeleteDefaultChannels(
-            configurationDataUpdate.DefaultChannels.Removals,
-            namespaceEntity);
-        await DeleteRepositoryBranches(
-            configurationDataUpdate.RepositoryBranches.Removals,
-            namespaceEntity);
+        await DeleteDefaultChannels(configurationDataUpdate.DefaultChannels.Removals, namespaceEntity);
+        await DeleteRepositoryBranches(configurationDataUpdate.RepositoryBranches.Removals, namespaceEntity);
         await DeleteChannels(configurationDataUpdate.Channels.Removals);
 
         var existingChannels = _context.Channels.ToDictionary(c => c.Name);
 
         // Channels must be updated first due to entity relationships
-        CreateChannels(
-            configurationDataUpdate.Channels.Creations,
-            namespaceEntity);
-
-        UpdateChannels(
-            configurationDataUpdate.Channels.Updates,
-            [.. existingChannels.Values]);
+        CreateChannels(configurationDataUpdate.Channels.Creations, namespaceEntity);
+        UpdateChannels(configurationDataUpdate.Channels.Updates, [.. existingChannels.Values]);
 
         // We fetch the channels again including newly created ones
         existingChannels = _context.Channels
@@ -105,37 +96,18 @@ internal partial class ConfigurationIngestor(
             .ToDictionary(c => c.Name);
 
         // Update the rest of the entities
-        await CreateSubscriptions(
-            configurationDataUpdate.Subscriptions.Creations,
-            namespaceEntity,
-            existingChannels);
-
+        await CreateSubscriptions(configurationDataUpdate.Subscriptions.Creations, namespaceEntity, existingChannels);
         await EnsureRepositoryRegistrationForCreatedSubscriptionsAsync(configurationDataUpdate.Subscriptions.Creations
                 .Select(s => s.Values.TargetRepository)
                 .Distinct()
                 .ToList());
+        await UpdateSubscriptions(configurationDataUpdate.Subscriptions.Updates, namespaceEntity, existingChannels);
 
-        await UpdateSubscriptions(
-            configurationDataUpdate.Subscriptions.Updates,
-            namespaceEntity,
-            existingChannels);
+        CreateDefaultChannels(configurationDataUpdate.DefaultChannels.Creations, namespaceEntity, existingChannels);
+        await UpdateDefaultChannels(configurationDataUpdate.DefaultChannels.Updates, namespaceEntity);
 
-        CreateDefaultChannels(
-            configurationDataUpdate.DefaultChannels.Creations,
-            namespaceEntity,
-            existingChannels);
-
-        await UpdateDefaultChannels(
-            configurationDataUpdate.DefaultChannels.Updates,
-            namespaceEntity);
-
-        CreateBranchRepositories(
-            configurationDataUpdate.RepositoryBranches.Creations,
-            namespaceEntity);
-
-        await UpdateRepositoryBranches(
-            configurationDataUpdate.RepositoryBranches.Updates,
-            namespaceEntity);
+        CreateBranchRepositories(configurationDataUpdate.RepositoryBranches.Creations, namespaceEntity);
+        await UpdateRepositoryBranches(configurationDataUpdate.RepositoryBranches.Updates, namespaceEntity);
 
         if (saveChanges)
         {
@@ -143,7 +115,7 @@ internal partial class ConfigurationIngestor(
         }
     }
 
-    private async Task<Namespace> FetchOrCreateNamespace(string configurationNamespace)
+    private async Task<Namespace> FetchOrCreateNamespaceAsync(string configurationNamespace)
     {
         var namespaceEntity = await _context.Namespaces
             .Include(ns => ns.Subscriptions)
