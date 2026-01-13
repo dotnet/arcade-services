@@ -242,15 +242,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             // Note: Due to limitations in CommandLine library, we cannot distinguish between explicit 
             // false values and default false values, so copied boolean values take precedence.
             // Users must explicitly specify boolean flags to override them when using --subscription.
-            bool userSpecifiedMergePolicies = _options.AllChecksSuccessfulMergePolicy || 
-                                               _options.NoRequestedChangesMergePolicy ||
-                                               _options.DontAutomergeDowngradesMergePolicy ||
-                                               _options.StandardAutoMergePolicies ||
-                                               _options.ValidateCoherencyCheckMergePolicy ||
-                                               _options.CodeFlowCheckMergePolicy ||
-                                               _options.VersionDetailsPropsMergePolicy;
-            
-            if (!userSpecifiedMergePolicies)
+            if (!HasUserSpecifiedMergePolicies())
             {
                 enabled = copyFromSubscription.Enabled;
                 batchable = copyFromSubscription.Policy.Batchable;
@@ -495,5 +487,19 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             _logger.LogError(e, $"Failed to create subscription.");
             return Constants.ErrorCode;
         }
+    }
+
+    /// <summary>
+    /// Checks if the user has specified any merge policy options via command line.
+    /// </summary>
+    private bool HasUserSpecifiedMergePolicies()
+    {
+        return _options.AllChecksSuccessfulMergePolicy ||
+               _options.NoRequestedChangesMergePolicy ||
+               _options.DontAutomergeDowngradesMergePolicy ||
+               _options.StandardAutoMergePolicies ||
+               _options.ValidateCoherencyCheckMergePolicy ||
+               _options.CodeFlowCheckMergePolicy ||
+               _options.VersionDetailsPropsMergePolicy;
     }
 }
