@@ -144,7 +144,7 @@ internal abstract class UpdaterTests : TestsWithServices
     protected static PullRequestUpdaterId GetPullRequestUpdaterId(Subscription subscription)
     {
         return subscription.PolicyObject.Batchable
-            ? new BatchedPullRequestUpdaterId(subscription.TargetRepository, subscription.TargetBranch, subscription.SourceEnabled)
-            : new NonBatchedPullRequestUpdaterId(subscription.Id, subscription.SourceEnabled);
+            ? new BatchedPullRequestUpdaterId(subscription.TargetRepository, subscription.TargetBranch)
+            : new NonBatchedPullRequestUpdaterId(subscription.Id);
     }
 }

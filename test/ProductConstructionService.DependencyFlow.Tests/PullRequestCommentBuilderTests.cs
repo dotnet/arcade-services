@@ -141,7 +141,7 @@ public class PullRequestCommentBuilderTests
         // the "Url" and ContainedSubscriptions fields in InProgressPullRequestObjects
         return new InProgressPullRequest()
         {
-            UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main", false).Id,
+            UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
             Url = url,
             HeadBranch = "pr.head.branch",
             HeadBranchSha = "pr.head.sha",
@@ -166,7 +166,7 @@ public class PullRequestCommentBuilderTests
 
         return new InProgressPullRequest()
         {
-            UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main", false).Id,
+            UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
             Url = url,
             HeadBranch = "pr.head.branch",
             HeadBranchSha = "pr.head.sha",
@@ -216,7 +216,7 @@ public class PullRequestCommentBuilderTests
             forwardFlowSubscription,
             new InProgressPullRequest()
             {
-                UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main", false).Id,
+                UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
                 Url = "https://api.github.com/repos/orgname/reponame/pulls/12345",
                 HeadBranch = "pr-head-branch",
                 HeadBranchSha = "pr.head.sha",
@@ -325,7 +325,7 @@ public class PullRequestCommentBuilderTests
             forwardFlowSubscription,
             new InProgressPullRequest()
             {
-                UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main", false).Id,
+                UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
                 Url = "https://api.github.com/repos/orgname/reponame/pulls/12345",
                 HeadBranch = "pr-head-branch",
                 HeadBranchSha = "pr.head.sha",

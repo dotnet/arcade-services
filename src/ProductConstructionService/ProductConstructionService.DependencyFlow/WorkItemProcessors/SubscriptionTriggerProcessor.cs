@@ -4,7 +4,6 @@
 using Maestro.Data;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 

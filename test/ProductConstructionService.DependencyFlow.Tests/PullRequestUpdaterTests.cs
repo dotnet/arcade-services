@@ -20,7 +20,6 @@ using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using NUnit.Framework;
 using ProductConstructionService.DependencyFlow.Model;
-using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 using ProductConstructionService.DependencyFlow.Tests.Mocks;
 using ProductConstructionService.DependencyFlow.WorkItems;
 

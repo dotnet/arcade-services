@@ -4,7 +4,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.DependencyFlow.Model;
 
-namespace ProductConstructionService.DependencyFlow.PullRequestUpdaters;
+namespace ProductConstructionService.DependencyFlow;
 
 public interface IPullRequestUpdaterFactory
 {
@@ -24,12 +24,8 @@ internal class PullRequestUpdaterFactory : IPullRequestUpdaterFactory
 
     public IPullRequestUpdater CreatePullRequestUpdater(PullRequestUpdaterId updaterId) => updaterId switch
     {
-        BatchedPullRequestUpdaterId batchedId => updaterId.IsCodeFlow
-            ? throw new InvalidOperationException("Batched code flow pull request updaters are not supported.")
-            : ActivatorUtilities.CreateInstance<BatchedDependencyPullRequestUpdater>(_serviceProvider, batchedId),
-        NonBatchedPullRequestUpdaterId nonBatchedId => updaterId.IsCodeFlow
-            ? ActivatorUtilities.CreateInstance<CodeFlowPullRequestUpdater>(_serviceProvider, nonBatchedId)
-            : ActivatorUtilities.CreateInstance<NonBatchedDependencyPullRequestUpdater>(_serviceProvider, nonBatchedId),
+        BatchedPullRequestUpdaterId batched => ActivatorUtilities.CreateInstance<BatchedPullRequestUpdater>(_serviceProvider, batched),
+        NonBatchedPullRequestUpdaterId nonBatched => ActivatorUtilities.CreateInstance<NonBatchedPullRequestUpdater>(_serviceProvider, nonBatched),
         _ => throw new NotImplementedException()
     };
 

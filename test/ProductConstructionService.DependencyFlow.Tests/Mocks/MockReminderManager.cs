@@ -21,13 +21,13 @@ internal class MockReminderManager<T>
         Data = data;
     }
 
-    public Task SetReminderAsync(T reminder, TimeSpan dueTime)
+    public Task SetReminderAsync(T reminder, TimeSpan dueTime, bool isCodeFlow)
     {
         Data[_key] = reminder;
         return Task.CompletedTask;
     }
 
-    public Task UnsetReminderAsync()
+    public Task UnsetReminderAsync(bool isCodeFlow)
     {
         Data.Remove(_key);
         return Task.CompletedTask;
