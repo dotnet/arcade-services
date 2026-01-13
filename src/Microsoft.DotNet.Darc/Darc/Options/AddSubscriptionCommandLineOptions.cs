@@ -42,6 +42,6 @@ internal class AddSubscriptionCommandLineOptions : SubscriptionCommandLineOption
     [Option("source-enabled", HelpText = "Get only source-enabled (VMR code flow) subscriptions.", Default = false)]
     public bool SourceEnabled { get; set; }
 
-    [Option("subscription", HelpText = "GUID of an existing subscription to copy settings from. Other command-line parameters will override the copied values.")]
+    [Option("subscription", HelpText = "GUID of an existing subscription to copy settings from. Other command-line parameters will override the copied values. Note: Boolean flags (enabled, batchable, source-enabled) are copied when no merge policies are specified via command line.")]
     public string CopyFromSubscription { get; set; }
 }
