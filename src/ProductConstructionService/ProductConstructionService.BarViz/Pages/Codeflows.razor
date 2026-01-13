@@ -50,7 +50,6 @@
     <Header>
         <FluentSelect TOption="DefaultChannel"
                       Items="@DefaultChannels"
-                      OptionText="@(channel => channel.Branch + " / " + channel.Channel.Name)"
                       OptionValue="@(channel => channel.Branch)"
                       OptionSelected="@(c => c.Id == DefaultChannel?.Id)"
                       SelectedOptionChanged="@(OnDefaultChannelSelected)"
