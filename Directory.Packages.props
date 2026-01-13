@@ -15,8 +15,8 @@
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.5.1" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.6.1" />
     <PackageVersion Include="Azure.Identity" Version="1.17.1" />
-    <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.4.0-beta.1" />
-    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.5.0-beta.1" />
+    <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.4.0" />
+    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.5.0" />
     <PackageVersion Include="Azure.ResourceManager.AppContainers" Version="1.5.0" />
     <PackageVersion Include="Azure.Storage.Queues" Version="12.24.0" />
     <PackageVersion Include="Blazored.SessionStorage" Version="2.4.0" />
