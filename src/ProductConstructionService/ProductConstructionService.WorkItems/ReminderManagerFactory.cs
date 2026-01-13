@@ -7,7 +7,7 @@ namespace ProductConstructionService.WorkItems;
 
 public interface IReminderManagerFactory
 {
-    IReminderManager<T> CreateReminderManager<T>(string key, bool isCodeFlow) where T : WorkItem;
+    IReminderManager<T> CreateReminderManager<T>(string key) where T : WorkItem;
 }
 
 public class ReminderManagerFactory : IReminderManagerFactory
@@ -23,9 +23,9 @@ public class ReminderManagerFactory : IReminderManagerFactory
         _cacheFactory = cacheFactory;
     }
 
-    public IReminderManager<T> CreateReminderManager<T>(string key, bool isCodeFlow) where T : WorkItem
+    public IReminderManager<T> CreateReminderManager<T>(string key) where T : WorkItem
     {
         key = $"{typeof(T).Name}_{key}";
-        return new ReminderManager<T>(_workItemProducerFactory, _cacheFactory, key, isCodeFlow);
+        return new ReminderManager<T>(_workItemProducerFactory, _cacheFactory, key);
     }
 }

@@ -5,7 +5,6 @@ using Maestro.DataProviders;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.DependencyFlow.Model;
-using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
 namespace ProductConstructionService.DependencyFlow.WorkItemProcessors;
 
@@ -29,15 +28,7 @@ public class SubscriptionUpdateProcessor(
             _logger.LogError("Build with buildId {BuildId} not found in the DB.", workItem.BuildId);
             return false;
         }
-
-        var subscription = await _sqlClient.GetSubscriptionAsync(workItem.SubscriptionId);
-        if (subscription == null)
-        {
-            _logger.LogError("Subscription with subscriptionId {SubscriptionId} not found in the DB.", workItem.SubscriptionId);
-            return false;
-        }
-
-        var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.UpdaterId, subscription.SourceEnabled));
+        var updater = _updaterFactory.CreatePullRequestUpdater(PullRequestUpdaterId.Parse(workItem.UpdaterId));
         await updater.ProcessPendingUpdatesAsync(workItem, applyNewestOnly: true, forceUpdate: false, build);
         return true;
     }

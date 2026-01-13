@@ -6,7 +6,6 @@ using Maestro.Data.Models;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
-using ProductConstructionService.DependencyFlow.PullRequestUpdaters;
 
 namespace ProductConstructionService.DependencyFlow;
 

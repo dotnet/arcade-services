@@ -17,7 +17,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         GivenACodeFlowSubscription(
             new SubscriptionPolicy
             {
-                Batchable = false,
+                Batchable = true,
                 UpdateFrequency = UpdateFrequency.EveryBuild
             });
         Build build = GivenANewBuild(true);
@@ -38,7 +38,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         GivenACodeFlowSubscription(
             new SubscriptionPolicy
             {
-                Batchable = false,
+                Batchable = true,
                 UpdateFrequency = UpdateFrequency.EveryBuild
             });
         Build build = GivenANewBuild(true);
@@ -59,7 +59,7 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
         GivenACodeFlowSubscription(
             new SubscriptionPolicy
             {
-                Batchable = false,
+                Batchable = true,
                 UpdateFrequency = UpdateFrequency.EveryBuild
             });
         Build oldBuild = GivenANewBuild(true);
