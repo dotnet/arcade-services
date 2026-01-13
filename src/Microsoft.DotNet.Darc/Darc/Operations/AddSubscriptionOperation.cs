@@ -174,8 +174,9 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
 
         // Initialize variables - if copying from a subscription, use its values as defaults
         // Command-line options always override copied values for string parameters
-        // For boolean parameters (enabled, batchable, sourceEnabled), they are copied if no command-line 
-        // merge policies were specified, as we cannot distinguish between explicit false and default false
+        // For boolean parameters (enabled, batchable, sourceEnabled), they are copied when NO 
+        // merge policies are specified via command-line, as we cannot distinguish between explicit 
+        // false and default false values
         bool enabled = _options.Enabled;
         string channel = _options.Channel;
         string sourceRepository = _options.SourceRepository;
