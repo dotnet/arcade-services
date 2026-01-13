@@ -4,6 +4,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using AwesomeAssertions;
@@ -307,18 +308,19 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
             pullRequestFailureNotificationTags: "tag1;tag2",
             sourceDirectory: null,
             targetDirectory: null,
-            excludedAssets: ["System.Text.Json"])
+            excludedAssets: new List<string> { "System.Text.Json" })
         {
             Channel = sourceChannel,
             Policy = new SubscriptionPolicy(batchable: false, updateFrequency: UpdateFrequency.EveryDay)
             {
-                MergePolicies = [
+                MergePolicies = new List<MergePolicy>
+                {
                     new MergePolicy
                     {
                         Name = MergePolicyConstants.AllCheckSuccessfulMergePolicyName,
                         Properties = []
                     }
-                ]
+                }
             }
         };
 
@@ -397,12 +399,12 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
             pullRequestFailureNotificationTags: "tag1",
             sourceDirectory: null,
             targetDirectory: null,
-            excludedAssets: [])
+            excludedAssets: new List<string>())
         {
             Channel = sourceChannel,
             Policy = new SubscriptionPolicy(batchable: false, updateFrequency: UpdateFrequency.EveryDay)
             {
-                MergePolicies = []
+                MergePolicies = new List<MergePolicy>()
             }
         };
 

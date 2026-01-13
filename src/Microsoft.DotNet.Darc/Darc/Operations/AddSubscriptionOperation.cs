@@ -173,7 +173,9 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         }
 
         // Initialize variables - if copying from a subscription, use its values as defaults
-        // Command-line options always override copied values
+        // Command-line options always override copied values for string parameters
+        // For boolean parameters (enabled, batchable, sourceEnabled), they are copied if no command-line 
+        // merge policies were specified, as we cannot distinguish between explicit false and default false
         bool enabled = _options.Enabled;
         string channel = _options.Channel;
         string sourceRepository = _options.SourceRepository;
@@ -229,16 +231,31 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             }
             
             // Copy merge policies if none were specified via command-line options
+            // This must happen before copying boolean values, as merge policies affect batchable validation
             if (mergePolicies.Count == 0 && copyFromSubscription.Policy.MergePolicies != null)
             {
                 mergePolicies = [..copyFromSubscription.Policy.MergePolicies];
             }
             
-            // For boolean values, since command-line options have defaults, we copy the subscription values
-            // These will be used in both quiet and interactive mode as the initial values
-            enabled = copyFromSubscription.Enabled;
-            batchable = copyFromSubscription.Policy.Batchable;
-            sourceEnabled = copyFromSubscription.SourceEnabled;
+            // For boolean values, we copy them from the source subscription only if no merge policies 
+            // were specified via command-line (which would indicate the user is making intentional changes).
+            // Note: Due to limitations in CommandLine library, we cannot distinguish between explicit 
+            // false values and default false values, so copied boolean values take precedence.
+            // Users must explicitly specify boolean flags to override them when using --subscription.
+            bool userSpecifiedMergePolicies = _options.AllChecksSuccessfulMergePolicy || 
+                                               _options.NoRequestedChangesMergePolicy ||
+                                               _options.DontAutomergeDowngradesMergePolicy ||
+                                               _options.StandardAutoMergePolicies ||
+                                               _options.ValidateCoherencyCheckMergePolicy ||
+                                               _options.CodeFlowCheckMergePolicy ||
+                                               _options.VersionDetailsPropsMergePolicy;
+            
+            if (!userSpecifiedMergePolicies)
+            {
+                enabled = copyFromSubscription.Enabled;
+                batchable = copyFromSubscription.Policy.Batchable;
+                sourceEnabled = copyFromSubscription.SourceEnabled;
+            }
         }
 
         if (!string.IsNullOrEmpty(sourceDirectory) && !string.IsNullOrEmpty(targetDirectory))
