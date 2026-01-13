@@ -21,7 +21,7 @@
     <PackageVersion Include="Azure.Storage.Queues" Version="12.24.0" />
     <PackageVersion Include="Blazored.SessionStorage" Version="2.4.0" />
     <PackageVersion Include="CommandLineParser" Version="2.9.1" />
-    <PackageVersion Include="DistributedLock.Redis" Version="1.0.3" />
+    <PackageVersion Include="DistributedLock.Redis" Version="1.1.1" />
     <PackageVersion Include="EntityFrameworkCore.Triggers" Version="1.2.3" />
     <PackageVersion Include="AwesomeAssertions" Version="9.3.0" />
     <PackageVersion Include="FluentValidation.AspNetCore" Version="11.3.0" />
