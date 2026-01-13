@@ -156,6 +156,24 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             return Constants.ErrorCode;
         }
 
+        // If --subscription parameter is provided, copy settings from the existing subscription
+        Subscription copyFromSubscription = null;
+        if (!string.IsNullOrEmpty(_options.CopyFromSubscription))
+        {
+            try
+            {
+                copyFromSubscription = await _barClient.GetSubscriptionAsync(_options.CopyFromSubscription);
+                _logger.LogInformation($"Copying settings from subscription '{copyFromSubscription.Id}'");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to retrieve subscription '{_options.CopyFromSubscription}'");
+                return Constants.ErrorCode;
+            }
+        }
+
+        // Initialize variables - if copying from a subscription, use its values as defaults
+        // Command-line options always override copied values
         bool enabled = _options.Enabled;
         string channel = _options.Channel;
         string sourceRepository = _options.SourceRepository;
@@ -168,6 +186,60 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         string targetDirectory = NormalizeTargetDirectory(_options.TargetDirectory);
         string failureNotificationTags = _options.FailureNotificationTags;
         List<string> excludedAssets = _options.ExcludedAssets != null ? [.._options.ExcludedAssets.Split(';', StringSplitOptions.RemoveEmptyEntries)] : [];
+
+        // Copy values from the source subscription where not explicitly provided via command-line
+        if (copyFromSubscription != null)
+        {
+            // For string values, use copied value if command-line option was not provided
+            if (string.IsNullOrEmpty(channel))
+            {
+                channel = copyFromSubscription.Channel.Name;
+            }
+            if (string.IsNullOrEmpty(sourceRepository))
+            {
+                sourceRepository = copyFromSubscription.SourceRepository;
+            }
+            if (string.IsNullOrEmpty(targetRepository))
+            {
+                targetRepository = copyFromSubscription.TargetRepository;
+            }
+            if (string.IsNullOrEmpty(targetBranch))
+            {
+                targetBranch = copyFromSubscription.TargetBranch;
+            }
+            if (string.IsNullOrEmpty(updateFrequency))
+            {
+                updateFrequency = copyFromSubscription.Policy.UpdateFrequency.ToString();
+            }
+            if (string.IsNullOrEmpty(sourceDirectory))
+            {
+                sourceDirectory = copyFromSubscription.SourceDirectory;
+            }
+            if (string.IsNullOrEmpty(targetDirectory))
+            {
+                targetDirectory = copyFromSubscription.TargetDirectory;
+            }
+            if (string.IsNullOrEmpty(failureNotificationTags))
+            {
+                failureNotificationTags = copyFromSubscription.PullRequestFailureNotificationTags;
+            }
+            if (_options.ExcludedAssets == null && copyFromSubscription.ExcludedAssets != null)
+            {
+                excludedAssets = [..copyFromSubscription.ExcludedAssets];
+            }
+            
+            // Copy merge policies if none were specified via command-line options
+            if (mergePolicies.Count == 0 && copyFromSubscription.Policy.MergePolicies != null)
+            {
+                mergePolicies = [..copyFromSubscription.Policy.MergePolicies];
+            }
+            
+            // For boolean values, since command-line options have defaults, we copy the subscription values
+            // These will be used in both quiet and interactive mode as the initial values
+            enabled = copyFromSubscription.Enabled;
+            batchable = copyFromSubscription.Policy.Batchable;
+            sourceEnabled = copyFromSubscription.SourceEnabled;
+        }
 
         if (!string.IsNullOrEmpty(sourceDirectory) && !string.IsNullOrEmpty(targetDirectory))
         {
