@@ -22,6 +22,5 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Maestro\Maestro.Data\Maestro.Data.csproj" />
-    <ProjectReference Include="..\..\Maestro\Maestro.DataProviders\Maestro.DataProviders.csproj" />
   </ItemGroup>
 </Project>
