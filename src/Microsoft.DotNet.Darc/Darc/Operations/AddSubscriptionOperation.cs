@@ -156,6 +156,27 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             return Constants.ErrorCode;
         }
 
+        // If --subscription parameter is provided, copy settings from the existing subscription
+        Subscription copyFromSubscription = null;
+        if (!string.IsNullOrEmpty(_options.CopyFromSubscription))
+        {
+            try
+            {
+                copyFromSubscription = await _barClient.GetSubscriptionAsync(_options.CopyFromSubscription);
+                _logger.LogInformation("Copying settings from subscription '{SubscriptionId}'", copyFromSubscription.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to retrieve subscription '{SubscriptionId}'", _options.CopyFromSubscription);
+                return Constants.ErrorCode;
+            }
+        }
+
+        // Initialize variables - if copying from a subscription, use its values as defaults
+        // Command-line options always override copied values for string parameters
+        // For boolean parameters (enabled, batchable, sourceEnabled), they are copied when NO 
+        // merge policies are specified via command-line, as we cannot distinguish between explicit 
+        // false and default false values
         bool enabled = _options.Enabled;
         string channel = _options.Channel;
         string sourceRepository = _options.SourceRepository;
@@ -168,6 +189,67 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
         string targetDirectory = NormalizeTargetDirectory(_options.TargetDirectory);
         string failureNotificationTags = _options.FailureNotificationTags;
         List<string> excludedAssets = _options.ExcludedAssets != null ? [.._options.ExcludedAssets.Split(';', StringSplitOptions.RemoveEmptyEntries)] : [];
+
+        // Copy values from the source subscription where not explicitly provided via command-line
+        if (copyFromSubscription != null)
+        {
+            // For string values, use copied value if command-line option was not provided
+            if (string.IsNullOrEmpty(channel))
+            {
+                channel = copyFromSubscription.Channel.Name;
+            }
+            if (string.IsNullOrEmpty(sourceRepository))
+            {
+                sourceRepository = copyFromSubscription.SourceRepository;
+            }
+            if (string.IsNullOrEmpty(targetRepository))
+            {
+                targetRepository = copyFromSubscription.TargetRepository;
+            }
+            if (string.IsNullOrEmpty(targetBranch))
+            {
+                targetBranch = copyFromSubscription.TargetBranch;
+            }
+            if (string.IsNullOrEmpty(updateFrequency))
+            {
+                updateFrequency = copyFromSubscription.Policy.UpdateFrequency.ToString();
+            }
+            if (string.IsNullOrEmpty(sourceDirectory))
+            {
+                sourceDirectory = copyFromSubscription.SourceDirectory;
+            }
+            if (string.IsNullOrEmpty(targetDirectory))
+            {
+                targetDirectory = copyFromSubscription.TargetDirectory;
+            }
+            if (string.IsNullOrEmpty(failureNotificationTags))
+            {
+                failureNotificationTags = copyFromSubscription.PullRequestFailureNotificationTags;
+            }
+            if (_options.ExcludedAssets == null && copyFromSubscription.ExcludedAssets != null)
+            {
+                excludedAssets = [..copyFromSubscription.ExcludedAssets];
+            }
+            
+            // Copy merge policies if none were specified via command-line options
+            // This must happen before copying boolean values, as merge policies affect batchable validation
+            if (mergePolicies.Count == 0 && copyFromSubscription.Policy.MergePolicies != null)
+            {
+                mergePolicies = [..copyFromSubscription.Policy.MergePolicies];
+            }
+            
+            // For boolean values, we copy them from the source subscription only if no merge policies 
+            // were specified via command-line (which would indicate the user is making intentional changes).
+            // Note: Due to limitations in CommandLine library, we cannot distinguish between explicit 
+            // false values and default false values, so copied boolean values take precedence.
+            // Users must explicitly specify boolean flags to override them when using --subscription.
+            if (!HasUserSpecifiedMergePolicies())
+            {
+                enabled = copyFromSubscription.Enabled;
+                batchable = copyFromSubscription.Policy.Batchable;
+                sourceEnabled = copyFromSubscription.SourceEnabled;
+            }
+        }
 
         if (!string.IsNullOrEmpty(sourceDirectory) && !string.IsNullOrEmpty(targetDirectory))
         {
@@ -406,5 +488,19 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             _logger.LogError(e, $"Failed to create subscription.");
             return Constants.ErrorCode;
         }
+    }
+
+    /// <summary>
+    /// Checks if the user has specified any merge policy options via command line.
+    /// </summary>
+    private bool HasUserSpecifiedMergePolicies()
+    {
+        return _options.AllChecksSuccessfulMergePolicy ||
+               _options.NoRequestedChangesMergePolicy ||
+               _options.DontAutomergeDowngradesMergePolicy ||
+               _options.StandardAutoMergePolicies ||
+               _options.ValidateCoherencyCheckMergePolicy ||
+               _options.CodeFlowCheckMergePolicy ||
+               _options.VersionDetailsPropsMergePolicy;
     }
 }
