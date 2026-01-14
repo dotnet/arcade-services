@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.EntityFrameworkCore;
+using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Configuration;
 
 namespace ProductConstructionService.Api.Controllers;
@@ -60,21 +61,13 @@ public class ConfigurationIngestionController : Controller
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new ProblemDetails
-            {
-                Title = "Configuration validation failed",
-                Detail = ex.Message,
-                Status = 400
-            });
+            _logger.LogError(ex, "Configuration validation failed for namespace {NamespaceName}", namespaceName);
+            return BadRequest(new ApiError("Configuration validation failed", [ex.Message]));
         }
         catch (Exception ex) when (ex is DbUpdateException || ex is InvalidOperationException)
         {
-            return BadRequest(new ProblemDetails
-            {
-                Title = "BAR constrains violated",
-                Detail = ex.Message,
-                Status = 400
-            });
+            _logger.LogError(ex, "BAR constraints violated while ingesting namespace {NamespaceName}", namespaceName);
+            return BadRequest(new ApiError("BAR constraints violated", [ex.Message]));
         }
     }
 
