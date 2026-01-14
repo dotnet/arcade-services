@@ -402,7 +402,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         else
         {
             StringBuilder str = new("PRs from original repository included in this codeflow update:");
-            foreach (var prInfo in prsInfo.Distinct())
+            foreach (var prInfo in prsInfo.Distinct().Reverse())
             {
                 string format = $"- {{0}}";
                 str.AppendLine();
