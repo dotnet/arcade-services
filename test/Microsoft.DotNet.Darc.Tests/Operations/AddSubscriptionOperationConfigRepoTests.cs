@@ -4,9 +4,11 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using AwesomeAssertions;
+using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib.Helpers;
@@ -288,6 +290,181 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
         var subscriptions = await DeserializeSubscriptionsAsync(fullPath);
         subscriptions.Should().HaveCount(1);
         subscriptions[0].Id.Should().Be(Guid.Parse(existingSubscriptionId));
+    }
+
+    [Test]
+    public async Task AddSubscriptionOperation_CopyFromSubscription_CopiesAllSettings()
+    {
+        // Arrange - Create a source subscription to copy from
+        var sourceSubscriptionId = Guid.NewGuid();
+        var sourceChannel = new Channel(42, "test-channel", "test");
+        var sourceSubscription = new Subscription(
+            id: sourceSubscriptionId,
+            enabled: true,
+            sourceEnabled: false,
+            sourceRepository: "https://github.com/dotnet/source-repo",
+            targetRepository: "https://github.com/dotnet/target-repo",
+            targetBranch: "main",
+            pullRequestFailureNotificationTags: "tag1;tag2",
+            sourceDirectory: null,
+            targetDirectory: null,
+            excludedAssets: new List<string> { "System.Text.Json" })
+        {
+            Channel = sourceChannel,
+            Policy = new SubscriptionPolicy(batchable: false, updateFrequency: UpdateFrequency.EveryDay)
+            {
+                MergePolicies = new List<MergePolicy>
+                {
+                    new MergePolicy
+                    {
+                        Name = MergePolicyConstants.AllCheckSuccessfulMergePolicyName,
+                        Properties = []
+                    }
+                }
+            }
+        };
+
+        // Setup the mock to return the source subscription
+        BarClientMock
+            .Setup(x => x.GetSubscriptionAsync(sourceSubscriptionId.ToString()))
+            .ReturnsAsync(sourceSubscription);
+
+        SetupChannel(sourceChannel.Name);
+
+        var testBranch = GetTestBranch();
+        var options = new AddSubscriptionCommandLineOptions
+        {
+            CopyFromSubscription = sourceSubscriptionId.ToString(),
+            ConfigurationRepository = ConfigurationRepoPath,
+            ConfigurationBranch = testBranch,
+            ConfigurationBaseBranch = DefaultBranch,
+            NoPr = true,
+            Quiet = true,
+            NoTriggerOnCreate = true,
+            IgnoreChecks = []
+        };
+
+        var operation = CreateOperation(options);
+
+        // Act
+        int result = await operation.ExecuteAsync();
+
+        // Assert
+        result.Should().Be(Constants.SuccessCode);
+
+        // Verify the new subscription was created with copied settings
+        await CheckoutBranch(testBranch);
+        var expectedSubscription = new SubscriptionYaml
+        {
+            Id = Guid.NewGuid(), // Placeholder ID for path calculation
+            Channel = sourceChannel.Name,
+            SourceRepository = sourceSubscription.SourceRepository,
+            TargetRepository = sourceSubscription.TargetRepository,
+            TargetBranch = sourceSubscription.TargetBranch
+        };
+        var expectedFilePath = ConfigFilePathResolver.GetDefaultSubscriptionFilePath(expectedSubscription);
+        var fullExpectedPath = Path.Combine(ConfigurationRepoPath, expectedFilePath.ToString());
+        File.Exists(fullExpectedPath).Should().BeTrue($"Expected file at {fullExpectedPath}");
+
+        var subscriptions = await DeserializeSubscriptionsAsync(fullExpectedPath);
+        subscriptions.Should().HaveCount(1);
+
+        var actualSubscription = subscriptions[0];
+        actualSubscription.Channel.Should().Be(sourceSubscription.Channel.Name);
+        actualSubscription.SourceRepository.Should().Be(sourceSubscription.SourceRepository);
+        actualSubscription.TargetRepository.Should().Be(sourceSubscription.TargetRepository);
+        actualSubscription.TargetBranch.Should().Be(sourceSubscription.TargetBranch);
+        actualSubscription.UpdateFrequency.Should().Be(sourceSubscription.Policy.UpdateFrequency);
+        actualSubscription.Enabled.Should().Be(sourceSubscription.Enabled);
+        actualSubscription.FailureNotificationTags.Should().Be(sourceSubscription.PullRequestFailureNotificationTags);
+        actualSubscription.ExcludedAssets.Should().BeEquivalentTo(sourceSubscription.ExcludedAssets);
+        actualSubscription.MergePolicies.Should().HaveCount(1);
+        actualSubscription.MergePolicies[0].Name.Should().Be(MergePolicyConstants.AllCheckSuccessfulMergePolicyName);
+    }
+
+    [Test]
+    public async Task AddSubscriptionOperation_CopyFromSubscription_OverrideWithCommandLineOptions()
+    {
+        // Arrange - Create a source subscription to copy from
+        var sourceSubscriptionId = Guid.NewGuid();
+        var sourceChannel = new Channel(42, "source-channel", "test");
+        var targetChannel = new Channel(43, "target-channel", "test");
+        var sourceSubscription = new Subscription(
+            id: sourceSubscriptionId,
+            enabled: true,
+            sourceEnabled: false,
+            sourceRepository: "https://github.com/dotnet/source-repo",
+            targetRepository: "https://github.com/dotnet/original-target",
+            targetBranch: "main",
+            pullRequestFailureNotificationTags: "tag1",
+            sourceDirectory: null,
+            targetDirectory: null,
+            excludedAssets: new List<string>())
+        {
+            Channel = sourceChannel,
+            Policy = new SubscriptionPolicy(batchable: false, updateFrequency: UpdateFrequency.EveryDay)
+            {
+                MergePolicies = new List<MergePolicy>()
+            }
+        };
+
+        // Setup the mocks
+        BarClientMock
+            .Setup(x => x.GetSubscriptionAsync(sourceSubscriptionId.ToString()))
+            .ReturnsAsync(sourceSubscription);
+
+        SetupChannel(sourceChannel.Name, channelId: sourceChannel.Id);
+        SetupChannel(targetChannel.Name, channelId: targetChannel.Id);
+
+        var testBranch = GetTestBranch();
+        var newTargetRepo = "https://github.com/dotnet/new-target";
+        var newTargetBranch = "release/1.0";
+        
+        var options = new AddSubscriptionCommandLineOptions
+        {
+            CopyFromSubscription = sourceSubscriptionId.ToString(),
+            Channel = targetChannel.Name, // Override channel
+            TargetRepository = newTargetRepo, // Override target repo
+            TargetBranch = newTargetBranch, // Override target branch
+            ConfigurationRepository = ConfigurationRepoPath,
+            ConfigurationBranch = testBranch,
+            ConfigurationBaseBranch = DefaultBranch,
+            NoPr = true,
+            Quiet = true,
+            NoTriggerOnCreate = true,
+            IgnoreChecks = []
+        };
+
+        var operation = CreateOperation(options);
+
+        // Act
+        int result = await operation.ExecuteAsync();
+
+        // Assert
+        result.Should().Be(Constants.SuccessCode);
+
+        // Verify the new subscription has overridden values
+        await CheckoutBranch(testBranch);
+        var expectedSubscription = new SubscriptionYaml
+        {
+            Id = Guid.NewGuid(), // Placeholder ID for path calculation
+            Channel = targetChannel.Name,
+            SourceRepository = sourceSubscription.SourceRepository,
+            TargetRepository = newTargetRepo,
+            TargetBranch = newTargetBranch
+        };
+        var expectedFilePath = ConfigFilePathResolver.GetDefaultSubscriptionFilePath(expectedSubscription);
+        var fullExpectedPath = Path.Combine(ConfigurationRepoPath, expectedFilePath.ToString());
+        File.Exists(fullExpectedPath).Should().BeTrue($"Expected file at {fullExpectedPath}");
+
+        var subscriptions = await DeserializeSubscriptionsAsync(fullExpectedPath);
+        subscriptions.Should().HaveCount(1);
+
+        var actualSubscription = subscriptions[0];
+        actualSubscription.Channel.Should().Be(targetChannel.Name); // Overridden
+        actualSubscription.SourceRepository.Should().Be(sourceSubscription.SourceRepository); // Copied
+        actualSubscription.TargetRepository.Should().Be(newTargetRepo); // Overridden
+        actualSubscription.TargetBranch.Should().Be(newTargetBranch); // Overridden
     }
 
     private AddSubscriptionCommandLineOptions CreateAddSubscriptionOptions(
