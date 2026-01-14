@@ -163,11 +163,11 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             try
             {
                 copyFromSubscription = await _barClient.GetSubscriptionAsync(_options.CopyFromSubscription);
-                _logger.LogInformation($"Copying settings from subscription '{copyFromSubscription.Id}'");
+                _logger.LogInformation("Copying settings from subscription '{SubscriptionId}'", copyFromSubscription.Id);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Failed to retrieve subscription '{_options.CopyFromSubscription}'");
+                _logger.LogError(ex, "Failed to retrieve subscription '{SubscriptionId}'", _options.CopyFromSubscription);
                 return Constants.ErrorCode;
             }
         }
