@@ -13,7 +13,6 @@ public static class DataProvidersExtensions
     {
         services.TryAddTransient<ISqlBarClient, SqlBarClient>();
         services.TryAddTransient<IConfigurationIngestor, ConfigurationIngestor>();
-        // Note: IDistributedLockProvider must be registered by the consuming application
         return services;
     }
 }

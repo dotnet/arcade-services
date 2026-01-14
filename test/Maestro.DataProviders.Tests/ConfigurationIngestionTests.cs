@@ -38,15 +38,6 @@ public class ConfigurationIngestorTests
 
         _context = new BuildAssetRegistryContext(options);
 
-        var distributedLockMock = new Mock<IDistributedLockProvider>();
-
-        distributedLockMock
-            .Setup(dl => dl.ExecuteWithLockAsync<ConfigurationUpdates>(
-                It.IsAny<string>(),
-                It.IsAny<Func<Task<ConfigurationUpdates>>>()))
-            .Returns<string, Func<Task<ConfigurationUpdates>>>(
-                async (_, action) => await action());
-
         var installationIdResolver = new Mock<IGitHubInstallationIdResolver>();
         installationIdResolver.Setup(r => r.GetInstallationIdForRepository(It.IsAny<string>()))
             .Returns(Task.FromResult((long?)1));
@@ -54,7 +45,6 @@ public class ConfigurationIngestorTests
         var services = new ServiceCollection()
             .AddSingleton(_context)
             .AddSingleton<ISqlBarClient>(new SqlBarClient(_context, null))
-            .AddSingleton(distributedLockMock.Object)
             .AddSingleton(installationIdResolver.Object)
             .AddConfigurationIngestion();
 

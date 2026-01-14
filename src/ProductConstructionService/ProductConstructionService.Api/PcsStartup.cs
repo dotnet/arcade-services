@@ -10,6 +10,7 @@ using Maestro.Common.AzureDevOpsTokens;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
+using Maestro.DataProviders.ConfigurationIngestion;
 using Maestro.MergePolicies;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
@@ -121,7 +122,32 @@ internal static class PcsStartup
 
         await builder.AddRedisCache(authRedis);
         builder.AddBuildAssetRegistry();
+        
+        // Register ConfigurationIngestor without the interface first
         builder.Services.AddConfigurationIngestion();
+        
+        // Replace the IConfigurationIngestor registration with the locked version
+        // This wraps the registered ConfigurationIngestor with distributed locking
+        var descriptor = builder.Services.FirstOrDefault(d => d.ServiceType == typeof(IConfigurationIngestor));
+        if (descriptor != null)
+        {
+            builder.Services.Remove(descriptor);
+            builder.Services.AddTransient<IConfigurationIngestor>(sp =>
+            {
+                // Get the dependencies needed to create ConfigurationIngestor
+                var context = sp.GetRequiredService<BuildAssetRegistryContext>();
+                var sqlBarClient = sp.GetRequiredService<ISqlBarClient>();
+                var installationIdResolver = sp.GetRequiredService<IGitHubInstallationIdResolver>();
+                var distributedLock = sp.GetRequiredService<IDistributedLock>();
+                
+                // Create the inner ConfigurationIngestor directly
+                var innerIngestor = new ConfigurationIngestor(context, sqlBarClient, installationIdResolver);
+                
+                // Wrap it with the locking decorator
+                return new LockedConfigurationIngestor(innerIngestor, distributedLock);
+            });
+        }
+        
         builder.AddMetricRecorder();
         builder.AddWorkItemQueues(azureCredential, waitForInitialization: true);
         builder.AddDependencyFlowProcessors();

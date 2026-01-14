@@ -48,16 +48,10 @@ public interface IDistributedLock
 
 public class DistributedLock(
     IRedisCacheFactory redisCacheFactory,
-    ILogger<DistributedLock> logger) : IDistributedLock, IDistributedLockProvider
+    ILogger<DistributedLock> logger) : IDistributedLock
 {
     private readonly IRedisCacheFactory _cacheFactory = redisCacheFactory;
     private readonly ILogger<DistributedLock> _logger = logger;
-
-    // Implementation of IDistributedLockProvider (simplified interface for external use)
-    Task<T> IDistributedLockProvider.ExecuteWithLockAsync<T>(string key, Func<Task<T>> action)
-    {
-        return ExecuteWithLockAsync(key, action);
-    }
 
     public async Task<T> ExecuteWithLockAsync<T>(
         string key,

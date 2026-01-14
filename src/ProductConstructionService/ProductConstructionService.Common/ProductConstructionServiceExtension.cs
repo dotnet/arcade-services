@@ -76,11 +76,7 @@ public static class ProductConstructionServiceExtension
         builder.Services.AddSingleton<IRedisCacheFactory, RedisCacheFactory>();
         builder.Services.AddSingleton<IRedisCacheClient, RedisCacheClient>();
         builder.Services.AddScoped<IFeatureFlagService, FeatureFlagService>();
-        
-        // Register DistributedLock for both its interfaces
-        builder.Services.AddSingleton<DistributedLock>();
-        builder.Services.AddSingleton<IDistributedLock>(sp => sp.GetRequiredService<DistributedLock>());
-        builder.Services.AddSingleton<IDistributedLockProvider>(sp => sp.GetRequiredService<DistributedLock>());
+        builder.Services.AddSingleton<IDistributedLock, DistributedLock>();
     }
 
     public static void AddMetricRecorder(this IHostApplicationBuilder builder)

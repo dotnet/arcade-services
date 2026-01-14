@@ -17,16 +17,14 @@ using Microsoft.DotNet.DarcLib;
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion;
 
-internal partial class ConfigurationIngestor(
+public partial class ConfigurationIngestor(
         BuildAssetRegistryContext context,
         ISqlBarClient sqlBarClient,
-        IDistributedLockProvider distributedLockProvider,
         IGitHubInstallationIdResolver installationIdResolver)
     : IConfigurationIngestor
 {
     private readonly BuildAssetRegistryContext _context = context;
     private readonly ISqlBarClient _sqlBarClient = sqlBarClient;
-    private readonly IDistributedLockProvider _distributedLockProvider = distributedLockProvider;
     private readonly IGitHubInstallationIdResolver _installationIdResolver = installationIdResolver;
 
     public async Task<ConfigurationUpdates> IngestConfigurationAsync(
@@ -34,13 +32,7 @@ internal partial class ConfigurationIngestor(
         string configurationNamespace,
         bool saveChanges)
     {
-        var ingestionResult =
-            await _distributedLockProvider.ExecuteWithLockAsync("ConfigurationIngestion", async () =>
-            {
-                return await IngestConfigurationInternalAsync(configurationData, configurationNamespace, saveChanges);
-            });
-
-        return ingestionResult;
+        return await IngestConfigurationInternalAsync(configurationData, configurationNamespace, saveChanges);
     }
 
     private async Task<ConfigurationUpdates> IngestConfigurationInternalAsync(
