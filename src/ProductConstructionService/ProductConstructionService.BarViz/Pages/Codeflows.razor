@@ -50,14 +50,17 @@
     <Header>
         <FluentSelect TOption="DefaultChannel"
                       Items="@DefaultChannels"
-                      OptionText="@(channel => channel.Branch + " / " + channel.Channel.Name)"
                       OptionValue="@(channel => channel.Branch)"
                       OptionSelected="@(c => c.Id == DefaultChannel?.Id)"
                       SelectedOptionChanged="@(OnDefaultChannelSelected)"
                       SelectedOption="@DefaultChannel"
                       Immediate="true"
                       Multiple="false"
-                      style="float: right" />
+                      style="float: right">
+            <OptionTemplate>
+                <span title="Channel ID: @context.Channel.Id">@context.Branch / @context.Channel.Name</span>
+            </OptionTemplate>
+        </FluentSelect>
     </Header>
     <Content>
         <FluentDataGrid Items="@CodeFlows"
