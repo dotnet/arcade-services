@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using AwesomeAssertions;
-using ProductConstructionService.Common;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders.ConfigurationIngestion;
@@ -39,16 +38,14 @@ public class ConfigurationIngestorTests
 
         _context = new BuildAssetRegistryContext(options);
 
-        var distributedLockMock = new Mock<IDistributedLock>();
+        var distributedLockMock = new Mock<IDistributedLockProvider>();
 
         distributedLockMock
             .Setup(dl => dl.ExecuteWithLockAsync<ConfigurationUpdates>(
                 It.IsAny<string>(),
-                It.IsAny<Func<Task<ConfigurationUpdates>>>(),
-                It.IsAny<TimeSpan?>(),
-                It.IsAny<CancellationToken>()))
-            .Returns<string, Func<Task<ConfigurationUpdates>>, TimeSpan?, CancellationToken>(
-                async (_, action, _, _) => await action());
+                It.IsAny<Func<Task<ConfigurationUpdates>>>()))
+            .Returns<string, Func<Task<ConfigurationUpdates>>>(
+                async (_, action) => await action());
 
         var installationIdResolver = new Mock<IGitHubInstallationIdResolver>();
         installationIdResolver.Setup(r => r.GetInstallationIdForRepository(It.IsAny<string>()))
