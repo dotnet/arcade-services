@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>true</IsPackable>
     <Nullable>enable</Nullable>
     <SignAssembly>False</SignAssembly>
   </PropertyGroup>
