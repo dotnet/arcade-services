@@ -124,6 +124,7 @@ internal abstract class CodeFlowOperation(
                     currentTargetRepoBranch,
                     enableRebase: true,
                     forceUpdate: true,
+                    unsafeFlow: _options.UnsafeFlow,
                     cancellationToken);
         }
         finally
@@ -213,6 +214,7 @@ internal abstract class CodeFlowOperation(
                 targetRepoUri,
                 enableRebase: true,
                 forceUpdate: true,
+                unsafeFlow: _options.UnsafeFlow,
                 cancellationToken);
         }
         finally

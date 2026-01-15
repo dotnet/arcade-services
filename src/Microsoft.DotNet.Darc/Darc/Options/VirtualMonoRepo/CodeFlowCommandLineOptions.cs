@@ -17,6 +17,8 @@ internal interface ICodeFlowCommandLineOptions : IBaseVmrCommandLineOptions
     public string SubscriptionId { get; set; }
 
     public string ExcludedAssets { get; set; }
+
+    bool UnsafeFlow { get; set; }
 }
 
 internal abstract class CodeFlowCommandLineOptions<T>
@@ -43,6 +45,9 @@ internal abstract class CodeFlowCommandLineOptions<T>
 
     [Option("excluded-assets", HelpText = "Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded during the flow.")]
     public string ExcludedAssets { get; set; }
+
+    [Option("unsafe", HelpText = "Bypasses some codeflow validations. Only use this when recovering from branch flow inconsistencies. This can lead to unexpected or lost changes. Use at your own risk!")]
+    public bool UnsafeFlow { get; set; }
 
     public abstract IEnumerable<string> Repositories { get; }
 

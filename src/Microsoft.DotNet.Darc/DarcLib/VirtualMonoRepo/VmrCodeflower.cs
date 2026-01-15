@@ -20,7 +20,8 @@ public interface IVmrCodeFlower
     Task<LastFlows> GetLastFlowsAsync(
         string mappingName,
         ILocalGitRepo repoClone,
-        bool currentIsBackflow);
+        bool currentIsBackflow,
+        bool ignoreNonLinearFlow);
 }
 
 public record CodeflowOptions(
@@ -31,7 +32,8 @@ public record CodeflowOptions(
     Build Build,
     IReadOnlyCollection<string>? ExcludedAssets,
     bool EnableRebase,
-    bool ForceUpdate);
+    bool ForceUpdate,
+    bool UnsafeFlow);
 
 /// <summary>
 /// This class is responsible for taking changes done to a repo in the VMR and backflowing them into the repo.
@@ -103,7 +105,10 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             throw new BlockingCodeflowException("Cannot apply codeflow on PR head branch because an opposite direction flow has been merged.");
         }
 
-        await EnsureCodeflowLinearityAsync(repo, codeflowOptions.CurrentFlow, lastFlows);
+        if (!codeflowOptions.UnsafeFlow)
+        {
+            await EnsureCodeflowLinearityAsync(repo, codeflowOptions.CurrentFlow, lastFlows);
+        }
 
         _logger.LogInformation("Last flow was {type} flow: {sourceSha} -> {targetSha}",
             lastFlow.Name,
@@ -215,7 +220,8 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     public async Task<LastFlows> GetLastFlowsAsync(
         string mappingName,
         ILocalGitRepo repoClone,
-        bool currentIsBackflow)
+        bool currentIsBackflow,
+        bool ignoreNonLinearFlow)
     {
         await _dependencyTracker.RefreshMetadataAsync();
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
@@ -266,8 +272,32 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
 
         // Commits not comparable. This can happen in situations such as trying to synchronize an old repo commit on top of
         // a new VMR commit which had other synchronization with the repo since.
+        // It can also happen if we get a flow to a branch that previously received flows from a different branch
+        //
+        //     repo                   VMR
+        //       │                     │ 1.
+        //       │                     O────┐
+        //       │                  2. │    │
+        //     3.O◄────────────────────O    │
+        //       │                     │    │
+        //       │  ??? ◄──────────────┼────O 4.
+        //       │                     │
+        //
+        // In such a case, we cannot compare commits 2. and 4.
         if (isBackwardOlder == isForwardOlder)
         {
+            if (ignoreNonLinearFlow)
+            {
+                _logger.LogWarning("Encountered problems with commit history linearity but will bypass because of the unsafe mode override");
+
+                return new LastFlows(
+                    // When ignoring non-linear flows, we should do an opposite direction flow
+                    LastFlow: sourceRepo != repoClone ? lastBackflow : lastForwardFlow,
+                    LastBackFlow: lastBackflow,
+                    LastForwardFlow: lastForwardFlow,
+                    CrossingFlow: null);
+            }
+
             throw new InvalidSynchronizationException($"Failed to determine which commit of {sourceRepo} is older ({backwardSha}, {forwardSha})");
         }
 
@@ -401,6 +431,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 previousFlows ?? lastFlows,
                 codeflowOptions.HeadBranch,
                 codeflowOptions.TargetBranch,
+                codeflowOptions.UnsafeFlow,
                 cancellationToken);
 
             // We store the SHA where the head branch originates from so that later we can diff it
@@ -487,6 +518,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         LastFlows previousFlows,
         string branchToCreate,
         string targetBranch,
+        bool unsafeFlow,
         CancellationToken cancellationToken);
 
     /// <summary>

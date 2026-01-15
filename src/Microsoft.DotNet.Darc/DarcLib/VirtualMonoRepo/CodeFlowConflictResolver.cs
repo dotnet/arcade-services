@@ -405,8 +405,7 @@ public abstract class CodeFlowConflictResolver
             fromSha,
             toSha,
             path: null,
-            filters:
-            excludedFiles,
+            filters: [..excludedFiles.Distinct()],
             relativePaths: true,
             workingDir: codeflowOptions.CurrentFlow.IsForwardFlow
                 ? productRepo.Path
