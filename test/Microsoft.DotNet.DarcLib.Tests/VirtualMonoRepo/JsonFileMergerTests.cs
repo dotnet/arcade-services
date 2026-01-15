@@ -856,6 +856,96 @@ public class JsonFileMergerTests
             Times.Never);
     }
 
+    [Test]
+    public async Task MergeJsonsAsync_RemovingPropertyRemovesEmptyParentObjects()
+    {
+        // Arrange
+        var targetPreviousJson = """
+            {
+              "sdk": {
+                "version": "8.0.303"
+              },
+              "nested": {
+                "deep": {
+                  "value": "original"
+                }
+              }
+            }
+            """;
+
+        var targetCurrentJson = """
+            {
+              "sdk": {
+                "version": "8.0.303"
+              },
+              "nested": {
+                "deep": {
+                  "value": "original"
+                }
+              }
+            }
+            """;
+
+        var vmrPreviousJson = """
+            {
+              "sdk": {
+                "version": "8.0.303"
+              },
+              "nested": {
+                "deep": {
+                  "value": "original"
+                }
+              }
+            }
+            """;
+
+        var vmrCurrentJson = """
+            {
+              "sdk": {
+                "version": "8.0.303"
+              }
+            }
+            """;
+
+        var expectedJson = """
+            {
+              "sdk": {
+                "version": "8.0.303"
+              }
+            }
+            """;
+
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), TargetPreviousSha, It.IsAny<string>()))
+            .ReturnsAsync(targetPreviousJson);
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), TargetCurrentSha, It.IsAny<string>()))
+            .ReturnsAsync(targetCurrentJson);
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), "HEAD", It.IsAny<string>()))
+            .ReturnsAsync(targetCurrentJson);
+        _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()))
+            .ReturnsAsync(vmrPreviousJson);
+        _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
+            .ReturnsAsync(vmrCurrentJson);
+
+        // Act
+        var hadChanges = await _jsonFileMerger.MergeJsonsAsync(
+            _targetRepoMock.Object,
+            TestJsonPath,
+            TargetPreviousSha,
+            TargetCurrentSha,
+            _vmrRepoMock.Object,
+            TestJsonPath,
+            VmrPreviousSha,
+            VmrCurrentSha);
+
+        // Assert
+        hadChanges.Should().BeTrue();
+        _gitRepoMock.Verify(g => g.CommitFilesAsync(
+            It.Is<List<GitFile>>(files => files.Count == 1 && ValidateGitFile(files[0], expectedJson, GitFileOperation.Add)),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()), Times.Once);
+    }
+
 
     private static bool ValidateGitFile(GitFile file, string expectedContent, GitFileOperation operation)
     {
