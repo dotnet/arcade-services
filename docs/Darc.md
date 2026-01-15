@@ -25,6 +25,7 @@ use darc to achieve them, as well as a general reference guide to darc commands.
 
 - [Command Reference](#command-reference)
   - [Parameters](#parameters)
+  - [Configuration Management Commands](#configuration-management-commands) - Overview of commands that use the configuration repository workflow.
   - [add-channel](#add-channel) - Creates a new channel.
   - [add-dependency](#add-dependency) - Add a new dependency to Version.Details.xml.
   - [add-default-channel](#add-default-channel) - Add a channel that a build of a branch+repository is automatically applied to.
@@ -59,6 +60,7 @@ use darc to achieve them, as well as a general reference guide to darc commands.
   - [trigger-subscriptions](#trigger-subscriptions) - Trigger a subscription or set of subscriptions matching criteria.
   - [update-dependencies](#update-dependencies) - Update local dependencies from
     a channel.
+  - [update-channel](#update-channel) - Update an existing channel's metadata.
   - [update-subscription](#update-subscription) - Update an existing subscription.
   - [verify](#verify) - Verify that the dependency information in the repository is correct.
   - [set-goal](#set-goal) - Sets goal for a Definition in a Channel.
@@ -1138,22 +1140,107 @@ You will find them on the `Checks` tab of each updates PRs created by maestro. D
 
 All darc command have a `--help` option that lists and describes all of their parameters
 
+### **Configuration Management Commands**
+
+Several darc commands manage configuration through a dedicated configuration repository. These commands use a standardized workflow to ensure changes are tracked, reviewed, and safely applied.
+
+**Affected Commands:**
+- [add-channel](#add-channel)
+- [update-channel](#update-channel)
+- [delete-channel](#delete-channel)
+- [add-default-channel](#add-default-channel)
+- [delete-default-channel](#delete-default-channel)
+- [default-channel-status](#default-channel-status)
+- [add-subscription](#add-subscription)
+- [update-subscription](#update-subscription)
+- [subscription-status](#subscription-status)
+- [set-repository-policies](#set-repository-policies)
+
+**Configuration Repository Workflow:**
+
+These commands operate against a configuration repository where all channel, subscription, and policy settings are stored as configuration files (YAML). When you run these commands, darc:
+
+1. **Clones or updates** the configuration repository locally
+2. **Creates or updates** a branch with your changes
+3. **Commits** the configuration changes to that branch
+4. **Opens a pull request** against the base branch (unless `--no-pr` is specified)
+
+**Default Configuration Repository:**
+```
+https://dev.azure.com/dnceng/internal/_git/maestro-configuration
+```
+
+The configuration is stored on the `production` branch by default.
+
+**Common Parameters:**
+
+All configuration management commands support these parameters:
+
+- `--configuration-repository` - URI of the repository where configuration is stored. Defaults to the repository above.
+- `--configuration-branch` - Specific branch to make changes on. If not specified, darc creates a new branch automatically.
+- `--configuration-base-branch` - Base branch to create the configuration branch from (defaults to `production`).
+- `--configuration-file` - Optional override of the target configuration file path (e.g., `configuration/channels/net-11-preview-3.yml`).
+- `--no-pr` - Push changes to the configuration branch without opening a pull request. Use this when you want to batch multiple changes before creating a PR.
+
+**Default Behavior:**
+
+- A pull request is opened automatically unless you specify `--no-pr`
+- Changes are made against the default configuration repository
+- A new branch is created automatically if you don't specify `--configuration-branch`
+- The base branch is `production` unless you override it with `--configuration-base-branch`
+
+**Example Workflow:**
+
+```powershell
+# Create a new channel - automatically opens a PR
+darc add-channel --name "My New Channel" --classification dev
+
+# Create multiple changes on the same branch before opening a PR
+darc add-channel --name "Channel 1" --no-pr --configuration-branch my-changes
+darc add-channel --name "Channel 2" --no-pr --configuration-branch my-changes
+darc add-channel --name "Channel 3" --configuration-branch my-changes  # Opens PR
+
+# Work against a different configuration repository
+darc add-channel --name "Test Channel" \
+  --configuration-repository https://dev.azure.com/myorg/myproject/_git/my-config
+```
+
+**Note:** All configuration changes require appropriate permissions on the configuration repository.
+
 ### **`add-channel`**
 
 Add a new channel. This creates a new tag that builds can be applied to.
 
+This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
+
 *This is not a typical operation and you should consult with the (`@dnceng`)
 engineering team before doing so.*
+
+**Parameters:**
+- `--name` (required) - Name of the channel to create
+- `--classification` - Classification of the channel (defaults to 'dev')
+- See [Configuration Management Commands](#configuration-management-commands) for additional parameters
 
 **Sample**:
 ```
 PS D:\enlistments\arcade> darc add-channel --name "Foo"
 
 Successfully created new channel with name 'Foo'.
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12345
+```
+
+**Sample (no PR):**
+```
+PS D:\enlistments\arcade> darc add-channel --name "Foo" --no-pr
+
+Successfully created new channel with name 'Foo'.
+Changes pushed to branch: darc-add-channel-foo-20240115
 ```
 
 **See also**:
+- [Configuration Management Commands](#configuration-management-commands)
 - [delete-channel](#delete-channel)
+- [update-channel](#update-channel)
 - [get-channels](#get-channels)
 
 
@@ -1277,6 +1364,8 @@ and manually applied to channels, this is generally inconvenient for day to day 
 in most cases.  In general, until release shutdown, each build of a branch
 should always be applied to its "normal" channel.
 
+This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
+
 ***Note that the branch specified should almost always be
 "refs/heads/{branchName}", unless you explicitly know otherwise***.
 
@@ -1285,17 +1374,30 @@ Azure DevOps built in pipeline variables, which specify refs/heads/foo vs. foo.
 If your repository is manually reporting to BAR without using the Arcade
 templates, then this name may be different.
 
-Default channel mappings can be deleted with [delete-default-channel](#delete-default-channel).
+Default channel mappings can be deleted with [delete-default-channel](#delete-default-channel) 
+or disabled/enabled with [default-channel-status](#default-channel-status).
+
+**Parameters:**
+- `--channel` (required) - Name of channel that builds of 'branch' and 'repo' should be applied to
+- `--branch` (required) - Builds of 'repo' on this branch will be automatically applied to 'channel'. Use with '--regex' to match on multiple branch names
+- `--repo` (required) - Builds of this repo on 'branch' will be automatically applied to 'channel'
+- `--regex` - If specified, the value of the 'branch' option will be treated as a regular expression for matching branch names
+- See [Configuration Management Commands](#configuration-management-commands) for additional parameters
 
 **Sample**
 ```
 PS D:\enlistments\arcade> darc add-default-channel --channel ".Net 5 Dev" --branch refs/heads/master --repo https://github.com/dotnet/arcade
+
+Successfully added default channel association.
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12348
 ```
 
 **See also**:
+- [Configuration Management Commands](#configuration-management-commands)
 - [get-channels](#get-channels)
 - [get-default-channels](#get-default-channels)
 - [delete-default-channel](#delete-default-channel)
+- [default-channel-status](#default-channel-status)
 - [set-goal](#set-goal)
 - [get-goal](#get-goal)
 
@@ -1307,7 +1409,7 @@ There are two types of subscriptions: dependency flow and code flow subscription
 
 Information about code flow subscriptions can be found at [Codeflow-PRs](UnifiedBuild/Codeflow-PRs.md)
 
-A  dependency flow subscription describes an update
+A dependency flow subscription describes an update
 operation for a specific repository+branch combination, mapping outputs of a
 repository that have been applied to a channel (virtual branch) onto matching
 inputs of the target repository+branch.
@@ -1316,6 +1418,8 @@ For example, a build of dotnet/runtime might be applied to the ".NET 9"
 channel. dotnet/sdk maps new outputs of runtime on the ".NET 9"
 channel onto its main branch.
 
+This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
+
 A subscription has a few parts:
 - Mapping of source repo + source channel => target repo + target branch
 - An update rate (e.g. every day, every build, not at all)
@@ -1323,8 +1427,7 @@ A subscription has a few parts:
   subscriptions targeting the same repo+branch combination will share a PR.
 - A set of auto merge policies, if the subscription is not batchable.  If batchable,
   merge policies are set on a repository level rather than a per-subscription
-  level, as they end up shared between several subscriptions. *Note: repository
-  merge policies are currently unsupported in darc*
+  level, using [set-repository-policies](#set-repository-policies).
 
 `add-subscription` has two modes of operation:
 - Interactive mode (default) - Interactive mode will take whatever input parameters were
@@ -1334,17 +1437,18 @@ A subscription has a few parts:
  supplied.
 
 Upon saving and closing the editor, or running the darc command if in command
-line mode (`-q`), the darc tool submits the new subscription to Maestro++. If
-successful, the id of the new subscription is returned.
+line mode (`-q`), the darc tool submits the new subscription to the configuration repository.
+A pull request is created by default (unless `--no-pr` is specified).
 
 **Sample**:
 ```
-PS D:\enlistments\arcade-services> darc add-subscription --channel ".NET Tools - Latest"
-                                   --source-repo https://github.com/dotnet/arcade
-                                   --target-repo https://dev.azure.com/dnceng/internal/_git/dotnet-optimization
+PS D:\enlistments\arcade-services> darc add-subscription --channel ".NET Tools - Latest" \
+                                   --source-repo https://github.com/dotnet/arcade \
+                                   --target-repo https://dev.azure.com/dnceng/internal/_git/dotnet-optimization \
                                    --target-branch master --update-frequency everyDay --all-checks-passed -q
 
 Successfully created new subscription with id '4f300f68-8800-4b14-328e-08d68308fe30'.
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12352
 ```
 
 **Target Directories for Dependency Flow Subscriptions**:
@@ -1537,8 +1641,19 @@ Clone a remote repo and all of its dependency repos. This is typically used for 
 
 Enables or disables a default channel association. Default channels associations
 that are disabled will not apply to new builds. This effectively turns off flow
-out of the repository. Builds may still be applied manually to any channel.
+out of the repository. Builds may still be applied manually to any channel
 using [add-build-to-channel](#add-build-to-channel).
+
+This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
+
+**Parameters:**
+- `--id` - ID of the default channel association to enable/disable
+- `--channel` - Name of the channel (alternative to using --id)
+- `--branch` - Branch name (alternative to using --id, must be used with --channel and --repo)
+- `--repo` - Repository name (alternative to using --id, must be used with --channel and --branch)
+- `--enable` - Enable the default channel association
+- `--disable` - Disable the default channel association
+- See [Configuration Management Commands](#configuration-management-commands) for additional parameters
 
 **Sample**:
 ```
@@ -1547,12 +1662,15 @@ PS D:\enlistments\websdk> darc get-default-channels --source-repo core-setup --b
 
 PS D:\enlistments\websdk> darc default-channel-status --disable --id 192
 Default channel association has been disabled.
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12350
 
 PS D:\enlistments\websdk> darc default-channel-status --enable --id 192
 Default channel association has been enabled.
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12351
 ```
 
 **See also**:
+- [Configuration Management Commands](#configuration-management-commands)
 - [add-build-to-channel](#add-build-to-channel)
 - [add-default-channel](#add-default-channel)
 - [delete-default-channel](#delete-default-channel)
@@ -1564,18 +1682,56 @@ Default channel association has been enabled.
 
 Delete a channel. This channel must not be in use by any subscriptions.
 
+This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
+
 *This is not a typical operation and you should consult with the (`@dnceng`)
 engineering team before doing so.*
+
+**Parameters:**
+- `--name` (required) - Name of the channel to delete
+- See [Configuration Management Commands](#configuration-management-commands) for additional parameters
 
 **Sample**:
 ```
 PS D:\enlistments\arcade> darc delete-channel --name "Foo"
 
 Successfully deleted channel 'Foo'.
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12346
 ```
 
 **See also**:
+- [Configuration Management Commands](#configuration-management-commands)
 - [add-channel](#add-channel)
+- [update-channel](#update-channel)
+- [get-channels](#get-channels)
+
+### **`update-channel`**
+
+Update an existing channel's metadata, such as its name or classification.
+
+This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
+
+*This is not a typical operation and you should consult with the (`@dnceng`)
+engineering team before doing so.*
+
+**Parameters:**
+- `--id` (required) - ID of the channel to update
+- `--name` - New name for the channel
+- `--classification` - New classification for the channel
+- See [Configuration Management Commands](#configuration-management-commands) for additional parameters
+
+**Sample**:
+```
+PS D:\enlistments\arcade> darc update-channel --id 123 --name "New Channel Name" --classification "release"
+
+Successfully updated channel with id '123'.
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12347
+```
+
+**See also**:
+- [Configuration Management Commands](#configuration-management-commands)
+- [add-channel](#add-channel)
+- [delete-channel](#delete-channel)
 - [get-channels](#get-channels)
 
 ### **`delete-default-channel`**
@@ -1584,22 +1740,30 @@ Deletes a default channel mapping. Deleting will not affect any existing builds,
 but new builds of the specified repos will not be applied to the target
 channel.
 
+This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
+
 You can obtain a list of current default channel mappings with
 [get-default-channels](#get-default-channels)
 
-- `--channel` - **(Required)** Name of channel that builds of 'repository' and 'branch' should not apply to.
-- `--branch` - **(Required)** Repository that should have its default association removed.
-- `--repo` - **(Required)** Branch that should have its default association
-  removed.
+**Parameters:**
+- `--channel` (required) - Name of channel that builds of 'repository' and 'branch' should not apply to
+- `--branch` (required) - Repository that should have its default association removed
+- `--repo` (required) - Branch that should have its default association removed
+- See [Configuration Management Commands](#configuration-management-commands) for additional parameters
 
 **Sample**
 ```
-PS D:\enlistments\arcade> darc delete-default-channel --channel ".Net 5 Dev" --branch refs/heads/master
+PS D:\enlistments\arcade> darc delete-default-channel --channel ".Net 5 Dev" --branch refs/heads/master \
                           --repo https://github.com/dotnet/arcade
+
+Successfully deleted default channel association.
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12349
 ```
 
 **See also**:
+- [Configuration Management Commands](#configuration-management-commands)
 - [add-default-channel](#add-default-channel)
+- [default-channel-status](#default-channel-status)
 - [get-default-channels](#get-default-channels)
 
 ### **`delete-subscriptions`**
