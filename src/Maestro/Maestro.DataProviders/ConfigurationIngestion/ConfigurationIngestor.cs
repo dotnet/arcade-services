@@ -30,14 +30,6 @@ internal partial class ConfigurationIngestor(
     public async Task<ConfigurationUpdates> IngestConfigurationAsync(
         ConfigurationData configurationData,
         string configurationNamespace,
-        bool saveChanges)
-    {
-        return await IngestConfigurationInternalAsync(configurationData, configurationNamespace, saveChanges);
-    }
-
-    private async Task<ConfigurationUpdates> IngestConfigurationInternalAsync(
-        ConfigurationData configurationData,
-        string configurationNamespace,
         bool saveChanges = true)
     {
         var ingestionData = IngestedConfigurationData.FromYamls(configurationData);
