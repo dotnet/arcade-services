@@ -812,7 +812,7 @@ A subscription has a few parts:
 - Whether a subscription is batchable or not. If batchable, all batchable
   subscriptions targeting the same repo+branch combination will share a PR.
 - A set of auto merge policies, if the subscription is not batchable.  If batchable,
-  merge policies are set on a repository level rather than a per-subscription
+  merge policies are set on a repository branch level rather than a per-subscription
   level, using [set-repository-policies](#set-repository-policies).
 
 For additional information and samples, see [add-subscription](#add-subscription)
@@ -1156,7 +1156,7 @@ Several darc commands manage configuration through a dedicated configuration rep
 
 These commands operate against a configuration repository where all channel, subscription, and policy settings are stored as configuration files (YAML). When you run these commands, darc:
 
-1. **Clones or updates** the configuration repository locally
+1. **Creates or updates** configuration files directly in the specified repository
 2. **Creates or updates** a branch with your changes
 3. **Commits** the configuration changes to that branch
 4. **Opens a pull request** against the base branch (unless `--no-pr` is specified)
@@ -1422,7 +1422,7 @@ A subscription has a few parts:
 - Whether a subscription is batchable or not. If batchable, all batchable
   subscriptions targeting the same repo+branch combination will share a PR.
 - A set of auto merge policies, if the subscription is not batchable.  If batchable,
-  merge policies are set on a repository level rather than a per-subscription
+  merge policies are set on a repository branch level rather than a per-subscription
   level, using [set-repository-policies](#set-repository-policies).
 
 `add-subscription` has two modes of operation:
