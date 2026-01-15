@@ -46,7 +46,7 @@ internal abstract class CodeFlowCommandLineOptions<T>
     [Option("excluded-assets", HelpText = "Semicolon-delineated list of asset filters (package name with asterisks allowed) to be excluded during the flow.")]
     public string ExcludedAssets { get; set; }
 
-    [Option("unsafe-flow", HelpText = "Ignores problems with codeflow linearity like flowing from a different branch than last time etc. Use at your own risk.")]
+    [Option("unsafe", HelpText = "Ignores problems with codeflow linearity like flowing from a different branch than last time etc. Use at your own risk.")]
     public bool UnsafeFlow { get; set; }
 
     public abstract IEnumerable<string> Repositories { get; }
