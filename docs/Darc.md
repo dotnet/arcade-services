@@ -1556,9 +1556,13 @@ PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9 Dev"
   ```
 
 **See also**:
+- [Configuration Management Commands](#configuration-management-commands)
 - [delete-subscriptions](#delete-subscriptions)
 - [get-subscriptions](#get-subscriptions)
+- [update-subscription](#update-subscription)
 - [trigger-subscriptions](#trigger-subscriptions)
+- [subscription-status](#subscription-status)
+- [set-repository-policies](#set-repository-policies)
 - [get-channels](#get-channels)
 
 ### **`add-build-to-channel`**
@@ -2848,13 +2852,28 @@ Set merge policies for the specific repository and branch. These policies only
 apply to batchable subscriptions. When all repository policies are satisfied,
 the dependency update pull request is automatically merged.
 
-If -q is not passed, the command pops up a edit dialog so that the repository
+This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
+
+If `-q` is not passed, the command pops up an edit dialog so that the repository
 policies may be edited.
+
+**Parameters:**
+- `--repo` (required) - Name of repository to set merge policies for
+- `--branch` (required) - Name of branch to set merge policies for
+- `--standard-automerge` - Use standard auto-merge policies
+- `--all-checks-passed` - PR is automatically merged if there is at least one check and all are passed
+- `--ignore-checks` - For use with `--all-checks-passed`. A comma-separated list of checks that are ignored
+- `--no-requested-changes` - PR is not merged if there are changes requested or the PR has been rejected
+- `--no-downgrades` - PR is not merged if there are version downgrades
+- `-q, --quiet` - Non-interactive mode (requires all elements to be passed on the command line)
+- See [Configuration Management Commands](#configuration-management-commands) for additional parameters
 
 **Sample**:
 ```
-PS D:\enlistments\websdk> darc set-repository-policies --repo https://github.com/dotnet/corefx --branch master --standard-automerge -q
+PS D:\enlistments\websdk> darc set-repository-policies --repo https://github.com/dotnet/corefx \
+                          --branch master --standard-automerge -q
 Successfully updated merge policies for https://github.com/dotnet/corefx@master.
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12353
 
 PS D:\enlistments\websdk> darc get-repository-policies --repo https://github.com/dotnet/corefx --branch master --all
 https://github.com/dotnet/corefx @ master
@@ -2865,6 +2884,7 @@ https://github.com/dotnet/corefxlab @ master
 ```
 
 **See also**:
+- [Configuration Management Commands](#configuration-management-commands)
 - [get-repository-policies](#get-repository-policies)
 - [get-subscriptions](#get-subscriptions)
 - [add-subscription](#add-subscription)
@@ -2872,12 +2892,21 @@ https://github.com/dotnet/corefxlab @ master
 ### **`subscription-status`**
 
 Enables or disables a subscription matching the id. You can find out whether a
-subscription is disabled or enabled using get-subscriptions.
+subscription is disabled or enabled using [get-subscriptions](#get-subscriptions).
+
+This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
+
+**Parameters:**
+- `--id` (required) - ID of the subscription to enable or disable
+- `--enable` - Enable the subscription
+- `--disable` - Disable the subscription
+- See [Configuration Management Commands](#configuration-management-commands) for additional parameters
 
 **Sample**:
 ```
 PS D:\enlistments\websdk> darc subscription-status --id 1abbb4c1-19d8-4912-fab8-08d6a19aff91 --disable
 Successfully disabled subscription with id '1abbb4c1-19d8-4912-fab8-08d6a19aff91'.
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12354
 
 PS D:\enlistments\websdk> darc get-subscriptions --source-repo aspnetcore --target-repo websdk --channel Dev
 https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet/websdk' ('master')
@@ -2890,6 +2919,7 @@ https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet
 
 PS D:\enlistments\websdk> darc subscription-status --id 1abbb4c1-19d8-4912-fab8-08d6a19aff91 --enable
 Successfully enabled subscription with id '1abbb4c1-19d8-4912-fab8-08d6a19aff91'.
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12355
 
 PS D:\enlistments\websdk> darc get-subscriptions --source-repo aspnetcore --target-repo websdk --channel Dev
 https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet/websdk' ('master')
@@ -2902,7 +2932,10 @@ https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet
 ```
 
 **See also**:
+- [Configuration Management Commands](#configuration-management-commands)
 - [get-subscriptions](#get-subscriptions)
+- [add-subscription](#add-subscription)
+- [update-subscription](#update-subscription)
 
 ### **`trigger-subscriptions`**
 
@@ -3055,6 +3088,8 @@ Enabled flag cannot be modified. If any of these immutable fields are changed,
 the update will fail with an error listing all the fields that cannot be
 modified.
 
+This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
+
 **Target Directories**: For dependency flow subscriptions, you can specify multiple 
 target directories (comma-separated) where dependency updates should be applied. 
 Use '.' for the repository root. Paths can include a wildcard (`*`) at the end to match 
@@ -3062,6 +3097,10 @@ multiple directories (e.g., `src/*`).
 
 When using target directories with `--excluded-assets`, you can exclude specific 
 assets in specific directories (e.g., `src/sdk/System.Text.Json` or `src/*/System.Text.*`).
+
+**Parameters:**
+- `--id` (required) - ID of the subscription to update
+- See [Configuration Management Commands](#configuration-management-commands) for additional parameters
 
 **Sample**:
 ```
@@ -3077,6 +3116,7 @@ https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet
 
 PS D:\enlistments\websdk> darc update-subscription --id 1abbb4c1-19d8-4912-fab8-08d6a19aff91
 Successfully updated subscription with id '1abbb4c1-19d8-4912-fab8-08d6a19aff91'.
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12356
 
 PS D:\enlistments\websdk> darc get-subscriptions --source-repo aspnetcore --target-repo websdk --channel Dev
 https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet/websdk' ('master')
@@ -3089,8 +3129,10 @@ https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet
 ```
 
 **See also**:
+- [Configuration Management Commands](#configuration-management-commands)
 - [get-subscriptions](#get-subscriptions)
 - [add-subscription](#add-subscription)
+- [subscription-status](#subscription-status)
 
 ### **`verify`**
 
