@@ -37,6 +37,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
     /// <param name="targetVmrUri">URI of the VMR to update</param>
     /// <param name="enableRebase">Rebases changes (and leaves conflict markers in place) instead of recreating the previous flows recursively</param>
     /// <param name="forceUpdate">Force the update to be performed</param>
+    /// <param name="unsafeFlow">If true, ignores non-linear flow errors (flowing from a different branch etc)</param>
     /// <returns>CodeFlowResult containing information about the codeflow calculation</returns>
     Task<CodeFlowResult> FlowForwardAsync(
         string mapping,
@@ -48,6 +49,7 @@ public interface IVmrForwardFlower : IVmrCodeFlower
         string targetVmrUri,
         bool enableRebase,
         bool forceUpdate,
+        bool unsafeFlow,
         CancellationToken cancellationToken = default);
 }
 
@@ -111,6 +113,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string targetVmrUri,
         bool enableRebase,
         bool forceUpdate,
+        bool unsafeFlow,
         CancellationToken cancellationToken = default)
     {
         ILocalGitRepo sourceRepo = _localGitRepoFactory.Create(repoPath);
@@ -121,6 +124,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             targetBranch,
             headBranch,
             enableRebase,
+            unsafeFlow,
             cancellationToken);
 
         SourceMapping mapping = _dependencyTracker.GetMapping(mappingName);
@@ -129,7 +133,16 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         await sourceRepo.FetchAllAsync([mapping.DefaultRemote, repoInfo.RemoteUri], cancellationToken);
 
         ForwardFlow currentFlow = new(build.Commit, lastFlows.LastFlow.VmrSha);
-        CodeflowOptions codeflowOptions = new(mapping, currentFlow, targetBranch, headBranch, build, excludedAssets, enableRebase, forceUpdate);
+        CodeflowOptions codeflowOptions = new(
+            mapping,
+            currentFlow,
+            targetBranch,
+            headBranch,
+            build,
+            excludedAssets,
+            enableRebase,
+            forceUpdate,
+            unsafeFlow);
 
         ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
@@ -192,6 +205,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string baseBranch,
         string headBranch,
         bool enableRebase,
+        bool unsafeFlow,
         CancellationToken cancellationToken)
     {
         _vmrInfo.VmrUri = vmrUri;
@@ -205,7 +219,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 ShouldResetVmr,
                 cancellationToken);
 
-            LastFlows lastFlows = await GetLastFlowsAsync(mappingName, sourceRepo, currentIsBackflow: false);
+            LastFlows lastFlows = await GetLastFlowsAsync(mappingName, sourceRepo, currentIsBackflow: false, ignoreNonLinearFlow: unsafeFlow);
             return (true, lastFlows);
         }
         catch (NotFoundException)
@@ -227,7 +241,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
                 throw new TargetBranchNotFoundException($"Failed to find target branch {baseBranch} in {vmrUri}", e);
             }
 
-            LastFlows lastFlows = await GetLastFlowsAsync(mappingName, sourceRepo, currentIsBackflow: false);
+            LastFlows lastFlows = await GetLastFlowsAsync(mappingName, sourceRepo, currentIsBackflow: false, ignoreNonLinearFlow: unsafeFlow);
 
             // Rebase strategy works on top of the target branch, non-rebase starts from the last point of synchronization
             if (!enableRebase)
@@ -436,6 +450,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         LastFlows previousFlows,
         string branchToCreate,
         string targetBranch,
+        bool unsafeFlow,
         CancellationToken cancellationToken)
     {
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
@@ -464,7 +479,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             cancellationToken);
 
         await sourceRepo.ForceCheckoutAsync(_sourceManifest.GetRepoVersion(mapping.Name).CommitSha);
-        previousFlows = await GetLastFlowsAsync(mapping.Name, sourceRepo, currentIsBackflow: false);
+        previousFlows = await GetLastFlowsAsync(mapping.Name, sourceRepo, currentIsBackflow: false, ignoreNonLinearFlow: unsafeFlow);
         previousFlow = previousFlows.LastForwardFlow;
 
         await vmr.CreateBranchAsync(branchToCreate, overwriteExistingBranch: true);

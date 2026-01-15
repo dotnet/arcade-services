@@ -88,6 +88,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             subscription.TargetRepository,
             enableRebase,
             forceUpdate,
+            unsafeFlow: false,
             cancellationToken);
 
         if (enableRebase && result.HadUpdates && !result.HadConflicts)

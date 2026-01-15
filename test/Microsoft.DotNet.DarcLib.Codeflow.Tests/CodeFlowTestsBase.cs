@@ -240,6 +240,7 @@ internal abstract class CodeFlowTestsBase
             branch,
             enableRebase,
             forceUpdate,
+            unsafeFlow: false,
             cancellationToken: _cancellationToken.Token);
 
         _lastFlowCollectedComments = scope.ServiceProvider.GetRequiredService<ICommentCollector>()

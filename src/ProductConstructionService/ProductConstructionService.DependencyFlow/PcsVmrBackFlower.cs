@@ -70,6 +70,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             headBranch,
             targetRepoPath: null,
             enableRebase,
+            unsafeFlow: false,
             cancellationToken);
 
         CodeFlowResult result = await FlowBackAsync(
@@ -81,7 +82,8 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 build,
                 subscription.ExcludedAssets,
                 enableRebase,
-                forceUpdate),
+                forceUpdate,
+                UnsafeFlow: false),
             targetRepo,
             lastFlows,
             headBranchExisted,
