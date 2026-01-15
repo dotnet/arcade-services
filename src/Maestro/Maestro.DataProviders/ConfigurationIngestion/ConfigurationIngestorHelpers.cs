@@ -13,7 +13,7 @@ using Newtonsoft.Json.Linq;
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion;
 
-public partial class ConfigurationIngestor
+internal partial class ConfigurationIngestor
 {
     private static IngestedConfigurationData CreateConfigurationDataObject(Namespace namespaceEntity)
     {

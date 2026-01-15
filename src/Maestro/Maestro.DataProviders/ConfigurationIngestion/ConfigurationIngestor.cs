@@ -17,7 +17,7 @@ using Microsoft.DotNet.DarcLib;
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion;
 
-public partial class ConfigurationIngestor(
+internal partial class ConfigurationIngestor(
         BuildAssetRegistryContext context,
         ISqlBarClient sqlBarClient,
         IGitHubInstallationIdResolver installationIdResolver)
