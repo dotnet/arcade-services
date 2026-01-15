@@ -1156,10 +1156,9 @@ Several darc commands manage configuration through a dedicated configuration rep
 
 These commands operate against a configuration repository where all channel, subscription, and policy settings are stored as configuration files (YAML). When you run these commands, darc:
 
-1. **Creates or updates** configuration files directly in the specified repository
-2. **Creates or updates** a branch with your changes
-3. **Commits** the configuration changes to that branch
-4. **Opens a pull request** against the base branch (unless `--no-pr` is specified)
+1. **Creates or updates** a branch in the configuration repository (based on the base branch if creating new)
+2. **Creates, updates, or deletes** configuration files directly in that branch
+3. **Opens a pull request** against the base branch (unless `--no-pr` is specified)
 
 **Default Configuration Repository:**
 ```
@@ -1173,7 +1172,7 @@ The configuration is stored on the `production` branch by default.
 All configuration management commands support these parameters:
 
 - `--configuration-repository` - URI of the repository where configuration is stored. Defaults to the repository above.
-- `--configuration-branch` - Specific branch to make changes on. If not specified, darc creates a new branch automatically.
+- `--configuration-branch` - Specific branch to make changes on. If not specified, darc creates a new branch automatically based on the base branch.
 - `--configuration-base-branch` - Base branch to create the configuration branch from (defaults to `production`).
 - `--configuration-file` - Optional override of the target configuration file path (e.g., `configuration/channels/net-11-preview-3.yml`).
 - `--no-pr` - Push changes to the configuration branch without opening a pull request. Use this when you want to batch multiple changes before creating a PR.
