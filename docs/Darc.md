@@ -1228,7 +1228,6 @@ A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/ma
 ```
 PS D:\enlistments\arcade> darc add-channel --name "Foo" --no-pr
 
-Successfully created new channel with name 'Foo'.
 Changes pushed to branch: darc-add-channel-foo-20240115
 ```
 
@@ -1383,7 +1382,6 @@ or disabled/enabled with [default-channel-status](#default-channel-status).
 ```
 PS D:\enlistments\arcade> darc add-default-channel --channel ".Net 5 Dev" --branch refs/heads/master --repo https://github.com/dotnet/arcade
 
-Successfully added default channel association.
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12348
 ```
 
@@ -1442,7 +1440,6 @@ PS D:\enlistments\arcade-services> darc add-subscription --channel ".NET Tools -
                                    --target-repo https://dev.azure.com/dnceng/internal/_git/dotnet-optimization \
                                    --target-branch master --update-frequency everyDay --all-checks-passed -q
 
-Successfully created new subscription with id '4f300f68-8800-4b14-328e-08d68308fe30'.
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12352
 ```
 
@@ -1694,7 +1691,6 @@ engineering team before doing so.*
 ```
 PS D:\enlistments\arcade> darc delete-channel --name "Foo"
 
-Successfully deleted channel 'Foo'.
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12346
 ```
 
@@ -1723,7 +1719,6 @@ engineering team before doing so.*
 ```
 PS D:\enlistments\arcade> darc update-channel --id 123 --name "New Channel Name" --classification "release"
 
-Successfully updated channel with id '123'.
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12347
 ```
 
@@ -1755,7 +1750,6 @@ You can obtain a list of current default channel mappings with
 PS D:\enlistments\arcade> darc delete-default-channel --channel ".Net 5 Dev" --branch refs/heads/master \
                           --repo https://github.com/dotnet/arcade
 
-Successfully deleted default channel association.
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12349
 ```
 
@@ -2869,7 +2863,6 @@ policies may be edited.
 ```
 PS D:\enlistments\websdk> darc set-repository-policies --repo https://github.com/dotnet/corefx \
                           --branch master --standard-automerge -q
-Successfully updated merge policies for https://github.com/dotnet/corefx@master.
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12353
 
 PS D:\enlistments\websdk> darc get-repository-policies --repo https://github.com/dotnet/corefx --branch master --all
@@ -2902,7 +2895,6 @@ This command uses the [configuration repository workflow](#configuration-managem
 **Sample**:
 ```
 PS D:\enlistments\websdk> darc subscription-status --id 1abbb4c1-19d8-4912-fab8-08d6a19aff91 --disable
-Successfully disabled subscription with id '1abbb4c1-19d8-4912-fab8-08d6a19aff91'.
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12354
 
 PS D:\enlistments\websdk> darc get-subscriptions --source-repo aspnetcore --target-repo websdk --channel Dev
@@ -2915,7 +2907,6 @@ https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet
     Standard
 
 PS D:\enlistments\websdk> darc subscription-status --id 1abbb4c1-19d8-4912-fab8-08d6a19aff91 --enable
-Successfully enabled subscription with id '1abbb4c1-19d8-4912-fab8-08d6a19aff91'.
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12355
 
 PS D:\enlistments\websdk> darc get-subscriptions --source-repo aspnetcore --target-repo websdk --channel Dev
@@ -3112,7 +3103,6 @@ https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet
       ignoreChecks = []
 
 PS D:\enlistments\websdk> darc update-subscription --id 1abbb4c1-19d8-4912-fab8-08d6a19aff91
-Successfully updated subscription with id '1abbb4c1-19d8-4912-fab8-08d6a19aff91'.
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12356
 
 PS D:\enlistments\websdk> darc get-subscriptions --source-repo aspnetcore --target-repo websdk --channel Dev
