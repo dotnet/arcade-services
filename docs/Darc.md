@@ -811,13 +811,9 @@ A subscription has a few parts:
 - An update rate (e.g. every day, every build, not at all)
 - Whether a subscription is batchable or not. If batchable, all batchable
   subscriptions targeting the same repo+branch combination will share a PR.
-  *Note: Batchable subscriptions is currently only supported by the REST API.
-  Please contact @dnceng to set up batchable subscriptions.*
 - A set of auto merge policies, if the subscription is not batchable.  If batchable,
   merge policies are set on a repository level rather than a per-subscription
-  level, as they end up shared between several subscriptions. *Note: repository
-  merge policies are currently unsupported in darc. Please contact @dnceng to
-  set up repository merge policies.*
+  level, using [set-repository-policies](#set-repository-policies).
 
 For additional information and samples, see [add-subscription](#add-subscription)
 
@@ -2145,7 +2141,9 @@ PS D:\enlistments\arcade> darc get-channels
 ```
 
 **See also**:
-- [add-channel](#get-dependency-graph)
+- [add-channel](#add-channel)
+- [update-channel](#update-channel)
+- [delete-channel](#delete-channel)
 
 ### **`get-default-channels`**
 
