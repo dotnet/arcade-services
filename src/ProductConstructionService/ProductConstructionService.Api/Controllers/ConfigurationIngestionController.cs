@@ -12,6 +12,7 @@ using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Configuration;
+using ProductConstructionService.Common;
 
 namespace ProductConstructionService.Api.Controllers;
 
@@ -23,14 +24,20 @@ public class ConfigurationIngestionController : Controller
     private readonly IConfigurationIngestor _configurationIngestor;
     private readonly ISqlBarClient _sqlBarClient;
     private readonly ILogger<ConfigurationIngestionController> _logger;
+    private readonly IDistributedLock _distributedLock;
 
     private const string ProductionNamespaceName = "production";
 
-    public ConfigurationIngestionController(IConfigurationIngestor configurationIngestor, ISqlBarClient sqlBarClient, ILogger<ConfigurationIngestionController> logger)
+    public ConfigurationIngestionController(
+        IConfigurationIngestor configurationIngestor, 
+        ISqlBarClient sqlBarClient, 
+        ILogger<ConfigurationIngestionController> logger,
+        IDistributedLock distributedLock)
     {
         _configurationIngestor = configurationIngestor;
         _sqlBarClient = sqlBarClient;
         _logger = logger;
+        _distributedLock = distributedLock;
     }
 
     [HttpPost(Name = "ingest")]
@@ -48,14 +55,17 @@ public class ConfigurationIngestionController : Controller
         _logger.LogInformation("Ingesting configuration for namespace {NamespaceName} (saveChanges={SaveChanges})", namespaceName, saveChanges);
         try
         {
-            var updates = await _configurationIngestor.IngestConfigurationAsync(
-                new ConfigurationData(
-                    yamlConfiguration.Subscriptions,
-                    yamlConfiguration.Channels,
-                    yamlConfiguration.DefaultChannels,
-                    yamlConfiguration.BranchMergePolicies),
-                namespaceName,
-                saveChanges);
+            var updates = await _distributedLock.ExecuteWithLockAsync("ConfigurationIngestion", async () =>
+            {
+                return await _configurationIngestor.IngestConfigurationAsync(
+                    new ConfigurationData(
+                        yamlConfiguration.Subscriptions,
+                        yamlConfiguration.Channels,
+                        yamlConfiguration.DefaultChannels,
+                        yamlConfiguration.BranchMergePolicies),
+                    namespaceName,
+                    saveChanges);
+            });
 
             return Ok(updates);
         }
