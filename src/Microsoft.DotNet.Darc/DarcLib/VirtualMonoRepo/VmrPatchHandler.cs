@@ -513,6 +513,8 @@ public class VmrPatchHandler : IVmrPatchHandler
             "--binary", // Include binary contents as base64
             "--no-color", // Don't colorize the output, it will be stored in a file
             "--output", // Store the diff in a .patch file
+            "--no-ext-diff", // Don't use external diffing tools defined in .gitattributes
+            "--no-textconv", // These external tools might not be available in Maestro
             patchName,
         };
 
