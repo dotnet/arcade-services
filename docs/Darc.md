@@ -1221,7 +1221,6 @@ engineering team before doing so.*
 ```
 PS D:\enlistments\arcade> darc add-channel --name "Foo"
 
-Successfully created new channel with name 'Foo'.
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12345
 ```
 
