@@ -275,6 +275,7 @@ internal abstract class CodeFlowTestsBase
             VmrPath,
             enableRebase,
             forceUpdate,
+            unsafeFlow: false,
             cancellationToken: _cancellationToken.Token);
 
         _lastFlowCollectedComments = scope.ServiceProvider.GetRequiredService<ICommentCollector>()
