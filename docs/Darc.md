@@ -1174,7 +1174,7 @@ All configuration management commands support these parameters:
 - `--configuration-repository` - URI of the repository where configuration is stored. Defaults to the repository above.
 - `--configuration-branch` - Specific branch to make changes on. If not specified, darc creates a new branch automatically based on the base branch.
 - `--configuration-base-branch` - Base branch to create the configuration branch from (defaults to `production`).
-- `--configuration-file` - Optional override of the target configuration file path (e.g., `configuration/channels/net-11-preview-3.yml`).
+- `--configuration-file` - Overrides the default configuration file path (e.g., `configuration/channels/net-11-preview-3.yml`).
 - `--no-pr` - Push changes to the configuration branch without opening a pull request. Use this when you want to batch multiple changes before creating a PR.
 
 **Default Behavior:**
@@ -1194,10 +1194,6 @@ darc add-channel --name "My New Channel" --classification dev
 darc add-channel --name "Channel 1" --no-pr --configuration-branch my-changes
 darc add-channel --name "Channel 2" --no-pr --configuration-branch my-changes
 darc add-channel --name "Channel 3" --configuration-branch my-changes  # Opens PR
-
-# Work against a different configuration repository
-darc add-channel --name "Test Channel" \
-  --configuration-repository https://dev.azure.com/myorg/myproject/_git/my-config
 ```
 
 **Note:** All configuration changes require appropriate permissions on the configuration repository.
