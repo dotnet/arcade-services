@@ -25,7 +25,18 @@ use darc to achieve them, as well as a general reference guide to darc commands.
 
 - [Command Reference](#command-reference)
   - [Parameters](#parameters)
-  - [Configuration Management Commands](#configuration-management-commands) - Overview of commands that use the configuration repository workflow.
+  - [Configuration Management Commands](#configuration-management-commands)
+    - Overview of commands that use the configuration repository workflow:
+      - [add-channel](#add-channel)
+      - [update-channel](#update-channel)
+      - [delete-channel](#delete-channel)
+      - [add-default-channel](#add-default-channel)
+      - [delete-default-channel](#delete-default-channel)
+      - [default-channel-status](#default-channel-status)
+      - [add-subscription](#add-subscription)
+      - [update-subscription](#update-subscription)
+      - [subscription-status](#subscription-status)
+      - [set-repository-policies](#set-repository-policies)
   - [add-channel](#add-channel) - Creates a new channel.
   - [add-dependency](#add-dependency) - Add a new dependency to Version.Details.xml.
   - [add-default-channel](#add-default-channel) - Add a channel that a build of a branch+repository is automatically applied to.
@@ -1154,6 +1165,10 @@ Several darc commands manage configuration through a dedicated configuration rep
 
 **Configuration Repository Workflow:**
 
+The configuration for Subscriptions, Channels, Default Channels, and Repository Branch Merge Policies are now all stored in the configuration repository. This repository contains YAML files that define these entities.
+
+When you run configuration management commands, darc creates pull requests with the requested changes. After these PRs are merged, an ingestion pipeline is triggered, refreshing the service configuration with the latest data from the repository.
+
 These commands operate against a configuration repository where all channel, subscription, and policy settings are stored as configuration files (YAML). When you run these commands, darc:
 
 1. **Creates or updates** a branch in the configuration repository (based on the base branch if creating new)
@@ -1644,11 +1659,9 @@ PS D:\enlistments\websdk> darc get-default-channels --source-repo core-setup --b
 (192)  https://github.com/dotnet/core-setup @ refs/heads/release/3.0 -> .NET Core 3 Release
 
 PS D:\enlistments\websdk> darc default-channel-status --disable --id 192
-Default channel association has been disabled.
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12350
 
 PS D:\enlistments\websdk> darc default-channel-status --enable --id 192
-Default channel association has been enabled.
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12351
 ```
 
@@ -1699,7 +1712,7 @@ This command uses the [configuration repository workflow](#configuration-managem
 
 **Note:** You cannot change a channel's name using this command, only its classification.
 
-- See [Configuration Management Commands](#configuration-management-commands) for additional parameters
+See [Configuration Management Commands](#configuration-management-commands) for additional parameters.
 
 **Sample**:
 ```
@@ -1727,8 +1740,8 @@ You can obtain a list of current default channel mappings with
 
 **Parameters:**
 - `--channel` (required) - Name of channel that builds of 'repository' and 'branch' should not apply to
-- `--branch` (required) - Repository that should have its default association removed
-- `--repo` (required) - Branch that should have its default association removed
+- `--branch` (required) - Branch that should have its default association removed
+- `--repo` (required) - Repository that should have its default association removed
 - See [Configuration Management Commands](#configuration-management-commands) for additional parameters
 
 **Sample**
