@@ -1419,7 +1419,6 @@ A subscription has a few parts:
 
 Upon saving and closing the editor, or running the darc command if in command
 line mode (`-q`), the darc tool submits the new subscription to the configuration repository.
-A pull request is created by default (unless `--no-pr` is specified).
 
 **Sample**:
 ```
