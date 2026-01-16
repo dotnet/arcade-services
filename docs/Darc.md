@@ -1177,13 +1177,6 @@ All configuration management commands support these parameters:
 - `--configuration-file` - Overrides the default configuration file path (e.g., `configuration/channels/net-11-preview-3.yml`).
 - `--no-pr` - Push changes to the configuration branch without opening a pull request. Use this when you want to batch multiple changes before creating a PR.
 
-**Default Behavior:**
-
-- A pull request is opened automatically unless you specify `--no-pr`
-- Changes are made against the default configuration repository
-- A new branch is created automatically if you don't specify `--configuration-branch`
-- The base branch is `production` unless you override it with `--configuration-base-branch`
-
 **Example Workflow:**
 
 ```powershell
