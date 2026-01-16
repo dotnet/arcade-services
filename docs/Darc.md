@@ -1748,7 +1748,7 @@ A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/ma
 
 ### **`delete-subscriptions`**
 
-Delete a subscription or set of subscriptions matching criteria.
+Deletes a specified subscription by its id. This removes the subscription from Maestro and no new updates based on the subscription will be created. Any updates currently in progress will not be closed, but will not auto-merge. To obtain the id of a subscription to be deleted, see [get-subscriptions](#get-subscriptions).
 
 This command uses the configuration repository workflow. Changes are committed to the configuration repository and a pull request is opened by default.
 
