@@ -115,45 +115,31 @@ public class BackflowValidationProcessor : WorkItemProcessor<BackflowValidationW
             var vmrUri = Constants.DefaultVmrUri;
             var remote = await _remoteFactory.CreateRemoteAsync(vmrUri);
 
-            // Check common branch patterns
-            var branchesToCheck = new[] { "main", "internal/main" };
-            
-            foreach (var branch in branchesToCheck)
+            // For simplicity, we'll check if we can find default channels for the VMR
+            // This is a pragmatic approach since we don't have easy branch membership checking
+            var defaultChannels = await _context.DefaultChannels
+                .Where(dc => dc.Repository == vmrUri)
+                .Select(dc => dc.Branch)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            // Verify the commit exists in the VMR
+            try
             {
-                try
+                var commitInfo = await remote.GetCommitAsync(vmrUri, sha);
+                if (commitInfo != null && defaultChannels.Count > 0)
                 {
-                    // Try to get the commit on this branch
-                    var commitInfo = await remote.GetCommitAsync(vmrUri, sha);
-                    if (commitInfo != null)
-                    {
-                        branches.Add(branch);
-                        
-                        // If this is an internal branch, also check the public branch
-                        if (branch.StartsWith("internal/"))
-                        {
-                            var publicBranch = branch.Replace("internal/", "");
-                            if (!branches.Contains(publicBranch) && branchesToCheck.Contains(publicBranch))
-                            {
-                                try
-                                {
-                                    var publicCommit = await remote.GetCommitAsync(vmrUri, sha);
-                                    if (publicCommit != null)
-                                    {
-                                        branches.Add(publicBranch);
-                                    }
-                                }
-                                catch
-                                {
-                                    // Public branch doesn't have this commit, which is expected
-                                }
-                            }
-                        }
-                    }
+                    // Assume the commit could be on any configured branch
+                    // A more sophisticated implementation would use git to determine exact branch membership
+                    branches.AddRange(defaultChannels);
+                    
+                    _logger.LogInformation("Commit {sha} exists in VMR, will process for branches: {branches}", 
+                        sha, string.Join(", ", branches));
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogDebug(ex, "SHA {sha} not found on branch {branch}", sha, branch);
-                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not verify commit {sha} exists in VMR", sha);
             }
         }
         catch (Exception ex)
@@ -286,8 +272,12 @@ public class BackflowValidationProcessor : WorkItemProcessor<BackflowValidationW
             }
 
             // Calculate commit distance
-            // For now, we'll use a simplified approach and set distance to 0
-            // A full implementation would need to clone the VMR and use git to calculate the distance
+            // TODO: Implement full git commit distance calculation
+            // This would require:
+            // 1. Clone the VMR repository locally
+            // 2. Use git rev-list to count commits between vmrSha and lastBackflowedSha
+            // 3. For public branches merged into internal, deduct internal-only commits
+            // For now, we return 0 as a placeholder
             int commitDistance = 0;
 
             _logger.LogInformation(

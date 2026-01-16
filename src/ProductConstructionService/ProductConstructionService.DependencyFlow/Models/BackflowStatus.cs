@@ -39,7 +39,7 @@ public class BranchBackflowStatus
     /// <summary>
     /// Default channel ID for this branch.
     /// </summary>
-    public int? DefaultChannelId { get; init; }
+    public required int DefaultChannelId { get; init; }
 
     /// <summary>
     /// Backflow status for each subscription on this branch.
