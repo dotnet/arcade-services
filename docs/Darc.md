@@ -3072,10 +3072,6 @@ multiple directories (e.g., `src/*`).
 When using target directories with `--excluded-assets`, you can exclude specific 
 assets in specific directories (e.g., `src/sdk/System.Text.Json` or `src/*/System.Text.*`).
 
-**Parameters:**
-- `--id` (required) - ID of the subscription to update
-- See [Configuration Management Commands](#configuration-management-commands) for additional parameters
-
 **Sample**:
 ```
 PS D:\enlistments\websdk> darc get-subscriptions --source-repo aspnetcore --target-repo websdk --channel Dev
