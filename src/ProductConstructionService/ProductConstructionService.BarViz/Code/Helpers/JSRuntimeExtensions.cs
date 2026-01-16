@@ -9,6 +9,6 @@ internal static class JSRuntimeExtensions
 {
     public static async Task OpenNewWindow(this IJSRuntime jsRuntime, string uri)
     {
-        await jsRuntime.InvokeAsync<object>("open", uri, "_blank");
+        await jsRuntime.InvokeVoidAsync("open", uri, "_blank");
     }
 }
