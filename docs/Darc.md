@@ -34,6 +34,7 @@ use darc to achieve them, as well as a general reference guide to darc commands.
     - [default-channel-status](#default-channel-status) - Enables or disables a default channel association.
     - [add-subscription](#add-subscription) - Add a new subscription.
     - [update-subscription](#update-subscription) - Update an existing subscription.
+    - [delete-subscriptions](#delete-subscriptions) - Delete a subscription or set of subscriptions matching criteria.
     - [subscription-status](#subscription-status) - Enables or disables a subscription matching the id.
     - [set-repository-policies](#set-repository-policies) - Set merge policies for the specific repository and branch.
   - [add-dependency](#add-dependency) - Add a new dependency to Version.Details.xml.
@@ -41,7 +42,6 @@ use darc to achieve them, as well as a general reference guide to darc commands.
   - [authenticate](#authenticate) - Stores the Azure DevOps and GitHub tokens
     required for remote operations.
   - [clone](#clone) - Clone a remote repo and all of its dependency repos.
-  - [delete-subscriptions](#delete-subscriptions) - Remove a subscription.
   - [gather-drop](#gather-drop) - Gather a drop of the outputs for a build.
   - [get-asset](#get-asset) - Get information about an asset.
   - [get-build](#get-build) - Retrieves a specific build of a repository,
@@ -1748,22 +1748,27 @@ A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/ma
 
 ### **`delete-subscriptions`**
 
-Deletes a specified subscription by its id. This removes the subscription from
-Maestro and no new updates based on the subscription will be created. Any
-updates currently in progress will not be closed, but will not auto-merge.  To
-obtain the id of a subscription to be deleted, see [get-subscriptions](#get-subscriptions).
+Delete a subscription or set of subscriptions matching criteria.
+
+This command uses the configuration repository workflow. Changes are committed to the configuration repository and a pull request is opened by default.
+
+**Parameters:**
+- `--id` - Delete a specific subscription by id.
+- `-q, --quiet` - Do not confirm which subscriptions are about to be deleted.
+- See [Configuration Management Commands](#configuration-management-commands) for additional parameters.
 
 **Sample**:
 ```
 PS D:\enlistments\arcade-services> darc delete-subscriptions --id 4f300f68-8800-4b14-328e-08d68308fe30
 
-Successfully deleted subscription with id '4f300f68-8800-4b14-328e-08d68308fe30'
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12345
 ```
 
 **See also**:
 - [add-subscription](#add-subscription)
 - [get-subscriptions](#get-subscriptions)
 - [trigger-subscriptions](#trigger-subscriptions)
+- [Configuration Management Commands](#configuration-management-commands)
 
 ### **`gather-drop`**
 
