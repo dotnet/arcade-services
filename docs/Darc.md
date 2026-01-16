@@ -25,18 +25,23 @@ use darc to achieve them, as well as a general reference guide to darc commands.
 
 - [Command Reference](#command-reference)
   - [Parameters](#parameters)
-  - [add-channel](#add-channel) - Creates a new channel.
+  - [Configuration Management Commands](#configuration-management-commands) - Overview of commands that use the configuration repository workflow
+    - [add-channel](#add-channel) - Creates a new channel.
+    - [update-channel](#update-channel) - Update an existing channel's classification.
+    - [delete-channel](#delete-channel) - Deletes an existing channel.
+    - [add-default-channel](#add-default-channel) - Add a channel that a build of a branch+repository is automatically applied to.
+    - [delete-default-channel](#delete-default-channel) - Remove a default channel association.
+    - [default-channel-status](#default-channel-status) - Enables or disables a default channel association.
+    - [add-subscription](#add-subscription) - Add a new subscription.
+    - [update-subscription](#update-subscription) - Update an existing subscription.
+    - [delete-subscriptions](#delete-subscriptions) - Delete a subscription or set of subscriptions matching criteria.
+    - [subscription-status](#subscription-status) - Enables or disables a subscription matching the id.
+    - [set-repository-policies](#set-repository-policies) - Set merge policies for the specific repository and branch.
   - [add-dependency](#add-dependency) - Add a new dependency to Version.Details.xml.
-  - [add-default-channel](#add-default-channel) - Add a channel that a build of a branch+repository is automatically applied to.
-  - [add-subscription](#add-subscription) - Add a new subscription.
   - [add-build-to-channel](#add-build-to-channel) - Adds an existing build to a channel
   - [authenticate](#authenticate) - Stores the Azure DevOps and GitHub tokens
     required for remote operations.
   - [clone](#clone) - Clone a remote repo and all of its dependency repos.
-  - [default-channel-status](#default-channel-status) - Enables or disables a default channel association.
-  - [delete-channel](#delete-channel) - Deletes an existing channel.
-  - [delete-default-channel](#delete-default-channel) - Remove a default channel association.
-  - [delete-subscriptions](#delete-subscriptions) - Remove a subscription.
   - [gather-drop](#gather-drop) - Gather a drop of the outputs for a build.
   - [get-asset](#get-asset) - Get information about an asset.
   - [get-build](#get-build) - Retrieves a specific build of a repository,
@@ -53,13 +58,9 @@ use darc to achieve them, as well as a general reference guide to darc commands.
   - [get-repository-policies](#get-repository-policies) - Retrieves information about repository merge policies.
   - [get-subscriptions](#get-subscriptions) - Get information about
     subscriptions.
-  - [set-repository-policies](#set-repository-policies) - Set merge policies for
-    the specific repository and branch.
-  - [subscription-status](#subscription-status) - Enables or disables a subscription matching the id.
   - [trigger-subscriptions](#trigger-subscriptions) - Trigger a subscription or set of subscriptions matching criteria.
   - [update-dependencies](#update-dependencies) - Update local dependencies from
     a channel.
-  - [update-subscription](#update-subscription) - Update an existing subscription.
   - [verify](#verify) - Verify that the dependency information in the repository is correct.
   - [set-goal](#set-goal) - Sets goal for a Definition in a Channel.
   - [get-goal](#get-goal) - Gets the goal for a Definition in a Channel.
@@ -376,7 +377,7 @@ index a1d683c1..dbf3fe0e 100644
 ```
 
 Alternately, let's say I'm working on updating to the latest arcade, which has a
-change I need to react to.  I check out a branch locally off of master, then run
+change I need to react to.  I check out a branch locally off of main, then run
 update-dependencies against the tools channel ('.NET Tools - Latest') to pull in the latest script files:
 
 ```
@@ -471,7 +472,7 @@ vs. Product Dependencies](#toolset-vs-product-dependencies)
 By default on each operation (e.g. subscription updates or `darc
 update-dependencies`), darc and Maestro will update all applicable dependencies
 in eng/Version.Details.xml and associated files.  For instance, if a
-subscription from core-setup's '.NET 5 Dev' channel to core-sdk's master
+subscription from core-setup's '.NET 5 Dev' channel to core-sdk's main
 branch produces 3 outputs, Maestro will attempt to update any matching inputs in
 core-sdk's eng/Version.Details.xml file. In some cases, it may be necessary to
 pin dependencies so they do not move (e.g. if a breaking change requires
@@ -603,7 +604,7 @@ PS D:\enlistments\extensions\eng> cat .\Version.Details.xml
   static analysis to determine the repo dependency graph.  It should only be modified manually when adding
   or removing dependencies. Updating versions should be done using the `darc` command line tool.
 
-  See https://github.com/dotnet/arcade/blob/master/Documentation/Darc.md for instructions on using darc.
+  See https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md for instructions on using darc.
 
 -->
 <Dependencies>
@@ -802,20 +803,16 @@ inputs of the target repository+branch.
 
 For example, a build of dotnet/corefx might be applied to the ".NET 5 Dev"
 channel. dotnet/core-setup maps new outputs of dotnet/corefx on the ".NET 5 Dev"
-channel onto its master branch.
+channel onto its main branch.
 
 A subscription has a few parts:
 - Mapping of source repo + source channel => target repo + target branch
 - An update rate (e.g. every day, every build, not at all)
 - Whether a subscription is batchable or not. If batchable, all batchable
   subscriptions targeting the same repo+branch combination will share a PR.
-  *Note: Batchable subscriptions is currently only supported by the REST API.
-  Please contact @dnceng to set up batchable subscriptions.*
 - A set of auto merge policies, if the subscription is not batchable.  If batchable,
-  merge policies are set on a repository level rather than a per-subscription
-  level, as they end up shared between several subscriptions. *Note: repository
-  merge policies are currently unsupported in darc. Please contact @dnceng to
-  set up repository merge policies.*
+  merge policies are set on a repository branch level rather than a per-subscription
+  level, using [set-repository-policies](#set-repository-policies).
 
 For additional information and samples, see [add-subscription](#add-subscription)
 
@@ -868,7 +865,7 @@ darc and Maestro++ have a few mechanisms to enable such scenarios:
   ```
   # Disable by repo+branch+channel
 
-  darc default-channel-status --disable --repo https://github.com/aspnet/Extensions --branch refs/heads/master --channel ".NET 5 Dev"
+  darc default-channel-status --disable --repo https://github.com/aspnet/Extensions --branch refs/heads/main --channel ".NET 5 Dev"
 
   # Disable by id.
   # Use get-default-channels to get the ID of the default channel association,
@@ -877,7 +874,7 @@ darc and Maestro++ have a few mechanisms to enable such scenarios:
   darc get-default-channels
 
   # Find id of association in list
-  (63)   https://github.com/aspnet/Extensions @ refs/heads/master -> .NET 5 Dev
+  (63)   https://github.com/aspnet/Extensions @ refs/heads/main -> .NET 5 Dev
 
   darc default-channel-status --disable --id 63
   ```
@@ -898,7 +895,7 @@ darc and Maestro++ have a few mechanisms to enable such scenarios:
   ```
   PS C:\enlistments\arcade> darc get-subscriptions --source-repo arcade --target-repo core-setup
 
-  https://github.com/dotnet/arcade (.NET Tools - Latest) ==> 'https://github.com/dotnet/core-setup' ('master')
+  https://github.com/dotnet/arcade (.NET Tools - Latest) ==> 'https://github.com/dotnet/core-setup' ('main')
   - Id: 21e611eb-ab71-410e-ca98-08d61f236c94
   - Update Frequency: everyDay
   - Merge Policies:
@@ -918,7 +915,7 @@ darc and Maestro++ have a few mechanisms to enable such scenarios:
 
   ```
   PS C:\enlistments\arcade> darc add-subscription --channel '.NET Tools - Latest' --target-repo https://github.com/dotnet/core-setup
-                            --target-branch master --update-frequency everyDay --all-checks-passed
+                            --target-branch main --update-frequency everyDay --all-checks-passed
                             --source-repo https://github.com/dotnet/arcade --ignore-checks 'WIP,license/cli'
 
   Successfully created new subscription with id '689a946e-2c12-4b0c-ccf6-08d688804ce4'.
@@ -1085,10 +1082,10 @@ There are a few interesting non-standard scenarios:
   you wish to assign. This may not be desirable if your repo is missing a required arcade fix. You can ask
   for the automation to use a different arcade version by passing `--source-branch` and `--source-sha`. These
   are the source branch and sha of arcade, not your repo. For instance, the following command will use arcade
-  at sha `09bb9d929120b402348c9a0e9c8c951e824059aa` in context of branch master (this is required by AzDO, but not
+  at sha `09bb9d929120b402348c9a0e9c8c951e824059aa` in context of branch main (this is required by AzDO, but not
   particularly material to the functionality.)
   ```
-  darc add-build-to-channel --id 46856 --channel ".NET Core SDK 3.1.3xx" --source-branch master
+  darc add-build-to-channel --id 46856 --channel ".NET Core SDK 3.1.3xx" --source-branch main
     --source-sha 09bb9d929120b402348c9a0e9c8c951e824059aa
   ```
 
@@ -1120,7 +1117,7 @@ To locate the BAR build ID for a build
         47632, IsProduct: False
     Metadata has been pushed. Build id in the Build Asset Registry is '47814'
     Found the following default channels:
-        https://github.com/dotnet/installer@master => (131) .NET Core 5 Dev
+        https://github.com/dotnet/installer@main => (131) .NET Core 5 Dev
     Determined build will be added to the following channels: [131]
   ```
 4. The BAR build ID is `47814`
@@ -1138,22 +1135,97 @@ You will find them on the `Checks` tab of each updates PRs created by maestro. D
 
 All darc command have a `--help` option that lists and describes all of their parameters
 
+### **Configuration Management Commands**
+
+Several darc commands manage configuration through a dedicated configuration repository. These commands use a standardized workflow to ensure changes are tracked, reviewed, and safely applied.
+
+**Affected Commands:**
+- [add-channel](#add-channel)
+- [update-channel](#update-channel)
+- [delete-channel](#delete-channel)
+- [add-default-channel](#add-default-channel)
+- [delete-default-channel](#delete-default-channel)
+- [default-channel-status](#default-channel-status)
+- [add-subscription](#add-subscription)
+- [update-subscription](#update-subscription)
+- [subscription-status](#subscription-status)
+- [set-repository-policies](#set-repository-policies)
+
+**Configuration Repository Workflow:**
+
+The configuration for Subscriptions, Channels, Default Channels, and Repository Branch Merge Policies are now all stored in the configuration repository. This repository contains YAML files that define these entities.
+
+When you run configuration management commands, darc creates pull requests with the requested changes. After these PRs are merged, an ingestion pipeline is triggered, refreshing the service configuration with the latest data from the repository.
+
+These commands operate against a configuration repository where all channel, subscription, and policy settings are stored as configuration files (YAML). When you run these commands, darc:
+
+1. **Creates or updates** a branch in the configuration repository (based on the base branch if creating new)
+2. **Creates, updates, or deletes** configuration files directly in that branch
+3. **Opens a pull request** against the base branch (unless `--no-pr` is specified)
+
+**Default Configuration Repository:**
+```
+https://dev.azure.com/dnceng/internal/_git/maestro-configuration
+```
+
+The configuration is stored on the `production` branch by default.
+
+**Common Parameters:**
+
+All configuration management commands support these parameters:
+
+- `--configuration-repository` - URI of the repository where configuration is stored. Defaults to the repository above.
+- `--configuration-branch` - Specific branch to make changes on. If not specified, darc creates a new branch automatically based on the base branch.
+- `--configuration-base-branch` - Base branch to create the configuration branch from (defaults to `production`).
+- `--configuration-file` - Overrides the default configuration file path (e.g., `configuration/channels/net-11-preview-3.yml`).
+- `--no-pr` - Push changes to the configuration branch without opening a pull request. Use this when you want to batch multiple changes before creating a PR.
+
+**Example Workflow:**
+
+```powershell
+# Create a new channel - automatically opens a PR
+darc add-channel --name "My New Channel" --classification dev
+
+# Create multiple changes on the same branch before opening a PR
+darc add-channel --name "Channel 1" --no-pr --configuration-branch my-changes
+darc add-channel --name "Channel 2" --no-pr --configuration-branch my-changes
+darc add-channel --name "Channel 3" --configuration-branch my-changes  # Opens PR
+```
+
+**Note:** All configuration changes require appropriate permissions on the configuration repository.
+
 ### **`add-channel`**
 
 Add a new channel. This creates a new tag that builds can be applied to.
 
+This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
+
 *This is not a typical operation and you should consult with the (`@dnceng`)
 engineering team before doing so.*
+
+**Parameters:**
+- `--name` (required) - Name of the channel to create
+- `--classification` - Classification of the channel (defaults to 'dev')
+- See [Configuration Management Commands](#configuration-management-commands) for additional parameters
 
 **Sample**:
 ```
 PS D:\enlistments\arcade> darc add-channel --name "Foo"
 
-Successfully created new channel with name 'Foo'.
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12345
+```
+
+**Sample (no PR):**
+```
+PS D:\enlistments\arcade> darc add-channel --name "Foo" --no-pr
+
+Changes pushed to branch: darc-add-channel-foo-20240115
 ```
 
 **See also**:
+- [Configuration Management Commands](#configuration-management-commands)
 - [delete-channel](#delete-channel)
+- [update-channel](#update-channel)
 - [get-channels](#get-channels)
 
 
@@ -1277,6 +1349,8 @@ and manually applied to channels, this is generally inconvenient for day to day 
 in most cases.  In general, until release shutdown, each build of a branch
 should always be applied to its "normal" channel.
 
+This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
+
 ***Note that the branch specified should almost always be
 "refs/heads/{branchName}", unless you explicitly know otherwise***.
 
@@ -1285,17 +1359,29 @@ Azure DevOps built in pipeline variables, which specify refs/heads/foo vs. foo.
 If your repository is manually reporting to BAR without using the Arcade
 templates, then this name may be different.
 
-Default channel mappings can be deleted with [delete-default-channel](#delete-default-channel).
+Default channel mappings can be deleted with [delete-default-channel](#delete-default-channel) 
+or disabled/enabled with [default-channel-status](#default-channel-status).
+
+**Parameters:**
+- `--channel` (required) - Name of channel that builds of 'branch' and 'repo' should be applied to
+- `--branch` (required) - Builds of 'repo' on this branch will be automatically applied to 'channel'. Use with '--regex' to match on multiple branch names
+- `--repo` (required) - Builds of this repo on 'branch' will be automatically applied to 'channel'
+- `--regex` - If specified, the value of the 'branch' option will be treated as a regular expression for matching branch names
+- See [Configuration Management Commands](#configuration-management-commands) for additional parameters
 
 **Sample**
 ```
-PS D:\enlistments\arcade> darc add-default-channel --channel ".Net 5 Dev" --branch refs/heads/master --repo https://github.com/dotnet/arcade
+PS D:\enlistments\arcade> darc add-default-channel --channel ".Net 5 Dev" --branch refs/heads/main --repo https://github.com/dotnet/arcade
+
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12348
 ```
 
 **See also**:
+- [Configuration Management Commands](#configuration-management-commands)
 - [get-channels](#get-channels)
 - [get-default-channels](#get-default-channels)
 - [delete-default-channel](#delete-default-channel)
+- [default-channel-status](#default-channel-status)
 - [set-goal](#set-goal)
 - [get-goal](#get-goal)
 
@@ -1307,7 +1393,7 @@ There are two types of subscriptions: dependency flow and code flow subscription
 
 Information about code flow subscriptions can be found at [Codeflow-PRs](UnifiedBuild/Codeflow-PRs.md)
 
-A  dependency flow subscription describes an update
+A dependency flow subscription describes an update
 operation for a specific repository+branch combination, mapping outputs of a
 repository that have been applied to a channel (virtual branch) onto matching
 inputs of the target repository+branch.
@@ -1316,15 +1402,16 @@ For example, a build of dotnet/runtime might be applied to the ".NET 9"
 channel. dotnet/sdk maps new outputs of runtime on the ".NET 9"
 channel onto its main branch.
 
+This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
+
 A subscription has a few parts:
 - Mapping of source repo + source channel => target repo + target branch
 - An update rate (e.g. every day, every build, not at all)
 - Whether a subscription is batchable or not. If batchable, all batchable
   subscriptions targeting the same repo+branch combination will share a PR.
 - A set of auto merge policies, if the subscription is not batchable.  If batchable,
-  merge policies are set on a repository level rather than a per-subscription
-  level, as they end up shared between several subscriptions. *Note: repository
-  merge policies are currently unsupported in darc*
+  merge policies are set on a repository branch level rather than a per-subscription
+  level, using [set-repository-policies](#set-repository-policies).
 
 `add-subscription` has two modes of operation:
 - Interactive mode (default) - Interactive mode will take whatever input parameters were
@@ -1334,17 +1421,16 @@ A subscription has a few parts:
  supplied.
 
 Upon saving and closing the editor, or running the darc command if in command
-line mode (`-q`), the darc tool submits the new subscription to Maestro++. If
-successful, the id of the new subscription is returned.
+line mode (`-q`), the darc tool submits the new subscription to the configuration repository.
 
 **Sample**:
 ```
 PS D:\enlistments\arcade-services> darc add-subscription --channel ".NET Tools - Latest"
                                    --source-repo https://github.com/dotnet/arcade
                                    --target-repo https://dev.azure.com/dnceng/internal/_git/dotnet-optimization
-                                   --target-branch master --update-frequency everyDay --all-checks-passed -q
+                                   --target-branch main --update-frequency everyDay --all-checks-passed -q
 
-Successfully created new subscription with id '4f300f68-8800-4b14-328e-08d68308fe30'.
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12352
 ```
 
 **Target Directories for Dependency Flow Subscriptions**:
@@ -1452,9 +1538,13 @@ PS D:\enlistments\sdk> darc add-subscription --channel ".NET 9 Dev"
   ```
 
 **See also**:
+- [Configuration Management Commands](#configuration-management-commands)
 - [delete-subscriptions](#delete-subscriptions)
 - [get-subscriptions](#get-subscriptions)
+- [update-subscription](#update-subscription)
 - [trigger-subscriptions](#trigger-subscriptions)
+- [subscription-status](#subscription-status)
+- [set-repository-policies](#set-repository-policies)
 - [get-channels](#get-channels)
 
 ### **`add-build-to-channel`**
@@ -1484,7 +1574,7 @@ Assigning build '65199' to the following channel(s):
 	.NET 6 Dev
 
 Repository:    https://github.com/dotnet/runtime
-Branch:        master
+Branch:        main
 Commit:        0e30f6fdc3ba5e1ef7ffb952fcb4762e5041c491
 Build Number:  20200921.2
 Date Produced: 9/21/2020 1:08 PM
@@ -1493,10 +1583,10 @@ BAR Build Id:  65199
 Released:      False
 Channels:
 The following repos/branches will apply this build immediately:
-  https://dev.azure.com/dnceng/internal/_git/dotnet-wpf-int @ master
+  https://dev.azure.com/dnceng/internal/_git/dotnet-wpf-int @ main
 The following repos/branches will apply this change at a later time, or not by default.
 To flow immediately, run the specified command
-  https://github.com/dotnet/ef6 @ master (update freq: EveryDay)
+  https://github.com/dotnet/ef6 @ main (update freq: EveryDay)
     darc trigger-subscriptions --id 9e51514d-a37b-46b2-d464-08d76e1d3434
 
 ```
@@ -1537,8 +1627,19 @@ Clone a remote repo and all of its dependency repos. This is typically used for 
 
 Enables or disables a default channel association. Default channels associations
 that are disabled will not apply to new builds. This effectively turns off flow
-out of the repository. Builds may still be applied manually to any channel.
+out of the repository. Builds may still be applied manually to any channel
 using [add-build-to-channel](#add-build-to-channel).
+
+This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
+
+**Parameters:**
+- `--id` - ID of the default channel association to enable/disable
+- `--channel` - Name of the channel (alternative to using --id)
+- `--branch` - Branch name (alternative to using --id, must be used with --channel and --repo)
+- `--repo` - Repository name (alternative to using --id, must be used with --channel and --branch)
+- `--enable` - Enable the default channel association
+- `--disable` - Disable the default channel association
+- See [Configuration Management Commands](#configuration-management-commands) for additional parameters
 
 **Sample**:
 ```
@@ -1546,13 +1647,14 @@ PS D:\enlistments\websdk> darc get-default-channels --source-repo core-setup --b
 (192)  https://github.com/dotnet/core-setup @ refs/heads/release/3.0 -> .NET Core 3 Release
 
 PS D:\enlistments\websdk> darc default-channel-status --disable --id 192
-Default channel association has been disabled.
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12350
 
 PS D:\enlistments\websdk> darc default-channel-status --enable --id 192
-Default channel association has been enabled.
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12351
 ```
 
 **See also**:
+- [Configuration Management Commands](#configuration-management-commands)
 - [add-build-to-channel](#add-build-to-channel)
 - [add-default-channel](#add-default-channel)
 - [delete-default-channel](#delete-default-channel)
@@ -1564,18 +1666,53 @@ Default channel association has been enabled.
 
 Delete a channel. This channel must not be in use by any subscriptions.
 
+This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
+
 *This is not a typical operation and you should consult with the (`@dnceng`)
 engineering team before doing so.*
+
+**Parameters:**
+- `--name` (required) - Name of the channel to delete
+- See [Configuration Management Commands](#configuration-management-commands) for additional parameters
 
 **Sample**:
 ```
 PS D:\enlistments\arcade> darc delete-channel --name "Foo"
 
-Successfully deleted channel 'Foo'.
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12346
 ```
 
 **See also**:
+- [Configuration Management Commands](#configuration-management-commands)
 - [add-channel](#add-channel)
+- [update-channel](#update-channel)
+- [get-channels](#get-channels)
+
+### **`update-channel`**
+
+Update an existing channel's classification.
+
+This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
+
+**Parameters:**
+- `--id` or `--name` (required) - ID or name of the channel to update
+- `--classification` - New classification for the channel
+
+**Note:** You cannot change a channel's name using this command, only its classification.
+
+See [Configuration Management Commands](#configuration-management-commands) for additional parameters.
+
+**Sample**:
+```
+PS D:\enlistments\arcade> darc update-channel --id 123 --classification "release"
+
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12347
+```
+
+**See also**:
+- [Configuration Management Commands](#configuration-management-commands)
+- [add-channel](#add-channel)
+- [delete-channel](#delete-channel)
 - [get-channels](#get-channels)
 
 ### **`delete-default-channel`**
@@ -1584,42 +1721,54 @@ Deletes a default channel mapping. Deleting will not affect any existing builds,
 but new builds of the specified repos will not be applied to the target
 channel.
 
+This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
+
 You can obtain a list of current default channel mappings with
 [get-default-channels](#get-default-channels)
 
-- `--channel` - **(Required)** Name of channel that builds of 'repository' and 'branch' should not apply to.
-- `--branch` - **(Required)** Repository that should have its default association removed.
-- `--repo` - **(Required)** Branch that should have its default association
-  removed.
+**Parameters:**
+- `--channel` (required) - Name of channel that builds of 'repository' and 'branch' should not apply to
+- `--branch` (required) - Branch that should have its default association removed
+- `--repo` (required) - Repository that should have its default association removed
+- See [Configuration Management Commands](#configuration-management-commands) for additional parameters
 
 **Sample**
 ```
-PS D:\enlistments\arcade> darc delete-default-channel --channel ".Net 5 Dev" --branch refs/heads/master
+PS D:\enlistments\arcade> darc delete-default-channel --channel ".Net 5 Dev" --branch refs/heads/main \
                           --repo https://github.com/dotnet/arcade
+
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12349
 ```
 
 **See also**:
+- [Configuration Management Commands](#configuration-management-commands)
 - [add-default-channel](#add-default-channel)
+- [default-channel-status](#default-channel-status)
 - [get-default-channels](#get-default-channels)
 
 ### **`delete-subscriptions`**
 
-Deletes a specified subscription by its id. This removes the subscription from
-Maestro and no new updates based on the subscription will be created. Any
-updates currently in progress will not be closed, but will not auto-merge.  To
-obtain the id of a subscription to be deleted, see [get-subscriptions](#get-subscriptions).
+Deletes a specified subscription by its id. This removes the subscription from Maestro and no new updates based on the subscription will be created. Any updates currently in progress will not be closed, but will not auto-merge. To obtain the id of a subscription to be deleted, see [get-subscriptions](#get-subscriptions).
+
+This command uses the configuration repository workflow. Changes are committed to the configuration repository and a pull request is opened by default.
+
+**Parameters:**
+- `--id` - Delete a specific subscription by id.
+- `-q, --quiet` - Do not confirm which subscriptions are about to be deleted.
+- See [Configuration Management Commands](#configuration-management-commands) for additional parameters.
 
 **Sample**:
 ```
 PS D:\enlistments\arcade-services> darc delete-subscriptions --id 4f300f68-8800-4b14-328e-08d68308fe30
 
-Successfully deleted subscription with id '4f300f68-8800-4b14-328e-08d68308fe30'
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12345
 ```
 
 **See also**:
 - [add-subscription](#add-subscription)
 - [get-subscriptions](#get-subscriptions)
 - [trigger-subscriptions](#trigger-subscriptions)
+- [Configuration Management Commands](#configuration-management-commands)
 
 ### **`gather-drop`**
 
@@ -1930,7 +2079,7 @@ Build succeeded.
 
 PS D:\enlistments\websdk> darc get-build --id 13386
 Repository:    https://github.com/dotnet/core-sdk
-Branch:        refs/heads/master
+Branch:        refs/heads/main
 Commit:        7996f7e53ffdf42feec5f1344df29ba53fcdf9ed
 Build Number:  20190605.3
 Date Produced: 6/5/2019 7:12 AM
@@ -1977,7 +2126,9 @@ PS D:\enlistments\arcade> darc get-channels
 ```
 
 **See also**:
-- [add-channel](#get-dependency-graph)
+- [add-channel](#add-channel)
+- [update-channel](#update-channel)
+- [delete-channel](#delete-channel)
 
 ### **`get-default-channels`**
 
@@ -2002,7 +2153,7 @@ PS D:\enlistments\websdk> darc get-default-channels --channel ".NET Core 3 relea
 (252)  https://github.com/aspnet/Extensions @ refs/heads/release/3.0-preview6 -> .NET Core 3 Release
 (89)   https://github.com/aspnet/websdk @ refs/heads/release/3.0.1xx -> .NET Core 3 Release
 (78)   https://github.com/dotnet/cli @ refs/heads/release/3.0.1xx -> .NET Core 3 Release
-(80)   https://github.com/dotnet/CliCommandLineParser @ refs/heads/master -> .NET Core 3 Release
+(80)   https://github.com/dotnet/CliCommandLineParser @ refs/heads/main -> .NET Core 3 Release
 (170)  https://github.com/dotnet/coreclr @ refs/heads/release/3.0 -> .NET Core 3 Release
 (193)  https://github.com/dotnet/corefx @ refs/heads/release/3.0 -> .NET Core 3 Release
 (77)   https://github.com/dotnet/core-sdk @ refs/heads/release/3.0.1xx -> .NET Core 3 Release
@@ -2010,8 +2161,8 @@ PS D:\enlistments\websdk> darc get-default-channels --channel ".NET Core 3 relea
 (247)  https://github.com/dotnet/roslyn @ refs/heads/release/dev16.1-vs-deps -> .NET Core 3 Release
 (81)   https://github.com/dotnet/sdk @ refs/heads/release/3.0.1xx -> .NET Core 3 Release
 (186)  https://github.com/dotnet/standard @ refs/heads/release/3.0 -> .NET Core 3 Release
-(83)   https://github.com/dotnet/symreader @ refs/heads/master -> .NET Core 3 Release
-(84)   https://github.com/dotnet/symreader-portable @ refs/heads/master -> .NET Core 3 Release
+(83)   https://github.com/dotnet/symreader @ refs/heads/main -> .NET Core 3 Release
+(84)   https://github.com/dotnet/symreader-portable @ refs/heads/main -> .NET Core 3 Release
 (90)   https://github.com/dotnet/templating @ refs/heads/release/3.0 -> .NET Core 3 Release
 (92)   https://github.com/dotnet/toolset @ refs/heads/release/3.0.1xx -> .NET Core 3 Release
 (194)  https://github.com/dotnet/winforms @ refs/heads/release/3.0 -> .NET Core 3 Release
@@ -2160,10 +2311,10 @@ using dot.exe or other GraphViz tools.
 PS D:\enlistments\websdk> darc get-flow-graph --channel "3 Rel"
 digraph repositoryGraph {
     node [shape=record]
-    arcademaster[label="arcade\nmaster"];
-    CliCommandLineParsermaster[label="CliCommandLineParser\nmaster"];
-    symreadermaster[label="symreader\nmaster"];
-    symreaderportablemaster[label="symreader-portable\nmaster"];
+    arcademaster[label="arcade\nmain"];
+    CliCommandLineParsermaster[label="CliCommandLineParser\nmain"];
+    symreadermaster[label="symreader\nmain"];
+    symreaderportablemaster[label="symreader-portable\nmain"];
     coresdkrelease301xx[label="core-sdk\nrelease/3.0.1xx"];
     clirelease301xx[label="cli\nrelease/3.0.1xx"];
     sdkrelease301xx[label="sdk\nrelease/3.0.1xx"];
@@ -2506,7 +2657,7 @@ Subscription health for https://github.com/aspnet/Extensions @ release/3.0-previ
     Microsoft.DotNet.GenAPI
     Microsoft.DotNet.Helix.Sdk
 
-Subscription health for https://github.com/dotnet/CliCommandLineParser @ master - (Warning)
+Subscription health for https://github.com/dotnet/CliCommandLineParser @ main - (Warning)
 
   Dependencies that do not flow automatically (disabled or frequency=none):
     Microsoft.DotNet.Arcade.Sdk
@@ -2517,12 +2668,12 @@ Subscription health for https://github.com/dotnet/sdk @ release/3.0.1xx - (Warni
     Microsoft.DotNet.Arcade.Sdk
     Microsoft.DotNet.SignTool
 
-Subscription health for https://github.com/dotnet/symreader @ master - (Warning)
+Subscription health for https://github.com/dotnet/symreader @ main - (Warning)
 
   Dependencies that do not flow automatically (disabled or frequency=none):
     Microsoft.DotNet.Arcade.Sdk
 
-Subscription health for https://github.com/dotnet/symreader-portable @ master - (Warning)
+Subscription health for https://github.com/dotnet/symreader-portable @ main - (Warning)
 
   Dependencies that do not flow automatically (disabled or frequency=none):
     Microsoft.DotNet.Arcade.Sdk
@@ -2570,10 +2721,10 @@ Product dependency cycle health for https://github.com/aspnet/EntityFramework6 @
 Product dependency cycle health for https://github.com/aspnet/EntityFrameworkCore @ release/3.0-preview6 - (Passed)
 Product dependency cycle health for https://github.com/aspnet/AspNetCore-Tooling @ release/3.0-preview6 - (Passed)
 Product dependency cycle health for https://github.com/aspnet/Extensions @ release/3.0-preview6 - (Passed)
-Product dependency cycle health for https://github.com/dotnet/CliCommandLineParser @ master - (Passed)
+Product dependency cycle health for https://github.com/dotnet/CliCommandLineParser @ main - (Passed)
 Product dependency cycle health for https://github.com/dotnet/sdk @ release/3.0.1xx - (Passed)
-Product dependency cycle health for https://github.com/dotnet/symreader @ master - (Passed)
-Product dependency cycle health for https://github.com/dotnet/symreader-portable @ master - (Passed)
+Product dependency cycle health for https://github.com/dotnet/symreader @ main - (Passed)
+Product dependency cycle health for https://github.com/dotnet/symreader-portable @ main - (Passed)
 Product dependency cycle health for https://github.com/Microsoft/msbuild @ vs16.0 - (Passed)
 Product dependency cycle health for https://github.com/dotnet/templating @ release/3.0 - (Passed)
 Product dependency cycle health for https://dev.azure.com/dnceng/internal/_git/dotnet-optimization @ release/3.0 - (Passed)
@@ -2591,7 +2742,7 @@ check of what the latest build of a repository is, especially if it has not been
 ```
 PS D:\enlistments\arcade-services> darc get-latest-build --repo core-setup --channel ".NET 5 Dev"
 Repository:    https://github.com/dotnet/core-setup
-Branch:        refs/heads/master
+Branch:        refs/heads/main
 Commit:        9042fe6c81aa3b47f58ccd94ff02e42f9f7a4e46
 Build Number:  20190916.2
 Date Produced: 9/16/2019 9:19 AM
@@ -2614,7 +2765,7 @@ These merge policies come from two sources:
 S D:\enlistments\websdk> darc get-repository-policies --repo extensions
 Filtered 3 policies for branches not targeted by an active batchable subscription. To include, pass --all.
 
-https://github.com/aspnet/Extensions @ master
+https://github.com/aspnet/Extensions @ main
 - Merge Policies:
   Standard
 https://github.com/aspnet/Extensions @ release/3.0-preview6
@@ -2637,9 +2788,9 @@ to obtain the id of a subscription for use in
 
 The top line of the listing shows the subscription mapping and is read:
 ```
-https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/dotnet/core-sdk' ('master')
+https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/dotnet/core-sdk' ('main')
 
-Builds of https://github.com/aspnet/AspNetCore that have been applied to channel ".NET 5 Dev" will be applied to the master branch of https://github.com/dotnet/core-sdk.
+Builds of https://github.com/aspnet/AspNetCore that have been applied to channel ".NET 5 Dev" will be applied to the main branch of https://github.com/dotnet/core-sdk.
 ```
 
 If no parameters are specified, `get-subscriptions` will show a full list of
@@ -2650,7 +2801,7 @@ to be more useful.
 ```
 PS D:\enlistments\arcade-services> darc get-subscriptions --target-repo core-sdk --source-repo aspnet
 
-https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/dotnet/core-sdk' ('master')
+https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/dotnet/core-sdk' ('main')
   - Id: 510286a9-8cd5-47bd-a259-08d68641480a
   - Update Frequency: EveryBuild
   - Enabled: True
@@ -2684,23 +2835,38 @@ Set merge policies for the specific repository and branch. These policies only
 apply to batchable subscriptions. When all repository policies are satisfied,
 the dependency update pull request is automatically merged.
 
-If -q is not passed, the command pops up a edit dialog so that the repository
+This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
+
+If `-q` is not passed, the command pops up an edit dialog so that the repository
 policies may be edited.
+
+**Parameters:**
+- `--repo` (required) - Name of repository to set merge policies for
+- `--branch` (required) - Name of branch to set merge policies for
+- `--standard-automerge` - Use standard auto-merge policies
+- `--all-checks-passed` - PR is automatically merged if there is at least one check and all are passed
+- `--ignore-checks` - For use with `--all-checks-passed`. A comma-separated list of checks that are ignored
+- `--no-requested-changes` - PR is not merged if there are changes requested or the PR has been rejected
+- `--no-downgrades` - PR is not merged if there are version downgrades
+- `-q, --quiet` - Non-interactive mode (requires all elements to be passed on the command line)
+- See [Configuration Management Commands](#configuration-management-commands) for additional parameters
 
 **Sample**:
 ```
-PS D:\enlistments\websdk> darc set-repository-policies --repo https://github.com/dotnet/corefx --branch master --standard-automerge -q
-Successfully updated merge policies for https://github.com/dotnet/corefx@master.
+PS D:\enlistments\websdk> darc set-repository-policies --repo https://github.com/dotnet/corefx \
+                          --branch main --standard-automerge -q
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12353
 
-PS D:\enlistments\websdk> darc get-repository-policies --repo https://github.com/dotnet/corefx --branch master --all
-https://github.com/dotnet/corefx @ master
+PS D:\enlistments\websdk> darc get-repository-policies --repo https://github.com/dotnet/corefx --branch main --all
+https://github.com/dotnet/corefx @ main
 - Merge Policies:
   Standard
-https://github.com/dotnet/corefxlab @ master
+https://github.com/dotnet/corefxlab @ main
 - Merge Policies: []
 ```
 
 **See also**:
+- [Configuration Management Commands](#configuration-management-commands)
 - [get-repository-policies](#get-repository-policies)
 - [get-subscriptions](#get-subscriptions)
 - [add-subscription](#add-subscription)
@@ -2708,15 +2874,23 @@ https://github.com/dotnet/corefxlab @ master
 ### **`subscription-status`**
 
 Enables or disables a subscription matching the id. You can find out whether a
-subscription is disabled or enabled using get-subscriptions.
+subscription is disabled or enabled using [get-subscriptions](#get-subscriptions).
+
+This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
+
+**Parameters:**
+- `--id` (required) - ID of the subscription to enable or disable
+- `--enable` - Enable the subscription
+- `--disable` - Disable the subscription
+- See [Configuration Management Commands](#configuration-management-commands) for additional parameters
 
 **Sample**:
 ```
 PS D:\enlistments\websdk> darc subscription-status --id 1abbb4c1-19d8-4912-fab8-08d6a19aff91 --disable
-Successfully disabled subscription with id '1abbb4c1-19d8-4912-fab8-08d6a19aff91'.
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12354
 
 PS D:\enlistments\websdk> darc get-subscriptions --source-repo aspnetcore --target-repo websdk --channel Dev
-https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet/websdk' ('master')
+https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet/websdk' ('main')
   - Id: 1abbb4c1-19d8-4912-fab8-08d6a19aff91
   - Update Frequency: EveryDay
   - Enabled: False
@@ -2725,10 +2899,10 @@ https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet
     Standard
 
 PS D:\enlistments\websdk> darc subscription-status --id 1abbb4c1-19d8-4912-fab8-08d6a19aff91 --enable
-Successfully enabled subscription with id '1abbb4c1-19d8-4912-fab8-08d6a19aff91'.
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12355
 
 PS D:\enlistments\websdk> darc get-subscriptions --source-repo aspnetcore --target-repo websdk --channel Dev
-https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet/websdk' ('master')
+https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet/websdk' ('main')
   - Id: 1abbb4c1-19d8-4912-fab8-08d6a19aff91
   - Update Frequency: EveryDay
   - Enabled: True
@@ -2738,7 +2912,10 @@ https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet
 ```
 
 **See also**:
+- [Configuration Management Commands](#configuration-management-commands)
 - [get-subscriptions](#get-subscriptions)
+- [add-subscription](#add-subscription)
+- [update-subscription](#update-subscription)
 
 ### **`trigger-subscriptions`**
 
@@ -2758,14 +2935,14 @@ confirmation before sending the trigger request.
 PS D:\enlistments\arcade> darc trigger-subscriptions --source-repo arcade --target-repo arcade-services
 
 Will trigger the following 1 subscriptions...
-  https://github.com/dotnet/arcade (.NET Tools - Latest) ==> 'https://github.com/dotnet/arcade-services' ('master')
+  https://github.com/dotnet/arcade (.NET Tools - Latest) ==> 'https://github.com/dotnet/arcade-services' ('main')
 Continue? (y/n) y
 Triggering 1 subscriptions...done
 
 PS D:\enlistments\arcade> darc trigger-subscriptions --source-repo arcade --target-repo arcade-services --build 123
 Subscription updates will use Build # 123 instead of latest available
 Will trigger the following 1 subscriptions...
-  https://github.com/dotnet/arcade (.NET Tools - Latest) ==> 'https://github.com/dotnet/arcade-services' ('master')
+  https://github.com/dotnet/arcade (.NET Tools - Latest) ==> 'https://github.com/dotnet/arcade-services' ('main')
 Continue? (y/n) y
 Triggering 1 subscriptions...done
 ```
@@ -2891,6 +3068,8 @@ Enabled flag cannot be modified. If any of these immutable fields are changed,
 the update will fail with an error listing all the fields that cannot be
 modified.
 
+This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
+
 **Target Directories**: For dependency flow subscriptions, you can specify multiple 
 target directories (comma-separated) where dependency updates should be applied. 
 Use '.' for the repository root. Paths can include a wildcard (`*`) at the end to match 
@@ -2902,7 +3081,7 @@ assets in specific directories (e.g., `src/sdk/System.Text.Json` or `src/*/Syste
 **Sample**:
 ```
 PS D:\enlistments\websdk> darc get-subscriptions --source-repo aspnetcore --target-repo websdk --channel Dev
-https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet/websdk' ('master')
+https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet/websdk' ('main')
   - Id: 1abbb4c1-19d8-4912-fab8-08d6a19aff91
   - Update Frequency: EveryDay
   - Enabled: True
@@ -2912,10 +3091,10 @@ https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet
       ignoreChecks = []
 
 PS D:\enlistments\websdk> darc update-subscription --id 1abbb4c1-19d8-4912-fab8-08d6a19aff91
-Successfully updated subscription with id '1abbb4c1-19d8-4912-fab8-08d6a19aff91'.
+A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12356
 
 PS D:\enlistments\websdk> darc get-subscriptions --source-repo aspnetcore --target-repo websdk --channel Dev
-https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet/websdk' ('master')
+https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet/websdk' ('main')
   - Id: 1abbb4c1-19d8-4912-fab8-08d6a19aff91
   - Update Frequency: EveryDay
   - Enabled: True
@@ -2925,8 +3104,10 @@ https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet
 ```
 
 **See also**:
+- [Configuration Management Commands](#configuration-management-commands)
 - [get-subscriptions](#get-subscriptions)
 - [add-subscription](#add-subscription)
+- [subscription-status](#subscription-status)
 
 ### **`verify`**
 
