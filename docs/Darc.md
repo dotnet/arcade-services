@@ -1423,9 +1423,9 @@ A pull request is created by default (unless `--no-pr` is specified).
 
 **Sample**:
 ```
-PS D:\enlistments\arcade-services> darc add-subscription --channel ".NET Tools - Latest" \
-                                   --source-repo https://github.com/dotnet/arcade \
-                                   --target-repo https://dev.azure.com/dnceng/internal/_git/dotnet-optimization \
+PS D:\enlistments\arcade-services> darc add-subscription --channel ".NET Tools - Latest"
+                                   --source-repo https://github.com/dotnet/arcade
+                                   --target-repo https://dev.azure.com/dnceng/internal/_git/dotnet-optimization
                                    --target-branch master --update-frequency everyDay --all-checks-passed -q
 
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12352
