@@ -1693,9 +1693,6 @@ Update an existing channel's metadata, such as its name or classification.
 
 This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
 
-*This is not a typical operation and you should consult with the (`@dnceng`)
-engineering team before doing so.*
-
 **Parameters:**
 - `--id` (required) - ID of the channel to update
 - `--name` - New name for the channel
