@@ -107,10 +107,13 @@ internal abstract class Operation(
             TargetDirectory = targetDirectory,
             ExcludedAssets = excludedAssets != null ? [.. excludedAssets] : []
         };
+        logger.LogInformation("Created test channel {channel} and subscription {subscriptionId}", channelName, subscription.Id);
         await IngestConfigurationAsync(@namespace, new ClientYamlConfiguration
         {
             Channels = [channel],
-            Subscriptions = [subscription]
+            Subscriptions = [subscription],
+            DefaultChannels = [],
+            BranchMergePolicies = []
         });
 
         return (channel, subscription);
