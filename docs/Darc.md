@@ -26,27 +26,21 @@ use darc to achieve them, as well as a general reference guide to darc commands.
 - [Command Reference](#command-reference)
   - [Parameters](#parameters)
   - [Configuration Management Commands](#configuration-management-commands) - Overview of commands that use the configuration repository workflow
-    - [add-channel](#add-channel)
-    - [update-channel](#update-channel)
-    - [delete-channel](#delete-channel)
-    - [add-default-channel](#add-default-channel)
-    - [delete-default-channel](#delete-default-channel)
-    - [default-channel-status](#default-channel-status)
-    - [add-subscription](#add-subscription)
-    - [update-subscription](#update-subscription)
-    - [subscription-status](#subscription-status)
-    - [set-repository-policies](#set-repository-policies)
-  - [add-channel](#add-channel) - Creates a new channel.
+    - [add-channel](#add-channel) - Creates a new channel.
+    - [update-channel](#update-channel) - Update an existing channel's classification.
+    - [delete-channel](#delete-channel) - Deletes an existing channel.
+    - [add-default-channel](#add-default-channel) - Add a channel that a build of a branch+repository is automatically applied to.
+    - [delete-default-channel](#delete-default-channel) - Remove a default channel association.
+    - [default-channel-status](#default-channel-status) - Enables or disables a default channel association.
+    - [add-subscription](#add-subscription) - Add a new subscription.
+    - [update-subscription](#update-subscription) - Update an existing subscription.
+    - [subscription-status](#subscription-status) - Enables or disables a subscription matching the id.
+    - [set-repository-policies](#set-repository-policies) - Set merge policies for the specific repository and branch.
   - [add-dependency](#add-dependency) - Add a new dependency to Version.Details.xml.
-  - [add-default-channel](#add-default-channel) - Add a channel that a build of a branch+repository is automatically applied to.
-  - [add-subscription](#add-subscription) - Add a new subscription.
   - [add-build-to-channel](#add-build-to-channel) - Adds an existing build to a channel
   - [authenticate](#authenticate) - Stores the Azure DevOps and GitHub tokens
     required for remote operations.
   - [clone](#clone) - Clone a remote repo and all of its dependency repos.
-  - [default-channel-status](#default-channel-status) - Enables or disables a default channel association.
-  - [delete-channel](#delete-channel) - Deletes an existing channel.
-  - [delete-default-channel](#delete-default-channel) - Remove a default channel association.
   - [delete-subscriptions](#delete-subscriptions) - Remove a subscription.
   - [gather-drop](#gather-drop) - Gather a drop of the outputs for a build.
   - [get-asset](#get-asset) - Get information about an asset.
@@ -64,14 +58,9 @@ use darc to achieve them, as well as a general reference guide to darc commands.
   - [get-repository-policies](#get-repository-policies) - Retrieves information about repository merge policies.
   - [get-subscriptions](#get-subscriptions) - Get information about
     subscriptions.
-  - [set-repository-policies](#set-repository-policies) - Set merge policies for
-    the specific repository and branch.
-  - [subscription-status](#subscription-status) - Enables or disables a subscription matching the id.
   - [trigger-subscriptions](#trigger-subscriptions) - Trigger a subscription or set of subscriptions matching criteria.
   - [update-dependencies](#update-dependencies) - Update local dependencies from
     a channel.
-  - [update-channel](#update-channel) - Update an existing channel's metadata.
-  - [update-subscription](#update-subscription) - Update an existing subscription.
   - [verify](#verify) - Verify that the dependency information in the repository is correct.
   - [set-goal](#set-goal) - Sets goal for a Definition in a Channel.
   - [get-goal](#get-goal) - Gets the goal for a Definition in a Channel.
