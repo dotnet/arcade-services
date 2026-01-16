@@ -25,18 +25,17 @@ use darc to achieve them, as well as a general reference guide to darc commands.
 
 - [Command Reference](#command-reference)
   - [Parameters](#parameters)
-  - [Configuration Management Commands](#configuration-management-commands)
-    - Overview of commands that use the configuration repository workflow:
-      - [add-channel](#add-channel)
-      - [update-channel](#update-channel)
-      - [delete-channel](#delete-channel)
-      - [add-default-channel](#add-default-channel)
-      - [delete-default-channel](#delete-default-channel)
-      - [default-channel-status](#default-channel-status)
-      - [add-subscription](#add-subscription)
-      - [update-subscription](#update-subscription)
-      - [subscription-status](#subscription-status)
-      - [set-repository-policies](#set-repository-policies)
+  - [Configuration Management Commands](#configuration-management-commands) - Overview of commands that use the configuration repository workflow
+    - [add-channel](#add-channel)
+    - [update-channel](#update-channel)
+    - [delete-channel](#delete-channel)
+    - [add-default-channel](#add-default-channel)
+    - [delete-default-channel](#delete-default-channel)
+    - [default-channel-status](#default-channel-status)
+    - [add-subscription](#add-subscription)
+    - [update-subscription](#update-subscription)
+    - [subscription-status](#subscription-status)
+    - [set-repository-policies](#set-repository-policies)
   - [add-channel](#add-channel) - Creates a new channel.
   - [add-dependency](#add-dependency) - Add a new dependency to Version.Details.xml.
   - [add-default-channel](#add-default-channel) - Add a channel that a build of a branch+repository is automatically applied to.
