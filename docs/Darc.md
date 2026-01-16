@@ -378,7 +378,7 @@ index a1d683c1..dbf3fe0e 100644
 ```
 
 Alternately, let's say I'm working on updating to the latest arcade, which has a
-change I need to react to.  I check out a branch locally off of master, then run
+change I need to react to.  I check out a branch locally off of main, then run
 update-dependencies against the tools channel ('.NET Tools - Latest') to pull in the latest script files:
 
 ```
@@ -473,7 +473,7 @@ vs. Product Dependencies](#toolset-vs-product-dependencies)
 By default on each operation (e.g. subscription updates or `darc
 update-dependencies`), darc and Maestro will update all applicable dependencies
 in eng/Version.Details.xml and associated files.  For instance, if a
-subscription from core-setup's '.NET 5 Dev' channel to core-sdk's master
+subscription from core-setup's '.NET 5 Dev' channel to core-sdk's main
 branch produces 3 outputs, Maestro will attempt to update any matching inputs in
 core-sdk's eng/Version.Details.xml file. In some cases, it may be necessary to
 pin dependencies so they do not move (e.g. if a breaking change requires
@@ -605,7 +605,7 @@ PS D:\enlistments\extensions\eng> cat .\Version.Details.xml
   static analysis to determine the repo dependency graph.  It should only be modified manually when adding
   or removing dependencies. Updating versions should be done using the `darc` command line tool.
 
-  See https://github.com/dotnet/arcade/blob/master/Documentation/Darc.md for instructions on using darc.
+  See https://github.com/dotnet/arcade/blob/main/Documentation/Darc.md for instructions on using darc.
 
 -->
 <Dependencies>
@@ -804,7 +804,7 @@ inputs of the target repository+branch.
 
 For example, a build of dotnet/corefx might be applied to the ".NET 5 Dev"
 channel. dotnet/core-setup maps new outputs of dotnet/corefx on the ".NET 5 Dev"
-channel onto its master branch.
+channel onto its main branch.
 
 A subscription has a few parts:
 - Mapping of source repo + source channel => target repo + target branch
@@ -866,7 +866,7 @@ darc and Maestro++ have a few mechanisms to enable such scenarios:
   ```
   # Disable by repo+branch+channel
 
-  darc default-channel-status --disable --repo https://github.com/aspnet/Extensions --branch refs/heads/master --channel ".NET 5 Dev"
+  darc default-channel-status --disable --repo https://github.com/aspnet/Extensions --branch refs/heads/main --channel ".NET 5 Dev"
 
   # Disable by id.
   # Use get-default-channels to get the ID of the default channel association,
@@ -875,7 +875,7 @@ darc and Maestro++ have a few mechanisms to enable such scenarios:
   darc get-default-channels
 
   # Find id of association in list
-  (63)   https://github.com/aspnet/Extensions @ refs/heads/master -> .NET 5 Dev
+  (63)   https://github.com/aspnet/Extensions @ refs/heads/main -> .NET 5 Dev
 
   darc default-channel-status --disable --id 63
   ```
@@ -896,7 +896,7 @@ darc and Maestro++ have a few mechanisms to enable such scenarios:
   ```
   PS C:\enlistments\arcade> darc get-subscriptions --source-repo arcade --target-repo core-setup
 
-  https://github.com/dotnet/arcade (.NET Tools - Latest) ==> 'https://github.com/dotnet/core-setup' ('master')
+  https://github.com/dotnet/arcade (.NET Tools - Latest) ==> 'https://github.com/dotnet/core-setup' ('main')
   - Id: 21e611eb-ab71-410e-ca98-08d61f236c94
   - Update Frequency: everyDay
   - Merge Policies:
@@ -916,7 +916,7 @@ darc and Maestro++ have a few mechanisms to enable such scenarios:
 
   ```
   PS C:\enlistments\arcade> darc add-subscription --channel '.NET Tools - Latest' --target-repo https://github.com/dotnet/core-setup
-                            --target-branch master --update-frequency everyDay --all-checks-passed
+                            --target-branch main --update-frequency everyDay --all-checks-passed
                             --source-repo https://github.com/dotnet/arcade --ignore-checks 'WIP,license/cli'
 
   Successfully created new subscription with id '689a946e-2c12-4b0c-ccf6-08d688804ce4'.
@@ -1083,10 +1083,10 @@ There are a few interesting non-standard scenarios:
   you wish to assign. This may not be desirable if your repo is missing a required arcade fix. You can ask
   for the automation to use a different arcade version by passing `--source-branch` and `--source-sha`. These
   are the source branch and sha of arcade, not your repo. For instance, the following command will use arcade
-  at sha `09bb9d929120b402348c9a0e9c8c951e824059aa` in context of branch master (this is required by AzDO, but not
+  at sha `09bb9d929120b402348c9a0e9c8c951e824059aa` in context of branch main (this is required by AzDO, but not
   particularly material to the functionality.)
   ```
-  darc add-build-to-channel --id 46856 --channel ".NET Core SDK 3.1.3xx" --source-branch master
+  darc add-build-to-channel --id 46856 --channel ".NET Core SDK 3.1.3xx" --source-branch main
     --source-sha 09bb9d929120b402348c9a0e9c8c951e824059aa
   ```
 
@@ -1118,7 +1118,7 @@ To locate the BAR build ID for a build
         47632, IsProduct: False
     Metadata has been pushed. Build id in the Build Asset Registry is '47814'
     Found the following default channels:
-        https://github.com/dotnet/installer@master => (131) .NET Core 5 Dev
+        https://github.com/dotnet/installer@main => (131) .NET Core 5 Dev
     Determined build will be added to the following channels: [131]
   ```
 4. The BAR build ID is `47814`
@@ -1368,7 +1368,7 @@ or disabled/enabled with [default-channel-status](#default-channel-status).
 
 **Sample**
 ```
-PS D:\enlistments\arcade> darc add-default-channel --channel ".Net 5 Dev" --branch refs/heads/master --repo https://github.com/dotnet/arcade
+PS D:\enlistments\arcade> darc add-default-channel --channel ".Net 5 Dev" --branch refs/heads/main --repo https://github.com/dotnet/arcade
 
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12348
 ```
@@ -1425,7 +1425,7 @@ line mode (`-q`), the darc tool submits the new subscription to the configuratio
 PS D:\enlistments\arcade-services> darc add-subscription --channel ".NET Tools - Latest"
                                    --source-repo https://github.com/dotnet/arcade
                                    --target-repo https://dev.azure.com/dnceng/internal/_git/dotnet-optimization
-                                   --target-branch master --update-frequency everyDay --all-checks-passed -q
+                                   --target-branch main --update-frequency everyDay --all-checks-passed -q
 
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12352
 ```
@@ -1571,7 +1571,7 @@ Assigning build '65199' to the following channel(s):
 	.NET 6 Dev
 
 Repository:    https://github.com/dotnet/runtime
-Branch:        master
+Branch:        main
 Commit:        0e30f6fdc3ba5e1ef7ffb952fcb4762e5041c491
 Build Number:  20200921.2
 Date Produced: 9/21/2020 1:08 PM
@@ -1580,10 +1580,10 @@ BAR Build Id:  65199
 Released:      False
 Channels:
 The following repos/branches will apply this build immediately:
-  https://dev.azure.com/dnceng/internal/_git/dotnet-wpf-int @ master
+  https://dev.azure.com/dnceng/internal/_git/dotnet-wpf-int @ main
 The following repos/branches will apply this change at a later time, or not by default.
 To flow immediately, run the specified command
-  https://github.com/dotnet/ef6 @ master (update freq: EveryDay)
+  https://github.com/dotnet/ef6 @ main (update freq: EveryDay)
     darc trigger-subscriptions --id 9e51514d-a37b-46b2-d464-08d76e1d3434
 
 ```
@@ -1689,19 +1689,21 @@ A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/ma
 
 ### **`update-channel`**
 
-Update an existing channel's metadata, such as its name or classification.
+Update an existing channel's classification.
 
 This command uses the [configuration repository workflow](#configuration-management-commands). Changes are committed to the configuration repository and a pull request is opened by default.
 
 **Parameters:**
-- `--id` (required) - ID of the channel to update
-- `--name` - New name for the channel
+- `--id` or `--name` (required) - ID or name of the channel to update
 - `--classification` - New classification for the channel
+
+**Note:** You cannot change a channel's name using this command, only its classification.
+
 - See [Configuration Management Commands](#configuration-management-commands) for additional parameters
 
 **Sample**:
 ```
-PS D:\enlistments\arcade> darc update-channel --id 123 --name "New Channel Name" --classification "release"
+PS D:\enlistments\arcade> darc update-channel --id 123 --classification "release"
 
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12347
 ```
@@ -1731,7 +1733,7 @@ You can obtain a list of current default channel mappings with
 
 **Sample**
 ```
-PS D:\enlistments\arcade> darc delete-default-channel --channel ".Net 5 Dev" --branch refs/heads/master \
+PS D:\enlistments\arcade> darc delete-default-channel --channel ".Net 5 Dev" --branch refs/heads/main \
                           --repo https://github.com/dotnet/arcade
 
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12349
@@ -2071,7 +2073,7 @@ Build succeeded.
 
 PS D:\enlistments\websdk> darc get-build --id 13386
 Repository:    https://github.com/dotnet/core-sdk
-Branch:        refs/heads/master
+Branch:        refs/heads/main
 Commit:        7996f7e53ffdf42feec5f1344df29ba53fcdf9ed
 Build Number:  20190605.3
 Date Produced: 6/5/2019 7:12 AM
@@ -2145,7 +2147,7 @@ PS D:\enlistments\websdk> darc get-default-channels --channel ".NET Core 3 relea
 (252)  https://github.com/aspnet/Extensions @ refs/heads/release/3.0-preview6 -> .NET Core 3 Release
 (89)   https://github.com/aspnet/websdk @ refs/heads/release/3.0.1xx -> .NET Core 3 Release
 (78)   https://github.com/dotnet/cli @ refs/heads/release/3.0.1xx -> .NET Core 3 Release
-(80)   https://github.com/dotnet/CliCommandLineParser @ refs/heads/master -> .NET Core 3 Release
+(80)   https://github.com/dotnet/CliCommandLineParser @ refs/heads/main -> .NET Core 3 Release
 (170)  https://github.com/dotnet/coreclr @ refs/heads/release/3.0 -> .NET Core 3 Release
 (193)  https://github.com/dotnet/corefx @ refs/heads/release/3.0 -> .NET Core 3 Release
 (77)   https://github.com/dotnet/core-sdk @ refs/heads/release/3.0.1xx -> .NET Core 3 Release
@@ -2153,8 +2155,8 @@ PS D:\enlistments\websdk> darc get-default-channels --channel ".NET Core 3 relea
 (247)  https://github.com/dotnet/roslyn @ refs/heads/release/dev16.1-vs-deps -> .NET Core 3 Release
 (81)   https://github.com/dotnet/sdk @ refs/heads/release/3.0.1xx -> .NET Core 3 Release
 (186)  https://github.com/dotnet/standard @ refs/heads/release/3.0 -> .NET Core 3 Release
-(83)   https://github.com/dotnet/symreader @ refs/heads/master -> .NET Core 3 Release
-(84)   https://github.com/dotnet/symreader-portable @ refs/heads/master -> .NET Core 3 Release
+(83)   https://github.com/dotnet/symreader @ refs/heads/main -> .NET Core 3 Release
+(84)   https://github.com/dotnet/symreader-portable @ refs/heads/main -> .NET Core 3 Release
 (90)   https://github.com/dotnet/templating @ refs/heads/release/3.0 -> .NET Core 3 Release
 (92)   https://github.com/dotnet/toolset @ refs/heads/release/3.0.1xx -> .NET Core 3 Release
 (194)  https://github.com/dotnet/winforms @ refs/heads/release/3.0 -> .NET Core 3 Release
@@ -2303,10 +2305,10 @@ using dot.exe or other GraphViz tools.
 PS D:\enlistments\websdk> darc get-flow-graph --channel "3 Rel"
 digraph repositoryGraph {
     node [shape=record]
-    arcademaster[label="arcade\nmaster"];
-    CliCommandLineParsermaster[label="CliCommandLineParser\nmaster"];
-    symreadermaster[label="symreader\nmaster"];
-    symreaderportablemaster[label="symreader-portable\nmaster"];
+    arcademaster[label="arcade\nmain"];
+    CliCommandLineParsermaster[label="CliCommandLineParser\nmain"];
+    symreadermaster[label="symreader\nmain"];
+    symreaderportablemaster[label="symreader-portable\nmain"];
     coresdkrelease301xx[label="core-sdk\nrelease/3.0.1xx"];
     clirelease301xx[label="cli\nrelease/3.0.1xx"];
     sdkrelease301xx[label="sdk\nrelease/3.0.1xx"];
@@ -2649,7 +2651,7 @@ Subscription health for https://github.com/aspnet/Extensions @ release/3.0-previ
     Microsoft.DotNet.GenAPI
     Microsoft.DotNet.Helix.Sdk
 
-Subscription health for https://github.com/dotnet/CliCommandLineParser @ master - (Warning)
+Subscription health for https://github.com/dotnet/CliCommandLineParser @ main - (Warning)
 
   Dependencies that do not flow automatically (disabled or frequency=none):
     Microsoft.DotNet.Arcade.Sdk
@@ -2660,12 +2662,12 @@ Subscription health for https://github.com/dotnet/sdk @ release/3.0.1xx - (Warni
     Microsoft.DotNet.Arcade.Sdk
     Microsoft.DotNet.SignTool
 
-Subscription health for https://github.com/dotnet/symreader @ master - (Warning)
+Subscription health for https://github.com/dotnet/symreader @ main - (Warning)
 
   Dependencies that do not flow automatically (disabled or frequency=none):
     Microsoft.DotNet.Arcade.Sdk
 
-Subscription health for https://github.com/dotnet/symreader-portable @ master - (Warning)
+Subscription health for https://github.com/dotnet/symreader-portable @ main - (Warning)
 
   Dependencies that do not flow automatically (disabled or frequency=none):
     Microsoft.DotNet.Arcade.Sdk
@@ -2713,10 +2715,10 @@ Product dependency cycle health for https://github.com/aspnet/EntityFramework6 @
 Product dependency cycle health for https://github.com/aspnet/EntityFrameworkCore @ release/3.0-preview6 - (Passed)
 Product dependency cycle health for https://github.com/aspnet/AspNetCore-Tooling @ release/3.0-preview6 - (Passed)
 Product dependency cycle health for https://github.com/aspnet/Extensions @ release/3.0-preview6 - (Passed)
-Product dependency cycle health for https://github.com/dotnet/CliCommandLineParser @ master - (Passed)
+Product dependency cycle health for https://github.com/dotnet/CliCommandLineParser @ main - (Passed)
 Product dependency cycle health for https://github.com/dotnet/sdk @ release/3.0.1xx - (Passed)
-Product dependency cycle health for https://github.com/dotnet/symreader @ master - (Passed)
-Product dependency cycle health for https://github.com/dotnet/symreader-portable @ master - (Passed)
+Product dependency cycle health for https://github.com/dotnet/symreader @ main - (Passed)
+Product dependency cycle health for https://github.com/dotnet/symreader-portable @ main - (Passed)
 Product dependency cycle health for https://github.com/Microsoft/msbuild @ vs16.0 - (Passed)
 Product dependency cycle health for https://github.com/dotnet/templating @ release/3.0 - (Passed)
 Product dependency cycle health for https://dev.azure.com/dnceng/internal/_git/dotnet-optimization @ release/3.0 - (Passed)
@@ -2734,7 +2736,7 @@ check of what the latest build of a repository is, especially if it has not been
 ```
 PS D:\enlistments\arcade-services> darc get-latest-build --repo core-setup --channel ".NET 5 Dev"
 Repository:    https://github.com/dotnet/core-setup
-Branch:        refs/heads/master
+Branch:        refs/heads/main
 Commit:        9042fe6c81aa3b47f58ccd94ff02e42f9f7a4e46
 Build Number:  20190916.2
 Date Produced: 9/16/2019 9:19 AM
@@ -2757,7 +2759,7 @@ These merge policies come from two sources:
 S D:\enlistments\websdk> darc get-repository-policies --repo extensions
 Filtered 3 policies for branches not targeted by an active batchable subscription. To include, pass --all.
 
-https://github.com/aspnet/Extensions @ master
+https://github.com/aspnet/Extensions @ main
 - Merge Policies:
   Standard
 https://github.com/aspnet/Extensions @ release/3.0-preview6
@@ -2780,9 +2782,9 @@ to obtain the id of a subscription for use in
 
 The top line of the listing shows the subscription mapping and is read:
 ```
-https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/dotnet/core-sdk' ('master')
+https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/dotnet/core-sdk' ('main')
 
-Builds of https://github.com/aspnet/AspNetCore that have been applied to channel ".NET 5 Dev" will be applied to the master branch of https://github.com/dotnet/core-sdk.
+Builds of https://github.com/aspnet/AspNetCore that have been applied to channel ".NET 5 Dev" will be applied to the main branch of https://github.com/dotnet/core-sdk.
 ```
 
 If no parameters are specified, `get-subscriptions` will show a full list of
@@ -2793,7 +2795,7 @@ to be more useful.
 ```
 PS D:\enlistments\arcade-services> darc get-subscriptions --target-repo core-sdk --source-repo aspnet
 
-https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/dotnet/core-sdk' ('master')
+https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/dotnet/core-sdk' ('main')
   - Id: 510286a9-8cd5-47bd-a259-08d68641480a
   - Update Frequency: EveryBuild
   - Enabled: True
@@ -2846,14 +2848,14 @@ policies may be edited.
 **Sample**:
 ```
 PS D:\enlistments\websdk> darc set-repository-policies --repo https://github.com/dotnet/corefx \
-                          --branch master --standard-automerge -q
+                          --branch main --standard-automerge -q
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12353
 
-PS D:\enlistments\websdk> darc get-repository-policies --repo https://github.com/dotnet/corefx --branch master --all
-https://github.com/dotnet/corefx @ master
+PS D:\enlistments\websdk> darc get-repository-policies --repo https://github.com/dotnet/corefx --branch main --all
+https://github.com/dotnet/corefx @ main
 - Merge Policies:
   Standard
-https://github.com/dotnet/corefxlab @ master
+https://github.com/dotnet/corefxlab @ main
 - Merge Policies: []
 ```
 
@@ -2882,7 +2884,7 @@ PS D:\enlistments\websdk> darc subscription-status --id 1abbb4c1-19d8-4912-fab8-
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12354
 
 PS D:\enlistments\websdk> darc get-subscriptions --source-repo aspnetcore --target-repo websdk --channel Dev
-https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet/websdk' ('master')
+https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet/websdk' ('main')
   - Id: 1abbb4c1-19d8-4912-fab8-08d6a19aff91
   - Update Frequency: EveryDay
   - Enabled: False
@@ -2894,7 +2896,7 @@ PS D:\enlistments\websdk> darc subscription-status --id 1abbb4c1-19d8-4912-fab8-
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12355
 
 PS D:\enlistments\websdk> darc get-subscriptions --source-repo aspnetcore --target-repo websdk --channel Dev
-https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet/websdk' ('master')
+https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet/websdk' ('main')
   - Id: 1abbb4c1-19d8-4912-fab8-08d6a19aff91
   - Update Frequency: EveryDay
   - Enabled: True
@@ -2927,14 +2929,14 @@ confirmation before sending the trigger request.
 PS D:\enlistments\arcade> darc trigger-subscriptions --source-repo arcade --target-repo arcade-services
 
 Will trigger the following 1 subscriptions...
-  https://github.com/dotnet/arcade (.NET Tools - Latest) ==> 'https://github.com/dotnet/arcade-services' ('master')
+  https://github.com/dotnet/arcade (.NET Tools - Latest) ==> 'https://github.com/dotnet/arcade-services' ('main')
 Continue? (y/n) y
 Triggering 1 subscriptions...done
 
 PS D:\enlistments\arcade> darc trigger-subscriptions --source-repo arcade --target-repo arcade-services --build 123
 Subscription updates will use Build # 123 instead of latest available
 Will trigger the following 1 subscriptions...
-  https://github.com/dotnet/arcade (.NET Tools - Latest) ==> 'https://github.com/dotnet/arcade-services' ('master')
+  https://github.com/dotnet/arcade (.NET Tools - Latest) ==> 'https://github.com/dotnet/arcade-services' ('main')
 Continue? (y/n) y
 Triggering 1 subscriptions...done
 ```
@@ -3077,7 +3079,7 @@ assets in specific directories (e.g., `src/sdk/System.Text.Json` or `src/*/Syste
 **Sample**:
 ```
 PS D:\enlistments\websdk> darc get-subscriptions --source-repo aspnetcore --target-repo websdk --channel Dev
-https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet/websdk' ('master')
+https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet/websdk' ('main')
   - Id: 1abbb4c1-19d8-4912-fab8-08d6a19aff91
   - Update Frequency: EveryDay
   - Enabled: True
@@ -3090,7 +3092,7 @@ PS D:\enlistments\websdk> darc update-subscription --id 1abbb4c1-19d8-4912-fab8-
 A pull request has been opened at: https://dev.azure.com/dnceng/internal/_git/maestro-configuration/pullrequest/12356
 
 PS D:\enlistments\websdk> darc get-subscriptions --source-repo aspnetcore --target-repo websdk --channel Dev
-https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet/websdk' ('master')
+https://github.com/aspnet/AspNetCore (.NET 5 Dev) ==> 'https://github.com/aspnet/websdk' ('main')
   - Id: 1abbb4c1-19d8-4912-fab8-08d6a19aff91
   - Update Frequency: EveryDay
   - Enabled: True
