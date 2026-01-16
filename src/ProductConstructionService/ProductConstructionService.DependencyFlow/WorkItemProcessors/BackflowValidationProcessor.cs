@@ -113,7 +113,7 @@ public class BackflowValidationProcessor : WorkItemProcessor<BackflowValidationW
         {
             // Get VMR repository URI from constants
             var vmrUri = Constants.DefaultVmrUri;
-            var remote = await _remoteFactory.CreateRemoteAsync(vmrUri, _logger);
+            var remote = await _remoteFactory.CreateRemoteAsync(vmrUri);
 
             // Check common branch patterns
             var branchesToCheck = new[] { "main", "internal/main" };
@@ -171,14 +171,14 @@ public class BackflowValidationProcessor : WorkItemProcessor<BackflowValidationW
     {
         try
         {
-            var normalizedBranch = GitHelpers.NormalizeBranchName(branch);
+            // Branch will be normalized when used in queries against the database
             
             // Get the default channel for the VMR on this branch
             var defaultChannel = await _context.DefaultChannels
                 .Include(dc => dc.Channel)
                 .FirstOrDefaultAsync(
                     dc => dc.Repository == Constants.DefaultVmrUri && 
-                          dc.Branch == normalizedBranch,
+                          dc.Branch == branch,
                     cancellationToken);
 
             if (defaultChannel == null)
@@ -249,24 +249,20 @@ public class BackflowValidationProcessor : WorkItemProcessor<BackflowValidationW
         try
         {
             // Get the last backflowed VMR commit SHA from Version.Details.xml in the target branch
-            var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository, _logger);
+            var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
             
             string lastBackflowedSha;
             try
             {
                 var versionDetails = await remote.GetFileContentsAsync(
-                    subscription.TargetRepository,
                     VersionFiles.VersionDetailsXml,
                     subscription.TargetRepository,
                     subscription.TargetBranch);
 
-                var dependencies = await _versionDetailsParser.ParseVersionDetailsXmlAsync(
-                    subscription.TargetRepository,
-                    subscription.TargetBranch,
-                    versionDetails);
+                var dependencies = _versionDetailsParser.ParseVersionDetailsXml(versionDetails, includePinned: false);
 
                 // Find the VMR dependency in the version details
-                var vmrDependency = dependencies.FirstOrDefault(d => 
+                var vmrDependency = dependencies.Dependencies.FirstOrDefault(d => 
                     d.RepoUri.Equals(Constants.DefaultVmrUri, StringComparison.OrdinalIgnoreCase));
 
                 if (vmrDependency == null)

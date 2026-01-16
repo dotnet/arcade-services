@@ -78,7 +78,7 @@ public class BackflowController : ControllerBase
         };
 
         await _workItemProducerFactory
-            .CreateProducer<BackflowValidationWorkItem>(isCodeFlowSubscription: true)
+            .CreateProducer<BackflowValidationWorkItem>(IsCodeFlowSubscription: true)
             .ProduceWorkItemAsync(workItem);
 
         _logger.LogInformation(
