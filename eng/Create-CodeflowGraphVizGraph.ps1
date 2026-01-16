@@ -847,7 +847,6 @@ function Get-MaxVmrDepth {
         [string]$vmrPath,
         [array]$repoCommits,
         [int]$minDepth = 1,
-        [int]$maxDepth = 600,
         [switch]$Verbose
     )
 
@@ -886,12 +885,6 @@ function Get-MaxVmrDepth {
                 $commitDepth = [int]$commitAge
                 if ($Verbose) {
                     Write-Host "  VMR commit $($sourceSha.ShortSourceSHA) is $commitDepth commits old" -ForegroundColor Cyan
-                }
-                
-                # Make sure the depth is within the acceptable range
-                if ($commitDepth -gt $maxDepth) {
-                    Write-Host "  VMR depth ($commitDepth) exceeds maximum ($maxDepth), using maximum depth" -ForegroundColor Yellow
-                    return $maxDepth
                 }
 
                 return $commitDepth
@@ -1380,7 +1373,7 @@ try {
     Write-Host "Loaded $($repoCommits.Count) commits from source repository" -ForegroundColor Green
 
     # Determine the optimal VMR depth by analyzing the loaded repo commits for referenced commits
-    $vmrDepth = Get-MaxVmrDepth -repoPath $RepoPath -vmrPath $VmrPath -repoCommits $repoCommits -minDepth 10 -maxDepth 500 @verboseParam
+    $vmrDepth = Get-MaxVmrDepth -repoPath $RepoPath -vmrPath $VmrPath -repoCommits $repoCommits -minDepth 10 @verboseParam
 
     Write-Host "Loading commits from VMR ($VmrPath)..." -ForegroundColor Yellow
     $vmrCommits = Get-GitCommits -repoPath $VmrPath -count $vmrDepth @verboseParam

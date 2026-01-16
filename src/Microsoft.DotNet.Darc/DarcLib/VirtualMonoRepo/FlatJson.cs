@@ -111,6 +111,9 @@ public class FlatJson
     {
         var segments = path.Split(':', StringSplitOptions.RemoveEmptyEntries);
 
+        // Keep track of all nodes we traverse so we can clean up empty parents
+        List<JsonObject> parentChain = [];
+
         JsonNode currentNode = root;
         for (int i = 0; i < segments.Length - 1; i++)
         {
@@ -119,14 +122,29 @@ public class FlatJson
                 throw new InvalidOperationException($"Cannot navigate to {segments[i]} in JSON structure.");
             }
 
+            parentChain.Add(obj);
             currentNode = obj[segments[i]]!;
         }
 
         // Remove the property from its parent
         if (currentNode is JsonObject parentObject)
         {
-            string propertyToRemove = segments[segments.Length - 1];
+            string propertyToRemove = segments.Last();
             parentObject.Remove(propertyToRemove);
+            parentChain.Add(parentObject);
+        }
+
+        // Clean up empty parent objects
+        for (int i = parentChain.Count - 1; i > 0; i--)
+        {
+            if (parentChain[i].Count == 0)
+            {
+                parentChain[i - 1].Remove(segments[i - 1]);
+            }
+            else
+            {
+                break;
+            }
         }
     }
 

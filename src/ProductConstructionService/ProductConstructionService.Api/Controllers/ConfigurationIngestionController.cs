@@ -10,7 +10,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.EntityFrameworkCore;
+using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Configuration;
+using ProductConstructionService.Common;
 
 namespace ProductConstructionService.Api.Controllers;
 
@@ -22,14 +24,20 @@ public class ConfigurationIngestionController : Controller
     private readonly IConfigurationIngestor _configurationIngestor;
     private readonly ISqlBarClient _sqlBarClient;
     private readonly ILogger<ConfigurationIngestionController> _logger;
+    private readonly IDistributedLock _distributedLock;
 
     private const string ProductionNamespaceName = "production";
 
-    public ConfigurationIngestionController(IConfigurationIngestor configurationIngestor, ISqlBarClient sqlBarClient, ILogger<ConfigurationIngestionController> logger)
+    public ConfigurationIngestionController(
+        IConfigurationIngestor configurationIngestor, 
+        ISqlBarClient sqlBarClient, 
+        ILogger<ConfigurationIngestionController> logger,
+        IDistributedLock distributedLock)
     {
         _configurationIngestor = configurationIngestor;
         _sqlBarClient = sqlBarClient;
         _logger = logger;
+        _distributedLock = distributedLock;
     }
 
     [HttpPost(Name = "ingest")]
@@ -47,34 +55,29 @@ public class ConfigurationIngestionController : Controller
         _logger.LogInformation("Ingesting configuration for namespace {NamespaceName} (saveChanges={SaveChanges})", namespaceName, saveChanges);
         try
         {
-            var updates = await _configurationIngestor.IngestConfigurationAsync(
-                new ConfigurationData(
-                    yamlConfiguration.Subscriptions,
-                    yamlConfiguration.Channels,
-                    yamlConfiguration.DefaultChannels,
-                    yamlConfiguration.BranchMergePolicies),
-                namespaceName,
-                saveChanges);
+            var updates = await _distributedLock.ExecuteWithLockAsync("ConfigurationIngestion", async () =>
+            {
+                return await _configurationIngestor.IngestConfigurationAsync(
+                    new ConfigurationData(
+                        yamlConfiguration.Subscriptions,
+                        yamlConfiguration.Channels,
+                        yamlConfiguration.DefaultChannels,
+                        yamlConfiguration.BranchMergePolicies),
+                    namespaceName,
+                    saveChanges);
+            });
 
             return Ok(updates);
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new ProblemDetails
-            {
-                Title = "Configuration validation failed",
-                Detail = ex.Message,
-                Status = 400
-            });
+            _logger.LogError(ex, "Configuration validation failed for namespace {NamespaceName}", namespaceName);
+            return BadRequest(new ApiError("Configuration validation failed", [ex.Message]));
         }
         catch (Exception ex) when (ex is DbUpdateException || ex is InvalidOperationException)
         {
-            return BadRequest(new ProblemDetails
-            {
-                Title = "BAR constrains violated",
-                Detail = ex.Message,
-                Status = 400
-            });
+            _logger.LogError(ex, "BAR constraints violated while ingesting namespace {NamespaceName}", namespaceName);
+            return BadRequest(new ApiError("BAR constraints violated", [ex.Message]));
         }
     }
 

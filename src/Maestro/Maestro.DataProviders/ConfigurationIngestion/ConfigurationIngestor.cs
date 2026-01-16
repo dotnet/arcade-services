@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using ProductConstructionService.Common;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders.ConfigurationIngestion.Model;
@@ -21,30 +20,14 @@ namespace Maestro.DataProviders.ConfigurationIngestion;
 internal partial class ConfigurationIngestor(
         BuildAssetRegistryContext context,
         ISqlBarClient sqlBarClient,
-        IDistributedLock distributedLock,
         IGitHubInstallationIdResolver installationIdResolver)
     : IConfigurationIngestor
 {
     private readonly BuildAssetRegistryContext _context = context;
     private readonly ISqlBarClient _sqlBarClient = sqlBarClient;
-    private readonly IDistributedLock _distributedLock = distributedLock;
     private readonly IGitHubInstallationIdResolver _installationIdResolver = installationIdResolver;
 
     public async Task<ConfigurationUpdates> IngestConfigurationAsync(
-        ConfigurationData configurationData,
-        string configurationNamespace,
-        bool saveChanges)
-    {
-        var ingestionResult =
-            await _distributedLock.ExecuteWithLockAsync("ConfigurationIngestion", async () =>
-            {
-                return await IngestConfigurationInternalAsync(configurationData, configurationNamespace, saveChanges);
-            });
-
-        return ingestionResult;
-    }
-
-    private async Task<ConfigurationUpdates> IngestConfigurationInternalAsync(
         ConfigurationData configurationData,
         string configurationNamespace,
         bool saveChanges = true)

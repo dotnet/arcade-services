@@ -30,6 +30,7 @@ public interface IVmrBackFlower : IVmrCodeFlower
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="enableRebase">Rebases changes (and leaves conflict markers in place) instead of recreating the previous flows recursively</param>
     /// <param name="forceUpdate">Apply updates always, even when no or non-meaningful changes only are flown</param>
+    /// <param name="unsafeFlow">If true, ignores non-linear flow errors (flowing from a different branch etc)</param>
     Task<CodeFlowResult> FlowBackAsync(
         string mapping,
         NativePath targetRepo,
@@ -39,6 +40,7 @@ public interface IVmrBackFlower : IVmrCodeFlower
         string headBranch,
         bool enableRebase,
         bool forceUpdate,
+        bool unsafeFlow,
         CancellationToken cancellationToken = default);
 }
 
@@ -97,6 +99,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string headBranch,
         bool enableRebase,
         bool forceUpdate,
+        bool unsafeFlow,
         CancellationToken cancellationToken = default)
     {
         (bool headBranchExisted, SourceMapping mapping, LastFlows lastFlows, ILocalGitRepo targetRepo) = await PrepareVmrAndRepo(
@@ -106,6 +109,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             headBranch,
             targetRepoPath,
             enableRebase,
+            unsafeFlow,
             cancellationToken);
 
         return await FlowBackAsync(
@@ -117,7 +121,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 build,
                 excludedAssets,
                 enableRebase,
-                forceUpdate),
+                forceUpdate,
+                unsafeFlow),
             targetRepo,
             lastFlows,
             headBranchExisted,
@@ -382,6 +387,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         string headBranch,
         NativePath? targetRepoPath,
         bool enableRebase,
+        bool unsafeFlow,
         CancellationToken cancellationToken)
     {
         await _vmrCloneManager.PrepareVmrAsync([build.GetRepository()], [build.Commit], build.Commit, ShouldResetClones, cancellationToken);
@@ -420,7 +426,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                     cancellationToken);
             }
 
-            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true);
+            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow);
             return (true, mapping, lastFlows, targetRepo);
         }
         catch (NotFoundException)
@@ -455,7 +461,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 throw new TargetBranchNotFoundException($"Failed to find target branch {targetBranch} in {string.Join(", ", remotes)}", e);
             }
 
-            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true);
+            LastFlows lastFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow);
 
             // Rebase strategy works on top of the target branch, non-rebase starts from the last point of synchronization
             if (!enableRebase)
@@ -499,6 +505,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         LastFlows previousFlows,
         string branchToCreate,
         string targetBranch,
+        bool unsafeFlow,
         CancellationToken cancellationToken)
     {
         Backflow previousFlow = previousFlows.LastBackFlow
@@ -526,7 +533,7 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             resetToRemote: false,
             cancellationToken);
 
-        previousFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true);
+        previousFlows = await GetLastFlowsAsync(mapping.Name, targetRepo, currentIsBackflow: true, ignoreNonLinearFlow: unsafeFlow);
         previousFlow = previousFlows.LastBackFlow
             ?? throw new DarcException($"No more backflows found to recreate from {previousFlowSha}");
 
