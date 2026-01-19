@@ -4,7 +4,6 @@
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -21,7 +20,6 @@ public class BackflowStatusCalculationProcessor : WorkItemProcessor<BackflowStat
 
     private readonly BuildAssetRegistryContext _context;
     private readonly IRemoteFactory _remoteFactory;
-    private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IRedisCacheFactory _redisCacheFactory;
     private readonly IVmrCloneManager _vmrCloneManager;
     private readonly ILogger<BackflowStatusCalculationProcessor> _logger;
@@ -29,14 +27,12 @@ public class BackflowStatusCalculationProcessor : WorkItemProcessor<BackflowStat
     public BackflowStatusCalculationProcessor(
         BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
-        IVersionDetailsParser versionDetailsParser,
         IRedisCacheFactory redisCacheFactory,
         IVmrCloneManager vmrCloneManager,
         ILogger<BackflowStatusCalculationProcessor> logger)
     {
         _context = context;
         _remoteFactory = remoteFactory;
-        _versionDetailsParser = versionDetailsParser;
         _redisCacheFactory = redisCacheFactory;
         _vmrCloneManager = vmrCloneManager;
         _logger = logger;
@@ -226,7 +222,7 @@ public class BackflowStatusCalculationProcessor : WorkItemProcessor<BackflowStat
                 var result = await vmrClone.ExecuteGitCommand(
                     ["rev-list", "--count", $"{lastBackflowedSha}..{vmrSha}"],
                     cancellationToken);
-                
+
                 if (result.Succeeded && int.TryParse(result.StandardOutput.Trim(), out var distance))
                 {
                     commitDistance = distance;
