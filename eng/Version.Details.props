@@ -23,7 +23,7 @@ This file should be imported by eng/Versions.props
     <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26062.3</MicrosoftDotNetArcadeSdkPackageVersion>
     <MicrosoftDotNetBuildTasksFeedPackageVersion>10.0.0-beta.26062.3</MicrosoftDotNetBuildTasksFeedPackageVersion>
     <MicrosoftDotNetSignToolPackageVersion>10.0.0-beta.26062.3</MicrosoftDotNetSignToolPackageVersion>
-    <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>10.0.0-beta.26062.3</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
+    <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>10.0.0-beta.26066.3</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
     <MicrosoftDotNetVersionToolsPackageVersion>8.0.0-beta.25555.2</MicrosoftDotNetVersionToolsPackageVersion>
     <!-- dotnet/dnceng dependencies -->
     <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.26065.2</MicrosoftDncEngConfigurationBootstrapPackageVersion>
