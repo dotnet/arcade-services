@@ -22,13 +22,11 @@ internal interface IPcsVmrForwardFlower
     /// <param name="subscription">Subscription to flow</param>
     /// <param name="build">Build to flow</param>
     /// <param name="headBranch">Branch to flow to (or to create)</param>
-    /// <param name="enableRebase">Rebases changes (and leaves conflict markers in place) instead of recreating the previous flows recursively</param>
     /// <param name="forceUpdate">Force the update to be performed</param>
     Task<CodeFlowResult> FlowForwardAsync(
         Subscription subscription,
         Build build,
         string headBranch,
-        bool enableRebase,
         bool forceUpdate,
         CancellationToken cancellationToken = default);
 }
@@ -68,7 +66,6 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         Subscription subscription,
         Build build,
         string headBranch,
-        bool enableRebase,
         bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
@@ -86,12 +83,12 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             subscription.TargetBranch,
             headBranch,
             subscription.TargetRepository,
-            enableRebase,
+            enableRebase: true,
             forceUpdate,
             unsafeFlow: false,
             cancellationToken);
 
-        if (enableRebase && result.HadUpdates && !result.HadConflicts)
+        if (result.HadUpdates && !result.HadConflicts)
         {
             var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
             var stagedFiles = await vmr.GetStagedFilesAsync();
@@ -124,10 +121,9 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             commitMessage,
             cancellationToken);
 
-        if (codeflowOptions.EnableRebase && conflicts.Count == 0)
+        // In the service, we need to commit (local runs only stage files) so that we push the update to the PR
+        if (conflicts.Count == 0)
         {
-            // When we do the rebase flow, we need only stage locally (in darc) after we rebase the work branch
-            // In the service, we need to commit too so that we push the update to the PR
             await targetRepo.CommitAsync(commitMessage, allowEmpty: true, cancellationToken: cancellationToken);
         }
 

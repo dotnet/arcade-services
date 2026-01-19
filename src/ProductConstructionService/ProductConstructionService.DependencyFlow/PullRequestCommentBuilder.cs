@@ -58,53 +58,6 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
             .ToString();
     }
 
-    public static string NotifyAboutMergeConflict(
-        InProgressPullRequest pr,
-        SubscriptionUpdateWorkItem update,
-        Subscription subscription,
-        IReadOnlyCollection<UnixPath> conflictedFiles,
-        Build build)
-    {
-        string metadataFile, contentType, correctContent;
-
-        if (subscription.IsBackflow())
-        {
-            metadataFile = VersionFiles.VersionDetailsXml;
-            contentType = "xml";
-            var sourceMetadata = new SourceDependency(
-                update.SourceRepo,
-                subscription.SourceDirectory,
-                update.SourceSha,
-                update.BuildId);
-            correctContent = VersionDetailsParser.SerializeSourceDependency(sourceMetadata);
-        }
-        else
-        {
-            metadataFile = VmrInfo.DefaultRelativeSourceManifestPath;
-            contentType = "json";
-            correctContent = JsonSerializer.Serialize(
-                new RepositoryRecord(
-                    subscription.TargetDirectory,
-                    update.SourceRepo,
-                    update.SourceSha,
-                    update.BuildId),
-                new JsonSerializerOptions()
-                {
-                    WriteIndented = true,
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                });
-        }
-
-        return $"""
-                There are conflicts with the `{subscription.TargetBranch}` branch in this PR.
-                Apart from conflicts in the source files, this means there are unresolved conflicts in the codeflow metadata file `{metadataFile}`.
-                When resolving these, please use the (incoming/ours) version from the PR branch. The correct content should be this:
-                ```{contentType}
-                {correctContent}
-                ```
-                """;
-    }
-
     internal static string BuildNotificationAboutManualConflictResolutionComment(
         SubscriptionUpdateWorkItem update,
         Subscription subscription,

@@ -206,7 +206,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
                 It.IsAny<string>(),
                 It.IsAny<bool>(),
-                It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
@@ -222,7 +221,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(s => s.Id == Subscription.Id),
                 It.Is<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(b => b.Id == build.Id && b.Commit == build.Commit),
                 It.IsAny<string>(),
-                It.IsAny<bool>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -554,44 +552,29 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         return Disposable.Create(remote.VerifyAll);
     }
 
-    protected void WithForwardFlowConflict(Mock<IRemote> remote, IReadOnlyCollection<UnixPath> conflictedFiles, bool rebaseStrategy = false)
+    protected void WithForwardFlowConflict(Mock<IRemote> remote, IReadOnlyCollection<UnixPath> conflictedFiles)
     {
         remote
             .Setup(x => x.CommentPullRequestAsync(
                 It.Is<string>(uri => uri.StartsWith(Subscription.TargetDirectory != null ? VmrUri + "/pulls/" : InProgressPrUrl)),
-                It.Is<string>(content => content.Contains(rebaseStrategy
-                    ? "The conflicts in the following files need to be manually resolved"
-                    : "Maestro attempted to flow new changes from"))))
+                It.Is<string>(content => content.Contains("Maestro attempted to flow new changes from"))))
             .Returns(Task.CompletedTask);
 
         // We re-evaulate checks after we push changes
-        if (rebaseStrategy)
-        {
-            remote
-                .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(
-                    It.Is<string>(uri => uri.StartsWith(Subscription.TargetDirectory != null ? VmrUri + "/pulls/" : InProgressPrUrl)),
-                    It.IsAny<IReadOnlyCollection<MergePolicyEvaluationResult>>()))
-                .Returns(Task.CompletedTask);
-        }
+        remote
+            .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(
+                It.Is<string>(uri => uri.StartsWith(Subscription.TargetDirectory != null ? VmrUri + "/pulls/" : InProgressPrUrl)),
+                It.IsAny<IReadOnlyCollection<MergePolicyEvaluationResult>>()))
+            .Returns(Task.CompletedTask);
 
         var setup = _forwardFlower.Setup(x => x.FlowForwardAsync(
             It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(),
             It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Build>(),
             It.IsAny<string>(),
             It.IsAny<bool>(),
-            It.IsAny<bool>(),
             It.IsAny<CancellationToken>()));
 
-        if (rebaseStrategy)
-        {
-            setup.ReturnsAsync(new CodeFlowResult(true, conflictedFiles, new NativePath(VmrPath), []));
-        }
-        else
-        {
-            setup.Throws(new ConflictInPrBranchException(
-                "error: patch failed: " + string.Join(Environment.NewLine + "error: patch failed: ", conflictedFiles),
-                "branch"));
-        }
+        setup.ReturnsAsync(new CodeFlowResult(true, conflictedFiles, new NativePath(VmrPath), []));
     }
 
     protected void AndShouldHavePullRequestCheckReminder(string? url = null)

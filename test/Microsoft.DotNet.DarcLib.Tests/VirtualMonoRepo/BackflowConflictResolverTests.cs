@@ -426,7 +426,7 @@ public class BackflowConflictResolverTests
                 PrBranch,
                 build,
                 excludedAssets,
-                EnableRebase: false,
+                EnableRebase: true,
                 ForceUpdate: false,
                 UnsafeFlow: false),
             lastFlows,

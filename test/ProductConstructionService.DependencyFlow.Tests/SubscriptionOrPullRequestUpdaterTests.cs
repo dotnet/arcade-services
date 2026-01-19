@@ -105,7 +105,7 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
         ContextUpdates.Add(context => context.Subscriptions.Add(Subscription));
     }
 
-    internal void GivenACodeFlowSubscription(SubscriptionPolicy policy, bool rebaseStrategy = false)
+    internal void GivenACodeFlowSubscription(SubscriptionPolicy policy)
     {
         Subscription = new Subscription
         {
@@ -121,13 +121,6 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
             ExcludedAssets = [new AssetFilter() { Filter = "Excluded.Package" }],
         };
         ContextUpdates.Add(context => context.Subscriptions.Add(Subscription));
-
-        if (rebaseStrategy)
-        {
-            FeatureFlagService
-                .Setup(x => x.IsFeatureOnAsync(Subscription.Id, FeatureFlag.EnableRebaseStrategy, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(true);
-        }
     }
 
     internal Build GivenANewBuild(bool addToChannel, (string name, string version, bool nonShipping)[]? assets = null)

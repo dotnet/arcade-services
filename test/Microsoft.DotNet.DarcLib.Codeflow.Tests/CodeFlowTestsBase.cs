@@ -237,6 +237,7 @@ internal abstract class CodeFlowTestsBase
             excludedAssets,
             "main",
             branch,
+            enableRebase: true,
             forceUpdate,
             unsafeFlow: false,
             cancellationToken: _cancellationToken.Token);
@@ -270,6 +271,7 @@ internal abstract class CodeFlowTestsBase
             "main",
             branch,
             VmrPath,
+            enableRebase: true,
             forceUpdate,
             unsafeFlow: false,
             cancellationToken: _cancellationToken.Token);
