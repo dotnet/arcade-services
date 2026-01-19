@@ -58,16 +58,10 @@ public class BackflowStatusCalculationProcessor : WorkItemProcessor<BackflowStat
                 return false;
             }
 
-            string[] branches;
             var branch = build.GetBranch();
-            if (branch.StartsWith(InternalBranchPrefix))
-            {
-                branches = [branch, branch.Substring(InternalBranchPrefix.Length)];
-            }
-            else
-            {
-                branches = [branch];
-            }
+            string[] branches = branch.StartsWith(InternalBranchPrefix)
+                ? [branch, branch.Substring(InternalBranchPrefix.Length)]
+                : [branch];
 
             _logger.LogInformation("Calculating backflow status for build {buildId} of commit {commit} branches: {branches}",
                 build.Id, build.Commit, string.Join(", ", branches));
