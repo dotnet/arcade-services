@@ -500,7 +500,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branch: forwardBranchName, build);
         codeFlowResult.ShouldHaveUpdates();
 
-await GitOperations.CommitAll(VmrPath, "9");
+        await GitOperations.CommitAll(VmrPath, "9");
 
         // 10. We make another change on the target branch in the repo
         var newDependencyInRepo = new DependencyDetail
