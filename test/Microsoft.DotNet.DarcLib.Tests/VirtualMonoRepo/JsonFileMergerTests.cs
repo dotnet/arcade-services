@@ -1028,4 +1028,86 @@ public class JsonFileMergerTests
             It.IsAny<string>(),
             It.IsAny<string>()), Times.Once);
     }
+
+    [Test]
+    public async Task MergeJsonsAsync_WhenRemovingPropertyWithAlreadyDeletedParent_Succeeds()
+    {
+        // Arrange
+        // Both start with a:b:c existing
+        var targetPreviousJson = """
+            {
+              "a": {
+                "other": "keep"
+              }
+            }
+            """;
+
+        // Target has already deleted "b" (and thus "c"), but "a" still has "other"
+        var targetCurrentJson = """
+            {
+              "a": {
+                "other": "keep"
+              }
+            }
+            """;
+
+        var vmrPreviousJson = """
+            {
+              "a": {
+                "b": {
+                  "c": "value"
+                },
+                "other": "keep"
+              }
+            }
+            """;
+
+        // VMR also deletes a:b:c
+        var vmrCurrentJson = """
+            {
+              "a": {
+                "other": "keep"
+              }
+            }
+            """;
+
+        // Expected: merge succeeds, a:b:c is already gone, result should be same as target
+        var expectedJson = """
+            {
+              "a": {
+                "other": "keep"
+              }
+            }
+            """;
+
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), TargetPreviousSha, It.IsAny<string>()))
+            .ReturnsAsync(targetPreviousJson);
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), TargetCurrentSha, It.IsAny<string>()))
+            .ReturnsAsync(targetCurrentJson);
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), "HEAD", It.IsAny<string>()))
+            .ReturnsAsync(targetCurrentJson);
+        _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()))
+            .ReturnsAsync(vmrPreviousJson);
+        _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
+            .ReturnsAsync(vmrCurrentJson);
+
+        // Act
+        var hadChanges = await _jsonFileMerger.MergeJsonsAsync(
+            _targetRepoMock.Object,
+            TestJsonPath,
+            TargetPreviousSha,
+            TargetCurrentSha,
+            _vmrRepoMock.Object,
+            TestJsonPath,
+            VmrPreviousSha,
+            VmrCurrentSha);
+
+        // Assert - no changes because both deleted the same thing
+        hadChanges.Should().BeFalse();
+        _gitRepoMock.Verify(g => g.CommitFilesAsync(
+            It.Is<List<GitFile>>(files => files.Count == 1 && ValidateGitFile(files[0], expectedJson, GitFileOperation.Add)),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()), Times.Once);
+    }
 }
