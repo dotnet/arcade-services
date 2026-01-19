@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Immutable;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.ProductConstructionService.Client.Models
@@ -13,15 +13,15 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         }
 
         [JsonProperty("subscriptions")]
-        public IImmutableList<Models.ClientSubscriptionYaml> Subscriptions { get; set; }
+        public List<ClientSubscriptionYaml> Subscriptions { get; set; }
 
         [JsonProperty("channels")]
-        public IImmutableList<Models.ClientChannelYaml> Channels { get; set; }
+        public List<ClientChannelYaml> Channels { get; set; }
 
         [JsonProperty("defaultChannels")]
-        public IImmutableList<Models.ClientDefaultChannelYaml> DefaultChannels { get; set; }
+        public List<ClientDefaultChannelYaml> DefaultChannels { get; set; }
 
         [JsonProperty("branchMergePolicies")]
-        public IImmutableList<Models.ClientBranchMergePoliciesYaml> BranchMergePolicies { get; set; }
+        public List<ClientBranchMergePoliciesYaml> BranchMergePolicies { get; set; }
     }
 }

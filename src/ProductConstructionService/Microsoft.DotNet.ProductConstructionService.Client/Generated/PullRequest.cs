@@ -18,10 +18,12 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         Task<List<Models.TrackedPullRequest>> GetTrackedPullRequestsAsync(
             CancellationToken cancellationToken = default
         );
+
         Task<Models.TrackedPullRequest> GetTrackedPullRequestBySubscriptionIdAsync(
             string subscriptionId,
             CancellationToken cancellationToken = default
         );
+
         Task UntrackPullRequestAsync(
             string id,
             CancellationToken cancellationToken = default
@@ -109,13 +111,18 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             throw ex;
         }
 
+        partial void HandleFailedGetTrackedPullRequestBySubscriptionIdRequest(RestApiException ex);
+
         public async Task<Models.TrackedPullRequest> GetTrackedPullRequestBySubscriptionIdAsync(
             string subscriptionId,
             CancellationToken cancellationToken = default
         )
         {
+
             if (string.IsNullOrEmpty(subscriptionId))
+            {
                 throw new ArgumentNullException(nameof(subscriptionId));
+            }
 
             const string apiVersion = "2020-02-20";
 
@@ -123,10 +130,11 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                $"/api/pull-requests/tracked/subscription/{Uri.EscapeDataString(Client.Serialize(subscriptionId))}",
+                "/api/pull-requests/tracked/subscription/{subscriptionId}".Replace("{subscriptionId}", Uri.EscapeDataString(Client.Serialize(subscriptionId))),
                 false);
 
             _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+
 
             using (var _req = Client.Pipeline.CreateRequest())
             {
@@ -171,7 +179,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                 res,
                 content,
                 Client.Deserialize<Models.ApiError>(content)
-            );
+                );
+            HandleFailedGetTrackedPullRequestBySubscriptionIdRequest(ex);
             HandleFailedRequest(ex);
             Client.OnFailedRequest(ex);
             throw ex;
