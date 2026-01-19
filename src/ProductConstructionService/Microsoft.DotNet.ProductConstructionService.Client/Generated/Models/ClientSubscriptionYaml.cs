@@ -2,14 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Collections.Immutable;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
     public partial class ClientSubscriptionYaml
     {
-        public ClientSubscriptionYaml(Guid id, bool enabled, string channel, string sourceRepository, string targetRepository, string targetBranch, Models.ClientUpdateFrequency updateFrequency, bool batchable, bool sourceEnabled)
+        public ClientSubscriptionYaml(Guid id, bool enabled, string channel, string sourceRepository, string targetRepository, string targetBranch, ClientUpdateFrequency updateFrequency, bool batchable, bool sourceEnabled)
         {
             Id = id;
             Enabled = enabled;
@@ -47,10 +47,10 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         public bool Batchable { get; set; }
 
         [JsonProperty("excludedAssets")]
-        public IImmutableList<string> ExcludedAssets { get; set; }
+        public List<string> ExcludedAssets { get; set; }
 
         [JsonProperty("mergePolicies")]
-        public IImmutableList<Models.ClientMergePolicyYaml> MergePolicies { get; set; }
+        public List<ClientMergePolicyYaml> MergePolicies { get; set; }
 
         [JsonProperty("failureNotificationTags")]
         public string FailureNotificationTags { get; set; }
@@ -85,7 +85,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
                 {
                     return false;
                 }
-                if (UpdateFrequency == default(Models.ClientUpdateFrequency))
+                if (UpdateFrequency == default)
                 {
                     return false;
                 }

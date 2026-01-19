@@ -3,7 +3,6 @@
 
 using System;
 using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure;
@@ -13,26 +12,23 @@ using Azure.Core;
 
 namespace Microsoft.DotNet.ProductConstructionService.Client
 {
-    public partial interface IConfigurationIngestion
+    public partial interface IBackflowStatus
     {
-        Task<Models.ConfigurationUpdates> IngestNamespaceAsync(
-            string namespaceName,
-            bool saveChanges,
-            Models.ClientYamlConfiguration body = default,
+        Task TriggerBackflowStatusCalculationAsync(
+            int vmrBuildId,
             CancellationToken cancellationToken = default
         );
 
-        Task<bool> DeleteNamespaceAsync(
-            string namespaceName,
-            bool saveChanges,
+        Task<Models.BackflowStatus> GetBackflowStatusAsync(
+            int vmrBuildId,
             CancellationToken cancellationToken = default
         );
 
     }
 
-    internal partial class ConfigurationIngestion : IServiceOperations<ProductConstructionServiceApi>, IConfigurationIngestion
+    internal partial class BackflowStatus : IServiceOperations<ProductConstructionServiceApi>, IBackflowStatus
     {
-        public ConfigurationIngestion(ProductConstructionServiceApi client)
+        public BackflowStatus(ProductConstructionServiceApi client)
         {
             Client = client ?? throw new ArgumentNullException(nameof(client));
         }
@@ -41,20 +37,13 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         partial void HandleFailedRequest(RestApiException ex);
 
-        partial void HandleFailedIngestNamespaceRequest(RestApiException ex);
+        partial void HandleFailedTriggerBackflowStatusCalculationRequest(RestApiException ex);
 
-        public async Task<Models.ConfigurationUpdates> IngestNamespaceAsync(
-            string namespaceName,
-            bool saveChanges,
-            Models.ClientYamlConfiguration body = default,
+        public async Task TriggerBackflowStatusCalculationAsync(
+            int vmrBuildId,
             CancellationToken cancellationToken = default
         )
         {
-
-            if (string.IsNullOrEmpty(namespaceName))
-            {
-                throw new ArgumentNullException(nameof(namespaceName));
-            }
 
             const string apiVersion = "2020-02-20";
 
@@ -62,16 +51,12 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/configuration-ingestion",
+                "/api/backflow-status/trigger",
                 false);
 
-            if (!string.IsNullOrEmpty(namespaceName))
+            if (vmrBuildId != default)
             {
-                _url.AppendQuery("namespaceName", Client.Serialize(namespaceName));
-            }
-            if (saveChanges != default)
-            {
-                _url.AppendQuery("saveChanges", Client.Serialize(saveChanges));
+                _url.AppendQuery("vmr-build-id", Client.Serialize(vmrBuildId));
             }
             _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
@@ -81,35 +66,20 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                 _req.Uri = _url;
                 _req.Method = RequestMethod.Post;
 
-                if (body != default(Models.ClientYamlConfiguration))
-                {
-                    _req.Content = RequestContent.Create(Encoding.UTF8.GetBytes(Client.Serialize(body)));
-                    _req.Headers.Add("Content-Type", "application/json; charset=utf-8");
-                }
-
                 using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
                 {
                     if (_res.Status < 200 || _res.Status >= 300)
                     {
-                        await OnIngestNamespaceFailed(_req, _res).ConfigureAwait(false);
+                        await OnTriggerBackflowStatusCalculationFailed(_req, _res).ConfigureAwait(false);
                     }
 
-                    if (_res.ContentStream == null)
-                    {
-                        await OnIngestNamespaceFailed(_req, _res).ConfigureAwait(false);
-                    }
 
-                    using (var _reader = new StreamReader(_res.ContentStream))
-                    {
-                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<Models.ConfigurationUpdates>(_content);
-                        return _body;
-                    }
+                    return;
                 }
             }
         }
 
-        internal async Task OnIngestNamespaceFailed(Request req, Response res)
+        internal async Task OnTriggerBackflowStatusCalculationFailed(Request req, Response res)
         {
             string content = null;
             if (res.ContentStream != null)
@@ -126,25 +96,19 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                 content,
                 Client.Deserialize<Models.ApiError>(content)
                 );
-            HandleFailedIngestNamespaceRequest(ex);
+            HandleFailedTriggerBackflowStatusCalculationRequest(ex);
             HandleFailedRequest(ex);
             Client.OnFailedRequest(ex);
             throw ex;
         }
 
-        partial void HandleFailedDeleteNamespaceRequest(RestApiException ex);
+        partial void HandleFailedGetBackflowStatusRequest(RestApiException ex);
 
-        public async Task<bool> DeleteNamespaceAsync(
-            string namespaceName,
-            bool saveChanges,
+        public async Task<Models.BackflowStatus> GetBackflowStatusAsync(
+            int vmrBuildId,
             CancellationToken cancellationToken = default
         )
         {
-
-            if (string.IsNullOrEmpty(namespaceName))
-            {
-                throw new ArgumentNullException(nameof(namespaceName));
-            }
 
             const string apiVersion = "2020-02-20";
 
@@ -152,48 +116,40 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             var _url = new RequestUriBuilder();
             _url.Reset(_baseUri);
             _url.AppendPath(
-                "/api/configuration-ingestion",
+                "/api/backflow-status/{vmrBuildId}".Replace("{vmrBuildId}", Uri.EscapeDataString(Client.Serialize(vmrBuildId))),
                 false);
 
-            if (!string.IsNullOrEmpty(namespaceName))
-            {
-                _url.AppendQuery("namespaceName", Client.Serialize(namespaceName));
-            }
-            if (saveChanges != default)
-            {
-                _url.AppendQuery("saveChanges", Client.Serialize(saveChanges));
-            }
             _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
 
             using (var _req = Client.Pipeline.CreateRequest())
             {
                 _req.Uri = _url;
-                _req.Method = RequestMethod.Delete;
+                _req.Method = RequestMethod.Get;
 
                 using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
                 {
                     if (_res.Status < 200 || _res.Status >= 300)
                     {
-                        await OnDeleteNamespaceFailed(_req, _res).ConfigureAwait(false);
+                        await OnGetBackflowStatusFailed(_req, _res).ConfigureAwait(false);
                     }
 
                     if (_res.ContentStream == null)
                     {
-                        await OnDeleteNamespaceFailed(_req, _res).ConfigureAwait(false);
+                        await OnGetBackflowStatusFailed(_req, _res).ConfigureAwait(false);
                     }
 
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<bool>(_content);
+                        var _body = Client.Deserialize<Models.BackflowStatus>(_content);
                         return _body;
                     }
                 }
             }
         }
 
-        internal async Task OnDeleteNamespaceFailed(Request req, Response res)
+        internal async Task OnGetBackflowStatusFailed(Request req, Response res)
         {
             string content = null;
             if (res.ContentStream != null)
@@ -210,7 +166,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                 content,
                 Client.Deserialize<Models.ApiError>(content)
                 );
-            HandleFailedDeleteNamespaceRequest(ex);
+            HandleFailedGetBackflowStatusRequest(ex);
             HandleFailedRequest(ex);
             Client.OnFailedRequest(ex);
             throw ex;
