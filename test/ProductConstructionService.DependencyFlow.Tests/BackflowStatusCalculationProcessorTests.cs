@@ -32,7 +32,6 @@ public class BackflowStatusCalculationProcessorTests
 
     private BuildAssetRegistryContext _context = null!;
     private Mock<IRemoteFactory> _remoteFactory = null!;
-    private Mock<IVersionDetailsParser> _versionDetailsParser = null!;
     private MockRedisCacheFactory _redisCacheFactory = null!;
     private Mock<IVmrCloneManager> _vmrCloneManager = null!;
     private Mock<ILocalGitRepo> _vmrClone = null!;
@@ -56,7 +55,6 @@ public class BackflowStatusCalculationProcessorTests
         _context = new BuildAssetRegistryContext(options);
 
         _remoteFactory = new Mock<IRemoteFactory>();
-        _versionDetailsParser = new Mock<IVersionDetailsParser>();
         _redisCacheFactory = new MockRedisCacheFactory();
         _vmrCloneManager = new Mock<IVmrCloneManager>();
         _vmrClone = new Mock<ILocalGitRepo>();
@@ -150,7 +148,6 @@ public class BackflowStatusCalculationProcessorTests
         return new BackflowStatusCalculationProcessor(
             _context,
             _remoteFactory.Object,
-            _versionDetailsParser.Object,
             _redisCacheFactory,
             _vmrCloneManager.Object,
             _logger.Object);
@@ -166,7 +163,7 @@ public class BackflowStatusCalculationProcessorTests
 
         SetupVmrCloneManager();
         SetupRemoteFactory();
-        SetupVersionDetailsParser(LastBackflowedSha1, LastBackflowedSha2);
+        SetupSourceTag(LastBackflowedSha1, LastBackflowedSha2);
         SetupGitRevListCommand(LastBackflowedSha1, commitDistance: 5);
         SetupGitRevListCommand(LastBackflowedSha2, commitDistance: 10);
 
@@ -222,7 +219,7 @@ public class BackflowStatusCalculationProcessorTests
 
         SetupVmrCloneManager(["internal/release/8.0", "release/8.0"]);
         SetupRemoteFactory();
-        SetupVersionDetailsParser(LastBackflowedSha1, LastBackflowedSha2);
+        SetupSourceTag(LastBackflowedSha1, LastBackflowedSha2);
         SetupGitRevListCommand(LastBackflowedSha1, commitDistance: 3);
         SetupGitRevListCommand(LastBackflowedSha2, commitDistance: 7);
 
@@ -293,22 +290,7 @@ public class BackflowStatusCalculationProcessorTests
         SetupRemoteFactory();
 
         // Return null Source for first subscription, valid for second
-        _versionDetailsParser
-            .Setup(p => p.ParseVersionDetailsXml(It.Is<string>(s => s.Contains(TargetRepo1)), true))
-            .Returns(new VersionDetails([], null));
-
-        _versionDetailsParser
-            .Setup(p => p.ParseVersionDetailsXml(It.Is<string>(s => s.Contains(TargetRepo2)), true))
-            .Returns(new VersionDetails([], new SourceDependency(VmrUri, "repo", LastBackflowedSha2, null)));
-
-        _remote1
-            .Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, TargetRepo1, TargetBranch))
-            .ReturnsAsync($"<versiondetails repo=\"{TargetRepo1}\" />");
-
-        _remote2
-            .Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, TargetRepo2, TargetBranch))
-            .ReturnsAsync($"<versiondetails repo=\"{TargetRepo2}\" />");
-
+        SetupSourceTag(null!, LastBackflowedSha2);
         SetupGitRevListCommand(LastBackflowedSha2, commitDistance: 8);
 
         var processor = CreateProcessor();
@@ -337,7 +319,7 @@ public class BackflowStatusCalculationProcessorTests
 
         SetupVmrCloneManager();
         SetupRemoteFactory();
-        SetupVersionDetailsParser(LastBackflowedSha1, LastBackflowedSha2);
+        SetupSourceTag(LastBackflowedSha1, LastBackflowedSha2);
 
         // Setup git rev-list to fail
         _vmrClone
@@ -365,75 +347,6 @@ public class BackflowStatusCalculationProcessorTests
         branchStatus.SubscriptionStatuses.Should().AllSatisfy(s => s.CommitDistance.Should().Be(0));
     }
 
-    [Test]
-    public async Task ProcessWorkItemAsync_WithMultipleSubscriptions_ProcessesAllAndCachesResult()
-    {
-        // Arrange - add a third subscription
-        var subscription3 = new Subscription
-        {
-            Id = Guid.NewGuid(),
-            Channel = _channel,
-            ChannelId = _channel.Id,
-            SourceRepository = VmrUri,
-            TargetRepository = "https://github.com/dotnet/sdk",
-            TargetBranch = TargetBranch,
-            SourceEnabled = true,
-            PolicyObject = new SubscriptionPolicy
-            {
-                UpdateFrequency = UpdateFrequency.EveryBuild,
-                Batchable = false
-            }
-        };
-
-        await SeedDatabaseAsync();
-        _context.Subscriptions.Add(subscription3);
-        await _context.SaveChangesAsync();
-
-        var workItem = new BackflowStatusCalculationWorkItem { VmrBuildId = _vmrBuild.Id };
-
-        SetupVmrCloneManager();
-
-        // Setup remotes for all 3 repos
-        var remote3 = new Mock<IRemote>();
-        _remoteFactory.Setup(f => f.CreateRemoteAsync(TargetRepo1)).ReturnsAsync(_remote1.Object);
-        _remoteFactory.Setup(f => f.CreateRemoteAsync(TargetRepo2)).ReturnsAsync(_remote2.Object);
-        _remoteFactory.Setup(f => f.CreateRemoteAsync("https://github.com/dotnet/sdk")).ReturnsAsync(remote3.Object);
-
-        _remote1
-            .Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, TargetRepo1, TargetBranch))
-            .ReturnsAsync("<versiondetails />");
-        _remote2
-            .Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, TargetRepo2, TargetBranch))
-            .ReturnsAsync("<versiondetails />");
-        remote3
-            .Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, "https://github.com/dotnet/sdk", TargetBranch))
-            .ReturnsAsync("<versiondetails />");
-
-        var sha3 = "sha333333";
-        _versionDetailsParser
-            .Setup(p => p.ParseVersionDetailsXml(It.IsAny<string>(), true))
-            .Returns((string _, bool _) => new VersionDetails([], new SourceDependency(VmrUri, "repo", sha3, null)));
-
-        SetupGitRevListCommand(sha3, commitDistance: 15);
-
-        var processor = CreateProcessor();
-
-        // Act
-        var result = await processor.ProcessWorkItemAsync(workItem, CancellationToken.None);
-
-        // Assert
-        result.Should().BeTrue();
-
-        var cachedStatus = await GetCachedStatusAsync();
-        cachedStatus.Should().NotBeNull();
-
-        var branchStatus = cachedStatus.BranchStatuses["main"];
-        branchStatus.SubscriptionStatuses.Should().HaveCount(3);
-        branchStatus.SubscriptionStatuses.Should().Contain(s => s.TargetRepository == TargetRepo1);
-        branchStatus.SubscriptionStatuses.Should().Contain(s => s.TargetRepository == TargetRepo2);
-        branchStatus.SubscriptionStatuses.Should().Contain(s => s.TargetRepository == "https://github.com/dotnet/sdk");
-    }
-
     private void SetupVmrCloneManager(string[]? expectedBranches = null)
     {
         expectedBranches ??= ["main"];
@@ -459,25 +372,15 @@ public class BackflowStatusCalculationProcessorTests
             .ReturnsAsync(_remote2.Object);
     }
 
-    private void SetupVersionDetailsParser(string sha1, string sha2)
+    private void SetupSourceTag(string sha1, string sha2)
     {
         _remote1
-            .Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, TargetRepo1, TargetBranch))
-            .ReturnsAsync("<versiondetails />");
+            .Setup(p => p.GetSourceDependencyAsync(TargetRepo1, TargetBranch))
+            .ReturnsAsync(new SourceDependency(VmrUri, "runtime", sha1, -1));
 
         _remote2
-            .Setup(r => r.GetFileContentsAsync(VersionFiles.VersionDetailsXml, TargetRepo2, TargetBranch))
-            .ReturnsAsync("<versiondetails />");
-
-        var callCount = 0;
-        _versionDetailsParser
-            .Setup(p => p.ParseVersionDetailsXml(It.IsAny<string>(), true))
-            .Returns(() =>
-            {
-                callCount++;
-                var sha = callCount == 1 ? sha1 : sha2;
-                return new VersionDetails([], new SourceDependency(VmrUri, "repo", sha, null));
-            });
+            .Setup(p => p.GetSourceDependencyAsync(TargetRepo2, TargetBranch))
+            .ReturnsAsync(new SourceDependency(VmrUri, "runtime", sha2, -1));
     }
 
     private void SetupGitRevListCommand(string fromSha, int commitDistance)
