@@ -2,8 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data;
+using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Common;
@@ -15,26 +17,28 @@ namespace ProductConstructionService.DependencyFlow.WorkItemProcessors;
 
 public class BackflowStatusCalculationProcessor : WorkItemProcessor<BackflowStatusCalculationWorkItem>
 {
+    private const string InternalBranchPrefix = "internal/";
+
     private readonly BuildAssetRegistryContext _context;
     private readonly IRemoteFactory _remoteFactory;
-    private readonly ILocalGitClient _gitClient;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IRedisCacheFactory _redisCacheFactory;
+    private readonly IVmrCloneManager _vmrCloneManager;
     private readonly ILogger<BackflowStatusCalculationProcessor> _logger;
 
     public BackflowStatusCalculationProcessor(
         BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
-        ILocalGitClient gitClient,
         IVersionDetailsParser versionDetailsParser,
         IRedisCacheFactory redisCacheFactory,
+        IVmrCloneManager vmrCloneManager,
         ILogger<BackflowStatusCalculationProcessor> logger)
     {
         _context = context;
         _remoteFactory = remoteFactory;
-        _gitClient = gitClient;
         _versionDetailsParser = versionDetailsParser;
         _redisCacheFactory = redisCacheFactory;
+        _vmrCloneManager = vmrCloneManager;
         _logger = logger;
     }
 
@@ -45,7 +49,7 @@ public class BackflowStatusCalculationProcessor : WorkItemProcessor<BackflowStat
         try
         {
             // Resolve build ID to a SHA
-            var build = await _context.Builds
+            Build? build = await _context.Builds
                 .FirstOrDefaultAsync(b => b.Id == workItem.VmrBuildId, cancellationToken);
 
             if (build == null)
@@ -54,43 +58,50 @@ public class BackflowStatusCalculationProcessor : WorkItemProcessor<BackflowStat
                 return false;
             }
 
-            string vmrSha = build.Commit;
-            _logger.LogInformation("Resolved build {buildId} to VMR SHA {sha}", workItem.VmrBuildId, vmrSha);
-
-            // Detect which branch the SHA is on
-            var branches = await DetectBranchesAsync(vmrSha, cancellationToken);
-            if (branches.Count == 0)
+            string[] branches;
+            var branch = build.GetBranch();
+            if (branch.StartsWith(InternalBranchPrefix))
             {
-                _logger.LogWarning("Could not detect branch for VMR SHA {sha}", vmrSha);
-                return false;
+                branches = [branch, branch.Substring(InternalBranchPrefix.Length)];
+            }
+            else
+            {
+                branches = [branch];
             }
 
-            _logger.LogInformation("Detected {count} branch(es) for SHA {sha}: {branches}", 
-                branches.Count, vmrSha, string.Join(", ", branches));
+            _logger.LogInformation("Calculating backflow status for build {buildId} of commit {commit} branches: {branches}",
+                build.Id, build.Commit, string.Join(", ", branches));
+
+            ILocalGitRepo vmrClone = await _vmrCloneManager.PrepareVmrAsync(
+                [build.GetRepository()],
+                branches,
+                branch,
+                resetToRemote: true,
+                cancellationToken);
 
             // Calculate status for each branch
             var branchStatuses = new Dictionary<string, BranchBackflowStatus>();
-            foreach (var branch in branches)
+            foreach (var sourceBranch in branches)
             {
-                var status = await CalculateBranchBackflowStatusAsync(vmrSha, branch, cancellationToken);
+                var status = await CalculateBranchBackflowStatusAsync(build, sourceBranch, vmrClone, cancellationToken);
                 if (status != null)
                 {
-                    branchStatuses[branch] = status;
+                    branchStatuses[sourceBranch] = status;
                 }
             }
 
             // Store in Redis cache
             var backflowStatus = new BackflowStatus
             {
-                VmrCommitSha = vmrSha,
+                VmrCommitSha = build.Commit,
                 ComputationTimestamp = DateTimeOffset.UtcNow,
                 BranchStatuses = branchStatuses
             };
 
-            var cache = _redisCacheFactory.Create<BackflowStatus>(vmrSha, includeTypeInKey: true);
-            await cache.SetAsync(backflowStatus, TimeSpan.FromHours(24));
+            var cache = _redisCacheFactory.Create<BackflowStatus>(build.Commit, includeTypeInKey: true);
+            await cache.SetAsync(backflowStatus, TimeSpan.FromDays(60));
 
-            _logger.LogInformation("Successfully computed and cached backflow status for VMR SHA {sha}", vmrSha);
+            _logger.LogInformation("Successfully computed and cached backflow status for VMR SHA {sha}", build.Commit);
             return true;
         }
         catch (Exception ex)
@@ -100,66 +111,19 @@ public class BackflowStatusCalculationProcessor : WorkItemProcessor<BackflowStat
         }
     }
 
-    private async Task<List<string>> DetectBranchesAsync(string sha, CancellationToken cancellationToken)
-    {
-        var branches = new List<string>();
-        
-        try
-        {
-            // Get VMR repository URI from constants
-            var vmrUri = Constants.DefaultVmrUri;
-            var remote = await _remoteFactory.CreateRemoteAsync(vmrUri);
-
-            // For simplicity, we'll check if we can find default channels for the VMR
-            // This is a pragmatic approach since we don't have easy branch membership checking
-            var defaultChannels = await _context.DefaultChannels
-                .Where(dc => dc.Repository == vmrUri)
-                .Select(dc => dc.Branch)
-                .Distinct()
-                .ToListAsync(cancellationToken);
-
-            // Verify the commit exists in the VMR
-            try
-            {
-                var commitInfo = await remote.GetCommitAsync(vmrUri, sha);
-                if (commitInfo != null && defaultChannels.Count > 0)
-                {
-                    // Assume the commit could be on any configured branch
-                    // A more sophisticated implementation would use git to determine exact branch membership
-                    branches.AddRange(defaultChannels);
-                    
-                    _logger.LogInformation("Commit {sha} exists in VMR, will process for branches: {branches}", 
-                        sha, string.Join(", ", branches));
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Could not verify commit {sha} exists in VMR", sha);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error detecting branches for SHA {sha}", sha);
-        }
-
-        return branches;
-    }
-
     private async Task<BranchBackflowStatus?> CalculateBranchBackflowStatusAsync(
-        string vmrSha,
+        Build vmrBuild,
         string branch,
+        ILocalGitRepo vmrClone,
         CancellationToken cancellationToken)
     {
         try
         {
-            // Branch will be normalized when used in queries against the database
-            
             // Get the default channel for the VMR on this branch
             var defaultChannel = await _context.DefaultChannels
                 .Include(dc => dc.Channel)
                 .FirstOrDefaultAsync(
-                    dc => dc.Repository == Constants.DefaultVmrUri && 
-                          dc.Branch == branch,
+                    dc => dc.Repository == vmrBuild.GetRepository() && dc.Branch == branch,
                     cancellationToken);
 
             if (defaultChannel == null)
@@ -171,25 +135,27 @@ public class BackflowStatusCalculationProcessor : WorkItemProcessor<BackflowStat
             // Get source-enabled subscriptions from VMR on this channel (backflow subscriptions)
             var subscriptions = await _context.Subscriptions
                 .Include(s => s.Channel)
-                .Where(s => s.ChannelId == defaultChannel.ChannelId &&
-                           s.SourceEnabled &&
-                           s.SourceRepository == Constants.DefaultVmrUri &&
-                           s.Enabled)
+                .Where(s => s.ChannelId == defaultChannel.ChannelId
+                    && s.SourceEnabled
+                    && s.SourceRepository == vmrBuild.GetRepository())
                 .ToListAsync(cancellationToken);
 
-            _logger.LogInformation("Found {count} backflow subscriptions for branch {branch}", 
+            _logger.LogInformation("Found {count} backflow subscriptions for branch {branch}",
                 subscriptions.Count, branch);
 
             var subscriptionStatuses = new List<SubscriptionBackflowStatus>();
 
             foreach (var subscription in subscriptions)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 try
                 {
                     var status = await CalculateSubscriptionBackflowStatusAsync(
-                        vmrSha,
+                        vmrBuild.Commit,
                         branch,
                         subscription,
+                        vmrClone,
                         cancellationToken);
 
                     if (status != null)
@@ -199,7 +165,7 @@ public class BackflowStatusCalculationProcessor : WorkItemProcessor<BackflowStat
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, 
+                    _logger.LogWarning(ex,
                         "Failed to calculate backflow status for subscription {subscriptionId} to {targetRepo}/{targetBranch}",
                         subscription.Id,
                         subscription.TargetRepository,
@@ -224,38 +190,26 @@ public class BackflowStatusCalculationProcessor : WorkItemProcessor<BackflowStat
     private async Task<SubscriptionBackflowStatus?> CalculateSubscriptionBackflowStatusAsync(
         string vmrSha,
         string vmrBranch,
-        Maestro.Data.Models.Subscription subscription,
+        Subscription subscription,
+        ILocalGitRepo vmrClone,
         CancellationToken cancellationToken)
     {
         try
         {
             // Get the last backflowed VMR commit SHA from Version.Details.xml in the target branch
             var remote = await _remoteFactory.CreateRemoteAsync(subscription.TargetRepository);
-            
-            string lastBackflowedSha;
+
+            string? lastBackflowedSha;
             try
             {
-                var versionDetails = await remote.GetFileContentsAsync(
+                var versionDetailsContent = await remote.GetFileContentsAsync(
                     VersionFiles.VersionDetailsXml,
                     subscription.TargetRepository,
                     subscription.TargetBranch);
 
-                var dependencies = _versionDetailsParser.ParseVersionDetailsXml(versionDetails, includePinned: false);
+                var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsContent);
 
-                // Find the VMR dependency in the version details
-                var vmrDependency = dependencies.Dependencies.FirstOrDefault(d => 
-                    d.RepoUri.Equals(Constants.DefaultVmrUri, StringComparison.OrdinalIgnoreCase));
-
-                if (vmrDependency == null)
-                {
-                    _logger.LogWarning(
-                        "No VMR dependency found in Version.Details.xml for {targetRepo}/{targetBranch}",
-                        subscription.TargetRepository,
-                        subscription.TargetBranch);
-                    return null;
-                }
-
-                lastBackflowedSha = vmrDependency.Commit;
+                lastBackflowedSha = versionDetails.Source?.Sha;
             }
             catch (Exception ex)
             {
@@ -266,14 +220,50 @@ public class BackflowStatusCalculationProcessor : WorkItemProcessor<BackflowStat
                 return null;
             }
 
-            // Calculate commit distance
-            // TODO: Implement full git commit distance calculation
-            // This would require:
-            // 1. Clone the VMR repository locally
-            // 2. Use git rev-list to count commits between vmrSha and lastBackflowedSha
-            // 3. For public branches merged into internal, deduct internal-only commits
-            // For now, we return 0 as a placeholder
+            if (lastBackflowedSha == null)
+            {
+                _logger.LogWarning("No backflow for repository {repository} found on branch {branch}",
+                    subscription.TargetRepository,
+                    subscription.TargetBranch);
+                return null;
+            }
+
+            // Calculate commit distance using git rev-list
             int commitDistance = 0;
+            try
+            {
+                // TODO: For public branch, we could subtract the amount of commits in the internal branch only.
+                //       For that, we'd need to find the merge base.
+                var result = await vmrClone.ExecuteGitCommand(
+                    ["rev-list", "--count", $"{lastBackflowedSha}..{vmrSha}"],
+                    cancellationToken);
+                
+                if (result.Succeeded && int.TryParse(result.StandardOutput.Trim(), out var distance))
+                {
+                    commitDistance = distance;
+                    _logger.LogDebug(
+                        "Subscription {subscriptionId}: Commit distance from {lastSha} to {currentSha} is {distance}",
+                        subscription.Id,
+                        lastBackflowedSha,
+                        vmrSha,
+                        commitDistance);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Failed to calculate commit distance for subscription {subscriptionId}: {error}",
+                        subscription.Id,
+                        result.StandardError);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Error calculating commit distance for subscription {subscriptionId} between {lastSha} and {currentSha}",
+                    subscription.Id,
+                    lastBackflowedSha,
+                    vmrSha);
+            }
 
             _logger.LogInformation(
                 "Subscription {subscriptionId}: Last backflowed SHA is {lastSha}, current SHA is {currentSha}",
