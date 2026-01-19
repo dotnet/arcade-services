@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using ProductConstructionService.Api.Api;
 using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Models;
 using ProductConstructionService.DependencyFlow.WorkItems;
@@ -19,20 +18,20 @@ namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 /// <summary>
 /// Exposes methods to trigger and retrieve VMR backflow validation status.
 /// </summary>
-[Route("backflow")]
+[Route("backflow-status")]
 [ApiVersion("2020-02-20")]
-public class BackflowController : ControllerBase
+public class BackflowStatusController : ControllerBase
 {
     private readonly BuildAssetRegistryContext _context;
     private readonly IWorkItemProducerFactory _workItemProducerFactory;
     private readonly IRedisCacheFactory _redisCacheFactory;
-    private readonly ILogger<BackflowController> _logger;
+    private readonly ILogger<BackflowStatusController> _logger;
 
-    public BackflowController(
+    public BackflowStatusController(
         BuildAssetRegistryContext context,
         IWorkItemProducerFactory workItemProducerFactory,
         IRedisCacheFactory redisCacheFactory,
-        ILogger<BackflowController> logger)
+        ILogger<BackflowStatusController> logger)
     {
         _context = context;
         _workItemProducerFactory = workItemProducerFactory;
@@ -79,24 +78,28 @@ public class BackflowController : ControllerBase
     /// <summary>
     /// Get cached backflow status for a VMR commit.
     /// </summary>
-    /// <param name="vmrCommitSha">VMR commit SHA to retrieve status for</param>
-    [HttpGet("{vmrCommitSha}")]
+    /// <param name="vmrBuildId">VMR build ID to retrieve status for</param>
+    [HttpGet("{vmrBuildId}")]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(BackflowStatus), Description = "The cached backflow status")]
     [SwaggerApiResponse(HttpStatusCode.NotFound, Description = "No cached status found for this SHA")]
     [ValidateModelState]
-    public async Task<IActionResult> GetBackflowStatus([FromRoute][Required] string vmrCommitSha)
+    public async Task<IActionResult> GetBackflowStatus([FromRoute][Required] int vmrBuildId)
     {
-        if (string.IsNullOrWhiteSpace(vmrCommitSha))
+        // Validate that the build exists
+        var build = await _context.Builds
+            .FirstOrDefaultAsync(b => b.Id == vmrBuildId);
+
+        if (build == null)
         {
-            return BadRequest(new ApiError("vmrCommitSha is required"));
+            return NotFound(new ApiError($"Build {vmrBuildId} was not found"));
         }
 
-        var cache = _redisCacheFactory.Create<BackflowStatus>(vmrCommitSha, includeTypeInKey: true);
+        var cache = _redisCacheFactory.Create<BackflowStatus>(build.Commit, includeTypeInKey: true);
         var status = await cache.TryGetStateAsync();
 
         if (status == null)
         {
-            return NotFound(new ApiError($"No backflow status found for VMR SHA {vmrCommitSha}"));
+            return NotFound(new ApiError($"No backflow status found for VMR SHA {build.Commit}"));
         }
 
         return Ok(status);
