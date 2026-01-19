@@ -45,6 +45,7 @@ public class BackflowStatusController : ControllerBase
     /// <param name="vmrBuildId">VMR build ID which will be resolved to a commit SHA</param>
     [HttpPost("trigger")]
     [SwaggerApiResponse(HttpStatusCode.Accepted, Description = "Backflow status calculation has been triggered")]
+    [SwaggerApiResponse(HttpStatusCode.BadRequest, Description = "Build does not exist")]
     [ValidateModelState]
     public async Task<IActionResult> TriggerBackflowStatusCalculation(
         [FromQuery(Name = "vmr-build-id")][Required] int vmrBuildId)
@@ -55,7 +56,7 @@ public class BackflowStatusController : ControllerBase
 
         if (build == null)
         {
-            return NotFound(new ApiError($"Build {vmrBuildId} was not found"));
+            return BadRequest(new ApiError($"Build {vmrBuildId} was not found"));
         }
 
         // Enqueue work item to the codeflow queue
@@ -81,6 +82,7 @@ public class BackflowStatusController : ControllerBase
     /// <param name="vmrBuildId">VMR build ID to retrieve status for</param>
     [HttpGet("{vmrBuildId}")]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(BackflowStatus), Description = "The cached backflow status")]
+    [SwaggerApiResponse(HttpStatusCode.BadRequest, Description = "Build does not exist")]
     [SwaggerApiResponse(HttpStatusCode.NotFound, Description = "No cached status found for this SHA")]
     [ValidateModelState]
     public async Task<IActionResult> GetBackflowStatus([FromRoute][Required] int vmrBuildId)
@@ -91,7 +93,7 @@ public class BackflowStatusController : ControllerBase
 
         if (build == null)
         {
-            return NotFound(new ApiError($"Build {vmrBuildId} was not found"));
+            return BadRequest(new ApiError($"Build {vmrBuildId} was not found"));
         }
 
         var cache = _redisCacheFactory.Create<BackflowStatus>(build.Commit, includeTypeInKey: true);

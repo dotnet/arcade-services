@@ -194,14 +194,11 @@ public class BackflowStatusCalculationProcessor : WorkItemProcessor<BackflowStat
             string? lastBackflowedSha;
             try
             {
-                var versionDetailsContent = await remote.GetFileContentsAsync(
-                    VersionFiles.VersionDetailsXml,
+                var codeflowMetadata = await remote.GetSourceDependencyAsync(
                     subscription.TargetRepository,
                     subscription.TargetBranch);
 
-                var versionDetails = _versionDetailsParser.ParseVersionDetailsXml(versionDetailsContent);
-
-                lastBackflowedSha = versionDetails.Source?.Sha;
+                lastBackflowedSha = codeflowMetadata?.Sha;
             }
             catch (Exception ex)
             {
@@ -257,11 +254,10 @@ public class BackflowStatusCalculationProcessor : WorkItemProcessor<BackflowStat
                     vmrSha);
             }
 
-            _logger.LogInformation(
-                "Subscription {subscriptionId}: Last backflowed SHA is {lastSha}, current SHA is {currentSha}",
+            _logger.LogDebug(
+                "Last backflowed SHA for subscription {subscriptionId} is {lastSha}",
                 subscription.Id,
-                lastBackflowedSha,
-                vmrSha);
+                lastBackflowedSha);
 
             return new SubscriptionBackflowStatus
             {
