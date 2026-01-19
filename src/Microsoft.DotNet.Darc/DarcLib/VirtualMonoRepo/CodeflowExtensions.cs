@@ -64,6 +64,7 @@ public static class CodeflowExtensions
         services.TryAddTransient<ICodeFlowVmrUpdater, CodeFlowVmrUpdater>();
         services.TryAddTransient<IBackflowConflictResolver, BackflowConflictResolver>();
         services.TryAddTransient<IForwardFlowConflictResolver, ForwardFlowConflictResolver>();
+        services.TryAddTransient<IFlatJsonUpdater, FlatJsonUpdater>();
         services.TryAddTransient<IJsonFileMerger, JsonFileMerger>();
         services.TryAddTransient<IVersionDetailsFileMerger, VersionDetailsFileMerger>();
         services.TryAddTransient<ICodeflowChangeAnalyzer, CodeflowChangeAnalyzer>();

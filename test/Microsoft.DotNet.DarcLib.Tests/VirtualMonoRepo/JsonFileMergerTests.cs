@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NUnit.Framework;
 
@@ -21,6 +22,7 @@ public class JsonFileMergerTests
     private readonly Mock<ICommentCollector> _commentCollectorMock = new();
 
     private JsonFileMerger _jsonFileMerger = null!;
+    private IFlatJsonUpdater _flatJsonUpdater = null!;
 
     private const string TestJsonPath = "test.json";
     private const string TargetPreviousSha = "target-previous-sha";
@@ -43,9 +45,11 @@ public class JsonFileMergerTests
 
         _gitRepoFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(_gitRepoMock.Object);
 
+        _flatJsonUpdater = new FlatJsonUpdater(NullLogger<FlatJsonUpdater>.Instance);
         _jsonFileMerger = new JsonFileMerger(
             _gitRepoFactoryMock.Object,
-            _commentCollectorMock.Object);
+            _commentCollectorMock.Object,
+            _flatJsonUpdater);
     }
 
     [Test]
@@ -952,5 +956,76 @@ public class JsonFileMergerTests
         var normalizedFileContent = file.Content.Trim().Replace("\r\n", "\n");
         var expectedContentNormalized = expectedContent.Trim().Replace("\r\n", "\n");
         return normalizedFileContent == expectedContentNormalized && file.Operation == operation;
+    }
+
+    [Test]
+    public async Task MergeJsonsAsync_WhenAddingChildToNonObject_ConvertsValueToObject()
+    {
+        // Arrange
+        // Target has "parent" as a string value
+        var targetPreviousJson = """
+            {
+              "parent": "original"
+            }
+            """;
+
+        var targetCurrentJson = """
+            {
+              "parent": "original"
+            }
+            """;
+
+        // VMR changes "parent" from a string to an object with a child
+        var vmrPreviousJson = """
+            {
+              "parent": "original"
+            }
+            """;
+
+        var vmrCurrentJson = """
+            {
+              "parent": {
+                "child": "newValue"
+              }
+            }
+            """;
+
+        var expectedJson = """
+            {
+              "parent": {
+                "child": "newValue"
+              }
+            }
+            """;
+
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), TargetPreviousSha, It.IsAny<string>()))
+            .ReturnsAsync(targetPreviousJson);
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), TargetCurrentSha, It.IsAny<string>()))
+            .ReturnsAsync(targetCurrentJson);
+        _targetRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), "HEAD", It.IsAny<string>()))
+            .ReturnsAsync(targetCurrentJson);
+        _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrPreviousSha, It.IsAny<string>()))
+            .ReturnsAsync(vmrPreviousJson);
+        _vmrRepoMock.Setup(r => r.GetFileFromGitAsync(It.IsAny<string>(), VmrCurrentSha, It.IsAny<string>()))
+            .ReturnsAsync(vmrCurrentJson);
+
+        // Act
+        var hadChanges = await _jsonFileMerger.MergeJsonsAsync(
+            _targetRepoMock.Object,
+            TestJsonPath,
+            TargetPreviousSha,
+            TargetCurrentSha,
+            _vmrRepoMock.Object,
+            TestJsonPath,
+            VmrPreviousSha,
+            VmrCurrentSha);
+
+        // Assert
+        hadChanges.Should().BeTrue();
+        _gitRepoMock.Verify(g => g.CommitFilesAsync(
+            It.Is<List<GitFile>>(files => files.Count == 1 && ValidateGitFile(files[0], expectedJson, GitFileOperation.Add)),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()), Times.Once);
     }
 }
