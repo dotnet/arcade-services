@@ -83,10 +83,11 @@ public abstract class CodeFlowConflictResolver
         CancellationToken cancellationToken)
     {
         var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : productRepo;
-
-        IReadOnlyCollection<UnixPath> conflictedFiles = (await targetRepo.GetStagedFilesAsync()).Count > 0
-            ? await targetRepo.GetConflictedFilesAsync(cancellationToken)
-            : await TryMergingBranch(targetRepo, codeflowOptions.HeadBranch, codeflowOptions.TargetBranch, cancellationToken);
+        var stagedFiles = await targetRepo.GetStagedFilesAsync();
+        if (stagedFiles.Count == 0)
+        {
+            await TryMergingBranch(targetRepo, codeflowOptions.HeadBranch, codeflowOptions.TargetBranch, cancellationToken);
+        }
 
         return await targetRepo.GetConflictedFilesAsync(cancellationToken);
     }
