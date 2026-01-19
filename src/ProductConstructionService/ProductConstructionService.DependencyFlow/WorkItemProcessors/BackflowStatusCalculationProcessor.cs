@@ -100,7 +100,7 @@ public class BackflowStatusCalculationProcessor : WorkItemProcessor<BackflowStat
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to process backflow validation for work item");
+            _logger.LogError(ex, "Failed to process backflow status calculation for work item");
             return false;
         }
     }
