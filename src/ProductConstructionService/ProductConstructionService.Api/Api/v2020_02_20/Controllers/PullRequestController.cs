@@ -238,7 +238,6 @@ public partial class PullRequestController : ControllerBase
                 csu.SourceRepo,
                 csu.SubscriptionId,
                 csu.BuildId))],
-            pr.MergeState == InProgressPullRequestState.Conflict,
             pr.HeadBranch,
             pr.NextBuildsToProcess);
     }
@@ -253,7 +252,6 @@ public partial class PullRequestController : ControllerBase
         DateTime LastCheck,
         DateTime? NextCheck,
         List<PullRequestUpdate> Updates,
-        bool IsInConflict,
         string HeadBranch,
         Dictionary<Guid, int> NextBuildsToApply);
 

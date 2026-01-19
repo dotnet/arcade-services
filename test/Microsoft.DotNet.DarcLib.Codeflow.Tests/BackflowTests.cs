@@ -342,20 +342,6 @@ internal class BackflowTests : CodeFlowTests
         ];
         dependencies = await productRepo.GetDependenciesAsync();
         dependencies.Should().BeEquivalentTo(expectedDependencies);
-
-        // We make a conflicting change in the PR branch
-        await File.WriteAllTextAsync(_productRepoFilePath, "New content again but this time in the PR directly");
-        await GitOperations.CommitAll(ProductRepoPath, "Changing a repo file in the PR");
-
-        // Flow the second build - this should throw as there's a conflict in the PR branch
-        await this.Awaiting(_ => CallBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranchName, buildToFlow: build5))
-            .Should().ThrowAsync<ConflictInPrBranchException>();
-
-        // The state of the branch should be the same as before
-        productRepo.Checkout(backflowBranchName);
-        dependencies = await productRepo.GetDependenciesAsync();
-        dependencies.Should().BeEquivalentTo(expectedDependencies);
-        CheckFileContents(_productRepoFilePath, "New content again but this time in the PR directly");
     }
 
     /*

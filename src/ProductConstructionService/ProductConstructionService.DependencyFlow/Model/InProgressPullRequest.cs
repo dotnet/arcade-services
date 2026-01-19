@@ -48,17 +48,9 @@ public class InProgressPullRequest : DependencyFlowWorkItem
 
     public DateTime? NextCheck { get; set; }
 
-    public InProgressPullRequestState MergeState { get; set; }
-
     public Dictionary<Guid, int> NextBuildsToProcess { get; set; } = [];
 
     public CodeFlowDirection CodeFlowDirection { get; set; }
 
     public bool BlockedFromFutureUpdates { get; set; } = false;
-}
-
-public enum InProgressPullRequestState
-{
-    Mergeable,
-    Conflict
 }

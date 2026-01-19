@@ -426,7 +426,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         bool canUpdate,
         int nextBuildToProcess = 0,
         bool newChangeWillConflict = false,
-        bool prAlreadyHasConflict = false,
         string? headBranchSha = null,
         bool willFlowNewBuild = false,
         bool mockMergePolicyEvaluator = true,
@@ -437,7 +436,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             canUpdate ? null : MergePolicyEvaluationStatus.Pending,
             nextBuildToProcess,
             newChangeWillConflict,
-            prAlreadyHasConflict,
             headBranchSha,
             willFlowNewBuild: willFlowNewBuild,
             mockMergePolicyEvaluator: mockMergePolicyEvaluator,
@@ -449,7 +447,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         MergePolicyEvaluationStatus? policyEvaluationStatus,
         int nextBuildToProcess = 0,
         bool flowerWillHaveConflict = false,
-        bool prAlreadyHasConflict = false,
         string? headBranchSha = null,
         bool willFlowNewBuild = false,
         bool mockMergePolicyEvaluator = true,
@@ -469,18 +466,13 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 forBuild,
                 prUrl,
                 nextBuildToProcess,
-                headBranchSha: prAlreadyHasConflict
-                    ? ConflictPRRemoteSha
-                    : InProgressPrHeadBranchSha,
-                prState: prAlreadyHasConflict
-                    ? InProgressPullRequestState.Conflict
-                    : InProgressPullRequestState.Mergeable,
+                headBranchSha: InProgressPrHeadBranchSha,
                 sourceRepoNotified: sourceRepoNotified);
             SetState(Subscription, pr);
             SetExpectedPullRequestState(Subscription, pr);
         });
 
-        headBranchSha ??= flowerWillHaveConflict || prAlreadyHasConflict
+        headBranchSha ??= flowerWillHaveConflict
             ? ConflictPRRemoteSha
             : InProgressPrHeadBranchSha;
 
@@ -605,7 +597,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         List<CoherencyErrorDetails>? coherencyErrors = null,
         InProgressPullRequest? expectedState = null,
         string? headBranchSha = null,
-        InProgressPullRequestState prState = InProgressPullRequestState.Mergeable,
         Func<Asset, bool>? assetFilter = null,
         bool? sourceRepoNotified = null,
         UnixPath? relativeBasePath = null,
@@ -628,7 +619,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     coherencyCheckSuccessful,
                     coherencyErrors,
                     headBranchSha,
-                    prState,
                     assetFilter,
                     sourceRepoNotified: sourceRepoNotified,
                     relativeBasePath,
@@ -687,7 +677,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             bool? coherencyCheckSuccessful = true,
             List<CoherencyErrorDetails>? coherencyErrors = null,
             string? headBranchSha = null,
-            InProgressPullRequestState prState = InProgressPullRequestState.Mergeable,
             Func<Asset, bool>? assetFilter = null,
             bool? sourceRepoNotified = null,
             UnixPath? relativeBasePath = null,
@@ -724,7 +713,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             CoherencyCheckSuccessful = coherencyCheckSuccessful,
             CoherencyErrors = coherencyErrors,
             Url = prUrl,
-            MergeState = prState,
             SourceRepoNotified = sourceRepoNotified,
             NextBuildsToProcess = nextBuildToProcess != 0 ?
                 new Dictionary<Guid, int>

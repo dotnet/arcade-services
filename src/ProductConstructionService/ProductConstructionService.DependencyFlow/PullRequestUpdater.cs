@@ -329,8 +329,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                             mergePolicyResult,
                             pr.Url);
 
-                        // If the PR we just merged was in conflict with an update we previously tried to apply, we shouldn't delete the reminder for the update
-                        await ClearAllStateAsync(isCodeFlow, clearPendingUpdates: pr.MergeState == InProgressPullRequestState.Mergeable);
+                        await ClearAllStateAsync(isCodeFlow, clearPendingUpdates: false);
                         return (PullRequestStatus.Completed, prInfo);
 
                     case MergePolicyCheckResult.FailedPolicies:
@@ -376,7 +375,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
                 _logger.LogInformation("PR {url} has been manually {action}. Stopping tracking it", pr.Url, prInfo.Status.ToString().ToLowerInvariant());
 
-                await ClearAllStateAsync(isCodeFlow, clearPendingUpdates: pr.MergeState == InProgressPullRequestState.Mergeable);
+                await ClearAllStateAsync(isCodeFlow, clearPendingUpdates: false);
 
                 // Also try to clean up the PR branch.
                 try
@@ -1330,7 +1329,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             // Even if we fail to update the PR title and description, the changes already got pushed, so we want to enqueue a PullRequestCheck
             pullRequest.SourceSha = update.SourceSha;
             pullRequest.LastUpdate = DateTime.UtcNow;
-            pullRequest.MergeState = InProgressPullRequestState.Mergeable;
             pullRequest.NextBuildsToProcess.Remove(update.SubscriptionId);
             await SetPullRequestCheckReminder(pullRequest, prInfo!, isCodeFlow: true);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
@@ -1453,14 +1451,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     forceUpdate,
                     cancellationToken: default);
         }
-        catch (ConflictInPrBranchException conflictWithPrChanges)
-        {
-            if (pr != null && prInfo != null)
-            {
-                await HandlePrUpdateConflictAsync(conflictWithPrChanges.ConflictedFiles, update, subscription, pr, prInfo);
-            }
-            return null;
-        }
         catch (BlockingCodeflowException) when (pr != null)
         {
             await HandleBlockingCodeflowException(pr);
@@ -1510,36 +1500,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         await RegisterSubscriptionUpdateAction(SubscriptionUpdateAction.ApplyingUpdates, update.SubscriptionId);
 
         return codeFlowRes;
-    }
-
-    /// <summary>
-    /// Handles a case when new code flow updates cannot be flowed into an existing PR,
-    /// because the PR contains a change conflicting with the new updates.
-    /// In this case, we post a comment on the PR with the list of files that are in conflict,
-    /// </summary>
-    private async Task HandlePrUpdateConflictAsync(
-        IReadOnlyCollection<string> filesInConflict,
-        SubscriptionUpdateWorkItem update,
-        SubscriptionDTO subscription,
-        InProgressPullRequest pr,
-        PullRequest prInfo)
-    {
-        _commentCollector.AddComment(
-            PullRequestCommentBuilder.BuildNotifyAboutConflictingUpdateComment(
-                filesInConflict,
-                update,
-                subscription,
-                pr,
-                prInfo.HeadBranch),
-            CommentType.Information);
-
-        pr.MergeState = InProgressPullRequestState.Conflict;
-        pr.NextBuildsToProcess[update.SubscriptionId] = update.BuildId;
-        pr.HeadBranchSha = prInfo.HeadBranchSha;
-
-        await _pullRequestState.SetAsync(pr);
-        await _pullRequestUpdateReminders.SetReminderAsync(update, DefaultReminderDelay, isCodeFlow: true);
-        await _pullRequestCheckReminders.UnsetReminderAsync(isCodeFlow: true);
     }
 
     private async Task HandleBlockingCodeflowException(InProgressPullRequest pr)
