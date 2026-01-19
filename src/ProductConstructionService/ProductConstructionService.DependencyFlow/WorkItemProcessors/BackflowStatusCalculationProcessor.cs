@@ -147,7 +147,6 @@ public class BackflowStatusCalculationProcessor : WorkItemProcessor<BackflowStat
                 {
                     var status = await CalculateSubscriptionBackflowStatusAsync(
                         vmrBuild.Commit,
-                        branch,
                         subscription,
                         vmrClone,
                         cancellationToken);
@@ -183,7 +182,6 @@ public class BackflowStatusCalculationProcessor : WorkItemProcessor<BackflowStat
 
     private async Task<SubscriptionBackflowStatus?> CalculateSubscriptionBackflowStatusAsync(
         string vmrSha,
-        string vmrBranch,
         Subscription subscription,
         ILocalGitRepo vmrClone,
         CancellationToken cancellationToken)
