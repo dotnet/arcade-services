@@ -664,7 +664,7 @@ public class SqlBarClient : ISqlBarClient
                     + "because the subscription could not be found in the database.");
             }
 
-            UpdateSubscription(
+            await UpdateSubscriptionAsync(
                 subscription,
                 existingSubscription);
         }
@@ -675,7 +675,7 @@ public class SqlBarClient : ISqlBarClient
         }
     }
 
-    private void UpdateSubscription(
+    private async Task UpdateSubscriptionAsync(
         Data.Models.Subscription subscription,
         Data.Models.Subscription existingSubscription)
     {
@@ -716,6 +716,12 @@ public class SqlBarClient : ISqlBarClient
         existingSubscription.PullRequestFailureNotificationTags = subscription.PullRequestFailureNotificationTags;
         existingSubscription.Channel = subscription.Channel;
         existingSubscription.ExcludedAssets = updatedFilters;
+
+        var conflictError = await ValidateCodeflowSubscriptionConflicts(subscription);
+        if (conflictError != null)
+        {
+            throw new InvalidOperationException($"Subscription {subscription.Id} update failed with error {conflictError}");
+        }
     }
 
     public async Task DeleteSubscriptionsAsync(
