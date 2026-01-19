@@ -44,23 +44,18 @@ public class BackflowValidationProcessor : WorkItemProcessor<BackflowValidationW
     {
         try
         {
-            string vmrSha = workItem.VmrCommitSha;
+            // Resolve build ID to a SHA
+            var build = await _context.Builds
+                .FirstOrDefaultAsync(b => b.Id == workItem.VmrBuildId, cancellationToken);
 
-            // If build ID is provided, resolve it to a SHA
-            if (workItem.VmrBuildId.HasValue)
+            if (build == null)
             {
-                var build = await _context.Builds
-                    .FirstOrDefaultAsync(b => b.Id == workItem.VmrBuildId.Value, cancellationToken);
-
-                if (build == null)
-                {
-                    _logger.LogError("Build {buildId} not found", workItem.VmrBuildId.Value);
-                    return false;
-                }
-
-                vmrSha = build.Commit;
-                _logger.LogInformation("Resolved build {buildId} to VMR SHA {sha}", workItem.VmrBuildId.Value, vmrSha);
+                _logger.LogError("Build {buildId} not found", workItem.VmrBuildId);
+                return false;
             }
+
+            string vmrSha = build.Commit;
+            _logger.LogInformation("Resolved build {buildId} to VMR SHA {sha}", workItem.VmrBuildId, vmrSha);
 
             // Detect which branch the SHA is on
             var branches = await DetectBranchesAsync(vmrSha, cancellationToken);
@@ -307,13 +302,7 @@ public class BackflowValidationProcessor : WorkItemProcessor<BackflowValidationW
     protected override Dictionary<string, object> GetLoggingContextData(BackflowValidationWorkItem workItem)
     {
         var data = base.GetLoggingContextData(workItem);
-        data["VmrCommitSha"] = workItem.VmrCommitSha;
-        
-        if (workItem.VmrBuildId.HasValue)
-        {
-            data["VmrBuildId"] = workItem.VmrBuildId.Value;
-        }
-        
+        data["VmrBuildId"] = workItem.VmrBuildId;
         return data;
     }
 }

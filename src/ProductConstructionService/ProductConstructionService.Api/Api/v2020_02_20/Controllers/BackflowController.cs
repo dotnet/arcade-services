@@ -41,39 +41,27 @@ public class BackflowController : ControllerBase
     }
 
     /// <summary>
-    /// Trigger backflow status calculation for a VMR commit.
+    /// Trigger backflow status calculation for a VMR build.
     /// </summary>
-    /// <param name="vmrCommitSha">VMR commit SHA to calculate status for</param>
-    /// <param name="vmrBuildId">Optional VMR build ID which resolves to a SHA</param>
+    /// <param name="vmrBuildId">VMR build ID which will be resolved to a commit SHA</param>
     [HttpPost("trigger")]
     [SwaggerApiResponse(HttpStatusCode.Accepted, Description = "Backflow status calculation has been triggered")]
     [ValidateModelState]
     public async Task<IActionResult> TriggerBackflowStatusCalculation(
-        [FromQuery][Required] string vmrCommitSha,
-        [FromQuery(Name = "vmr-build-id")] int? vmrBuildId = null)
+        [FromQuery(Name = "vmr-build-id")][Required] int vmrBuildId)
     {
-        // Validate input
-        if (string.IsNullOrWhiteSpace(vmrCommitSha))
-        {
-            return BadRequest(new ApiError("vmrCommitSha is required"));
-        }
+        // Validate that the build exists
+        var build = await _context.Builds
+            .FirstOrDefaultAsync(b => b.Id == vmrBuildId);
 
-        // If build ID is provided, validate it exists
-        if (vmrBuildId.HasValue)
+        if (build == null)
         {
-            var build = await _context.Builds
-                .FirstOrDefaultAsync(b => b.Id == vmrBuildId.Value);
-
-            if (build == null)
-            {
-                return NotFound(new ApiError($"Build {vmrBuildId.Value} was not found"));
-            }
+            return NotFound(new ApiError($"Build {vmrBuildId} was not found"));
         }
 
         // Enqueue work item to the codeflow queue
         var workItem = new BackflowValidationWorkItem
         {
-            VmrCommitSha = vmrCommitSha,
             VmrBuildId = vmrBuildId
         };
 
@@ -82,8 +70,7 @@ public class BackflowController : ControllerBase
             .ProduceWorkItemAsync(workItem);
 
         _logger.LogInformation(
-            "Enqueued backflow status calculation for VMR SHA {sha} (build ID: {buildId})",
-            vmrCommitSha,
+            "Enqueued backflow status calculation for VMR build {buildId}",
             vmrBuildId);
 
         return Accepted();

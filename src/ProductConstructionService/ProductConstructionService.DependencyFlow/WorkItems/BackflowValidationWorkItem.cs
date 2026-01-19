@@ -8,13 +8,7 @@ namespace ProductConstructionService.DependencyFlow.WorkItems;
 public class BackflowValidationWorkItem : WorkItem
 {
     /// <summary>
-    /// VMR commit SHA to calculate backflow status for.
+    /// VMR build ID which will be resolved to a commit SHA.
     /// </summary>
-    public required string VmrCommitSha { get; init; }
-
-    /// <summary>
-    /// Optional VMR build ID which resolves to a SHA.
-    /// If specified, VmrCommitSha will be resolved from this build.
-    /// </summary>
-    public int? VmrBuildId { get; init; }
+    public required int VmrBuildId { get; init; }
 }
