@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -76,10 +77,58 @@ internal abstract class Operation(
         return build;
     }
 
-    protected async Task TriggerSubscriptionAsync(string subscriptionId, int buildId = 0, bool force = false)
+    protected async Task IngestConfigurationAsync(string @namespace, ClientYamlConfiguration yamlConfiguration)
+        => await localPcsApi.Ingestion.IngestNamespaceAsync(@namespace, saveChanges: true, yamlConfiguration);
+
+    protected async Task<(ClientChannelYaml channel, ClientSubscriptionYaml subscription)> CreateChannelAndSubscriptionAsync(
+        string @namespace,
+        string channelName,
+        string sourceRepository,
+        string targetRepository,
+        string targetBranch,
+        bool sourceEnabled,
+        string? sourceDirectory = null,
+        string? targetDirectory = null,
+        IEnumerable<string>? excludedAssets = null)
+    {
+        ClientChannelYaml channel = new(channelName, "test");
+        ClientSubscriptionYaml subscription = new(
+            channel: channelName,
+            sourceRepository: sourceRepository,
+            targetRepository: targetRepository,
+            targetBranch: targetBranch,
+            sourceEnabled: sourceEnabled,
+            batchable: false,
+            enabled: true,
+            id: Guid.NewGuid(),
+            updateFrequency: ClientUpdateFrequency.None)
+        {
+            SourceDirectory = sourceDirectory,
+            TargetDirectory = targetDirectory,
+            ExcludedAssets = excludedAssets != null ? [.. excludedAssets] : []
+        };
+        logger.LogInformation("Created test channel {channel} and subscription {subscriptionId}", channelName, subscription.Id);
+        await IngestConfigurationAsync(@namespace, new ClientYamlConfiguration
+        {
+            Channels = [channel],
+            Subscriptions = [subscription],
+            DefaultChannels = [],
+            BranchMergePolicies = []
+        });
+
+        return (channel, subscription);
+    }
+
+    protected async Task DeleteNamespace(string @namespace)
+    {
+        logger.LogInformation("Deleting namespace {namespace}", @namespace);
+        await localPcsApi.Ingestion.DeleteNamespaceAsync(@namespace, saveChanges: true);
+    }
+
+    protected async Task TriggerSubscriptionAsync(Guid subscriptionId, int buildId = 0, bool force = false)
     {
         logger.LogInformation("Triggering subscription {subscriptionId}", subscriptionId);
-        await localPcsApi.Subscriptions.TriggerSubscriptionAsync(buildId, force: force, Guid.Parse(subscriptionId));
+        await localPcsApi.Subscriptions.TriggerSubscriptionAsync(buildId, force: force, subscriptionId);
     }
 
     protected async Task<AsyncDisposableValue<string>> PrepareVmrForkAsync(string branch, bool skipCleanup)

@@ -4,6 +4,7 @@
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ProductConstructionService.Client;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Octokit;
@@ -124,7 +125,17 @@ internal class ReproOperation(
         }
 
         var channelName = $"repro-{Guid.NewGuid()}";
-        await using var channel = await darcProcessManager.CreateTestChannelAsync(channelName, options.SkipCleanup);
+        var namespaceName = channelName;
+        var (_, testSubscription) = await CreateChannelAndSubscriptionAsync(
+            namespaceName,
+            channelName,
+            sourceRepository: isForwardFlow ? productRepoForkUri : VmrForkUri,
+            targetRepository: isForwardFlow ? VmrForkUri : productRepoForkUri,
+            targetBranch: isForwardFlow ? vmrTmpBranch.Value : productRepoTmpBranch.Value,
+            sourceEnabled: true,
+            sourceDirectory: subscription.SourceDirectory,
+            targetDirectory: subscription.TargetDirectory,
+            excludedAssets: subscription.ExcludedAssets);
 
         var testBuild = await CreateBuildAsync(
             isForwardFlow ? productRepoForkUri : VmrForkUri,
@@ -132,27 +143,16 @@ internal class ReproOperation(
             sourceRepoSha,
             build != null ? CreateAssetDataFromBuild(build) : []);
 
-        await using var testSubscription = await darcProcessManager.CreateSubscriptionAsync(
-            channel: channelName,
-            sourceRepo: isForwardFlow ? productRepoForkUri : VmrForkUri,
-            targetRepo: isForwardFlow ? VmrForkUri : productRepoForkUri,
-            targetBranch: isForwardFlow ? vmrTmpBranch.Value : productRepoTmpBranch.Value,
-            sourceEnabled: true,
-            sourceDirectory: subscription.SourceDirectory,
-            targetDirectory: subscription.TargetDirectory,
-            excludedAssets: subscription.ExcludedAssets,
-            skipCleanup: options.SkipCleanup);
-
         await darcProcessManager.AddBuildToChannelAsync(testBuild.Id, channelName, options.SkipCleanup);
 
-        await CopyFeatureFlagsAsync(subscription.Id, Guid.Parse(testSubscription.Value));
+        await CopyFeatureFlagsAsync(subscription.Id, testSubscription.Id);
 
-        await TriggerSubscriptionAsync(testSubscription.Value, testBuild.Id, force: options.Force);
+        await TriggerSubscriptionAsync(testSubscription.Id, testBuild.Id, force: options.Force);
 
         if (options.SkipCleanup)
         {
             logger.LogInformation("Skipping cleanup. If you want to re-trigger the reproduced subscription run \"darc trigger-subscriptions --ids {subscriptionId} --bar-uri {barUri}\"",
-                testSubscription.Value,
+                testSubscription.Id,
                 ProductConstructionServiceApiOptions.PcsLocalUri);
             return;
         }
@@ -160,6 +160,7 @@ internal class ReproOperation(
         logger.LogInformation("Code flow successfully recreated. Press enter to finish and cleanup");
         Console.ReadLine();
 
+        await DeleteNamespace(channelName);
         // Cleanup
         if (isForwardFlow)
         {
@@ -173,7 +174,6 @@ internal class ReproOperation(
 
     private async Task ReproDependencyFlowSubscription(Subscription subscription)
     {
-
         if (options.BuildId == null)
         {
             throw new ArgumentException("A buildId must be provided to flow a dependency update subscription");
@@ -191,7 +191,16 @@ internal class ReproOperation(
         await using var targetRepoTmpBranch = await PrepareProductRepoForkAsync(subscription.TargetRepository, targetRepoFork, targetBranch, options.SkipCleanup);
 
         var channelName = $"repro-{Guid.NewGuid()}";
-        await using var channel = await darcProcessManager.CreateTestChannelAsync(channelName, options.SkipCleanup);
+        var namespaceName = channelName;
+        var (_, testSubscription) = await CreateChannelAndSubscriptionAsync(
+            namespaceName,
+            channelName,
+            sourceRepoFork,
+            targetRepoFork,
+            targetRepoTmpBranch.Value,
+            sourceEnabled: false,
+            targetDirectory: subscription.TargetDirectory,
+            excludedAssets: subscription.ExcludedAssets);
 
         var testBuild = await CreateBuildAsync(
             sourceRepoFork,
@@ -199,25 +208,24 @@ internal class ReproOperation(
             build.Commit,
             CreateAssetDataFromBuild(build));
 
-        await using var testSubscription = await darcProcessManager.CreateSubscriptionAsync(
-            sourceRepoFork,
-            targetRepoFork,
-            channelName,
-            targetRepoTmpBranch.Value,
-            sourceEnabled: false,
-            sourceDirectory: null,
-            targetDirectory: subscription.TargetDirectory,
-            excludedAssets: subscription.ExcludedAssets,
-            skipCleanup: options.SkipCleanup);
+        await darcProcessManager.AddBuildToChannelAsync(testBuild.Id, testSubscription.Channel, options.SkipCleanup);
 
-        await darcProcessManager.AddBuildToChannelAsync(testBuild.Id, channelName, options.SkipCleanup);
+        await CopyFeatureFlagsAsync(subscription.Id, testSubscription.Id);
 
-        await CopyFeatureFlagsAsync(subscription.Id, Guid.Parse(testSubscription.Value));
+        await TriggerSubscriptionAsync(testSubscription.Id, testBuild.Id, force: options.Force);
 
-        await TriggerSubscriptionAsync(testSubscription.Value, testBuild.Id, force: options.Force);
+        if (options.SkipCleanup)
+        {
+            logger.LogInformation("Skipping cleanup. If you want to re-trigger the reproduced subscription run \"darc trigger-subscriptions --ids {subscriptionId} --bar-uri {barUri}\"",
+                testSubscription.Id,
+                ProductConstructionServiceApiOptions.PcsLocalUri);
+            return;
+        }
 
-        logger.LogInformation("Code flow successfully recreated. Press enter to finish and cleanup");
+        logger.LogInformation("Dependency flow successfully recreated. Press enter to finish and cleanup");
         Console.ReadLine();
+
+        await DeleteNamespace(channelName);
         await DeleteDarcPRBranchAsync(targetRepoFork.Split('/').Last(), targetRepoTmpBranch.Value);
     }
 
