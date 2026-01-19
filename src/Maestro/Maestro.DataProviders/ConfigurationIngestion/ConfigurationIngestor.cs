@@ -13,6 +13,7 @@ using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.GitHub.Authentication;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion;
@@ -20,12 +21,16 @@ namespace Maestro.DataProviders.ConfigurationIngestion;
 internal partial class ConfigurationIngestor(
         BuildAssetRegistryContext context,
         ISqlBarClient sqlBarClient,
-        IGitHubInstallationIdResolver installationIdResolver)
+        IGitHubInstallationIdResolver installationIdResolver,
+        IGitHubClientFactory gitHubClientFactory)
     : IConfigurationIngestor
 {
     private readonly BuildAssetRegistryContext _context = context;
     private readonly ISqlBarClient _sqlBarClient = sqlBarClient;
     private readonly IGitHubInstallationIdResolver _installationIdResolver = installationIdResolver;
+    private readonly IGitHubClientFactory _gitHubClientFactory = gitHubClientFactory;
+
+    private const string RequiredOrgForSubscriptionNotification = "microsoft";
 
     public async Task<ConfigurationUpdates> IngestConfigurationAsync(
         ConfigurationData configurationData,
@@ -138,6 +143,16 @@ internal partial class ConfigurationIngestor(
                 sub,
                 namespaceEntity,
                 existingChannelsByName))];
+
+        foreach (Subscription subscription in subscriptionDaos)
+        {
+            if (!string.IsNullOrEmpty(subscription.PullRequestFailureNotificationTags)
+                && !await AllNotificationTagsValid(subscription.PullRequestFailureNotificationTags))
+            {
+                throw new InvalidOperationException($"Subscription {subscription.Id} has invalid Pull Request Failure Notification Tags."
+                    + " is everyone listed publicly a member of the Microsoft github org?");
+            }
+        }
 
         await _sqlBarClient.CreateSubscriptionsAsync(subscriptionDaos, false);
     }
@@ -430,5 +445,37 @@ internal partial class ConfigurationIngestor(
 
             existingRepo.InstallationId = await GetInstallationId(existingRepo.RepositoryName);
         }
+    }
+
+    /// <summary>
+    ///  Subscriptions support notifying GitHub tags when non-batched dependency flow PRs fail checks.
+    ///  Before inserting them into the database, we'll make sure they're either not a user's login or
+    ///  that user is publicly a member of the Microsoft organization so we can store their login.
+    /// </summary>
+    private async Task<bool> AllNotificationTagsValid(string pullRequestFailureNotificationTags)
+    {
+        var allTags = pullRequestFailureNotificationTags.Split(';', StringSplitOptions.RemoveEmptyEntries);
+
+        // We'll only be checking public membership in the Microsoft org, so no token needed
+        var client = _gitHubClientFactory.CreateGitHubClient(string.Empty);
+        var success = true;
+
+        foreach (var tagToNotify in allTags)
+        {
+            // remove @ if it's there
+            var tag = tagToNotify.TrimStart('@');
+
+            try
+            {
+                IReadOnlyList<Octokit.Organization> orgList = await client.Organization.GetAllForUser(tag);
+                success &= orgList.Any(o => o.Login?.Equals(RequiredOrgForSubscriptionNotification, StringComparison.InvariantCultureIgnoreCase) == true);
+            }
+            catch (Octokit.NotFoundException)
+            {
+                // Non-existent user: Either a typo, or a group (we don't have the admin privilege to find out, so just allow it)
+            }
+        }
+
+        return success;
     }
 }

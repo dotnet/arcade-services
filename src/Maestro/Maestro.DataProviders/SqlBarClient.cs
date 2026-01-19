@@ -562,6 +562,13 @@ public class SqlBarClient : ISqlBarClient
                     + $"There is another subscription in the set of subscriptions to create that performs the same update.");
             }
 
+            // Check for codeflow subscription conflicts
+            var conflictError = await ValidateCodeflowSubscriptionConflicts(subscription);
+            if (conflictError != null)
+            {
+                throw new InvalidOperationException($"Subscription {subscription.Id} creation failed with error {conflictError}");
+            }
+
             _context.Subscriptions.Add(subscription);
 
             newSubscriptionHashes.Add(SubscriptionComparisonKey(subscription));
@@ -572,6 +579,70 @@ public class SqlBarClient : ISqlBarClient
             await _context.SaveChangesAsync();
         }
     }
+
+    /// <summary>
+    ///     Validates codeflow subscription conflicts
+    /// </summary>
+    /// <param name="subscription">Subscription to validate</param>
+    /// <returns>Error message if conflict found, null if no conflicts</returns>
+    private async Task<string> ValidateCodeflowSubscriptionConflicts(Maestro.Data.Models.Subscription subscription)
+    {
+        if (!subscription.SourceEnabled)
+        {
+            return null;
+        }
+
+        // Check for backflow conflicts (source directory not empty)
+        if (!string.IsNullOrEmpty(subscription.SourceDirectory))
+        {
+            var conflictingBackflowSubscription = await FindConflictingBackflowSubscription(subscription);
+            if (conflictingBackflowSubscription != null)
+            {
+                return $"A backflow subscription '{conflictingBackflowSubscription.Id}' already exists for the same target repository and branch. " +
+                       "Only one backflow subscription is allowed per target repository and branch combination.";
+            }
+        }
+
+        // Check for forward flow conflicts (target directory not empty)
+        if (!string.IsNullOrEmpty(subscription.TargetDirectory))
+        {
+            var conflictingForwardFlowSubscription = await FindConflictingForwardFlowSubscription(subscription);
+            if (conflictingForwardFlowSubscription != null)
+            {
+                return $"A forward flow subscription '{conflictingForwardFlowSubscription.Id}' already exists for the same VMR repository, branch, and target directory. " +
+                       "Only one forward flow subscription is allowed per VMR repository, branch, and target directory combination.";
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    ///     Find a conflicting backflow subscription (different subscription targeting same repo/branch)
+    /// </summary>
+    /// <param name="updatedOrNewSubscription">Subscription model with updated data.</param>
+    /// <returns>Conflicting subscription if found, null otherwise</returns>
+    private async Task<Data.Models.Subscription> FindConflictingBackflowSubscription(Maestro.Data.Models.Subscription updatedOrNewSubscription) =>
+        await _context.Subscriptions.FirstOrDefaultAsync(sub =>
+            sub.SourceEnabled == true
+                && !string.IsNullOrEmpty(sub.SourceDirectory) // Backflow subscription
+                && sub.TargetRepository == updatedOrNewSubscription.TargetRepository
+                && sub.TargetBranch == updatedOrNewSubscription.TargetBranch
+                && sub.Id != updatedOrNewSubscription.Id);
+
+    /// <summary>
+    ///     Find a conflicting forward flow subscription (different subscription targeting same VMR branch/directory)
+    /// </summary>
+    /// <param name="updatedOrNewSubscription">Subscription model with updated data.</param>
+    /// <returns>Conflicting subscription if found, null otherwise</returns>
+    private async Task<Data.Models.Subscription> FindConflictingForwardFlowSubscription(Maestro.Data.Models.Subscription updatedOrNewSubscription) =>
+        await _context.Subscriptions.FirstOrDefaultAsync(sub =>
+            sub.SourceEnabled == true
+                && !string.IsNullOrEmpty(sub.TargetDirectory) // Forward flow subscription
+                && sub.TargetRepository == updatedOrNewSubscription.TargetRepository
+                && sub.TargetBranch == updatedOrNewSubscription.TargetBranch
+                && sub.TargetDirectory == updatedOrNewSubscription.TargetDirectory
+                && sub.Id != updatedOrNewSubscription.Id);
 
     public async Task UpdateSubscriptionsAsync(
         IEnumerable<Data.Models.Subscription> subscriptions,
