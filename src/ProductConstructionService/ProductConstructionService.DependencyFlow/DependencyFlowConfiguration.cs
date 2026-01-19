@@ -34,6 +34,6 @@ public static class DependencyFlowConfiguration
         services.AddWorkItemProcessor<PullRequestCheck, PullRequestCheckProcessor>();
         services.AddWorkItemProcessor<SubscriptionTriggerWorkItem, SubscriptionTriggerProcessor>();
         services.AddWorkItemProcessor<SubscriptionUpdateWorkItem, SubscriptionUpdateProcessor>();
-        services.AddWorkItemProcessor<BackflowValidationWorkItem, BackflowValidationProcessor>();
+        services.AddWorkItemProcessor<BackflowStatusCalculationWorkItem, BackflowStatusCalculationProcessor>();
     }
 }

@@ -13,22 +13,22 @@ using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.WorkItemProcessors;
 
-public class BackflowValidationProcessor : WorkItemProcessor<BackflowValidationWorkItem>
+public class BackflowStatusCalculationProcessor : WorkItemProcessor<BackflowStatusCalculationWorkItem>
 {
     private readonly BuildAssetRegistryContext _context;
     private readonly IRemoteFactory _remoteFactory;
     private readonly ILocalGitClient _gitClient;
     private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly IRedisCacheFactory _redisCacheFactory;
-    private readonly ILogger<BackflowValidationProcessor> _logger;
+    private readonly ILogger<BackflowStatusCalculationProcessor> _logger;
 
-    public BackflowValidationProcessor(
+    public BackflowStatusCalculationProcessor(
         BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
         ILocalGitClient gitClient,
         IVersionDetailsParser versionDetailsParser,
         IRedisCacheFactory redisCacheFactory,
-        ILogger<BackflowValidationProcessor> logger)
+        ILogger<BackflowStatusCalculationProcessor> logger)
     {
         _context = context;
         _remoteFactory = remoteFactory;
@@ -39,7 +39,7 @@ public class BackflowValidationProcessor : WorkItemProcessor<BackflowValidationW
     }
 
     public override async Task<bool> ProcessWorkItemAsync(
-        BackflowValidationWorkItem workItem,
+        BackflowStatusCalculationWorkItem workItem,
         CancellationToken cancellationToken)
     {
         try
@@ -299,7 +299,7 @@ public class BackflowValidationProcessor : WorkItemProcessor<BackflowValidationW
         }
     }
 
-    protected override Dictionary<string, object> GetLoggingContextData(BackflowValidationWorkItem workItem)
+    protected override Dictionary<string, object> GetLoggingContextData(BackflowStatusCalculationWorkItem workItem)
     {
         var data = base.GetLoggingContextData(workItem);
         data["VmrBuildId"] = workItem.VmrBuildId;

@@ -59,13 +59,13 @@ public class BackflowStatusController : ControllerBase
         }
 
         // Enqueue work item to the codeflow queue
-        var workItem = new BackflowValidationWorkItem
+        var workItem = new BackflowStatusCalculationWorkItem
         {
             VmrBuildId = vmrBuildId
         };
 
         await _workItemProducerFactory
-            .CreateProducer<BackflowValidationWorkItem>(IsCodeFlowSubscription: true)
+            .CreateProducer<BackflowStatusCalculationWorkItem>(IsCodeFlowSubscription: true)
             .ProduceWorkItemAsync(workItem);
 
         _logger.LogInformation(

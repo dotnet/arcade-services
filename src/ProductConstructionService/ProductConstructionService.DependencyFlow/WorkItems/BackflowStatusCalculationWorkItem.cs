@@ -5,7 +5,7 @@ using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.DependencyFlow.WorkItems;
 
-public class BackflowValidationWorkItem : WorkItem
+public class BackflowStatusCalculationWorkItem : WorkItem
 {
     /// <summary>
     /// VMR build ID which will be resolved to a commit SHA.
