@@ -110,9 +110,9 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         branch = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         branch.ShouldHaveUpdates();
+        await FinalizeForwardFlow(branchName);
         await GitOperations.CheckAllIsCommitted(VmrPath);
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
-        await GitOperations.MergePrBranch(VmrPath, branchName);
         CheckFileContents(_submoduleFileVmrPath, "File in product-repo2");
 
         // Make an "invalid" change to the submodule in the VMR
@@ -120,7 +120,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await File.WriteAllLinesAsync(_submoduleFileVmrPath, new[] { "Invalid change" });
         await GitOperations.CommitAll(VmrPath, "Invalid change in the VMR");
         await CallBackflow(Constants.ProductRepoName, ProductRepoPath, branchName);
-        await GitOperations.MergePrBranch(ProductRepoPath, branchName);
+        await FinalizeBackFlow(branchName);
         await GitOperations.CheckAllIsCommitted(VmrPath);
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
     }
