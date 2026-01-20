@@ -60,68 +60,6 @@ public class BarApiClient : IBarApiClient
             ?? throw new ArgumentException($"Channel {channel} is not a valid channel.");
 
     /// <summary>
-    ///     Adds a default channel association.
-    /// </summary>
-    /// <param name="repository">Repository receiving the default association</param>
-    /// <param name="branch">Branch receiving the default association</param>
-    /// <param name="channel">Name of channel that builds of 'repository' on 'branch' should automatically be applied to.</param>
-    /// <returns>Async task.</returns>
-    public async Task AddDefaultChannelAsync(string repository, string branch, string channel)
-    {
-        // Look up channel to translate to channel id.
-        Channel foundChannel = await GetChannel(channel);
-
-        var defaultChannelsData = new DefaultChannelCreateData(repository: repository, branch: branch, channelId: foundChannel.Id);
-
-        await _barClient.DefaultChannels.CreateAsync(defaultChannelsData);
-    }
-
-    /// <summary>
-    ///     Removes a default channel based on the specified criteria
-    /// </summary>
-    /// <param name="repository">Repository having a default association</param>
-    /// <param name="branch">Branch having a default association</param>
-    /// <param name="channel">Name of channel that builds of 'repository' on 'branch' are being applied to.</param>
-    /// <returns>Async task</returns>
-    public async Task DeleteDefaultChannelAsync(int id)
-    {
-        await _barClient.DefaultChannels.DeleteAsync(id);
-    }
-
-    /// <summary>
-    ///     Updates a default channel with new information.
-    /// </summary>
-    /// <param name="id">Id of default channel.</param>
-    /// <param name="repository">New repository</param>
-    /// <param name="branch">New branch</param>
-    /// <param name="channel">New channel</param>
-    /// <param name="enabled">Enabled/disabled status</param>
-    /// <returns>Async task</returns>
-    public async Task UpdateDefaultChannelAsync(
-        int id,
-        string? repository = null,
-        string? branch = null,
-        string? channel = null,
-        bool? enabled = null)
-    {
-        Channel? foundChannel = null;
-        if (!string.IsNullOrEmpty(channel))
-        {
-            foundChannel = await GetChannel(channel);
-        }
-
-        var updateData = new DefaultChannelUpdateData
-        {
-            Branch = branch,
-            ChannelId = foundChannel?.Id,
-            Enabled = enabled,
-            Repository = repository
-        };
-
-        await _barClient.DefaultChannels.UpdateAsync(id, updateData);
-    }
-
-    /// <summary>
     ///     Create a new channel
     /// </summary>
     /// <param name="name">Name of channel. Must be unique.</param>
