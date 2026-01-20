@@ -63,11 +63,11 @@ internal partial class ConfigurationIngestor(
         return finalUpdates;
     }
 
-    private async Task ValidateNotificationTags(EntityChanges<SubscriptionYaml> subscriptionUpdates, Dictionary<Guid, string?> oldFailureNotificationTags)
+    private async Task ValidateNotificationTags(EntityChanges<SubscriptionYaml> subscriptionChanges, Dictionary<Guid, string?> oldFailureNotificationTags)
     {
-        var subscriptionsToValidate = subscriptionUpdates.Updates
+        var subscriptionsToValidate = subscriptionChanges.Updates
             .Where(s => s.FailureNotificationTags != oldFailureNotificationTags[s.Id])
-            .Concat(subscriptionUpdates.Creations)
+            .Concat(subscriptionChanges.Creations)
             .Where(s => !string.IsNullOrEmpty(s.FailureNotificationTags))
             .ToList();
 
@@ -99,7 +99,7 @@ internal partial class ConfigurationIngestor(
 
         if (subscriptionsWithInvalidTags.Count > 0)
         {
-            throw new InvalidOperationException(
+            throw new IngestionEntityValidationException(
                 $"The following subscriptions have invalid Pull Request Failure Notification Tags: {string.Join(", ", subscriptionsWithInvalidTags)}."
                 + " Is everyone listed publicly a member of the Microsoft github org?");
         }
