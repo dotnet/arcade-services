@@ -39,7 +39,7 @@ async Task<int> TriggerBackflowStatusAsync(TriggerOptions opts)
         {
             continue;
         }
-    } while (beforeTimestamp > status?.ComputationTimestamp);
+    } while (status == null || beforeTimestamp > status.ComputationTimestamp);
 
     Console.WriteLine($"Backflow status calculation completed at {status!.ComputationTimestamp:u}");
     PrintStatus(status);
