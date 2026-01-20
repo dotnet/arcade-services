@@ -270,4 +270,69 @@ public class DarcManifestHelperTests
         }
         return fakeDownloadedBuilds;
     }
+
+    [Test]
+    public void ParseAssetRepoOrigins_WithOriginAttribute()
+    {
+        string manifestContent = @"<?xml version=""1.0"" encoding=""utf-8""?>
+<Build Name=""dotnet-installer"">
+  <Package Id=""Microsoft.NET.Sdk"" Version=""8.0.0"" Origin=""sdk"" />
+  <Package Id=""Microsoft.AspNetCore.App"" Version=""8.0.0"" Origin=""aspnetcore"" />
+  <Package Id=""Microsoft.NETCore.App"" Version=""8.0.0"" Origin=""runtime"" />
+</Build>";
+
+        // Use reflection to access the private ParseAssetRepoOrigins method
+        var method = typeof(ManifestHelper).GetMethod("ParseAssetRepoOrigins",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        method.Should().NotBeNull("ParseAssetRepoOrigins method should exist");
+
+        var result = (Dictionary<string, string>)method.Invoke(null, [manifestContent, NullLogger.Instance]);
+
+        result.Should().NotBeNull();
+        result.Count.Should().Be(3);
+        result["Microsoft.NET.Sdk"].Should().Be("sdk");
+        result["Microsoft.AspNetCore.App"].Should().Be("aspnetcore");
+        result["Microsoft.NETCore.App"].Should().Be("runtime");
+    }
+
+    [Test]
+    public void ParseAssetRepoOrigins_WithoutOriginAttribute()
+    {
+        string manifestContent = @"<?xml version=""1.0"" encoding=""utf-8""?>
+<Build Name=""dotnet-runtime"">
+  <Package Id=""Microsoft.NETCore.App.Runtime.linux-x64"" Version=""8.0.0"" />
+  <Package Id=""Microsoft.NETCore.App.Runtime.win-x64"" Version=""8.0.0"" />
+</Build>";
+
+        // Use reflection to access the private ParseAssetRepoOrigins method
+        var method = typeof(ManifestHelper).GetMethod("ParseAssetRepoOrigins",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        method.Should().NotBeNull("ParseAssetRepoOrigins method should exist");
+
+        var result = (Dictionary<string, string>)method.Invoke(null, [manifestContent, NullLogger.Instance]);
+
+        result.Should().NotBeNull();
+        result.Count.Should().Be(2);
+        // When Origin attribute is missing, it should use the build name without "dotnet-" prefix
+        result["Microsoft.NETCore.App.Runtime.linux-x64"].Should().Be("runtime");
+        result["Microsoft.NETCore.App.Runtime.win-x64"].Should().Be("runtime");
+    }
+
+    [Test]
+    public void ParseAssetRepoOrigins_EmptyManifest()
+    {
+        string manifestContent = @"<?xml version=""1.0"" encoding=""utf-8""?>
+<Build Name=""dotnet-empty"">
+</Build>";
+
+        // Use reflection to access the private ParseAssetRepoOrigins method
+        var method = typeof(ManifestHelper).GetMethod("ParseAssetRepoOrigins",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        method.Should().NotBeNull("ParseAssetRepoOrigins method should exist");
+
+        var result = (Dictionary<string, string>)method.Invoke(null, [manifestContent, NullLogger.Instance]);
+
+        result.Should().NotBeNull();
+        result.Count.Should().Be(0);
+    }
 }
