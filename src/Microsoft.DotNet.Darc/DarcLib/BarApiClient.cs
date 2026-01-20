@@ -226,86 +226,6 @@ public class BarApiClient : IBarApiClient
     #region Subscription Operations
 
     /// <summary>
-    ///     Create a new subscription
-    /// </summary>
-    /// <param name="channelName">Name of source channel</param>
-    /// <param name="sourceRepo">URL of source repository</param>
-    /// <param name="targetRepo">URL of target repository where updates should be made</param>
-    /// <param name="targetBranch">Name of target branch where updates should be made</param>
-    /// <param name="updateFrequency">Frequency of updates, can be 'none', 'everyBuild', 'everyDay', 'twiceDaily', 'everyWeek', 'everyTwoWeeks', or 'everyMonth'</param>
-    /// <param name="mergePolicies">
-    ///     Dictionary of merge policies. Each merge policy is a name of a policy with an associated blob
-    ///     of metadata
-    /// </param>
-    /// <param name="failureNotificationTags">List of GitHub tags to notify with a PR comment when the build fails</param>
-    /// <param name="sourceEnabled">Whether this is a VMR code flow (special VMR subscription)</param>
-    /// <param name="sourceDirectory">Directory of the VMR to synchronize the sources with</param>
-    /// <param name="excludedAssets">List of assets to exclude from the source-enabled code flow</param>
-    /// <returns>Newly created subscription, if successful</returns>
-    public Task<Subscription> CreateSubscriptionAsync(
-        bool enabled,
-        string channelName,
-        string sourceRepo,
-        string targetRepo,
-        string targetBranch,
-        string updateFrequency,
-        bool batchable,
-        List<MergePolicy> mergePolicies,
-        string failureNotificationTags,
-        bool sourceEnabled,
-        string sourceDirectory,
-        string targetDirectory,
-        IReadOnlyCollection<string> excludedAssets)
-    {
-        var subscriptionData = new SubscriptionData(
-            channelName: channelName,
-            sourceRepository: sourceRepo,
-            targetRepository: targetRepo,
-            targetBranch: targetBranch,
-            policy: new SubscriptionPolicy(
-                batchable,
-                (UpdateFrequency)Enum.Parse(
-                    typeof(UpdateFrequency),
-                    updateFrequency,
-                    ignoreCase: true))
-            {
-                MergePolicies = mergePolicies,
-            },
-            failureNotificationTags)
-        {
-            Enabled = enabled,
-            SourceEnabled = sourceEnabled,
-            SourceDirectory = sourceDirectory,
-            TargetDirectory = targetDirectory,
-            ExcludedAssets = [..excludedAssets],
-        };
-
-        return _barClient.Subscriptions.CreateAsync(subscriptionData);
-    }
-
-    /// <summary>
-    ///     Update an existing subscription
-    /// </summary>
-    /// <param name="subscriptionId">Id of subscription to update</param>
-    /// <param name="subscription">Subscription information</param>
-    /// <returns>Updated subscription</returns>
-    public Task<Subscription> UpdateSubscriptionAsync(Guid subscriptionId, SubscriptionUpdate subscription)
-    {
-        return _barClient.Subscriptions.UpdateSubscriptionAsync(subscriptionId, subscription);
-    }
-
-    /// <summary>
-    ///     Update an existing subscription
-    /// </summary>
-    /// <param name="subscriptionId">Id of subscription to update</param>
-    /// <param name="subscription">Subscription information</param>
-    /// <returns>Updated subscription</returns>
-    public Task<Subscription> UpdateSubscriptionAsync(string subscriptionId, SubscriptionUpdate subscription)
-    {
-        return UpdateSubscriptionAsync(Guid.Parse(subscriptionId), subscription);
-    }
-
-    /// <summary>
     ///     Get a set of subscriptions based on input filters.
     /// </summary>
     /// <param name="sourceRepo">Filter by the source repository of the subscription.</param>
@@ -366,16 +286,6 @@ public class BarApiClient : IBarApiClient
     public Task<Subscription> GetSubscriptionAsync(string subscriptionId)
     {
         return GetSubscriptionAsync(Guid.Parse(subscriptionId));
-    }
-
-    /// <summary>
-    ///     Delete a subscription by ID.
-    /// </summary>
-    /// <param name="subscriptionId">Id of subscription to delete.</param>
-    /// <returns>Information on deleted subscription</returns>
-    public Task<Subscription> DeleteSubscriptionAsync(Guid subscriptionId)
-    {
-        return _barClient.Subscriptions.DeleteSubscriptionAsync(subscriptionId);
     }
 
     /// <summary>

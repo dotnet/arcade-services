@@ -18,54 +18,6 @@ public interface IBarApiClient : IBasicBarClient
     #region Subscription Operations
 
     /// <summary>
-    ///     Create a new subscription.
-    /// </summary>
-    /// <param name="enabled">Whether subscription is enabled (active) or not.</param>
-    /// <param name="channelName">Name of source channel.</param>
-    /// <param name="sourceRepo">Source repository URI.</param>
-    /// <param name="targetRepo">Target repository URI.</param>
-    /// <param name="targetBranch">Target branch in <paramref name="targetRepo"/></param>
-    /// <param name="updateFrequency">Frequency of update.  'none', 'everyBuild', 'everyDay', 'twiceDaily', 'everyWeek', 'everyTwoWeeks', or 'everyMonth'.</param>
-    /// <param name="batchable">Is subscription batchable.</param>
-    /// <param name="mergePolicies">Set of auto-merge policies.</param>
-    /// <param name="failureNotificationTags">List of GitHub tags to notify with a PR comment when the build fails</param>
-    /// <param name="sourceEnabled">Whether this is a VMR code flow (special VMR subscription)</param>
-    /// <param name="sourceDirectory">Directory of the VMR to synchronize the sources from</param>
-    /// <param name="targetDirectory">Directory of the VMR to synchronize the sources to</param>
-    /// <param name="excludedAssets">List of assets to exclude from the source-enabled code flow</param>
-    /// <returns>Newly created subscription.</returns>
-    Task<Subscription> CreateSubscriptionAsync(
-        bool enabled,
-        string channelName,
-        string sourceRepo,
-        string targetRepo,
-        string targetBranch,
-        string updateFrequency,
-        bool batchable,
-        List<MergePolicy> mergePolicies,
-        string failureNotificationTags,
-        bool sourceEnabled,
-        string sourceDirectory,
-        string targetDirectory,
-        IReadOnlyCollection<string> excludedAssets);
-
-    /// <summary>
-    ///     Update an existing subscription
-    /// </summary>
-    /// <param name="subscriptionId">Id of subscription to update</param>
-    /// <param name="subscription">Subscription information</param>
-    /// <returns>Updated subscription</returns>
-    Task<Subscription> UpdateSubscriptionAsync(Guid subscriptionId, SubscriptionUpdate subscription);
-
-    /// <summary>
-    ///     Update an existing subscription
-    /// </summary>
-    /// <param name="subscriptionId">Id of subscription to update</param>
-    /// <param name="subscription">Subscription information</param>
-    /// <returns>Updated subscription</returns>
-    Task<Subscription> UpdateSubscriptionAsync(string subscriptionId, SubscriptionUpdate subscription);
-
-    /// <summary>
     ///     Get a repository merge policy (for batchable subscriptions)
     /// </summary>
     /// <param name="repoUri">Repository uri</param>
@@ -106,13 +58,6 @@ public interface IBarApiClient : IBasicBarClient
     /// <param name="force">Force update even for PRs with pending or successful checks</param>
     /// <returns>Subscription just triggered.</returns>
     Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, int sourceBuildId, bool force = false);
-
-    /// <summary>
-    ///     Delete a subscription by ID.
-    /// </summary>
-    /// <param name="subscriptionId">Id of subscription to delete.</param>
-    /// <returns>Information on deleted subscription</returns>
-    Task<Subscription> DeleteSubscriptionAsync(Guid subscriptionId);
 
     #endregion
 
