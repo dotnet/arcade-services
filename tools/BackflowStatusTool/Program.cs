@@ -111,7 +111,7 @@ void PrintStatus(BackflowStatus status)
     Console.WriteLine(new string('-', repoWidth + branchWidth + shaWidth + distanceWidth + 9));
 
     // Print rows
-    foreach (var subStatus in allStatuses.OrderBy(s => s.TargetRepository).ThenBy(s => s.TargetBranch))
+    foreach (var subStatus in allStatuses.OrderBy(s => s.CommitDistance).ThenBy(s => s.TargetRepository).ThenBy(s => s.TargetBranch))
     {
         var repo = (subStatus.TargetRepository ?? "").PadRight(repoWidth);
         var branch = (subStatus.TargetBranch ?? "").PadRight(branchWidth);
