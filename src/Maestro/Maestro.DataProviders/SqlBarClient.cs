@@ -593,7 +593,7 @@ public class SqlBarClient : ISqlBarClient
                     + "because the subscription could not be found in the database.");
             }
 
-            await UpdateSubscriptionAsync(
+            UpdateSubscription(
                 subscription,
                 existingSubscription);
         }
@@ -604,7 +604,7 @@ public class SqlBarClient : ISqlBarClient
         }
     }
 
-    private async Task UpdateSubscriptionAsync(
+    private void UpdateSubscription(
         Data.Models.Subscription subscription,
         Data.Models.Subscription existingSubscription)
     {
@@ -703,6 +703,7 @@ public class SqlBarClient : ISqlBarClient
             // between a product repo and a VMR directory on a given branch
             return string.Join(
                 "|", new string[] {
+                    subscription.SourceRepository,
                     subscription.TargetBranch,
                     subscription.TargetDirectory,
                     subscription.TargetRepository,
