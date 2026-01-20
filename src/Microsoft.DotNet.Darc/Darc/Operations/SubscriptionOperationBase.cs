@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.MaestroConfiguration.Client;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -98,15 +99,14 @@ internal abstract class SubscriptionOperationBase : Operation
                 .Select(p => p == "/" ? "." : p));
     }
 
-    protected async Task ValidateNoEquivalentSubscription(SubscriptionYaml subscriptionYaml)
+    protected async Task<Subscription> TryGetEquivalentSubscription(SubscriptionYamlParameters subscriptionYaml)
     {
         var channel = await _barClient.GetChannelAsync(subscriptionYaml.Channel);
         if (channel == null)
         {
             throw new ArgumentException($"Channel '{subscriptionYaml.Channel}' does not exist.");
         }
-
-        var equivalentSub = (await _barClient.GetSubscriptionsAsync(
+        return (await _barClient.GetSubscriptionsAsync(
                 sourceRepo: subscriptionYaml.SourceRepository,
                 channelId: channel.Id,
                 targetRepo: subscriptionYaml.TargetRepository,
@@ -114,10 +114,5 @@ internal abstract class SubscriptionOperationBase : Operation
                 sourceDirectory: subscriptionYaml.SourceDirectory,
                 targetDirectory: subscriptionYaml.TargetDirectory))
             .FirstOrDefault(s => s.TargetBranch == subscriptionYaml.TargetBranch);
-
-        if (equivalentSub != null && equivalentSub.Id != subscriptionYaml.Id)
-        {
-            throw new ArgumentException($"An equivalent subscription '{equivalentSub.Id}' already exists.");
-        }
     }
 }

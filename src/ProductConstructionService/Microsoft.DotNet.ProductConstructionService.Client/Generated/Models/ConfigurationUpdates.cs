@@ -12,15 +12,15 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         }
 
         [JsonProperty("subscriptions")]
-        public Models.EntityChangesSubscriptionYaml Subscriptions { get; set; }
+        public EntityChangesSubscriptionYaml Subscriptions { get; set; }
 
         [JsonProperty("channels")]
-        public Models.EntityChangesChannelYaml Channels { get; set; }
+        public EntityChangesChannelYaml Channels { get; set; }
 
         [JsonProperty("defaultChannels")]
-        public Models.EntityChangesDefaultChannelYaml DefaultChannels { get; set; }
+        public EntityChangesDefaultChannelYaml DefaultChannels { get; set; }
 
         [JsonProperty("repositoryBranches")]
-        public Models.EntityChangesBranchMergePoliciesYaml RepositoryBranches { get; set; }
+        public EntityChangesBranchMergePoliciesYaml RepositoryBranches { get; set; }
     }
 }

@@ -470,4 +470,23 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                 });
         }
     }
+
+    private async Task ValidateNoEquivalentSubscription(SubscriptionYaml subscriptionYaml)
+    {
+        var equivalentSub = await TryGetEquivalentSubscription(new SubscriptionYamlParameters
+        {
+            Channel = subscriptionYaml.Channel,
+            SourceRepository = subscriptionYaml.SourceRepository,
+            TargetRepository = subscriptionYaml.TargetRepository,
+            TargetBranch = subscriptionYaml.TargetBranch,
+            SourceEnabled = subscriptionYaml.SourceEnabled,
+            SourceDirectory = subscriptionYaml.SourceDirectory,
+            TargetDirectory = subscriptionYaml.TargetDirectory
+        });
+
+        if (equivalentSub != null && equivalentSub.Id != subscriptionYaml.Id)
+        {
+            throw new ArgumentException($"An equivalent subscription '{equivalentSub.Id}' already exists.");
+        }
+    }
 }
