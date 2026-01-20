@@ -44,7 +44,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     private readonly IPullRequestBuilder _pullRequestBuilder;
     private readonly ICommentCollector _commentCollector;
     private readonly IPullRequestCommenter _pullRequestCommenter;
-    private readonly IFeatureFlagService _featureFlagService;
     private readonly ISqlBarClient _sqlClient;
     private readonly ILocalLibGit2Client _gitClient;
     private readonly IVmrInfo _vmrInfo;
@@ -78,8 +77,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         ITelemetryRecorder telemetryRecorder,
         ILogger logger,
         ICommentCollector commentCollector,
-        IPullRequestCommenter pullRequestCommenter,
-        IFeatureFlagService featureFlagService)
+        IPullRequestCommenter pullRequestCommenter)
     {
         Id = id;
         _mergePolicyEvaluator = mergePolicyEvaluator;
@@ -103,7 +101,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         _mergePolicyEvaluationState = cacheFactory.Create<MergePolicyEvaluationResults>(cacheKey);
         _commentCollector = commentCollector;
         _pullRequestCommenter = pullRequestCommenter;
-        _featureFlagService = featureFlagService;
     }
 
     protected abstract Task<(string repository, string branch)> GetTargetAsync();
@@ -339,22 +336,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
                     case MergePolicyCheckResult.NoPolicies:
                     case MergePolicyCheckResult.FailedToMerge:
-                        // Check if we think the PR has a conflict
-                        // If we think so, check if the PR head branch still has the same commit as the one we remembered.
-                        // If it doesn't, we should try to update the PR again, the conflicts might be resolved
-                        if (pr.MergeState == InProgressPullRequestState.Conflict && pr.HeadBranchSha == prInfo.HeadBranchSha && isCodeFlow)
-                        {
-                            bool featureEnabled = await _featureFlagService.IsFeatureOnAsync(
-                                pr.ContainedSubscriptions.First().SubscriptionId,
-                                FeatureFlag.EnableRebaseStrategy);
-
-                            if (!featureEnabled)
-                            {
-                                _logger.LogInformation("Pull request {url} is in conflict and cannot be updated at the moment", pr.Url);
-                                return (PullRequestStatus.InProgressCannotUpdate, prInfo);
-                            }
-                        }
-
                         _logger.LogInformation("Pull request {url} can be updated", pr.Url);
                         await SetPullRequestCheckReminder(pr, prInfo, isCodeFlow, delay);
 
@@ -1203,13 +1184,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         IReadOnlyCollection<UpstreamRepoDiff> upstreamRepoDiffs;
         string? previousSourceSha; // is null in some edge cases like onboarding a new repository
 
-        bool enableRebase = await _featureFlagService.IsFeatureOnAsync(subscription.Id, FeatureFlag.EnableRebaseStrategy);
-
-        if (enableRebase)
-        {
-            _logger.LogInformation("Rebase strategy is enabled for subscription {subscriptionId}", subscription.Id);
-        }
-
         var codeFlowRes = await ExecuteCodeFlowAsync(
             pr,
             prInfo,
@@ -1218,7 +1192,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             build,
             prHeadBranch,
             forceUpdate,
-            enableRebase);
+            enableRebase: true);
 
         if (codeFlowRes == null)
         {
@@ -1248,7 +1222,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         }
 
         // Conflicts + rebase means we have to block the PR until a human resolves the conflicts manually
-        if (enableRebase && codeFlowRes.HadConflicts)
+        if (codeFlowRes.HadConflicts)
         {
             await RequestManualConflictResolutionAsync(
                 update,
@@ -1264,7 +1238,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
         if (pr == null && codeFlowRes.HadUpdates)
         {
-            (pr, _) = await CreateCodeFlowPullRequestAsync(
+            await CreateCodeFlowPullRequestAsync(
                 update,
                 previousSourceSha,
                 subscription,
@@ -1282,18 +1256,6 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 subscription,
                 codeFlowRes.DependencyUpdates,
                 upstreamRepoDiffs);
-        }
-
-        if (pr != null && !enableRebase && codeFlowRes.HadConflicts)
-        {
-            _commentCollector.AddComment(
-                PullRequestCommentBuilder.NotifyAboutMergeConflict(
-                    pr,
-                    update,
-                    subscription,
-                    codeFlowRes.ConflictedFiles,
-                    build),
-                CommentType.Caution);
         }
     }
 

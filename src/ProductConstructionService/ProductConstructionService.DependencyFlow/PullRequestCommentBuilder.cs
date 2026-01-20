@@ -4,12 +4,10 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
-using System.Text.Json;
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
-using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
@@ -52,57 +50,10 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
             .AppendLine(" but conflicted with changes in the PR branch.")
             .AppendLine()
             .AppendLine("Conflicted files:")
-            .AppendConflictedFileList(update, subscription, [..filesInConflict.Select(f => new UnixPath(f))], prHeadBranch)
+            .AppendConflictedFileList(update, subscription, [.. filesInConflict.Select(f => new UnixPath(f))], prHeadBranch)
             .AppendLine()
             .AppendLine("Updates from this subscription will be paused until the PR branch is either merged or changed further so that the conflicts are resolved (files match).")
             .ToString();
-    }
-
-    public static string NotifyAboutMergeConflict(
-        InProgressPullRequest pr,
-        SubscriptionUpdateWorkItem update,
-        Subscription subscription,
-        IReadOnlyCollection<UnixPath> conflictedFiles,
-        Build build)
-    {
-        string metadataFile, contentType, correctContent;
-
-        if (subscription.IsBackflow())
-        {
-            metadataFile = VersionFiles.VersionDetailsXml;
-            contentType = "xml";
-            var sourceMetadata = new SourceDependency(
-                update.SourceRepo,
-                subscription.SourceDirectory,
-                update.SourceSha,
-                update.BuildId);
-            correctContent = VersionDetailsParser.SerializeSourceDependency(sourceMetadata);
-        }
-        else
-        {
-            metadataFile = VmrInfo.DefaultRelativeSourceManifestPath;
-            contentType = "json";
-            correctContent = JsonSerializer.Serialize(
-                new RepositoryRecord(
-                    subscription.TargetDirectory,
-                    update.SourceRepo,
-                    update.SourceSha,
-                    update.BuildId),
-                new JsonSerializerOptions()
-                {
-                    WriteIndented = true,
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                });
-        }
-
-        return $"""
-                There are conflicts with the `{subscription.TargetBranch}` branch in this PR.
-                Apart from conflicts in the source files, this means there are unresolved conflicts in the codeflow metadata file `{metadataFile}`.
-                When resolving these, please use the (incoming/ours) version from the PR branch. The correct content should be this:
-                ```{contentType}
-                {correctContent}
-                ```
-                """;
     }
 
     internal static string BuildNotificationAboutManualConflictResolutionComment(
