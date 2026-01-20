@@ -1113,7 +1113,10 @@ internal class GatherDropOperation : Operation
     /// <param name="location">Location</param>
     /// <returns>True if the location is a sleet uri, false otherwise.</returns>
     /// <remarks>
-    ///     Blob feed uris look like: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
+    ///     Blob feed uris look like: 
+    ///         - https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
+    ///         - https://ci.dot.net/public
+    ///         - https://ci.dot.net/internal
     /// </remarks>
     private static bool IsBlobFeedUrl(string location)
     {
@@ -1123,7 +1126,8 @@ internal class GatherDropOperation : Operation
             return false;
         }
 
-        return locationUri.Host.EndsWith("blob.core.windows.net");
+        return locationUri.Host.EndsWith("blob.core.windows.net") || 
+               locationUri.Host.Equals("ci.dot.net", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
