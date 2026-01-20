@@ -504,7 +504,8 @@ internal class UpdateDependenciesOperation : Operation
                 candidateDependenciesForUpdate,
                 dependenciesToUpdate,
                 excludedAssetsMatcher,
-                relativeBasePath);
+                relativeBasePath,
+                null); // Repo origin filtering is only supported for specific build IDs, not channel-based updates
             if (nonCoherencyResult != Constants.SuccessCode)
             {
                 throw new DarcException($"Failed to update non-coherent parent tied dependencies in {relativeBasePath}");

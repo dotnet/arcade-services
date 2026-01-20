@@ -282,7 +282,7 @@ public class ManifestHelper
             }
 
             string? buildName = buildElement.Attribute("Name")?.Value;
-            string repoName = buildName?.Replace("dotnet-", string.Empty) ?? string.Empty;
+            string repoName = buildName?.Replace("dotnet-", null) ?? string.Empty;
 
             foreach (var asset in buildElement.Elements())
             {
