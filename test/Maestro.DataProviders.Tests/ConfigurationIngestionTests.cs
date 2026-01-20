@@ -1,17 +1,18 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Net;
 using AwesomeAssertions;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders.ConfigurationIngestion;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using ProductConstructionService.Api.Tests;
 using Moq;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.GitHub.Authentication;
+using ProductConstructionService.Api.Tests;
 
 namespace Maestro.DataProviders.Tests;
 
@@ -44,6 +45,28 @@ public class ConfigurationIngestorTests
             .Returns(Task.FromResult((long?)1));
 
         var gitHubClient = new Mock<Octokit.IGitHubClient>();
+        gitHubClient.Setup(ghc => ghc.Organization.GetAllForUser(It.IsAny<string>()))
+                .Returns((string userLogin) => CallFakeGetAllForUser(userLogin));
+
+        static async Task<IReadOnlyList<Octokit.Organization>> CallFakeGetAllForUser(string userLogin)
+        {
+            await Task.Delay(0); // Added just to suppress green squiggles
+            List<Octokit.Organization> returnValue = [];
+
+            switch (userLogin.ToLower())
+            {
+                case "somemicrosoftuser": // valid user, in MS org
+                    returnValue.Add(MockOrganization(123, "microsoft"));
+                    break;
+                case "someexternaluser":  // "real" user, but not in MS org
+                    returnValue.Add(MockOrganization(456, "definitely-not-microsoft"));
+                    break;
+                default: // Any other user; GitHub "teams" will fall through here.
+                    throw new Octokit.NotFoundException("Unknown user", HttpStatusCode.NotFound);
+            }
+
+            return returnValue.AsReadOnly();
+        }
 
         var githubClientFactory = new Mock<IGitHubClientFactory>();
         githubClientFactory.Setup(f => f.CreateGitHubClient(It.IsAny<string>()))
@@ -111,6 +134,43 @@ public class ConfigurationIngestorTests
         namespaceEntity.Should().NotBeNull();
         namespaceEntity.Channels.Should().ContainSingle()
             .Which.Name.Should().Be(".NET 8");
+    }
+
+    [Test]
+    public async Task IngestConfigurationAsync_SubscriptionWithInvalidNotificationTags_ThrowsException()
+    {
+        // Arrange
+        var anInvalidDependencyFlowNotificationList = "@someexternaluser;@somemicrosoftuser;@some-team";
+
+        var channelYaml = new ChannelYaml
+        {
+            Name = ".NET 8",
+            Classification = "release",
+        };
+
+        var subscriptionYaml = new SubscriptionYaml
+        {
+            Id = Guid.NewGuid(),
+            Channel = ".NET 8",
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = "https://github.com/dotnet/aspnetcore",
+            TargetBranch = "main",
+            Enabled = true,
+            FailureNotificationTags = anInvalidDependencyFlowNotificationList,
+        };
+
+        var configData = new ConfigurationData(
+            [subscriptionYaml],
+            [channelYaml],
+            [],
+            []);
+
+        // Act
+        var act = async () => await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*invalid Pull Request Failure Notification Tags*");
     }
 
     [Test]
@@ -1431,6 +1491,20 @@ public class ConfigurationIngestorTests
             [branchMergePoliciesYaml]);
     }
 
+    private class MockOrg : Octokit.Organization
+    {
+        public MockOrg(int id, string login)
+        {
+            Id = id;
+            Login = login;
+        }
+    }
+
+    private static MockOrg MockOrganization(int id, string login)
+    {
+        return new MockOrg(id, login);
+    }
+
     #endregion
 }
 
@@ -1777,5 +1851,19 @@ internal class LargeScaleTestDataBuilder
             }
         }
         await context.SaveChangesAsync();
+    }
+
+    private class MockOrg : Octokit.Organization
+    {
+        public MockOrg(int id, string login)
+        {
+            Id = id;
+            Login = login;
+        }
+    }
+
+    private static MockOrg MockOrganization(int id, string login)
+    {
+        return new MockOrg(id, login);
     }
 }
