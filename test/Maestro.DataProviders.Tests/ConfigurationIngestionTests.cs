@@ -50,7 +50,6 @@ public class ConfigurationIngestorTests
 
         static async Task<IReadOnlyList<Octokit.Organization>> CallFakeGetAllForUser(string userLogin)
         {
-            await Task.Delay(0); // Added just to suppress green squiggles
             List<Octokit.Organization> returnValue = [];
 
             switch (userLogin.ToLower())
