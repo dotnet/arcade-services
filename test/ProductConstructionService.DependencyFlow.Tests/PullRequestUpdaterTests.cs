@@ -551,7 +551,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         remote
             .Setup(x => x.CommentPullRequestAsync(
                 It.Is<string>(uri => uri.StartsWith(Subscription.TargetDirectory != null ? VmrUri + "/pulls/" : InProgressPrUrl)),
-                It.Is<string>(content => content.Contains("Maestro attempted to flow new changes from"))))
+                It.Is<string>(content => content.Contains("need to be manually resolved"))))
             .Returns(Task.CompletedTask);
 
         // We re-evaulate checks after we push changes
