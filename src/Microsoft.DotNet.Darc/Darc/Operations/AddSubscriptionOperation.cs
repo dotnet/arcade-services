@@ -336,8 +336,6 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             excludedAssets = [..addSubscriptionPopup.ExcludedAssets];
         }
 
-
-
         try
         {
             // If we are about to add a batchable subscription and the merge policies are empty for the
@@ -401,75 +399,30 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 }
             }
 
-            if (_options.ShouldUseConfigurationRepository)
+            SubscriptionYaml subscriptionYaml = new()
             {
-                SubscriptionYaml subscriptionYaml = new()
-                {
-                    Id = Guid.NewGuid(),
-                    Enabled = enabled,
-                    Channel = channel,
-                    SourceRepository = sourceRepository,
-                    TargetRepository = targetRepository,
-                    TargetBranch = targetBranch,
-                    UpdateFrequency = (UpdateFrequency)Enum.Parse(typeof(UpdateFrequency), updateFrequency, ignoreCase: true),
-                    Batchable = batchable,
-                    MergePolicies = MergePolicyYaml.FromClientModels(mergePolicies),
-                    FailureNotificationTags = failureNotificationTags,
-                    SourceEnabled = sourceEnabled,
-                    SourceDirectory = sourceDirectory,
-                    TargetDirectory = targetDirectory,
-                    ExcludedAssets = excludedAssets
-                };
+                Id = Guid.NewGuid(),
+                Enabled = enabled,
+                Channel = channel,
+                SourceRepository = sourceRepository,
+                TargetRepository = targetRepository,
+                TargetBranch = targetBranch,
+                UpdateFrequency = (UpdateFrequency)Enum.Parse(typeof(UpdateFrequency), updateFrequency, ignoreCase: true),
+                Batchable = batchable,
+                MergePolicies = MergePolicyYaml.FromClientModels(mergePolicies),
+                FailureNotificationTags = failureNotificationTags,
+                SourceEnabled = sourceEnabled,
+                SourceDirectory = sourceDirectory,
+                TargetDirectory = targetDirectory,
+                ExcludedAssets = excludedAssets
+            };
 
-                await ValidateNoEquivalentSubscription(subscriptionYaml);
+            await ValidateNoEquivalentSubscription(subscriptionYaml);
 
-                try
-                {
-                    await _configurationRepositoryManager.AddSubscriptionAsync(
-                        _options.ToConfigurationRepositoryOperationParameters(),
-                        subscriptionYaml);
-                }
-                // TODO https://github.com/dotnet/arcade-services/issues/5693 drop to the "global try-catch" when configuration repo is the only behavior
-                catch (MaestroConfiguration.Client.DuplicateConfigurationObjectException ex)
-                {
-                    _logger.LogError("Subscription {id} with equivalent parameters already exists in '{filePath}' in repo {repo} on branch {branch}.",
-                        subscriptionYaml.Id,
-                        ex.FilePath,
-                        ex.Repository,
-                        ex.Branch);
-                    return Constants.ErrorCode;
-                }
-            }
-            else
-            {
-                Subscription newSubscription = await _barClient.CreateSubscriptionAsync(
-                    enabled,
-                    channel,
-                    sourceRepository,
-                    targetRepository,
-                    targetBranch,
-                    updateFrequency,
-                    batchable,
-                    mergePolicies,
-                    failureNotificationTags,
-                    sourceEnabled,
-                    sourceDirectory,
-                    targetDirectory,
-                    excludedAssets);
+            await _configurationRepositoryManager.AddSubscriptionAsync(
+                _options.ToConfigurationRepositoryOperationParameters(),
+                subscriptionYaml);
 
-                Console.WriteLine($"Successfully created new subscription with id '{newSubscription.Id}'.");
-
-                // Prompt the user to trigger the subscription unless they have explicitly disallowed it
-                if (!_options.NoTriggerOnCreate)
-                {
-                    bool triggerAutomatically = _options.TriggerOnCreate || UxHelpers.PromptForYesNo("Trigger this subscription immediately?");
-                    if (triggerAutomatically)
-                    {
-                        await _barClient.TriggerSubscriptionAsync(newSubscription.Id);
-                        Console.WriteLine($"Subscription '{newSubscription.Id}' triggered.");
-                    }
-                }
-            }
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)
@@ -477,10 +430,12 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
             Console.WriteLine(e.Message);
             return Constants.ErrorCode;
         }
-        catch (RestApiException e) when (e.Response.Status == (int) System.Net.HttpStatusCode.BadRequest)
+        catch (MaestroConfiguration.Client.DuplicateConfigurationObjectException ex)
         {
-            // Could have been some kind of validation error (e.g. channel doesn't exist)
-            _logger.LogError($"Failed to create subscription: {e.Response.Content}");
+            _logger.LogError("Subscription with equivalent parameters already exists in '{filePath}' in repo {repo} on branch {branch}.",
+                ex.FilePath,
+                ex.Repository,
+                ex.Branch);
             return Constants.ErrorCode;
         }
         catch (Exception e)

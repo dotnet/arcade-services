@@ -48,35 +48,24 @@ internal class DeleteChannelOperation : Operation
 
         try
         {
-            if (_options.ShouldUseConfigurationRepository)
-            {
-                try
-                {
-                    await _configurationRepositoryManager.DeleteChannelAsync(
-                                _options.ToConfigurationRepositoryOperationParameters(),
-                                ChannelYaml.FromClientModel(existingChannel));
-                }
-                catch (ConfigurationObjectNotFoundException ex)
-                {
-                    _logger.LogError("No existing channel with name '{name}' found in file {filePath} of repo {repo} on branch {branch}",
-                        existingChannel.Name,
-                        ex.FilePath,
-                        ex.RepositoryUri,
-                        ex.BranchName);
-                    return Constants.ErrorCode;
-                }
-            }
-            else
-            {
-                await _barClient.DeleteChannelAsync(existingChannel.Id);
-                Console.WriteLine($"Successfully deleted channel '{existingChannel.Name}'.");
-            }
+            await _configurationRepositoryManager.DeleteChannelAsync(
+                        _options.ToConfigurationRepositoryOperationParameters(),
+                        ChannelYaml.FromClientModel(existingChannel));
 
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)
         {
             Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (ConfigurationObjectNotFoundException ex)
+        {
+            _logger.LogError("No existing channel with name '{name}' found in file {filePath} of repo {repo} on branch {branch}",
+                existingChannel.Name,
+                ex.FilePath,
+                ex.RepositoryUri,
+                ex.BranchName);
             return Constants.ErrorCode;
         }
         catch (Exception e)

@@ -72,45 +72,32 @@ internal class DefaultChannelStatusOperation : UpdateDefaultChannelBaseOperation
                 enabled = false;
             }
 
-            if (_options.ShouldUseConfigurationRepository)
+            // Create an updated YAML default channel with the new enabled status
+            DefaultChannelYaml updatedDefaultChannelYaml = DefaultChannelYaml.FromClientModel(resolvedChannel) with
             {
-                // Create an updated YAML default channel with the new enabled status
-                DefaultChannelYaml updatedDefaultChannelYaml = DefaultChannelYaml.FromClientModel(resolvedChannel) with
-                {
-                    Enabled = enabled
-                };
+                Enabled = enabled
+            };
 
-                try
-                {
-                    await _configurationRepositoryManager.UpdateDefaultChannelAsync(
-                                _options.ToConfigurationRepositoryOperationParameters(),
-                                updatedDefaultChannelYaml);
-                }
-                // TODO drop to the "global try-catch" when configuration repo is the only behavior
-                catch (MaestroConfiguration.Client.ConfigurationObjectNotFoundException ex)
-                {
-                    _logger.LogError("No existing default channel with repository '{repository}', branch '{branch}', and channel '{channel}' found in file {filePath} of repo {repositoryUri} on branch {branchName}",
-                        updatedDefaultChannelYaml.Repository,
-                        updatedDefaultChannelYaml.Branch,
-                        updatedDefaultChannelYaml.Channel,
-                        ex.FilePath,
-                        ex.RepositoryUri,
-                        ex.BranchName);
-                    return Constants.ErrorCode;
-                }
-            }
-            else
-            {
-                await _barClient.UpdateDefaultChannelAsync(resolvedChannel.Id, enabled: enabled);
-
-                Console.WriteLine($"Default channel association has been {(enabled ? "enabled" : "disabled")}.");
-            }
+            await _configurationRepositoryManager.UpdateDefaultChannelAsync(
+                        _options.ToConfigurationRepositoryOperationParameters(),
+                        updatedDefaultChannelYaml);
 
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)
         {
             Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (MaestroConfiguration.Client.ConfigurationObjectNotFoundException ex)
+        {
+            _logger.LogError("No existing default channel with repository '{repository}', branch '{branch}', and channel '{channel}' found in file {filePath} of repo {repositoryUri} on branch {branchName}",
+                _options.Repository,
+                _options.Branch,
+                _options.Channel,
+                ex.FilePath,
+                ex.RepositoryUri,
+                ex.BranchName);
             return Constants.ErrorCode;
         }
         catch (Exception e)
