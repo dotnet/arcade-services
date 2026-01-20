@@ -54,7 +54,7 @@ public class BackflowStatusCalculationProcessor : WorkItemProcessor<BackflowStat
                 return false;
             }
 
-            var branch = build.GetBranch();
+            var branch = build.GetBranch().Replace("refs/heads/", null);
             string[] branches = branch.StartsWith(InternalBranchPrefix)
                 ? [branch, branch.Substring(InternalBranchPrefix.Length)]
                 : [branch];
