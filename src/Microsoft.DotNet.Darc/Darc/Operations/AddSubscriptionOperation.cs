@@ -403,9 +403,8 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
 
             if (_options.ShouldUseConfigurationRepository)
             {
-                SubscriptionYaml subscriptionYaml = new()
+                SubscriptionYamlParameters subscriptionYaml = new()
                 {
-                    Id = Guid.NewGuid(),
                     Enabled = enabled,
                     Channel = channel,
                     SourceRepository = sourceRepository,
@@ -432,8 +431,7 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 // TODO https://github.com/dotnet/arcade-services/issues/5693 drop to the "global try-catch" when configuration repo is the only behavior
                 catch (MaestroConfiguration.Client.DuplicateConfigurationObjectException ex)
                 {
-                    _logger.LogError("Subscription {id} with equivalent parameters already exists in '{filePath}' in repo {repo} on branch {branch}.",
-                        subscriptionYaml.Id,
+                    _logger.LogError("Subscription with equivalent parameters already exists in '{filePath}' in repo {repo} on branch {branch}.",
                         ex.FilePath,
                         ex.Repository,
                         ex.Branch);
@@ -502,5 +500,15 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                _options.ValidateCoherencyCheckMergePolicy ||
                _options.CodeFlowCheckMergePolicy ||
                _options.VersionDetailsPropsMergePolicy;
+    }
+
+    private async Task ValidateNoEquivalentSubscription(SubscriptionYamlParameters subscriptionYamlParameters)
+    {
+        var equivalentSub = await TryGetEquivalentSubscription(subscriptionYamlParameters);
+
+        if (equivalentSub != null)
+        {
+            throw new ArgumentException($"An equivalent subscription '{equivalentSub.Id}' already exists.");
+        }
     }
 }
