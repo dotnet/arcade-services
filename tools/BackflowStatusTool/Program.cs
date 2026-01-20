@@ -148,21 +148,54 @@ void PrintWithDistanceColor(string text, int? distance)
     Console.ForegroundColor = originalColor;
 }
 
+/// <summary>
+/// Command-line options for the <c>trigger</c> verb.
+/// </summary>
+/// <remarks>
+/// The <c>trigger</c> command starts a backflow status calculation for the specified VMR build
+/// and waits until the computation completes before returning.
+/// </remarks>
 [Verb("trigger", HelpText = "Trigger backflow status calculation for a given build")]
 file class TriggerOptions : Options
 {
 }
 
+/// <summary>
+/// Command-line options for the <c>show</c> verb.
+/// </summary>
+/// <remarks>
+/// The <c>show</c> command retrieves and displays the current backflow status for the specified
+/// VMR build. If no status is available yet, it suggests running the <c>trigger</c> command.
+/// </remarks>
 [Verb("show", HelpText = "Show backflow status information for a given build")]
 file class ShowOptions : Options
 {
 }
 
+/// <summary>
+/// Common command-line options shared by all Backflow Status Tool verbs.
+/// </summary>
+/// <remarks>
+/// Typical usage:
+/// <code>
+///   backflow-status trigger --build 12345
+///   backflow-status show --build 12345
+/// </code>
+/// </remarks>
 abstract file class Options
 {
+    /// <summary>
+    /// Gets or sets the VMR build ID for which backflow status should be calculated or displayed.
+    /// </summary>
     [Option("build", Required = true, HelpText = "The VMR build ID")]
     public int Build { get; set; }
 
+    /// <summary>
+    /// Gets or sets the Product Construction Service (PCS) base URI.
+    /// </summary>
+    /// <remarks>
+    /// If not specified, the tool uses the default production PCS endpoint.
+    /// </remarks>
     [Option("pcs-uri", Required = false, HelpText = "PCS base URI, defaults to production")]
     public string? PcsUri { get; set; }
 }
