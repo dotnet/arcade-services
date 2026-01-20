@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.Api.Tests;
 using Moq;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.GitHub.Authentication;
 
 namespace Maestro.DataProviders.Tests;
 
@@ -42,10 +43,17 @@ public class ConfigurationIngestorTests
         installationIdResolver.Setup(r => r.GetInstallationIdForRepository(It.IsAny<string>()))
             .Returns(Task.FromResult((long?)1));
 
+        var gitHubClient = new Mock<Octokit.IGitHubClient>();
+
+        var githubClientFactory = new Mock<IGitHubClientFactory>();
+        githubClientFactory.Setup(f => f.CreateGitHubClient(It.IsAny<string>()))
+            .Returns(gitHubClient.Object);
+
         var services = new ServiceCollection()
             .AddSingleton(_context)
             .AddSingleton<ISqlBarClient>(new SqlBarClient(_context, null))
             .AddSingleton(installationIdResolver.Object)
+            .AddSingleton(githubClientFactory.Object)
             .AddConfigurationIngestion();
 
         _ingestor = services.BuildServiceProvider()
