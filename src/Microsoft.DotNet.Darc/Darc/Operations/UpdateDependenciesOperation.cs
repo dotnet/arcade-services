@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Maestro.Common;
@@ -64,6 +65,15 @@ internal class UpdateDependenciesOperation : Operation
             if (_options.CoherencyOnly && _options.NoCoherencyUpdates)
             {
                 throw new ArgumentException("The --coherency-only and --no-coherency-updates options cannot be used together.");
+            }
+
+            // Validate that --excluded-repo-origins is only used with --id
+            if (!string.IsNullOrEmpty(_options.ExcludedRepoOrigins))
+            {
+                if (_options.BARBuildId == 0)
+                {
+                    throw new ArgumentException("The --excluded-repo-origins option can only be used with a specific BAR build id (--id).");
+                }
             }
 
             // If subscription ID is provided, fetch subscription metadata and populate options
@@ -130,16 +140,52 @@ internal class UpdateDependenciesOperation : Operation
         return targetDirectories;
     }
 
-    private int NonCoherencyUpdatesForBuild(
+    private async Task<int> NonCoherencyUpdatesForBuildAsync(
         ProductConstructionService.Client.Models.Build build,
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> candidateDependenciesForUpdate,
         List<DependencyDetail> dependenciesToUpdate,
         IAssetMatcher excludedAssetsMatcher,
-        UnixPath relativeBasePath)
+        UnixPath relativeBasePath,
+        Dictionary<string, string> assetRepoOrigins = null)
     {
+        // Parse excluded repo origins if provided
+        HashSet<string> excludedOrigins = null;
+        if (!string.IsNullOrEmpty(_options.ExcludedRepoOrigins))
+        {
+            excludedOrigins = _options.ExcludedRepoOrigins
+                .Split(';')
+                .Select(o => o.Trim())
+                .Where(o => !string.IsNullOrEmpty(o))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            _logger.LogInformation($"Excluding assets from repo origins: {string.Join(", ", excludedOrigins)}");
+        }
+
         List<AssetData> assetData = build.Assets
             .Where(a => !excludedAssetsMatcher.IsExcluded(a.Name, relativeBasePath))
+            .Where(a =>
+            {
+                // If no repo origin filtering is requested, include the asset
+                if (excludedOrigins == null || excludedOrigins.Count == 0)
+                    return true;
+
+                // If we don't have repo origin information, include the asset by default
+                if (assetRepoOrigins == null || !assetRepoOrigins.TryGetValue(a.Name, out var origin))
+                {
+                    _logger.LogTrace($"Asset '{a.Name}' has no repo origin information, including by default.");
+                    return true;
+                }
+
+                // Check if this asset's origin is in the excluded list
+                if (excludedOrigins.Contains(origin))
+                {
+                    _logger.LogInformation($"Excluding asset '{a.Name}' from repo origin '{origin}'");
+                    return false;
+                }
+
+                return true;
+            })
             .Select(a => new AssetData(a.NonShipping)
             {
                 Name = a.Name,
@@ -365,13 +411,31 @@ internal class UpdateDependenciesOperation : Operation
         {
             var specificBuild = await _barClient.GetBuildAsync(_options.BARBuildId);
 
-            int nonCoherencyResult = NonCoherencyUpdatesForBuild(
+            // Download and parse MergedManifest.xml if repo origin filtering is requested
+            Dictionary<string, string> assetRepoOrigins = null;
+            if (!string.IsNullOrEmpty(_options.ExcludedRepoOrigins))
+            {
+                using var httpClient = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true })
+                {
+                    Timeout = TimeSpan.FromMinutes(2)
+                };
+                assetRepoOrigins = await ManifestHelper.GetAssetRepoOriginsAsync(specificBuild, httpClient, _logger);
+
+                if (assetRepoOrigins == null)
+                {
+                    _logger.LogWarning($"Could not retrieve MergedManifest.xml from build {specificBuild.Id}. " +
+                        "Repo origin filtering will not be applied.");
+                }
+            }
+
+            int nonCoherencyResult = await NonCoherencyUpdatesForBuildAsync(
                 specificBuild,
                 currentDependencies,
                 candidateDependenciesForUpdate,
                 dependenciesToUpdate,
                 excludedAssetsMatcher,
-                relativeBasePath);
+                relativeBasePath,
+                assetRepoOrigins);
             if (nonCoherencyResult != Constants.SuccessCode)
             {
                 _logger.LogError("    Failed to update non-coherent parent tied dependencies.");
@@ -434,7 +498,7 @@ internal class UpdateDependenciesOperation : Operation
                 continue;
             }
 
-            int nonCoherencyResult = NonCoherencyUpdatesForBuild(
+            int nonCoherencyResult = await NonCoherencyUpdatesForBuildAsync(
                 build,
                 currentDependencies,
                 candidateDependenciesForUpdate,

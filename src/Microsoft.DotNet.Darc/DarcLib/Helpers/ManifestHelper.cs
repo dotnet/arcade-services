@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.DotNet.DarcLib.Models.Darc;
+using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -9,6 +10,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 
 namespace Microsoft.DotNet.DarcLib.Helpers;
@@ -192,4 +195,119 @@ public class ManifestHelper
     }
 
     private record AssetReleaseMetadata(string Origin, bool DotNetReleaseShipping);
+
+    /// <summary>
+    /// Downloads and parses the MergedManifest.xml from a build to retrieve repo origins for assets.
+    /// </summary>
+    /// <param name="build">The build to get the MergedManifest.xml from</param>
+    /// <param name="httpClient">HTTP client for downloading the manifest</param>
+    /// <param name="logger">Logger for diagnostics</param>
+    /// <returns>A dictionary mapping asset names to their repo origins, or null if MergedManifest.xml is not found</returns>
+    public static async Task<Dictionary<string, string>?> GetAssetRepoOriginsAsync(
+        Build build,
+        HttpClient httpClient,
+        ILogger logger)
+    {
+        // Find the MergedManifest.xml asset
+        var mergedManifestAsset = build.Assets?
+            .FirstOrDefault(a => a.Name.EndsWith(MergedManifestFileName, StringComparison.OrdinalIgnoreCase));
+
+        if (mergedManifestAsset == null)
+        {
+            logger.LogInformation($"Build {build.Id} does not contain a {MergedManifestFileName} asset.");
+            return null;
+        }
+
+        // Get the asset location
+        var assetLocation = mergedManifestAsset.Locations?.FirstOrDefault();
+        if (assetLocation == null || string.IsNullOrEmpty(assetLocation.Location))
+        {
+            logger.LogWarning($"MergedManifest.xml asset found but has no location information.");
+            return null;
+        }
+
+        // Download the manifest
+        string manifestContent;
+        try
+        {
+            var manifestUrl = GetManifestDownloadUrl(assetLocation.Location, mergedManifestAsset.Name);
+            logger.LogInformation($"Downloading MergedManifest.xml from {manifestUrl}");
+
+            var response = await httpClient.GetAsync(manifestUrl);
+            response.EnsureSuccessStatusCode();
+            manifestContent = await response.Content.ReadAsStringAsync();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, $"Failed to download MergedManifest.xml from build {build.Id}");
+            return null;
+        }
+
+        // Parse the manifest to extract repo origins
+        return ParseAssetRepoOrigins(manifestContent, logger);
+    }
+
+    /// <summary>
+    /// Constructs the download URL for the MergedManifest.xml asset based on its location.
+    /// </summary>
+    private static string GetManifestDownloadUrl(string assetLocation, string assetName)
+    {
+        // If the location is a blob storage URL ending in index.json, strip that and append the asset name
+        if (assetLocation.EndsWith("index.json", StringComparison.OrdinalIgnoreCase))
+        {
+            var baseUrl = assetLocation.Substring(0, assetLocation.LastIndexOf("index.json"));
+            return $"{baseUrl}{assetName}";
+        }
+
+        // Otherwise assume the location is directly usable
+        return assetLocation;
+    }
+
+    /// <summary>
+    /// Parses the MergedManifest.xml content to extract repo origins for each asset.
+    /// </summary>
+    private static Dictionary<string, string> ParseAssetRepoOrigins(string manifestContent, ILogger logger)
+    {
+        var assetOrigins = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            var document = XDocument.Parse(manifestContent);
+            var buildElement = document.Element("Build");
+
+            if (buildElement == null)
+            {
+                logger.LogWarning("MergedManifest.xml does not contain a Build element.");
+                return assetOrigins;
+            }
+
+            string? buildName = buildElement.Attribute("Name")?.Value;
+            string repoName = buildName?.Replace("dotnet-", string.Empty) ?? string.Empty;
+
+            foreach (var asset in buildElement.Elements())
+            {
+                string? assetName = asset.Attribute("Id")?.Value;
+                if (assetName == null)
+                    continue;
+
+                string? assetOrigin = asset.Attribute("Origin")?.Value;
+
+                // If Origin attribute doesn't exist, use the build name (repo name) as the origin
+                assetOrigin ??= repoName;
+
+                if (!string.IsNullOrEmpty(assetOrigin) && !assetOrigins.ContainsKey(assetName))
+                {
+                    assetOrigins.Add(assetName, assetOrigin);
+                }
+            }
+
+            logger.LogInformation($"Parsed {assetOrigins.Count} asset origin mappings from MergedManifest.xml");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to parse MergedManifest.xml");
+        }
+
+        return assetOrigins;
+    }
 }

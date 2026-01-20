@@ -52,4 +52,8 @@ internal class UpdateDependenciesCommandLineOptions : CommandLineOptions<UpdateD
         " When used with dependency flow subscriptions with specified target directories, it is possible to exclude assets in specific directories" +
         " e.g. src/sdk/System.Text.json or src/*/System.Text.* ")]
     public string ExcludedAssets { get; set; }
+
+    [Option("excluded-repo-origins", HelpText = "Semicolon-delineated list of repo origins to exclude assets from." +
+        " Only available when using a specific BAR build id (--id). Repo origins are specified in the MergedManifest.xml of VMR builds.")]
+    public string ExcludedRepoOrigins { get; set; }
 }
