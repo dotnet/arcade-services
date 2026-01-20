@@ -13,7 +13,6 @@ using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.GitHub.Authentication;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion;
@@ -22,15 +21,13 @@ internal partial class ConfigurationIngestor(
         BuildAssetRegistryContext context,
         ISqlBarClient sqlBarClient,
         IGitHubInstallationIdResolver installationIdResolver,
-        IGitHubClientFactory gitHubClientFactory)
+        IGitHubTagValidator gitHubTagValidator)
     : IConfigurationIngestor
 {
     private readonly BuildAssetRegistryContext _context = context;
     private readonly ISqlBarClient _sqlBarClient = sqlBarClient;
     private readonly IGitHubInstallationIdResolver _installationIdResolver = installationIdResolver;
-    private readonly IGitHubClientFactory _gitHubClientFactory = gitHubClientFactory;
-
-    private const string RequiredOrgForSubscriptionNotification = "microsoft";
+    private readonly IGitHubTagValidator _gitHubTagValidator = gitHubTagValidator;
 
     public async Task<ConfigurationUpdates> IngestConfigurationAsync(
         ConfigurationData configurationData,
@@ -87,14 +84,11 @@ internal partial class ConfigurationIngestor(
             .GroupBy(x => x.Tag, x => x.Subscription, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
-        // We'll only be checking public membership in the Microsoft org, so no token needed
-        var client = _gitHubClientFactory.CreateGitHubClient(string.Empty);
-
         // Validate each unique tag once and collect subscriptions with invalid tags
         var subscriptionsWithInvalidTags = new HashSet<Guid>();
         foreach (var (tag, subscriptions) in subscriptionsByTag)
         {
-            if (!await IsNotificationTagValidAsync(tag, client))
+            if (!await _gitHubTagValidator.IsNotificationTagValidAsync(tag))
             {
                 foreach (var subscription in subscriptions)
                 {
@@ -484,23 +478,6 @@ internal partial class ConfigurationIngestor(
             }
 
             existingRepo.InstallationId = await GetInstallationId(existingRepo.RepositoryName);
-        }
-    }
-
-    /// <summary>
-    ///  Validates a single notification tag by checking if it's publicly a member of the Microsoft organization.
-    /// </summary>
-    private async Task<bool> IsNotificationTagValidAsync(string tag, Octokit.IGitHubClient client)
-    {
-        try
-        {
-            IReadOnlyList<Octokit.Organization> orgList = await client.Organization.GetAllForUser(tag);
-            return orgList.Any(o => o.Login?.Equals(RequiredOrgForSubscriptionNotification, StringComparison.InvariantCultureIgnoreCase) == true);
-        }
-        catch (Octokit.NotFoundException)
-        {
-            // Non-existent user: Either a typo, or a group (we don't have the admin privilege to find out, so just allow it)
-            return true;
         }
     }
 }

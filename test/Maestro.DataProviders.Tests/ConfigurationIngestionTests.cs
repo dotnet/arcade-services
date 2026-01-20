@@ -1,13 +1,11 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Net;
 using AwesomeAssertions;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders.ConfigurationIngestion;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,38 +42,26 @@ public class ConfigurationIngestorTests
         installationIdResolver.Setup(r => r.GetInstallationIdForRepository(It.IsAny<string>()))
             .Returns(Task.FromResult((long?)1));
 
-        var gitHubClient = new Mock<Octokit.IGitHubClient>();
-        gitHubClient.Setup(ghc => ghc.Organization.GetAllForUser(It.IsAny<string>()))
-                .Returns((string userLogin) => CallFakeGetAllForUser(userLogin));
+        var gitHubTagValidator = new Mock<IGitHubTagValidator>();
+        gitHubTagValidator
+            .Setup(v => v.IsNotificationTagValidAsync(It.IsAny<string>()))
+            .Returns((string tag) => Task.FromResult(IsTagValid(tag)));
 
-        static async Task<IReadOnlyList<Octokit.Organization>> CallFakeGetAllForUser(string userLogin)
+        static bool IsTagValid(string tag)
         {
-            List<Octokit.Organization> returnValue = [];
-
-            switch (userLogin.ToLower())
+            return tag.ToLower() switch
             {
-                case "somemicrosoftuser": // valid user, in MS org
-                    returnValue.Add(MockOrganization(123, "microsoft"));
-                    break;
-                case "someexternaluser":  // "real" user, but not in MS org
-                    returnValue.Add(MockOrganization(456, "definitely-not-microsoft"));
-                    break;
-                default: // Any other user; GitHub "teams" will fall through here.
-                    throw new Octokit.NotFoundException("Unknown user", HttpStatusCode.NotFound);
-            }
-
-            return returnValue.AsReadOnly();
+                "somemicrosoftuser" => true,   // valid user, in MS org
+                "someexternaluser" => false,   // "real" user, but not in MS org
+                _ => true,                     // Any other user; GitHub "teams" or non-existent users are allowed
+            };
         }
-
-        var githubClientFactory = new Mock<IGitHubClientFactory>();
-        githubClientFactory.Setup(f => f.CreateGitHubClient(It.IsAny<string>()))
-            .Returns(gitHubClient.Object);
 
         var services = new ServiceCollection()
             .AddSingleton(_context)
             .AddSingleton<ISqlBarClient>(new SqlBarClient(_context, null))
             .AddSingleton(installationIdResolver.Object)
-            .AddSingleton(githubClientFactory.Object)
+            .AddSingleton(gitHubTagValidator.Object)
             .AddConfigurationIngestion();
 
         _ingestor = services.BuildServiceProvider()
@@ -1488,20 +1474,6 @@ public class ConfigurationIngestorTests
             [channelYaml],
             [defaultChannelYaml],
             [branchMergePoliciesYaml]);
-    }
-
-    private class MockOrg : Octokit.Organization
-    {
-        public MockOrg(int id, string login)
-        {
-            Id = id;
-            Login = login;
-        }
-    }
-
-    private static MockOrg MockOrganization(int id, string login)
-    {
-        return new MockOrg(id, login);
     }
 
     #endregion
