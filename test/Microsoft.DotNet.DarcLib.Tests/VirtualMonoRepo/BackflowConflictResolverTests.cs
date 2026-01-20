@@ -78,6 +78,12 @@ public class BackflowConflictResolverTests
             .Setup(x => x.GetFileFromGitAsync(It.Is<string>(s => s.Contains(VersionFiles.VersionDetailsXml)), It.IsAny<string>(), null))
             .ReturnsAsync((string _, string _, string __) => $"repo/{TargetBranch}");
         _localRepo
+            .Setup(x => x.GetStagedFilesAsync())
+            .ReturnsAsync(Array.Empty<string>());
+        _localRepo
+            .Setup(x => x.GetConflictedFilesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<UnixPath>());
+        _localRepo
             .SetReturnsDefault(Task.CompletedTask);
         _localRepo
             .SetReturnsDefault(Task.FromResult(new ProcessExecutionResult()));
@@ -89,6 +95,12 @@ public class BackflowConflictResolverTests
         _localVmr
             .Setup(x => x.GetFileFromGitAsync(It.Is<string>(s => s.Contains(VersionFiles.VersionDetailsXml)), It.IsAny<string>(), null))
             .ReturnsAsync((string _, string commit, string __) => $"vmr/{commit}");
+        _localVmr
+            .Setup(x => x.GetStagedFilesAsync())
+            .ReturnsAsync(Array.Empty<string>());
+        _localVmr
+            .Setup(x => x.GetConflictedFilesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<UnixPath>());
 
         _localGitRepoFactory.Reset();
         _localGitRepoFactory
