@@ -45,6 +45,9 @@ internal partial class ConfigurationIngestor(
         var existingConfigurationData =
             CreateConfigurationDataObject(namespaceEntity);
 
+        // save the old failure notification tags before applying the subscription updates
+        var oldFailureNotificationTags = existingConfigurationData.Subscriptions.ToDictionary(s => s.Values.Id, s => s.Values.FailureNotificationTags);
+
         var configurationDataUpdate = ComputeEntityUpdates(
             ingestionData,
             existingConfigurationData);
@@ -53,12 +56,59 @@ internal partial class ConfigurationIngestor(
 
         var finalUpdates = FilterNonUpdates(configurationDataUpdate.ToYamls());
 
+        await ValidateNotificationTags(finalUpdates.Subscriptions, oldFailureNotificationTags);
+
         if (saveChanges)
         {
             await _context.SaveChangesAsync();
         }
 
         return finalUpdates;
+    }
+
+    private async Task ValidateNotificationTags(EntityChanges<SubscriptionYaml> subscriptionUpdates, Dictionary<Guid, string?> oldFailureNotificationTags)
+    {
+        var subscriptionsToValidate = subscriptionUpdates.Updates
+            .Where(s => s.FailureNotificationTags != oldFailureNotificationTags[s.Id])
+            .Concat(subscriptionUpdates.Creations)
+            .Where(s => !string.IsNullOrEmpty(s.FailureNotificationTags))
+            .ToList();
+
+        if (subscriptionsToValidate.Count == 0)
+        {
+            return;
+        }
+
+        // Group subscriptions by their tags to deduplicate API calls
+        var subscriptionsByTag = subscriptionsToValidate
+            .SelectMany(s => s.FailureNotificationTags!
+                .Split(';', StringSplitOptions.RemoveEmptyEntries)
+                .Select(t => (Tag: t.TrimStart('@'), Subscription: s)))
+            .GroupBy(x => x.Tag, x => x.Subscription, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
+        // We'll only be checking public membership in the Microsoft org, so no token needed
+        var client = _gitHubClientFactory.CreateGitHubClient(string.Empty);
+
+        // Validate each unique tag once and collect subscriptions with invalid tags
+        var subscriptionsWithInvalidTags = new HashSet<Guid>();
+        foreach (var (tag, subscriptions) in subscriptionsByTag)
+        {
+            if (!await IsNotificationTagValidAsync(tag, client))
+            {
+                foreach (var subscription in subscriptions)
+                {
+                    subscriptionsWithInvalidTags.Add(subscription.Id);
+                }
+            }
+        }
+
+        if (subscriptionsWithInvalidTags.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"The following subscriptions have invalid Pull Request Failure Notification Tags: {string.Join(", ", subscriptionsWithInvalidTags)}."
+                + " Is everyone listed publicly a member of the Microsoft github org?");
+        }
     }
 
     private static void ValidateEntityFields(IngestedConfigurationData newConfigurationData)
@@ -143,16 +193,6 @@ internal partial class ConfigurationIngestor(
                 sub,
                 namespaceEntity,
                 existingChannelsByName))];
-
-        foreach (Subscription subscription in subscriptionDaos)
-        {
-            if (!string.IsNullOrEmpty(subscription.PullRequestFailureNotificationTags)
-                && !await AllNotificationTagsValid(subscription.PullRequestFailureNotificationTags))
-            {
-                throw new InvalidOperationException($"Subscription {subscription.Id} has invalid Pull Request Failure Notification Tags."
-                    + " is everyone listed publicly a member of the Microsoft github org?");
-            }
-        }
 
         await _sqlBarClient.CreateSubscriptionsAsync(subscriptionDaos, false);
     }
@@ -448,34 +488,19 @@ internal partial class ConfigurationIngestor(
     }
 
     /// <summary>
-    ///  Subscriptions support notifying GitHub tags when non-batched dependency flow PRs fail checks.
-    ///  Before inserting them into the database, we'll make sure they're either not a user's login or
-    ///  that user is publicly a member of the Microsoft organization so we can store their login.
+    ///  Validates a single notification tag by checking if it's publicly a member of the Microsoft organization.
     /// </summary>
-    private async Task<bool> AllNotificationTagsValid(string pullRequestFailureNotificationTags)
+    private async Task<bool> IsNotificationTagValidAsync(string tag, Octokit.IGitHubClient client)
     {
-        var allTags = pullRequestFailureNotificationTags.Split(';', StringSplitOptions.RemoveEmptyEntries);
-
-        // We'll only be checking public membership in the Microsoft org, so no token needed
-        var client = _gitHubClientFactory.CreateGitHubClient(string.Empty);
-        var success = true;
-
-        foreach (var tagToNotify in allTags)
+        try
         {
-            // remove @ if it's there
-            var tag = tagToNotify.TrimStart('@');
-
-            try
-            {
-                IReadOnlyList<Octokit.Organization> orgList = await client.Organization.GetAllForUser(tag);
-                success &= orgList.Any(o => o.Login?.Equals(RequiredOrgForSubscriptionNotification, StringComparison.InvariantCultureIgnoreCase) == true);
-            }
-            catch (Octokit.NotFoundException)
-            {
-                // Non-existent user: Either a typo, or a group (we don't have the admin privilege to find out, so just allow it)
-            }
+            IReadOnlyList<Octokit.Organization> orgList = await client.Organization.GetAllForUser(tag);
+            return orgList.Any(o => o.Login?.Equals(RequiredOrgForSubscriptionNotification, StringComparison.InvariantCultureIgnoreCase) == true);
         }
-
-        return success;
+        catch (Octokit.NotFoundException)
+        {
+            // Non-existent user: Either a typo, or a group (we don't have the admin privilege to find out, so just allow it)
+            return true;
+        }
     }
 }
