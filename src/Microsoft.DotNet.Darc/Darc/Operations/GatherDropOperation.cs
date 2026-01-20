@@ -65,7 +65,7 @@ internal class GatherDropOperation : Operation
     //      - https://pkgs.dev.azure.com/dnceng/_packaging/internal-feed-name/nuget/v3/index.json
     public const string AzDoNuGetFeedPattern =
         @"https://pkgs.dev.azure.com/(?<account>[a-zA-Z0-9]+)/(?<visibility>[a-zA-Z0-9-]+/)?_packaging/(?<feed>.+)/nuget/v3/index.json";
-
+    private const string CDNUri = "ci.dot.net";
     private static readonly List<(string repo, string sha)> DependenciesAlwaysMissingBuilds =
     [
         ("https://github.com/dotnet/corefx", "7ee84596d92e178bce54c986df31ccc52479e772"),
@@ -1127,7 +1127,7 @@ internal class GatherDropOperation : Operation
         }
 
         return locationUri.Host.EndsWith("blob.core.windows.net") || 
-               locationUri.Host.Equals("ci.dot.net", StringComparison.OrdinalIgnoreCase);
+               locationUri.Host.Equals(CDNUri, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -1510,7 +1510,8 @@ internal class GatherDropOperation : Operation
 
     private void ConfigureRequestMessage(HttpRequestMessage request)
     {
-        if (request.RequestUri.Host.Contains(".blob.core.windows.net", StringComparison.OrdinalIgnoreCase))
+        if (request.RequestUri.Host.Contains(".blob.core.windows.net", StringComparison.OrdinalIgnoreCase) ||
+            request.RequestUri.Host.Equals(CDNUri, StringComparison.OrdinalIgnoreCase))
         {
             // add API version to support Bearer token authentication
             request.Headers.Add("x-ms-version", "2023-08-03");
