@@ -9,6 +9,7 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders.ConfigurationIngestion.Model;
 using Maestro.DataProviders.ConfigurationIngestion.Validations;
+using Maestro.DataProviders.Exceptions;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
@@ -99,7 +100,7 @@ internal partial class ConfigurationIngestor(
 
         if (subscriptionsWithInvalidTags.Count > 0)
         {
-            throw new IngestionEntityValidationException(
+            throw new EntityIngestionValidationException(
                 $"The following subscriptions have invalid Pull Request Failure Notification Tags: {string.Join(", ", subscriptionsWithInvalidTags)}."
                 + " Is everyone listed publicly a member of the Microsoft github org?");
         }
@@ -438,7 +439,7 @@ internal partial class ConfigurationIngestor(
 
                 if (!installationId.HasValue)
                 {
-                    throw new IngestionEntityValidationException($"No Maestro GitHub application installation found for repository '{repoUri}'. " +
+                    throw new EntityIngestionValidationException($"No Maestro GitHub application installation found for repository '{repoUri}'. " +
                         "The Maestro github application must be installed by the repository's owner and given access to the repository.");
                 }
 
