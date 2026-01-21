@@ -37,25 +37,6 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
         _barClient = barClient;
     }
 
-    public static string BuildNotifyAboutConflictingUpdateComment(
-        IReadOnlyCollection<string> filesInConflict,
-        SubscriptionUpdateWorkItem update,
-        Subscription subscription,
-        InProgressPullRequest pr,
-        string prHeadBranch)
-    {
-        return new StringBuilder()
-            .Append("Maestro attempted to flow new changes from ")
-            .Append(GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha))
-            .AppendLine(" but conflicted with changes in the PR branch.")
-            .AppendLine()
-            .AppendLine("Conflicted files:")
-            .AppendConflictedFileList(update, subscription, [.. filesInConflict.Select(f => new UnixPath(f))], prHeadBranch)
-            .AppendLine()
-            .AppendLine("Updates from this subscription will be paused until the PR branch is either merged or changed further so that the conflicts are resolved (files match).")
-            .ToString();
-    }
-
     internal static string BuildNotificationAboutManualConflictResolutionComment(
         SubscriptionUpdateWorkItem update,
         Subscription subscription,
