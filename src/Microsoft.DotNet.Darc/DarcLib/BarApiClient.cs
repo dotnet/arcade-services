@@ -223,19 +223,6 @@ public class BarApiClient : IBarApiClient
         return await _barClient.Repository.ListRepositoriesAsync(repository: repoUri, branch: branch);
     }
 
-
-    /// <summary>
-    ///     Set the merge policies for batchable subscriptions applied to a specific repo and branch
-    /// </summary>
-    /// <param name="repoUri">Repository</param>
-    /// <param name="branch">Branch</param>
-    /// <param name="mergePolicies">Merge policies. May be empty.</param>
-    /// <returns>Task</returns>
-    public async Task SetRepositoryMergePoliciesAsync(string repoUri, string branch, List<MergePolicy> mergePolicies)
-    {
-        await _barClient.Repository.SetMergePoliciesAsync(repository: repoUri, branch: branch, body: mergePolicies);
-    }
-
     #endregion
 
     #region Pull Request Operations

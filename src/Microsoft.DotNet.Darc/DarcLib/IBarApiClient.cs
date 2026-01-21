@@ -34,15 +34,6 @@ public interface IBarApiClient : IBasicBarClient
     Task<IEnumerable<RepositoryBranch>> GetRepositoriesAsync(string repoUri, string branch);
 
     /// <summary>
-    ///     Set the merge policies for batchable subscriptions applied to a specific repo and branch
-    /// </summary>
-    /// <param name="repoUri">Repository</param>
-    /// <param name="branch">Branch</param>
-    /// <param name="mergePolicies">Merge policies. May be empty.</param>
-    /// <returns>Task</returns>
-    Task SetRepositoryMergePoliciesAsync(string repoUri, string branch, List<MergePolicy> mergePolicies);
-
-    /// <summary>
     /// Trigger a subscription by ID
     /// </summary>
     /// <param name="subscriptionId">ID of subscription to trigger</param>
