@@ -32,7 +32,8 @@ internal partial class ConfigurationIngestor(
     public async Task<ConfigurationUpdates> IngestConfigurationAsync(
         ConfigurationData configurationData,
         string configurationNamespace,
-        bool saveChanges = true)
+        bool saveChanges = true,
+        bool createRepositoryIds = true)
     {
         var ingestionData = IngestedConfigurationData.FromYamls(configurationData);
         ValidateEntityFields(ingestionData);
@@ -54,6 +55,11 @@ internal partial class ConfigurationIngestor(
         var finalUpdates = FilterNonUpdates(configurationDataUpdate.ToYamls());
 
         await ValidateNotificationTags(finalUpdates.Subscriptions, oldFailureNotificationTags);
+
+        if (createRepositoryIds)
+        {
+            await EnsureRepositoryRegistrationForCreatedSubscriptionsAsync();
+        }
 
         if (saveChanges)
         {
@@ -136,11 +142,6 @@ internal partial class ConfigurationIngestor(
 
         // Update the rest of the entities
         await CreateSubscriptions(configurationDataUpdate.Subscriptions.Creations, namespaceEntity, existingChannels);
-
-        await EnsureRepositoryRegistrationForCreatedSubscriptionsAsync(configurationDataUpdate.Subscriptions.Creations
-                .Select(s => s.Values.TargetRepository)
-                .Distinct()
-                .ToList());
 
         await UpdateSubscriptions(configurationDataUpdate.Subscriptions.Updates, namespaceEntity, existingChannels);
 
@@ -424,8 +425,15 @@ internal partial class ConfigurationIngestor(
     /// <summary>
     /// Verifies that the repositories are registered in the database (and that they have a valid installation ID).
     /// </summary>
-    private async Task EnsureRepositoryRegistrationForCreatedSubscriptionsAsync(IReadOnlyList<string> targetRepositories)
+    private async Task EnsureRepositoryRegistrationForCreatedSubscriptionsAsync()
     {
+        var targetRepositories = _context.ChangeTracker.Entries<Subscription>()
+            .Where(e => e.State is EntityState.Added)
+            .Select(e => e.Entity)
+            .Select(sub => sub.TargetRepository)
+            .Distinct()
+            .ToList();
+
         List<Repository> existing = await _context.Repositories
             .Where(r => targetRepositories.Contains(r.RepositoryName))
             .ToListAsync();

@@ -14,11 +14,16 @@ public interface IConfigurationIngestor
     /// <summary>
     ///  Ingests a configuration on a given namespace, validating and persisting its data.
     /// </summary>
+    /// <param name="configurationData">The configuration data to ingest.</param>
+    /// <param name="configurationNamespace">The namespace under which to ingest the configuration.</param>
+    /// <param name="saveChanges">Whether to save changes to the database after ingestion.</param>
+    /// <param name="createRepositoryIds">Whether to create repository registrations in the DB.</param>
     /// <returns>A record of the entity changes applied during ingestion.</returns>
     Task<ConfigurationUpdates> IngestConfigurationAsync(
         ConfigurationData configurationData,
         string configurationNamespace,
-        bool saveChanges = true);
+        bool saveChanges = true,
+        bool createRepositoryIds = true);
 }
 
 public record ConfigurationUpdates(
