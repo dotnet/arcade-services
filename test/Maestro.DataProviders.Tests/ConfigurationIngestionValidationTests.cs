@@ -4,6 +4,7 @@
 using AwesomeAssertions;
 using Maestro.DataProviders.ConfigurationIngestion.Model;
 using Maestro.DataProviders.ConfigurationIngestion.Validations;
+using Maestro.DataProviders.Exceptions;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 
 namespace Maestro.DataProviders.Tests;
@@ -27,7 +28,7 @@ public class ConfigurationIngestionValidationTests
         });
 
         // Act & Assert
-        var exception = Assert.Throws<IngestionEntityValidationException>(
+        var exception = Assert.Throws<EntityIngestionValidationException>(
             () => SubscriptionValidator.ValidateSubscription(subscription));
 
         exception.Should().NotBeNull();
@@ -53,7 +54,7 @@ public class ConfigurationIngestionValidationTests
         });
 
         // Act & Assert
-        var exception = Assert.Throws<IngestionEntityValidationException>(
+        var exception = Assert.Throws<EntityIngestionValidationException>(
             () => SubscriptionValidator.ValidateSubscription(subscription));
 
         exception.Should().NotBeNull();
@@ -79,7 +80,7 @@ public class ConfigurationIngestionValidationTests
         });
 
         // Act & Assert
-        var exception = Assert.Throws<IngestionEntityValidationException>(
+        var exception = Assert.Throws<EntityIngestionValidationException>(
             () => SubscriptionValidator.ValidateSubscription(subscription));
 
         exception.Should().NotBeNull();
@@ -102,7 +103,7 @@ public class ConfigurationIngestionValidationTests
         });
 
         // Act & Assert
-        var exception = Assert.Throws<IngestionEntityValidationException>(
+        var exception = Assert.Throws<EntityIngestionValidationException>(
             () => ChannelValidator.ValidateChannel(channel));
 
         exception.Should().NotBeNull();
@@ -120,7 +121,7 @@ public class ConfigurationIngestionValidationTests
         });
 
         // Act & Assert
-        var exception = Assert.Throws<IngestionEntityValidationException>(
+        var exception = Assert.Throws<EntityIngestionValidationException>(
             () => ChannelValidator.ValidateChannel(channel));
 
         exception.Should().NotBeNull();
@@ -146,7 +147,7 @@ public class ConfigurationIngestionValidationTests
         });
 
         // Act & Assert
-        var exception = Assert.Throws<IngestionEntityValidationException>(
+        var exception = Assert.Throws<EntityIngestionValidationException>(
             () => DefaultChannelValidator.ValidateDefaultChannel(defaultChannel));
 
         exception.Should().NotBeNull();
@@ -169,7 +170,7 @@ public class ConfigurationIngestionValidationTests
         });
 
         // Act & Assert
-        var exception = Assert.Throws<IngestionEntityValidationException>(
+        var exception = Assert.Throws<EntityIngestionValidationException>(
             () => DefaultChannelValidator.ValidateDefaultChannel(defaultChannel));
 
         exception.Should().NotBeNull();
@@ -192,7 +193,7 @@ public class ConfigurationIngestionValidationTests
         });
 
         // Act & Assert
-        var exception = Assert.Throws<IngestionEntityValidationException>(
+        var exception = Assert.Throws<EntityIngestionValidationException>(
             () => DefaultChannelValidator.ValidateDefaultChannel(defaultChannel));
 
         exception.Should().NotBeNull();
@@ -217,7 +218,7 @@ public class ConfigurationIngestionValidationTests
         });
 
         // Act & Assert
-        var exception = Assert.Throws<IngestionEntityValidationException>(
+        var exception = Assert.Throws<EntityIngestionValidationException>(
             () => BranchMergePolicyValidator.ValidateBranchMergePolicies(branchMergePolicy));
 
         exception.Should().NotBeNull();
@@ -238,7 +239,7 @@ public class ConfigurationIngestionValidationTests
         });
 
         // Act & Assert
-        var exception = Assert.Throws<IngestionEntityValidationException>(
+        var exception = Assert.Throws<EntityIngestionValidationException>(
             () => BranchMergePolicyValidator.ValidateBranchMergePolicies(branchMergePolicy));
 
         exception.Should().NotBeNull();
@@ -262,7 +263,7 @@ public class ConfigurationIngestionValidationTests
         });
 
         // Act & Assert
-        var exception = Assert.Throws<IngestionEntityValidationException>(
+        var exception = Assert.Throws<EntityIngestionValidationException>(
             () => BranchMergePolicyValidator.ValidateBranchMergePolicies(branchMergePolicy));
 
         exception.Should().NotBeNull();
@@ -286,7 +287,7 @@ public class ConfigurationIngestionValidationTests
         };
 
         // Act & Assert
-        var exception = Assert.Throws<IngestionEntityValidationException>(
+        var exception = Assert.Throws<EntityIngestionValidationException>(
             () => EntityValidator.ValidateEntityUniqueness(channels));
 
         exception.Should().NotBeNull();
@@ -320,7 +321,7 @@ public class ConfigurationIngestionValidationTests
         };
 
         // Act & Assert
-        var exception = Assert.Throws<IngestionEntityValidationException>(
+        var exception = Assert.Throws<EntityIngestionValidationException>(
             () => EntityValidator.ValidateEntityUniqueness(subscriptions));
 
         exception.Should().NotBeNull();

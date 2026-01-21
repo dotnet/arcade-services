@@ -5,23 +5,23 @@ using System;
 using Maestro.DataProviders.ConfigurationIngestion.Model;
 
 #nullable enable
-namespace Maestro.DataProviders.ConfigurationIngestion.Validations;
+namespace Maestro.DataProviders.Exceptions;
 
 /// <summary>
 /// Exception thrown when validation of an ingestion entity fails.
 /// Includes information about the entity that failed validation.
 /// </summary>
-public class IngestionEntityValidationException : Exception
+public class EntityIngestionValidationException : IngestionValidationException
 {
     public string EntityInfo { get; }
 
-    public IngestionEntityValidationException(string message)
+    public EntityIngestionValidationException(string message)
         : base(message)
     {
         EntityInfo = "";
     }
 
-    public IngestionEntityValidationException(string message, IExternallySyncedEntity entity)
+    public EntityIngestionValidationException(string message, IExternallySyncedEntity entity)
         : base(FormatMessage(message, entity))
     {
         EntityInfo = entity.ToString() ?? string.Empty;
