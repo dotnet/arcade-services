@@ -20,12 +20,14 @@ namespace Maestro.DataProviders.ConfigurationIngestion;
 internal partial class ConfigurationIngestor(
         BuildAssetRegistryContext context,
         ISqlBarClient sqlBarClient,
-        IGitHubInstallationIdResolver installationIdResolver)
+        IGitHubInstallationIdResolver installationIdResolver,
+        IGitHubTagValidator gitHubTagValidator)
     : IConfigurationIngestor
 {
     private readonly BuildAssetRegistryContext _context = context;
     private readonly ISqlBarClient _sqlBarClient = sqlBarClient;
     private readonly IGitHubInstallationIdResolver _installationIdResolver = installationIdResolver;
+    private readonly IGitHubTagValidator _gitHubTagValidator = gitHubTagValidator;
 
     public async Task<ConfigurationUpdates> IngestConfigurationAsync(
         ConfigurationData configurationData,
@@ -40,6 +42,9 @@ internal partial class ConfigurationIngestor(
         var existingConfigurationData =
             CreateConfigurationDataObject(namespaceEntity);
 
+        // save the old failure notification tags before applying the subscription updates
+        var oldFailureNotificationTags = existingConfigurationData.Subscriptions.ToDictionary(s => s.Values.Id, s => s.Values.FailureNotificationTags);
+
         var configurationDataUpdate = ComputeEntityUpdates(
             ingestionData,
             existingConfigurationData);
@@ -48,12 +53,56 @@ internal partial class ConfigurationIngestor(
 
         var finalUpdates = FilterNonUpdates(configurationDataUpdate.ToYamls());
 
+        await ValidateNotificationTags(finalUpdates.Subscriptions, oldFailureNotificationTags);
+
         if (saveChanges)
         {
             await _context.SaveChangesAsync();
         }
 
         return finalUpdates;
+    }
+
+    private async Task ValidateNotificationTags(EntityChanges<SubscriptionYaml> subscriptionChanges, Dictionary<Guid, string?> oldFailureNotificationTags)
+    {
+        var subscriptionsToValidate = subscriptionChanges.Updates
+            .Where(s => s.FailureNotificationTags != oldFailureNotificationTags[s.Id])
+            .Concat(subscriptionChanges.Creations)
+            .Where(s => !string.IsNullOrEmpty(s.FailureNotificationTags))
+            .ToList();
+
+        if (subscriptionsToValidate.Count == 0)
+        {
+            return;
+        }
+
+        // Group subscriptions by their tags to deduplicate API calls
+        var subscriptionsByTag = subscriptionsToValidate
+            .SelectMany(s => s.FailureNotificationTags!
+                .Split(';', StringSplitOptions.RemoveEmptyEntries)
+                .Select(t => (Tag: t.TrimStart('@'), Subscription: s)))
+            .GroupBy(x => x.Tag, x => x.Subscription, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
+        // Validate each unique tag once and collect subscriptions with invalid tags
+        var subscriptionsWithInvalidTags = new HashSet<Guid>();
+        foreach (var (tag, subscriptions) in subscriptionsByTag)
+        {
+            if (!await _gitHubTagValidator.IsNotificationTagValidAsync(tag))
+            {
+                foreach (var subscription in subscriptions)
+                {
+                    subscriptionsWithInvalidTags.Add(subscription.Id);
+                }
+            }
+        }
+
+        if (subscriptionsWithInvalidTags.Count > 0)
+        {
+            throw new IngestionEntityValidationException(
+                $"The following subscriptions have invalid Pull Request Failure Notification Tags: {string.Join(", ", subscriptionsWithInvalidTags)}."
+                + " Is everyone listed publicly a member of the Microsoft github org?");
+        }
     }
 
     private static void ValidateEntityFields(IngestedConfigurationData newConfigurationData)
