@@ -69,48 +69,6 @@ internal partial class ConfigurationIngestor(
         return finalUpdates;
     }
 
-    private async Task ValidateNotificationTags(EntityChanges<SubscriptionYaml> subscriptionChanges, Dictionary<Guid, string?> oldFailureNotificationTags)
-    {
-        var subscriptionsToValidate = subscriptionChanges.Updates
-            .Where(s => s.FailureNotificationTags != oldFailureNotificationTags[s.Id])
-            .Concat(subscriptionChanges.Creations)
-            .Where(s => !string.IsNullOrEmpty(s.FailureNotificationTags))
-            .ToList();
-
-        if (subscriptionsToValidate.Count == 0)
-        {
-            return;
-        }
-
-        // Group subscriptions by their tags to deduplicate API calls
-        var subscriptionsByTag = subscriptionsToValidate
-            .SelectMany(s => s.FailureNotificationTags!
-                .Split(';', StringSplitOptions.RemoveEmptyEntries)
-                .Select(t => (Tag: t.TrimStart('@'), Subscription: s)))
-            .GroupBy(x => x.Tag, x => x.Subscription, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
-
-        // Validate each unique tag once and collect subscriptions with invalid tags
-        var subscriptionsWithInvalidTags = new HashSet<Guid>();
-        foreach (var (tag, subscriptions) in subscriptionsByTag)
-        {
-            if (!await _gitHubTagValidator.IsNotificationTagValidAsync(tag))
-            {
-                foreach (var subscription in subscriptions)
-                {
-                    subscriptionsWithInvalidTags.Add(subscription.Id);
-                }
-            }
-        }
-
-        if (subscriptionsWithInvalidTags.Count > 0)
-        {
-            throw new IngestionEntityValidationException(
-                $"The following subscriptions have invalid Pull Request Failure Notification Tags: {string.Join(", ", subscriptionsWithInvalidTags)}."
-                + " Is everyone listed publicly a member of the Microsoft github org?");
-        }
-    }
-
     private static void ValidateEntityFields(IngestedConfigurationData newConfigurationData)
     {
         SubscriptionValidator.ValidateSubscriptions(newConfigurationData.Subscriptions);
@@ -420,6 +378,48 @@ internal partial class ConfigurationIngestor(
                 Updates = repositoryBranchUpdates
             }
         );
+    }
+
+    private async Task ValidateNotificationTags(EntityChanges<SubscriptionYaml> subscriptionChanges, Dictionary<Guid, string?> oldFailureNotificationTags)
+    {
+        var subscriptionsToValidate = subscriptionChanges.Updates
+            .Where(s => s.FailureNotificationTags != oldFailureNotificationTags[s.Id])
+            .Concat(subscriptionChanges.Creations)
+            .Where(s => !string.IsNullOrEmpty(s.FailureNotificationTags))
+            .ToList();
+
+        if (subscriptionsToValidate.Count == 0)
+        {
+            return;
+        }
+
+        // Group subscriptions by their tags to deduplicate API calls
+        var subscriptionsByTag = subscriptionsToValidate
+            .SelectMany(s => s.FailureNotificationTags!
+                .Split(';', StringSplitOptions.RemoveEmptyEntries)
+                .Select(t => (Tag: t.TrimStart('@'), Subscription: s)))
+            .GroupBy(x => x.Tag, x => x.Subscription, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
+        // Validate each unique tag once and collect subscriptions with invalid tags
+        var subscriptionsWithInvalidTags = new HashSet<Guid>();
+        foreach (var (tag, subscriptions) in subscriptionsByTag)
+        {
+            if (!await _gitHubTagValidator.IsNotificationTagValidAsync(tag))
+            {
+                foreach (var subscription in subscriptions)
+                {
+                    subscriptionsWithInvalidTags.Add(subscription.Id);
+                }
+            }
+        }
+
+        if (subscriptionsWithInvalidTags.Count > 0)
+        {
+            throw new IngestionEntityValidationException(
+                $"The following subscriptions have invalid Pull Request Failure Notification Tags: {string.Join(", ", subscriptionsWithInvalidTags)}."
+                + " Is everyone listed publicly a member of the Microsoft github org?");
+        }
     }
 
     /// <summary>
