@@ -117,10 +117,10 @@ $issueBody = Get-Content $templatePath -Raw
 $issueBody = $issueBody -replace '(?s)^---.*?---\s*', ''
 Write-Host ""
 
-# Step 8: Create the rollout issue with Rollout label
+# Step 8: Create the rollout issue with Rollout label and assign to current user
 Write-Host "Step 8: Creating rollout issue..." -ForegroundColor Yellow
-$issueUrl = gh issue create --title "$issueTitle" --body "$issueBody" --label "Rollout" --repo $Repo
-Write-Host "Created issue: $issueUrl" -ForegroundColor Green
+$issueUrl = gh issue create --title "$issueTitle" --body "$issueBody" --label "Rollout" --assignee "$currentUser" --repo $Repo
+Write-Host "Created issue: $issueUrl (assigned to $currentUser)" -ForegroundColor Green
 
 # Get issue details
 $issue = gh issue view $issueUrl --json id,number,url | ConvertFrom-Json
