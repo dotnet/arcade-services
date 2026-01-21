@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using Maestro.DataProviders.ConfigurationIngestion.Model;
+using Maestro.DataProviders.Exceptions;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion.Validations;
@@ -32,22 +33,22 @@ internal class DefaultChannelValidator
 
         if (string.IsNullOrWhiteSpace(defaultChannel.Values.Repository))
         {
-            throw new IngestionEntityValidationException("Default channel repository is required.", defaultChannel);
+            throw new EntityIngestionValidationException("Default channel repository is required.", defaultChannel);
         }
 
         if (string.IsNullOrWhiteSpace(defaultChannel.Values.Branch))
         {
-            throw new IngestionEntityValidationException("Default channel branch is required.", defaultChannel);
+            throw new EntityIngestionValidationException("Default channel branch is required.", defaultChannel);
         }
 
         if (defaultChannel.Values.Repository.Length > 300)
         {
-            throw new IngestionEntityValidationException("Default channel repository cannot be longer than 300 characters.", defaultChannel);
+            throw new EntityIngestionValidationException("Default channel repository cannot be longer than 300 characters.", defaultChannel);
         }
 
         if (defaultChannel.Values.Branch.Length > 100)
         {
-            throw new IngestionEntityValidationException("Default channel branch name cannot be longer than 100 characters.", defaultChannel);
+            throw new EntityIngestionValidationException("Default channel branch name cannot be longer than 100 characters.", defaultChannel);
         }
     }
 }
