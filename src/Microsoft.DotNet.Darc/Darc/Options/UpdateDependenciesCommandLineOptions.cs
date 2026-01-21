@@ -54,6 +54,6 @@ internal class UpdateDependenciesCommandLineOptions : CommandLineOptions<UpdateD
     public string ExcludedAssets { get; set; }
 
     [Option("excluded-repo-origins", HelpText = "Semicolon-delineated list of repo origins to exclude assets from." +
-        " Only available when using a specific BAR build id (--id). Repo origins are specified in the MergedManifest.xml of VMR builds.")]
+        " Only applies when using a BAR build (--id or --channel). Repo origins are specified in the MergedManifest.xml of VMR builds.")]
     public string ExcludedRepoOrigins { get; set; }
 }

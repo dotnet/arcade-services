@@ -67,15 +67,6 @@ internal class UpdateDependenciesOperation : Operation
                 throw new ArgumentException("The --coherency-only and --no-coherency-updates options cannot be used together.");
             }
 
-            // Validate that --excluded-repo-origins is only used with --id
-            if (!string.IsNullOrEmpty(_options.ExcludedRepoOrigins))
-            {
-                if (_options.BARBuildId == 0)
-                {
-                    throw new ArgumentException("The --excluded-repo-origins option can only be used with a specific BAR build id (--id).");
-                }
-            }
-
             // If subscription ID is provided, fetch subscription metadata and populate options
             if (!string.IsNullOrEmpty(_options.SubscriptionId))
             {
@@ -498,6 +489,23 @@ internal class UpdateDependenciesOperation : Operation
                 continue;
             }
 
+            // Download and parse MergedManifest.xml if repo origin filtering is requested
+            Dictionary<string, string> assetRepoOrigins = null;
+            if (!string.IsNullOrEmpty(_options.ExcludedRepoOrigins))
+            {
+                using var httpClient = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true })
+                {
+                    Timeout = TimeSpan.FromMinutes(2)
+                };
+                assetRepoOrigins = await ManifestHelper.GetAssetRepoOriginsAsync(build, httpClient, _logger);
+
+                if (assetRepoOrigins == null)
+                {
+                    _logger.LogWarning($"Could not retrieve MergedManifest.xml from build {build.Id}. " +
+                        "Repo origin filtering will not be applied.");
+                }
+            }
+
             int nonCoherencyResult = await NonCoherencyUpdatesForBuildAsync(
                 build,
                 currentDependencies,
@@ -505,7 +513,7 @@ internal class UpdateDependenciesOperation : Operation
                 dependenciesToUpdate,
                 excludedAssetsMatcher,
                 relativeBasePath,
-                null); // Repo origin filtering is only supported for specific build IDs, not channel-based updates
+                assetRepoOrigins);
             if (nonCoherencyResult != Constants.SuccessCode)
             {
                 throw new DarcException($"Failed to update non-coherent parent tied dependencies in {relativeBasePath}");
