@@ -27,6 +27,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         IAssets Assets { get; }
         IAzDo AzDo { get; }
+        IBackflowStatus BackflowStatus { get; }
         IBuilds Builds { get; }
         IBuildTime BuildTime { get; }
         IChannels Channels { get; }
@@ -118,6 +119,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         public IAzDo AzDo { get; }
 
+        public IBackflowStatus BackflowStatus { get; }
+
         public IBuilds Builds { get; }
 
         public IBuildTime BuildTime { get; }
@@ -153,6 +156,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             Options = options;
             Assets = new Assets(this);
             AzDo = new AzDo(this);
+            BackflowStatus = new BackflowStatus(this);
             Builds = new Builds(this);
             BuildTime = new BuildTime(this);
             Channels = new Channels(this);

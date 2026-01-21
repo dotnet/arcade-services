@@ -177,65 +177,6 @@ public class PullRequestCommentBuilderTests
     }
 
     [Test]
-    public void ConflictCommentFiltersOutMetadataFilesForForwardFlow()
-    {
-        // Create a forward flow subscription (has TargetDirectory set)
-        var forwardFlowSubscription = new ClientModels.Subscription(
-            new Guid("12345678-1234-1234-1234-123456789012"),
-            true,
-            true, // sourceEnabled = true
-            $"https://github.com/{FakeOrgName}/source-repo",
-            $"https://github.com/{FakeOrgName}/vmr",
-            "main",
-            null, // sourceDirectory
-            "sdk", // targetDirectory - makes this a forward flow
-            "@notifiedUser1",
-            excludedAssets: []);
-
-        var update = new SubscriptionUpdateWorkItem
-        {
-            UpdaterId = "test-updater-id",
-            SubscriptionId = forwardFlowSubscription.Id,
-            BuildId = 12345,
-            SourceSha = "abcdef123",
-            SourceRepo = $"https://github.com/{FakeOrgName}/source-repo"
-        };
-
-        // Conflicted files include both actual source files and metadata files
-        var conflictedFiles = new List<string>
-        {
-            "src/sdk/file1.cs", // Should be included
-            "src/sdk/subfolder/file2.cs", // Should be included
-            "src/source-manifest.json", // Should be filtered out (metadata at src/ level)
-            "src/git-info/sdk.props" // Should be filtered out (not under src/sdk/)
-        };
-
-        var comment = PullRequestCommentBuilder.BuildNotifyAboutConflictingUpdateComment(
-            conflictedFiles,
-            update,
-            forwardFlowSubscription,
-            new InProgressPullRequest()
-            {
-                UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
-                Url = "https://api.github.com/repos/orgname/reponame/pulls/12345",
-                HeadBranch = "pr-head-branch",
-                HeadBranchSha = "pr.head.sha",
-                SourceSha = "update.source.sha",
-                ContainedSubscriptions = [],
-                SourceRepoNotified = false
-            },
-            "pr-head-branch");
-
-        // Verify only files under src/sdk/ are included
-        comment.Should().Contain("file1.cs");
-        comment.Should().Contain("subfolder/file2.cs");
-        
-        // Verify metadata files are not included
-        comment.Should().NotContain("source-manifest.json");
-        comment.Should().NotContain("git-info");
-    }
-
-    [Test]
     public void ManualConflictCommentFiltersOutMetadataFilesForForwardFlow()
     {
         // Create a forward flow subscription (has TargetDirectory set)
@@ -283,65 +224,6 @@ public class PullRequestCommentBuilderTests
         // Verify metadata files are not included
         comment.Should().NotContain("source-manifest.json");
         comment.Should().NotContain("git-info");
-    }
-
-    [Test]
-    public void ConflictCommentFilteringIsCaseInsensitive()
-    {
-        // Create a forward flow subscription (has TargetDirectory set)
-        var forwardFlowSubscription = new ClientModels.Subscription(
-            new Guid("12345678-1234-1234-1234-123456789012"),
-            true,
-            true, // sourceEnabled = true
-            $"https://github.com/{FakeOrgName}/source-repo",
-            $"https://github.com/{FakeOrgName}/vmr",
-            "main",
-            null, // sourceDirectory
-            "sdk", // targetDirectory - makes this a forward flow (expects src/sdk/)
-            "@notifiedUser1",
-            excludedAssets: []);
-
-        var update = new SubscriptionUpdateWorkItem
-        {
-            UpdaterId = "test-updater-id",
-            SubscriptionId = forwardFlowSubscription.Id,
-            BuildId = 12345,
-            SourceSha = "abcdef123",
-            SourceRepo = $"https://github.com/{FakeOrgName}/source-repo"
-        };
-
-        // Test with mixed case file paths - should still match case-insensitively
-        var conflictedFiles = new List<string>
-        {
-            "SRC/SDK/file1.cs", // Should be included (case mismatch but should match)
-            "src/SDK/file2.cs", // Should be included (case mismatch but should match)
-            "Src/sdk/file3.cs", // Should be included (case mismatch but should match)
-            "SRC/source-manifest.json", // Should be filtered out (not under src/sdk/)
-        };
-
-        var comment = PullRequestCommentBuilder.BuildNotifyAboutConflictingUpdateComment(
-            conflictedFiles,
-            update,
-            forwardFlowSubscription,
-            new InProgressPullRequest()
-            {
-                UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
-                Url = "https://api.github.com/repos/orgname/reponame/pulls/12345",
-                HeadBranch = "pr-head-branch",
-                HeadBranchSha = "pr.head.sha",
-                SourceSha = "update.source.sha",
-                ContainedSubscriptions = [],
-                SourceRepoNotified = false
-            },
-            "pr-head-branch");
-
-        // Verify case-insensitive matching works - all SDK files should be included
-        comment.Should().Contain("file1.cs");
-        comment.Should().Contain("file2.cs");
-        comment.Should().Contain("file3.cs");
-        
-        // Verify metadata files are still filtered out
-        comment.Should().NotContain("source-manifest.json");
     }
 
     private static List<ClientModels.Subscription> GenerateFakeSubscriptionModels() =>
