@@ -428,7 +428,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         bool canUpdate,
         int nextBuildToProcess = 0,
         bool newChangeWillConflict = false,
-        bool prAlreadyHasConflict = false,
         string? headBranchSha = null,
         bool willFlowNewBuild = false,
         bool mockMergePolicyEvaluator = true,
@@ -439,7 +438,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             canUpdate ? null : MergePolicyEvaluationStatus.Pending,
             nextBuildToProcess,
             newChangeWillConflict,
-            prAlreadyHasConflict,
             headBranchSha,
             willFlowNewBuild: willFlowNewBuild,
             mockMergePolicyEvaluator: mockMergePolicyEvaluator,
@@ -451,7 +449,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         MergePolicyEvaluationStatus? policyEvaluationStatus,
         int nextBuildToProcess = 0,
         bool flowerWillHaveConflict = false,
-        bool prAlreadyHasConflict = false,
         string? headBranchSha = null,
         bool willFlowNewBuild = false,
         bool mockMergePolicyEvaluator = true,
@@ -471,18 +468,13 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 forBuild,
                 prUrl,
                 nextBuildToProcess,
-                headBranchSha: prAlreadyHasConflict
-                    ? ConflictPRRemoteSha
-                    : InProgressPrHeadBranchSha,
-                prState: prAlreadyHasConflict
-                    ? InProgressPullRequestState.Conflict
-                    : InProgressPullRequestState.Mergeable,
+                headBranchSha: InProgressPrHeadBranchSha,
                 sourceRepoNotified: sourceRepoNotified);
             SetState(Subscription, pr);
             SetExpectedPullRequestState(Subscription, pr);
         });
 
-        headBranchSha ??= flowerWillHaveConflict || prAlreadyHasConflict
+        headBranchSha ??= flowerWillHaveConflict
             ? ConflictPRRemoteSha
             : InProgressPrHeadBranchSha;
 
@@ -554,25 +546,20 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         return Disposable.Create(remote.VerifyAll);
     }
 
-    protected void WithForwardFlowConflict(Mock<IRemote> remote, IReadOnlyCollection<UnixPath> conflictedFiles, bool rebaseStrategy = false)
+    protected void WithForwardFlowConflict(Mock<IRemote> remote, IReadOnlyCollection<UnixPath> conflictedFiles)
     {
         remote
             .Setup(x => x.CommentPullRequestAsync(
                 It.Is<string>(uri => uri.StartsWith(Subscription.TargetDirectory != null ? VmrUri + "/pulls/" : InProgressPrUrl)),
-                It.Is<string>(content => content.Contains(rebaseStrategy
-                    ? "The conflicts in the following files need to be manually resolved"
-                    : "Maestro attempted to flow new changes from"))))
+                It.Is<string>(content => content.Contains("need to be manually resolved"))))
             .Returns(Task.CompletedTask);
 
         // We re-evaulate checks after we push changes
-        if (rebaseStrategy)
-        {
-            remote
-                .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(
-                    It.Is<string>(uri => uri.StartsWith(Subscription.TargetDirectory != null ? VmrUri + "/pulls/" : InProgressPrUrl)),
-                    It.IsAny<IReadOnlyCollection<MergePolicyEvaluationResult>>()))
-                .Returns(Task.CompletedTask);
-        }
+        remote
+            .Setup(r => r.CreateOrUpdatePullRequestMergeStatusInfoAsync(
+                It.Is<string>(uri => uri.StartsWith(Subscription.TargetDirectory != null ? VmrUri + "/pulls/" : InProgressPrUrl)),
+                It.IsAny<IReadOnlyCollection<MergePolicyEvaluationResult>>()))
+            .Returns(Task.CompletedTask);
 
         var setup = _forwardFlower.Setup(x => x.FlowForwardAsync(
             It.IsAny<Microsoft.DotNet.ProductConstructionService.Client.Models.Subscription>(),
@@ -582,16 +569,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             It.IsAny<bool>(),
             It.IsAny<CancellationToken>()));
 
-        if (rebaseStrategy)
-        {
-            setup.ReturnsAsync(new CodeFlowResult(true, conflictedFiles, new NativePath(VmrPath), []));
-        }
-        else
-        {
-            setup.Throws(new ConflictInPrBranchException(
-                "error: patch failed: " + string.Join(Environment.NewLine + "error: patch failed: ", conflictedFiles),
-                "branch"));
-        }
+        setup.ReturnsAsync(new CodeFlowResult(true, conflictedFiles, new NativePath(VmrPath), []));
     }
 
     protected void AndShouldHavePullRequestCheckReminder(string? url = null)
@@ -622,7 +600,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         List<CoherencyErrorDetails>? coherencyErrors = null,
         InProgressPullRequest? expectedState = null,
         string? headBranchSha = null,
-        InProgressPullRequestState prState = InProgressPullRequestState.Mergeable,
         Func<Asset, bool>? assetFilter = null,
         bool? sourceRepoNotified = null,
         UnixPath? relativeBasePath = null,
@@ -645,7 +622,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                     coherencyCheckSuccessful,
                     coherencyErrors,
                     headBranchSha,
-                    prState,
                     assetFilter,
                     sourceRepoNotified: sourceRepoNotified,
                     relativeBasePath,
@@ -704,7 +680,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             bool? coherencyCheckSuccessful = true,
             List<CoherencyErrorDetails>? coherencyErrors = null,
             string? headBranchSha = null,
-            InProgressPullRequestState prState = InProgressPullRequestState.Mergeable,
             Func<Asset, bool>? assetFilter = null,
             bool? sourceRepoNotified = null,
             UnixPath? relativeBasePath = null,
@@ -741,7 +716,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             CoherencyCheckSuccessful = coherencyCheckSuccessful,
             CoherencyErrors = coherencyErrors,
             Url = prUrl,
-            MergeState = prState,
             SourceRepoNotified = sourceRepoNotified,
             NextBuildsToProcess = nextBuildToProcess != 0 ?
                 new Dictionary<Guid, int>
