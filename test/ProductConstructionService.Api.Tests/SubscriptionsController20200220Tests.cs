@@ -395,7 +395,7 @@ public partial class SubscriptionsController20200220Tests : IDisposable
             }
         }
 
-        public static void Ingestion(IServiceCollection collection)
+        public static void AddConfigurationIngestor(IServiceCollection collection)
         {
             var installationIdResolver = new Mock<IGitHubInstallationIdResolver>();
             installationIdResolver.Setup(r => r.GetInstallationIdForRepository(It.IsAny<string>()))

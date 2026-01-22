@@ -216,7 +216,7 @@ public partial class DefaultChannelsController20200220Tests
                     }));
         }
 
-        public static void Ingestion(IServiceCollection collection)
+        public static void AddConfigurationIngestor(IServiceCollection collection)
         {
             var installationIdResolver = new Mock<IGitHubInstallationIdResolver>();
             installationIdResolver.Setup(r => r.GetInstallationIdForRepository(It.IsAny<string>()))

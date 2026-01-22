@@ -247,7 +247,7 @@ public partial class ChannelsController20200220Tests
             collection.AddSingleton(mockWorkItemProducerFactory.Object);
         }
 
-        public static void Ingestion(IServiceCollection collection)
+        public static void AddConfigurationIngestor(IServiceCollection collection)
         {
             var installationIdResolver = new Mock<IGitHubInstallationIdResolver>();
             installationIdResolver.Setup(r => r.GetInstallationIdForRepository(It.IsAny<string>()))
