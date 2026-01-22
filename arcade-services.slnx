@@ -58,6 +58,7 @@
     <Project Path="test/ProductConstructionService.WorkItem.Tests/ProductConstructionService.WorkItem.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
+    <Project Path="tools/BackflowStatusTool/BackflowStatusTool.csproj" />
     <Project Path="tools/ProductConstructionService.Cli/ProductConstructionService.Cli.csproj" />
     <Project Path="tools/ProductConstructionService.ReproTool/ProductConstructionService.ReproTool.csproj" />
     <Project Path="tools/Tools.Common/Tools.Common.csproj" />

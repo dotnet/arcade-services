@@ -5,7 +5,7 @@ using System;
 
 namespace Maestro.DataProviders.Exceptions;
 
-public class EntityConflictException : Exception
+public class EntityConflictException : IngestionValidationException
 {
     public EntityConflictException() { }
 

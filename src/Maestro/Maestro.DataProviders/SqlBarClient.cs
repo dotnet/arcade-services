@@ -703,7 +703,6 @@ public class SqlBarClient : ISqlBarClient
             // between a product repo and a VMR directory on a given branch
             return string.Join(
                 "|", new string[] {
-                    subscription.SourceRepository,
                     subscription.TargetBranch,
                     subscription.TargetDirectory,
                     subscription.TargetRepository,

@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
         public string Url { get; set; }
 
         [JsonProperty("channel")]
-        public Models.Channel Channel { get; set; }
+        public Channel Channel { get; set; }
 
         [JsonProperty("targetBranch")]
         public string TargetBranch { get; set; }
@@ -42,9 +42,6 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 
         [JsonProperty("updates")]
         public List<PullRequestUpdate> Updates { get; set; }
-
-        [JsonProperty("isInConflict")]
-        public bool IsInConflict { get; set; }
 
         [JsonProperty("headBranch")]
         public string HeadBranch { get; set; }

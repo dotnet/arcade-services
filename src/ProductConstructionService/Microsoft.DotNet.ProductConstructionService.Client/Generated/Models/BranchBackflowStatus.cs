@@ -6,22 +6,23 @@ using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 {
-    public partial class ClientBranchMergePoliciesYaml
+    public partial class BranchBackflowStatus
     {
-        public ClientBranchMergePoliciesYaml(string branch, string repository)
+        public BranchBackflowStatus(string branch, int defaultChannelId, List<SubscriptionBackflowStatus> subscriptionStatuses)
         {
             Branch = branch;
-            Repository = repository;
+            DefaultChannelId = defaultChannelId;
+            SubscriptionStatuses = subscriptionStatuses;
         }
 
         [JsonProperty("branch")]
         public string Branch { get; set; }
 
-        [JsonProperty("repository")]
-        public string Repository { get; set; }
+        [JsonProperty("defaultChannelId")]
+        public int DefaultChannelId { get; set; }
 
-        [JsonProperty("mergePolicies")]
-        public List<ClientMergePolicyYaml> MergePolicies { get; set; }
+        [JsonProperty("subscriptionStatuses")]
+        public List<SubscriptionBackflowStatus> SubscriptionStatuses { get; set; }
 
         [JsonIgnore]
         public bool IsValid
@@ -32,7 +33,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
                 {
                     return false;
                 }
-                if (string.IsNullOrEmpty(Repository))
+                if (SubscriptionStatuses == default(List<SubscriptionBackflowStatus>))
                 {
                     return false;
                 }

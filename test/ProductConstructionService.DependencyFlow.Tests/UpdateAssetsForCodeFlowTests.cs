@@ -145,7 +145,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
     }
 
     [Test]
-    public async Task UpdateCodeFlowWithNoPrWithConflictAndRebaseStrategy()
+    public async Task UpdateCodeFlowWithNoPrWithConflict()
     {
         GivenATestChannel();
         GivenACodeFlowSubscription(
@@ -153,8 +153,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             {
                 Batchable = false,
                 UpdateFrequency = UpdateFrequency.EveryBuild,
-            },
-            rebaseStrategy: true);
+            });
 
         Build build = GivenANewBuild(true);
 
@@ -163,8 +162,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
 
         WithForwardFlowConflict(
             DarcRemotes[Subscription.TargetRepository],
-            [new UnixPath($"src/{Subscription.TargetDirectory}/conflict.txt")],
-            rebaseStrategy: true);
+            [new UnixPath($"src/{Subscription.TargetDirectory}/conflict.txt")]);
 
         await WhenUpdateAssetsAsyncIsCalled(build);
 

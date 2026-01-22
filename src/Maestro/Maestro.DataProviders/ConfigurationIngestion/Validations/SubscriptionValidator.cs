@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Maestro.DataProviders.ConfigurationIngestion.Model;
+using Maestro.DataProviders.Exceptions;
 using Maestro.MergePolicyEvaluation;
 
 #nullable enable
@@ -44,27 +45,27 @@ internal static class SubscriptionValidator
 
         if (string.IsNullOrWhiteSpace(subscription.Values.Channel))
         {
-            throw new IngestionEntityValidationException("Channel name is required.", subscription);
+            throw new EntityIngestionValidationException("Channel name is required.", subscription);
         }
 
         if (string.IsNullOrWhiteSpace(subscription.Values.SourceRepository))
         {
-            throw new IngestionEntityValidationException("Source repository is required.", subscription);
+            throw new EntityIngestionValidationException("Source repository is required.", subscription);
         }
 
         if (string.IsNullOrWhiteSpace(subscription.Values.TargetRepository))
         {
-            throw new IngestionEntityValidationException("Target repository is required.", subscription);
+            throw new EntityIngestionValidationException("Target repository is required.", subscription);
         }
 
         if (string.IsNullOrWhiteSpace(subscription.Values.TargetBranch))
         {
-            throw new IngestionEntityValidationException("Target branch is required.", subscription);
+            throw new EntityIngestionValidationException("Target branch is required.", subscription);
         }
 
         if (subscription.Values.MergePolicies == null)
         {
-            throw new IngestionEntityValidationException("Merge policies cannot be null.", subscription);
+            throw new EntityIngestionValidationException("Merge policies cannot be null.", subscription);
         }
 
         List<string> mergePolicies = [.. subscription.Values.MergePolicies.Select(mp => mp.Name)];
@@ -72,25 +73,25 @@ internal static class SubscriptionValidator
         if (!subscription.Values.SourceEnabled
             && mergePolicies.Contains(MergePolicyConstants.CodeflowMergePolicyName))
         {
-            throw new IngestionEntityValidationException("Only source-enabled subscriptions may have the Codeflow merge policy.", subscription);
+            throw new EntityIngestionValidationException("Only source-enabled subscriptions may have the Codeflow merge policy.", subscription);
         }
 
         if (mergePolicies.Contains(MergePolicyConstants.StandardMergePolicyName)
             && mergePolicies.Any(StandardMergePolicies.Contains))
         {
-            throw new IngestionEntityValidationException(
+            throw new EntityIngestionValidationException(
                 "One or more of the following merge policies could not be added because it is already included "
                 + $"in the policy `{MergePolicyConstants.StandardMergePolicyName}`: {string.Join(", ", StandardMergePolicies)}.", subscription);
         }
 
         if (subscription.Values.Batchable && subscription.Values.SourceEnabled)
         {
-            throw new IngestionEntityValidationException("Batched codeflow subscriptions are not supported.", subscription);
+            throw new EntityIngestionValidationException("Batched codeflow subscriptions are not supported.", subscription);
         }
 
         if (subscription.Values.Batchable && mergePolicies.Count > 0)
         {
-            throw new IngestionEntityValidationException(
+            throw new EntityIngestionValidationException(
                 "Batchable subscriptions cannot be combined with merge policies. " +
                 "Merge policies are specified at a repository+branch level.", subscription);
         }
@@ -98,7 +99,7 @@ internal static class SubscriptionValidator
         if (!string.IsNullOrEmpty(subscription.Values.SourceDirectory)
             && !string.IsNullOrEmpty(subscription.Values.TargetDirectory))
         {
-            throw new IngestionEntityValidationException(
+            throw new EntityIngestionValidationException(
                 "Only one of source or target directory can be specified for source-enabled subscriptions.", subscription);
         }
 
@@ -106,7 +107,7 @@ internal static class SubscriptionValidator
             && string.IsNullOrEmpty(subscription.Values.SourceDirectory)
             && string.IsNullOrEmpty(subscription.Values.TargetDirectory))
         {
-            throw new IngestionEntityValidationException(
+            throw new EntityIngestionValidationException(
                 "One of source or target directory is required for source-enabled subscriptions.", subscription);
         }
     }

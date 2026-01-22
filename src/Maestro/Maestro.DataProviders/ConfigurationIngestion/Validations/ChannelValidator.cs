@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using Maestro.DataProviders.ConfigurationIngestion.Model;
+using Maestro.DataProviders.Exceptions;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion.Validations;
@@ -32,12 +33,12 @@ internal class ChannelValidator
 
         if (string.IsNullOrWhiteSpace(channel.Values.Name))
         {
-            throw new IngestionEntityValidationException("Channel name is required.", channel);
+            throw new EntityIngestionValidationException("Channel name is required.", channel);
         }
 
         if (string.IsNullOrWhiteSpace(channel.Values.Classification))
         {
-            throw new IngestionEntityValidationException("Channel classification is required.", channel);
+            throw new EntityIngestionValidationException("Channel classification is required.", channel);
         }
     }
 }

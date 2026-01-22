@@ -399,9 +399,8 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 }
             }
 
-            SubscriptionYaml subscriptionYaml = new()
+            SubscriptionYamlParameters subscriptionYamlParameters = new()
             {
-                Id = Guid.NewGuid(),
                 Enabled = enabled,
                 Channel = channel,
                 SourceRepository = sourceRepository,
@@ -417,11 +416,11 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                 ExcludedAssets = excludedAssets
             };
 
-            await ValidateNoEquivalentSubscription(subscriptionYaml);
+            await ValidateNoEquivalentSubscription(subscriptionYamlParameters);
 
             await _configurationRepositoryManager.AddSubscriptionAsync(
                 _options.ToConfigurationRepositoryOperationParameters(),
-                subscriptionYaml);
+                subscriptionYamlParameters);
 
             return Constants.SuccessCode;
         }
@@ -457,5 +456,15 @@ internal class AddSubscriptionOperation : SubscriptionOperationBase
                _options.ValidateCoherencyCheckMergePolicy ||
                _options.CodeFlowCheckMergePolicy ||
                _options.VersionDetailsPropsMergePolicy;
+    }
+
+    private async Task ValidateNoEquivalentSubscription(SubscriptionYamlParameters subscriptionYamlParameters)
+    {
+        var equivalentSub = await TryGetEquivalentSubscription(subscriptionYamlParameters);
+
+        if (equivalentSub != null)
+        {
+            throw new ArgumentException($"An equivalent subscription '{equivalentSub.Id}' already exists.");
+        }
     }
 }

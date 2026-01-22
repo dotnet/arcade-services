@@ -41,8 +41,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
         ILogger<NonBatchedPullRequestUpdater> logger,
         ICommentCollector commentCollector,
         IPullRequestCommenter pullRequestCommenter,
-        IPullRequestCommentBuilder commentBuilder,
-        IFeatureFlagService featureFlagService)
+        IPullRequestCommentBuilder commentBuilder)
         : base(
             id,
             mergePolicyEvaluator,
@@ -61,8 +60,7 @@ internal class NonBatchedPullRequestUpdater : PullRequestUpdater
             telemetryRecorder,
             logger,
             commentCollector,
-            pullRequestCommenter,
-            featureFlagService)
+            pullRequestCommenter)
     {
         _lazySubscription = new Lazy<Task<Subscription?>>(RetrieveSubscription);
         _id = id;

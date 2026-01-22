@@ -5,12 +5,13 @@ using AwesomeAssertions;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders.ConfigurationIngestion;
+using Maestro.DataProviders.Exceptions;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using ProductConstructionService.Api.Tests;
 using Moq;
-using Microsoft.DotNet.DarcLib;
+using ProductConstructionService.Api.Tests;
 
 namespace Maestro.DataProviders.Tests;
 
@@ -42,10 +43,26 @@ public class ConfigurationIngestorTests
         installationIdResolver.Setup(r => r.GetInstallationIdForRepository(It.IsAny<string>()))
             .Returns(Task.FromResult((long?)1));
 
+        var gitHubTagValidator = new Mock<IGitHubTagValidator>();
+        gitHubTagValidator
+            .Setup(v => v.IsNotificationTagValidAsync(It.IsAny<string>()))
+            .Returns((string tag) => Task.FromResult(IsTagValid(tag)));
+
+        static bool IsTagValid(string tag)
+        {
+            return tag.ToLower() switch
+            {
+                "somemicrosoftuser" => true,   // valid user, in MS org
+                "someexternaluser" => false,   // "real" user, but not in MS org
+                _ => true,                     // Any other user; GitHub "teams" or non-existent users are allowed
+            };
+        }
+
         var services = new ServiceCollection()
             .AddSingleton(_context)
             .AddSingleton<ISqlBarClient>(new SqlBarClient(_context, null))
             .AddSingleton(installationIdResolver.Object)
+            .AddSingleton(gitHubTagValidator.Object)
             .AddConfigurationIngestion();
 
         _ingestor = services.BuildServiceProvider()
@@ -103,6 +120,43 @@ public class ConfigurationIngestorTests
         namespaceEntity.Should().NotBeNull();
         namespaceEntity.Channels.Should().ContainSingle()
             .Which.Name.Should().Be(".NET 8");
+    }
+
+    [Test]
+    public async Task IngestConfigurationAsync_SubscriptionWithInvalidNotificationTags_ThrowsException()
+    {
+        // Arrange
+        var anInvalidDependencyFlowNotificationList = "@someexternaluser;@somemicrosoftuser;@some-team";
+
+        var channelYaml = new ChannelYaml
+        {
+            Name = ".NET 8",
+            Classification = "release",
+        };
+
+        var subscriptionYaml = new SubscriptionYaml
+        {
+            Id = Guid.NewGuid(),
+            Channel = ".NET 8",
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = "https://github.com/dotnet/aspnetcore",
+            TargetBranch = "main",
+            Enabled = true,
+            FailureNotificationTags = anInvalidDependencyFlowNotificationList,
+        };
+
+        var configData = new ConfigurationData(
+            [subscriptionYaml],
+            [channelYaml],
+            [],
+            []);
+
+        // Act
+        var act = async () => await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
+
+        // Assert
+        await act.Should().ThrowAsync<EntityIngestionValidationException>()
+            .WithMessage("*invalid Pull Request Failure Notification Tags*");
     }
 
     [Test]
@@ -1769,5 +1823,19 @@ internal class LargeScaleTestDataBuilder
             }
         }
         await context.SaveChangesAsync();
+    }
+
+    private class MockOrg : Octokit.Organization
+    {
+        public MockOrg(int id, string login)
+        {
+            Id = id;
+            Login = login;
+        }
+    }
+
+    private static MockOrg MockOrganization(int id, string login)
+    {
+        return new MockOrg(id, login);
     }
 }

@@ -65,7 +65,7 @@ internal class GatherDropOperation : Operation
     //      - https://pkgs.dev.azure.com/dnceng/_packaging/internal-feed-name/nuget/v3/index.json
     public const string AzDoNuGetFeedPattern =
         @"https://pkgs.dev.azure.com/(?<account>[a-zA-Z0-9]+)/(?<visibility>[a-zA-Z0-9-]+/)?_packaging/(?<feed>.+)/nuget/v3/index.json";
-
+    private const string CDNUri = "ci.dot.net";
     private static readonly List<(string repo, string sha)> DependenciesAlwaysMissingBuilds =
     [
         ("https://github.com/dotnet/corefx", "7ee84596d92e178bce54c986df31ccc52479e772"),
@@ -1113,7 +1113,10 @@ internal class GatherDropOperation : Operation
     /// <param name="location">Location</param>
     /// <returns>True if the location is a sleet uri, false otherwise.</returns>
     /// <remarks>
-    ///     Blob feed uris look like: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
+    ///     Blob feed uris look like: 
+    ///         - https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
+    ///         - https://ci.dot.net/public
+    ///         - https://ci.dot.net/internal
     /// </remarks>
     private static bool IsBlobFeedUrl(string location)
     {
@@ -1123,7 +1126,8 @@ internal class GatherDropOperation : Operation
             return false;
         }
 
-        return locationUri.Host.EndsWith("blob.core.windows.net");
+        return locationUri.Host.EndsWith("blob.core.windows.net") || 
+               locationUri.Host.Equals(CDNUri, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -1506,7 +1510,8 @@ internal class GatherDropOperation : Operation
 
     private void ConfigureRequestMessage(HttpRequestMessage request)
     {
-        if (request.RequestUri.Host.Contains(".blob.core.windows.net", StringComparison.OrdinalIgnoreCase))
+        if (request.RequestUri.Host.Contains(".blob.core.windows.net", StringComparison.OrdinalIgnoreCase) ||
+            request.RequestUri.Host.Equals(CDNUri, StringComparison.OrdinalIgnoreCase))
         {
             // add API version to support Bearer token authentication
             request.Headers.Add("x-ms-version", "2023-08-03");
