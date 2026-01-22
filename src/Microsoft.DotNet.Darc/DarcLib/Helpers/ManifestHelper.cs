@@ -214,7 +214,7 @@ public class ManifestHelper
 
         if (mergedManifestAsset == null)
         {
-            logger.LogInformation($"Build {build.Id} does not contain a {MergedManifestFileName} asset.");
+            logger.LogInformation("Build {BuildId} does not contain a {FileName} asset.", build.Id, MergedManifestFileName);
             return null;
         }
 
@@ -231,7 +231,7 @@ public class ManifestHelper
         try
         {
             var manifestUrl = GetManifestDownloadUrl(assetLocation.Location, mergedManifestAsset.Name);
-            logger.LogInformation($"Downloading MergedManifest.xml from {manifestUrl}");
+            logger.LogInformation("Downloading MergedManifest.xml from {ManifestUrl}", manifestUrl);
 
             var response = await httpClient.GetAsync(manifestUrl);
             response.EnsureSuccessStatusCode();
@@ -239,7 +239,7 @@ public class ManifestHelper
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, $"Failed to download MergedManifest.xml from build {build.Id}");
+            logger.LogWarning(ex, "Failed to download MergedManifest.xml from build {BuildId}", build.Id);
             return null;
         }
 
@@ -301,7 +301,7 @@ public class ManifestHelper
                 }
             }
 
-            logger.LogInformation($"Parsed {assetOrigins.Count} asset origin mappings from MergedManifest.xml");
+            logger.LogInformation("Parsed {Count} asset origin mappings from MergedManifest.xml", assetOrigins.Count);
         }
         catch (Exception ex)
         {

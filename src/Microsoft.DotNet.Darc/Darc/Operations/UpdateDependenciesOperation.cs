@@ -150,7 +150,7 @@ internal class UpdateDependenciesOperation : Operation
                 .Where(o => !string.IsNullOrEmpty(o))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            _logger.LogInformation($"Excluding assets from repo origins: {string.Join(", ", excludedOrigins)}");
+            _logger.LogInformation("Excluding assets from repo origins: {ExcludedOrigins}", string.Join(", ", excludedOrigins));
         }
 
         List<AssetData> assetData = build.Assets
@@ -164,14 +164,14 @@ internal class UpdateDependenciesOperation : Operation
                 // If we don't have repo origin information, include the asset by default
                 if (assetRepoOrigins == null || !assetRepoOrigins.TryGetValue(a.Name, out var origin))
                 {
-                    _logger.LogTrace($"Asset '{a.Name}' has no repo origin information, including by default.");
+                    _logger.LogTrace("Asset '{AssetName}' has no repo origin information, including by default.", a.Name);
                     return true;
                 }
 
                 // Check if this asset's origin is in the excluded list
                 if (excludedOrigins.Contains(origin))
                 {
-                    _logger.LogInformation($"Excluding asset '{a.Name}' from repo origin '{origin}'");
+                    _logger.LogInformation("Excluding asset '{AssetName}' from repo origin '{Origin}'", a.Name, origin);
                     return false;
                 }
 
@@ -403,21 +403,7 @@ internal class UpdateDependenciesOperation : Operation
             var specificBuild = await _barClient.GetBuildAsync(_options.BARBuildId);
 
             // Download and parse MergedManifest.xml if repo origin filtering is requested
-            Dictionary<string, string> assetRepoOrigins = null;
-            if (!string.IsNullOrEmpty(_options.ExcludedRepoOrigins))
-            {
-                using var httpClient = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true })
-                {
-                    Timeout = TimeSpan.FromMinutes(2)
-                };
-                assetRepoOrigins = await ManifestHelper.GetAssetRepoOriginsAsync(specificBuild, httpClient, _logger);
-
-                if (assetRepoOrigins == null)
-                {
-                    _logger.LogWarning($"Could not retrieve MergedManifest.xml from build {specificBuild.Id}. " +
-                        "Repo origin filtering will not be applied.");
-                }
-            }
+            Dictionary<string, string> assetRepoOrigins = await GetAssetRepoOriginsIfNeededAsync(specificBuild);
 
             int nonCoherencyResult = await NonCoherencyUpdatesForBuildAsync(
                 specificBuild,
@@ -447,6 +433,33 @@ internal class UpdateDependenciesOperation : Operation
             _logger.LogError("Could not find build with BAR id '{id}'.", _options.BARBuildId);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Downloads and parses MergedManifest.xml from a build if repo origin filtering is requested.
+    /// </summary>
+    /// <param name="build">The build to get the manifest from</param>
+    /// <returns>Dictionary of asset names to repo origins, or null if filtering is not requested or manifest unavailable</returns>
+    private async Task<Dictionary<string, string>> GetAssetRepoOriginsIfNeededAsync(Build build)
+    {
+        if (string.IsNullOrEmpty(_options.ExcludedRepoOrigins))
+        {
+            return null;
+        }
+
+        using var httpClient = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true })
+        {
+            Timeout = TimeSpan.FromMinutes(2)
+        };
+        
+        var assetRepoOrigins = await ManifestHelper.GetAssetRepoOriginsAsync(build, httpClient, _logger);
+
+        if (assetRepoOrigins == null)
+        {
+            _logger.LogWarning("Could not retrieve MergedManifest.xml from build {BuildId}. Repo origin filtering will not be applied.", build.Id);
+        }
+
+        return assetRepoOrigins;
     }
 
     private async Task RunNonCoherencyUpdateForChannel(
@@ -490,21 +503,7 @@ internal class UpdateDependenciesOperation : Operation
             }
 
             // Download and parse MergedManifest.xml if repo origin filtering is requested
-            Dictionary<string, string> assetRepoOrigins = null;
-            if (!string.IsNullOrEmpty(_options.ExcludedRepoOrigins))
-            {
-                using var httpClient = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true })
-                {
-                    Timeout = TimeSpan.FromMinutes(2)
-                };
-                assetRepoOrigins = await ManifestHelper.GetAssetRepoOriginsAsync(build, httpClient, _logger);
-
-                if (assetRepoOrigins == null)
-                {
-                    _logger.LogWarning($"Could not retrieve MergedManifest.xml from build {build.Id}. " +
-                        "Repo origin filtering will not be applied.");
-                }
-            }
+            Dictionary<string, string> assetRepoOrigins = await GetAssetRepoOriginsIfNeededAsync(build);
 
             int nonCoherencyResult = await NonCoherencyUpdatesForBuildAsync(
                 build,
