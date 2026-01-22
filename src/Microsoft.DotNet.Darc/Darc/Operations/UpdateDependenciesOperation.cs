@@ -457,7 +457,9 @@ internal class UpdateDependenciesOperation : Operation
 
         if (assetRepoOrigins == null)
         {
-            _logger.LogWarning("Could not retrieve MergedManifest.xml from build {BuildId}. Repo origin filtering will not be applied.", build.Id);
+            // When --excluded-repo-origins is used, we should fail if we can't get the manifest
+            throw new DarcException($"The --excluded-repo-origins option requires MergedManifest.xml from build {build.Id}, but it could not be retrieved. " +
+                "Ensure the build is a VMR build with a MergedManifest.xml asset.");
         }
 
         return assetRepoOrigins;
@@ -682,9 +684,12 @@ internal class UpdateDependenciesOperation : Operation
     {
         const string MergedManifestFileName = "MergedManifest.xml";
 
-        // Find the MergedManifest.xml asset
-        var mergedManifestAsset = build.Assets?
-            .FirstOrDefault(a => a.Name.EndsWith(MergedManifestFileName, StringComparison.OrdinalIgnoreCase));
+        // Query BAR to get the MergedManifest.xml asset with locations loaded
+        var mergedManifestAssets = await _barClient.GetAssetsAsync(
+            name: MergedManifestFileName,
+            buildId: build.Id);
+
+        var mergedManifestAsset = mergedManifestAssets.FirstOrDefault();
 
         if (mergedManifestAsset == null)
         {
