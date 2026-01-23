@@ -7,9 +7,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Azure.Core;
+using Azure.Identity;
 using Maestro.Common;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
@@ -18,6 +22,7 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.TeamFoundation.WorkItemTracking.Process.WebApi.Models;
 using NuGet.Packaging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -75,14 +80,15 @@ internal class UpdateDependenciesOperation : Operation
             }
 
             var local = new Local(_remoteTokenProvider, _logger);
-            var excludedAssetsMatcher = _options.ExcludedAssets?.Split(';').GetAssetMatcher()
-                ?? new AssetMatcher(null);
+            var excludedAssetsMatcher = new NameBasedAssetMatcher(_options.ExcludedAssets?.Split(';'));
             List<UnixPath> targetDirectories = ResolveTargetDirectories(local);
+
+            IReadOnlyList<IAssetMatcher> excludedAssetMatchers = [excludedAssetsMatcher];
 
             ConcurrentDictionary<string, Task<ProductConstructionService.Client.Models.Build>> latestBuildTaskDictionary = new();
             foreach (var targetDirectory in targetDirectories)
             {
-                await UpdateDependenciesInDirectory(targetDirectory, local, latestBuildTaskDictionary, excludedAssetsMatcher);
+                await UpdateDependenciesInDirectory(targetDirectory, local, latestBuildTaskDictionary, excludedAssetMatchers);
             }
 
             return Constants.SuccessCode;
@@ -137,46 +143,14 @@ internal class UpdateDependenciesOperation : Operation
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> candidateDependenciesForUpdate,
         List<DependencyDetail> dependenciesToUpdate,
-        IAssetMatcher excludedAssetsMatcher,
+        IReadOnlyList<IAssetMatcher> excludedAssetMatchers,
         UnixPath relativeBasePath,
         Dictionary<string, string> assetRepoOrigins = null)
     {
-        // Parse excluded repo origins if provided
-        HashSet<string> excludedOrigins = null;
-        if (!string.IsNullOrEmpty(_options.ExcludedRepoOrigins))
-        {
-            excludedOrigins = _options.ExcludedRepoOrigins
-                .Split(';')
-                .Select(o => o.Trim())
-                .Where(o => !string.IsNullOrEmpty(o))
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            _logger.LogInformation("Excluding assets from repo origins: {ExcludedOrigins}", string.Join(", ", excludedOrigins));
-        }
-
         List<AssetData> assetData = build.Assets
-            .Where(a => !excludedAssetsMatcher.IsExcluded(a.Name, relativeBasePath))
             .Where(a =>
             {
-                // If no repo origin filtering is requested, include the asset
-                if (excludedOrigins == null || excludedOrigins.Count == 0)
-                    return true;
-
-                // If we don't have repo origin information, include the asset by default
-                if (assetRepoOrigins == null || !assetRepoOrigins.TryGetValue(a.Name, out var origin))
-                {
-                    _logger.LogTrace("Asset '{AssetName}' has no repo origin information, including by default.", a.Name);
-                    return true;
-                }
-
-                // Check if this asset's origin is in the excluded list
-                if (excludedOrigins.Contains(origin))
-                {
-                    _logger.LogInformation("Excluding asset '{AssetName}' from repo origin '{Origin}'", a.Name, origin);
-                    return false;
-                }
-
-                return true;
+                return !excludedAssetMatchers.Any(m => m.IsExcluded(a.Name, relativeBasePath));
             })
             .Select(a => new AssetData(a.NonShipping)
             {
@@ -212,11 +186,55 @@ internal class UpdateDependenciesOperation : Operation
         return Constants.SuccessCode;
     }
 
+    private IAssetMatcher CreateExcludedRepoOriginsMatcher(string excludedRepoOrigins, Dictionary<string, string> assetRepoOrigins)
+    {
+        if (string.IsNullOrEmpty(excludedRepoOrigins))
+        {
+            return null;
+        }
+
+        if (assetRepoOrigins == null || assetRepoOrigins.Count == 0)
+        {
+            return null;
+        }
+
+        List<string> excludedOrigins = excludedRepoOrigins
+            .Split(';')
+            .Select(o => o.Trim())
+            .Where(o => !string.IsNullOrEmpty(o))
+            .ToList();
+
+        if (excludedOrigins.Count == 0)
+        {
+            return null;
+        }
+
+        _logger.LogInformation("Excluding assets from repo origins: {ExcludedOrigins}", string.Join(", ", excludedOrigins));
+        return new RepoOriginAssetMatcher(excludedOrigins, assetRepoOrigins);
+    }
+
+    private IReadOnlyList<IAssetMatcher> CreateExcludedAssetMatchers(Dictionary<string, string> assetRepoOrigins, IReadOnlyList<IAssetMatcher> baseMatchers)
+    {
+        bool hasExcludedRepoOrigins = !string.IsNullOrEmpty(_options.ExcludedRepoOrigins)
+            && assetRepoOrigins != null
+            && assetRepoOrigins.Count > 0;
+
+        if (!hasExcludedRepoOrigins)
+        {
+            return baseMatchers;
+        }
+
+        var excludedRepoOriginsMatcher = CreateExcludedRepoOriginsMatcher(_options.ExcludedRepoOrigins, assetRepoOrigins);
+        return excludedRepoOriginsMatcher == null
+            ? baseMatchers
+            : [.. baseMatchers, excludedRepoOriginsMatcher];
+    }
+
     private async Task UpdateDependenciesInDirectory(
         UnixPath relativeBasePath,
         Local local,
         ConcurrentDictionary<string, Task<ProductConstructionService.Client.Models.Build>> latestBuildTaskDictionary,
-        IAssetMatcher excludedAssetsMatcher)
+        IReadOnlyList<IAssetMatcher> excludedAssetMatchers)
     {
         List<DependencyDetail> dependenciesToUpdate = [];
 
@@ -232,7 +250,6 @@ internal class UpdateDependenciesOperation : Operation
         var dependenciesRelativeFolder = relativeBasePath == UnixPath.Empty
             ? "root"
             : relativeBasePath;
-        Console.WriteLine($"Path {dependenciesRelativeFolder}");
 
         // If the source repository was specified, filter away any local dependencies not from that
         // source repository.
@@ -270,7 +287,7 @@ internal class UpdateDependenciesOperation : Operation
                     currentDependencies,
                     candidateDependenciesForUpdate,
                     dependenciesToUpdate,
-                    excludedAssetsMatcher,
+                    excludedAssetMatchers,
                     relativeBasePath);
             }
             else if (!string.IsNullOrEmpty(_options.Channel))
@@ -280,7 +297,7 @@ internal class UpdateDependenciesOperation : Operation
                     currentDependencies,
                     candidateDependenciesForUpdate,
                     dependenciesToUpdate,
-                    excludedAssetsMatcher,
+                    excludedAssetMatchers,
                     relativeBasePath);
             }
         }
@@ -396,7 +413,7 @@ internal class UpdateDependenciesOperation : Operation
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> candidateDependenciesForUpdate,
         List<DependencyDetail> dependenciesToUpdate,
-        IAssetMatcher excludedAssetsMatcher,
+        IReadOnlyList<IAssetMatcher> excludedAssetMatchers,
         UnixPath relativeBasePath)
     {
         try
@@ -406,12 +423,14 @@ internal class UpdateDependenciesOperation : Operation
             // Download and parse MergedManifest.xml if repo origin filtering is requested
             Dictionary<string, string> assetRepoOrigins = await GetAssetRepoOriginsIfNeededAsync(specificBuild);
 
+            IReadOnlyList<IAssetMatcher> excludedAssetMatchersWithOrigins = CreateExcludedAssetMatchers(assetRepoOrigins, excludedAssetMatchers);
+
             int nonCoherencyResult = await NonCoherencyUpdatesForBuildAsync(
                 specificBuild,
                 currentDependencies,
                 candidateDependenciesForUpdate,
                 dependenciesToUpdate,
-                excludedAssetsMatcher,
+                excludedAssetMatchersWithOrigins,
                 relativeBasePath,
                 assetRepoOrigins);
             if (nonCoherencyResult != Constants.SuccessCode)
@@ -470,7 +489,7 @@ internal class UpdateDependenciesOperation : Operation
         List<DependencyDetail> currentDependencies,
         List<DependencyDetail> candidateDependenciesForUpdate,
         List<DependencyDetail> dependenciesToUpdate,
-        IAssetMatcher excludedAssetsMatcher,
+        IReadOnlyList<IAssetMatcher> excludedAssetMatchers,
         UnixPath relativeBasePath)
     {
         // Start channel query.
@@ -508,12 +527,14 @@ internal class UpdateDependenciesOperation : Operation
             // Download and parse MergedManifest.xml if repo origin filtering is requested
             Dictionary<string, string> assetRepoOrigins = await GetAssetRepoOriginsIfNeededAsync(build);
 
+            IReadOnlyList<IAssetMatcher> excludedAssetMatchersWithOrigins = CreateExcludedAssetMatchers(assetRepoOrigins, excludedAssetMatchers);
+
             int nonCoherencyResult = await NonCoherencyUpdatesForBuildAsync(
                 build,
                 currentDependencies,
                 candidateDependenciesForUpdate,
                 dependenciesToUpdate,
-                excludedAssetsMatcher,
+                excludedAssetMatchersWithOrigins,
                 relativeBasePath,
                 assetRepoOrigins);
             if (nonCoherencyResult != Constants.SuccessCode)
@@ -684,12 +705,23 @@ internal class UpdateDependenciesOperation : Operation
     {
         const string MergedManifestFileName = "MergedManifest.xml";
 
+        // Find the merged manfiest asset in the build:
+
+        var mergedManifestAssets =
+            build.Assets.FirstOrDefault(a => a.Name.EndsWith(MergedManifestFileName, StringComparison.OrdinalIgnoreCase));
+
+        if (mergedManifestAssets == null)
+        {
+            _logger.LogInformation("Build {BuildId} does not contain a {FileName} asset.", build.Id, MergedManifestFileName);
+            return null;
+        }
+
         // Query BAR to get the MergedManifest.xml asset with locations loaded
-        var mergedManifestAssets = await _barClient.GetAssetsAsync(
-            name: MergedManifestFileName,
+        var mergedManifestWithLocation = await _barClient.GetAssetsAsync(
+            name: mergedManifestAssets.Name,
             buildId: build.Id);
 
-        var mergedManifestAsset = mergedManifestAssets.FirstOrDefault();
+        var mergedManifestAsset = mergedManifestWithLocation.Single();
 
         if (mergedManifestAsset == null)
         {
@@ -697,49 +729,48 @@ internal class UpdateDependenciesOperation : Operation
             return null;
         }
 
-        // Get the asset location
-        var assetLocation = mergedManifestAsset.Locations?.FirstOrDefault();
-        if (assetLocation == null || string.IsNullOrEmpty(assetLocation.Location))
+        // Attempt to download from each CDN location
+        string manifestContent = null;
+        foreach (var location in mergedManifestAsset.Locations)
         {
-            _logger.LogWarning("MergedManifest.xml asset found but has no location information.");
-            return null;
+            try
+            {
+                var targetUri = new Uri(location.Location +
+                                        (location.Location.EndsWith("/") ? "" : "/") +
+                                        mergedManifestAsset.Name);
+                if (targetUri.Host.Contains(".blob.core.windows.net", StringComparison.OrdinalIgnoreCase) ||
+                    targetUri.Host.Contains("ci.dot.net", StringComparison.OrdinalIgnoreCase))
+                {
+                    using var request = new HttpRequestMessage(HttpMethod.Get, targetUri);
+
+                    // add API version to support Bearer token authentication
+                    request.Headers.Add("x-ms-version", "2023-08-03");
+
+                    var tokenRequest = new TokenRequestContext(["https://storage.azure.com/"]);
+                    var azureTokenCredential = new AzureCliCredential();
+                    var token = azureTokenCredential.GetToken(tokenRequest, CancellationToken.None);
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
+
+                    using var response = await httpClient.SendAsync(request, CancellationToken.None);
+                    response.EnsureSuccessStatusCode();
+                    manifestContent = await response.Content.ReadAsStringAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to download MergedManifest.xml from build {BuildId}", build.Id);
+                return null;
+            }
         }
 
-        // Download the manifest
-        string manifestContent;
-        try
+        if (manifestContent == null)
         {
-            var manifestUrl = GetManifestDownloadUrl(assetLocation.Location, mergedManifestAsset.Name);
-            _logger.LogInformation("Downloading MergedManifest.xml from {ManifestUrl}", manifestUrl);
-
-            var response = await httpClient.GetAsync(manifestUrl);
-            response.EnsureSuccessStatusCode();
-            manifestContent = await response.Content.ReadAsStringAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to download MergedManifest.xml from build {BuildId}", build.Id);
+            _logger.LogError("Failed to download {FileName} from build {BuildId}", MergedManifestFileName, build.Id);
             return null;
         }
 
         // Parse the manifest to extract repo origins
         return ParseAssetRepoOrigins(manifestContent);
-    }
-
-    /// <summary>
-    /// Constructs the download URL for the MergedManifest.xml asset based on its location.
-    /// </summary>
-    private static string GetManifestDownloadUrl(string assetLocation, string assetName)
-    {
-        // If the location is a blob storage URL ending in index.json, strip that and append the asset name
-        if (assetLocation.EndsWith("index.json", StringComparison.OrdinalIgnoreCase))
-        {
-            var baseUrl = assetLocation.Substring(0, assetLocation.LastIndexOf("index.json"));
-            return $"{baseUrl}{assetName}";
-        }
-
-        // Otherwise assume the location is directly usable
-        return assetLocation;
     }
 
     /// <summary>
@@ -761,7 +792,6 @@ internal class UpdateDependenciesOperation : Operation
             }
 
             string buildName = buildElement.Attribute("Name")?.Value;
-            string repoName = buildName?.Replace("dotnet-", null) ?? string.Empty;
 
             foreach (var asset in buildElement.Elements())
             {
@@ -769,10 +799,7 @@ internal class UpdateDependenciesOperation : Operation
                 if (assetName == null)
                     continue;
 
-                string assetOrigin = asset.Attribute("Origin")?.Value;
-
-                // If Origin attribute doesn't exist, use the build name (repo name) as the origin
-                assetOrigin ??= repoName;
+                string assetOrigin = asset.Attribute("RepoOrigin")?.Value;
 
                 if (!string.IsNullOrEmpty(assetOrigin) && !assetOrigins.ContainsKey(assetName))
                 {

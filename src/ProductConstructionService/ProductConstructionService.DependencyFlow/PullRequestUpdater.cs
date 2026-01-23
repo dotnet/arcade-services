@@ -887,7 +887,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         var subscription = await _sqlClient.GetSubscriptionAsync(update.SubscriptionId)
             ?? throw new ($"Subscription with ID {update.SubscriptionId} not found in the DB.");
 
-        var excludedAssetsMatcher = subscription.ExcludedAssets.GetAssetMatcher();
+        var excludedAssetsMatcher = new NameBasedAssetMatcher(subscription.ExcludedAssets);
 
         List<UnixPath> targetDirectories;
         if (string.IsNullOrEmpty(subscription.TargetDirectory))
