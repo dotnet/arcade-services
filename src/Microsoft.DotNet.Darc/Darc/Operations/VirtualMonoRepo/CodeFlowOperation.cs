@@ -217,7 +217,6 @@ internal abstract class CodeFlowOperation(
             cancellationToken);
 
         // Update source-manifest.json by getting the latest and overwriting the entry for the flowed repo
-        vmr ??= _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         var sourceManifestContent = await vmr.GetFileFromGitAsync(VmrInfo.DefaultRelativeSourceManifestPath, headBranch);
         var sourceManifest = SourceManifest.FromJson(sourceManifestContent!);
         sourceManifest.UpdateVersion(mapping.Name, build.GetRepository(), build.Commit, build.Id);
