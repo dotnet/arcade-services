@@ -195,37 +195,35 @@ internal abstract class CodeFlowOperation(
         string? targetRepoUri,
         CancellationToken cancellationToken)
     {
+        ILocalGitRepo vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
+
         if (targetRepoUri == null)
         {
-            var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
             var remotes = await vmr.GetRemotesAsync();
             targetRepoUri = remotes.First().Uri;
         }
 
-        try
-        {
-            return await _forwardFlower.FlowForwardAsync(
-                mapping.Name,
-                productRepo.Path,
-                build,
-                excludedAssets,
-                headBranch,
-                headBranch,
-                targetRepoUri,
-                enableRebase: true,
-                forceUpdate: true,
-                unsafeFlow: _options.UnsafeFlow,
-                cancellationToken);
-        }
-        finally
-        {
-            var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-            var sourceManifestContent = await vmr.GetFileFromGitAsync(VmrInfo.DefaultRelativeSourceManifestPath, headBranch);
-            var sourceManifest = SourceManifest.FromJson(sourceManifestContent!);
-            sourceManifest.UpdateVersion(mapping.Name, build.GetRepository(), build.Commit, build.Id);
-            _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, sourceManifest.ToJson());
-            await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
-        }
+        CodeFlowResult result = await _forwardFlower.FlowForwardAsync(
+            mapping.Name,
+            productRepo.Path,
+            build,
+            excludedAssets,
+            headBranch,
+            headBranch,
+            targetRepoUri,
+            enableRebase: true,
+            forceUpdate: true,
+            unsafeFlow: _options.UnsafeFlow,
+            cancellationToken);
+
+        // Update source-manifest.json by getting the latest and overwriting the entry for the flowed repo
+        var sourceManifestContent = await vmr.GetFileFromGitAsync(VmrInfo.DefaultRelativeSourceManifestPath, headBranch);
+        var sourceManifest = SourceManifest.FromJson(sourceManifestContent!);
+        sourceManifest.UpdateVersion(mapping.Name, build.GetRepository(), build.Commit, build.Id);
+        _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, sourceManifest.ToJson());
+        await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
+
+        return result;
     }
 
     protected async Task VerifyLocalRepositoriesAsync(ILocalGitRepo repo)

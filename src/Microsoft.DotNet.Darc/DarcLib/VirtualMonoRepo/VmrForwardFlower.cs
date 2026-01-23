@@ -155,29 +155,14 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
         if (result.HadUpdates)
         {
-            LastFlows lastFlowsAfterRecreation = lastFlows;
-            if (codeflowOptions.EnableRebase && lastFlows.CrossingFlow == null && result.RecreatedPreviousFlows)
-            {
-                lastFlowsAfterRecreation = lastFlows with
-                {
-                    CrossingFlow = lastFlows.LastForwardFlow,
-                };
-            }
-
-            // We try to merge the target branch so that we can potentially
-            // resolve some expected conflicts in the version files
-            result = result with
-            {
-                ConflictedFiles = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
-                    codeflowOptions,
-                    vmr,
-                    sourceRepo,
-                    lastFlowsAfterRecreation,
-                    headBranchExisted,
-                    cancellationToken)
-            };
-
-            await CommentIncludedPRs(sourceRepo, lastFlows.LastForwardFlow.RepoSha, build.Commit, mapping.DefaultRemote, cancellationToken);
+            result = await ResolveConflictsAndUpdateDependenciesAsync(
+                codeflowOptions,
+                result,
+                headBranchExisted,
+                lastFlows,
+                vmr,
+                sourceRepo,
+                cancellationToken);
         }
 
         // If we don't force the update, we'll set hasChanges to false when the updates are not meaningful
@@ -386,6 +371,45 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         }
 
         return result;
+    }
+
+    protected virtual async Task<CodeFlowResult> ResolveConflictsAndUpdateDependenciesAsync(
+        CodeflowOptions codeflowOptions,
+        CodeFlowResult result,
+        bool headBranchExisted,
+        LastFlows lastFlows,
+        ILocalGitRepo vmr,
+        ILocalGitRepo sourceRepo,
+        CancellationToken cancellationToken)
+    {
+        LastFlows lastFlowsAfterRecreation = lastFlows;
+        if (codeflowOptions.EnableRebase && lastFlows.CrossingFlow == null && result.RecreatedPreviousFlows)
+        {
+            lastFlowsAfterRecreation = lastFlows with
+            {
+                CrossingFlow = lastFlows.LastForwardFlow,
+            };
+        }
+
+        await CommentIncludedPRs(
+            sourceRepo,
+            lastFlows.LastForwardFlow.RepoSha,
+            codeflowOptions.Build.Commit,
+            codeflowOptions.Mapping.DefaultRemote,
+            cancellationToken);
+
+        return result with
+        {
+            // We try to merge the target branch so that we can potentially
+            // resolve some expected conflicts in the version files
+            ConflictedFiles = await _conflictResolver.TryMergingBranchAndUpdateDependencies(
+                codeflowOptions,
+                vmr,
+                sourceRepo,
+                lastFlowsAfterRecreation,
+                headBranchExisted,
+                cancellationToken)
+        };
     }
 
     private async Task CommentIncludedPRs(

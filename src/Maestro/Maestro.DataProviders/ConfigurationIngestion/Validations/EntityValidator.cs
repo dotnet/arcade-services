@@ -5,6 +5,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using Maestro.DataProviders.ConfigurationIngestion.Model;
+using Maestro.DataProviders.Exceptions;
 
 namespace Maestro.DataProviders.ConfigurationIngestion.Validations;
 
@@ -29,7 +30,7 @@ internal class EntityValidator
             var duplicateInfo = string.Join(", ", duplicates.Select(e => e.ToString()));
             var entityTypeName = entities.First().GetType().Name;
 
-            throw new IngestionEntityValidationException(
+            throw new EntityIngestionValidationException(
                 $"{entityTypeName} collection contains duplicate Ids: {duplicateInfo}");
         }
     }

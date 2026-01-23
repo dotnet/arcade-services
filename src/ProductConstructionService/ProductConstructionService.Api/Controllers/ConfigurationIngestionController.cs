@@ -4,7 +4,7 @@
 using System.Net;
 using Maestro.DataProviders;
 using Maestro.DataProviders.ConfigurationIngestion;
-using Maestro.DataProviders.ConfigurationIngestion.Validations;
+using Maestro.DataProviders.Exceptions;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Authorization;
@@ -75,7 +75,7 @@ public class ConfigurationIngestionController : Controller
             _logger.LogError(ex, "Configuration validation failed for namespace {NamespaceName}", namespaceName);
             return BadRequest(new ApiError("Configuration validation failed", [ex.Message]));
         }
-        catch (IngestionEntityValidationException ex)
+        catch (EntityIngestionValidationException ex)
         {
             _logger.LogError(ex, "Entity validation failed for namespace {NamespaceName}: {EntityInfo}", namespaceName, ex.EntityInfo);
             return BadRequest(new ApiError("Entity validation failed", [ex.Message]));

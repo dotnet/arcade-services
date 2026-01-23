@@ -5,7 +5,7 @@ using AwesomeAssertions;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders.ConfigurationIngestion;
-using Maestro.DataProviders.ConfigurationIngestion.Validations;
+using Maestro.DataProviders.Exceptions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.EntityFrameworkCore;
@@ -155,7 +155,7 @@ public class ConfigurationIngestorTests
         var act = async () => await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
 
         // Assert
-        await act.Should().ThrowAsync<IngestionEntityValidationException>()
+        await act.Should().ThrowAsync<EntityIngestionValidationException>()
             .WithMessage("*invalid Pull Request Failure Notification Tags*");
     }
 
