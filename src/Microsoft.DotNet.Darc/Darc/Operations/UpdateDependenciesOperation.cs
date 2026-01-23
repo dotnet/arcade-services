@@ -22,7 +22,6 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
-using Microsoft.TeamFoundation.WorkItemTracking.Process.WebApi.Models;
 using NuGet.Packaging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -467,12 +466,7 @@ internal class UpdateDependenciesOperation : Operation
             return null;
         }
 
-        using var httpClient = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true })
-        {
-            Timeout = TimeSpan.FromMinutes(2)
-        };
-        
-        var assetRepoOrigins = await DownloadAndParseMergedManifestAsync(build, httpClient);
+        var assetRepoOrigins = await DownloadAndParseMergedManifestAsync(build);
 
         if (assetRepoOrigins == null)
         {
@@ -700,8 +694,7 @@ internal class UpdateDependenciesOperation : Operation
     /// <param name="httpClient">HTTP client for downloading the manifest</param>
     /// <returns>A dictionary mapping asset names to their repo origins, or null if MergedManifest.xml is not found</returns>
     private async Task<Dictionary<string, string>> DownloadAndParseMergedManifestAsync(
-        Build build,
-        HttpClient httpClient)
+        Build build)
     {
         const string MergedManifestFileName = "MergedManifest.xml";
 
@@ -741,6 +734,11 @@ internal class UpdateDependenciesOperation : Operation
                 if (targetUri.Host.Contains(".blob.core.windows.net", StringComparison.OrdinalIgnoreCase) ||
                     targetUri.Host.Contains("ci.dot.net", StringComparison.OrdinalIgnoreCase))
                 {
+                    using var httpClient = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true })
+                    {
+                        Timeout = TimeSpan.FromMinutes(2)
+                    };
+
                     using var request = new HttpRequestMessage(HttpMethod.Get, targetUri);
 
                     // add API version to support Bearer token authentication
