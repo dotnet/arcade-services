@@ -162,7 +162,6 @@ public abstract partial class VmrManagerBase
     /// <param name="oldSha">SHA we are updating from</param>
     /// <param name="newSha">SHA we are updating to</param>
     /// <param name="additionalMessage">Additional message inserted in the commit body</param>
-    /// <param name="conflictingFiles">List of files that had conflicts, if any</param>
     public static string PrepareCommitMessage(
         string template,
         string name,

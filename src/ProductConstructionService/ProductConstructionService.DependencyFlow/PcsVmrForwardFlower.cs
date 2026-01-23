@@ -133,4 +133,39 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
 
         return conflicts;
     }
+
+    protected override async Task<CodeFlowResult> ResolveConflictsAndUpdateDependenciesAsync(
+        CodeflowOptions codeflowOptions,
+        CodeFlowResult result,
+        bool headBranchExisted,
+        LastFlows lastFlows,
+        ILocalGitRepo vmr,
+        ILocalGitRepo sourceRepo,
+        CancellationToken cancellationToken)
+    {
+        bool hadConflicts = result.HadConflicts;
+        result = await base.ResolveConflictsAndUpdateDependenciesAsync(
+            codeflowOptions,
+            result,
+            headBranchExisted,
+            lastFlows,
+            vmr,
+            sourceRepo,
+            cancellationToken);
+
+        // Did we resolve all conflicts? We need to commit files before creating the PR
+        // This only has to happen in the service while in darc we only stage files
+        if (hadConflicts && !result.HadConflicts)
+        {
+            var commitMessage = VmrManagerBase.PrepareCommitMessage(
+                CodeFlowVmrUpdater.SyncCommitMessage,
+                codeflowOptions.Mapping.Name,
+                codeflowOptions.Build.GetRepository(),
+                lastFlows.LastForwardFlow.RepoSha,
+                codeflowOptions.Build.Commit);
+            await vmr.CommitAsync(commitMessage, allowEmpty: false, cancellationToken: cancellationToken);
+        }
+
+        return result;
+    }
 }
