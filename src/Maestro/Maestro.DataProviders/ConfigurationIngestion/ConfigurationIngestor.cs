@@ -14,7 +14,6 @@ using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.DarcLib;
-using System.Diagnostics;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion;
@@ -158,7 +157,6 @@ internal partial class ConfigurationIngestor(
 
     private async Task<Namespace> FetchOrCreateNamespaceAsync(string configurationNamespace)
     {
-        _context.Database.SetCommandTimeout(TimeSpan.FromMinutes(1));
         var namespaceEntity = await _context.Namespaces
             .Include(ns => ns.Subscriptions)
             .Include(ns => ns.Channels)
