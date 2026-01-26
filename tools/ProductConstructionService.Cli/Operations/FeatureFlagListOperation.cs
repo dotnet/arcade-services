@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.MaestroConfiguration.Client;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Cli.Options;
@@ -29,18 +28,6 @@ internal class FeatureFlagListOperation : IOperation
 
     public async Task<int> RunAsync()
     {
-        var path = "C:\\Users\\dkurepa\\source\\repos\\maestro-configuration";
-        var config = LocalConfigurationRepositoryParser.Parse(path);
-        //await _client.Ingestion.DeleteNamespaceAsync("djuradj", saveChanges: true);
-        var result = await _client.Ingestion.IngestNamespaceAsync("djuradj", saveChanges: true, config.ToPcsClient());
-
-        Console.WriteLine("=== Ingestion Summary ===");
-        Console.WriteLine($"Subscriptions:       Created: {result.Subscriptions?.Creations?.Count ?? 0}, Updated: {result.Subscriptions?.Updates?.Count ?? 0}, Removed: {result.Subscriptions?.Removals?.Count ?? 0}");
-        Console.WriteLine($"Channels:            Created: {result.Channels?.Creations?.Count ?? 0}, Updated: {result.Channels?.Updates?.Count ?? 0}, Removed: {result.Channels?.Removals?.Count ?? 0}");
-        Console.WriteLine($"Default Channels:    Created: {result.DefaultChannels?.Creations?.Count ?? 0}, Updated: {result.DefaultChannels?.Updates?.Count ?? 0}, Removed: {result.DefaultChannels?.Removals?.Count ?? 0}");
-        Console.WriteLine($"Repository Branches: Created: {result.RepositoryBranches?.Creations?.Count ?? 0}, Updated: {result.RepositoryBranches?.Updates?.Count ?? 0}, Removed: {result.RepositoryBranches?.Removals?.Count ?? 0}");
-        Console.WriteLine("=========================");
-
         try
         {
             if (!string.IsNullOrEmpty(_options.SubscriptionId))
