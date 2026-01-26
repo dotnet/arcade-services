@@ -732,6 +732,7 @@ public class SqlBarClient : ISqlBarClient
             .Include(n => n.Channels)
             .Include(n => n.DefaultChannels)
             .Include(n => n.RepositoryBranches)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(n => n.Name == namespaceName);
 
         if (barNamespace == null)
