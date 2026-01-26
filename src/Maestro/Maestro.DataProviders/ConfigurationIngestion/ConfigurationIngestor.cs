@@ -437,26 +437,25 @@ internal partial class ConfigurationIngestor(
 
         async Task<long> GetInstallationId(string repoUri)
         {
-            return default;
-            //if (repoUri.Contains("github.com"))
-            //{
-            //    var installationId = await _installationIdResolver.GetInstallationIdForRepository(repoUri);
+            if (repoUri.Contains("github.com"))
+            {
+                var installationId = await _installationIdResolver.GetInstallationIdForRepository(repoUri);
 
-            //    if (!installationId.HasValue)
-            //    {
-            //        throw new EntityIngestionValidationException($"No Maestro GitHub application installation found for repository '{repoUri}'. " +
-            //            "The Maestro github application must be installed by the repository's owner and given access to the repository.");
-            //    }
+                if (!installationId.HasValue)
+                {
+                    throw new EntityIngestionValidationException($"No Maestro GitHub application installation found for repository '{repoUri}'. " +
+                        "The Maestro github application must be installed by the repository's owner and given access to the repository.");
+                }
 
-            //    return installationId.Value; 
-            //}
-            //else
-            //{
-            //    // In the case of a non github repository, we don't have an app installation,
-            //    // but we should add an entry in the repositories table, as this is required when
-            //    // adding a new subscription policy.
-            //    return default;
-            //}
+                return installationId.Value;
+            }
+            else
+            {
+                // In the case of a non github repository, we don't have an app installation,
+                // but we should add an entry in the repositories table, as this is required when
+                // adding a new subscription policy.
+                return default;
+            }
         }
 
         List<Repository> newRepositories = [];
