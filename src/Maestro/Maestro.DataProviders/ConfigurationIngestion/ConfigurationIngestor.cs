@@ -14,6 +14,7 @@ using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.DarcLib;
+using System.Diagnostics;
 
 #nullable enable
 namespace Maestro.DataProviders.ConfigurationIngestion;
@@ -135,13 +136,16 @@ internal partial class ConfigurationIngestor(
             .Local
             .ToDictionary(c => c.Name);
 
+        // Before creating subscriptions and branch policies, ensure that all referenced repositories have a Repository row in the DB
+        await EnsureRepositoryRegistrationAsync(configurationDataUpdate.Subscriptions.Creations
+            .Select(s => s.Values.TargetRepository)
+            .Concat(configurationDataUpdate.RepositoryBranches.Creations
+                .Select(rb => rb.Values.Repository))
+            .Distinct()
+            .ToList());
+
         // Update the rest of the entities
         await CreateSubscriptions(configurationDataUpdate.Subscriptions.Creations, namespaceEntity, existingChannels);
-
-        await EnsureRepositoryRegistrationForCreatedSubscriptionsAsync(configurationDataUpdate.Subscriptions.Creations
-                .Select(s => s.Values.TargetRepository)
-                .Distinct()
-                .ToList());
 
         await UpdateSubscriptions(configurationDataUpdate.Subscriptions.Updates, namespaceEntity, existingChannels);
 
@@ -154,12 +158,14 @@ internal partial class ConfigurationIngestor(
 
     private async Task<Namespace> FetchOrCreateNamespaceAsync(string configurationNamespace)
     {
+        _context.Database.SetCommandTimeout(TimeSpan.FromMinutes(1));
         var namespaceEntity = await _context.Namespaces
             .Include(ns => ns.Subscriptions)
             .Include(ns => ns.Channels)
             .Include(ns => ns.DefaultChannels)
             .Include(ns => ns.RepositoryBranches)
             .Where(ns => ns.Name == configurationNamespace)
+            .AsSplitQuery()
             .FirstOrDefaultAsync();
 
         if (namespaceEntity is null)
@@ -425,7 +431,7 @@ internal partial class ConfigurationIngestor(
     /// <summary>
     /// Verifies that the repositories are registered in the database (and that they have a valid installation ID).
     /// </summary>
-    private async Task EnsureRepositoryRegistrationForCreatedSubscriptionsAsync(IReadOnlyList<string> targetRepositories)
+    private async Task EnsureRepositoryRegistrationAsync(IReadOnlyList<string> targetRepositories)
     {
         List<Repository> existing = await _context.Repositories
             .Where(r => targetRepositories.Contains(r.RepositoryName))
@@ -433,25 +439,26 @@ internal partial class ConfigurationIngestor(
 
         async Task<long> GetInstallationId(string repoUri)
         {
-            if (repoUri.Contains("github.com"))
-            {
-                var installationId = await _installationIdResolver.GetInstallationIdForRepository(repoUri);
+            return default;
+            //if (repoUri.Contains("github.com"))
+            //{
+            //    var installationId = await _installationIdResolver.GetInstallationIdForRepository(repoUri);
 
-                if (!installationId.HasValue)
-                {
-                    throw new EntityIngestionValidationException($"No Maestro GitHub application installation found for repository '{repoUri}'. " +
-                        "The Maestro github application must be installed by the repository's owner and given access to the repository.");
-                }
+            //    if (!installationId.HasValue)
+            //    {
+            //        throw new EntityIngestionValidationException($"No Maestro GitHub application installation found for repository '{repoUri}'. " +
+            //            "The Maestro github application must be installed by the repository's owner and given access to the repository.");
+            //    }
 
-                return installationId.Value; 
-            }
-            else
-            {
-                // In the case of a non github repository, we don't have an app installation,
-                // but we should add an entry in the repositories table, as this is required when
-                // adding a new subscription policy.
-                return default;
-            }
+            //    return installationId.Value; 
+            //}
+            //else
+            //{
+            //    // In the case of a non github repository, we don't have an app installation,
+            //    // but we should add an entry in the repositories table, as this is required when
+            //    // adding a new subscription policy.
+            //    return default;
+            //}
         }
 
         List<Repository> newRepositories = [];

@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.DotNet.MaestroConfiguration.Client;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Cli.Options;
@@ -28,6 +29,10 @@ internal class FeatureFlagListOperation : IOperation
 
     public async Task<int> RunAsync()
     {
+        var path = "C:\\Users\\dkurepa\\source\\repos\\maestro-configuration";
+        var config = LocalConfigurationRepositoryParser.Parse(path);
+        //await _client.Ingestion.DeleteNamespaceAsync("djuradj", saveChanges: true);
+        var a = await _client.Ingestion.IngestNamespaceAsync("djuradj", saveChanges: true, config.ToPcsClient());
         try
         {
             if (!string.IsNullOrEmpty(_options.SubscriptionId))
