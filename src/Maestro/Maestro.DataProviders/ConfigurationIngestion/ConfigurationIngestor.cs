@@ -459,7 +459,9 @@ internal partial class ConfigurationIngestor(
         }
 
         List<Repository> newRepositories = [];
-        foreach (var newRepositoryUri in targetRepositories.Except(existing.Select(r => r.RepositoryName)))
+        foreach (var newRepositoryUri in targetRepositories.Except(
+            existing.Select(r => r.RepositoryName),
+            StringComparer.OrdinalIgnoreCase))
         {
             var installationId = await GetInstallationId(newRepositoryUri);
 
