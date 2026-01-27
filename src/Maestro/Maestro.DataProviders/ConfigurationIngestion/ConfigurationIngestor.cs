@@ -161,6 +161,7 @@ internal partial class ConfigurationIngestor(
             .Include(ns => ns.Subscriptions)
             .Include(ns => ns.Channels)
             .Include(ns => ns.DefaultChannels)
+                .ThenInclude(dc => dc.Channel)
             .Include(ns => ns.RepositoryBranches)
             .Where(ns => ns.Name == configurationNamespace)
             .AsSplitQuery()
