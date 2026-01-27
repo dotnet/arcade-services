@@ -161,6 +161,7 @@ internal partial class ConfigurationIngestor(
             .Include(ns => ns.Subscriptions)
             .Include(ns => ns.Channels)
             .Include(ns => ns.DefaultChannels)
+                .ThenInclude(dc => dc.Channel)
             .Include(ns => ns.RepositoryBranches)
             .Where(ns => ns.Name == configurationNamespace)
             .AsSplitQuery()
@@ -459,7 +460,9 @@ internal partial class ConfigurationIngestor(
         }
 
         List<Repository> newRepositories = [];
-        foreach (var newRepositoryUri in targetRepositories.Except(existing.Select(r => r.RepositoryName)))
+        foreach (var newRepositoryUri in targetRepositories.Except(
+            existing.Select(r => r.RepositoryName),
+            StringComparer.OrdinalIgnoreCase))
         {
             var installationId = await GetInstallationId(newRepositoryUri);
 
