@@ -302,9 +302,9 @@ public class SqlBarClient : ISqlBarClient
             other.SourceRepository,
             other.TargetRepository,
             other.TargetBranch,
-            other.PullRequestFailureNotificationTags,
             other.SourceDirectory,
             other.TargetDirectory,
+            other.PullRequestFailureNotificationTags,
             other.ExcludedAssets?.Select(a => a.Filter).ToList())
         {
             Channel = ToClientModelChannel(other.Channel),
