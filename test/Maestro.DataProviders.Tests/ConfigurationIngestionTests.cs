@@ -1325,6 +1325,50 @@ public class ConfigurationIngestorTests
         ns2.Channels.Should().Contain(c => c.Name == "Channel 2");
     }
 
+    [Test]
+    public async Task IngestConfigurationAsync_RepositoryWithDifferentCasing_DoesNotCreateDuplicate()
+    {
+        // Arrange
+        // Pre-populate the database with a lowercase repository name
+        var existingRepoName = "https://github.com/dotnet/casingtest";
+        await EnsureRepositoriesExist(existingRepoName);
+
+        // Create subscription targeting the same repo but with different casing
+        var repoNameWithDifferentCasing = "https://github.com/dotnet/CasingTest";
+
+        var channelYaml = new ChannelYaml
+        {
+            Name = ".NET 8",
+            Classification = "release",
+        };
+
+        var subscriptionYaml = new SubscriptionYaml
+        {
+            Id = Guid.NewGuid(),
+            Channel = ".NET 8",
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = repoNameWithDifferentCasing,
+            TargetBranch = "main",
+            Enabled = true,
+        };
+
+        var configData = new ConfigurationData(
+            [subscriptionYaml],
+            [channelYaml],
+            [],
+            []);
+
+        // Act - should not throw due to duplicate repository tracking
+        await _ingestor.IngestConfigurationAsync(configData, _testNamespace, saveChanges: true);
+
+        // Assert - only one repository should exist (case-insensitive match)
+        var repos = await _context.Repositories
+            .Where(r => r.RepositoryName.ToLower() == existingRepoName.ToLower())
+            .ToListAsync();
+
+        repos.Should().HaveCount(1, "repository names should be treated as case-insensitive");
+    }
+
     #endregion
 
     #region Helper Methods

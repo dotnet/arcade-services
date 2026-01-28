@@ -135,13 +135,16 @@ internal partial class ConfigurationIngestor(
             .Local
             .ToDictionary(c => c.Name);
 
+        // Before creating subscriptions and branch policies, ensure that all referenced repositories have a Repository row in the DB
+        await EnsureRepositoryRegistrationAsync(configurationDataUpdate.Subscriptions.Creations
+            .Select(s => s.Values.TargetRepository)
+            .Concat(configurationDataUpdate.RepositoryBranches.Creations
+                .Select(rb => rb.Values.Repository))
+            .Distinct()
+            .ToList());
+
         // Update the rest of the entities
         await CreateSubscriptions(configurationDataUpdate.Subscriptions.Creations, namespaceEntity, existingChannels);
-
-        await EnsureRepositoryRegistrationForCreatedSubscriptionsAsync(configurationDataUpdate.Subscriptions.Creations
-                .Select(s => s.Values.TargetRepository)
-                .Distinct()
-                .ToList());
 
         await UpdateSubscriptions(configurationDataUpdate.Subscriptions.Updates, namespaceEntity, existingChannels);
 
@@ -158,8 +161,10 @@ internal partial class ConfigurationIngestor(
             .Include(ns => ns.Subscriptions)
             .Include(ns => ns.Channels)
             .Include(ns => ns.DefaultChannels)
+                .ThenInclude(dc => dc.Channel)
             .Include(ns => ns.RepositoryBranches)
             .Where(ns => ns.Name == configurationNamespace)
+            .AsSplitQuery()
             .FirstOrDefaultAsync();
 
         if (namespaceEntity is null)
@@ -425,7 +430,7 @@ internal partial class ConfigurationIngestor(
     /// <summary>
     /// Verifies that the repositories are registered in the database (and that they have a valid installation ID).
     /// </summary>
-    private async Task EnsureRepositoryRegistrationForCreatedSubscriptionsAsync(IReadOnlyList<string> targetRepositories)
+    private async Task EnsureRepositoryRegistrationAsync(IReadOnlyList<string> targetRepositories)
     {
         List<Repository> existing = await _context.Repositories
             .Where(r => targetRepositories.Contains(r.RepositoryName))
@@ -443,7 +448,7 @@ internal partial class ConfigurationIngestor(
                         "The Maestro github application must be installed by the repository's owner and given access to the repository.");
                 }
 
-                return installationId.Value; 
+                return installationId.Value;
             }
             else
             {
@@ -455,7 +460,9 @@ internal partial class ConfigurationIngestor(
         }
 
         List<Repository> newRepositories = [];
-        foreach (var newRepositoryUri in targetRepositories.Except(existing.Select(r => r.RepositoryName)))
+        foreach (var newRepositoryUri in targetRepositories.Except(
+            existing.Select(r => r.RepositoryName),
+            StringComparer.OrdinalIgnoreCase))
         {
             var installationId = await GetInstallationId(newRepositoryUri);
 
