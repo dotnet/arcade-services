@@ -53,7 +53,7 @@ internal class ExportConfigurationOperation : IOperation
         var yamlGroups = data
             .Select(convertToYaml)
             .Select(yaml => (filePath: getFilePath(yaml), yaml))
-            .GroupBy(t => t.filePath, t => t.yaml);
+            .GroupBy(t => t.filePath.ToLower(), t => t.yaml);
 
         _fileSystem.CreateDirectory(exportPath / folderPath);
         WriteGroupsToFiles(exportPath, yamlGroups, comparer);
@@ -62,6 +62,7 @@ internal class ExportConfigurationOperation : IOperation
     private async Task ExportSubscriptions(NativePath exportPath)
     {
         var subscriptions = await _api.Subscriptions.ListSubscriptionsAsync();
+        var a = subscriptions.First(s => s.Id == Guid.Parse("804b7770-9ec2-4d1d-851a-b920b110907e"));
         ProcessAndWriteYamlGroups(
             exportPath,
             subscriptions,
