@@ -100,7 +100,9 @@ internal abstract class CodeFlowTestsBase
         .AddCodeflow(TmpPath, VmrPath)
         .AddSingleton(_basicBarClient.Object)
         .AddTransient<IRemoteFactory, RemoteFactory>()
-        .AddSingleton(Mock.Of<IRemoteTokenProvider>());
+        .AddSingleton(Mock.Of<IRemoteTokenProvider>())
+        .AddScoped<ICommentCollector, CommentCollector>()
+        .AddSingleton<IRedisCacheClient, NoOpRedisClient>();
 
     protected static List<NativePath> GetExpectedFilesInVmr(
         NativePath vmrPath,
