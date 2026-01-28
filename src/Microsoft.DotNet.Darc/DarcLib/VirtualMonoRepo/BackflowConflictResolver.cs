@@ -278,7 +278,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             // we're applying the changes to a product repo, so no mapping
             mappingToApplyChanges: null);
 
-        var excludedAssetsMatcher = codeflowOptions.ExcludedAssets.GetAssetMatcher();
+        var excludedAssetsMatcher = new NameBasedAssetMatcher(codeflowOptions.ExcludedAssets);
         List<AssetData> buildAssets = codeflowOptions.Build.Assets
             .Where(a => !excludedAssetsMatcher.IsExcluded(a.Name))
             .Select(a => new AssetData(a.NonShipping)
