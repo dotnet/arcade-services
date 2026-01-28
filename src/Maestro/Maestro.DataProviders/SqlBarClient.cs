@@ -296,16 +296,16 @@ public class SqlBarClient : ISqlBarClient
     public static Subscription ToClientModelSubscription(Data.Models.Subscription other)
     {
         return new Subscription(
-            other.Id,
-            other.Enabled,
-            other.SourceEnabled,
-            other.SourceRepository,
-            other.TargetRepository,
-            other.TargetBranch,
-            other.SourceDirectory,
-            other.TargetDirectory,
-            other.PullRequestFailureNotificationTags,
-            other.ExcludedAssets?.Select(a => a.Filter).ToList())
+            id: other.Id,
+            enabled: other.Enabled,
+            sourceEnabled: other.SourceEnabled,
+            sourceRepository: other.SourceRepository,
+            targetRepository: other.TargetRepository,
+            targetBranch: other.TargetBranch,
+            sourceDirectory: other.SourceDirectory,
+            targetDirectory: other.TargetDirectory,
+            pullRequestFailureNotificationTags: other.PullRequestFailureNotificationTags,
+            excludedAssets: other.ExcludedAssets?.Select(a => a.Filter).ToList())
         {
             Channel = ToClientModelChannel(other.Channel),
             Policy = ToClientModelSubscriptionPolicy(other.PolicyObject),
