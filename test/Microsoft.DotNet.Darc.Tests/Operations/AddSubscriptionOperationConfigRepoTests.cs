@@ -340,7 +340,6 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
             ConfigurationBaseBranch = DefaultBranch,
             NoPr = true,
             Quiet = true,
-            NoTriggerOnCreate = true,
             IgnoreChecks = []
         };
 
@@ -431,7 +430,6 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
             ConfigurationBaseBranch = DefaultBranch,
             NoPr = true,
             Quiet = true,
-            NoTriggerOnCreate = true,
             IgnoreChecks = []
         };
 
@@ -487,7 +485,6 @@ public class AddSubscriptionOperationConfigRepoTests : ConfigurationManagementTe
             ConfigurationFilePath = configurationFilePath,
             NoPr = noPr,
             Quiet = true,
-            NoTriggerOnCreate = true,
             SourceEnabled = subscription.SourceEnabled,
             SourceDirectory = subscription.SourceDirectory,
             TargetDirectory = subscription.TargetDirectory,

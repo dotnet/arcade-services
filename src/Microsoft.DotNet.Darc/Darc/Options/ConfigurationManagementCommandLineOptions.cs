@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.DarcLib.ConfigurationRepository;
@@ -26,7 +25,6 @@ internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLi
 {
     private const string DefaultConfigurationRepository = "https://dev.azure.com/dnceng/internal/_git/maestro-configuration";
     private const string DefaultConfigurationBaseBranch = "production";
-    private const string UseConfigRepositoryEnvVar = "DARC_USE_CONFIGURATION_REPOSITORY";
 
     [Option("configuration-repository", HelpText = "URI of the repository where configuration is stored in. Defaults to " + DefaultConfigurationRepository, Default = DefaultConfigurationRepository)]
     public string ConfigurationRepository { get; set; }
@@ -42,9 +40,6 @@ internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLi
 
     [Option("no-pr", HelpText = "Do not open a PR against the configuration repository (push the configuration branch only).", Default = false)]
     public bool NoPr { get; set; }
-
-    public bool ShouldUseConfigurationRepository { get; }
-        = bool.TryParse(Environment.GetEnvironmentVariable(UseConfigRepositoryEnvVar), out var result) && result;
 
     public override IServiceCollection RegisterServices(IServiceCollection services)
     {

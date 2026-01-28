@@ -4,10 +4,14 @@
 using System.Net;
 using AwesomeAssertions;
 using Maestro.Data;
+using Maestro.DataProviders;
+using Maestro.DataProviders.ConfigurationIngestion;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
+using Microsoft.DotNet.Kusto;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -18,7 +22,10 @@ using Microsoft.Extensions.Options;
 using Moq;
 using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
+using ProductConstructionService.Api.Controllers;
 using ProductConstructionService.Api.v2020_02_20.Models;
+using ProductConstructionService.Common;
+using ProductConstructionService.DependencyFlow.Tests.Mocks;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 
@@ -31,23 +38,36 @@ public partial class ChannelsController20200220Tests
     public async Task CreateChannel()
     {
         using TestData data = await TestData.Default.BuildAsync();
-        Channel channel;
         var channelName = "TEST-CHANNEL-BASIC";
         var classification = "TEST-CLASSIFICATION";
 
+        var yamlConfiguration = new YamlConfiguration(
+            Subscriptions: [],
+            Channels: [new ChannelYaml { Name = channelName, Classification = classification }],
+            DefaultChannels: [],
+            BranchMergePolicies: []);
         {
-            IActionResult result = await data.Controller.CreateChannel(channelName, classification);
+            var result = await data.ConfigurationIngestionController.IngestNamespace(
+                nameof(ListRepositories),
+                yamlConfiguration);
             result.Should().BeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
-            objResult.StatusCode.Should().Be((int)HttpStatusCode.Created);
-            objResult.Value.Should().BeAssignableTo<Channel>();
-            channel = (Channel)objResult.Value!;
-            channel.Name.Should().Be(channelName);
-            channel.Classification.Should().Be(classification);
+            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+        }
+
+        Channel channel;
+        {
+            var result = data.ChannelsController.ListChannels();
+            result.Should().BeAssignableTo<ObjectResult>();
+            var objResult = (ObjectResult)result;
+            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            objResult.Value.Should().BeAssignableTo<IEnumerable<Channel>>();
+            var channels = (IEnumerable<Channel>)objResult.Value!;
+            channel = channels.First(c => c.Name == channelName);
         }
 
         {
-            IActionResult result = await data.Controller.GetChannel(channel.Id);
+            IActionResult result = await data.ChannelsController.GetChannel(channel.Id);
             result.Should().BeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
             objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
@@ -71,10 +91,29 @@ public partial class ChannelsController20200220Tests
         var repository = "FAKE-REPOSITORY";
         var branch = "FAKE-BRANCH";
 
+        var yamlConfiguration = new YamlConfiguration(
+            Subscriptions: [],
+            Channels: [new ChannelYaml { Name = channelName, Classification = classification }],
+            DefaultChannels: [],
+            BranchMergePolicies: []);
+        {
+            var result = await data.ConfigurationIngestionController.IngestNamespace(
+                nameof(ListRepositories),
+                yamlConfiguration);
+            result.Should().BeAssignableTo<ObjectResult>();
+            var objResult = (ObjectResult)result;
+            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+        }
+
         Channel channel;
         {
-            var result = await data.Controller.CreateChannel(channelName, classification);
-            channel = (Channel)((ObjectResult)result).Value!;
+            var result = data.ChannelsController.ListChannels();
+            result.Should().BeAssignableTo<ObjectResult>();
+            var objResult = (ObjectResult)result;
+            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            objResult.Value.Should().BeAssignableTo<IEnumerable<Channel>>();
+            var channels = (IEnumerable<Channel>)objResult.Value!;
+            channel = channels.First(c => c.Name == channelName);
         }
 
         Build build;
@@ -91,11 +130,11 @@ public partial class ChannelsController20200220Tests
             build = (Build)((ObjectResult)result).Value!;
         }
 
-        await data.Controller.AddBuildToChannel(channel.Id, build.Id);
+        await data.ChannelsController.AddBuildToChannel(channel.Id, build.Id);
 
         List<string> repositories;
         {
-            IActionResult result = await data.Controller.ListRepositories(channel.Id);
+            IActionResult result = await data.ChannelsController.ListRepositories(channel.Id);
             result.Should().BeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
             objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
@@ -119,10 +158,29 @@ public partial class ChannelsController20200220Tests
         const string repository = "FAKE-REPOSITORY";
         const string branch = "FAKE-BRANCH";
 
+        var yamlConfiguration = new YamlConfiguration(
+            Subscriptions: [],
+            Channels: [new ChannelYaml { Name = channelName, Classification = classification }],
+            DefaultChannels: [],
+            BranchMergePolicies: []);
+        {
+            var result = await data.ConfigurationIngestionController.IngestNamespace(
+                nameof(ListRepositories),
+                yamlConfiguration);
+            result.Should().BeAssignableTo<ObjectResult>();
+            var objResult = (ObjectResult)result;
+            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+        }
+
         Channel channel;
         {
-            var result = await data.Controller.CreateChannel(channelName, classification);
-            channel = (Channel)((ObjectResult)result).Value!;
+            var result = data.ChannelsController.ListChannels();
+            result.Should().BeAssignableTo<ObjectResult>();
+            var objResult = (ObjectResult)result;
+            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            objResult.Value.Should().BeAssignableTo<IEnumerable<Channel>>();
+            var channels = (IEnumerable<Channel>)objResult.Value!;
+            channel = channels.First(c => c.Name == channelName);
         }
 
         Build build;
@@ -140,14 +198,14 @@ public partial class ChannelsController20200220Tests
         }
 
         {
-            IActionResult result = await data.Controller.AddBuildToChannel(channel.Id, build.Id);
+            IActionResult result = await data.ChannelsController.AddBuildToChannel(channel.Id, build.Id);
             result.Should().BeAssignableTo<StatusCodeResult>();
             var objResult = (StatusCodeResult)result;
             objResult.StatusCode.Should().Be((int)HttpStatusCode.Created);
         }
 
         {
-            IActionResult result = await data.Controller.AddBuildToChannel(channel.Id, build.Id);
+            IActionResult result = await data.ChannelsController.AddBuildToChannel(channel.Id, build.Id);
             result.Should().BeAssignableTo<StatusCodeResult>();
             var objResult = (StatusCodeResult)result;
             objResult.StatusCode.Should().Be((int)HttpStatusCode.Created);
@@ -189,13 +247,32 @@ public partial class ChannelsController20200220Tests
             collection.AddSingleton(mockWorkItemProducerFactory.Object);
         }
 
+        public static void AddConfigurationIngestor(IServiceCollection collection)
+        {
+            var installationIdResolver = new Mock<IGitHubInstallationIdResolver>();
+            installationIdResolver.Setup(r => r.GetInstallationIdForRepository(It.IsAny<string>()))
+                .Returns(Task.FromResult((long?)1));
+            var ghTagValidator = new Mock<IGitHubTagValidator>();
+            ghTagValidator.Setup(v => v.IsNotificationTagValidAsync(It.IsAny<string>()))
+                .Returns(Task.FromResult(true));
+            var kustoClientProvider = new Mock<IKustoClientProvider>();
+
+            collection.AddSingleton(installationIdResolver.Object)
+                .AddSingleton<IConfigurationIngestor, ConfigurationIngestor>()
+                .AddSingleton(kustoClientProvider.Object)
+                .AddSingleton(ghTagValidator.Object)
+                .AddSingleton<ISqlBarClient, SqlBarClient>()
+                .AddSingleton<IDistributedLock, DistributedLock>()
+                .AddSingleton<IRedisCacheFactory, MockRedisCacheFactory>();
+        }
+
         public static Func<IServiceProvider, TestClock> Clock(IServiceCollection collection)
         {
             collection.AddSingleton<ISystemClock, TestClock>();
             return s => (TestClock)s.GetRequiredService<ISystemClock>();
         }
 
-        public static Func<IServiceProvider, ChannelsController> Controller(IServiceCollection collection)
+        public static Func<IServiceProvider, ChannelsController> ChannelsController(IServiceCollection collection)
         {
             collection.AddSingleton<ChannelsController>();
             return s => s.GetRequiredService<ChannelsController>();
@@ -205,6 +282,12 @@ public partial class ChannelsController20200220Tests
         {
             collection.AddSingleton<BuildsController>();
             return s => s.GetRequiredService<BuildsController>();
+        }
+
+        public static Func<IServiceProvider, ConfigurationIngestionController> ConfigurationIngestionController(IServiceCollection collection)
+        {
+            collection.AddSingleton<ConfigurationIngestionController>();
+            return s => s.GetRequiredService<ConfigurationIngestionController>();
         }
     }
 }

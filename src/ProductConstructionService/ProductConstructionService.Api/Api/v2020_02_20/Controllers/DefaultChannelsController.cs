@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Text.RegularExpressions;
 using Maestro.Data;
@@ -10,13 +9,12 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using ProductConstructionService.Api.v2020_02_20.Models;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 
 /// <summary>
-///   Exposes methods to Create/Read/Delete <see cref="DefaultChannel"/> mapping information.
+///   Exposes methods to Read <see cref="DefaultChannel"/> mapping information.
 /// </summary>
 [Route("default-channels")]
 [ApiVersion("2020-02-20")]
@@ -28,8 +26,8 @@ public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannels
     // wants to use a regex, and not direct matching.
     private const string RegexBranchPrefix = "-regex:";
 
-    public DefaultChannelsController(BuildAssetRegistryContext context, IOptions<EnvironmentNamespaceOptions> environmentNamespaceOptions)
-        : base(context, environmentNamespaceOptions)
+    public DefaultChannelsController(BuildAssetRegistryContext context)
+        : base(context)
     {
         _context = context;
     }
@@ -87,133 +85,6 @@ public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannels
             return Ok(branchFilteredResults);
         }
         return Ok(results);
-    }
-
-    [ApiRemoved]
-    public override Task<IActionResult> Create([FromBody, Required] ProductConstructionService.Api.v2018_07_16.Models.DefaultChannel.DefaultChannelCreateData data)
-    {
-        throw new NotImplementedException();
-    }
-
-    /// <summary>
-    ///   Creates a <see cref="DefaultChannel"/> mapping.
-    /// </summary>
-    /// <param name="data">An object containing the data for the new <see cref="DefaultChannel"/></param>
-    [HttpPost]
-    [SwaggerApiResponse(HttpStatusCode.Created, Description = "DefaultChannel successfully created")]
-    [SwaggerApiResponse(HttpStatusCode.Conflict, Description = "A DefaultChannel matching the data already exists")]
-    [ValidateModelState]
-    public async Task<IActionResult> Create([FromBody, Required] DefaultChannel.DefaultChannelCreateData data)
-    {
-        int channelId = data.ChannelId;
-        Maestro.Data.Models.Channel? channel = await _context.Channels.FindAsync(channelId);
-        if (channel == null)
-        {
-            return NotFound(new ApiError($"The channel with id '{channelId}' was not found."));
-        }
-
-        Maestro.Data.Models.DefaultChannel defaultChannel;
-
-        // Due to abundant retry logic, we'll return a normal response even if this is creating a duplicate, by simply
-        // returning the one that already exists vs. HTTP 409 / 500
-        var existingInstance = _context.DefaultChannels
-            .Where(d => d.Channel == channel &&
-                        d.Repository == data.Repository &&
-                        d.Branch == data.Branch)
-            .FirstOrDefault();
-
-        if (existingInstance != null)
-        {
-            defaultChannel = existingInstance;
-        }
-        else
-        {
-            var defaultNamespace = await _context.Namespaces.SingleAsync(n => n.Name == _environmentNamespaceOptions.Value.DefaultNamespaceName);
-            defaultChannel = new Maestro.Data.Models.DefaultChannel
-            {
-                Channel = channel,
-                Repository = data.Repository,
-                Branch = data.Branch,
-                Enabled = data.Enabled ?? true,
-                Namespace = defaultNamespace
-            };
-            await _context.DefaultChannels.AddAsync(defaultChannel);
-            await _context.SaveChangesAsync();
-        }
-        return CreatedAtRoute(
-            new
-            {
-                action = "Get",
-                id = defaultChannel.Id
-            },
-            new DefaultChannel(defaultChannel));
-    }
-
-    [ApiRemoved]
-    public override Task<IActionResult> Update(int id, [FromBody] ProductConstructionService.Api.v2018_07_16.Models.DefaultChannel.DefaultChannelUpdateData update)
-    {
-        throw new NotImplementedException();
-    }
-
-    /// <summary>
-    ///     Update an existing default channel with new data.
-    /// </summary>
-    /// <param name="id">Id of default channel</param>
-    /// <param name="update">Default channel update data</param>
-    /// <returns>Updated default channel data.</returns>
-    [HttpPatch("{id}")]
-    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(DefaultChannel), Description = "Default channel successfully updated")]
-    [SwaggerApiResponse(HttpStatusCode.NotFound, Description = "The existing default channel does not exist.")]
-    [SwaggerApiResponse(HttpStatusCode.Conflict, Description = "A DefaultChannel matching the data already exists")]
-    [ValidateModelState]
-    public async Task<IActionResult> Update(int id, [FromBody] DefaultChannel.DefaultChannelUpdateData update)
-    {
-        Maestro.Data.Models.DefaultChannel? defaultChannel = await _context.DefaultChannels.FindAsync(id);
-        if (defaultChannel == null)
-        {
-            return NotFound();
-        }
-
-        var doUpdate = false;
-        if (!string.IsNullOrEmpty(update.Branch))
-        {
-            defaultChannel.Branch = update.Branch;
-            doUpdate = true;
-        }
-
-        if (!string.IsNullOrEmpty(update.Repository))
-        {
-            defaultChannel.Repository = update.Repository;
-            doUpdate = true;
-        }
-
-        if (update.ChannelId.HasValue)
-        {
-            int channelId = update.ChannelId.Value;
-            Maestro.Data.Models.Channel? channel = await _context.Channels.FindAsync(channelId);
-            if (channel == null)
-            {
-                return NotFound(new ApiError($"The channel with id '{channelId}' was not found."));
-            }
-
-            defaultChannel.ChannelId = channelId;
-            defaultChannel.Channel = channel;
-            doUpdate = true;
-        }
-
-        if (update.Enabled.HasValue)
-        {
-            defaultChannel.Enabled = update.Enabled.Value;
-            doUpdate = true;
-        }
-
-        if (doUpdate)
-        {
-            _context.DefaultChannels.Update(defaultChannel);
-            await _context.SaveChangesAsync();
-        }
-
-        return Ok(new DefaultChannel(defaultChannel));
     }
 
     /// <summary>

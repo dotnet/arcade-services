@@ -55,47 +55,36 @@ internal class AddDefaultChannelOperation : Operation
                 return Constants.ErrorCode;
             }
 
-            if (_options.ShouldUseConfigurationRepository)
+            DefaultChannelYaml defaultChannelYaml = new()
             {
-                DefaultChannelYaml defaultChannelYaml = new()
-                {
-                    Repository = _options.Repository,
-                    Branch = _options.Branch,
-                    Channel = _options.Channel,
-                    Enabled = true
-                };
+                Repository = _options.Repository,
+                Branch = _options.Branch,
+                Channel = _options.Channel,
+                Enabled = true
+            };
 
-                await ValidateNoEquivalentDefaultChannel(defaultChannelYaml);
+            await ValidateNoEquivalentDefaultChannel(defaultChannelYaml);
 
-                try
-                {
-                    await _configurationRepositoryManager.AddDefaultChannelAsync(
-                                _options.ToConfigurationRepositoryOperationParameters(),
-                                defaultChannelYaml);
-                }
-                // TODO https://github.com/dotnet/arcade-services/issues/5693 drop to the "global try-catch" when configuration repo is the only behavior
-                catch (MaestroConfiguration.Client.DuplicateConfigurationObjectException e)
-                {
-                    _logger.LogError("Default channel with repository '{repo}', branch '{branch}', and channel '{channel}' already exists in '{filePath}' in repo {repo} on branch {branch}.",
-                        defaultChannelYaml.Repository,
-                        defaultChannelYaml.Branch,
-                        defaultChannelYaml.Channel,
-                        e.FilePath,
-                        e.Repository,
-                        e.Branch);
-                    return Constants.ErrorCode;
-                }
-            }
-            else
-            {
-                await _barClient.AddDefaultChannelAsync(_options.Repository, _options.Branch, _options.Channel);
-            }
+            await _configurationRepositoryManager.AddDefaultChannelAsync(
+                        _options.ToConfigurationRepositoryOperationParameters(),
+                        defaultChannelYaml);
 
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)
         {
             Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (MaestroConfiguration.Client.DuplicateConfigurationObjectException e)
+        {
+            _logger.LogError("Default channel with repository '{repo}', branch '{branch}', and channel '{channel}' already exists in '{filePath}' in repo {configRepo} on branch {configBranch}.",
+                _options.Repository,
+                _options.Branch,
+                _options.Channel,
+                e.FilePath,
+                e.Repository,
+                e.Branch);
             return Constants.ErrorCode;
         }
         catch (Exception e)

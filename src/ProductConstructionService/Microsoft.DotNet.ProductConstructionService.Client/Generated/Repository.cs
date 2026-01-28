@@ -28,13 +28,6 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             CancellationToken cancellationToken = default
         );
 
-        Task SetMergePoliciesAsync(
-            string branch,
-            string repository,
-            List<Models.MergePolicy> body = default,
-            CancellationToken cancellationToken = default
-        );
-
         AsyncPageable<Models.RepositoryHistoryItem> GetHistoryAsync(
             string branch,
             string repository,
@@ -225,93 +218,6 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
                 Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedGetMergePoliciesRequest(ex);
-            HandleFailedRequest(ex);
-            Client.OnFailedRequest(ex);
-            throw ex;
-        }
-
-        partial void HandleFailedSetMergePoliciesRequest(RestApiException ex);
-
-        public async Task SetMergePoliciesAsync(
-            string branch,
-            string repository,
-            List<Models.MergePolicy> body = default,
-            CancellationToken cancellationToken = default
-        )
-        {
-
-            if (string.IsNullOrEmpty(branch))
-            {
-                throw new ArgumentNullException(nameof(branch));
-            }
-
-            if (string.IsNullOrEmpty(repository))
-            {
-                throw new ArgumentNullException(nameof(repository));
-            }
-
-            const string apiVersion = "2020-02-20";
-
-            var _baseUri = Client.Options.BaseUri;
-            var _url = new RequestUriBuilder();
-            _url.Reset(_baseUri);
-            _url.AppendPath(
-                "/api/repo-config/merge-policy",
-                false);
-
-            if (!string.IsNullOrEmpty(repository))
-            {
-                _url.AppendQuery("repository", Client.Serialize(repository));
-            }
-            if (!string.IsNullOrEmpty(branch))
-            {
-                _url.AppendQuery("branch", Client.Serialize(branch));
-            }
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
-
-
-            using (var _req = Client.Pipeline.CreateRequest())
-            {
-                _req.Uri = _url;
-                _req.Method = RequestMethod.Post;
-
-                if (body != default(List<Models.MergePolicy>))
-                {
-                    _req.Content = RequestContent.Create(Encoding.UTF8.GetBytes(Client.Serialize(body)));
-                    _req.Headers.Add("Content-Type", "application/json; charset=utf-8");
-                }
-
-                using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
-                {
-                    if (_res.Status < 200 || _res.Status >= 300)
-                    {
-                        await OnSetMergePoliciesFailed(_req, _res).ConfigureAwait(false);
-                    }
-
-
-                    return;
-                }
-            }
-        }
-
-        internal async Task OnSetMergePoliciesFailed(Request req, Response res)
-        {
-            string content = null;
-            if (res.ContentStream != null)
-            {
-                using (var reader = new StreamReader(res.ContentStream))
-                {
-                    content = await reader.ReadToEndAsync().ConfigureAwait(false);
-                }
-            }
-
-            var ex = new RestApiException<Models.ApiError>(
-                req,
-                res,
-                content,
-                Client.Deserialize<Models.ApiError>(content)
-                );
-            HandleFailedSetMergePoliciesRequest(ex);
             HandleFailedRequest(ex);
             Client.OnFailedRequest(ex);
             throw ex;

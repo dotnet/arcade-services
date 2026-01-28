@@ -101,44 +101,6 @@ public class RepositoryController : ControllerBase
     }
 
     /// <summary>
-    ///   Sets the <see cref="MergePolicy">MergePolicies</see> for the given repository and branch
-    /// </summary>
-    /// <param name="repository">The repository</param>
-    /// <param name="branch">The branch</param>
-    /// <param name="policies">The <see cref="MergePolicy">MergePolicies</see></param>
-    [HttpPost("merge-policy")]
-    [SwaggerApiResponse(HttpStatusCode.OK, Description = "MergePolicies successfully updated")]
-    public async Task<IActionResult> SetMergePolicies(
-        [Required] string repository,
-        [Required] string branch,
-        [FromBody] IImmutableList<MergePolicy> policies)
-    {
-        if (string.IsNullOrEmpty(repository))
-        {
-            ModelState.TryAddModelError(nameof(repository), "The repository parameter is required");
-        }
-
-        if (string.IsNullOrEmpty(branch))
-        {
-            ModelState.TryAddModelError(nameof(branch), "The branch parameter is required");
-        }
-
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        Maestro.Data.Models.RepositoryBranch repoBranch = await GetRepositoryBranch(repository, branch);
-        Maestro.Data.Models.RepositoryBranch.Policy policy = repoBranch.PolicyObject ?? new Maestro.Data.Models.RepositoryBranch.Policy();
-        policy.MergePolicies = policies?.Select(p => p.ToDb()).ToList() ?? [];
-        var defaultNamespace = await _context.Namespaces.SingleAsync(n => n.Name == _environmentNamespaceOptions.Value.DefaultNamespaceName);
-        repoBranch.PolicyObject = policy;
-        repoBranch.Namespace = defaultNamespace;
-        await _context.SaveChangesAsync();
-        return Ok();
-    }
-
-    /// <summary>
     ///   Gets a paginated list of the repository history for the given repository and branch
     /// </summary>
     /// <param name="repository">The repository</param>
@@ -175,25 +137,5 @@ public class RepositoryController : ControllerBase
             .OrderByDescending(u => u.Timestamp);
 
         return Ok(query);
-    }
-
-    private async Task<Maestro.Data.Models.RepositoryBranch> GetRepositoryBranch(string repository, string branch)
-    {
-        Maestro.Data.Models.RepositoryBranch? repoBranch = await _context.RepositoryBranches.FindAsync(repository, branch);
-        if (repoBranch == null)
-        {
-            _context.RepositoryBranches.Add(
-                repoBranch = new Maestro.Data.Models.RepositoryBranch
-                {
-                    RepositoryName = repository,
-                    BranchName = branch
-                });
-        }
-        else
-        {
-            _context.RepositoryBranches.Update(repoBranch);
-        }
-
-        return repoBranch;
     }
 }

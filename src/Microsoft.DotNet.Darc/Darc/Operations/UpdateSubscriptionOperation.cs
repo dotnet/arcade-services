@@ -285,24 +285,6 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
 
         try
         {
-            var subscriptionToUpdate = new SubscriptionUpdate
-            {
-                ChannelName = channel ?? subscription.Channel.Name,
-                SourceRepository = sourceRepository ?? subscription.SourceRepository,
-                Enabled = enabled,
-                Policy = subscription.Policy,
-                PullRequestFailureNotificationTags = failureNotificationTags,
-                SourceEnabled = sourceEnabled,
-                ExcludedAssets = excludedAssets,
-                SourceDirectory = sourceDirectory,
-                TargetDirectory = targetDirectory,
-            };
-
-            subscriptionToUpdate.Policy.Batchable = batchable;
-            subscriptionToUpdate.Policy.UpdateFrequency = Enum.Parse<UpdateFrequency>(updateFrequency, true);
-
-            subscriptionToUpdate.Policy.MergePolicies = mergePolicies;
-
             // Check for codeflow subscription conflicts (source-enabled subscriptions)
             if (sourceEnabled)
             {
@@ -322,87 +304,50 @@ internal class UpdateSubscriptionOperation : SubscriptionOperationBase
                 }
             }
 
-            if (_options.ShouldUseConfigurationRepository)
+            // We created an updated Yaml subscription, keeping immutable fields from the existing subscription.
+            SubscriptionYaml updatedSubscriptionYaml = new()
             {
-                // We created an updated Yaml subscription, keeping immutable fields from the existing subscription.
-                SubscriptionYaml updatedSubscriptionYaml = new()
-                {
-                    Id = subscription.Id,
-                    Enabled = subscriptionToUpdate.Enabled ?? subscription.Enabled,
-                    Channel = subscriptionToUpdate.ChannelName,
-                    SourceRepository = subscriptionToUpdate.SourceRepository,
-                    TargetRepository = subscription.TargetRepository,
-                    TargetBranch = subscription.TargetBranch,
-                    UpdateFrequency = subscriptionToUpdate.Policy.UpdateFrequency,
-                    Batchable = subscriptionToUpdate.Policy.Batchable,
-                    MergePolicies = MergePolicyYaml.FromClientModels(subscriptionToUpdate.Policy.MergePolicies),
-                    FailureNotificationTags = subscriptionToUpdate.PullRequestFailureNotificationTags,
-                    SourceEnabled = subscription.SourceEnabled,
-                    SourceDirectory = subscriptionToUpdate.SourceDirectory,
-                    TargetDirectory = subscriptionToUpdate.TargetDirectory,
-                    ExcludedAssets = subscriptionToUpdate.ExcludedAssets
-                };
+                Id = subscription.Id,
+                Enabled = enabled,
+                Channel = channel ?? subscription.Channel.Name,
+                SourceRepository = sourceRepository ?? subscription.SourceRepository,
+                TargetRepository = subscription.TargetRepository,
+                TargetBranch = subscription.TargetBranch,
+                UpdateFrequency = Enum.Parse<UpdateFrequency>(updateFrequency, true),
+                Batchable = batchable,
+                MergePolicies = MergePolicyYaml.FromClientModels(mergePolicies),
+                FailureNotificationTags = failureNotificationTags,
+                SourceEnabled = subscription.SourceEnabled,
+                SourceDirectory = sourceDirectory,
+                TargetDirectory = targetDirectory,
+                ExcludedAssets = excludedAssets
+            };
 
-                await ValidateNoEquivalentSubscription(updatedSubscriptionYaml);
-                try
-                {
-                    await _configurationRepositoryManager.UpdateSubscriptionAsync(
-                                _options.ToConfigurationRepositoryOperationParameters(),
-                                updatedSubscriptionYaml);
-                }
-                // TODO https://github.com/dotnet/arcade-services/issues/5693 drop to the "global try-catch" when configuration repo is the only behavior
-                catch (MaestroConfiguration.Client.ConfigurationObjectNotFoundException ex)
-                {
-                    _logger.LogError("No existing subscription with id {id} found in file {filePath} of repo {repo} on branch {branch}",
-                        updatedSubscriptionYaml.Id,
-                        ex.FilePath,
-                        ex.RepositoryUri,
-                        ex.BranchName);
-                    return Constants.ErrorCode;
-                }
-                catch (MaestroConfiguration.Client.DuplicateConfigurationObjectException ex)
-                {
-                    _logger.LogError("Subscription with equivalent parameters already exists in file {filePath}", ex.FilePath);
-                }
-            }
-            else
-            {
-                var updatedSubscription = await _barClient.UpdateSubscriptionAsync(
-                    _options.Id,
-                    subscriptionToUpdate);
+            await ValidateNoEquivalentSubscription(updatedSubscriptionYaml);
 
-                Console.WriteLine($"Successfully updated subscription with id '{updatedSubscription.Id}'.");
-
-                // Determine whether the subscription should be triggered.
-                if (!_options.NoTriggerOnUpdate)
-                {
-                    bool triggerAutomatically = _options.TriggerOnUpdate;
-                    // Determine whether we should prompt if the user hasn't explicitly
-                    // said one way or another. We shouldn't prompt if nothing changes or
-                    // if non-interesting options have changed
-                    if (!triggerAutomatically &&
-                        ((subscriptionToUpdate.ChannelName != subscription.Channel.Name) ||
-                         (subscriptionToUpdate.SourceRepository != subscription.SourceRepository) ||
-                         (subscriptionToUpdate.Enabled.Value && !subscription.Enabled) ||
-                         (subscriptionToUpdate.Policy.UpdateFrequency != UpdateFrequency.None && subscriptionToUpdate.Policy.UpdateFrequency !=
-                             subscription.Policy.UpdateFrequency)))
-                    {
-                        triggerAutomatically = UxHelpers.PromptForYesNo("Trigger this subscription immediately?");
-                    }
-
-                    if (triggerAutomatically)
-                    {
-                        await _barClient.TriggerSubscriptionAsync(updatedSubscription.Id);
-                        Console.WriteLine($"Subscription '{updatedSubscription.Id}' triggered.");
-                    }
-                }
-            }
+            await _configurationRepositoryManager.UpdateSubscriptionAsync(
+                        _options.ToConfigurationRepositoryOperationParameters(),
+                        updatedSubscriptionYaml);
 
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)
         {
             Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (MaestroConfiguration.Client.ConfigurationObjectNotFoundException ex)
+        {
+            _logger.LogError("No existing subscription with id {id} found in file {filePath} of repo {repo} on branch {branch}",
+                _options.Id,
+                ex.FilePath,
+                ex.RepositoryUri,
+                ex.BranchName);
+            return Constants.ErrorCode;
+        }
+        catch (MaestroConfiguration.Client.DuplicateConfigurationObjectException ex)
+        {
+            _logger.LogError("Subscription with equivalent parameters already exists in file {filePath}", ex.FilePath);
             return Constants.ErrorCode;
         }
         catch (RestApiException e) when (e.Response.Status == (int) System.Net.HttpStatusCode.BadRequest)

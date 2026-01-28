@@ -4,10 +4,14 @@
 using System.Net;
 using AwesomeAssertions;
 using Maestro.Data;
+using Maestro.DataProviders;
+using Maestro.DataProviders.ConfigurationIngestion;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
+using Microsoft.DotNet.Kusto;
+using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -18,8 +22,10 @@ using Microsoft.Extensions.Options;
 using Moq;
 using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
+using ProductConstructionService.Api.Controllers;
 using ProductConstructionService.Api.v2020_02_20.Models;
-using static ProductConstructionService.Api.v2020_02_20.Models.DefaultChannel;
+using ProductConstructionService.Common;
+using ProductConstructionService.DependencyFlow.Tests.Mocks;
 
 namespace ProductConstructionService.Api.Tests;
 
@@ -30,42 +36,50 @@ public partial class DefaultChannelsController20200220Tests
     public async Task CreateAndGetDefaultChannel()
     {
         using TestData data = await TestData.Default.BuildAsync();
-        var channelName = "TEST-CHANNEL-LIST-REPOSITORIES";
+        var channelName1 = "TEST-CHANNEL-LIST-REPOSITORIES1";
+        var channelName2 = "TEST-CHANNEL-LIST-REPOSITORIES2";
         var classification = "TEST-CLASSIFICATION";
         var repository = "FAKE-REPOSITORY";
         var branch = "FAKE-BRANCH";
 
-        Channel channel1, channel2;
-        {
-            var result = await data.ChannelsController.CreateChannel($"{channelName}-1", classification);
-            channel1 = (Channel)((ObjectResult)result).Value!;
-            result = await data.ChannelsController.CreateChannel($"{channelName}-2", classification);
-            channel2 = (Channel)((ObjectResult)result).Value!;
-        }
+        var yamlConfiguration = new YamlConfiguration(
+            Subscriptions: [],
+            Channels: [
+                    new ChannelYaml { Name = channelName1, Classification = classification },
+                    new ChannelYaml { Name = channelName2, Classification = classification }
+            ],
+            DefaultChannels: [
+                new DefaultChannelYaml { Branch = branch, Channel = channelName2, Enabled = true, Repository = repository  },
+            ],
+            BranchMergePolicies: []);
 
-        DefaultChannel defaultChannel;
+        DefaultChannelYaml defaultChannelYaml;
         {
-            var testDefaultChannelData = new DefaultChannelCreateData()
-            {
-                Branch = branch,
-                ChannelId = channel2.Id,
-                Enabled = true,
-                Repository = repository
-            };
-            var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
-            defaultChannel = (DefaultChannel)((ObjectResult)result).Value!;
-        }
-
-        DefaultChannel singleChannelGetDefaultChannel;
-        {
-            IActionResult result = await data.DefaultChannelsController.Get(defaultChannel.Id);
+            var result = await data.ConfigurationIngestionController.IngestNamespace(
+                nameof(CreateAndGetDefaultChannel),
+                yamlConfiguration);
             result.Should().BeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
             objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
-            objResult.Value.Should().BeAssignableTo<DefaultChannel>();
-            singleChannelGetDefaultChannel = (DefaultChannel)objResult.Value!;
+            objResult.Value.Should().BeAssignableTo<ConfigurationUpdates>();
+            var configUpdates = (ConfigurationUpdates)objResult.Value!;
+
+            configUpdates.Channels.Creations.Should().HaveCount(2);
+            configUpdates.DefaultChannels.Creations.Should().HaveCount(1);
+
+            defaultChannelYaml = configUpdates.DefaultChannels.Creations.First();
         }
-        singleChannelGetDefaultChannel.Id.Should().Be(defaultChannel.Id);
+
+        Channel channel2;
+        {
+            var result = data.ChannelsController.ListChannels();
+            result.Should().BeAssignableTo<ObjectResult>();
+            var objResult = (ObjectResult)result;
+            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            objResult.Value.Should().BeAssignableTo<IEnumerable<Channel>>();
+            var channels = (IEnumerable<Channel>)objResult.Value!;
+            channel2 = channels.First(c => c.Name == channelName2);
+        }
 
         List<DefaultChannel> listOfInsertedDefaultChannels;
         {
@@ -74,68 +88,21 @@ public partial class DefaultChannelsController20200220Tests
             var objResult = (ObjectResult)result;
             objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
             objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
-            listOfInsertedDefaultChannels = [.. ((IEnumerable<DefaultChannel>) objResult.Value!)];
+            listOfInsertedDefaultChannels = [.. ((IEnumerable<DefaultChannel>)objResult.Value!)];
+            listOfInsertedDefaultChannels.Should().HaveCount(1);
         }
 
-        listOfInsertedDefaultChannels.Should().ContainSingle();
-        listOfInsertedDefaultChannels.Single().Channel.Id.Should().Be(channel2.Id, "Only fake channel #2's id should show up as a default channel");
-    }
-
-    [Test]
-    public async Task UpdateDefaultChannel()
-    {
-        using TestData data = await TestData.Default.BuildAsync();
-        var channelName = "TEST-CHANNEL-TO-UPDATE";
-        var classification = "TEST-CLASSIFICATION";
-        var repository = "FAKE-REPOSITORY";
-        var branch = "FAKE-BRANCH";
-
-        Channel channel1, channel2;
+        DefaultChannel singleChannelGetDefaultChannel;
         {
-            var result = await data.ChannelsController.CreateChannel($"{channelName}-1", classification);
-            channel1 = (Channel)((ObjectResult)result).Value!;
-            result = await data.ChannelsController.CreateChannel($"{channelName}-2", classification);
-            channel2 = (Channel)((ObjectResult)result).Value!;
-        }
-
-        DefaultChannel defaultChannel;
-        {
-            var testDefaultChannelData = new DefaultChannelCreateData()
-            {
-                Branch = branch,
-                ChannelId = channel1.Id,
-                Enabled = true,
-                Repository = repository
-            };
-            var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
-            defaultChannel = (DefaultChannel)((ObjectResult)result).Value!;
-        }
-
-        DefaultChannel updatedDefaultChannel;
-        {
-            var defaultChannelUpdateData = new DefaultChannelUpdateData()
-            {
-                Branch = $"{branch}-UPDATED",
-                ChannelId = channel2.Id,
-                Enabled = false,
-                Repository = $"NEW-{repository}"
-            };
-            var result = await data.DefaultChannelsController.Update(defaultChannel.Id, defaultChannelUpdateData);
-            updatedDefaultChannel = (DefaultChannel)((ObjectResult)result).Value!;
-        }
-
-        List<DefaultChannel> defaultChannels;
-        {
-            IActionResult result = data.DefaultChannelsController.List($"NEW-{repository}", $"{branch}-UPDATED", channel2.Id, false);
+            IActionResult result = await data.DefaultChannelsController.Get(listOfInsertedDefaultChannels.First().Id);
             result.Should().BeAssignableTo<ObjectResult>();
             var objResult = (ObjectResult)result;
             objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
-            objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
-            defaultChannels = [.. ((IEnumerable<DefaultChannel>) objResult.Value!)];
+            objResult.Value.Should().BeAssignableTo<DefaultChannel>();
+            singleChannelGetDefaultChannel = (DefaultChannel)objResult.Value!;
         }
 
-        defaultChannels.Should().ContainSingle();
-        defaultChannels.Single().Channel.Id.Should().Be(channel2.Id, "Only fake channel #2's id should show up as a default channel");
+        listOfInsertedDefaultChannels.Single().Channel.Id.Should().Be(channel2.Id, "Only fake channel #2's id should show up as a default channel");
     }
 
     [Test]
@@ -147,23 +114,33 @@ public partial class DefaultChannelsController20200220Tests
         var repository = "FAKE-REPOSITORY";
         var branch = "-regex:FAKE-BRANCH-REGEX-.*";
 
-        Channel channel;
+        var yamlConfiguration = new YamlConfiguration(
+            Subscriptions: [],
+            Channels: [
+                    new ChannelYaml { Name = channelName, Classification = classification }
+            ],
+            DefaultChannels: [
+                new DefaultChannelYaml { Branch = branch, Channel = channelName, Enabled = true, Repository = repository  },
+            ],
+            BranchMergePolicies: []);
         {
-            var result = await data.ChannelsController.CreateChannel($"{channelName}", classification);
-            channel = (Channel)((ObjectResult)result).Value!;
+            var result = await data.ConfigurationIngestionController.IngestNamespace(
+                nameof(DefaultChannelRegularExpressionMatching),
+                yamlConfiguration);
+            result.Should().BeAssignableTo<ObjectResult>();
+            var objResult = (ObjectResult)result;
+            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
         }
 
-        DefaultChannel defaultChannel;
+        Channel channel;
         {
-            var testDefaultChannelData = new DefaultChannelCreateData()
-            {
-                Branch = branch,
-                ChannelId = channel.Id,
-                Enabled = true,
-                Repository = repository
-            };
-            var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
-            defaultChannel = (DefaultChannel)((ObjectResult)result).Value!;
+            var result = data.ChannelsController.ListChannels();
+            result.Should().BeAssignableTo<ObjectResult>();
+            var objResult = (ObjectResult)result;
+            objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+            objResult.Value.Should().BeAssignableTo<IEnumerable<Channel>>();
+            var channels = (IEnumerable<Channel>)objResult.Value!;
+            channel = channels.First(c => c.Name == channelName);
         }
 
         string[] branchesThatMatch = ["FAKE-BRANCH-REGEX-", "FAKE-BRANCH-REGEX-RELEASE-BRANCH-1", "FAKE-BRANCH-REGEX-RELEASE-BRANCH-2"];
@@ -200,116 +177,13 @@ public partial class DefaultChannelsController20200220Tests
     }
 
     [Test]
-    public async Task TryToAddNonExistentChannel()
+    public async Task TryToGetNonExistentChannel()
     {
         using TestData data = await TestData.Default.BuildAsync();
-        var repository = "FAKE-REPOSITORY";
-        var branch = "FAKE-BRANCH";
 
-        var testDefaultChannelData = new DefaultChannelCreateData()
-        {
-            Branch = branch,
-            ChannelId = 404,
-            Enabled = true,
-            Repository = repository
-        };
-        var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
-        result.Should().BeOfType<NotFoundObjectResult>("Asking for a non-existent channel should give a not-found-object type result");
-    }
-
-    [Test]
-    public async Task TryToGetOrUpdateNonExistentChannel()
-    {
-        var channelName = "TEST-CHANNEL-TO-UPDATE";
-        var classification = "TEST-CLASSIFICATION";
-        var repository = "FAKE-NON-EXISTENT-REPOSITORY-MISSING-CHANNEL-UPDATE";
-        var branch = "FAKE-BRANCH-MISSING-CHANNEL-UPDATE";
-
-        using TestData data = await TestData.Default.BuildAsync();
-        var defaultChannelThatDoesntExistUpdateData = new DefaultChannelUpdateData()
-        {
-            Branch = branch,
-            ChannelId = 404,
-            Enabled = false,
-            Repository = repository
-        };
-        // First: non-existent default channel
-        var expectedFailResult = await data.DefaultChannelsController.Update(404, defaultChannelThatDoesntExistUpdateData);
-        expectedFailResult.Should().BeOfType<NotFoundResult>("Asking for a non-existent channel should give a not-found type result");
-
-        // Second: Extant default, non-existent channel.
-        Channel channel;
-        {
-            var result = await data.ChannelsController.CreateChannel(channelName, classification);
-            channel = (Channel)((ObjectResult)result).Value!;
-        }
-
-        DefaultChannel defaultChannel;
-        {
-            var testDefaultChannelData = new DefaultChannelCreateData()
-            {
-                Branch = branch,
-                ChannelId = channel.Id,
-                Enabled = true,
-                Repository = repository
-            };
-            var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
-            defaultChannel = (DefaultChannel)((ObjectResult)result).Value!;
-        }
-
-        var defaultChannelUpdateData = new DefaultChannelUpdateData()
-        {
-            Branch = $"{branch}-UPDATED",
-            ChannelId = 404,
-            Enabled = false,
-            Repository = $"NEW-{repository}"
-        };
-        var secondExpectedFailResult = await data.DefaultChannelsController.Update(defaultChannel.Id, defaultChannelUpdateData);
-        secondExpectedFailResult.Should().BeOfType<NotFoundObjectResult>("Updating a default channel for a non-existent channel should give a not-found type result");
         // Try to get a default channel that just doesn't exist at all.
         var thirdExpectedFailResult = await data.DefaultChannelsController.Get(404);
         thirdExpectedFailResult.Should().BeOfType<NotFoundResult>("Getting a default channel for a non-existent default channel should give a not-found type result");
-    }
-
-    [Test]
-    public async Task AddDuplicateDefaultChannels()
-    {
-        using TestData data = await TestData.Default.BuildAsync();
-        var channelName = "TEST-CHANNEL-DUPLICATE-ENTRY-SCENARIO";
-        var classification = "TEST-CLASSIFICATION";
-        var repository = "FAKE-REPOSITORY";
-        var branch = "FAKE-BRANCH";
-
-        Channel channel;
-        {
-            var result = await data.ChannelsController.CreateChannel(channelName, classification);
-            channel = (Channel)((ObjectResult)result).Value!;
-        }
-
-        var testDefaultChannelData = new DefaultChannelCreateData()
-        {
-            Branch = branch,
-            ChannelId = channel.Id,
-            Enabled = true,
-            Repository = repository
-        };
-
-        DefaultChannel defaultChannel;
-        {
-            var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
-            defaultChannel = (DefaultChannel)((ObjectResult)result).Value!;
-        }
-
-        defaultChannel.Should().NotBeNull();
-
-        DefaultChannel defaultChannelDuplicateAdd;
-        {
-            var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
-            defaultChannelDuplicateAdd = (DefaultChannel)((ObjectResult)result).Value!;
-        }
-
-        // Adding the same thing twice should succeed, as well as provide the correct object in return.
-        defaultChannelDuplicateAdd.Should().BeEquivalentTo(defaultChannel);
     }
 
     [TestDependencyInjectionSetup]
@@ -342,6 +216,25 @@ public partial class DefaultChannelsController20200220Tests
                     }));
         }
 
+        public static void AddConfigurationIngestor(IServiceCollection collection)
+        {
+            var installationIdResolver = new Mock<IGitHubInstallationIdResolver>();
+            installationIdResolver.Setup(r => r.GetInstallationIdForRepository(It.IsAny<string>()))
+                .Returns(Task.FromResult((long?)1));
+            var ghTagValidator = new Mock<IGitHubTagValidator>();
+            ghTagValidator.Setup(v => v.IsNotificationTagValidAsync(It.IsAny<string>()))
+                .Returns(Task.FromResult(true));
+            var kustoClientProvider = new Mock<IKustoClientProvider>();
+
+            collection.AddSingleton(installationIdResolver.Object)
+                .AddSingleton<IConfigurationIngestor, ConfigurationIngestor>()
+                .AddSingleton(kustoClientProvider.Object)
+                .AddSingleton(ghTagValidator.Object)
+                .AddSingleton<ISqlBarClient, SqlBarClient>()
+                .AddSingleton<IDistributedLock, DistributedLock>()
+                .AddSingleton<IRedisCacheFactory, MockRedisCacheFactory>();
+        }
+
         public static Func<IServiceProvider, TestClock> Clock(IServiceCollection collection)
         {
             collection.AddSingleton<ISystemClock, TestClock>();
@@ -359,6 +252,12 @@ public partial class DefaultChannelsController20200220Tests
         {
             collection.AddSingleton<DefaultChannelsController>();
             return s => s.GetRequiredService<DefaultChannelsController>();
+        }
+
+        public static Func<IServiceProvider, ConfigurationIngestionController> ConfigurationIngestionController(IServiceCollection collection)
+        {
+            collection.AddSingleton<ConfigurationIngestionController>();
+            return s => s.GetRequiredService<ConfigurationIngestionController>();
         }
     }
 }

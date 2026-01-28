@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.MaestroConfiguration.Client;
@@ -75,57 +74,13 @@ internal class DeleteSubscriptionsOperation : Operation
                 subscriptionsToDelete.AddRange(subscriptions);
             }
 
-            if (_options.ShouldUseConfigurationRepository)
+            foreach (Subscription subscription in subscriptionsToDelete)
             {
-                foreach (Subscription subscription in subscriptionsToDelete)
-                {
-                    try
-                    {
-                        await _configRepositoryManager.DeleteSubscriptionAsync(
-                                        _options.ToConfigurationRepositoryOperationParameters(),
-                                        SubscriptionYaml.FromClientModel(subscription));
-                    }
-                    // TODO https://github.com/dotnet/arcade-services/issues/5693 drop to the "global try-catch" when configuration repo is the only behavior
-                    catch (ConfigurationObjectNotFoundException ex)
-                    {
-                        _logger.LogError("No existing subscription with id {id} found in file {filePath} of repo {repo} on branch {branch}",
-                            subscription.Id,
-                            ex.FilePath,
-                            ex.RepositoryUri,
-                            ex.BranchName);
-                        return Constants.ErrorCode;
-                    }
-                }
+                await _configRepositoryManager.DeleteSubscriptionAsync(
+                                _options.ToConfigurationRepositoryOperationParameters(),
+                                SubscriptionYaml.FromClientModel(subscription));
             }
-            else
-            {
-                if (!noConfirm)
-                {
-                    // Print out the list of subscriptions about to be triggered.
-                    Console.WriteLine($"Will delete the following {subscriptionsToDelete.Count} subscriptions...");
-                    foreach (var subscription in subscriptionsToDelete)
-                    {
-                        Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
-                    }
 
-                    if (!UxHelpers.PromptForYesNo("Continue?"))
-                    {
-                        Console.WriteLine($"No subscriptions deleted, exiting.");
-                        return Constants.ErrorCode;
-                    }
-                }
-
-                Console.Write($"Deleting {subscriptionsToDelete.Count} subscriptions...{(noConfirm ? Environment.NewLine : "")}");
-                foreach (var subscription in subscriptionsToDelete)
-                {
-                    // If noConfirm was passed, print out the subscriptions as we go
-                    if (noConfirm)
-                    {
-                        Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
-                    }
-                    await _barClient.DeleteSubscriptionAsync(subscription.Id);
-                } 
-            }
             Console.WriteLine("done");
 
             return Constants.SuccessCode;
@@ -133,6 +88,15 @@ internal class DeleteSubscriptionsOperation : Operation
         catch (AuthenticationException e)
         {
             Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (ConfigurationObjectNotFoundException ex)
+        {
+            _logger.LogError("No existing subscription with id {id} found in file {filePath} of repo {repo} on branch {branch}",
+                ex.FilePath, // The subscription id is not stored in the exception, so we use filePath as context
+                ex.FilePath,
+                ex.RepositoryUri,
+                ex.BranchName);
             return Constants.ErrorCode;
         }
         catch (Exception e)
