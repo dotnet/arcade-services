@@ -204,11 +204,15 @@ public partial class ChannelsController20180716Tests
             var installationIdResolver = new Mock<IGitHubInstallationIdResolver>();
             installationIdResolver.Setup(r => r.GetInstallationIdForRepository(It.IsAny<string>()))
                 .Returns(Task.FromResult((long?)1));
+            var ghTagValidator = new Mock<IGitHubTagValidator>();
+            ghTagValidator.Setup(v => v.IsNotificationTagValidAsync(It.IsAny<string>()))
+                .Returns(Task.FromResult(true));
             var kustoClientProvider = new Mock<IKustoClientProvider>();
 
             collection.AddSingleton(installationIdResolver.Object)
                 .AddSingleton<IConfigurationIngestor, ConfigurationIngestor>()
                 .AddSingleton(kustoClientProvider.Object)
+                .AddSingleton(ghTagValidator.Object)
                 .AddSingleton<ISqlBarClient, SqlBarClient>()
                 .AddSingleton<IDistributedLock, DistributedLock>()
                 .AddSingleton<IRedisCacheFactory, MockRedisCacheFactory>();
