@@ -245,7 +245,10 @@ internal partial class ConfigurationIngestor(
         foreach (var channel in updatedChannels)
         {
             var dbChannel = dbChannelsByName[channel.Values.Name];
-            dbChannel!.Classification = channel.Values.Classification;
+            if (dbChannel.Classification != channel.Values.Classification)
+            {
+                dbChannel.Classification = channel.Values.Classification;
+            }
         }
     }
 
@@ -352,7 +355,10 @@ internal partial class ConfigurationIngestor(
             var updatedBranchMergePoliciesDao =
                 ConvertIngestedBranchMergePoliciesToDao(bmp, namespaceEntity);
 
-            dbRepositoryBranch.PolicyString = updatedBranchMergePoliciesDao.PolicyString;
+            if (dbRepositoryBranch.PolicyString != updatedBranchMergePoliciesDao.PolicyString)
+            {
+                dbRepositoryBranch.PolicyString = updatedBranchMergePoliciesDao.PolicyString;
+            }
         }
     }
 
