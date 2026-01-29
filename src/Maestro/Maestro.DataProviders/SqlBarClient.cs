@@ -359,7 +359,14 @@ public class SqlBarClient : ISqlBarClient
         => new(other.BuildId, other.IsProduct, other.TimeToInclusionInMinutes);
 
     private static SubscriptionPolicy ToClientModelSubscriptionPolicy(Data.Models.SubscriptionPolicy other)
-        => new(other.Batchable, (UpdateFrequency)other.UpdateFrequency);
+        => new(other.Batchable, (UpdateFrequency)other.UpdateFrequency)
+        {
+            MergePolicies = other.MergePolicies?.Select(mp => new MergePolicy
+            {
+                Name = mp.Name,
+                Properties = mp.Properties
+            }).ToList()
+        };
 
     public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync(
         string sourceRepo = null, 
@@ -580,6 +587,7 @@ public class SqlBarClient : ISqlBarClient
         List<Guid> ids = [.. subscriptions.Select(sub => sub.Id)];
 
         var existingSubscriptions = await _context.Subscriptions
+            .Include(sub => sub.ExcludedAssets)
             .Where(sub => ids.Contains(sub.Id))
             .ToDictionaryAsync(sub => sub.Id);
 
@@ -631,19 +639,102 @@ public class SqlBarClient : ISqlBarClient
                 $"attempt to modify the following immutable fields: {string.Join(", ", illegalFieldChanges)}");
         }
 
-        var updatedFilters = ComputeUpdatedFilters(
-            existingSubscription.ExcludedAssets,
-            subscription.ExcludedAssets);
+        if (!StringEquivalent(existingSubscription.SourceRepository, subscription.SourceRepository))
+        {
+            existingSubscription.SourceRepository = subscription.SourceRepository;
+        }
 
-        existingSubscription.SourceRepository = subscription.SourceRepository;
-        existingSubscription.TargetRepository = subscription.TargetRepository;
-        existingSubscription.Enabled = subscription.Enabled;
-        existingSubscription.SourceEnabled = subscription.SourceEnabled;
-        existingSubscription.SourceDirectory = subscription.SourceDirectory;
-        existingSubscription.TargetDirectory = subscription.TargetDirectory;
-        existingSubscription.PolicyObject = subscription.PolicyObject;
-        existingSubscription.PullRequestFailureNotificationTags = subscription.PullRequestFailureNotificationTags;
-        existingSubscription.Channel = subscription.Channel;
+        if (existingSubscription.Enabled != subscription.Enabled)
+        {
+            existingSubscription.Enabled = subscription.Enabled;
+        }
+
+        if (existingSubscription.SourceEnabled != subscription.SourceEnabled)
+        {
+            existingSubscription.SourceEnabled = subscription.SourceEnabled;
+        }
+
+        if (!StringEquivalent(existingSubscription.SourceDirectory, subscription.SourceDirectory))
+        {
+            existingSubscription.SourceDirectory = subscription.SourceDirectory;
+        }
+
+        if (!StringEquivalent(existingSubscription.TargetDirectory, subscription.TargetDirectory))
+        {
+            existingSubscription.TargetDirectory = subscription.TargetDirectory;
+        }
+
+        if (!StringEquivalent(existingSubscription.PullRequestFailureNotificationTags, subscription.PullRequestFailureNotificationTags))
+        {
+            existingSubscription.PullRequestFailureNotificationTags = subscription.PullRequestFailureNotificationTags;
+        }
+
+        if (existingSubscription.ChannelId != subscription.Channel.Id)
+        {
+            existingSubscription.ChannelId = subscription.Channel.Id;
+        }
+
+        // Compare PolicyString to avoid serialization differences causing false modifications
+        var newPolicyString = subscription.PolicyString;
+        if (!StringEquivalent(existingSubscription.PolicyString, newPolicyString))
+        {
+            existingSubscription.PolicyString = newPolicyString;
+        }
+
+        // Update ExcludedAssets only if they differ
+        UpdateExcludedAssetsIfChanged(existingSubscription, subscription.ExcludedAssets);
+    }
+
+    /// <summary>
+    /// Compares two strings for equivalence, treating null and empty string as equal.
+    /// </summary>
+    private static bool StringEquivalent(string a, string b)
+    {
+        return string.IsNullOrEmpty(a) && string.IsNullOrEmpty(b)
+            || string.Equals(a, b, StringComparison.Ordinal);
+    }
+
+    private void UpdateExcludedAssetsIfChanged(
+        Data.Models.Subscription existingSubscription,
+        IEnumerable<Data.Models.AssetFilter> incomingFilters)
+    {
+        var existingFilterLookup = (existingSubscription.ExcludedAssets ?? [])
+            .ToDictionary(a => a.Filter, StringComparer.OrdinalIgnoreCase);
+
+        var incomingFilterStrings = (incomingFilters?.Select(f => f.Filter) ?? [])
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        // If the sets are equal, no update needed
+        if (existingFilterLookup.Count == incomingFilterStrings.Count
+            && existingFilterLookup.Keys.All(incomingFilterStrings.Contains))
+        {
+            return;
+        }
+
+        List<Data.Models.AssetFilter> updatedFilters = [];
+        foreach (var incomingFilter in incomingFilters ?? [])
+        {
+            // Reuse existing entity if it exists, otherwise use the new one
+            if (existingFilterLookup.TryGetValue(incomingFilter.Filter, out var existingFilter))
+            {
+                updatedFilters.Add(existingFilter);
+            }
+            else
+            {
+                updatedFilters.Add(incomingFilter);
+            }
+        }
+
+        // Find orphaned filters that are no longer in the incoming set
+        var orphanedFilters = existingFilterLookup.Values
+            .Where(f => !incomingFilterStrings.Contains(f.Filter))
+            .ToList();
+
+        if (orphanedFilters.Count > 0)
+        {
+            _context.Set<Data.Models.AssetFilter>().RemoveRange(orphanedFilters);
+        }
+
         existingSubscription.ExcludedAssets = updatedFilters;
     }
 
@@ -664,31 +755,6 @@ public class SqlBarClient : ISqlBarClient
         {
             await _context.SaveChangesAsync();
         }
-    }
-
-    private static List<Data.Models.AssetFilter> ComputeUpdatedFilters(
-        IEnumerable<Data.Models.AssetFilter> existingFilters,
-        IEnumerable<Data.Models.AssetFilter> incomingFilters)
-    {
-        List<Data.Models.AssetFilter> result = [];
-
-        Dictionary<string, Data.Models.AssetFilter> existingFilterLookups = existingFilters?
-            .ToDictionary(a => a.Filter, StringComparer.OrdinalIgnoreCase)
-            ?? [];
-
-        foreach (var asset in incomingFilters)
-        {
-            if (existingFilterLookups.TryGetValue(asset.Filter, out var existingAsset))
-            {
-                result.Add(existingAsset);
-            }
-            else
-            {
-                result.Add(asset);
-            }
-        }
-
-        return result;
     }
 
     /// <summary>
