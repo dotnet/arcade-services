@@ -359,7 +359,14 @@ public class SqlBarClient : ISqlBarClient
         => new(other.BuildId, other.IsProduct, other.TimeToInclusionInMinutes);
 
     private static SubscriptionPolicy ToClientModelSubscriptionPolicy(Data.Models.SubscriptionPolicy other)
-        => new(other.Batchable, (UpdateFrequency)other.UpdateFrequency);
+        => new(other.Batchable, (UpdateFrequency)other.UpdateFrequency)
+        {
+            MergePolicies = other.MergePolicies?.Select(mp => new MergePolicy
+            {
+                Name = mp.Name,
+                Properties = mp.Properties
+            }).ToList()
+        };
 
     public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync(
         string sourceRepo = null, 
