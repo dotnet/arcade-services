@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.DotNet.MaestroConfiguration.Client;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Cli.Options;
@@ -12,7 +13,7 @@ internal class FeatureFlagListOperation : IOperation
     private readonly FeatureFlagListOptions _options;
     private readonly IProductConstructionServiceApi _client;
     private readonly ILogger<FeatureFlagListOperation> _logger;
-    private readonly ISubscriptionDescriptionHelper _subscriptionHelper;
+    private readonly ISubscriptionDescriptionHelper _subscriptionHelper;    
 
     public FeatureFlagListOperation(
         FeatureFlagListOptions options,
@@ -28,6 +29,10 @@ internal class FeatureFlagListOperation : IOperation
 
     public async Task<int> RunAsync()
     {
+        var path = "C:\\Users\\dkurepa\\source\\test\\lala";
+        var configuration = LocalConfigurationRepositoryParser.Parse(path);
+        var res = await _client.Ingestion.IngestNamespaceAsync("local", saveChanges: true, configuration.ToPcsClient());
+        //await _client.Ingestion.DeleteNamespaceAsync("djuradjTest", true);
         try
         {
             if (!string.IsNullOrEmpty(_options.SubscriptionId))
