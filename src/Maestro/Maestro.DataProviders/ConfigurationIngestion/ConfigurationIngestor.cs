@@ -304,7 +304,10 @@ internal partial class ConfigurationIngestor(
 
             var dbDefaultChannel = dbDefaultChannels[key];
 
-            dbDefaultChannel.Enabled = defaultChannel.Values.Enabled;
+            if (dbDefaultChannel.Enabled != defaultChannel.Values.Enabled)
+            {
+                dbDefaultChannel.Enabled = defaultChannel.Values.Enabled;
+            }
         }
     }
 
