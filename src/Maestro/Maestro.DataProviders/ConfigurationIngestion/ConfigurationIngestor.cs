@@ -391,11 +391,8 @@ internal partial class ConfigurationIngestor(
 
     private ConfigurationUpdates FilterNonUpdates(ConfigurationUpdates update)
     {
-        var addedSubscriptionIds = update.Subscriptions.Creations
-            .Select(s => s.Id)
-            .ToHashSet();
-
-        var deletedSubscriptionIds = update.Subscriptions.Removals
+        var createdOrDeletedSubscriptionIds = update.Subscriptions.Creations
+            .Concat(update.Subscriptions.Removals)
             .Select(s => s.Id)
             .ToHashSet();
 
@@ -409,7 +406,7 @@ internal partial class ConfigurationIngestor(
                 : e.CurrentValues.GetValue<Guid?>("SubscriptionId"))
             .Where(id => id.HasValue)
             .Select(id => id!.Value)
-            .Where(id => !addedSubscriptionIds.Contains(id) && !deletedSubscriptionIds.Contains(id))
+            .Where(id => !createdOrDeletedSubscriptionIds.Contains(id))
             .ToHashSet();
 
         var subscriptionUpdates = _context.ChangeTracker.Entries<Subscription>()
