@@ -741,15 +741,21 @@ public class SqlBarClient : ISqlBarClient
     public async Task DeleteSubscriptionsAsync(
         IEnumerable<Data.Models.Subscription> subscriptionsToDelete, bool andSaveContext = true)
     {
-        var subscriptionLookups = subscriptionsToDelete.ToDictionary(s => s.Id);
+        var subscriptionIds = subscriptionsToDelete.Select(s => s.Id).ToHashSet();
 
         _context.SubscriptionUpdates.RemoveRange(
             _context.SubscriptionUpdates
-            .Where(s => subscriptionLookups.ContainsKey(s.SubscriptionId)));
+                .Where(s => subscriptionIds.Contains(s.SubscriptionId)));
 
-        _context.Subscriptions.RemoveRange(
-            subscriptionLookups.Values
-            .Where(s => subscriptionLookups.ContainsKey(s.Id)));
+        var subscriptionsWithAssets = await _context.Subscriptions
+            .Include(s => s.ExcludedAssets)
+            .Where(s => subscriptionIds.Contains(s.Id))
+            .ToListAsync();
+
+        _context.AssetFilters.RemoveRange(
+            subscriptionsWithAssets.SelectMany(s => s.ExcludedAssets));
+
+        _context.Subscriptions.RemoveRange(subscriptionsWithAssets);
 
         if (andSaveContext)
         {
