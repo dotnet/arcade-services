@@ -43,7 +43,6 @@ internal partial class ConfigurationIngestor(
         var existingConfigurationData =
             CreateConfigurationDataObject(namespaceEntity);
 
-        // save the old failure notification tags before applying the subscription updates
         var oldFailureNotificationTags = existingConfigurationData.Subscriptions.ToDictionary(s => s.Values.Id, s => s.Values.FailureNotificationTags);
 
         var configurationDataUpdate = ComputeEntityUpdates(
@@ -220,8 +219,12 @@ internal partial class ConfigurationIngestor(
                 .Where(s => subscriptionIds.Contains(s.SubscriptionId)));
 
         var subscriptionDaos = await _context.Subscriptions
+            .Include(sub => sub.ExcludedAssets)
             .Where(sub => subscriptionIds.Contains(sub.Id))
             .ToListAsync();
+
+        _context.AssetFilters.RemoveRange(
+            subscriptionDaos.SelectMany(s => s.ExcludedAssets));
 
         _context.Subscriptions.RemoveRange(subscriptionDaos);
     }
@@ -388,6 +391,14 @@ internal partial class ConfigurationIngestor(
 
     private ConfigurationUpdates FilterNonUpdates(ConfigurationUpdates update)
     {
+        var addedSubscriptionIds = update.Subscriptions.Creations
+            .Select(s => s.Id)
+            .ToHashSet();
+
+        var deletedSubscriptionIds = update.Subscriptions.Removals
+            .Select(s => s.Id)
+            .ToHashSet();
+
         // Find subscription IDs that have ExcludedAssets added or removed
         // For deleted AssetFilters, we need to get the SubscriptionId from the original values
         // since the entity is no longer in the subscription's collection
@@ -398,6 +409,7 @@ internal partial class ConfigurationIngestor(
                 : e.CurrentValues.GetValue<Guid?>("SubscriptionId"))
             .Where(id => id.HasValue)
             .Select(id => id!.Value)
+            .Where(id => !addedSubscriptionIds.Contains(id) && !deletedSubscriptionIds.Contains(id))
             .ToHashSet();
 
         var subscriptionUpdates = _context.ChangeTracker.Entries<Subscription>()
