@@ -33,12 +33,6 @@ internal class AddSubscriptionCommandLineOptions : SubscriptionCommandLineOption
     [Option("read-stdin", HelpText = "Interactive mode style (YAML), but read input from stdin. Implies -q")]
     public bool ReadStandardIn { get; set; }
 
-    [Option("trigger", SetName = "trigger", HelpText = "Automatically trigger the subscription on creation.")]
-    public bool TriggerOnCreate { get; set; }
-
-    [Option("no-trigger", SetName = "notrigger", HelpText = "Do not trigger the subscription on creation.")]
-    public bool NoTriggerOnCreate { get; set; }
-
     [Option("source-enabled", HelpText = "Get only source-enabled (VMR code flow) subscriptions.", Default = false)]
     public bool SourceEnabled { get; set; }
 

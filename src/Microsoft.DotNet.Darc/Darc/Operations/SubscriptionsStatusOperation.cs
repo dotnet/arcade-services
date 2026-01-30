@@ -125,53 +125,15 @@ internal class SubscriptionsStatusOperation : Operation
                     Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
                 }
 
-                if (_options.ShouldUseConfigurationRepository)
+                // Create an updated subscription YAML with only the Enabled property changed
+                var updatedyaml = SubscriptionYaml.FromClientModel(subscription) with
                 {
-                    // Create an updated subscription YAML with only the Enabled property changed
-                    var updatedyaml = SubscriptionYaml.FromClientModel(subscription) with
-                    {
-                        Enabled = _options.Enable,
-                    };
+                    Enabled = _options.Enable,
+                };
 
-                    try
-                    {
-                        await _configurationRepositoryManager.UpdateSubscriptionAsync(
-                            _options.ToConfigurationRepositoryOperationParameters(),
-                            updatedyaml);
-                    }
-                    // TODO drop to the "global try-catch" when configuration repo is the only behavior
-                    catch (MaestroConfiguration.Client.ConfigurationObjectNotFoundException ex)
-                    {
-                        _logger.LogError("No existing subscription with id {id} found in file {filePath} of repo {repo} on branch {branch}",
-                            subscription.Id,
-                            ex.FilePath,
-                            ex.RepositoryUri,
-                            ex.BranchName);
-                        return Constants.ErrorCode;
-                    }
-                }
-                else
-                {
-                    var subscriptionToUpdate = new SubscriptionUpdate
-                    {
-                        ChannelName = subscription.Channel.Name,
-                        SourceRepository = subscription.SourceRepository,
-                        Enabled = _options.Enable,
-                        Policy = subscription.Policy,
-                        SourceEnabled = subscription.SourceEnabled,
-                        PullRequestFailureNotificationTags = subscription.PullRequestFailureNotificationTags,
-                        SourceDirectory = subscription.SourceDirectory,
-                        TargetDirectory = subscription.TargetDirectory,
-                        ExcludedAssets = subscription.ExcludedAssets
-                    };
-                    subscriptionToUpdate.Policy.Batchable = subscription.Policy.Batchable;
-                    subscriptionToUpdate.Policy.UpdateFrequency = subscription.Policy.UpdateFrequency;
-                    subscriptionToUpdate.Policy.MergePolicies = subscription.Policy.MergePolicies;
-
-                    var updatedSubscription = await _barClient.UpdateSubscriptionAsync(
-                        subscription.Id.ToString(),
-                        subscriptionToUpdate);
-                }
+                await _configurationRepositoryManager.UpdateSubscriptionAsync(
+                    _options.ToConfigurationRepositoryOperationParameters(),
+                    updatedyaml);
             }
             Console.WriteLine("done");
 
@@ -180,6 +142,14 @@ internal class SubscriptionsStatusOperation : Operation
         catch (AuthenticationException e)
         {
             Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (MaestroConfiguration.Client.ConfigurationObjectNotFoundException ex)
+        {
+            _logger.LogError("No existing subscription found in file {filePath} of repo {repo} on branch {branch}",
+                ex.FilePath,
+                ex.RepositoryUri,
+                ex.BranchName);
             return Constants.ErrorCode;
         }
         catch (Exception e)

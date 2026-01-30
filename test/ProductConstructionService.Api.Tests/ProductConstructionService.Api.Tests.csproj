@@ -4,6 +4,7 @@
     <ProjectReference Include="..\..\src\ProductConstructionService\ProductConstructionService.Api\ProductConstructionService.Api.csproj" />
     <ProjectReference Include="..\..\src\ProductConstructionService\ProductConstructionService.DependencyFlow\ProductConstructionService.DependencyFlow.csproj" />
     <ProjectReference Include="..\..\src\ProductConstructionService\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj" />
+    <ProjectReference Include="..\ProductConstructionService.DependencyFlow.Tests\ProductConstructionService.DependencyFlow.Tests.csproj" />
   </ItemGroup>
 
   <ItemGroup>
