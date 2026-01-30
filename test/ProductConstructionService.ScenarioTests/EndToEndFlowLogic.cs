@@ -237,7 +237,6 @@ internal abstract class TestLogic : ScenarioTestBase
             UpdateFrequency.None.ToString(),
             "maestro-auth-test",
             additionalOptions: ["--validate-coherency"],
-            trigger: true,
             sourceIsAzDo: false,
             targetIsAzDo: false);
 
@@ -577,7 +576,6 @@ internal abstract class TestLogic : ScenarioTestBase
                 UpdateFrequency.None.ToString(),
                 "maestro-auth-test",
                 additionalOptions: ["--all-checks-passed", "--validate-coherency", "--ignore-checks", "license/cla"],
-                trigger: true,
                 sourceIsAzDo: isAzDoTest,
                 targetIsAzDo: isAzDoTest);
         }
