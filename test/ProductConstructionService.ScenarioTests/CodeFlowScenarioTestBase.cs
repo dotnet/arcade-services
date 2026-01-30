@@ -153,7 +153,6 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string sourceOrg = "dotnet",
         bool sourceIsAzDo = false,
         bool targetIsAzDo = false,
-        bool trigger = false,
         string? sourceDirectory = null,
         string? targetDirectory = null)
     {
@@ -186,8 +185,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 sourceOrg,
                 additionalOptions,
                 sourceIsAzDo,
-                targetIsAzDo,
-                trigger);
+                targetIsAzDo);
     }
 
     public async Task<PullRequest> WaitForPullRequestComment(

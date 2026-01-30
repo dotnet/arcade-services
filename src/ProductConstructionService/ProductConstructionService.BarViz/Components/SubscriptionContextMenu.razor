@@ -57,20 +57,13 @@
                 <FluentIcon Value="@(new Icons.Regular.Size16.FlashSparkle())" Color="@Color.Neutral" />
             </span>
         </FluentMenuItem>
-
-        <FluentMenuItem OnClick="@Disable">
-            Disable subscription
-            <span slot="start">
-                <FluentIcon Value="@(new Icons.Regular.Size16.ArrowSyncOff())" Color="@Color.Neutral" />
-            </span>
-        </FluentMenuItem>
     }
     else
     {
-        <FluentMenuItem OnClick="@Enable">
-            Enable subscription
+        <FluentMenuItem Disabled="true">
+            Subscription disabled (use darc to enable)
             <span slot="start">
-                <FluentIcon Value="@(new Icons.Regular.Size16.ArrowSync())" Color="@Color.Neutral" />
+                <FluentIcon Value="@(new Icons.Regular.Size16.ErrorCircle())" Color="@Color.Neutral" />
             </span>
         </FluentMenuItem>
     }
@@ -105,53 +98,7 @@
         }
     }
 
-    async Task Enable()
-    {
-        await UpdateSubscription(sub =>
-        {
-            sub.Enabled = true;
-        });
-    }
-
-    async Task Disable()
-    {
-        await UpdateSubscription(sub =>
-        {
-            sub.Enabled = false;
-        });
-    }
-
     string? BuildLink => Subscription.LastAppliedBuild == null
         ? null
         : $"/channel/{Subscription.Channel.Id}/{RepoUrlConverter.RepoUrlToSlug(Subscription.SourceRepository)}/build/{Subscription.LastAppliedBuild.Id}";
-
-    private async Task UpdateSubscription(Action<SubscriptionUpdate> update)
-    {
-        try
-        {
-            var updatedSubscription = new SubscriptionUpdate
-            {
-                ChannelName = Subscription.Channel.Name,
-                SourceRepository = Subscription.SourceRepository,
-                Enabled = Subscription.Enabled,
-                ExcludedAssets = Subscription.ExcludedAssets,
-                PullRequestFailureNotificationTags = Subscription.PullRequestFailureNotificationTags,
-                Policy = Subscription.Policy,
-                SourceEnabled = Subscription.SourceEnabled,
-                SourceDirectory = Subscription.SourceDirectory,
-                TargetDirectory = Subscription.TargetDirectory,
-            };
-
-            update(updatedSubscription);
-
-            await PcsApi.Subscriptions.UpdateSubscriptionAsync(Subscription.Id, updatedSubscription);
-            ToastService.ShowSuccess("Subscription updated");
-            await Refresh.Invoke();
-        }
-        catch (Exception e)
-        {
-            ToastService.ShowError("Failed to untrack the PR");
-            Console.WriteLine(e);
-        }
-    }
 }

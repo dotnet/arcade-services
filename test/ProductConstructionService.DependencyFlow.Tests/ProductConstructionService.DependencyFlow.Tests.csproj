@@ -10,4 +10,8 @@
     <ProjectReference Include="..\..\src\ProductConstructionService\ProductConstructionService.DependencyFlow\ProductConstructionService.DependencyFlow.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="ProductConstructionService.Api.Tests" />
+  </ItemGroup>
+
 </Project>
