@@ -48,11 +48,6 @@ public class ConfigurationIngestionController : Controller
         [FromBody] YamlConfiguration yamlConfiguration,
         [FromQuery] bool saveChanges = true)
     {
-        if (namespaceName == ProductionNamespaceName)
-        {
-            saveChanges = false;
-        }
-
         _logger.LogInformation("Ingesting configuration for namespace {NamespaceName} (saveChanges={SaveChanges})", namespaceName, saveChanges);
         try
         {
