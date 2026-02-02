@@ -2,8 +2,6 @@ stages:
 - stage: Approval
   dependsOn:
   - Build
-  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-    - publish_using_darc
   jobs:
   - deployment: approval
     displayName: deployment approval (conditional)
