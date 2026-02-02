@@ -386,6 +386,22 @@ internal partial class ConfigurationIngestor(
             }
         }
 
+        if (branchRemovals.Count > 0)
+        {
+            var branchKeysToRemove = branchRemovals
+                .Select(rb => rb.RepositoryName + "|" + rb.BranchName)
+                .ToHashSet();
+
+            var repositoryNames = branchRemovals.Select(rb => rb.RepositoryName).Distinct().ToList();
+
+            var repositoryBranchUpdates = await _context.RepositoryBranchUpdates
+                .Where(rbu => repositoryNames.Contains(rbu.RepositoryName))
+                .ToListAsync();
+
+            _context.RepositoryBranchUpdates.RemoveRange(
+                repositoryBranchUpdates.Where(rbu => branchKeysToRemove.Contains(rbu.RepositoryName + "|" + rbu.BranchName)));
+        }
+
         _context.RepositoryBranches.RemoveRange(branchRemovals);
     }
 
