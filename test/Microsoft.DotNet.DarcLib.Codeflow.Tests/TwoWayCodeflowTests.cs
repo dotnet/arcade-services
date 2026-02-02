@@ -106,10 +106,11 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         var branch = await ChangeVmrFileAndFlowIt("New content in the VMR repo", branchName);
         branch.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(ProductRepoPath, branchName);
+        await FinalizeBackFlow(branchName);
 
         branch = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, branchName);
         branch.ShouldHaveUpdates();
+        await GitOperations.Commit(VmrPath, "Forward flow");
         await GitOperations.CheckAllIsCommitted(VmrPath);
         await GitOperations.CheckAllIsCommitted(ProductRepoPath);
         await GitOperations.MergePrBranch(VmrPath, branchName);
@@ -268,10 +269,12 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.Checkout(ProductRepoPath, "main");
         var codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backBranchName);
         codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.CommitAll(ProductRepoPath, "2");
 
         // 3-4. Change the file in the repo again
         codeFlowResult = await ChangeRepoFileAndFlowIt("BBB", forwardBranchName + "-second");
         codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.CommitAll(VmrPath, "4");
 
         // 5. Merge the backflow PR
         await GitOperations.MergePrBranch(ProductRepoPath, backBranchName);
@@ -345,10 +348,12 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.Checkout(VmrPath, "main");
         var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, forwardBranchName);
         codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.CommitAll(VmrPath, "2");
 
         // 3-4. Change the file in the VMR again
         codeFlowResult = await ChangeVmrFileAndFlowIt("BBB", backBranchName + "-second");
         codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.CommitAll(ProductRepoPath, "4");
 
         // 5. Merge the forwardflow PR
         await GitOperations.MergePrBranch(VmrPath, forwardBranchName);
@@ -637,8 +642,8 @@ internal class TwoWayCodeflowTests : CodeFlowTests
             ProductRepoPath,
             backBranchName,
             mergeTheirs: true,
-            expectedConflictingFiles: [_productRepoFileName]/*,
-            🔥🔥🔥 TODO: enableRebase: false /* intentional, we commit everything */);
+            expectedConflictingFiles: [_productRepoFileName],
+            changesStagedOnly: false /* intentional, we commit everything */);
         CheckFileContents(_productRepoFilePath, "New content from the VMR #2");
 
         // 7. We resolve the conflict by using the content from the VMR too
@@ -1028,7 +1033,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // - full-revert.txt should still exist in the VMR (because it wasn't part of the reverted changes)
         CheckFileContents(_productRepoVmrPath / "conflict.txt", conflictFileContent3);
         CheckFileContents(_productRepoVmrPath / "partial-revert.txt", revertFileContent);
-        File.ReadAllText(_productRepoVmrPath / "full-revert.txt").Should().Contain("PLEASE READ");
+        File.Exists(ProductRepoPath / "full-revert.txt").Should().BeFalse();
     }
 
     // Same test as above but mirrored.
@@ -1107,7 +1112,7 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // - full-revert.txt should still exist in the repo (because it wasn't part of the reverted changes)
         CheckFileContents(ProductRepoPath / "conflict.txt", conflictFileContent3);
         CheckFileContents(ProductRepoPath / "partial-revert.txt", revertFileContent);
-        File.ReadAllText(ProductRepoPath / "full-revert.txt").Should().Contain("PLEASE READ");
+        File.Exists(ProductRepoPath / "full-revert.txt").Should().BeFalse();
     }
 
     // This test verifies that backflows work if the target repo if since tha last backflow, the product repo has added or removed dependencies,

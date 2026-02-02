@@ -348,14 +348,8 @@ internal class BackflowTests : CodeFlowTests
         await GitOperations.CommitAll(ProductRepoPath, "Changing a repo file in the PR");
 
         // Flow the second build - this should throw as there's a conflict in the PR branch
-        await this.Awaiting(_ => CallBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranchName, buildToFlow: build5))
-            .Should().ThrowAsync<ConflictInPrBranchException>();
-
-        // The state of the branch should be the same as before
-        productRepo.Checkout(backflowBranchName);
-        dependencies = await productRepo.GetDependenciesAsync();
-        dependencies.Should().BeEquivalentTo(expectedDependencies);
-        CheckFileContents(_productRepoFilePath, "New content again but this time in the PR directly");
+        codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, backflowBranchName, buildToFlow: build5);
+        codeFlowResult.HadConflicts.Should().BeTrue();
     }
 
     /*
@@ -714,7 +708,7 @@ internal class BackflowTests : CodeFlowTests
         await AddDependencies(ProductRepoPath);
         var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
         codeFlowResult.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, ffBranchName);
+        await FinalizeForwardFlow(ffBranchName);
 
         // Now update one of the dependencies, open a forward flow PR but don't merge it
         await GitOperations.Checkout(ProductRepoPath, "main");
@@ -730,6 +724,7 @@ internal class BackflowTests : CodeFlowTests
         await GitOperations.CommitAll(ProductRepoPath, "Updating Package.A1 to 1.0.1");
         codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
         codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.CommitAll(VmrPath, "Forward flow commit");
 
         // Now update the same dependency again
         await GitOperations.Checkout(ProductRepoPath, "main");
@@ -747,14 +742,14 @@ internal class BackflowTests : CodeFlowTests
         // Now open and merge a backflow
         codeFlowResult = await ChangeVmrFileAndFlowIt("New content in the VMR", bfBranchName);
         codeFlowResult.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(ProductRepoPath, bfBranchName);
+        await FinalizeBackFlow(bfBranchName);
 
         // merge the forward flow PR
-        await GitOperations.MergePrBranch(VmrPath, ffBranchName);
+        await FinalizeForwardFlow(ffBranchName);
 
         // Open a backflow again, there shouldn't be any downgrades
         codeFlowResult = await ChangeVmrFileAndFlowIt("New content in the VMR again", bfBranchName);
-        codeFlowResult.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
         codeFlowResult.DependencyUpdates.Should().BeEmpty();
     }
 

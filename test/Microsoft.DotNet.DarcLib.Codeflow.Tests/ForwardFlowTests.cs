@@ -404,7 +404,7 @@ internal class ForwardFlowTests : CodeFlowTests
         await GitOperations.CommitAll(ProductRepoPath, "Add Package.A1 v1.0.0");
         var codeFlowResult = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranch);
         codeFlowResult.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, ffBranch);
+        await FinalizeForwardFlow(ffBranch);
 
         // update the dependency in the VMR, open a backflow but don't merge
         dep = new DependencyDetail
@@ -421,6 +421,7 @@ internal class ForwardFlowTests : CodeFlowTests
         await GitOperations.CommitAll(VmrPath, "Update Package.A1 to v1.0.1 in VMR");
         codeFlowResult = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, bfBranch);
         codeFlowResult.ShouldHaveUpdates();
+        await GitOperations.CommitAll(ProductRepoPath, "Backflow commit");
 
         // now update the same dependency again
         dep = new DependencyDetail
@@ -438,15 +439,15 @@ internal class ForwardFlowTests : CodeFlowTests
         // now open and merge a forward flow
         codeFlowResult = await ChangeRepoFileAndFlowIt("Some change in the repo", ffBranch);
         codeFlowResult.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, ffBranch);
+        await FinalizeForwardFlow(ffBranch);
 
         // now merge the backflow
-        await GitOperations.MergePrBranch(ProductRepoPath, bfBranch);
+        await FinalizeBackFlow(bfBranch);
 
         // now open a new forward flow, the dependency shouldn't be downgraded to 1.0.1
         codeFlowResult = await ChangeRepoFileAndFlowIt("Another change in the repo", ffBranch);
         codeFlowResult.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, ffBranch);
+        await FinalizeForwardFlow(ffBranch);
         var deps = await vmrRepo.GetDependenciesAsync(relativeBasePath: VmrInfo.GetRelativeRepoSourcesPath(Constants.ProductRepoName));
         deps.Should().ContainSingle(d => d.Name == "Package.A1" && d.Version == "1.0.2");
     }
