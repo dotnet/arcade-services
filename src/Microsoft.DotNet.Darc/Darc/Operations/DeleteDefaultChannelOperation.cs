@@ -2,16 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.MaestroConfiguration.Client;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
-using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations;
@@ -44,38 +41,28 @@ internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation
                 return Constants.ErrorCode;
             }
 
-            if (_options.ShouldUseConfigurationRepository)
-            {
-                var defaultChannelYaml = DefaultChannelYaml.FromClientModel(resolvedChannel);
+            var defaultChannelYaml = DefaultChannelYaml.FromClientModel(resolvedChannel);
 
-                try
-                {
-                    await _configurationRepositoryManager.DeleteDefaultChannelAsync(
-                                _options.ToConfigurationRepositoryOperationParameters(),
-                                defaultChannelYaml);
-                }
-                catch (ConfigurationObjectNotFoundException ex)
-                {
-                    _logger.LogError("No existing default channel for {repo} ({branch}) => {channel} found in file {filePath} of repo {configRepo} on branch {configBranch}",
-                        defaultChannelYaml.Repository,
-                        defaultChannelYaml.Branch,
-                        defaultChannelYaml.Channel,
-                        ex.FilePath,
-                        ex.RepositoryUri,
-                        ex.BranchName);
-                    return Constants.ErrorCode;
-                }
-            }
-            else
-            {
-                await _barClient.DeleteDefaultChannelAsync(resolvedChannel.Id);
-            }
+            await _configurationRepositoryManager.DeleteDefaultChannelAsync(
+                        _options.ToConfigurationRepositoryOperationParameters(),
+                        defaultChannelYaml);
 
             return Constants.SuccessCode;
         }
         catch (AuthenticationException e)
         {
             Console.WriteLine(e.Message);
+            return Constants.ErrorCode;
+        }
+        catch (ConfigurationObjectNotFoundException ex)
+        {
+            _logger.LogError("No existing default channel for {repo} ({branch}) => {channel} found in file {filePath} of repo {configRepo} on branch {configBranch}",
+                _options.Repository,
+                _options.Branch,
+                _options.Channel,
+                ex.FilePath,
+                ex.RepositoryUri,
+                ex.BranchName);
             return Constants.ErrorCode;
         }
         catch (Exception e)

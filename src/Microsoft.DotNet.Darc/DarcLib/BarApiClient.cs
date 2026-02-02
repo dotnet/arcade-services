@@ -59,101 +59,6 @@ public class BarApiClient : IBarApiClient
             .SingleOrDefault(c => c.Name.Equals(channel, StringComparison.OrdinalIgnoreCase))
             ?? throw new ArgumentException($"Channel {channel} is not a valid channel.");
 
-    /// <summary>
-    ///     Adds a default channel association.
-    /// </summary>
-    /// <param name="repository">Repository receiving the default association</param>
-    /// <param name="branch">Branch receiving the default association</param>
-    /// <param name="channel">Name of channel that builds of 'repository' on 'branch' should automatically be applied to.</param>
-    /// <returns>Async task.</returns>
-    public async Task AddDefaultChannelAsync(string repository, string branch, string channel)
-    {
-        // Look up channel to translate to channel id.
-        Channel foundChannel = await GetChannel(channel);
-
-        var defaultChannelsData = new DefaultChannelCreateData(repository: repository, branch: branch, channelId: foundChannel.Id);
-
-        await _barClient.DefaultChannels.CreateAsync(defaultChannelsData);
-    }
-
-    /// <summary>
-    ///     Removes a default channel based on the specified criteria
-    /// </summary>
-    /// <param name="repository">Repository having a default association</param>
-    /// <param name="branch">Branch having a default association</param>
-    /// <param name="channel">Name of channel that builds of 'repository' on 'branch' are being applied to.</param>
-    /// <returns>Async task</returns>
-    public async Task DeleteDefaultChannelAsync(int id)
-    {
-        await _barClient.DefaultChannels.DeleteAsync(id);
-    }
-
-    /// <summary>
-    ///     Updates a default channel with new information.
-    /// </summary>
-    /// <param name="id">Id of default channel.</param>
-    /// <param name="repository">New repository</param>
-    /// <param name="branch">New branch</param>
-    /// <param name="channel">New channel</param>
-    /// <param name="enabled">Enabled/disabled status</param>
-    /// <returns>Async task</returns>
-    public async Task UpdateDefaultChannelAsync(
-        int id,
-        string? repository = null,
-        string? branch = null,
-        string? channel = null,
-        bool? enabled = null)
-    {
-        Channel? foundChannel = null;
-        if (!string.IsNullOrEmpty(channel))
-        {
-            foundChannel = await GetChannel(channel);
-        }
-
-        var updateData = new DefaultChannelUpdateData
-        {
-            Branch = branch,
-            ChannelId = foundChannel?.Id,
-            Enabled = enabled,
-            Repository = repository
-        };
-
-        await _barClient.DefaultChannels.UpdateAsync(id, updateData);
-    }
-
-    /// <summary>
-    ///     Create a new channel
-    /// </summary>
-    /// <param name="name">Name of channel. Must be unique.</param>
-    /// <param name="classification">Classification of channel.</param>
-    /// <returns>Newly created channel</returns>
-    public Task<Channel> CreateChannelAsync(string name, string classification)
-    {
-        return _barClient.Channels.CreateChannelAsync(name: name, classification: classification);
-    }
-
-    /// <summary>
-    /// Deletes a channel from the Build Asset Registry
-    /// </summary>
-    /// <param name="name">Name of channel</param>
-    /// <returns>Channel just deleted</returns>
-    public Task<Channel> DeleteChannelAsync(int id)
-    {
-        return _barClient.Channels.DeleteChannelAsync(id);
-    }
-
-    /// <summary>
-    ///     Update a channel with new metadata.
-    /// </summary>
-    /// <param name="id">Id of channel to update</param>
-    /// <param name="name">Optional new name of channel</param>
-    /// <param name="classification">Optional new classification of channel</param>
-    /// <returns>Updated channel</returns>
-    public Task<Channel> UpdateChannelAsync(int id, string? name = null, string? classification = null)
-    {
-        return _barClient.Channels.UpdateChannelAsync(id, classification, name);
-    }
-
     public async Task<DependencyFlowGraph> GetDependencyFlowGraphAsync(
         int channelId,
         int days,
@@ -226,86 +131,6 @@ public class BarApiClient : IBarApiClient
     #region Subscription Operations
 
     /// <summary>
-    ///     Create a new subscription
-    /// </summary>
-    /// <param name="channelName">Name of source channel</param>
-    /// <param name="sourceRepo">URL of source repository</param>
-    /// <param name="targetRepo">URL of target repository where updates should be made</param>
-    /// <param name="targetBranch">Name of target branch where updates should be made</param>
-    /// <param name="updateFrequency">Frequency of updates, can be 'none', 'everyBuild', 'everyDay', 'twiceDaily', 'everyWeek', 'everyTwoWeeks', or 'everyMonth'</param>
-    /// <param name="mergePolicies">
-    ///     Dictionary of merge policies. Each merge policy is a name of a policy with an associated blob
-    ///     of metadata
-    /// </param>
-    /// <param name="failureNotificationTags">List of GitHub tags to notify with a PR comment when the build fails</param>
-    /// <param name="sourceEnabled">Whether this is a VMR code flow (special VMR subscription)</param>
-    /// <param name="sourceDirectory">Directory of the VMR to synchronize the sources with</param>
-    /// <param name="excludedAssets">List of assets to exclude from the source-enabled code flow</param>
-    /// <returns>Newly created subscription, if successful</returns>
-    public Task<Subscription> CreateSubscriptionAsync(
-        bool enabled,
-        string channelName,
-        string sourceRepo,
-        string targetRepo,
-        string targetBranch,
-        string updateFrequency,
-        bool batchable,
-        List<MergePolicy> mergePolicies,
-        string failureNotificationTags,
-        bool sourceEnabled,
-        string sourceDirectory,
-        string targetDirectory,
-        IReadOnlyCollection<string> excludedAssets)
-    {
-        var subscriptionData = new SubscriptionData(
-            channelName: channelName,
-            sourceRepository: sourceRepo,
-            targetRepository: targetRepo,
-            targetBranch: targetBranch,
-            policy: new SubscriptionPolicy(
-                batchable,
-                (UpdateFrequency)Enum.Parse(
-                    typeof(UpdateFrequency),
-                    updateFrequency,
-                    ignoreCase: true))
-            {
-                MergePolicies = mergePolicies,
-            },
-            failureNotificationTags)
-        {
-            Enabled = enabled,
-            SourceEnabled = sourceEnabled,
-            SourceDirectory = sourceDirectory,
-            TargetDirectory = targetDirectory,
-            ExcludedAssets = [..excludedAssets],
-        };
-
-        return _barClient.Subscriptions.CreateAsync(subscriptionData);
-    }
-
-    /// <summary>
-    ///     Update an existing subscription
-    /// </summary>
-    /// <param name="subscriptionId">Id of subscription to update</param>
-    /// <param name="subscription">Subscription information</param>
-    /// <returns>Updated subscription</returns>
-    public Task<Subscription> UpdateSubscriptionAsync(Guid subscriptionId, SubscriptionUpdate subscription)
-    {
-        return _barClient.Subscriptions.UpdateSubscriptionAsync(subscriptionId, subscription);
-    }
-
-    /// <summary>
-    ///     Update an existing subscription
-    /// </summary>
-    /// <param name="subscriptionId">Id of subscription to update</param>
-    /// <param name="subscription">Subscription information</param>
-    /// <returns>Updated subscription</returns>
-    public Task<Subscription> UpdateSubscriptionAsync(string subscriptionId, SubscriptionUpdate subscription)
-    {
-        return UpdateSubscriptionAsync(Guid.Parse(subscriptionId), subscription);
-    }
-
-    /// <summary>
     ///     Get a set of subscriptions based on input filters.
     /// </summary>
     /// <param name="sourceRepo">Filter by the source repository of the subscription.</param>
@@ -369,16 +194,6 @@ public class BarApiClient : IBarApiClient
     }
 
     /// <summary>
-    ///     Delete a subscription by ID.
-    /// </summary>
-    /// <param name="subscriptionId">Id of subscription to delete.</param>
-    /// <returns>Information on deleted subscription</returns>
-    public Task<Subscription> DeleteSubscriptionAsync(Guid subscriptionId)
-    {
-        return _barClient.Subscriptions.DeleteSubscriptionAsync(subscriptionId);
-    }
-
-    /// <summary>
     ///     Get a repository merge policy (for batchable subscriptions)
     /// </summary>
     /// <param name="repoUri">Repository uri</param>
@@ -406,19 +221,6 @@ public class BarApiClient : IBarApiClient
     public async Task<IEnumerable<RepositoryBranch>> GetRepositoriesAsync(string? repoUri = null, string? branch = null)
     {
         return await _barClient.Repository.ListRepositoriesAsync(repository: repoUri, branch: branch);
-    }
-
-
-    /// <summary>
-    ///     Set the merge policies for batchable subscriptions applied to a specific repo and branch
-    /// </summary>
-    /// <param name="repoUri">Repository</param>
-    /// <param name="branch">Branch</param>
-    /// <param name="mergePolicies">Merge policies. May be empty.</param>
-    /// <returns>Task</returns>
-    public async Task SetRepositoryMergePoliciesAsync(string repoUri, string branch, List<MergePolicy> mergePolicies)
-    {
-        await _barClient.Repository.SetMergePoliciesAsync(repository: repoUri, branch: branch, body: mergePolicies);
     }
 
     #endregion

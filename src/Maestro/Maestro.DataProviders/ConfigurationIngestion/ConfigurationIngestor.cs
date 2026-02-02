@@ -43,7 +43,6 @@ internal partial class ConfigurationIngestor(
         var existingConfigurationData =
             CreateConfigurationDataObject(namespaceEntity);
 
-        // save the old failure notification tags before applying the subscription updates
         var oldFailureNotificationTags = existingConfigurationData.Subscriptions.ToDictionary(s => s.Values.Id, s => s.Values.FailureNotificationTags);
 
         var configurationDataUpdate = ComputeEntityUpdates(
@@ -220,8 +219,12 @@ internal partial class ConfigurationIngestor(
                 .Where(s => subscriptionIds.Contains(s.SubscriptionId)));
 
         var subscriptionDaos = await _context.Subscriptions
+            .Include(sub => sub.ExcludedAssets)
             .Where(sub => subscriptionIds.Contains(sub.Id))
             .ToListAsync();
+
+        _context.AssetFilters.RemoveRange(
+            subscriptionDaos.SelectMany(s => s.ExcludedAssets));
 
         _context.Subscriptions.RemoveRange(subscriptionDaos);
     }
@@ -245,7 +248,10 @@ internal partial class ConfigurationIngestor(
         foreach (var channel in updatedChannels)
         {
             var dbChannel = dbChannelsByName[channel.Values.Name];
-            dbChannel!.Classification = channel.Values.Classification;
+            if (dbChannel.Classification != channel.Values.Classification)
+            {
+                dbChannel.Classification = channel.Values.Classification;
+            }
         }
     }
 
@@ -301,7 +307,10 @@ internal partial class ConfigurationIngestor(
 
             var dbDefaultChannel = dbDefaultChannels[key];
 
-            dbDefaultChannel.Enabled = defaultChannel.Values.Enabled;
+            if (dbDefaultChannel.Enabled != defaultChannel.Values.Enabled)
+            {
+                dbDefaultChannel.Enabled = defaultChannel.Values.Enabled;
+            }
         }
     }
 
@@ -352,7 +361,10 @@ internal partial class ConfigurationIngestor(
             var updatedBranchMergePoliciesDao =
                 ConvertIngestedBranchMergePoliciesToDao(bmp, namespaceEntity);
 
-            dbRepositoryBranch.PolicyString = updatedBranchMergePoliciesDao.PolicyString;
+            if (dbRepositoryBranch.PolicyString != updatedBranchMergePoliciesDao.PolicyString)
+            {
+                dbRepositoryBranch.PolicyString = updatedBranchMergePoliciesDao.PolicyString;
+            }
         }
     }
 
@@ -379,8 +391,26 @@ internal partial class ConfigurationIngestor(
 
     private ConfigurationUpdates FilterNonUpdates(ConfigurationUpdates update)
     {
+        var createdOrDeletedSubscriptionIds = update.Subscriptions.Creations
+            .Concat(update.Subscriptions.Removals)
+            .Select(s => s.Id)
+            .ToHashSet();
+
+        // Find subscription IDs that have ExcludedAssets added or removed
+        // For deleted AssetFilters, we need to get the SubscriptionId from the original values
+        // since the entity is no longer in the subscription's collection
+        var subscriptionIdsWithAssetFilterChanges = _context.ChangeTracker.Entries<AssetFilter>()
+            .Where(e => e.State == EntityState.Added || e.State == EntityState.Deleted)
+            .Select(e => e.State == EntityState.Deleted
+                ? e.OriginalValues.GetValue<Guid?>("SubscriptionId")
+                : e.CurrentValues.GetValue<Guid?>("SubscriptionId"))
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .Where(id => !createdOrDeletedSubscriptionIds.Contains(id))
+            .ToHashSet();
+
         var subscriptionUpdates = _context.ChangeTracker.Entries<Subscription>()
-            .Where(e => e.State == EntityState.Modified)
+            .Where(e => e.State == EntityState.Modified || subscriptionIdsWithAssetFilterChanges.Contains(e.Entity.Id))
             .Select(e => e.Entity)
             .Select(sub => SqlBarClient.ToClientModelSubscription(sub))
             .Select(SubscriptionYaml.FromClientModel)

@@ -698,8 +698,7 @@ internal abstract partial class ScenarioTestBase
         string sourceOrg = "dotnet",
         List<string>? additionalOptions = null,
         bool sourceIsAzDo = false,
-        bool targetIsAzDo = false,
-        bool trigger = false)
+        bool targetIsAzDo = false)
     {
         var sourceUrl = sourceIsAzDo ? GetAzDoRepoUrl(sourceRepo) : GetRepoUrl(sourceOrg, sourceRepo);
         var targetUrl = targetIsAzDo ? GetAzDoRepoUrl(targetRepo) : GetGitHubRepoUrl(targetRepo);
@@ -712,7 +711,6 @@ internal abstract partial class ScenarioTestBase
             "--target-repo", targetUrl,
             "--target-branch", targetBranch,
             "--update-frequency", updateFrequency,
-            trigger? "--trigger" : "--no-trigger",
             .. additionalOptions ?? []
         ];
 
@@ -729,7 +727,7 @@ internal abstract partial class ScenarioTestBase
 
     protected async Task<string> CreateSubscriptionAsync(string yamlDefinition)
     {
-        var output = await RunDarcAsyncWithInput(yamlDefinition, ["add-subscription", "-q", "--read-stdin", "--no-trigger"]);
+        var output = await RunDarcAsyncWithInput(yamlDefinition, ["add-subscription", "-q", "--read-stdin"]);
 
         Match match = Regex.Match(output, "Successfully added subscription with id '([a-f0-9-]+)' on branch");
         if (!match.Success)
