@@ -77,7 +77,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 headBranch,
                 build,
                 subscription.ExcludedAssets,
-                EnableRebase: true,
+                KeepConflicts: true,
                 forceUpdate,
                 UnsafeFlow: false),
             targetRepo,

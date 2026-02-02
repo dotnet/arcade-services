@@ -31,7 +31,7 @@ public record CodeflowOptions(
     string HeadBranch,
     Build Build,
     IReadOnlyCollection<string>? ExcludedAssets,
-    bool EnableRebase,
+    bool KeepConflicts,
     bool ForceUpdate,
     bool UnsafeFlow);
 
@@ -427,7 +427,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                         CurrentFlow = currentIsBackflow
                             ? new Backflow(previouslyAppliedBuild.Commit, previousFlow!.RepoSha)
                             : new ForwardFlow(previouslyAppliedBuild.Commit, previousFlow!.VmrSha),
-                        EnableRebase = false,
+                        KeepConflicts = false,
                         ForceUpdate = true,
                     },
                     previousFlows,
