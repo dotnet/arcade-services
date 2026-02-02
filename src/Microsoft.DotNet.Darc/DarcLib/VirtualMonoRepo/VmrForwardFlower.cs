@@ -370,7 +370,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         CancellationToken cancellationToken)
     {
         LastFlows lastFlowsAfterRecreation = lastFlows;
-        if (codeflowOptions.EnableRebase && lastFlows.CrossingFlow == null && result.RecreatedPreviousFlows)
+        if (lastFlows.CrossingFlow == null && result.RecreatedPreviousFlows)
         {
             lastFlowsAfterRecreation = lastFlows with
             {

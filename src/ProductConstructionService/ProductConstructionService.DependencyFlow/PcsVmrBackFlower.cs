@@ -120,7 +120,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             commitMessage,
             cancellationToken);
 
-        if (codeflowOptions.EnableRebase && conflicts.Count == 0)
+        if (conflicts.Count == 0)
         {
             // When we do the rebase flow, we need only stage locally (in darc) after we rebase the work branch
             // In the service, we need to commit too so that we push the update to the PR
