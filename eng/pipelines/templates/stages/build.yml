@@ -88,25 +88,3 @@ stages:
             displayName: Push docker image
 
 - template: /eng/pipelines/templates/stages/deploy.yaml@self
-
-- ${{ if parameters.isProdPipeline }}:
-  - template: /eng/common/templates-official/post-build/post-build.yml@self
-    parameters:
-      enableSymbolValidation: true
-      enableSigningValidation: false
-      artifactsPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
-      symbolPublishingAdditionalParameters: '/p:CheckEolTargetFramework=false'
-      SDLValidationParameters:
-        enable: true
-        params: |
-          -SourceToolsList @("policheck","credscan")
-          -TsaInstanceURL $(_TsaInstanceURL)
-          -TsaProjectName $(_TsaProjectName)
-          -TsaNotificationEmail $(_TsaNotificationEmail)
-          -TsaCodebaseAdmin $(_TsaCodebaseAdmin)
-          -TsaBugAreaPath $(_TsaBugAreaPath)
-          -TsaIterationPath $(_TsaIterationPath)
-          -TsaRepositoryName "Arcade-Services"
-          -TsaCodebaseName "Arcade-Services"
-          -TsaPublish $True
-          -PoliCheckAdditionalRunConfigParams @("UserExclusionPath < $(Build.SourcesDirectory)/eng/PoliCheckExclusions.xml")
