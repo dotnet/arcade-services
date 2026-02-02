@@ -439,19 +439,15 @@ internal abstract class CodeFlowTestsBase
         return $"{(forwardFlow ? "forward" : "backward")}/{testName}/{Guid.NewGuid().ToString().Substring(0, 16)}";
     }
 
-    protected async Task FinalizeBackFlow(bool enableRebase, string branchName)
-        => await FinalizeFlow(ProductRepoPath, enableRebase, branchName);
+    protected async Task FinalizeBackFlow(string branchName)
+        => await FinalizeFlow(ProductRepoPath, branchName);
 
-    protected async Task FinalizeForwardFlow(bool enableRebase, string branchName)
-        => await FinalizeFlow(VmrPath, enableRebase, branchName);
+    protected async Task FinalizeForwardFlow(string branchName)
+        => await FinalizeFlow(VmrPath, branchName);
 
-    private async Task FinalizeFlow(NativePath targetRepo, bool enableRebase, string branchName)
+    private async Task FinalizeFlow(NativePath targetRepo, string branchName)
     {
-        if (enableRebase)
-        {
-            await GitOperations.CommitAll(targetRepo, "Commit codeflow", allowEmpty: true);
-        }
-
+        await GitOperations.CommitAll(targetRepo, "Commit codeflow", allowEmpty: true);
         await GitOperations.MergePrBranch(targetRepo, branchName);
     }
 }
