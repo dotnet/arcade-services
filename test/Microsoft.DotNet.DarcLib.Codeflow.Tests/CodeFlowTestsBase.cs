@@ -220,7 +220,6 @@ internal abstract class CodeFlowTestsBase
         Build? buildToFlow = null,
         IReadOnlyCollection<string>? excludedAssets = null,
         bool useLatestBuild = false,
-        bool enableRebase = false,
         bool forceUpdate = true)
     {
         using var scope = ServiceProvider.CreateScope();
@@ -238,7 +237,6 @@ internal abstract class CodeFlowTestsBase
             excludedAssets,
             "main",
             branch,
-            enableRebase,
             forceUpdate,
             unsafeFlow: false,
             cancellationToken: _cancellationToken.Token);
@@ -257,7 +255,6 @@ internal abstract class CodeFlowTestsBase
         string branch,
         Build? buildToFlow = null,
         IReadOnlyCollection<string>? excludedAssets = null,
-        bool enableRebase = false,
         bool forceUpdate = true)
     {
         using var scope = ServiceProvider.CreateScope();
@@ -273,7 +270,6 @@ internal abstract class CodeFlowTestsBase
             "main",
             branch,
             VmrPath,
-            enableRebase,
             forceUpdate,
             unsafeFlow: false,
             cancellationToken: _cancellationToken.Token);
