@@ -354,18 +354,40 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         {
             return await applyLatestChanges(enableRebase: false);
         }
-        catch (PatchApplicationFailedException)
+        catch (PatchApplicationFailedException e)
         {
-            // We need to recreate a previous flow so that we have something to rebase later
-            return await RecreatePreviousFlowsAndApplyChanges(
-                codeflowOptions with
+            if (codeflowOptions.KeepConflicts)
+            {
+                // We need to recreate a previous flow so that we have something to rebase later
+                return await RecreatePreviousFlowsAndApplyChanges(
+                    codeflowOptions with
+                    {
+                        HeadBranch = workBranch!.WorkBranchName,
+                    },
+                    productRepo,
+                    lastFlows,
+                    async (_) => await applyLatestChanges(enableRebase: false),
+                    cancellationToken);
+            }
+            else
+            {
+                // When we are updating an already existing PR branch, there can be conflicting changes in the PR from devs.
+                // In that case we want to throw as that is a conflict we don't want to try to resolve.
+                if (headBranchExisted)
                 {
-                    HeadBranch = workBranch!.WorkBranchName,
-                },
-                productRepo,
-                lastFlows,
-                async (_) => await applyLatestChanges(enableRebase: false),
-                cancellationToken);
+                    _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
+                    throw new ConflictInPrBranchException(e.Result.StandardError, codeflowOptions.TargetBranch);
+                }
+
+                // Otherwise, we have a conflicting change in the last backflow PR (before merging)
+                // The scenario is described here: https://github.com/dotnet/dotnet/tree/main/docs/VMR-Full-Code-Flow.md#conflicts
+                return await RecreatePreviousFlowsAndApplyChanges(
+                    codeflowOptions,
+                    productRepo,
+                    lastFlows,
+                    async (_) => await applyLatestChanges(enableRebase: false),
+                    cancellationToken);
+            }
         }
     }
 
@@ -435,7 +457,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     headBranchExisted: true, // Head branch was created when we rewound to the previous flow
                     cancellationToken);
             }
-            catch (Exception e) when (e is PatchApplicationFailedException)
+            catch (Exception e) when (e is PatchApplicationFailedException || e is ConflictInPrBranchException)
             {
                 _logger.LogInformation("Recreated {count} flows but current changes conflict with them. Recreating deeper...", flowsToRecreate);
                 flowsToRecreate++;
@@ -470,7 +492,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                     RecreatedPreviousFlows = true,
                 };
             }
-            catch (Exception e) when (e is PatchApplicationFailedException)
+            catch (Exception e) when (e is PatchApplicationFailedException || e is ConflictInPrBranchException)
             {
                 _logger.LogInformation("Recreated {count} flows but conflict with a previous flow still exists. Recreating deeper...", flowsToRecreate);
                 flowsToRecreate++;
@@ -682,7 +704,26 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         string commitMessage,
         CancellationToken cancellationToken)
     {
-        return await workBranch.RebaseAsync(cancellationToken);
+        if (codeflowOptions.KeepConflicts)
+        {
+            return await workBranch.RebaseAsync(cancellationToken);
+        }
+        else
+        {
+            try
+            {
+                await workBranch.MergeBackAsync(commitMessage);
+                _logger.LogInformation("Branch {branch} with code changes is ready in {repoDir}", codeflowOptions.HeadBranch, targetRepo);
+                return [];
+            }
+            catch (WorkBranchInConflictException e) when (headBranchExisted)
+            {
+                _logger.LogInformation(e.Message);
+                throw new ConflictInPrBranchException(
+                    [..e.ConflictedFiles.Select(f => f.Path)],
+                    codeflowOptions.TargetBranch);
+            }
+        }
     }
 
     protected abstract NativePath GetEngCommonPath(NativePath sourceRepo);
