@@ -175,19 +175,9 @@ public abstract class CodeFlowConflictResolver
                 if (!await TryResolvingConflict(codeflowOptions, vmr, sourceRepo, filePath, crossingFlow, headBranchExisted, cancellationToken))
                 {
                     _logger.LogInformation("Failed to auto-resolve a conflict in {conflictedFile}", filePath);
-
-                    if (!codeflowOptions.KeepConflicts)
-                    {
-                        _logger.LogDebug("Conflict in {filePath} cannot be resolved automatically", filePath);
-                        await AbortMerge(codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : sourceRepo);
-                        return false;
-                    }
-                    else
-                    {
-                        // When we fail to resolve conflicts during a rebase, we are fine with keeping it
-                        success = false;
-                        continue;
-                    }
+                    // When we fail to resolve conflicts during a rebase, we are fine with keeping it
+                    success = false;
+                    continue;
                 }
 
                 count++;
@@ -195,11 +185,6 @@ public abstract class CodeFlowConflictResolver
             catch (Exception e)
             {
                 _logger.LogError(e, "Failed to resolve conflicts in {filePath}", filePath);
-
-                if (!codeflowOptions.KeepConflicts)
-                {
-                    await AbortMerge(codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : sourceRepo);
-                }
                 return false;
             }
         }
@@ -279,7 +264,7 @@ public abstract class CodeFlowConflictResolver
         }
 
         var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : repo;
-        await targetRepo.ResolveConflict(conflictedFile, ours: codeflowOptions.KeepConflicts);
+        await targetRepo.ResolveConflict(conflictedFile, ours: true);
 
         if (_fileSystem.GetFileInfo(patches.First().Path).Length == 0)
         {
@@ -307,11 +292,8 @@ public abstract class CodeFlowConflictResolver
             // We will just leave it as is and let the user resolve it manually
             _logger.LogInformation("Detected conflicts in {filePath}", conflictedFile);
 
-            if (codeflowOptions.KeepConflicts)
-            {
-                // Revert the file into the conflicted state for manual resolution
-                await targetRepo.ExecuteGitCommand(["checkout", "--conflict=merge", "--", conflictedFile], CancellationToken.None);
-            }
+            // Revert the file into the conflicted state for manual resolution
+            await targetRepo.ExecuteGitCommand(["checkout", "--conflict=merge", "--", conflictedFile], CancellationToken.None);
 
             return false;
         }
