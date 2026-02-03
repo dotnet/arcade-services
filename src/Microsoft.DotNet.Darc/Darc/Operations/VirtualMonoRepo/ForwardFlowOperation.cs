@@ -77,6 +77,17 @@ internal class ForwardFlowOperation(
 
         await _cloneManager.RegisterCloneAsync(sourceRepo.Path);
 
+        // Ensure the source repo has the commit we want to flow
+        // This will fetch from the remote if necessary
+        _logger.LogInformation("Making sure commit '{commit}' is present in repository '{repo}'...", build.Commit, sourceRepo.Path);
+        await _cloneManager.PrepareCloneAsync(
+            sourceRepo.Path,
+            [build.GetRepository()],
+            [build.Commit],
+            build.Commit,
+            resetToRemote: false,
+            cancellationToken: cancellationToken);
+
         cancellationToken.ThrowIfCancellationRequested();
 
         var result = await FlowCodeLocallyAsync(
