@@ -99,43 +99,4 @@ public class RepositoryController : ControllerBase
             repoBranch.PolicyObject?.MergePolicies ?? [];
         return Ok(policies.Select(p => new MergePolicy(p)));
     }
-
-    /// <summary>
-    ///   Gets a paginated list of the repository history for the given repository and branch
-    /// </summary>
-    /// <param name="repository">The repository</param>
-    /// <param name="branch">The branch</param>
-    [HttpGet("history")]
-    [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<RepositoryHistoryItem>), Description = "The requested history")]
-    [Paginated(typeof(RepositoryHistoryItem))]
-    public async Task<IActionResult> GetHistory([Required] string repository, [Required] string branch)
-    {
-        if (string.IsNullOrEmpty(repository))
-        {
-            ModelState.TryAddModelError(nameof(repository), "The repository parameter is required");
-        }
-
-        if (string.IsNullOrEmpty(branch))
-        {
-            ModelState.TryAddModelError(nameof(branch), "The branch parameter is required");
-        }
-
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        Maestro.Data.Models.RepositoryBranch? repoBranch = await _context.RepositoryBranches.FindAsync(repository, branch);
-
-        if (repoBranch == null)
-        {
-            return NotFound();
-        }
-
-        IOrderedQueryable<RepositoryBranchUpdateHistoryEntry> query = _context.RepositoryBranchUpdateHistory
-            .Where(u => u.Repository == repository && u.Branch == branch)
-            .OrderByDescending(u => u.Timestamp);
-
-        return Ok(query);
-    }
 }
