@@ -84,7 +84,8 @@ public abstract class CodeFlowConflictResolver
     {
         var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : productRepo;
 
-        IReadOnlyCollection<UnixPath> conflictedFiles = (await targetRepo.GetStagedFilesAsync()).Count > 0
+        var x = await targetRepo.GetStagedFilesAsync();
+        IReadOnlyCollection<UnixPath> conflictedFiles = (x).Count > 0
             ? await targetRepo.GetConflictedFilesAsync(cancellationToken)
             : await TryMergingBranch(targetRepo, codeflowOptions.HeadBranch, codeflowOptions.TargetBranch, cancellationToken);
 
