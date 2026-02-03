@@ -182,6 +182,17 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             return true;
         }
 
+        // NuGet.config is a dependency-related file that needs to be auto-resolved during backflow
+        // to avoid XML parsing errors when trying to read it with conflict markers
+        if (VersionFiles.NugetConfigNames.Any(name => conflictedFile.Path.Equals(name, StringComparison.OrdinalIgnoreCase)))
+        {
+            // Use the same logic as other dependency files:
+            // - Target branch version when flowing the first time (headBranchExisted = false)
+            // - Head branch version when flowing again (headBranchExisted = true)
+            await targetRepo.ResolveConflict(conflictedFile, ours: headBranchExisted);
+            return true;
+        }
+
         // eng/common is always preferred from the source side
         // In rebase mode: ours=true means keep the incoming changes (source)
         // In merge mode: ours=false means prefer theirs (source being merged in)
