@@ -384,13 +384,13 @@ internal abstract class CodeFlowOperation(
         // Parse and validate subscription ID
         BarBuild? build = await PopulateOptionsAndBuildFromSubscription();
 
-        return await GetOrCreateBuildAsync(sourceRepo, build);
+        return await ResolveBuildFromOptionsAsync(sourceRepo, build);
     }
 
     /// <summary>
     /// Gets the build to flow, either from the provided build, from the --build option, or creates a synthetic build from the current ref.
     /// </summary>
-    protected async Task<BarBuild> GetOrCreateBuildAsync(ILocalGitRepo sourceRepo, BarBuild? build)
+    protected async Task<BarBuild> ResolveBuildFromOptionsAsync(ILocalGitRepo sourceRepo, BarBuild? build)
     {
         if (_options.Build != 0 && build == null)
         {

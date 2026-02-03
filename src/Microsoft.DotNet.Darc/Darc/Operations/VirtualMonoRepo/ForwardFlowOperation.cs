@@ -72,7 +72,7 @@ internal class ForwardFlowOperation(
         {
             // We're in a git repo, if a subscription id is provided make sure the sourceRepo path matches the subscription source repo
             // if it's not, just use the current repo path
-            (sourceRepo, build) = await ResolveSourceRepoAsync(currentRepoPath, cancellationToken);
+            (sourceRepo, build) = await GetSourceRepoPreferringLocalAsync(currentRepoPath, cancellationToken);
         }
 
         await _cloneManager.RegisterCloneAsync(sourceRepo.Path);
@@ -100,14 +100,14 @@ internal class ForwardFlowOperation(
         return !result.HadConflicts;
     }
 
-    private async Task<(ILocalGitRepo sourceRepo, BarBuild build)> ResolveSourceRepoAsync(NativePath currentRepoPath, CancellationToken cancellationToken)
+    private async Task<(ILocalGitRepo sourceRepo, BarBuild build)> GetSourceRepoPreferringLocalAsync(NativePath currentRepoPath, CancellationToken cancellationToken)
     {
         var subscription = await GetSubscriptionAsync();
         // if no subscription was provided then we'll just use the current repo
         if (subscription == null)
         {
             var sourceRepo = _localGitRepoFactory.Create(currentRepoPath);
-            return (sourceRepo, await GetOrCreateBuildAsync(sourceRepo, null));
+            return (sourceRepo, await ResolveBuildFromOptionsAsync(sourceRepo, null));
         }
 
         // if subscription is provided and we're here, check if the currentRepoPath matches the subscription source repo
