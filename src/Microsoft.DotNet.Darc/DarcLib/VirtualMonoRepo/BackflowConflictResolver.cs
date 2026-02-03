@@ -170,25 +170,16 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         bool headBranchExisted,
         CancellationToken cancellationToken)
     {
-        // Known version file - check out the branch version, we want to override it
+        // Known version and dependency files - check out the branch version, we want to override them
         // See https://github.com/dotnet/arcade-services/issues/4865
-        if (DependencyFileManager.CodeflowDependencyFiles.Any(f => f.Equals(conflictedFile, StringComparison.OrdinalIgnoreCase)))
+        // NuGet.config is also included to avoid XML parsing errors when reading it with conflict markers
+        if (DependencyFileManager.CodeflowDependencyFiles.Any(f => f.Equals(conflictedFile, StringComparison.OrdinalIgnoreCase)) ||
+            VersionFiles.NugetConfigNames.Any(name => conflictedFile.Path.Equals(name, StringComparison.OrdinalIgnoreCase)))
         {
             // Revert files so that we can resolve the conflicts
             // We use the target branch version when we are flowing the first time (because we did not flow the version files yet)
             // We use the head branch version when we are flowing again because it already has updates from previous flow
             // plus it can contain additional changes from the PR
-            await targetRepo.ResolveConflict(conflictedFile, ours: headBranchExisted);
-            return true;
-        }
-
-        // NuGet.config is a dependency-related file that needs to be auto-resolved during backflow
-        // to avoid XML parsing errors when trying to read it with conflict markers
-        if (VersionFiles.NugetConfigNames.Any(name => conflictedFile.Path.Equals(name, StringComparison.OrdinalIgnoreCase)))
-        {
-            // Use the same logic as other dependency files:
-            // - Target branch version when flowing the first time (headBranchExisted = false)
-            // - Head branch version when flowing again (headBranchExisted = true)
             await targetRepo.ResolveConflict(conflictedFile, ours: headBranchExisted);
             return true;
         }
