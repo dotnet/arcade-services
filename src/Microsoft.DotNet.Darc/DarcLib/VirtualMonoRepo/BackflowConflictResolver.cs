@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -174,7 +175,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         // See https://github.com/dotnet/arcade-services/issues/4865
         // NuGet.config is also included to avoid XML parsing errors when reading it with conflict markers
         if (DependencyFileManager.CodeflowDependencyFiles.Any(f => f.Equals(conflictedFile, StringComparison.OrdinalIgnoreCase)) ||
-            VersionFiles.NugetConfigNames.Any(name => conflictedFile.Path.Equals(name, StringComparison.OrdinalIgnoreCase)))
+            VersionFiles.NugetConfigNames.Any(name => Path.GetFileName(conflictedFile.Path).Equals(name, StringComparison.OrdinalIgnoreCase)))
         {
             // Revert files so that we can resolve the conflicts
             // We use the target branch version when we are flowing the first time (because we did not flow the version files yet)
