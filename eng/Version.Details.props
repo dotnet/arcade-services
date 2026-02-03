@@ -29,7 +29,7 @@ This file should be imported by eng/Versions.props
     <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.26065.2</MicrosoftDncEngConfigurationBootstrapPackageVersion>
     <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.26065.2</MicrosoftDncEngSecretManagerPackageVersion>
     <!-- _git/maestro-configuration dependencies -->
-    <MicrosoftDotNetMaestroConfigurationClientPackageVersion>1.1.0-beta.26102.5</MicrosoftDotNetMaestroConfigurationClientPackageVersion>
+    <MicrosoftDotNetMaestroConfigurationClientPackageVersion>1.1.0-beta.26103.1</MicrosoftDotNetMaestroConfigurationClientPackageVersion>
   </PropertyGroup>
   <!--Property group for alternate package version names-->
   <PropertyGroup>
