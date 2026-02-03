@@ -268,7 +268,7 @@ internal abstract class CodeFlowOperation(
         return versionDetails.Source.Mapping;
     }
 
-    private async Task<BarBuild?> PopulateOptionsAndBuildFromSubscription()
+    protected async Task<Subscription?> GetSubscriptionAsync()
     {
         if (string.IsNullOrEmpty(_options.SubscriptionId))
         {
@@ -280,24 +280,24 @@ internal abstract class CodeFlowOperation(
             throw new DarcException($"Invalid subscription ID '{_options.SubscriptionId}'. Please provide a valid GUID.");
         }
 
-        // Fetch subscription metadata
-        Subscription subscription;
         try
         {
-            subscription = await _barApiClient.GetSubscriptionAsync(subscriptionId)
+            return await _barApiClient.GetSubscriptionAsync(subscriptionId)
                 ?? throw new DarcException($"Subscription with ID '{subscriptionId}' not found.");
         }
         catch (RestApiException e) when (e.Response.Status == 404)
         {
             throw new DarcException($"Subscription with ID '{subscriptionId}' not found.", e);
         }
+    }
 
-        // Check if subscription is source-enabled (VMR code flow)
-        if (!subscription.SourceEnabled)
-        {
-            throw new DarcException("Only source-enabled subscriptions (VMR code flow) are supported with --subscription for codeflow operations.");
-        }
-
+    /// <summary>
+    /// Populates command options from subscription settings and returns the build to flow.
+    /// </summary>
+    /// <param name="subscription">The subscription to use for populating options.</param>
+    /// <returns>The build to flow.</returns>
+    protected async Task<BarBuild> PopulateOptionsAndGetBuildFromSubscriptionAsync(Subscription subscription)
+    {
         _logger.LogInformation("Simulating subscription '{Id}':", subscription.Id);
         _logger.LogInformation("  Source: {sourceRepo} (channel: {channelName})", subscription.SourceRepository, subscription.Channel.Name);
         _logger.LogInformation("  Target: {targetRepo}#{targetBranch}", subscription.TargetRepository, subscription.TargetBranch);
@@ -323,30 +323,50 @@ internal abstract class CodeFlowOperation(
             _logger.LogInformation("  Using command-line excluded assets: {excludedAssets}", _options.ExcludedAssets);
         }
 
+        BarBuild build;
+
         // If build ID is not provided, find the latest build from the source repository on the channel
         if (_options.Build == 0)
         {
-            BarBuild latestBuild = await _barApiClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
-            if (latestBuild is null)
+            build = await _barApiClient.GetLatestBuildAsync(subscription.SourceRepository, subscription.Channel.Id);
+            if (build is null)
             {
                 string channelName = subscription.Channel?.Name ?? "(unknown channel)";
                 throw new DarcException($"No builds found for repository '{subscription.SourceRepository}' on channel '{channelName}'.");
             }
 
-            _logger.LogInformation("  Latest build: {buildNumber} (BAR ID: {buildId})", latestBuild.AzureDevOpsBuildNumber, latestBuild.Id);
-            _logger.LogInformation("  Build commit: {commit}", latestBuild.Commit);
-            _logger.LogInformation(string.Empty);
-
-            // Set the build to use for the codeflow operation
-            _options.Build = latestBuild.Id;
-            return latestBuild;
+            _logger.LogInformation("  Latest build: {buildNumber} (BAR ID: {buildId})", build.AzureDevOpsBuildNumber, build.Id);
+            _options.Build = build.Id;
         }
         else
         {
             _logger.LogInformation("  Using provided build ID: {buildId}", _options.Build);
-            _logger.LogInformation(string.Empty);
+
+            build = await _barApiClient.GetBuildAsync(_options.Build)
+                ?? throw new DarcException($"Build with ID '{_options.Build}' not found.");
+        }
+
+        _logger.LogInformation("  Build commit: {commit}", build.Commit);
+        _logger.LogInformation(string.Empty);
+
+        return build;
+    }
+
+    private async Task<BarBuild?> PopulateOptionsAndBuildFromSubscription()
+    {
+        var subscription = await GetSubscriptionAsync();
+        if (subscription == null)
+        {
             return null;
         }
+
+        // Check if subscription is source-enabled (VMR code flow)
+        if (!subscription.SourceEnabled)
+        {
+            throw new DarcException("Only source-enabled subscriptions (VMR code flow) are supported with --subscription for codeflow operations.");
+        }
+
+        return await PopulateOptionsAndGetBuildFromSubscriptionAsync(subscription);
     }
 
     /// <summary>
@@ -364,6 +384,14 @@ internal abstract class CodeFlowOperation(
         // Parse and validate subscription ID
         BarBuild? build = await PopulateOptionsAndBuildFromSubscription();
 
+        return await GetOrCreateBuildAsync(sourceRepo, build);
+    }
+
+    /// <summary>
+    /// Gets the build to flow, either from the provided build, from the --build option, or creates a synthetic build from the current ref.
+    /// </summary>
+    protected async Task<BarBuild> GetOrCreateBuildAsync(ILocalGitRepo sourceRepo, BarBuild? build)
+    {
         if (_options.Build != 0 && build == null)
         {
             build = await _barApiClient.GetBuildAsync(_options.Build);
