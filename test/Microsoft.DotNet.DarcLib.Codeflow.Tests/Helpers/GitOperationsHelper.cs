@@ -36,7 +36,7 @@ internal class GitOperationsHelper
     {
         if (addAll)
         {
-            ProcessExecutionResult result = await ExecuteGitCommand(repo, "add", "-A");
+            var result = await ExecuteGitCommand(repo, "add", "-A");
 
             if (!allowEmpty)
             {
