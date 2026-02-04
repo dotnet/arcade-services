@@ -122,7 +122,6 @@ internal abstract class CodeFlowOperation(
                     excludedAssets: excludedAssets,
                     currentTargetRepoBranch,
                     currentTargetRepoBranch,
-                    enableRebase: true,
                     forceUpdate: true,
                     unsafeFlow: _options.UnsafeFlow,
                     cancellationToken);
@@ -211,7 +210,6 @@ internal abstract class CodeFlowOperation(
             headBranch,
             headBranch,
             targetRepoUri,
-            enableRebase: true,
             forceUpdate: true,
             unsafeFlow: _options.UnsafeFlow,
             cancellationToken);

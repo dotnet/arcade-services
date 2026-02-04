@@ -22,13 +22,11 @@ internal interface IPcsVmrForwardFlower
     /// <param name="subscription">Subscription to flow</param>
     /// <param name="build">Build to flow</param>
     /// <param name="headBranch">Branch to flow to (or to create)</param>
-    /// <param name="enableRebase">Rebases changes (and leaves conflict markers in place) instead of recreating the previous flows recursively</param>
     /// <param name="forceUpdate">Force the update to be performed</param>
     Task<CodeFlowResult> FlowForwardAsync(
         Subscription subscription,
         Build build,
         string headBranch,
-        bool enableRebase,
         bool forceUpdate,
         CancellationToken cancellationToken = default);
 }
@@ -69,7 +67,6 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         Build build,
         string headBranch,
         bool enableRebase,
-        bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
         ILocalGitRepo sourceRepo = await _repositoryCloneManager.PrepareCloneAsync(
@@ -87,7 +84,6 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             headBranch,
             subscription.TargetRepository,
             enableRebase,
-            forceUpdate,
             unsafeFlow: false,
             cancellationToken);
 
@@ -124,7 +120,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             commitMessage,
             cancellationToken);
 
-        if (codeflowOptions.EnableRebase && conflicts.Count == 0)
+        if (conflicts.Count == 0)
         {
             // When we do the rebase flow, we need only stage locally (in darc) after we rebase the work branch
             // In the service, we need to commit too so that we push the update to the PR
