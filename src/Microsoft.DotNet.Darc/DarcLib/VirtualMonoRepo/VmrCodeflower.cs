@@ -352,7 +352,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     {
         try
         {
-            return await applyLatestChanges(enableRebase: false);
+            return await applyLatestChanges(keepConflicts: false);
         }
         catch (PatchApplicationFailedException)
         {
@@ -364,7 +364,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                 },
                 productRepo,
                 lastFlows,
-                async (_) => await applyLatestChanges(enableRebase: false),
+                async (_) => await applyLatestChanges(keepConflicts: false),
                 cancellationToken);
         }
     }
@@ -452,7 +452,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             // We apply the current changes on top again to check if they apply now
             try
             {
-                CodeFlowResult result = await reapplyChanges(enableRebase: false);
+                CodeFlowResult result = await reapplyChanges(keepConflicts: false);
 
                 await HandleRevertedFiles(
                     codeflowOptions,
@@ -724,6 +724,6 @@ public record LastFlows(
 /// <summary>
 /// Delegate for applying latest changes with an option to enable rebase mode.
 /// </summary>
-/// <param name="enableRebase">When true, enables rebase mode for applying changes</param>
-/// <returns>When enableRebase is true, returns a list of conflicting files</returns>
-public delegate Task<CodeFlowResult> ApplyLatestChangesDelegate(bool enableRebase);
+/// <param name="keepConflicts">When true, enables rebase mode for applying changes</param>
+/// <returns>When keepConflicts is true, returns a list of conflicting files</returns>
+public delegate Task<CodeFlowResult> ApplyLatestChangesDelegate(bool keepConflicts);
