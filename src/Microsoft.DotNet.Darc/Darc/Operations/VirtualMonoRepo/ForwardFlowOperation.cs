@@ -119,6 +119,9 @@ internal class ForwardFlowOperation(
         }
 
         // current repo path does not match subscription source repo, clone the subscription's source repository
+        _logger.LogInformation("The current repository does not match the source repository of subscription '{subscriptionId}'. Cloning the source repository '{sourceRepo}' to a tmp folder",
+            subscription.Id,
+            subscription.SourceRepository);
         return await CloneSourceRepoFromSubscriptionAsync(cancellationToken);
     }
 
