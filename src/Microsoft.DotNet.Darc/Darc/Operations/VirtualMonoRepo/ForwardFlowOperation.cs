@@ -113,7 +113,7 @@ internal class ForwardFlowOperation(
         // if subscription is provided and we're here, check if the currentRepoPath matches the subscription source repo
         var currentRepoSourceMapping = GetRepoSourceMapping(currentRepoPath);
         var (repoName, _) = GitRepoUrlUtils.GetRepoNameAndOwner(subscription.SourceRepository);
-        if (repoName == currentRepoSourceMapping)
+        if (repoName == currentRepoSourceMapping || (currentRepoSourceMapping == "nuget-client" && repoName == "nuget.client"))
         {
             return (_localGitRepoFactory.Create(currentRepoPath), await PopulateOptionsAndGetBuildFromSubscriptionAsync(subscription));
         }
