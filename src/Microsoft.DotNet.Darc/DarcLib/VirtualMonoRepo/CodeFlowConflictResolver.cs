@@ -185,6 +185,7 @@ public abstract class CodeFlowConflictResolver
             catch (Exception e)
             {
                 _logger.LogError(e, "Failed to resolve conflicts in {filePath}", filePath);
+                success = false;
             }
         }
 
