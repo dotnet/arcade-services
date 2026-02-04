@@ -95,16 +95,13 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             headBranchExisted,
             cancellationToken);
 
-        if (codeflowOptions.EnableRebase)
-        {
-            await DetectAndFixPartialReverts(
-                codeflowOptions,
-                vmr,
-                targetRepo,
-                conflictedFiles,
-                lastFlows,
-                cancellationToken);
-        }
+        await DetectAndFixPartialReverts(
+            codeflowOptions,
+            vmr,
+            targetRepo,
+            conflictedFiles,
+            lastFlows,
+            cancellationToken);
 
         try
         {
@@ -189,11 +186,11 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         // In merge mode: ours=false means prefer theirs (source being merged in)
         if (conflictedFile.Path.StartsWith(Constants.CommonScriptFilesPath, StringComparison.InvariantCultureIgnoreCase))
         {
-            await targetRepo.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase /* rebase vs merge direction */);
+            await targetRepo.ResolveConflict(conflictedFile, ours: true);
             return true;
         }
 
-        if (codeflowOptions.EnableRebase && await TryDeletingFileMarkedForDeletion(targetRepo, conflictedFile, cancellationToken))
+        if (await TryDeletingFileMarkedForDeletion(targetRepo, conflictedFile, cancellationToken))
         {
             return true;
         }
@@ -418,20 +415,6 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                     || update.From.RepoUri != update.To.RepoUri
                     || update.From.Commit != update.To.Commit),
         ];
-
-        string commitMessage = string.Concat(
-            $"Update dependencies from {codeflowOptions.Build.GetRepository()} build {codeflowOptions.Build.Id}",
-            Environment.NewLine,
-            BuildDependencyUpdateCommitMessage(dependencyUpdates));
-
-        // When rebasing, we only want to stage the changes, not commit them
-        if (!codeflowOptions.EnableRebase)
-        {
-            await targetRepo.CommitAsync(
-                commitMessage,
-                allowEmpty: false,
-                cancellationToken: cancellationToken);
-        }
 
         return dependencyUpdates;
     }

@@ -22,19 +22,39 @@ internal class GitOperationsHelper
         _processManager = new ProcessManager(new NullLogger<ProcessManager>(), "git");
     }
 
+    public async Task Commit(NativePath repo, string commitMessage, bool allowEmpty = false)
+    {
+        await CommitInternal(repo, commitMessage, addAll: false, allowEmpty);
+    }
+
     public async Task CommitAll(NativePath repo, string commitMessage, bool allowEmpty = false)
     {
-        var result = await ExecuteGitCommand(repo, "add", "-A");
+        await CommitInternal(repo, commitMessage, addAll: true, allowEmpty);
+    }
 
-        if (!allowEmpty)
+    private async Task CommitInternal(NativePath repo, string commitMessage, bool addAll, bool allowEmpty)
+    {
+        if (addAll)
         {
-            result.ThrowIfFailed($"No files to add in {repo}");
+            var result = await ExecuteGitCommand(repo, "add", "-A");
+
+            if (!allowEmpty)
+            {
+                result.ThrowIfFailed($"No files to add in {repo}");
+            }
         }
 
-        result = await ExecuteGitCommand(repo, "commit", "-m", commitMessage);
+        var args = new[] { "commit", "-m", commitMessage };
+
+        if (!addAll && allowEmpty)
+        {
+            args = [.. args, "--allow-empty"];
+        }
+
+        var result2 = await ExecuteGitCommand(repo, args);
         if (!allowEmpty)
         {
-            result.ThrowIfFailed($"No changes to commit in {repo}");
+            result2.ThrowIfFailed($"No changes to commit in {repo}");
         }
     }
 
@@ -169,10 +189,10 @@ internal class GitOperationsHelper
         string[]? expectedConflictingFiles = null,
         bool? mergeTheirs = null,
         string targetBranch = "main",
-        bool enableRebase = false)
+        bool changesStagedOnly = true)
     {
         ProcessExecutionResult result = null!;
-        if (!enableRebase)
+        if (!changesStagedOnly)
         {
             result = await ExecuteGitCommand(repo, "checkout", targetBranch);
             result.ThrowIfFailed($"Could not checkout main branch in {repo}");
@@ -183,7 +203,7 @@ internal class GitOperationsHelper
 
         if (expectedConflictingFiles != null)
         {
-            if (enableRebase)
+            if (changesStagedOnly)
             {
                 result = await ExecuteGitCommand(repo, "diff", "--name-only", "--diff-filter=U");
                 var conflictedFiles = result.GetOutputLines();
@@ -243,7 +263,7 @@ internal class GitOperationsHelper
 
         await CommitAll(repo, $"Merged {branch} into {targetBranch} using {(mergeTheirs.Value ? targetBranch : branch)}");
 
-        if (enableRebase)
+        if (changesStagedOnly)
         {
             await Checkout(repo, targetBranch);
             await ExecuteGitCommand(repo, "merge", branch);
