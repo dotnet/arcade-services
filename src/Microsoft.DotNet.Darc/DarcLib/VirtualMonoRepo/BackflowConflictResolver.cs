@@ -172,7 +172,9 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
     {
         // Known version file - check out the branch version, we want to override it
         // See https://github.com/dotnet/arcade-services/issues/4865
-        if (DependencyFileManager.CodeflowDependencyFiles.Any(f => f.Equals(conflictedFile, StringComparison.OrdinalIgnoreCase)))
+        if (DependencyFileManager.CodeflowDependencyFiles
+            .Concat(VersionFiles.NugetConfigNames) // TODO https://github.com/dotnet/arcade-services/issues/5897, 
+            .Any(f => f.Equals(conflictedFile, StringComparison.OrdinalIgnoreCase)))
         {
             // Revert files so that we can resolve the conflicts
             // We use the target branch version when we are flowing the first time (because we did not flow the version files yet)

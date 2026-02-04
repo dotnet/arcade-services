@@ -296,7 +296,16 @@ public abstract class CodeFlowConflictResolver
         }
 
         var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : repo;
-        await targetRepo.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase);
+        try
+        {
+            await targetRepo.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase);
+        }
+        // file does not exist in the target repo anymore
+        catch (ProcessFailedException e) when (e.Message.Contains("does not have our version"))
+        {
+            _logger.LogInformation("Detected conflicts in {filePath}", conflictedFile);
+            return false;
+        }
 
         if (_fileSystem.GetFileInfo(patches.First().Path).Length == 0)
         {
