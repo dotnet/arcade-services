@@ -27,7 +27,7 @@ public sealed class Remote : IRemote
     private readonly IRemoteFactory _remoteFactory;
     private readonly IAssetLocationResolver _locationResolver;
     private readonly IRedisCacheClient _cache;
-    IGitRepoFactory _gitRepoFactory,
+    IGitRepoFactory _gitRepoFactory;
     private readonly ILogger _logger;
 
     //[DependencyUpdate]: <> (Begin)
@@ -304,7 +304,7 @@ public sealed class Remote : IRemote
         try
         {
             // First try to fetch it as if it was the VMR
-            version = await arcadeFileManager.ReadToolsDotnetVersionAsync(repoUri, commitSha, VmrInfo.ArcadeRepoDir));
+            version = await arcadeFileManager.ReadToolsDotnetVersionAsync(repoUri, commitSha, VmrInfo.ArcadeRepoDir);
             return (true, version);
         }
         catch (DependencyFileNotFoundException)
