@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 
 [Verb("forwardflow", HelpText = "Flows source code from the current commit of a local repository into a local VMR. " +
-                                "Must be called from the local repository folder or with the `subscription` parameterm")]
+                                "Must be called from the local repository folder or with the `subscription` parameter")]
 internal class ForwardFlowCommandLineOptions : CodeFlowCommandLineOptions<ForwardFlowOperation>
 {
     // This argument would not be necessary as we have the --vmr option but just to keep the forward and backflow commands
