@@ -53,7 +53,7 @@ public interface IGitRepo
 
     Task<List<GitTreeItem>> LsTreeAsync(string uri, string gitRef, string path = null);
 
-    async Task<bool> IsRepoVmrAsync(string repoUri, string branch)
+    async Task<bool> IsRepoVmrAsync(string repoUri, string branch = "main")
     {
         try
         {
