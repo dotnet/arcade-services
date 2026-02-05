@@ -118,16 +118,13 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             headBranchExisted,
             cancellationToken);
 
-        if (codeflowOptions.EnableRebase)
-        {
-            await DetectAndFixPartialReverts(
-                codeflowOptions,
-                vmr,
-                sourceRepo,
-                conflictedFiles,
-                lastFlows,
-                cancellationToken);
-        }
+        await DetectAndFixPartialReverts(
+            codeflowOptions,
+            vmr,
+            sourceRepo,
+            conflictedFiles,
+            lastFlows,
+            cancellationToken);
 
         try
         {
@@ -141,14 +138,6 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
                     ? lastFlows.LastBackFlow?.VmrSha ?? lastFlows.LastForwardFlow.VmrSha
                     : lastFlows.LastForwardFlow.VmrSha,
                 cancellationToken);
-
-            if (!codeflowOptions.EnableRebase)
-            {
-                await vmr.CommitAsync(
-                    $"Update dependencies after merging {codeflowOptions.TargetBranch} into {codeflowOptions.HeadBranch}",
-                    allowEmpty: true,
-                    cancellationToken: CancellationToken.None);
-            }
         }
         catch (Exception e)
         {
@@ -160,14 +149,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             throw;
         }
 
-        if (codeflowOptions.EnableRebase)
-        {
-            return await vmr.GetConflictedFilesAsync(cancellationToken);
-        }
-        else
-        {
-            return conflictedFiles;
-        }
+        return await vmr.GetConflictedFilesAsync(cancellationToken);
     }
 
     protected override async Task<bool> TryResolvingConflict(
@@ -192,11 +174,11 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         var engCommon = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping) / Constants.CommonScriptFilesPath;
         if (conflictedFile.Path.StartsWith(engCommon, StringComparison.InvariantCultureIgnoreCase))
         {
-            await vmr.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase /* rebase vs merge direction */);
+            await vmr.ResolveConflict(conflictedFile, ours: true);
             return true;
         }
 
-        if (codeflowOptions.EnableRebase && await TryDeletingFileMarkedForDeletion(vmr, conflictedFile, cancellationToken))
+        if (await TryDeletingFileMarkedForDeletion(vmr, conflictedFile, cancellationToken))
         {
             return true;
         }

@@ -31,7 +31,7 @@ public record CodeflowOptions(
     string HeadBranch,
     Build Build,
     IReadOnlyCollection<string>? ExcludedAssets,
-    bool EnableRebase,
+    bool KeepConflicts,
     bool ForceUpdate,
     bool UnsafeFlow);
 
@@ -352,42 +352,20 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
     {
         try
         {
-            return await applyLatestChanges(enableRebase: false);
+            return await applyLatestChanges(keepConflicts: false);
         }
-        catch (PatchApplicationFailedException e)
+        catch (PatchApplicationFailedException)
         {
-            if (codeflowOptions.EnableRebase)
-            {
-                // We need to recreate a previous flow so that we have something to rebase later
-                return await RecreatePreviousFlowsAndApplyChanges(
-                    codeflowOptions with
-                    {
-                        HeadBranch = workBranch!.WorkBranchName,
-                    },
-                    productRepo,
-                    lastFlows,
-                    async (_) => await applyLatestChanges(enableRebase: false),
-                    cancellationToken);
-            }
-            else
-            {
-                // When we are updating an already existing PR branch, there can be conflicting changes in the PR from devs.
-                // In that case we want to throw as that is a conflict we don't want to try to resolve.
-                if (headBranchExisted)
+            // We need to recreate a previous flow so that we have something to rebase later
+            return await RecreatePreviousFlowsAndApplyChanges(
+                codeflowOptions with
                 {
-                    _logger.LogInformation("Failed to update a PR branch because of a conflict. Stopping the flow..");
-                    throw new ConflictInPrBranchException(e.Result.StandardError, codeflowOptions.TargetBranch);
-                }
-
-                // Otherwise, we have a conflicting change in the last backflow PR (before merging)
-                // The scenario is described here: https://github.com/dotnet/dotnet/tree/main/docs/VMR-Full-Code-Flow.md#conflicts
-                return await RecreatePreviousFlowsAndApplyChanges(
-                    codeflowOptions,
-                    productRepo,
-                    lastFlows,
-                    async (_) => await applyLatestChanges(enableRebase: false),
-                    cancellationToken);
-            }
+                    HeadBranch = workBranch!.WorkBranchName,
+                },
+                productRepo,
+                lastFlows,
+                async (_) => await applyLatestChanges(keepConflicts: false),
+                cancellationToken);
         }
     }
 
@@ -449,7 +427,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                         CurrentFlow = currentIsBackflow
                             ? new Backflow(previouslyAppliedBuild.Commit, previousFlow!.RepoSha)
                             : new ForwardFlow(previouslyAppliedBuild.Commit, previousFlow!.VmrSha),
-                        EnableRebase = false,
+                        KeepConflicts = false,
                         ForceUpdate = true,
                     },
                     previousFlows,
@@ -474,7 +452,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
             // We apply the current changes on top again to check if they apply now
             try
             {
-                CodeFlowResult result = await reapplyChanges(enableRebase: false);
+                CodeFlowResult result = await reapplyChanges(keepConflicts: false);
 
                 await HandleRevertedFiles(
                     codeflowOptions,
@@ -704,7 +682,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
         string commitMessage,
         CancellationToken cancellationToken)
     {
-        if (codeflowOptions.EnableRebase)
+        if (codeflowOptions.KeepConflicts)
         {
             return await workBranch.RebaseAsync(cancellationToken);
         }
@@ -746,6 +724,6 @@ public record LastFlows(
 /// <summary>
 /// Delegate for applying latest changes with an option to enable rebase mode.
 /// </summary>
-/// <param name="enableRebase">When true, enables rebase mode for applying changes</param>
-/// <returns>When enableRebase is true, returns a list of conflicting files</returns>
-public delegate Task<CodeFlowResult> ApplyLatestChangesDelegate(bool enableRebase);
+/// <param name="keepConflicts">When true, enables rebase mode for applying changes</param>
+/// <returns>When keepConflicts is true, returns a list of conflicting files</returns>
+public delegate Task<CodeFlowResult> ApplyLatestChangesDelegate(bool keepConflicts);
