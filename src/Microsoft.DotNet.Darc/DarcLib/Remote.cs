@@ -295,9 +295,6 @@ public sealed class Remote : IRemote
     /// <summary>
     /// Gets the dotnet version of a repo, whether it is a product repo, or inside the VMR
     /// </summary>
-    /// <param name="repoUri"></param>
-    /// <param name="commitSha"></param>
-    /// <returns></returns>
     private async Task<(bool isVmr, SemanticVersion version)> GetDotNetVersionInVmrOrRepo(
         string repoUri,
         string commitSha)
