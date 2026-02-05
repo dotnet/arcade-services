@@ -345,6 +345,13 @@ public abstract class CodeFlowConflictResolver
     {
         if (lastFlows.CrossingFlow == null)
         {
+            // Reverts can only happen if there was a crossing flow
+            return;
+        }
+
+        if (lastFlows.LastFlow.IsForwardFlow != codeflowOptions.CurrentFlow.IsForwardFlow)
+        {
+            // Reverts only happen for same direction flows
             return;
         }
 
