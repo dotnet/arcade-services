@@ -99,12 +99,12 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
                 # or on Windows
                 .\eng\common\darc-init.ps1
                 ```
-            3. Run from repo's git clone and follow the instructions provided by the command to resolve the conflict locally
+            3. Run from repo's git clone and follow the instructions provided by the command to stage the conflict locally
                 ```bash
                 darc vmr resolve-conflict --subscription {subscription.Id}
                 ```
                 This should apply the build `{update.BuildId}` with sources from [`{Microsoft.DotNet.DarcLib.Commit.GetShortSha(update.SourceSha)}`]({GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha)})
-            4. Commit & push the changes
+            4. Resolve the conflicts, commit & push the changes
             5. Once pushed, the `Codeflow verification` check will turn green.  
                 If not, a new build might have flown into the PR and you might need to run the command above again.
             """);
