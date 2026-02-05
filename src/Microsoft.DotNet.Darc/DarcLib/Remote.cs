@@ -418,14 +418,11 @@ public sealed class Remote : IRemote
         await _remoteGitClient.CloneAsync(repoUri, commit, targetDirectory, checkoutSubmodules, gitDirectory);
     }
 
-    /// <summary>
-    /// 
     /// </summary>
     /// <param name="repoUri">Uri of the repository</param>
     /// <param name="commit">Commit at which to fetch the files</param>
     /// <param name="baseDirectory">Relative path from repo root where the eng folder is located (eg: `src/arcade`)</param>
     /// <param name="stripBaseDirectory">Strip the file paths of the base directory, such that they start with `eng/common/...`</param>
-    /// <returns></returns>
     public async Task<List<GitFile>> GetCommonScriptFilesAsync(
         string repoUri,
         string commit,
@@ -441,14 +438,14 @@ public sealed class Remote : IRemote
         if (stripBaseDirectory)
         {
             files = [.. files.Select(f => new GitFile(
-                f.FilePath.TrimStart(baseDirectory).ToString(),
+                f.FilePath.TrimStart(baseDirectory),
                 f.Content,
                 f.ContentEncoding,
                 f.Mode,
                 f.Operation))];
         }
 
-        _logger.LogInformation("Fetched eng/common script files from repo {RepoUri} at commit {Commit}, "
+        _logger.LogInformation("Fetched common script files from repo {RepoUri} at commit {Commit}, "
             + "at relative path {RelativeBasePath}",
             repoUri,
             commit,
