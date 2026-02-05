@@ -23,11 +23,13 @@ internal interface IPcsVmrBackFlower : IVmrBackFlower
     /// <param name="subscription">Subscription to flow</param>
     /// <param name="build">Build to flow</param>
     /// <param name="targetBranch">Target branch to make the changes on</param>
+    /// <param name="enableRebase">Rebases changes (and leaves conflict markers in place) instead of recreating the previous flows recursively</param>
     /// <param name="forceUpdate">Force the update to be performed</param>
     Task<CodeFlowResult> FlowBackAsync(
         Subscription subscription,
         Build build,
         string targetBranch,
+        bool enableRebase,
         bool forceUpdate,
         CancellationToken cancellationToken = default);
 }
@@ -57,6 +59,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
         Subscription subscription,
         Build build,
         string headBranch,
+        bool enableRebase,
         bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
@@ -66,6 +69,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             subscription.TargetBranch,
             headBranch,
             targetRepoPath: null,
+            enableRebase,
             unsafeFlow: false,
             cancellationToken);
 
@@ -77,7 +81,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 headBranch,
                 build,
                 subscription.ExcludedAssets,
-                KeepConflicts: true,
+                enableRebase,
                 forceUpdate,
                 UnsafeFlow: false),
             targetRepo,
@@ -85,7 +89,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             headBranchExisted,
             cancellationToken);
 
-        if (result.HadUpdates && !result.HadConflicts)
+        if (result.HadUpdates && enableRebase && !result.HadConflicts)
         {
             var stagedFiles = await targetRepo.GetStagedFilesAsync();
             if (stagedFiles.Count > 0)
@@ -120,7 +124,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             commitMessage,
             cancellationToken);
 
-        if (conflicts.Count == 0)
+        if (codeflowOptions.EnableRebase && conflicts.Count == 0)
         {
             // When we do the rebase flow, we need only stage locally (in darc) after we rebase the work branch
             // In the service, we need to commit too so that we push the update to the PR

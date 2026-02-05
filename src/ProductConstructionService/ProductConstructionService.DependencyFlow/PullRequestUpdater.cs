@@ -1191,7 +1191,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             subscription,
             build,
             prHeadBranch,
-            forceUpdate);
+            forceUpdate,
+            enableRebase: true);
 
         if (codeFlowRes == null)
         {
@@ -1420,7 +1421,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         SubscriptionDTO subscription,
         BuildDTO build,
         string prHeadBranch,
-        bool forceUpdate)
+        bool forceUpdate,
+        bool enableRebase)
     {
         _logger.LogInformation(
             "{direction}-flowing build {buildId} of {sourceRepo} for subscription {subscriptionId} targeting {targetRepo} / {targetBranch} to new branch {newBranch}",
@@ -1440,12 +1442,14 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     subscription,
                     build,
                     prHeadBranch,
+                    enableRebase,
                     forceUpdate,
                     cancellationToken: default)
                 : await _vmrBackFlower.FlowBackAsync(
                     subscription,
                     build,
                     prHeadBranch,
+                    enableRebase,
                     forceUpdate,
                     cancellationToken: default);
         }
@@ -1469,7 +1473,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             throw;
         }
 
-        if (codeFlowRes.HadConflicts)
+        if (enableRebase && codeFlowRes.HadConflicts)
         {
             _logger.LogInformation("Detected conflicts while rebasing new changes");
             return codeFlowRes;
