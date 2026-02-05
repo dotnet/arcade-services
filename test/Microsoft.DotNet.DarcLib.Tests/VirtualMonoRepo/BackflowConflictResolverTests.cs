@@ -81,6 +81,12 @@ public class BackflowConflictResolverTests
             .SetReturnsDefault(Task.CompletedTask);
         _localRepo
             .SetReturnsDefault(Task.FromResult(new ProcessExecutionResult()));
+        _localRepo
+            .Setup(x => x.GetStagedFilesAsync())
+            .ReturnsAsync(() => DependencyFileManager.CodeflowDependencyFiles);
+        _localRepo
+            .Setup(x => x.GetConflictedFilesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CancellationToken _) => []);
 
         _localVmr.Reset();
         _localVmr
@@ -427,7 +433,7 @@ public class BackflowConflictResolverTests
                 PrBranch,
                 build,
                 excludedAssets,
-                EnableRebase: false,
+                KeepConflicts: false,
                 ForceUpdate: false,
                 UnsafeFlow: false),
             lastFlows,
@@ -451,7 +457,6 @@ public class BackflowConflictResolverTests
 
         _libGit2Client.Verify(x => x.CommitFilesAsync(It.IsAny<List<GitFile>>(), _repoPath.Path, null, null), Times.AtLeastOnce);
         _localRepo.Verify(x => x.StageAsync(It.IsAny<IEnumerable<string>>(), cancellationToken), Times.AtLeastOnce);
-        _localRepo.Verify(x => x.CommitAsync(It.IsAny<string>(), false, null, cancellationToken), Times.AtLeastOnce);
     }
 
     private Build CreateNewBuild(string commit, (string name, string version)[] assets)

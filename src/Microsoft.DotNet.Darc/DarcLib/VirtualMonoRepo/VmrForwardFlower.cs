@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,7 +34,6 @@ public interface IVmrForwardFlower : IVmrCodeFlower
     /// <param name="targetBranch">Target branch to create the PR against. If target branch does not exist, it is created off of this branch</param>
     /// <param name="headBranch">New/existing branch to make the changes on</param>
     /// <param name="targetVmrUri">URI of the VMR to update</param>
-    /// <param name="enableRebase">Rebases changes (and leaves conflict markers in place) instead of recreating the previous flows recursively</param>
     /// <param name="forceUpdate">Force the update to be performed</param>
     /// <param name="unsafeFlow">If true, ignores non-linear flow errors (flowing from a different branch etc)</param>
     /// <returns>CodeFlowResult containing information about the codeflow calculation</returns>
@@ -47,7 +45,6 @@ public interface IVmrForwardFlower : IVmrCodeFlower
         string targetBranch,
         string headBranch,
         string targetVmrUri,
-        bool enableRebase,
         bool forceUpdate,
         bool unsafeFlow,
         CancellationToken cancellationToken = default);
@@ -111,7 +108,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         string targetBranch,
         string headBranch,
         string targetVmrUri,
-        bool enableRebase,
         bool forceUpdate,
         bool unsafeFlow,
         CancellationToken cancellationToken = default)
@@ -123,7 +119,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             sourceRepo,
             targetBranch,
             headBranch,
-            enableRebase,
             unsafeFlow,
             cancellationToken);
 
@@ -140,7 +135,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             headBranch,
             build,
             excludedAssets,
-            enableRebase,
+            KeepConflicts: true,
             forceUpdate,
             unsafeFlow);
 
@@ -189,7 +184,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         ILocalGitRepo sourceRepo,
         string baseBranch,
         string headBranch,
-        bool enableRebase,
         bool unsafeFlow,
         CancellationToken cancellationToken)
     {
@@ -228,13 +222,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
 
             LastFlows lastFlows = await GetLastFlowsAsync(mappingName, sourceRepo, currentIsBackflow: false, ignoreNonLinearFlow: unsafeFlow);
 
-            // Rebase strategy works on top of the target branch, non-rebase starts from the last point of synchronization
-            if (!enableRebase)
-            {
-                await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
-                await _dependencyTracker.RefreshMetadataAsync();
-            }
-
             await vmr.CreateBranchAsync(headBranch, overwriteExistingBranch: true);
 
             return (false, lastFlows);
@@ -250,7 +237,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     {
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
         IWorkBranch? workBranch = null;
-        if (codeflowOptions.EnableRebase || headBranchExisted)
+        if (codeflowOptions.KeepConflicts || headBranchExisted)
         {
             await vmr.CheckoutAsync(lastFlows.LastFlow.VmrSha);
 
@@ -302,7 +289,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         // If the target branch did not exist, checkout the last synchronization point
         // Otherwise, check out the last flow's commit in the PR branch
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-        await vmr.CheckoutAsync(headBranchExisted && !codeflowOptions.EnableRebase
+        await vmr.CheckoutAsync(headBranchExisted && !codeflowOptions.KeepConflicts
             ? lastFlows.LastForwardFlow.VmrSha
             : lastFlows.LastFlow.VmrSha);
 
@@ -350,7 +337,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
             codeflowOptions.Build,
             additionalFileExclusions: [.. DependencyFileManager.CodeflowDependencyFiles],
             fromSha: currentSha,
-            keepConflicts: codeflowOptions.EnableRebase,
+            keepConflicts: codeflowOptions.KeepConflicts,
             resetToRemoteWhenCloningRepo: ShouldResetClones,
             cancellationToken: cancellationToken);
 
@@ -383,7 +370,7 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         CancellationToken cancellationToken)
     {
         LastFlows lastFlowsAfterRecreation = lastFlows;
-        if (codeflowOptions.EnableRebase && lastFlows.CrossingFlow == null && result.RecreatedPreviousFlows)
+        if (codeflowOptions.KeepConflicts && lastFlows.CrossingFlow == null && result.RecreatedPreviousFlows)
         {
             lastFlowsAfterRecreation = lastFlows with
             {
