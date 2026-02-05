@@ -66,7 +66,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         Subscription subscription,
         Build build,
         string headBranch,
-        bool enableRebase,
+        bool forceUpdate,
         CancellationToken cancellationToken = default)
     {
         ILocalGitRepo sourceRepo = await _repositoryCloneManager.PrepareCloneAsync(
@@ -83,18 +83,23 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             subscription.TargetBranch,
             headBranch,
             subscription.TargetRepository,
-            enableRebase,
+            forceUpdate,
             unsafeFlow: false,
             cancellationToken);
 
-        if (enableRebase && result.HadUpdates && !result.HadConflicts)
+        if (result.HadUpdates && !result.HadConflicts)
         {
             var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
             var stagedFiles = await vmr.GetStagedFilesAsync();
             if (stagedFiles.Count > 0)
             {
                 // When we do a rebase flow, the files stay staged and we need to commit them
-                await vmr.CommitAsync("Update dependencies", allowEmpty: false, cancellationToken: cancellationToken);
+                var commitMessage =
+                    $"""
+                    Update dependencies from build {build.Id}
+                    {Constants.AUTOMATION_COMMIT_TAG}
+                    """;
+                await vmr.CommitAsync(commitMessage, allowEmpty: false, cancellationToken: cancellationToken);
             }
         }
 
@@ -139,7 +144,7 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
         ILocalGitRepo sourceRepo,
         CancellationToken cancellationToken)
     {
-        bool hadConflicts = result.HadConflicts;
+        var hadSourceConflicts = result.HadConflicts;
         result = await base.ResolveConflictsAndUpdateDependenciesAsync(
             codeflowOptions,
             result,
@@ -149,18 +154,36 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             sourceRepo,
             cancellationToken);
 
-        // Did we resolve all conflicts? We need to commit files before creating the PR
+        // Did we resolve all conflicts? We need to commit dependencies before creating the PR
         // This only has to happen in the service while in darc we only stage files
-        if (hadConflicts && !result.HadConflicts)
+        if (result.HadConflicts)
         {
-            var commitMessage = VmrManagerBase.PrepareCommitMessage(
+            return result;
+        }
+
+        string commitMessage;
+
+        if (hadSourceConflicts)
+        {
+            // We had conflicts before, so we will only have 1 commit with source updates + dependency updates
+            commitMessage = VmrManagerBase.PrepareCommitMessage(
                 CodeFlowVmrUpdater.SyncCommitMessage,
                 codeflowOptions.Mapping.Name,
                 codeflowOptions.Build.GetRepository(),
                 lastFlows.LastForwardFlow.RepoSha,
                 codeflowOptions.Build.Commit);
-            await vmr.CommitAsync(commitMessage, allowEmpty: false, cancellationToken: cancellationToken);
         }
+        else
+        {
+            // Source updates were committed already, we need to commit dependencies only
+            commitMessage =
+                $"""
+                Update dependencies from build {codeflowOptions.Build.Id}
+                {Constants.AUTOMATION_COMMIT_TAG}
+                """;
+        }
+
+        await vmr.CommitAsync(commitMessage, allowEmpty: false, cancellationToken: cancellationToken);
 
         return result;
     }

@@ -7,6 +7,7 @@ using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
+using System.Text;
 
 namespace ProductConstructionService.DependencyFlow;
 
@@ -91,7 +92,13 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
             if (stagedFiles.Count > 0)
             {
                 // When we do a rebase flow, the files stay staged and we need to commit them
-                await targetRepo.CommitAsync("Update dependencies", allowEmpty: false, cancellationToken: cancellationToken);
+                var commitMessage = new StringBuilder();
+                commitMessage.Append("Update dependencies from build ");
+                commitMessage.AppendLine(build.Id.ToString());
+                PullRequestBuilder.AppendCoherencyCommitMessage(string.Empty, result.DependencyUpdates, commitMessage);
+                commitMessage.AppendLine(Constants.AUTOMATION_COMMIT_TAG);
+
+                await targetRepo.CommitAsync(commitMessage.ToString(), allowEmpty: false, cancellationToken: cancellationToken);
             }
         }
 
