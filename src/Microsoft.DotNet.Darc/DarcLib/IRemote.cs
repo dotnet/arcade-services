@@ -162,20 +162,6 @@ public interface IRemote
         UnixPath relativeDependencyBasePath = null);
 
     /// <summary>
-    ///     Commit a set of updated dependencies to a repository
-    /// </summary>
-    /// <param name="repoUri">Repository to update</param>
-    /// <param name="branch">Branch of <paramref name="repoUri"/> to update.</param>
-    /// <param name="itemsToUpdate">Dependencies that need updating.</param>
-    /// <param name="message">Commit message.</param>
-    Task<List<GitFile>> CommitUpdatesAsync(
-        string repoUri,
-        string branch,
-        List<DependencyDetail> itemsToUpdate,
-        string message,
-        UnixPath relativeDependencyBasePath = null);
-
-    /// <summary>
     ///     Commits a set of files to a repository
     /// </summary>
     Task CommitUpdatesAsync(

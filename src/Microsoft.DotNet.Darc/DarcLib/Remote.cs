@@ -170,27 +170,7 @@ public sealed class Remote : IRemote
         string message) =>
             await _remoteGitClient.CommitFilesWithNoCloningAsync(filesToCommit, repoUri, branch, message);
 
-    /// <summary>
-    ///     Commit a set of updated dependencies to a repository
-    /// </summary>
-    /// <param name="repoUri">Repository to update</param>
-    /// <param name="branch">Branch of <paramref name="repoUri"/> to update.</param>
-    /// <param name="itemsToUpdate">Dependencies that need updating.</param>
-    /// <param name="message">Commit message.</param>
-    /// <returns>Async task.</returns>
-    public async Task<List<GitFile>> CommitUpdatesAsync(
-        string repoUri,
-        string branch,
-        List<DependencyDetail> itemsToUpdate,
-        string message,
-        UnixPath relativeDependencyBasePath = null)
-    {
-        var filesToCommit = await GetUpdatesAsync(repoUri, branch, itemsToUpdate, relativeDependencyBasePath);
 
-        await _remoteGitClient.CommitFilesAsync(filesToCommit, repoUri, branch, message);
-
-        return filesToCommit;
-    }
 
     public async Task<List<GitFile>> GetUpdatesAsync(
         string repoUri,
