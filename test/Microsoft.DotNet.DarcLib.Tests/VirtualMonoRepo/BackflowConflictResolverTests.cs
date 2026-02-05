@@ -162,6 +162,7 @@ public class BackflowConflictResolverTests
             _jsonMergerMock.Object,
             _versionDetailsFileMergerMock.Object,
             _fileSystem.Object,
+            Mock.Of<ICommentCollector>(),
             new NullLogger<BackflowConflictResolver>());
     }
 
