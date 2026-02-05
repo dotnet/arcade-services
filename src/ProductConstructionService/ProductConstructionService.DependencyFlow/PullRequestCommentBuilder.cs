@@ -99,7 +99,7 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
                 # or on Windows
                 .\eng\common\darc-init.ps1
                 ```
-            3. Run from repo's git clone and follow the instructions provided by the command to resolve the conflict locally
+            3. Run from repo's git clone and follow the instructions provided by the command to stage the conflict locally
                 ```bash
                 darc vmr resolve-conflict --subscription {subscription.Id}
                 ```
