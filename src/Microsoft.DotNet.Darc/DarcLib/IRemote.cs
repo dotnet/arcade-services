@@ -158,10 +158,10 @@ public interface IRemote
     /// <param name="itemsToUpdate">Dependencies that need updating.</param>
     /// <param name="relativeDependencyBasePath">Relative base path of the dependency files</param>
     Task<List<GitFile>> GetUpdatedDependencyFiles(
-        string repoUri,
+        string targetRepo,
         string branch,
         List<DependencyDetail> itemsToUpdate,
-        UnixPath relativeDependencyBasePath = null);
+        UnixPath targetDirectory);
 
     /// <summary>
     ///     Commits a set of files to a repository

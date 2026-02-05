@@ -178,12 +178,31 @@ public sealed class Remote : IRemote
         string targetRepo,
         string branch,
         List<DependencyDetail> itemsToUpdate,
-        UnixPath relativeDependencyBasePath = null)
+        UnixPath targetDirectory)
     {
-        (var targetRepoIsVmr, var targetDotNetVersion) = await GetDotNetVersionInVmrOrRepo(targetRepo, branch);
-
-        List<DependencyDetail> oldDependencies = [.. await GetDependenciesAsync(targetRepo, branch, relativeBasePath: relativeDependencyBasePath)];
+        List<DependencyDetail> oldDependencies = [.. await GetDependenciesAsync(targetRepo, branch, relativeBasePath: targetDirectory)];
         await _locationResolver.AddAssetLocationToDependenciesAsync(oldDependencies);
+        var arcadePackage = itemsToUpdate.GetArcadeUpdate();
+
+        bool isRecursiveUpdateTargetingRootDirectory = targetRepo == arcadePackage.RepoUri &&
+            (targetDirectory == UnixPath.Empty || targetDirectory == UnixPath.CurrentDir);
+
+        var skipArcadeUpdates = arcadePackage == null
+            || isRecursiveUpdateTargetingRootDirectory;  // arcade->arcade and vmr->vmr subscriptions should not update root level dependencies
+
+        if (skipArcadeUpdates)
+        {
+            return  (await _fileManager.UpdateDependencyFiles(
+            itemsToUpdate,
+            sourceDependency: null,
+            targetRepo,
+            branch,
+            oldDependencies,
+            null,
+            relativeBasePath: targetDirectory)).GetFilesToCommit();
+        }
+
+        (var sourceRepoIsVmr, var targetDotNetVersion) = await GetDotNetVersionInVmrOrRepo(arcadePackage.RepoUri, arcadePackage.Commit);
 
         var updatedDependencyFiles = await _fileManager.UpdateDependencyFiles(
             itemsToUpdate,
@@ -192,14 +211,14 @@ public sealed class Remote : IRemote
             branch,
             oldDependencies,
             targetDotNetVersion,
-            relativeBasePath: relativeDependencyBasePath);
+            relativeBasePath: targetDirectory);
 
         var updatedEngCommonFiles = await GetUpdatedCommonScriptFilesAsync(
             targetRepo,
             branch,
-            targetRepoIsVmr,
+            sourceRepoIsVmr,
             itemsToUpdate.GetArcadeUpdate(),
-            relativeDependencyBasePath);
+            targetDirectory);
 
         return [..updatedDependencyFiles.GetFilesToCommit(),
             ..updatedEngCommonFiles];
@@ -208,24 +227,13 @@ public sealed class Remote : IRemote
     public async Task<List<GitFile>> GetUpdatedCommonScriptFilesAsync(
         string targetRepo,
         string branch,
-        bool targetRepoIsVmr,
+        bool sourceRepoIsVmr,
         DependencyDetail newArcadePackage,
-        UnixPath targetDirectory = null)
+        UnixPath targetDirectory)
     {
-        if (newArcadePackage == null)
-        {
-            return [];
-        }
+        var incomingEngCommonFiles = await GetCommonScriptFilesByArcadePackage(newArcadePackage, sourceRepoIsVmr);
 
-        if (targetRepo == newArcadePackage.RepoUri &&
-            (targetDirectory == UnixPath.Empty || targetDirectory == UnixPath.CurrentDir))
-        {
-            return []; // arcade->arcade and vmr->vmr subscriptions should not update root level eng/common
-        }
-
-        var newEngCommonFiles = await GetCommonScriptFilesByArcadePackage(newArcadePackage);
-
-        newEngCommonFiles = [.. newEngCommonFiles
+        incomingEngCommonFiles = [.. incomingEngCommonFiles
             .Select(f => new GitFile(
                 targetDirectory / f.FilePath,
                 f.Content,
@@ -234,13 +242,14 @@ public sealed class Remote : IRemote
                 f.Operation))];
 
         var latestCommit = await _remoteGitClient.GetLastCommitShaAsync(targetRepo, branch);
-        var targetRepoEngCommonFiles = await GetCommonScriptFilesAsync(
+
+        var existingEngCommonFiles = await GetCommonScriptFilesAsync(
             targetRepo,
             latestCommit,
             baseDirectory: targetDirectory,
             stripBaseDirectory: false);
 
-        var deletedFiles = CalculateFileDeletions(newEngCommonFiles, targetRepoEngCommonFiles);
+        var deletedEngCommonFiles = CalculateFileDeletions(incomingEngCommonFiles, existingEngCommonFiles);
 
         _logger.LogInformation(
             "Updating eng/common files from Arcade package with commit {commit} to {repoUri} on branch {branch}@{latestCommit} " +
@@ -249,11 +258,11 @@ public sealed class Remote : IRemote
             targetRepo,
             branch,
             latestCommit,
-            newEngCommonFiles.Count,
-            targetRepoEngCommonFiles.Count,
-            string.Join(Environment.NewLine, deletedFiles));
+            incomingEngCommonFiles.Count,
+            existingEngCommonFiles.Count,
+            string.Join(Environment.NewLine, deletedEngCommonFiles));
 
-        return [.. newEngCommonFiles, .. deletedFiles];
+        return [.. incomingEngCommonFiles, .. deletedEngCommonFiles];
     }
 
     private static List<GitFile> CalculateFileDeletions(List<GitFile> newFiles, List<GitFile> existingFiles)
@@ -274,14 +283,14 @@ public sealed class Remote : IRemote
         return removedFiles;
     }
 
-    private async Task<List<GitFile>> GetCommonScriptFilesByArcadePackage(DependencyDetail arcadePackage)
+    private async Task<List<GitFile>> GetCommonScriptFilesByArcadePackage(DependencyDetail arcadePackage, bool isVmr)
     {
         IRemote sourceRepoRemote = await _remoteFactory.CreateRemoteAsync(arcadePackage.RepoUri);
 
         string sourceRepoUri = arcadePackage.RepoUri;
         IGitRepo sourceRepo = _gitRepoFactory.CreateClient(sourceRepoUri);
 
-        var sourceRelativeBasePath = await sourceRepo.IsRepoVmrAsync(sourceRepoUri)
+        var sourceRelativeBasePath = isVmr
             ? VmrInfo.ArcadeRepoDir
             : null;
 
@@ -293,24 +302,24 @@ public sealed class Remote : IRemote
     }
 
     /// <summary>
-    /// Gets the dotnet version of a repo, whether it is a product repo, or inside the VMR
+    /// Gets the dotnet version of a repo, whether it is a product repo, or the VMR
     /// </summary>
     private async Task<(bool isVmr, SemanticVersion version)> GetDotNetVersionInVmrOrRepo(
         string repoUri,
         string commitSha)
     {
         SemanticVersion version;
-        IDependencyFileManager arcadeFileManager = await _remoteFactory.CreateDependencyFileManagerAsync(repoUri);
+        IDependencyFileManager dependencyManager = await _remoteFactory.CreateDependencyFileManagerAsync(repoUri);
         try
         {
-            // First try to fetch it as if it was the VMR
-            version = await arcadeFileManager.ReadToolsDotnetVersionAsync(repoUri, commitSha, VmrInfo.ArcadeRepoDir);
+            // First, assume we are on the VMR, and try to fetch it from the arcade subdirectory
+            version = await dependencyManager.ReadToolsDotnetVersionAsync(repoUri, commitSha, VmrInfo.ArcadeRepoDir);
             return (true, version);
         }
         catch (DependencyFileNotFoundException)
         {
             // global.json not found in src/arcade meaning that the source repo is not the VMR
-            version = await arcadeFileManager.ReadToolsDotnetVersionAsync(repoUri, commitSha);
+            version = await dependencyManager.ReadToolsDotnetVersionAsync(repoUri, commitSha);
             return (false, version);
         }
     }
@@ -440,7 +449,7 @@ public sealed class Remote : IRemote
         if (stripBaseDirectory)
         {
             files = [.. files.Select(f => new GitFile(
-                f.FilePath.TrimStart(baseDirectory),
+                f.FilePath.TrimStart(baseDirectory).ToString(),
                 f.Content,
                 f.ContentEncoding,
                 f.Mode,
