@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Maestro.Common;
@@ -251,7 +252,12 @@ internal class ResolveConflictOperation(
         if (result.HadConflicts)
         {
             _logger.LogInformation("Codeflow has finished, and {conflictedFiles} conflicting file(s) have been" +
-                " left on the current branch.", result.ConflictedFiles.Count);
+                " left on the current branch:", result.ConflictedFiles.Count);
+            StringBuilder str = new();
+            foreach (var conflict in result.ConflictedFiles)
+            {
+                str.AppendLine($" - {conflict}");
+            }
             _logger.LogInformation("Please resolve the conflicts locally, commit and push your changes to unblock the codeflow PR.");
 
             string lastFlownSha = await GetLastFlownShaAsync(subscription, targetGitRepoPath);
