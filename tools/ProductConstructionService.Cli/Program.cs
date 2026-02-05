@@ -36,5 +36,4 @@ Type[] GetOptions() =>
         typeof(FeatureFlagListOptions),
         typeof(FeatureFlagAvailableOptions),
         typeof(ExportConfigurationOptions),
-        typeof(DeleteNamespaceOptions),
     ];
