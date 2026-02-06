@@ -25,7 +25,7 @@ internal abstract class UpdateAssetsPullRequestUpdaterTests : PullRequestUpdater
             {
                 if (shouldGetUpdates)
                 {
-                    DarcRemotes[TargetRepo].Setup(r => r.GetUpdatesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<DependencyDetail>>(), It.IsAny<UnixPath>()))
+                    DarcRemotes[TargetRepo].Setup(r => r.GetUpdatedDependencyFiles(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<DependencyDetail>>(), It.IsAny<UnixPath>()))
                         .ReturnsAsync([new GitFile("path", "content")]);
                 }
 

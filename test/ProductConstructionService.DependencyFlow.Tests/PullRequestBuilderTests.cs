@@ -33,7 +33,7 @@ internal class PullRequestBuilderTests : SubscriptionOrPullRequestUpdaterTests
     {
         foreach (var (_, remote) in DarcRemotes)
         {
-            remote.Setup(r => r.GetUpdatesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<DependencyDetail>>(), It.IsAny<UnixPath>()))
+            remote.Setup(r => r.GetUpdatedDependencyFiles(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<DependencyDetail>>(), It.IsAny<UnixPath>()))
                 .ReturnsAsync([new GitFile("path", "content")]);
         }
         services.AddSingleton(_barClient.Object);
