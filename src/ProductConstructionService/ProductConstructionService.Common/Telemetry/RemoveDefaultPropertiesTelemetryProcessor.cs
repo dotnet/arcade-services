@@ -5,7 +5,7 @@ using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 
-namespace ProductConstructionService.Api.Telemetry;
+namespace ProductConstructionService.Common.Telemetry;
 
 public class RemoveDefaultPropertiesTelemetryProcessor : ITelemetryProcessor
 {

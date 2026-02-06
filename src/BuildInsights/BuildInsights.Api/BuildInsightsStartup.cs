@@ -1,50 +1,23 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Globalization;
 using System.Net;
 using System.Text;
-using EntityFrameworkCore.Triggers;
+using Azure.Core;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
-using Maestro.Data;
-using Maestro.Data.Models;
-using Maestro.DataProviders;
-using Maestro.MergePolicies;
-using Microsoft.AspNetCore.ApiPagination;
-using Microsoft.AspNetCore.ApiVersioning;
-using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.GitHub.Authentication;
-using Microsoft.DotNet.Internal.Logging;
-using Microsoft.DotNet.Services.Utility;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Serialization;
-using ProductConstructionService.Api.Api;
-using ProductConstructionService.Api.Configuration;
-using ProductConstructionService.Api.Pages.DependencyFlow;
-using ProductConstructionService.Api.VirtualMonoRepo;
 using ProductConstructionService.Common;
-using ProductConstructionService.WorkItems;
-using ProductConstructionService.DependencyFlow;
-using ProductConstructionService.ServiceDefaults;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Octokit.Webhooks.AspNetCore;
-using Octokit.Webhooks;
-using ProductConstructionService.Api.Controllers;
-using Azure.Core;
-using Microsoft.DotNet.DarcLib.Helpers;
 using ProductConstructionService.Common.Telemetry;
 
-namespace ProductConstructionService.Api;
-
-internal static class PcsStartup
+internal static class BuildInsightsStartup
 {
-    private const string GitHubWebHooksPath = "/api/webhooks/incoming/github";
-
     private static class ConfigurationKeys
     {
         // All secrets loaded from KeyVault will have this prefix
@@ -53,7 +26,6 @@ internal static class PcsStartup
         // Secrets coming from the KeyVault
         public const string GitHubClientId = $"{KeyVaultSecretPrefix}github-app-id";
         public const string GitHubClientSecret = $"{KeyVaultSecretPrefix}github-app-private-key";
-        public const string GitHubAppWebhook = $"{KeyVaultSecretPrefix}github-app-webhook-secret";
 
         // Configuration from appsettings.json
         public const string AzureDevOpsConfiguration = "AzureDevOps";
@@ -62,11 +34,6 @@ internal static class PcsStartup
         public const string EntraAuthenticationKey = "EntraAuthentication";
         public const string KeyVaultName = "KeyVaultName";
         public const string ManagedIdentityId = "ManagedIdentityClientId";
-    }
-
-    static PcsStartup()
-    {
-        Triggers<BuildChannel>.Inserted += SubscriptionTriggerConfiguration.TriggerSubscriptionOnNewBuild;
     }
 
     /// <summary>
@@ -87,8 +54,6 @@ internal static class PcsStartup
         // Read configuration
         string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
-        builder.Services.Configure<EnvironmentNamespaceOptions>(
-            builder.Configuration.GetSection(EnvironmentNamespaceOptions.ConfigurationKey));
 
         TokenCredential azureCredential = AzureAuthentication.GetServiceCredential(isDevelopment, managedIdentityId);
 
@@ -104,8 +69,6 @@ internal static class PcsStartup
                 new KeyVaultSecretsWithPrefix(ConfigurationKeys.KeyVaultSecretPrefix));
         }
 
-        // This needs to precede the AddVmrRegistrations call as we want a GitHub provider using the app installations
-        // Otherwise, AddVmrRegistrations would add one based on PATs (like we give it in darc)
         builder.Services.TryAddSingleton<IRemoteTokenProvider>(sp =>
         {
             var azdoTokenProvider = sp.GetRequiredService<IAzureDevOpsTokenProvider>();
@@ -113,10 +76,7 @@ internal static class PcsStartup
             return new RemoteTokenProvider(azdoTokenProvider, new Microsoft.DotNet.DarcLib.GitHubTokenProvider(gitHubTokenProvider));
         });
 
-        if (isDevelopment)
-        {
-            builder.Services.UseMaestroAuthTestRepositories();
-        }
+        /*
 
         await builder.AddRedisCache(authRedis);
         builder.AddBuildAssetRegistry();
@@ -223,11 +183,12 @@ internal static class PcsStartup
                       .AllowAnyMethod());
             });
         }
+        */
     }
 
     public static void ConfigureApi(this IApplicationBuilder app, bool isDevelopment)
     {
-        app.UseApiRedirection(requireAuth: !isDevelopment);
+        // app.UseApiRedirection(requireAuth: !isDevelopment);
         app.UseExceptionHandler(a =>
             a.Run(async ctx =>
             {
@@ -247,10 +208,6 @@ internal static class PcsStartup
             {
                 controllers.AllowAnonymous();
             }
-            
-            e.MapGitHubWebhooks(
-                path: GitHubWebHooksPath,
-                secret: app.ApplicationServices.GetRequiredService<IConfiguration>()[ConfigurationKeys.GitHubAppWebhook]);
         });
     }
 

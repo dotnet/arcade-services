@@ -1,10 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using BuildInsights.ServiceDefaults;
 using BuildInsights.Api.Components;
+using BuildInsights.Api.Configuration;
+using BuildInsights.ServiceDefaults;
+using ProductConstructionService.Common;
+using ProductConstructionService.WorkItems;
 
 var builder = WebApplication.CreateBuilder(args);
+
+bool isDevelopment = builder.Environment.IsDevelopment();
+bool useSwagger = isDevelopment;
 
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
@@ -16,7 +22,19 @@ builder.Services.AddRazorComponents()
 
 var app = builder.Build();
 
-if (!app.Environment.IsDevelopment())
+if (isDevelopment)
+{
+    app.UseDeveloperExceptionPage();
+
+    var workQueueName = app.Configuration.GetRequiredValue(WorkItemConfiguration.DefaultWorkItemQueueNameConfigurationKey);
+    await app.Services.UseLocalWorkItemQueues([workQueueName]);
+
+    if (useSwagger)
+    {
+        app.UseLocalSwagger();
+    }
+}
+else
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
@@ -24,6 +42,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseHttpLogging();
 
 app.UseAntiforgery();
 
@@ -35,5 +54,13 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.MapDefaultEndpoints();
+
+var controllers = app.MapControllers();
+if (isDevelopment)
+{
+    controllers.AllowAnonymous();
+}
+
+await app.SetWorkItemProcessorInitialState();
 
 app.Run();

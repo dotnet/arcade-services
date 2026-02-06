@@ -7,7 +7,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.Common;
+using ProductConstructionService.Common.Cache;
 using ProductConstructionService.DependencyFlow.Models;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;

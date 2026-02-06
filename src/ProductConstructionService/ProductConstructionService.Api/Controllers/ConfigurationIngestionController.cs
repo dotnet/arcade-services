@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Common;
+using ProductConstructionService.Common.Cache;
 
 namespace ProductConstructionService.Api.Controllers;
 

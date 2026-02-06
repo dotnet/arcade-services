@@ -4,8 +4,9 @@
 using System.Diagnostics;
 using Microsoft.ApplicationInsights;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.Extensions.Logging;
 
-namespace ProductConstructionService.Api.Telemetry;
+namespace ProductConstructionService.Common.Telemetry;
 
 public class TelemetryRecorder(
         ILogger<TelemetryRecorder> logger,

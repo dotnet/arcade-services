@@ -15,8 +15,6 @@
     <!-- Health check for the Azure Storage Queue fails if this is not pinned to 8.0.0. -->
     <PackageReference Include="Aspire.Azure.Storage.Queues" />
     <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
-    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" />
-    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Keys" />
     <PackageReference Include="Azure.Identity" />
     <PackageReference Include="FluentValidation.AspNetCore" />
     <PackageReference Include="Microsoft.AspNetCore.ApiPagination" />
@@ -40,8 +38,8 @@
     <ProjectReference Include="..\ProductConstructionService.BarViz\ProductConstructionService.BarViz.csproj" />
     <ProjectReference Include="..\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />
     <ProjectReference Include="..\ProductConstructionService.DependencyFlow\ProductConstructionService.DependencyFlow.csproj" />
-    <ProjectReference Include="..\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj" />
     <ProjectReference Include="..\ProductConstructionService.ServiceDefaults\ProductConstructionService.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -2,9 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.Extensions.Logging;
+using ProductConstructionService.Common.Cache;
 using System.Text.Json;
 
-namespace ProductConstructionService.Common;
+namespace ProductConstructionService.Common.FeatureFlags;
 
 /// <summary>
 /// Implementation of the feature flag service using Redis as the backing store.

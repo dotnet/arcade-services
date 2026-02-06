@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure;
-using ProductConstructionService.Common;
+using ProductConstructionService.Common.Cache;
 
 namespace ProductConstructionService.WorkItems;
 

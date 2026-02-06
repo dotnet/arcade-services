@@ -5,7 +5,7 @@ using Microsoft.OpenApi.Interfaces;
 using Microsoft.OpenApi.Writers;
 using Microsoft.OpenApi;
 
-namespace ProductConstructionService.Api.Configuration;
+namespace ProductConstructionService.Common;
 
 internal class PaginatedExtension : IOpenApiExtension
 {

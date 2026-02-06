@@ -4,7 +4,7 @@
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.Common;
+using ProductConstructionService.Common.Cache;
 using ProductConstructionService.DependencyFlow.Model;
 
 namespace ProductConstructionService.DependencyFlow;

@@ -4,7 +4,7 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 
-namespace ProductConstructionService.Common;
+namespace ProductConstructionService.Common.Cache;
 
 
 public interface IDistributedLock

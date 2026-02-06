@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
-using ProductConstructionService.Common;
+using ProductConstructionService.Common.FeatureFlags;
 
 namespace ProductConstructionService.Api.Tests;
 

@@ -8,7 +8,13 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.Storage.Queues" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Keys" />
     <PackageReference Include="DistributedLock.Redis" />
+    <PackageReference Include="Microsoft.AspNetCore.ApiPagination" />
+    <PackageReference Include="Microsoft.AspNetCore.ApiVersioning" />
+    <PackageReference Include="Microsoft.AspNetCore.ApiVersioning.Swashbuckle" />
     <PackageReference Include="Microsoft.DotNet.Kusto" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Configuration" />
@@ -18,6 +24,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Console" />
     <PackageReference Include="Microsoft.Azure.StackExchangeRedis" />
     <PackageReference Include="NRedisStack" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Newtonsoft" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
   </ItemGroup>
 
   <ItemGroup>

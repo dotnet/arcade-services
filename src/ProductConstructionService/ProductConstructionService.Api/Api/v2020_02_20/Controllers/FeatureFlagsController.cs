@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ProductConstructionService.Api.Configuration;
-using ProductConstructionService.Common;
+using ProductConstructionService.Common.FeatureFlags;
 
 namespace ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 

@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Moq;
-using ProductConstructionService.Common;
+using ProductConstructionService.Common.Cache;
 
 namespace ProductConstructionService.DependencyFlow.Tests.Mocks;
 

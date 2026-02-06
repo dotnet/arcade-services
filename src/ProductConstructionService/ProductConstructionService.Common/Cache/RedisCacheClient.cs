@@ -4,7 +4,7 @@
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
 
-namespace ProductConstructionService.Common;
+namespace ProductConstructionService.Common.Cache;
 
 /// <summary>
 /// This class acts as a delegate for RedisCache and RedisCacheFactory.

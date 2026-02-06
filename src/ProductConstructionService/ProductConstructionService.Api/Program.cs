@@ -47,7 +47,6 @@ app.Use((context, next) =>
 
 app.UseHttpLogging();
 
-// Configure the HTTP request pipeline.
 if (isDevelopment)
 {
     app.UseDeveloperExceptionPage();

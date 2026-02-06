@@ -1,12 +1,16 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Reflection;
 using Azure.Core;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.DependencyInjection;
+using ProductConstructionService.Common;
 
-namespace ProductConstructionService.Api.Configuration;
+namespace ProductConstructionService.Common;
 
-internal static class DataProtection
+public static class DataProtection
 {
     private const string DataProtectionKeyBlobUri = "DataProtection:KeyBlobUri";
     private const string DataProtectionKeyUri = "DataProtection:DataProtectionKeyUri";
@@ -30,6 +34,6 @@ internal static class DataProtection
             .PersistKeysToAzureBlobStorage(new Uri(keyBlobUri), credential)
             .ProtectKeysWithAzureKeyVault(new Uri(dataProtectionKeyUri), credential)
             .SetDefaultKeyLifetime(DataProtectionKeyLifetime)
-            .SetApplicationName(typeof(PcsStartup).FullName!);
+            .SetApplicationName(Assembly.GetEntryAssembly()?.GetName().Name!);
     }
 }

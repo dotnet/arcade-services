@@ -2,9 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace ProductConstructionService.Api.Telemetry;
+namespace ProductConstructionService.Common.Telemetry;
 
 public static class TelemetryConfiguration
 {
