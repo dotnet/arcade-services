@@ -66,18 +66,15 @@ internal class ResolveConflictOperation(
         IReadOnlyCollection<AdditionalRemote> additionalRemotes,
         CancellationToken cancellationToken)
     {
-        NativePath targetGitRepoPath = new(_processManager.FindGitRoot(Directory.GetCurrentDirectory()));
-
         var subscription = await FetchCodeflowSubscriptionAsync(_options.SubscriptionId);
 
         var pr = await FetchTrackedPrAsync(subscription.Id);
 
         var build = await FetchPrLastAppliedBuildAsync(pr);
 
-        (var _, var repo) = await CloneReposAndFetchBranchesAsync(
+        (var vmr, var repo) = await CloneReposAndFetchBranchesAsync(
             subscription,
             build,
-            targetGitRepoPath,
             pr.HeadBranch,
             cancellationToken);
 
@@ -90,7 +87,7 @@ internal class ResolveConflictOperation(
             subscription,
             build,
             repo,
-            targetGitRepoPath,
+            subscription.IsForwardFlow() ? vmr.Path : repo.Path,
             additionalRemotes,
             cancellationToken);
     }
@@ -175,7 +172,6 @@ internal class ResolveConflictOperation(
     private async Task<(ILocalGitRepo vmr, ILocalGitRepo repo)> CloneReposAndFetchBranchesAsync(
         Subscription subscription,
         Build build,
-        NativePath targetRepoPath,
         string headBranch,
         CancellationToken cancellationToken)
     {
@@ -186,6 +182,10 @@ internal class ResolveConflictOperation(
 
         if (subscription.IsForwardFlow())
         {
+            NativePath targetRepoPath = string.IsNullOrEmpty(_options.VmrPath)
+                ? new(_processManager.FindGitRoot(Directory.GetCurrentDirectory()))
+                : new(_options.VmrPath);
+
             vmr = await _vmrCloneManager.PrepareVmrAsync(
                 targetRepoPath,
                 [subscription.TargetRepository],
@@ -198,15 +198,29 @@ internal class ResolveConflictOperation(
                 build.GetRepository(),
                 DarcLib.Commit.GetShortSha(build.Commit));
 
-            repo = await _repositoryCloneManager.PrepareCloneAsync(
-                build.GetRepository(),
-                build.Commit,
-                cancellationToken: cancellationToken);
-
-            _logger.LogInformation("Cloned {repoName} into {path}", subscription.TargetDirectory, repo.Path);
+            if (!string.IsNullOrEmpty(_options.SourceRepoPath))
+            {
+                _logger.LogInformation("Using provided source repository path at {path}", _options.SourceRepoPath);
+                repo = await _repositoryCloneManager.PrepareCloneAsync(
+                    new NativePath(_options.SourceRepoPath),
+                    [build.GetRepository()],
+                    [build.Commit],
+                    build.Commit,
+                    resetToRemote: false,
+                    cancellationToken);
+            }
+            else
+            {
+                repo = await _repositoryCloneManager.PrepareCloneAsync(
+                    build.GetRepository(),
+                    build.Commit,
+                    cancellationToken: cancellationToken);
+                _logger.LogInformation("Cloned {repoName} into {path}", subscription.TargetDirectory, repo.Path);
+            }
         }
         else
         {
+            NativePath targetRepoPath = new(_processManager.FindGitRoot(Directory.GetCurrentDirectory()));
             repo = await _repositoryCloneManager.PrepareCloneAsync(
                 targetRepoPath,
                 [subscription.TargetRepository],
@@ -219,14 +233,33 @@ internal class ResolveConflictOperation(
                 build.GetRepository(),
                 DarcLib.Commit.GetShortSha(build.Commit));
 
-            vmr = await _vmrCloneManager.PrepareVmrAsync(
-                [build.GetRepository()],
-                [build.Commit],
-                build.Commit,
-                resetToRemote: false,
-                cancellationToken);
+            var providedVmrPath = string.IsNullOrEmpty(_options.VmrPath)
+                ? string.IsNullOrEmpty(_options.SourceRepoPath)
+                    ? null
+                    : new NativePath(_options.SourceRepoPath)
+                : new NativePath(_options.VmrPath);
 
-            _logger.LogInformation("Cloned the VMR into {path}", vmr.Path);
+            if (providedVmrPath == null)
+            {
+                vmr = await _vmrCloneManager.PrepareVmrAsync(
+                        [build.GetRepository()],
+                        [build.Commit],
+                        build.Commit,
+                        resetToRemote: false,
+                        cancellationToken);
+                _logger.LogInformation("Cloned the VMR into {path}", vmr.Path);
+            }
+            else
+            {
+                _logger.LogInformation("Using provided VMR path at {path}", providedVmrPath);
+                vmr = await _vmrCloneManager.PrepareVmrAsync(
+                    providedVmrPath,
+                    [build.GetRepository()],
+                    [build.Commit],
+                    build.Commit,
+                    resetToRemote: false,
+                    cancellationToken);
+            }
         }
 
         _vmrInfo.VmrPath = vmr.Path;
