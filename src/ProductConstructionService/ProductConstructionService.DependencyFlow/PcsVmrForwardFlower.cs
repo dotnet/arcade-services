@@ -161,6 +161,11 @@ internal class PcsVmrForwardFlower : VmrForwardFlower, IPcsVmrForwardFlower
             return result;
         }
 
+        if (!await vmr.HasStagedChangesAsync())
+        {
+            return result;
+        }
+
         string commitMessage;
 
         if (hadSourceConflicts)
