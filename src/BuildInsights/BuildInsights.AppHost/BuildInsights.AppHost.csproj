@@ -13,7 +13,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BuildInsights.Api\BuildInsights.Api.csproj" />
-    <ProjectReference Include="..\BuildInsights.Web\BuildInsights.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>

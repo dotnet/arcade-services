@@ -5,15 +5,10 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var cache = builder.AddRedis("cache");
 
-var api = builder.AddProject<Projects.BuildInsights_Api>("api")
-    .WithHttpHealthCheck("/health");
-
-builder.AddProject<Projects.BuildInsights_Web>("webfrontend")
+builder.AddProject<Projects.BuildInsights_Api>("api")
     .WithExternalHttpEndpoints()
     .WithHttpHealthCheck("/health")
     .WithReference(cache)
-    .WaitFor(cache)
-    .WithReference(api)
-    .WaitFor(api);
+    .WaitFor(cache);
 
 builder.Build().Run();

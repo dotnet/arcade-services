@@ -20,7 +20,6 @@
     <Project Path="src/BuildInsights/BuildInsights.Api/BuildInsights.Api.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.AppHost/BuildInsights.AppHost.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.ServiceDefaults/BuildInsights.ServiceDefaults.csproj" />
-    <Project Path="src/BuildInsights/BuildInsights.Web/BuildInsights.Web.csproj" />
   </Folder>
   <Folder Name="/src/Darc/">
     <Project Path="src/Microsoft.DotNet.Darc/Darc/Microsoft.DotNet.Darc.csproj" />
