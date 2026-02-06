@@ -24,7 +24,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
     {
         // When we expect updates from multiple repos (batchable subscriptions), we need to wait until the PR gets updated with the second repository after it is created
         // Otherwise it might try to validate the contents before all updates are in place
-        PullRequest pullRequest = repoUpdates.Length > 1
+        Octokit.PullRequest pullRequest = repoUpdates.Length > 1
             ? await WaitForUpdatedPullRequestAsync(targetRepoName, targetBranch)
             : await WaitForPullRequestAsync(targetRepoName, targetBranch);
 
@@ -77,7 +77,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
         string commitSha,
         int buildId)
     {
-        PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
+        Octokit.PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
 
         await using (CleanUpPullRequestAfter(TestParameters.GitHubTestOrg, targetRepoName, pullRequest))
         {
@@ -188,13 +188,13 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
                 targetIsAzDo);
     }
 
-    public async Task<PullRequest> WaitForPullRequestComment(
+    public async Task<Octokit.PullRequest> WaitForPullRequestComment(
         string targetRepo,
         string targetBranch,
         string partialComment,
         int attempts = 40)
     {
-        PullRequest pullRequest = await WaitForPullRequestAsync(targetRepo, targetBranch);
+        Octokit.PullRequest pullRequest = await WaitForPullRequestAsync(targetRepo, targetBranch);
 
         while (attempts-- > 0)
         {
@@ -212,7 +212,7 @@ internal class CodeFlowScenarioTestBase : ScenarioTestBase
 
     public static async Task CheckIfPullRequestCommentExists(
         string targetRepo,
-        PullRequest pullRequest,
+        Octokit.PullRequest pullRequest,
         string[] stringsExpectedInComment)
     {
         IReadOnlyList<IssueComment> comments = await GitHubApi.Issue.Comment.GetAllForIssue(TestParameters.GitHubTestOrg, targetRepo, pullRequest.Number);
