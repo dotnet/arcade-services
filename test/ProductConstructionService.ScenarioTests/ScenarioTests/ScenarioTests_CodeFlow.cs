@@ -5,7 +5,6 @@ using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using NUnit.Framework;
 using Microsoft.DotNet.DarcLib.Helpers;
-using ProductConstructionService.ScenarioTests.Helpers;
 
 #nullable enable
 namespace ProductConstructionService.ScenarioTests;

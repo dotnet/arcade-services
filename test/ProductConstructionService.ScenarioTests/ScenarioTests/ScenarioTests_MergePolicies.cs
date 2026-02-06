@@ -4,7 +4,6 @@
 using AwesomeAssertions;
 using NUnit.Framework;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
-using ProductConstructionService.ScenarioTests.Helpers;
 
 namespace ProductConstructionService.ScenarioTests;
 

@@ -47,6 +47,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         {
             UpdaterId = GetPullRequestUpdaterId(Subscription).Id,
             Url = VmrPullRequestUrl,
+            TargetBranch = TargetBranch,
             HeadBranch = InProgressPrHeadBranch,
             HeadBranchSha = InProgressPrHeadBranchSha,
             SourceSha = build.Commit,
@@ -174,6 +175,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
         {
             UpdaterId = GetPullRequestUpdaterId(Subscription).Id,
             Url = VmrPullRequestUrl,
+            TargetBranch = TargetBranch,
             HeadBranch = InProgressPrHeadBranch,
             HeadBranchSha = InProgressPrHeadBranchSha,
             SourceSha = build.Commit,
@@ -248,6 +250,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             {
                 UpdaterId = GetPullRequestUpdaterId(Subscription).Id,
                 Url = VmrPullRequestUrl,
+                TargetBranch = TargetBranch,
                 HeadBranch = InProgressPrHeadBranch,
                 HeadBranchSha = InProgressPrHeadBranchSha,
                 SourceSha = build2.Commit,
@@ -332,6 +335,7 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
             {
                 UpdaterId = GetPullRequestUpdaterId(Subscription).Id,
                 Url = VmrPullRequestUrl,
+                TargetBranch = TargetBranch,
                 HeadBranch = InProgressPrHeadBranch,
                 HeadBranchSha = InProgressPrHeadBranchSha,
                 SourceSha = build2.Commit,

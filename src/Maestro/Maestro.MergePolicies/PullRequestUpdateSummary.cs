@@ -14,6 +14,7 @@ public record PullRequestUpdateSummary
         List<DependencyUpdateSummary> requiredUpdates,
         List<SubscriptionUpdateSummary> containedUpdates,
         string headBranch,
+        string targetBranch,
         string repoUrl,
         CodeFlowDirection codeFlowDirection)
     {
@@ -25,6 +26,7 @@ public record PullRequestUpdateSummary
         HeadBranch = headBranch;
         TargetRepoUrl = repoUrl;
         CodeFlowDirection = codeFlowDirection;
+        TargetBranch = targetBranch;
     }
 
     public string Url { get; set; }
@@ -45,6 +47,7 @@ public record PullRequestUpdateSummary
     public List<SubscriptionUpdateSummary> ContainedUpdates { get; set; }
 
     public string HeadBranch { get; set; }
+    public string TargetBranch { get; set; }
 
     public string TargetRepoUrl { get; set; }
 

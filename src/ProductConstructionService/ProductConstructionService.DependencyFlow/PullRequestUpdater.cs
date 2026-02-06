@@ -608,6 +608,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             {
                 UpdaterId = Id.ToString(),
                 Url = pr.Url,
+                TargetBranch = targetBranch,
                 HeadBranch = newBranchName,
                 HeadBranchSha = pr.HeadBranchSha,
                 SourceSha = update.SourceSha,
@@ -656,6 +657,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 Url = pr.Url,
                 HeadBranch = newBranchName,
                 HeadBranchSha = pr.HeadBranchSha,
+                TargetBranch = targetBranch,
                 SourceSha = update.SourceSha,
 
                 ContainedSubscriptions = [subscriptionUpdate],
@@ -1130,6 +1132,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     su.CommitSha))
                 .ToList(),
             pr.HeadBranch,
+            pr.TargetBranch,
             targetRepo,
             pr.CodeFlowDirection);
     }
@@ -1370,6 +1373,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             {
                 UpdaterId = Id.ToString(),
                 Url = pr.Url,
+                TargetBranch = subscription.TargetBranch,
                 HeadBranch = prBranch,
                 HeadBranchSha = pr.HeadBranchSha,
                 SourceSha = update.SourceSha,

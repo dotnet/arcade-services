@@ -8,10 +8,12 @@ using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Extensions.Logging;
 
 namespace Maestro.MergePolicies;
-internal class CodeFlowMergePolicy : MergePolicy
+internal class CodeFlowMergePolicy(ILogger<IMergePolicy> logger) : MergePolicy
 {
+    protected ILogger<IMergePolicy> _logger = logger;
     public override string DisplayName => "Codeflow verification";
 
     public override string Name => "CodeFlow";
@@ -48,8 +50,8 @@ internal class CodeFlowMergePolicy : MergePolicy
     {
         CodeFlowMergePolicy mergePolicy = pr.CodeFlowDirection switch
         {
-            CodeFlowDirection.BackFlow => new BackFlowMergePolicy(),
-            CodeFlowDirection.ForwardFlow => new ForwardFlowMergePolicy(),
+            CodeFlowDirection.BackFlow => new BackFlowMergePolicy(_logger),
+            CodeFlowDirection.ForwardFlow => new ForwardFlowMergePolicy(_logger),
             _ => throw new ArgumentException("PR is not a codeflow PR, can't evaluate CodeFlow Merge Policy"),
         };
 
@@ -57,12 +59,12 @@ internal class CodeFlowMergePolicy : MergePolicy
     }
 }
 
-public class CodeFlowMergePolicyBuilder : IMergePolicyBuilder
+public class CodeFlowMergePolicyBuilder(ILogger<IMergePolicy> logger) : IMergePolicyBuilder
 {
     public string Name => MergePolicyConstants.CodeflowMergePolicyName;
 
     public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
     {
-        return Task.FromResult<IReadOnlyList<IMergePolicy>>([new CodeFlowMergePolicy()]);
+        return Task.FromResult<IReadOnlyList<IMergePolicy>>([new CodeFlowMergePolicy(logger)]);
     }
 }
