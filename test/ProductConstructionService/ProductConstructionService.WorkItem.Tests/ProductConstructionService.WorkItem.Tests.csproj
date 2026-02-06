@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\ProductConstructionService\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj" />
+    <ProjectReference Include="..\..\..\src\ProductConstructionService\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj" />
   </ItemGroup>
 
   <ItemGroup>

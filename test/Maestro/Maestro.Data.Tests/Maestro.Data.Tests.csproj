@@ -11,6 +11,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Maestro\Maestro.Data\Maestro.Data.csproj" />
+    <ProjectReference Include="..\..\..\src\Maestro\Maestro.Data\Maestro.Data.csproj" />
   </ItemGroup>
 </Project>

@@ -9,7 +9,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Microsoft.DotNet.Darc\Darc\Microsoft.DotNet.Darc.csproj" />
+    <ProjectReference Include="..\..\..\src\Microsoft.DotNet.Darc\Darc\Microsoft.DotNet.Darc.csproj" />
   </ItemGroup>
 
   <ItemGroup>
