@@ -81,7 +81,7 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
             if (headBranchDic[repo].CommitSha != targetBranchDic[repo].CommitSha
                 || headBranchDic[repo].BarId != targetBranchDic[repo].BarId)
             {
-                validationErrors.Add($"Repo {repo} metadata has changed. Only changes to the updated repository ({updatedRepo}) are allowed in a forward flow PR.");
+                validationErrors.Add($"Repo {repo} source-manifest.json metadata has changed. Only changes to the updated repository ({updatedRepo}) are allowed in a forward flow PR.");
             }
         }
 
