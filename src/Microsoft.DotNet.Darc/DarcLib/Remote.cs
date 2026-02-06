@@ -192,16 +192,37 @@ public sealed class Remote : IRemote
 
         if (skipArcadeUpdates)
         {
-            return  (await _fileManager.UpdateDependencyFiles(
-            itemsToUpdate,
-            sourceDependency: null,
-            targetRepo,
-            branch,
-            oldDependencies,
-            null,
-            relativeBasePath: targetDirectory)).GetFilesToCommit();
-        }
+            var updatedFiles = await _fileManager.UpdateDependencyFiles(
+                itemsToUpdate,
+                sourceDependency: null,
+                targetRepo,
+                branch,
+                oldDependencies,
+                null,
+                relativeBasePath: targetDirectory);
 
+            return updatedFiles.GetFilesToCommit();
+        }
+        else
+        {
+            return await GetUpdatedDependencyAndArcadeFiles(
+                targetRepo,
+                branch,
+                oldDependencies,
+                itemsToUpdate,
+                arcadePackage,
+                targetDirectory);
+        }
+    }
+
+    private async Task<List<GitFile>> GetUpdatedDependencyAndArcadeFiles(
+        string targetRepo,
+        string branch,
+        List<DependencyDetail> oldDependencies,
+        List<DependencyDetail> itemsToUpdate,
+        DependencyDetail arcadePackage,
+        UnixPath targetDirectory)
+    {
         (var sourceRepoIsVmr, var targetDotNetVersion) = await GetDotNetVersionInVmrOrRepo(arcadePackage.RepoUri, arcadePackage.Commit);
 
         var updatedDependencyFiles = await _fileManager.UpdateDependencyFiles(
@@ -217,11 +238,12 @@ public sealed class Remote : IRemote
             targetRepo,
             branch,
             sourceRepoIsVmr,
-            itemsToUpdate.GetArcadeUpdate(),
+            arcadePackage,
             targetDirectory);
 
         return [..updatedDependencyFiles.GetFilesToCommit(),
             ..updatedEngCommonFiles];
+
     }
 
     public async Task<List<GitFile>> GetUpdatedCommonScriptFilesAsync(
