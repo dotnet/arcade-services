@@ -15,7 +15,7 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
 {
     public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote remote)
     {
-        SourceManifest headBranchSourceManifest;
+        SourceManifest headBranchSourceManifest, targetBranchSourceManifest;
         try
         {
             headBranchSourceManifest = await remote.GetSourceManifestAsync(pr.TargetRepoUrl, pr.HeadBranch);
@@ -25,6 +25,19 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
             return FailTransiently(
                 "Error while retrieving head branch source manifest",
                 $"An issue occurred while retrieving the source manifest. This could be due to a misconfiguration of the `{VmrInfo.DefaultRelativeSourceManifestPath}` file, or because of a server error."
+                + SeekHelpMsg);
+        }
+        try
+        {
+            targetBranchSourceManifest = string.IsNullOrEmpty(pr.TargetBranch)
+                ? null
+                : await remote.GetSourceManifestAsync(pr.TargetRepoUrl, pr.TargetBranch);
+        }
+        catch (Exception)
+        {
+            return FailTransiently(
+                "Error while retrieving target branch source manifest",
+                $"An issue occurred while retrieving the target branch source manifest. This could be due to a misconfiguration of the `{VmrInfo.DefaultRelativeSourceManifestPath}` file, or because of a server error."
                 + SeekHelpMsg);
         }
 
@@ -42,7 +55,7 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
                 ? []
                 : ValidateChangesOnlyInUpdatedRepoRecord(
                     headBranchSourceManifest,
-                    await remote.GetSourceManifestAsync(pr.TargetRepoUrl, pr.TargetBranch),
+                    targetBranchSourceManifest,
                     pr)
         ];
 
