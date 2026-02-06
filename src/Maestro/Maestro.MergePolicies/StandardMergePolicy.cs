@@ -6,11 +6,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Maestro.MergePolicyEvaluation;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
 namespace Maestro.MergePolicies;
 
-public class StandardMergePolicyBuilder : IMergePolicyBuilder
+public class StandardMergePolicyBuilder(ILogger<IMergePolicy> logger) : IMergePolicyBuilder
 {
     private static readonly IReadOnlyList<string> s_standardGitHubIgnoreChecks = [
             "WIP",
@@ -62,7 +63,7 @@ public class StandardMergePolicyBuilder : IMergePolicyBuilder
 
         if (pr.CodeFlowDirection != CodeFlowDirection.None)
         {
-            policies.AddRange(await new CodeFlowMergePolicyBuilder().BuildMergePoliciesAsync(standardProperties, pr));
+            policies.AddRange(await new CodeFlowMergePolicyBuilder(logger).BuildMergePoliciesAsync(standardProperties, pr));
         }
 
         return policies;
