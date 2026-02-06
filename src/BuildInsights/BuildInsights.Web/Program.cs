@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using BuildInsights.ServiceDefaults;
-using BuildInsights.Web;
 using BuildInsights.Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,13 +13,6 @@ builder.AddRedisOutputCache("cache");
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-
-builder.Services.AddHttpClient<WeatherApiClient>(client =>
-    {
-        // This URL uses "https+http://" to indicate HTTPS is preferred over HTTP.
-        // Learn more about service discovery scheme resolution at https://aka.ms/dotnet/sdschemes.
-        client.BaseAddress = new("https+http://api");
-    });
 
 var app = builder.Build();
 
