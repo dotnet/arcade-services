@@ -1,0 +1,19 @@
+{{#if this}}
+## :clock3: The following pipeline(s) will be analyzed once they finish
+  {{#each this}}
+  * {{LinkTo Name Url}}
+  {{/each}}
+
+{{#unless (or ../HasBuildFailures ../HasTestFailures)}}
+## The following pipeline(s) have completed
+{{#each ../SucceededPipelinesLinks}}
+  :white_check_mark: {{LinkTo Name Url}}
+
+{{/each}}
+{{#each ../FailingPipelinesLinks}}
+  :x: {{LinkTo Name Url}}
+
+{{/each}}
+{{/unless}}
+
+{{/if}}

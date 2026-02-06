@@ -1,0 +1,29 @@
+{
+    "GitHubAppAuth": {
+        "GitHubAppId": "[vault(build-analysis-github-app-id)]",
+        "PrivateKey": "[vault(build-analysis-github-app-private-key)]"
+    },
+    "Kusto": {
+        "Database": "engineeringdata"
+    },
+    "GitHubIssuesSettings": {
+        "KnownIssuesLabels": [ "Known Build Error", "blocking-clean-ci"]
+    },
+    "KnownIssuesAnalysisTable": {
+        "Name": "knownissuesanalysis",
+        "Endpoint": "https://helixexecutestagedrop.table.core.windows.net/"
+    },
+    "KnownIssuesErrorsTable": {
+        "Name": "knownissueserrors",
+        "Endpoint": "https://helixexecutestagedrop.table.core.windows.net/"
+    },
+    "KnownIssuesValidationTable": {
+        "Name": "knownissuevalidations",
+        "Endpoint": "https://helixexecutestagedrop.table.core.windows.net/"
+    },
+    "SsaCriteriaSettings": {
+        "DailyHitsForEscalation": 100,
+        "SsaRepositories": [ "dotnet/arcade", "dotnet/dnceng" ],
+        "SsaLabel": "First Responder"
+    }
+}

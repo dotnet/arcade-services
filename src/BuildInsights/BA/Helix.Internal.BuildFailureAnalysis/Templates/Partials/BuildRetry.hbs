@@ -1,0 +1,21 @@
+{{#if LatestAttempt}}
+{{#each LatestAttempt}}
+## Build Rerun
+:heavy_check_mark: Build passed after {{AttemptId}} retries. 
+### (Attempt #{{AttemptId}}) {{LinkTo [link to build] LinkToBuild}}
+{{#if HasBuildFailures}}
+{{#limited-each BuildStepsResult}}
+{{> StepResult RepositoryHasIssues=../../RepositoryHasIssues}}
+
+{{/limited-each}}
+{{/if}}
+{{#if HasTestFailures}}
+## Non-Deterministic Test Failures Detected
+{{#limited-each TestResults}}
+{{> TestResult SummarizeInstructions=../../SummarizeInstructions CheckSig=../../CheckSig  RepositoryHasIssues=../../RepositoryHasIssues}}
+{{/limited-each}}
+{{/if}}
+{{/each}}
+{{else}}
+## :heavy_check_mark: All checks complete after rerun, no issues found
+{{/if}}

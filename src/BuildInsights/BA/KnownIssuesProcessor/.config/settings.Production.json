@@ -1,0 +1,16 @@
+{
+    "KeyVaultUri": "https://helixprodservice.vault.azure.net/",
+    "Secrets": {
+        "ManagedIdentityId": "d2580e46-e758-4778-a864-18f909438b45"
+    },
+    "KnownIssuesProcessorOptions": {
+        "BuildAnalysisQueueEndpoint": "https://helixexecution.queue.core.windows.net",
+        "RepositoryIssuesOnly": false
+    },
+    "KnownIssueStorageQueue": {
+        "Endpoint": "https://helixexecution.queue.core.windows.net",
+    },
+    "ProcessingStatusTable": {
+        "Endpoint": "https://helixexecution.table.core.windows.net"
+    }
+}

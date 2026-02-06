@@ -1,0 +1,25 @@
+{{#if (or HasTestKnownIssues HasTestKnownIssueAnalysisUnavailablePipelines) }}
+<details open>
+    <summary><h2>Known test errors</h2></summary>
+{{#if SummarizeInstructions.GenerateSummarizeVersion}}
+    {{#for-take TestKnownIssues  SummarizeInstructions.TestKnownIssueDisplayLimit ':warning:' 'Known test errors not displayed due to space limitations' }}
+    <ul>
+        :x:{{LinkToHtml [DisplayName] Link}} {{#if HasDuplicateHits}}<b>and {{DuplicateHits}} more hits</b> {{/if}} - {{LinkToHtml [TitleGitHubIssue] LinkToGitHubIssue}}
+    </ul>
+    {{/for-take}}
+{{else}}
+    {{#each TestKnownIssues}}
+    <ul>
+        :x:{{LinkToHtml [DisplayName] Link}} {{#if HasDuplicateHits}}<b>and {{DuplicateHits}} more hits</b> {{/if}} - {{LinkToHtml [TitleGitHubIssue] LinkToGitHubIssue}}
+    </ul>
+    {{/each}}
+{{/if}}
+
+{{#if TestKnownIssueAnalysisUnavailablePipelines}}
+The following build(s) were only partially analyzed due to the number of test errors and helix logs:
+{{#each TestKnownIssueAnalysisUnavailablePipelines}}
+    - {{LinkTo [Name] Url}}
+{{/each}}
+{{/if}}
+</details>
+{{/if}}

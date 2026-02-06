@@ -1,0 +1,10 @@
+<h4>{{LinkToHtml [PipelineBuildName] LinkToBuild}} / {{LinkToHtml [DisplayStepName] LinkToFirstLogError}}</h4>
+{{LinkToHtml [ :construction: Report infrastructure issue] CreateInfraIssueLink }} {{#if RepositoryHasIssues}}{{LinkToHtml [ :page_facing_up: Report repository issue] CreateRepoIssueLink }}{{/if}}
+{{#limited-each Errors}}
+<ul>
+:x:{{SplitMessageIntoCollapsibleSectionsByLength ErrorMessage 1000}}
+</ul>
+{{/limited-each}}
+{{#if (gt TotalErrorsCount)}}
+<ul>:x: {{#GetNumberOfRecordsNotDisplayed TotalErrorsCount}} more errors on {{LinkToHtml 'this task' LinkToStep }}</ul>
+{{/if}}

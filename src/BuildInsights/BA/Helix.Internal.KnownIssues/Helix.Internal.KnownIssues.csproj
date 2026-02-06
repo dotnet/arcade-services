@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Microsoft.Internal.Helix.KnownIssues</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.DotNet.Kusto" />
+    <PackageReference Include="Microsoft.DotNet.Web.Authentication" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Mono.Options" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\HelixMonitoringSql\Helix.Utilities.Sql\Helix.Utilities.Sql.csproj" />
+    <ProjectReference Include="..\..\..\Utility\Helix.Utility.GitHubGraphQL\Helix.Utility.GitHubGraphQL.csproj" />
+    <ProjectReference Include="..\Helix.Internal.GitHub\Helix.Internal.GitHub.csproj" />
+  </ItemGroup>
+
+</Project>

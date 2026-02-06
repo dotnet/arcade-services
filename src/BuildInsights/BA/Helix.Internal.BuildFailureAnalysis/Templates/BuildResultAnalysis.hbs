@@ -1,0 +1,115 @@
+{{#if (or HasBuildFailures HasTestFailures)}}
+> [!TIP]
+> To unconditionally bypass the build analysis check (turn it green), you can use the [escape mechanism feature](https://github.com/dotnet/arcade/blob/main/Documentation/Projects/Build%20Analysis/EscapeMechanismforBuildAnalysis.md). The completion time may vary, potentially taking several minutes, depending on the build analysis workload at the moment.
+
+{{/if}}
+{{#if RenderSummary}}
+{{> BuildAnalysisSummary}}
+{{else}}
+{{> NotAnalyzedPipelinesList FilteredPipelinesBuildNames}}
+{{> PendingPipelineList PendingBuildNames}}
+{{#unless (or HasBuildFailures HasTestFailures HasPendingBuildNames)}}
+## All checks completed
+{{#each SucceededPipelinesLinks}}
+  :white_check_mark: {{LinkTo Name Url}}
+
+{{/each}}
+{{#each FailingPipelinesLinks}}
+  :x: {{LinkTo Name Url}}
+
+{{/each}}
+{{#if IsRerun}}
+{{> BuildRetry}}
+{{/if}}
+{{#if HasFlakyTests}}
+## Non-Deterministic Test Failures Detected
+:heavy_check_mark: These tests passed after a retry (flaky tests)
+{{#limited-each FlakyTests}}
+{{> TestRetryResult}}
+{{/limited-each}}
+{{/if}}
+{{else}}
+{{#if HasAutomaticRetry}}
+## Builds that were automatically rerun
+{{#each BuildRetryAutomatically}}
+:repeat: The build {{LinkTo BuildNumber LinkToBuild}} has been automatically rerun and the retry is currently in progress
+{{#if GithubIssueId}}{{#if GithubIssueRepository}}
+<ul> :information_source: Retry triggered by known issue: {{GithubIssueRepository}}#{{GithubIssueId}} </ul>
+{{/if}}{{/if}}
+{{/each}}
+{{/if}}
+{{#if (or HasBuildFailures HasTestFailures)}}
+{{#if CriticalIssues}}
+## :heavy_exclamation_mark: Ongoing critical infrastructure issues
+{{#each CriticalIssues}}
+<ul>
+:x: {{LinkToHtml [DisplayName] Link}}
+</ul>
+{{/each}}
+
+{{/if}}
+{{/if}}
+{{#if HasBuildFailures}}
+{{#if RepoBuildBreaks}}
+<details open>
+<summary><h2>Known Repository Errors</h2></summary>
+
+{{#each RepoBuildBreaks}}
+<ul>
+:x:{{LinkToHtml [DisplayName] Link}} {{#if HasDuplicateHits}}<b>and {{DuplicateHits}} more hits</b> {{/if}} - {{LinkToHtml [TitleGitHubIssue] LinkToGitHubIssue}}
+</ul>
+{{/each}}
+
+{{/if}}
+</details>
+{{#if InfrastructureBuildBreaks}}
+<details open>
+<summary><h2>Known Infrastructure Errors</h2></summary>
+
+{{#each InfrastructureBuildBreaks}}
+<ul>
+:x:{{LinkToHtml [DisplayName] Link}} {{#if HasDuplicateHits}}<b>and {{DuplicateHits}} more hits</b> {{/if}} - {{LinkToHtml [TitleGitHubIssue] LinkToGitHubIssue}}
+</ul>
+{{/each}}
+
+{{/if}}
+</details>
+{{#if BuildFailuresUnique}}
+<details open>
+<summary><h2>Build Failures</h2></summary>
+{{#limited-each BuildFailuresUnique}}
+{{> StepResult RepositoryHasIssues=../RepositoryHasIssues}}
+
+{{/limited-each}}
+{{#if (gt TotalBuildFailuresUnique)}}
+#### {{#GetNumberOfRecordsNotDisplayed TotalBuildFailuresUnique}} other jobs are failing and were not displayed due to space limitations.</br> Builds with failures: {{#each FailingPipelinesLinks}} {{LinkTo Name Url}} {{/each}}
+{{/if}}
+{{/if}}
+{{/if}}
+</details>
+
+{{#if HasTestFailures}}
+{{> KnownIssuesTest}}
+{{#if TestFailuresUnique}}
+<details open>
+<summary><h2>Test Failures ({{UniqueTestFailures}} tests failed)</h2></summary>
+
+{{#each TestFailuresUnique}}
+
+:small_blue_diamond: {{LinkToHtml LinkToResultView.Name LinkToResultView.Link}}
+<ul>
+{{#if HasNotDisplayTests}}<p> :warning: {{NotDisplayTestsCount}} failing tests not displayed for this pipeline due to space limitations </p>{{/if}}
+{{#for-take TestResults DisplayTestsCount}}
+{{> TestResult SummarizeInstructions=../../SummarizeInstructions CheckSig=../../CheckSig RepositoryHasIssues=../../RepositoryHasIssues}}
+{{/for-take }}
+</ul>
+{{/each}}
+{{/if}}
+{{/if}}
+</details>
+{{/unless}}
+{{/if}}
+
+{{SentimentTracking SentimentParameters}}
+
+{{SnapshotIdComment SnapshotId}}

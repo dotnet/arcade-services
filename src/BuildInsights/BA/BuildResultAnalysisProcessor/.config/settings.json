@@ -1,0 +1,132 @@
+{
+    "BuildResultAnalysisStorageQueue": {
+        "Endpoint": "https://helixexecutestagedrop.queue.core.windows.net",
+        "Name": "buildresultanalysis"
+    },
+    "BuildResultAnalysisBlobStorage": {
+        "Endpoint": "https://helixexecutestagedrop.blob.core.windows.net",
+        "ContainerName": "previousbuildresultscache",
+        "LeaseRenewalTimespan": "00:00:30",
+        "LeaseAcquireRetryWaitTime": "00:00:15"
+    },
+    "QueueProcessing": {
+        "EmptyQueueDelayInSeconds": 30,
+        "QueueProcessingTimeInSeconds": 300,
+        "MaxRetries": 10,
+        "DeadlockTimerInSeconds": 6000
+    },
+    "GitHubAppAuth": {
+        "GitHubAppId": "[vault(build-analysis-github-app-id)]",
+        "PrivateKey": "[vault(build-analysis-github-app-private-key)]"
+    },
+    "AzureDevOps": {
+        "Settings": [
+            {
+                "AccessToken": "[vault(dnb2-bot-all-build-rw-test-rw)]",
+                "CollectionUri": "https://dev.azure.com/dnceng/",
+                "OrgId": "dnceng"
+            },
+            {
+                "AccessToken": "[vault(dnb2-bot-all-build-rw-test-rw)]",
+                "CollectionUri": "https://dev.azure.com/dnceng-public",
+                "OrgId": "dnceng-public"
+            }
+        ]
+    },
+    "UserSentiment": {
+        "Host": "https://helix.int-dot.net"
+    },
+    "GitHubIssuesSettings": {
+        "CriticalIssuesRepositories": [
+            "dotnet/arcade",
+            "dotnet/dnceng"
+        ],
+        "CriticalIssuesLabels": [
+            "Critical",
+            "FC - Infrastructure"
+        ],
+        "KnownIssuesRepositories": [
+            "dotnet/arcade",
+            "dotnet/dnceng"
+        ],
+        "KnownIssuesLabels": [
+            "Known Build Error",
+            "blocking-clean-ci"
+        ]
+    },
+    "KnownIssueUrlOptions": {
+        "Host": "https://helix.int-dot.net/ki/new",
+        "InfrastructureIssueParameters": {
+            "Labels": [ "Known Build Error", "First Responder", "Detected By - Customer" ],
+            "GithubTemplateName": "z-build-break-infrastructure-issue-template.yml",
+            "Repository": "dotnet/dnceng"
+        },
+        "RepositoryIssueParameters": {
+            "Labels": [ "Known Build Error", "blocking-clean-ci" ]
+        }
+    },
+    "KnownIssuesAnalysisTable": {
+        "Name": "knownissuesanalysis",
+        "Endpoint": "https://helixexecutestagedrop.table.core.windows.net"
+    },
+    "KnownIssuesErrorsTable": {
+        "Name": "knownissueserrors",
+        "Endpoint": "https://helixexecutestagedrop.table.core.windows.net"
+    },
+    "BuildAnalysisTable": {
+        "Name": "buildanalysis",
+        "Endpoint": "https://helixexecutestagedrop.table.core.windows.net"
+    },
+    "KnownIssuesValidationTable": {
+        "Name": "knownissuevalidations",
+        "Endpoint": "https://helixexecutestagedrop.table.core.windows.net"
+    },
+    "BuildAnalysisRepoConfigurationTable": {
+        "Name": "buildanalysisrepoconfiguration",
+        "Endpoint": "https://helixexecutestagedrop.table.core.windows.net"
+    },
+    "ProcessingStatusTable": {
+        "Name": "buildprocessingstatuses",
+        "Endpoint": "https://helixexecutestagedrop.table.core.windows.net"
+    },
+    "QueueInsightsBeta": {
+        "AllowedRepos": [
+            "dotnet/arcade",
+            "dotnet/arcade-services",
+            "dotnet/aspnetcore",
+            "dotnet/installer",
+            "dotnet/performance",
+            "dotnet/runtime",
+            "dotnet/sdk",
+            "maestro-auth-test/helix-queue-insights-test",
+            "maestro-auth-test/build-result-analysis-test"
+        ]
+    },
+    "MatrixOfTruth": {
+        "Endpoint": "https://matrixoftruth.blob.core.windows.net",
+        "ContainerName": "mot-v1"
+    },
+    "KnownIssuesAnalysisLimits": {
+        "RecordCountLimit": 1000,
+        "LogLinesCountLimit": 100000,
+        "FailingTestCountLimit": 1000,
+        "HelixLogsFilesLimit": 100
+    },
+    "RelatedBuildProviderSettings": {
+        "AllowedTargetProjects": {
+            "dnceng/public": "9ee6d478-d288-47f7-aacc-f6e6d082ae6d",
+            "dnceng-public/public": "cbb18261-c48f-4abb-8651-8cdcb5474649"
+        }
+    },
+    "InternalProject": {
+        "Id": "7ea9116e-9fac-403d-b258-b31fcf1bb293",
+        "Path": "internal"
+    },
+    "BuildAnalysisFileSettings": {
+        "Path": "eng/",
+        "FileName": "build-analysis-configuration.json"
+    },
+    "KnownIssuesKustoOptions": {
+        "Database": "engineeringdata"
+    }
+}

@@ -1,0 +1,107 @@
+﻿@page "/DependencyFlow/incoming/{channelId}/{owner}/{repo}"
+
+@using Humanizer
+@using ProductConstructionService.Api.Configuration
+@using ProductConstructionService.Api.Pages.DependencyFlow
+
+@model IncomingModel
+
+@{
+    ViewBag.Title = "DependencyFlow";
+}
+
+@section Head {
+    <style type="text/css">
+        /* Provide sufficient contrast against white background */
+        a {
+          color: #0366d6;
+        }
+
+        a.link-light {
+            color: #9FF
+        }
+    </style>
+}
+
+<small>For channel '@Model.ChannelName' based on <a href="@Model.GetCommitUrl(Model.Build)">@Model.GetGitHubInfo(Model.Build)?.Repo/@Model.Build?.GitHubBranch@@@Model.Build?.Commit.Substring(0, 6)</a> build <a href="@Model.GetBuildUrl(Model.Build)">@Model.Build?.AzureDevOpsBuildNumber</a> produced @Model.GetDateProduced(Model.Build)</small>
+
+<div class="card-deck">
+    @{
+        var index = 0;
+    }
+
+    @foreach (var incoming in Model.IncomingRepositories?.OrderBy(r => r.ShortName).ToArray() ?? Array.Empty<IncomingRepo>())
+    {
+        // We compute the "condition" of a dependency by first checking how old the build we have is.
+        // If it's older than we'd like, we then ALSO check the number of commits that we're missing
+        // If it's old but there are few commits, it's OK, there just hasn't been churn
+        // If it's old and there are lots of commits, ruh-roh!
+
+        string conditionClass;
+        string? textClass = "text-white";
+        string? linkClass = "link-light";
+        string statusIcon = "✔️";
+
+        var elapsed = TimeSpan.Zero;
+        if (incoming.OldestPublishedButUnconsumedBuild != null)
+        {
+            elapsed = DateTime.UtcNow - incoming.OldestPublishedButUnconsumedBuild.DateProduced;
+        }
+
+        if (incoming.OldestPublishedButUnconsumedBuild == null || elapsed.TotalDays < Model.SlaOptions.GetForRepo(incoming.ShortName).WarningUnconsumedBuildAge)
+        {
+            conditionClass = "bg-primary";
+        }
+        else if (elapsed.TotalDays < Model.SlaOptions.GetForRepo(incoming.ShortName).FailUnconsumedBuildAge)
+        {
+            statusIcon = "⚠";
+            conditionClass = "bg-warning";
+            textClass = null;
+            linkClass = null;
+        }
+        else
+        {
+            statusIcon = "❌";
+            conditionClass = "bg-danger";
+        }
+
+        <div class="card @textClass @conditionClass m-1">
+            <div class="card-header">@incoming.ShortName</div>
+            <div class="card-body">
+                <h5 class="card-title">
+                    @statusIcon We are @(incoming.CommitDistance == null ? "(unknown)" : incoming.CommitDistance == 0 ? "0" : $"{incoming.CommitDistance}") commit(s) behind
+                </h5>
+                <p class="card-text">
+                    Oldest unconsumed - build: @(incoming.OldestPublishedButUnconsumedBuild == null ? "none" : incoming.OldestPublishedButUnconsumedBuild.DateProduced.Humanize()) / commit: @(incoming.CommitAge == null ? "(unknown)" : incoming.CommitAge.Humanize())
+                </p>
+            </div>
+            <div class="card-footer">
+                <a class="@linkClass" target="_blank" href="@incoming.BuildUrl">Build @incoming.LastConsumedBuild.AzureDevOpsBuildNumber</a> | <a class="@linkClass" target="_blank" href="@incoming.CommitUrl">@incoming.LastConsumedBuild.Commit.Substring(0, 6)</a>
+            </div>
+        </div>
+
+        index += 1;
+        if (index % 3 == 0)
+        {
+            // Wrap every 3 cards
+            <div class="w-100"></div>
+        }
+    }
+</div>
+
+<small>Rate Limit Remaining: @GetRateLimitInfo(Model.CurrentRateLimit)</small>
+
+@functions
+{
+    string DisplayFor(string repository)
+    {
+        return repository.Substring("https://github.com/".Length);
+    }
+
+    string GetRateLimitInfo(Octokit.RateLimit? rateLimit)
+    {
+        return rateLimit == null
+            ? "unknown"
+            : $"{rateLimit.Remaining}(Resets {rateLimit.Reset.Humanize()})";
+    }
+}

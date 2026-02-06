@@ -1,0 +1,61 @@
+<details open>
+  <summary>:x: <b>{{TestName}}</b> {{#if ConsoleLogLink}}{{LinkToHtml [Console] ConsoleLogLink}}{{/if}} {{LinkToHtml [Details] TestLogs}} {{#if IsHelixWorkItem}}{{LinkToHtml [Artifacts] ArtifactLink}}{{/if}} {{#if FailureRate}}{{LinkToHtml FailureRate.PercentOfFailureToLinkString HistoryLink}}{{else}}{{LinkToHtml [History] HistoryLink}}{{/if}}</summary>
+
+<dl>
+{{LinkToHtml [ :construction: Report test infrastructure issue] ReportKnownIssueInfraTestUrl }} {{#if RepositoryHasIssues}}{{LinkToHtml [ :page_facing_up: Report test repository issue] ReportKnownIssueRepositoryTestUrl }}{{/if}}
+{{#if IsHelixWorkItemFailure}}
+<blockquote>
+ <strong>This is a helix work item crash {{#if HelixWorkItem.Status}} with status: {{HelixWorkItem.Status}}{{/if}}.</strong> To investigate {{#if ConsoleLogLink}}look the {{LinkToHtml [Console log] ConsoleLogLink}}{{/if}} / navigate to {{LinkToHtml [Helix Artifacts] ArtifactLink}}
+</blockquote>
+  {{FailingConfigurationBlock}}
+{{else}}
+  {{FailingConfigurationBlock}}
+  {{#if ExceptionMessage}}
+  <dt>Exception Message</dt>
+  {{#if SummarizeInstructions.GenerateSummarizeVersion}}
+  <dd><pre>{{truncate ExceptionMessage SummarizeInstructions.ErrorMessageLimitLength}} {{LinkToHtml [Full log] TestLogs}}</pre></dd>
+  {{else}}
+  <dd><pre>{{ExceptionMessage}}</pre></dd>
+  {{/if}}
+  {{/if}}
+
+  {{#if CallStack}}
+  <dt>CallStack</dt>
+  {{#if SummarizeInstructions.GenerateSummarizeVersion}}
+  <dd><pre>{{truncate CallStack SummarizeInstructions.ErrorMessageLimitLength}}... {{LinkToHtml [Full call stack] TestLogs}}</pre></dd>
+  {{else}}
+  <dd><pre>{{CallStack}}</pre></dd>
+
+  {{/if}}
+  
+  {{/if}}
+  {{#if HasTestSubResults}}
+  <dt>Data Driven SubResults</dt>
+  <ul>
+  {{#limited-each TestSubResults}}
+  :x: <b>{{this.TestName}}</b>
+    {{#if ErrorMessage}}
+    <dt>Exception Message</dt>
+    {{#if ../SummarizeInstructions.GenerateSummarizeVersion}}
+    <dd><pre>{{truncate this.ErrorMessage ../SummarizeInstructions.ErrorMessageLimitLength}} {{LinkToHtml [Full log] ../TestLogs}}</pre></dd>
+    {{else}}
+    <dd><pre>{{this.ErrorMessage}}</pre></dd>
+    {{/if}}
+    {{/if}}
+    {{#if StackTrace}}
+    <dt>Stack Trace</dt>
+    {{#if ../SummarizeInstructions.GenerateSummarizeVersion}}
+    <dd><pre>{{truncate StackTrace ../SummarizeInstructions.ErrorMessageLimitLength}}... {{LinkToHtml [Full stack trace] TestLogs}}</pre></dd>
+    {{else}}
+    <dd><pre>{{StackTrace}}</pre></dd>
+    {{/if}}
+    {{/if}}
+  {{/limited-each}}
+  </ul>
+  {{/if}}
+{{#if IsNewTest}}
+  <dt>:grey_exclamation: This is a new test{{#if CreationDate}}, introduced on {{{CreationDate}}}{{/if}}</dt>
+  {{/if}}
+</dl>
+{{/if}}
+</details>

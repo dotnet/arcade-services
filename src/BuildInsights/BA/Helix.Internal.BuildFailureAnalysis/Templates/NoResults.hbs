@@ -1,0 +1,23 @@
+{{#if CriticalIssues}}
+## :heavy_exclamation_mark: Ongoing critical infrastructure issues
+{{#each CriticalIssues}}
+<ul>
+:x: {{LinkToHtml [DisplayName] Link}}
+</ul>
+{{/each}}
+
+{{/if}}
+
+{{> PendingPipelineList PendingBuildNames}}
+
+This build has Azure Pipelines builds configured for checks. As those build complete,
+build analysis for them will appear in this check within a few minutes.
+
+Where can I learn more?  Read the documentation for the build analysis here:
+[Build Analysis Introduction](https://github.com/dotnet/arcade/blob/main/Documentation/Projects/Build%20Analysis/Introduction.md)
+
+![Image of dotnet-bot doing science](https://raw.githubusercontent.com/dotnet/brand/29878855347e055ff15675471f7043fda3e92cea/dotnet-bot-illustrations/Website%20Illustrations/apache-spark-analytics-engine-bot-machine.svg)
+
+{{SentimentTracking SentimentParameters}}
+
+{{SnapshotIdComment SnapshotId}}

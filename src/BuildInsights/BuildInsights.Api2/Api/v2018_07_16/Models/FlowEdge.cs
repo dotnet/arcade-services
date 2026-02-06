@@ -1,0 +1,58 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using Microsoft.DotNet.DarcLib.Models.Darc;
+
+#nullable disable
+namespace ProductConstructionService.Api.v2018_07_16.Models;
+
+public class FlowEdge
+{
+    public FlowEdge(string to, string from)
+    {
+        ToId = to;
+        FromId = from;
+    }
+
+    public FlowEdge(
+        string to,
+        string from,
+        Guid subscriptionId,
+        string channelName,
+        bool onLongestBuildPath,
+        bool isToolingOnly,
+        bool? partOfCycle,
+        bool backEdge)
+    {
+        ToId = to;
+        FromId = from;
+        SubscriptionId = subscriptionId;
+        ChannelName = channelName;
+        OnLongestBuildPath = onLongestBuildPath;
+        IsToolingOnly = isToolingOnly;
+        PartOfCycle = partOfCycle;
+        BackEdge = backEdge;
+    }
+
+    public static FlowEdge Create(DependencyFlowEdge other)
+    {
+        return new FlowEdge(
+            other.To.Id,
+            other.From.Id,
+            other.Subscription.Id,
+            other.Subscription.Channel.Name,
+            other.OnLongestBuildPath,
+            other.IsToolingOnly,
+            other.PartOfCycle,
+            other.BackEdge);
+    }
+
+    public string ToId { get; }
+    public string FromId { get; }
+    public Guid SubscriptionId { get; }
+    public string ChannelName { get; }
+    public bool OnLongestBuildPath { get; }
+    public bool IsToolingOnly { get; }
+    public bool? PartOfCycle { get; }
+    public bool BackEdge { get; set; }
+}
