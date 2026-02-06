@@ -86,15 +86,32 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
         }
 
         // codeflow subscriptions can't be batched so there will only be one source repo even for multiple updates
-        var updatedRepo = pr.ContainedUpdates.First().SourceRepo;
+        var update = pr.ContainedUpdates.FirstOrDefault();
+        if (update == null)
+        {
+            return [];
+        }
+
+        var updatedRepo = update.SourceRepo;
 
         foreach (var repo in headBranchDic.Keys.Where(r => r != updatedRepo))
         {
-            if (headBranchDic[repo].CommitSha != targetBranchDic[repo].CommitSha
-                || headBranchDic[repo].BarId != targetBranchDic[repo].BarId)
+            if (!targetBranchDic.TryGetValue(repo, out var targetRepo))
+            {
+                validationErrors.Add($"Repo {repo} was added in the head branch but does not exist in the target branch. Only changes to the updated repository ({updatedRepo}) are allowed in a forward flow PR.");
+                continue;
+            }
+
+            if (headBranchDic[repo].CommitSha != targetRepo.CommitSha
+                || headBranchDic[repo].BarId != targetRepo.BarId)
             {
                 validationErrors.Add($"Repo {repo} source-manifest.json metadata has changed. Only changes to the updated repository ({updatedRepo}) are allowed in a forward flow PR.");
             }
+        }
+
+        foreach (var repo in targetBranchDic.Keys.Where(r => r != updatedRepo && !headBranchDic.ContainsKey(r)))
+        {
+            validationErrors.Add($"Repo {repo} was deleted from the head branch but exists in the target branch. Only changes to the updated repository ({updatedRepo}) are allowed in a forward flow PR.");
         }
 
         return validationErrors;
