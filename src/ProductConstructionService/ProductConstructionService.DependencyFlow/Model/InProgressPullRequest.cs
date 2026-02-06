@@ -15,6 +15,8 @@ public class InProgressPullRequest : DependencyFlowWorkItem
     /// </summary>
     public required string Url { get; set; }
 
+    public required string TargetBranch { get; set; }
+
     /// <summary>
     /// Name of the branch from which changes are proposed.
     /// </summary>

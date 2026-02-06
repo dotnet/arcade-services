@@ -143,6 +143,7 @@ public class PullRequestCommentBuilderTests
         {
             UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
             Url = url,
+            TargetBranch = "pr.target.branch",
             HeadBranch = "pr.head.branch",
             HeadBranchSha = "pr.head.sha",
             SourceSha = "update.source.sha",
@@ -168,6 +169,7 @@ public class PullRequestCommentBuilderTests
         {
             UpdaterId = new BatchedPullRequestUpdaterId(FakeRepoName, "main").Id,
             Url = url,
+            TargetBranch = "pr.target.branch",
             HeadBranch = "pr.head.branch",
             HeadBranchSha = "pr.head.sha",
             SourceSha = "update.source.sha",

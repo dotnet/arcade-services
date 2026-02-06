@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
@@ -14,28 +15,36 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
 {
     public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote remote)
     {
-        SourceManifest sourceManifest;
+        SourceManifest headBranchSourceManifest;
         try
         {
-            sourceManifest = await remote.GetSourceManifestAsync(pr.TargetRepoUrl, pr.HeadBranch);
+            headBranchSourceManifest = await remote.GetSourceManifestAsync(pr.TargetRepoUrl, pr.HeadBranch);
         }
         catch (Exception)
         {
             return FailTransiently(
-                "Error while retrieving source manifest",
+                "Error while retrieving head branch source manifest",
                 $"An issue occurred while retrieving the source manifest. This could be due to a misconfiguration of the `{VmrInfo.DefaultRelativeSourceManifestPath}` file, or because of a server error."
                 + SeekHelpMsg);
         }
 
-        if (!TryCreateBarIdDictionaryFromSourceManifest(sourceManifest, out Dictionary<string, int?> repoNamesToBarIds) ||
-            !TryCreateCommitShaDictionaryFromSourceManifest(sourceManifest, out Dictionary<string, string> repoNamesToCommitSha))
+        if (!TryCreateBarIdDictionaryFromSourceManifest(headBranchSourceManifest, out Dictionary<string, int?> repoNamesToBarIds) ||
+            !TryCreateCommitShaDictionaryFromSourceManifest(headBranchSourceManifest, out Dictionary<string, string> repoNamesToCommitSha))
         {
             return FailDecisively(
                 "The source manifest file is malformed",
                 $"Duplicate repository URIs were found in {VmrInfo.DefaultRelativeSourceManifestPath}." + SeekHelpMsg);
         }
 
-        List<string> configurationErrors = CalculateConfigurationErrors(pr, repoNamesToBarIds, repoNamesToCommitSha);
+        List<string> configurationErrors = [
+            .. CalculateConfigurationErrors(pr, repoNamesToBarIds, repoNamesToCommitSha),
+            .. string.IsNullOrEmpty(pr.TargetBranch)
+                ? []
+                : ValidateChangesOnlyInUpdatedRepoRecord(
+                    headBranchSourceManifest,
+                    await remote.GetSourceManifestAsync(pr.TargetRepoUrl, pr.TargetBranch),
+                    pr)
+        ];
 
         if (configurationErrors.Count != 0)
         {
@@ -47,6 +56,36 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
         }
 
         return SucceedDecisively("Forward flow checks succeeded.");
+    }
+
+    private List<string> ValidateChangesOnlyInUpdatedRepoRecord(
+        SourceManifest headBranchSourceManifest,
+        SourceManifest targetBranchSourceManifest,
+        PullRequestUpdateSummary pr)
+    {
+        var headBranchDic = headBranchSourceManifest.Repositories.ToDictionary(r => r.RemoteUri);
+        var targetBranchDic = targetBranchSourceManifest.Repositories.ToDictionary(r => r.RemoteUri);
+
+        List<string> validationErrors = [];
+
+        if (headBranchDic.Keys.Count != targetBranchDic.Keys.Count)
+        {
+            validationErrors.Add($"The number of repositories in the head branch ({headBranchDic.Keys.Count}) does not match the target branch ({targetBranchDic.Keys.Count}).");
+        }
+
+        // codeflow subscriptions can't be batched so there will only be one source repo even for multiple updates
+        var updatedRepo = pr.ContainedUpdates.First().SourceRepo;
+
+        foreach (var repo in headBranchDic.Keys.Where(r => r != updatedRepo))
+        {
+            if (headBranchDic[repo].CommitSha != targetBranchDic[repo].CommitSha
+                || headBranchDic[repo].BarId != targetBranchDic[repo].BarId)
+            {
+                validationErrors.Add($"Repo {repo} metadata has changed. Only changes to the updated repository ({updatedRepo}) are allowed in a forward flow PR.");
+            }
+        }
+
+        return validationErrors;
     }
 
     private static List<string> CalculateConfigurationErrors(
