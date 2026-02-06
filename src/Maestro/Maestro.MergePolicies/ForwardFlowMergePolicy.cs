@@ -27,19 +27,6 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
                 $"An issue occurred while retrieving the source manifest. This could be due to a misconfiguration of the `{VmrInfo.DefaultRelativeSourceManifestPath}` file, or because of a server error."
                 + SeekHelpMsg);
         }
-        try
-        {
-            targetBranchSourceManifest = string.IsNullOrEmpty(pr.TargetBranch)
-                ? null
-                : await remote.GetSourceManifestAsync(pr.TargetRepoUrl, pr.TargetBranch);
-        }
-        catch (Exception)
-        {
-            return FailTransiently(
-                "Error while retrieving target branch source manifest",
-                $"An issue occurred while retrieving the target branch source manifest. This could be due to a misconfiguration of the `{VmrInfo.DefaultRelativeSourceManifestPath}` file, or because of a server error."
-                + SeekHelpMsg);
-        }
 
         if (!TryCreateBarIdDictionaryFromSourceManifest(headBranchSourceManifest, out Dictionary<string, int?> repoNamesToBarIds) ||
             !TryCreateCommitShaDictionaryFromSourceManifest(headBranchSourceManifest, out Dictionary<string, string> repoNamesToCommitSha))
@@ -49,15 +36,27 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
                 $"Duplicate repository URIs were found in {VmrInfo.DefaultRelativeSourceManifestPath}." + SeekHelpMsg);
         }
 
-        List<string> configurationErrors = [
-            .. CalculateConfigurationErrors(pr, repoNamesToBarIds, repoNamesToCommitSha),
-            .. string.IsNullOrEmpty(pr.TargetBranch)
-                ? []
-                : ValidateChangesOnlyInUpdatedRepoRecord(
-                    headBranchSourceManifest,
-                    targetBranchSourceManifest,
-                    pr)
-        ];
+        List<string> configurationErrors = CalculateConfigurationErrors(pr, repoNamesToBarIds, repoNamesToCommitSha);
+
+        List<string> unexpectedRepoChangeErrors = [];
+        if (!string.IsNullOrEmpty(pr.TargetBranch))
+        {
+            try
+            {
+                targetBranchSourceManifest = await remote.GetSourceManifestAsync(pr.TargetRepoUrl, pr.TargetBranch);
+            }
+            catch (Exception)
+            {
+                return FailTransiently(
+                    "Error while retrieving target branch source manifest",
+                    $"An issue occurred while retrieving the target branch source manifest. This could be due to a misconfiguration of the `{VmrInfo.DefaultRelativeSourceManifestPath}` file, or because of a server error."
+                    + SeekHelpMsg);
+            }
+
+            unexpectedRepoChangeErrors = GetUnexpectedRepoChangeErrors(headBranchSourceManifest, targetBranchSourceManifest, pr);
+        }
+
+        configurationErrors.AddRange(unexpectedRepoChangeErrors);
 
         if (configurationErrors.Count != 0)
         {
@@ -71,7 +70,7 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
         return SucceedDecisively("Forward flow checks succeeded.");
     }
 
-    private List<string> ValidateChangesOnlyInUpdatedRepoRecord(
+    private static List<string> GetUnexpectedRepoChangeErrors(
         SourceManifest headBranchSourceManifest,
         SourceManifest targetBranchSourceManifest,
         PullRequestUpdateSummary pr)
