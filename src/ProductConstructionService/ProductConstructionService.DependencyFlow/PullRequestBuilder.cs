@@ -92,20 +92,17 @@ internal class PullRequestBuilder : IPullRequestBuilder
     private readonly BuildAssetRegistryContext _context;
     private readonly IRemoteFactory _remoteFactory;
     private readonly IBasicBarClient _barClient;
-    private readonly IGitRepoFactory _gitRepoFactory;
     private readonly ILogger<PullRequestBuilder> _logger;
 
     public PullRequestBuilder(
         BuildAssetRegistryContext context,
         IRemoteFactory remoteFactory,
         IBasicBarClient barClient,
-        IGitRepoFactory gitRepoFactory,
         ILogger<PullRequestBuilder> logger)
     {
         _context = context;
         _remoteFactory = remoteFactory;
         _barClient = barClient;
-        _gitRepoFactory = gitRepoFactory;
         _logger = logger;
     }
 

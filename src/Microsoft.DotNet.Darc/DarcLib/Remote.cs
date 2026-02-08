@@ -27,7 +27,6 @@ public sealed class Remote : IRemote
     private readonly IRemoteFactory _remoteFactory;
     private readonly IAssetLocationResolver _locationResolver;
     private readonly IRedisCacheClient _cache;
-    private readonly IGitRepoFactory _gitRepoFactory;
     private readonly ILogger _logger;
 
     //[DependencyUpdate]: <> (Begin)
@@ -45,7 +44,6 @@ public sealed class Remote : IRemote
         IRemoteFactory remoteFactory,
         IAssetLocationResolver locationResolver,
         IRedisCacheClient cacheClient,
-        IGitRepoFactory gitRepoFactory,
         ILogger logger)
     {
         _logger = logger;
@@ -55,7 +53,6 @@ public sealed class Remote : IRemote
         _remoteFactory = remoteFactory;
         _locationResolver = locationResolver;
         _fileManager = new DependencyFileManager(remoteGitClient, _versionDetailsParser, _logger);
-        _gitRepoFactory = gitRepoFactory;
         _cache = cacheClient;
     }
 
@@ -173,7 +170,6 @@ public sealed class Remote : IRemote
         string message) =>
             await _remoteGitClient.CommitFilesWithNoCloningAsync(filesToCommit, repoUri, branch, message);
 
-
     public async Task<List<GitFile>> GetUpdatedDependencyFiles(
         string targetRepo,
         string branch,
@@ -182,6 +178,7 @@ public sealed class Remote : IRemote
     {
         List<DependencyDetail> oldDependencies = [.. await GetDependenciesAsync(targetRepo, branch, relativeBasePath: targetDirectory)];
         await _locationResolver.AddAssetLocationToDependenciesAsync(oldDependencies);
+
         var arcadePackage = itemsToUpdate.GetArcadeUpdate();
 
         bool isRecursiveUpdateTargetingRootDirectory = targetRepo == arcadePackage.RepoUri &&
@@ -243,7 +240,6 @@ public sealed class Remote : IRemote
 
         return [..updatedDependencyFiles.GetFilesToCommit(),
             ..updatedEngCommonFiles];
-
     }
 
     public async Task<List<GitFile>> GetUpdatedCommonScriptFilesAsync(
@@ -309,9 +305,6 @@ public sealed class Remote : IRemote
     {
         IRemote sourceRepoRemote = await _remoteFactory.CreateRemoteAsync(arcadePackage.RepoUri);
 
-        string sourceRepoUri = arcadePackage.RepoUri;
-        IGitRepo sourceRepo = _gitRepoFactory.CreateClient(sourceRepoUri);
-
         var sourceRelativeBasePath = isVmr
             ? VmrInfo.ArcadeRepoDir
             : null;
@@ -334,7 +327,6 @@ public sealed class Remote : IRemote
         IDependencyFileManager dependencyManager = await _remoteFactory.CreateDependencyFileManagerAsync(repoUri);
         try
         {
-            // First, assume we are on the VMR, and try to fetch it from the arcade subdirectory
             version = await dependencyManager.ReadToolsDotnetVersionAsync(repoUri, commitSha, VmrInfo.ArcadeRepoDir);
             return (true, version);
         }
