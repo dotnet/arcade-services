@@ -178,7 +178,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
             if (itemsToUpdate.Count > 0)
             {
                 await locationResolver.AddAssetLocationToDependenciesAsync(itemsToUpdate);
-                targetDirectoryUpdatedDependencies = await remote.GetUpdatesAsync(
+                targetDirectoryUpdatedDependencies = await remote.GetUpdatedDependencyFiles(
                         targetRepository,
                         newBranchName,
                         itemsToUpdate,
