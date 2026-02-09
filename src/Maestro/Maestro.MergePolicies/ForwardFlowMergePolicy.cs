@@ -55,13 +55,14 @@ internal class ForwardFlowMergePolicy(IBasicBarClient barClient, ILogger<IMergeP
         }
         var mapping = subscription.TargetDirectory;
 
-        GitDiff diff;
+        string mergeBaseSha;
         SourceManifest headBranchSourceManifest, mergeBaseSourceManifest;
         try
         {
             // Get the merge base commit between the head and target branches
-            diff = await remote.GitDiffAsync(pr.TargetRepoUrl, subscription.TargetBranch, pr.HeadBranch);
-            if (string.IsNullOrEmpty(diff.MergeBaseCommit))
+            var diff = await remote.GitDiffAsync(pr.TargetRepoUrl, subscription.TargetBranch, pr.HeadBranch);
+            mergeBaseSha = diff.MergeBaseCommit;
+            if (string.IsNullOrEmpty(mergeBaseSha))
             {
                 _logger.LogError("Merge base commit not found for PR {PrUrl}", pr.Url);
                 return FailTransiently(
