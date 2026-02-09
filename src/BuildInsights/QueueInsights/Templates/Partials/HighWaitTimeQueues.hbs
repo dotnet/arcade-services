@@ -1,0 +1,7 @@
+Here's a list of the top {{this.Count}} queues with the highest work item wait time:
+
+| Queue                              | Work Item Wait Time | Difference in Moving Avg |
+| ---------------------------------- | ------------------- | ------------------------ |
+{{#each this}}
+| {{QueueLink QueueName}} | {{WaitTime}} | {{MovingAverageDiff}}% {{#if MovingAverageStatus}} :chart_with_upwards_trend: {{else}} :chart_with_downwards_trend: {{/if}}
+{{/each}}

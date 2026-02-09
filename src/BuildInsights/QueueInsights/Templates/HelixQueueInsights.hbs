@@ -1,0 +1,47 @@
+# Pipeline Status
+
+*The list of queues is cached weekly. If your PR changes what queues your pipelines use, this information will not show the updated queues.*
+
+{{#if HasEstimatedPipelineDurations}}
+## Estimated Pipeline Durations
+
+*This model assumes that the current state of the entire CI infrastructure is normal, and that your CI pipelines will succeed.*
+
+{{>EstimatedDurations EstimatedPipelineDurations}}
+{{/if}}
+
+{{# if RepoHasQueues}}
+## Highest Work Item Wait Time Queues
+
+{{#if HighWaitTimeError}}
+{{> InternalError this}}
+{{else}}
+{{> HighWaitTimeQueues LongestQueues}}
+{{/if}}
+
+{{> GrafanaDashboard this}}
+
+## Your Queues
+
+{{#if QueueListError}}
+{{> InternalError this}}
+{{else}}
+{{> QueueList QueueView }}
+{{/if}}
+
+
+{{#if QueryFailedQueues}}
+{{> QueryFailedQueueList QueryFailedQueues }}
+{{/if}}
+
+{{else}}
+{{> NoQueues this}}
+
+{{> GrafanaDashboard this}}
+{{/if}}
+
+## Build Pools
+
+{{> BuildPool BuildInfoView}}
+
+{{SentimentTracking SentimentParameters}}

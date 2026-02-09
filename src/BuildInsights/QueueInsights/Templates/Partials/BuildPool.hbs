@@ -1,0 +1,25 @@
+{{#if HasMicrosoftPool}}
+### Microsoft Hosted
+
+This pipeline will build on the following Microsoft Hosted build pools:
+
+Click [here](https://docs.microsoft.com/en-us/azure/devops/pipelines/agents/hosted?view=azure-devops&tabs=yaml) for information about these agents.
+
+{{#each MicrosoftPools}}
+* {{this}}
+{{/each}}
+{{/if}}
+
+
+{{#if HasOneESHostedPool}}
+### 1ES Hosted
+This pipeline will build on the following 1ES Hosted build pools:
+
+Click [here](https://helix.dot.net/#1ESHostedPoolImagesWestUS-rg-Public) for information about these agents.
+
+{{#each OneESPools}}
+* {{this}}
+{{/each}}
+{{/if}}
+
+

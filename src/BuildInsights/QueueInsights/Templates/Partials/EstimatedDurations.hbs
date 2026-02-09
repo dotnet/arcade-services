@@ -1,0 +1,26 @@
+{{#if CriticalIssue}}
+
+### :red_circle: There is a critical infrastructure issue.
+
+We are unable to show the estimated completion of this pipeline, as there is an ongoing critical infrastructure issue that can affect the calculation.
+
+View *Build Analysis* to display information about the critical issue.
+
+{{else}}
+
+| Pipeline                       | Lower Bound | Estimated Time | Upper Bound |
+| ------------------------------ | ----------- | -------------- | ----------- |
+{{#each Durations}}
+{{#if this.HighVariance}}
+| {{this.Duration.PipelineName}} | :x: | :x: | :x: |
+{{else}}
+| {{this.Duration.PipelineName}} | {{this.Duration.LowerBound}} | {{this.Duration.Mean}} | {{this.Duration.UpperBound}} |
+{{/if}}
+{{/each}}
+
+
+{{#if HasHighVariancePipeline}}
+*Pipelines denoted with :x: means that this pipeline is highly variable, and we cannot predict its duration. This typically means this pipeline changes the legs it runs based on the PR's changed contents.*
+{{/if}}
+
+{{/if}}

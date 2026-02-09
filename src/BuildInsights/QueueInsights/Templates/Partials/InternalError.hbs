@@ -1,0 +1,9 @@
+### :no_entry: We're sorry, but there was an error while obtaining this data.
+
+This does not mean there is anything wrong with your PR or CI pipeline. This is typically caused by an issue with Azure or our internal tooling.
+
+{{#if PullRequest}}
+Please file an issue in **dotnet/arcade** by clicking [here](https://github.com/dotnet/arcade/issues/new?title=Helix%20Queue%20Insights%20failed%20to%20query%20data&body=Queue%20Insights%20failed%20to%20produce%20data%20for%20%5Bthis%20PR%5D(https://github.com/{{Repo}}/pull/{{PullRequest}}))
+{{else}}
+Please file an issue in **dotnet/arcade** by clicking [here]((https://github.com/dotnet/arcade/issues/new?title=Helix%20Queue%20Insights%20failed%20to%20query%20data) and please provide a link to your PR.
+{{/if}}
