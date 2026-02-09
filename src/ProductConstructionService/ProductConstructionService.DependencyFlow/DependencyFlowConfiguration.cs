@@ -20,7 +20,7 @@ public static class DependencyFlowConfiguration
     public static void AddDependencyFlowProcessors(this IServiceCollection services)
     {
         services.TryAddTransient<IPullRequestUpdaterFactory, PullRequestUpdaterFactory>();
-        services.TryAddSingleton<IMergePolicyEvaluator, MergePolicyEvaluator>();
+        services.TryAddTransient<IMergePolicyEvaluator, MergePolicyEvaluator>();
         services.TryAddTransient<IPullRequestBuilder, PullRequestBuilder>();
         services.TryAddTransient<IPullRequestCommenter, PullRequestCommenter>();
         services.TryAddScoped<ISqlBarClient, SqlBarClient>();

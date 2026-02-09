@@ -144,7 +144,6 @@ public class VersionDetailsPropsMergePolicyTests
             requiredUpdates: [],
             containedUpdates: [],
             headBranch: "test-branch",
-            targetBranch: "main",
             repoUrl: "https://github.com/test/repo",
             codeFlowDirection: CodeFlowDirection.BackFlow);
     }

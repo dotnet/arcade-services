@@ -684,7 +684,6 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         => new()
         {
             UpdaterId = GetPullRequestUpdaterId().ToString(),
-            TargetBranch = Subscription.TargetBranch,
             HeadBranch = InProgressPrHeadBranch,
             HeadBranchSha = headBranchSha ?? InProgressPrHeadBranchSha,
             SourceSha = forBuild.Commit,

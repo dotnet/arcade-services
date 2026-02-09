@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Maestro.MergePolicies;
 
-internal class BackFlowMergePolicy(ILogger<IMergePolicy> logger) : CodeFlowMergePolicy(logger)
+internal class BackFlowMergePolicy(IBasicBarClient barClient, ILogger<IMergePolicy> logger) : CodeFlowMergePolicy(barClient, logger)
 {
     public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote remote)
     {

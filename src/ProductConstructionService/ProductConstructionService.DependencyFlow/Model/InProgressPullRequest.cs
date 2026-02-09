@@ -14,11 +14,6 @@ public class InProgressPullRequest : DependencyFlowWorkItem
     /// Note: not the regular URL you'd visit in your browser, but the API URL.
     /// </summary>
     public required string Url { get; set; }
-    
-    /// <summary>
-    /// Name of the branch the pull request is targeting.
-    /// </summary>
-    public string TargetBranch { get; set; }
 
     /// <summary>
     /// Name of the branch from which changes are proposed.
