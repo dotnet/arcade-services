@@ -251,13 +251,16 @@ public sealed class Remote : IRemote
     {
         var incomingEngCommonFiles = await GetCommonScriptFilesByArcadePackage(newArcadePackage, sourceRepoIsVmr);
 
-        incomingEngCommonFiles = [.. incomingEngCommonFiles
+        if (targetDirectory.ToString() != ".")
+        {
+            incomingEngCommonFiles = [.. incomingEngCommonFiles
             .Select(f => new GitFile(
                 targetDirectory / f.FilePath,
                 f.Content,
                 f.ContentEncoding,
                 f.Mode,
                 f.Operation))];
+        }
 
         var latestCommit = await _remoteGitClient.GetLastCommitShaAsync(targetRepo, branch);
 
@@ -290,13 +293,13 @@ public sealed class Remote : IRemote
             .ToHashSet(StringComparer.InvariantCultureIgnoreCase);
 
         List<GitFile> removedFiles = [.. existingFiles
-        .Where(f => !filesToKeep.Contains(f.FilePath))
-        .Select(f => new GitFile(
-            f.FilePath,
-            f.Content,
-            f.ContentEncoding,
-            f.Mode,
-            GitFileOperation.Delete))];
+            .Where(f => !filesToKeep.Contains(f.FilePath))
+            .Select(f => new GitFile(
+                f.FilePath,
+                f.Content,
+                f.ContentEncoding,
+                f.Mode,
+                GitFileOperation.Delete))];
 
         return removedFiles;
     }
