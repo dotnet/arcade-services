@@ -13,7 +13,7 @@ internal class ResolveConflictCommandLineOptions : CodeFlowCommandLineOptions<Re
     [Option('s', "subscription", Required = true, HelpText = "Subscription for which to resolve the pending conflict")]
     public new string SubscriptionId { get; set; }
 
-    [Option("source-repo", Required = false, HelpText = "Optional path to the local source repo. If not provided, source repo will be cloned into tmp")]
+    [Option("source-repo", Required = false, HelpText = "Optional path to a local clone of the repo the change is flowing from. If not provided, source repo will be cloned into $DARC_TMP_DIR or $TEMP/$TMPDIR")]
     public string SourceRepoPath { get; set; } = null;
 
     public override IEnumerable<string> Repositories => [SubscriptionId]; // We don't really need this field
