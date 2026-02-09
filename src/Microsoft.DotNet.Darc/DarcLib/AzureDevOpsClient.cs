@@ -684,11 +684,15 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// <param name="baseCommit">Base version</param>
     /// <param name="targetCommit">Target version</param>
     /// <returns>Diff information</returns>
-    public async Task<GitDiff> GitDiffAsync(string repoUri, string baseCommit, string targetCommit)
+    public async Task<GitDiff> GitDiffAsync(string repoUri, string baseVersion, string targetVersion)
     {
         _logger.LogInformation(
-            $"Diffing '{baseCommit}'->'{targetCommit}' in {repoUri}");
+            $"Diffing '{baseVersion}'->'{targetVersion}' in {repoUri}");
         (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
+
+        // Determine version types based on whether the values look like commit SHAs
+        string baseVersionType = IsCommitSha(baseVersion) ? "commit" : "branch";
+        string targetVersionType = IsCommitSha(targetVersion) ? "commit" : "branch";
 
         try
         {
@@ -696,16 +700,17 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                 HttpMethod.Get,
                 accountName,
                 projectName,
-                $"_apis/git/repositories/{repoName}/diffs/commits?baseVersion={baseCommit}&baseVersionType=commit" +
-                $"&targetVersion={targetCommit}&targetVersionType=commit",
+                $"_apis/git/repositories/{repoName}/diffs/commits?baseVersion={baseVersion}&baseVersionType={baseVersionType}" +
+                $"&targetVersion={targetVersion}&targetVersionType={targetVersionType}",
                 _logger);
 
             return new GitDiff()
             {
-                BaseVersion = baseCommit,
-                TargetVersion = targetCommit,
+                BaseVersion = baseVersion,
+                TargetVersion = targetVersion,
                 Ahead = content["aheadCount"].Value<int>(),
                 Behind = content["behindCount"].Value<int>(),
+                MergeBaseCommit = content["commonCommit"]?.Value<string>(),
                 Valid = true
             };
         }
@@ -713,6 +718,12 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         {
             return GitDiff.UnknownDiff();
         }
+    }
+
+    private static bool IsCommitSha(string value)
+    {
+        // A commit SHA is a 40-character hexadecimal string
+        return value.Length == 40 && value.All(c => char.IsAsciiHexDigit(c));
     }
 
     /// <summary>

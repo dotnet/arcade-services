@@ -9,10 +9,11 @@ using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Maestro.MergePolicies;
 
-internal class BackFlowMergePolicy : CodeFlowMergePolicy
+internal class BackFlowMergePolicy(IBasicBarClient barClient, ILogger<IMergePolicy> logger) : CodeFlowMergePolicy(barClient, logger)
 {
     public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote remote)
     {

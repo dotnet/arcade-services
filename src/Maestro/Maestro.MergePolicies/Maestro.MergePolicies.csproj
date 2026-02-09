@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Maestro.MergePolicies.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="LibGit2Sharp" />
     <PackageReference Include="Microsoft.Build" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
