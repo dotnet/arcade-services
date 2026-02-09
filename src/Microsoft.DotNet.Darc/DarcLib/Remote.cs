@@ -251,7 +251,7 @@ public sealed class Remote : IRemote
     {
         var incomingEngCommonFiles = await GetCommonScriptFilesByArcadePackage(newArcadePackage, sourceRepoIsVmr);
 
-        if (targetDirectory.ToString() != ".")
+        if (targetDirectory != UnixPath.CurrentDir && targetDirectory != UnixPath.Empty)
         {
             incomingEngCommonFiles = [.. incomingEngCommonFiles
             .Select(f => new GitFile(
