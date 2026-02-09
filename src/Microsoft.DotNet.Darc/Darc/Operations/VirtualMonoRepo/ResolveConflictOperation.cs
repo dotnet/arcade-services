@@ -233,11 +233,22 @@ internal class ResolveConflictOperation(
                 build.GetRepository(),
                 DarcLib.Commit.GetShortSha(build.Commit));
 
-            var providedVmrPath = string.IsNullOrEmpty(_options.VmrPath)
-                ? string.IsNullOrEmpty(_options.SourceRepoPath)
-                    ? null
-                    : new NativePath(_options.SourceRepoPath)
-                : new NativePath(_options.VmrPath);
+            bool isVmrPathProvided = !_options.VmrPath.Equals(Environment.CurrentDirectory, StringComparison.OrdinalIgnoreCase);
+            bool isSourceRepoPathProvided = !string.IsNullOrEmpty(_options.SourceRepoPath);
+            if (isVmrPathProvided && isSourceRepoPathProvided)
+            {
+                throw new ArgumentException("Both source repo path and VMR path cannot be provided at the same time for a backflow.");
+            }
+
+            NativePath? providedVmrPath = null;
+            if (isSourceRepoPathProvided)
+            {
+                providedVmrPath = new NativePath(_options.SourceRepoPath);
+            }
+            else if (isVmrPathProvided)
+            {
+                providedVmrPath = new NativePath(_options.VmrPath);
+            }
 
             if (providedVmrPath == null)
             {
