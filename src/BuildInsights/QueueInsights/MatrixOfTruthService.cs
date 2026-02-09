@@ -4,9 +4,13 @@
 using Microsoft.Extensions.Options;
 using Microsoft.Internal.Helix.Machines.MatrixOfTruthOutputDeserialization.V1.Models;
 using QueueInsights.Models;
-using QueueInsights.Services;
 
-namespace QueueInsights.Providers;
+namespace QueueInsights;
+
+public interface IMatrixOfTruthService
+{
+    public Task<IList<PipelineOutputModel>> GetPipelineOutputsAsync();
+}
 
 public class MatrixOfTruthService : IMatrixOfTruthService
 {
