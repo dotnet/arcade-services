@@ -26,7 +26,10 @@ public static class SubscriptionTriggererConfiguration
         builder.RegisterLogging(telemetryChannel);
 
         builder.AddBuildAssetRegistry();
-        builder.AddWorkItemProducerFactory(credential);
+        builder.AddWorkItemProducerFactory(
+            credential,
+            builder.Configuration.GetRequiredValue("DefaultWorkItemQueueName"),
+            builder.Configuration.GetRequiredValue("CodeflowWorkItemQueueName"));
 
         builder.Services.AddTransient<DarcRemoteMemoryCache>();
         builder.Services.AddTransient<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));

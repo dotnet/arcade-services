@@ -3,12 +3,19 @@
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-var cache = builder.AddRedis("cache");
+var redisCache = builder
+    .AddRedis("redis", port: 55689);
 
-builder.AddProject<Projects.BuildInsights_Api>("api")
+var queues = builder.AddAzureStorage("storage")
+    .RunAsEmulator()
+    .AddQueues("queues");
+
+builder.AddProject<Projects.BuildInsights_Api>("buildInsightsApi")
     .WithExternalHttpEndpoints()
     .WithHttpHealthCheck("/health")
-    .WithReference(cache)
-    .WaitFor(cache);
+    .WithReference(queues)
+    .WithReference(redisCache)
+    .WaitFor(redisCache)
+    .WaitFor(queues);
 
 builder.Build().Run();

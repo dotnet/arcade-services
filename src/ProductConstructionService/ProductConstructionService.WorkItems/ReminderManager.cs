@@ -3,8 +3,7 @@
 
 using Azure;
 using ProductConstructionService.Common.Cache;
-
-namespace ProductConstructionService.WorkItems;
+using ProductConstructionService.WorkItems;
 
 public interface IReminderManager<T> where T : WorkItem
 {

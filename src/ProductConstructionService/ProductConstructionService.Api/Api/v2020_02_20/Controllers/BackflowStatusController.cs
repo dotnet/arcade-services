@@ -67,7 +67,7 @@ public class BackflowStatusController : ControllerBase
         };
 
         await _workItemProducerFactory
-            .CreateProducer<BackflowStatusCalculationWorkItem>(IsCodeFlowSubscription: true)
+            .CreateProducer<BackflowStatusCalculationWorkItem>(IsSpecialQueue: true)
             .ProduceWorkItemAsync(workItem);
 
         _logger.LogInformation(

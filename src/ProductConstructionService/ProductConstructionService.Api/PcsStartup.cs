@@ -44,6 +44,8 @@ namespace ProductConstructionService.Api;
 internal static class PcsStartup
 {
     private const string GitHubWebHooksPath = "/api/webhooks/incoming/github";
+    private const string DefaultWorkItemType = "Default";
+    private const string CodeFlowWorkItemType = "CodeFlow";
 
     private static class ConfigurationKeys
     {
@@ -62,6 +64,10 @@ internal static class PcsStartup
         public const string EntraAuthenticationKey = "EntraAuthentication";
         public const string KeyVaultName = "KeyVaultName";
         public const string ManagedIdentityId = "ManagedIdentityClientId";
+
+        public const string CodeFlowWorkItemQueueName = "CodeFlowWorkItemQueueName";
+        public const string DefaultWorkItemQueueName = "DefaultWorkItemQueueName";
+        public const string DefaultWorkItemConsumerCount = "DefaultWorkItemConsumerCount";
     }
 
     static PcsStartup()
@@ -122,8 +128,19 @@ internal static class PcsStartup
         builder.AddBuildAssetRegistry();
         builder.Services.AddConfigurationIngestion();
         builder.AddMetricRecorder();
-        builder.AddWorkItemQueues(azureCredential, waitForInitialization: true);
+
+        builder.AddWorkItemQueues(azureCredential, waitForInitialization: true,
+            new Dictionary<string, (int Count, string WorkItemType)>
+            {
+                { builder.Configuration.GetRequiredValue(ConfigurationKeys.DefaultWorkItemQueueName), (int.Parse(builder.Configuration.GetRequiredValue(ConfigurationKeys.DefaultWorkItemConsumerCount)), DefaultWorkItemType) },
+                { builder.Configuration.GetRequiredValue(ConfigurationKeys.CodeFlowWorkItemQueueName), (1, CodeFlowWorkItemType) }
+            });
+        builder.AddWorkItemProducerFactory(
+            azureCredential,
+            builder.Configuration.GetRequiredValue(ConfigurationKeys.DefaultWorkItemQueueName),
+            builder.Configuration.GetRequiredValue(ConfigurationKeys.CodeFlowWorkItemQueueName));
         builder.AddDependencyFlowProcessors();
+
         builder.AddCodeflow();
         builder.AddGitHubClientFactory(
             builder.Configuration[ConfigurationKeys.GitHubClientId],

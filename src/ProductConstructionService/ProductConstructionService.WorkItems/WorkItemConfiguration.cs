@@ -15,10 +15,6 @@ namespace ProductConstructionService.WorkItems;
 
 public static class WorkItemConfiguration
 {
-    public const string WorkItemQueueNameConfigurationKey = "WorkItemQueueName";
-    public const string DefaultWorkItemQueueNameConfigurationKey = "DefaultWorkItemQueueName";
-    public const string CodeFlowWorkItemQueueNameConfigurationKey = "CodeFlowWorkItemQueueName";
-    public const string DefaultWorkItemConsumerCountConfigurationKey = "DefaultWorkItemConsumerCount";
     public const string ReplicaNameKey = "CONTAINER_APP_REPLICA_NAME";
     public const string SubscriptionIdKey = "SubscriptionId";
     public const string ResourceGroupNameKey = "ResourceGroupName";
@@ -26,8 +22,6 @@ public static class WorkItemConfiguration
     public const int PollingRateSeconds = 10;
     public const string LocalReplicaName = "localReplica";
 
-    public const string DefaultWorkItemType = "Default";
-    public const string CodeFlowWorkItemType = "CodeFlow";
 
     internal static readonly JsonSerializerOptions JsonSerializerOptions = new()
     {
@@ -35,10 +29,12 @@ public static class WorkItemConfiguration
         WriteIndented = false,
     };
 
-    public static void AddWorkItemQueues(this IHostApplicationBuilder builder, TokenCredential credential, bool waitForInitialization)
+    public static void AddWorkItemQueues(
+        this IHostApplicationBuilder builder,
+        TokenCredential credential,
+        bool waitForInitialization,
+        Dictionary<string, (int Count, string WorkItemType)> workItemConsumers)
     {
-        builder.AddWorkItemProducerFactory(credential);
-
         builder.Services.AddSingleton(sp => ActivatorUtilities.CreateInstance<WorkItemProcessorStateCache>(
             sp,
             builder.Configuration[ReplicaNameKey] ?? LocalReplicaName));
@@ -51,15 +47,14 @@ public static class WorkItemConfiguration
 
         builder.Services.Configure<WorkItemConsumerOptions>(
             builder.Configuration.GetSection(WorkItemConsumerOptions.ConfigurationKey));
-        builder.RegisterWorkItemConsumers(
-            int.Parse(builder.Configuration.GetRequiredValue(DefaultWorkItemConsumerCountConfigurationKey)),
-            DefaultWorkItemType,
-            builder.Configuration.GetRequiredValue(DefaultWorkItemQueueNameConfigurationKey));
-        // We should only ever have one consumer listening to the CodeFlow Work Item Queue
-        builder.RegisterWorkItemConsumers(
-            1,
-            CodeFlowWorkItemType,
-            builder.Configuration.GetRequiredValue(CodeFlowWorkItemQueueNameConfigurationKey));
+
+        foreach (var consumer in workItemConsumers)
+        {
+            builder.RegisterWorkItemConsumers(
+                count: consumer.Value.Count,
+                type: consumer.Value.WorkItemType,
+                queueName: consumer.Key);
+        }
 
         builder.Services.AddTransient<IReminderManagerFactory, ReminderManagerFactory>();
         if (builder.Environment.IsDevelopment())
@@ -76,17 +71,6 @@ public static class WorkItemConfiguration
             );
             builder.Services.AddTransient<IReplicaWorkItemProcessorStateCacheFactory, ReplicaWorkItemProcessorStateCache>();
         }
-    }
-
-    public static void AddWorkItemProducerFactory(this IHostApplicationBuilder builder, TokenCredential credential)
-    {
-        builder.AddAzureQueueServiceClient("queues", settings => settings.Credential = credential);
-
-        var defaultWorkItemQueueName = builder.Configuration.GetRequiredValue(DefaultWorkItemQueueNameConfigurationKey);
-        var codeFlowWorkItemQueueName = builder.Configuration.GetRequiredValue(CodeFlowWorkItemQueueNameConfigurationKey);
-
-        builder.Services.AddTransient<IWorkItemProducerFactory>(sp =>
-            ActivatorUtilities.CreateInstance<WorkItemProducerFactory>(sp, defaultWorkItemQueueName, codeFlowWorkItemQueueName));
     }
 
     // When running locally, create the workitem queue, if it doesn't already exist
@@ -125,6 +109,17 @@ public static class WorkItemConfiguration
         {
             registrations.RegisterProcessor<TWorkItem, TProcessor>();
         });
+    }
+
+    public static void AddWorkItemProducerFactory(
+        this IHostApplicationBuilder builder,
+        TokenCredential credential,
+        string defaulQueueName,
+        string specialQueueName)
+    {
+        builder.AddAzureQueueServiceClient("queues", settings => settings.Credential = credential);
+        builder.Services.AddTransient<IWorkItemProducerFactory>(sp =>
+            ActivatorUtilities.CreateInstance<WorkItemProducerFactory>(sp, defaulQueueName, specialQueueName));
     }
 
     private static void RegisterWorkItemConsumers(

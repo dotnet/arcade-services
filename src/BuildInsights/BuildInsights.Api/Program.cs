@@ -26,7 +26,7 @@ if (isDevelopment)
 {
     app.UseDeveloperExceptionPage();
 
-    var workQueueName = app.Configuration.GetRequiredValue(WorkItemConfiguration.DefaultWorkItemQueueNameConfigurationKey);
+    var workQueueName = app.Configuration.GetRequiredValue("WorkItemQueueName");
     await app.Services.UseLocalWorkItemQueues([workQueueName]);
 
     if (useSwagger)

@@ -4,20 +4,28 @@
 using System.Net;
 using System.Text;
 using Azure.Core;
+using BuildInsights.Api.Configuration;
+using BuildInsights.ServiceDefaults;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
+using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Internal.Logging;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using ProductConstructionService.Common;
 using ProductConstructionService.Common.Telemetry;
+using ProductConstructionService.WorkItems;
 
 internal static class BuildInsightsStartup
 {
+    private const string DefaultWorkItemType = "Default";
+
     private static class ConfigurationKeys
     {
         // All secrets loaded from KeyVault will have this prefix
@@ -34,6 +42,10 @@ internal static class BuildInsightsStartup
         public const string EntraAuthenticationKey = "EntraAuthentication";
         public const string KeyVaultName = "KeyVaultName";
         public const string ManagedIdentityId = "ManagedIdentityClientId";
+
+        public const string WorkItemQueueName = "WorkItemQueueName";
+        public const string SpecialWorkItemQueueName = "SpecialWorkItemQueueName";
+        public const string WorkItemConsumerCount = "WorkItemConsumerCount";
     }
 
     /// <summary>
@@ -43,7 +55,7 @@ internal static class BuildInsightsStartup
     /// <param name="addKeyVault">Use KeyVault for secrets?</param>
     /// <param name="authRedis">Use authenticated connection for Redis?</param>
     /// <param name="addSwagger">Add Swagger?</param>
-    internal static async Task ConfigurePcs(
+    internal static async Task ConfigureBuildInsights(
         this WebApplicationBuilder builder,
         bool addKeyVault,
         bool authRedis,
@@ -76,50 +88,26 @@ internal static class BuildInsightsStartup
             return new RemoteTokenProvider(azdoTokenProvider, new Microsoft.DotNet.DarcLib.GitHubTokenProvider(gitHubTokenProvider));
         });
 
-        /*
-
         await builder.AddRedisCache(authRedis);
-        builder.AddBuildAssetRegistry();
-        builder.Services.AddConfigurationIngestion();
-        builder.AddMetricRecorder();
-        builder.AddWorkItemQueues(azureCredential, waitForInitialization: true);
-        builder.AddDependencyFlowProcessors();
-        builder.AddCodeflow();
+        var workItemQueueName = builder.Configuration.GetRequiredValue(ConfigurationKeys.WorkItemQueueName);
+        var specialWorkItemQueueName = builder.Configuration.GetRequiredValue(ConfigurationKeys.SpecialWorkItemQueueName);
+        builder.AddWorkItemQueues(azureCredential, waitForInitialization: false, new()
+        {
+            { workItemQueueName, (int.Parse(builder.Configuration.GetRequiredValue(ConfigurationKeys.WorkItemConsumerCount)), DefaultWorkItemType) },
+        });
+        builder.AddWorkItemProducerFactory(azureCredential, workItemQueueName, specialWorkItemQueueName);
+
         builder.AddGitHubClientFactory(
             builder.Configuration[ConfigurationKeys.GitHubClientId],
             builder.Configuration[ConfigurationKeys.GitHubClientSecret]);
         builder.Services.AddGitHubTokenProvider();
-        builder.Services.AddScoped<IRemoteFactory, RemoteFactory>();
-        builder.Services.AddTransient<IGitHubInstallationIdResolver, GitHubInstallationIdResolver>();
         builder.Services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();
         builder.Services.AddSingleton<ExponentialRetry>();
         builder.Services.Configure<ExponentialRetryOptions>(_ => { });
         builder.Services.AddMemoryCache();
         builder.Services.AddSingleton(builder.Configuration);
 
-        // We do not use AddMemoryCache here. We use our own cache because we wish to
-        // use a sized cache and some components, such as EFCore, do not implement their caching
-        // in such a way that will work with sizing.
-        builder.Services.AddSingleton<DarcRemoteMemoryCache>();
-        builder.Services.EnableLazy();
-        builder.Services.AddMergePolicies();
-        builder.Services.Configure<SlaOptions>(builder.Configuration.GetSection(ConfigurationKeys.DependencyFlowSLAs));
-
-        builder.InitializeVmrFromRemote();
         builder.AddServiceDefaults();
-
-        // Configure API
-        builder.Services.Configure<CookiePolicyOptions>(
-            options =>
-            {
-                options.HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always;
-                options.Secure = builder.Environment.IsDevelopment()
-                    ? CookieSecurePolicy.SameAsRequest
-                    : CookieSecurePolicy.Always;
-            });
-        builder.Services.ConfigureAuthServices(builder.Configuration.GetSection(ConfigurationKeys.EntraAuthenticationKey));
-        builder.ConfigureApiRedirection();
-        builder.Services.AddApiVersioning(options => options.VersionByQuery("api-version"));
         builder.Services.AddOperationTracking(_ => { });
         builder.Services.AddHttpLogging(
             options =>
@@ -132,22 +120,44 @@ internal static class BuildInsightsStartup
             });
 
         builder.Services
-            .AddControllers()
-            .AddNewtonsoftJson(
-                options =>
-                {
-                    options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
-                    options.SerializerSettings.Converters.Add(new StringEnumConverter
-                    {
-                        NamingStrategy = new CamelCaseNamingStrategy()
-                    });
-                    options.SerializerSettings.Converters.Add(
-                        new IsoDateTimeConverter
-                        {
-                            DateTimeFormat = "yyyy-MM-ddTHH:mm:ssZ",
-                            DateTimeStyles = DateTimeStyles.AdjustToUniversal
-                        });
-                });
+            .AddControllers();
+        //.AddNewtonsoftJson(
+        //    options =>
+        //    {
+        //        options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+        //        options.SerializerSettings.Converters.Add(new StringEnumConverter
+        //        {
+        //            NamingStrategy = new CamelCaseNamingStrategy()
+        //        });
+        //        options.SerializerSettings.Converters.Add(
+        //            new IsoDateTimeConverter
+        //            {
+        //                DateTimeFormat = "yyyy-MM-ddTHH:mm:ssZ",
+        //                DateTimeStyles = DateTimeStyles.AdjustToUniversal
+        //            });
+        //    });
+
+        if (addSwagger)
+        {
+            builder.ConfigureSwagger();
+        }
+
+        if (isDevelopment)
+        {
+            builder.Services.AddCors(policy =>
+            {
+                policy.AddDefaultPolicy(p =>
+                    // These come from BarViz project's launchsettings.json
+                    p.WithOrigins("https://localhost:7287", "http://localhost:5015")
+                      .AllowAnyHeader()
+                      .AllowAnyMethod());
+            });
+        }
+
+        /*
+
+        // Configure API
+        builder.Services.ConfigureAuthServices(builder.Configuration.GetSection(ConfigurationKeys.EntraAuthenticationKey));
 
         builder.Services.AddRazorPages(
             options =>
@@ -166,23 +176,6 @@ internal static class BuildInsightsStartup
                 });
 
         builder.Services.AddTransient<WebhookEventProcessor, GitHubWebhookEventProcessor>();
-
-        if (addSwagger)
-        {
-            builder.ConfigureSwagger();
-        }
-
-        if (isDevelopment)
-        {
-            builder.Services.AddCors(policy =>
-            {
-                policy.AddDefaultPolicy(p =>
-                    // These come from BarViz project's launchsettings.json
-                    p.WithOrigins("https://localhost:7287", "http://localhost:5015")
-                      .AllowAnyHeader()
-                      .AllowAnyMethod());
-            });
-        }
         */
     }
 
@@ -202,7 +195,7 @@ internal static class BuildInsightsStartup
         app.UseEndpoints(e =>
         {
             var controllers = e.MapControllers();
-            controllers.RequireAuthorization(AuthenticationConfiguration.ApiAuthorizationPolicyName);
+            // controllers.RequireAuthorization(AuthenticationConfiguration.ApiAuthorizationPolicyName);
 
             if (isDevelopment)
             {

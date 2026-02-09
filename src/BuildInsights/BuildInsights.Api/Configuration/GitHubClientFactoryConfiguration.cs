@@ -4,7 +4,7 @@
 using System.Reflection;
 using Microsoft.DotNet.GitHub.Authentication;
 
-namespace ProductConstructionService.Api.Configuration;
+namespace BuildInsights.Api.Configuration;
 
 internal static class GitHubClientFactoryConfiguration
 {
@@ -16,7 +16,7 @@ internal static class GitHubClientFactoryConfiguration
         builder.Services.Configure<GitHubClientOptions>(o =>
         {
             o.ProductHeader = new Octokit.ProductHeaderValue(
-                "PCS",
+                "BuildInsights",
                 Assembly.GetEntryAssembly()
                     ?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                     ?.InformationalVersion);
