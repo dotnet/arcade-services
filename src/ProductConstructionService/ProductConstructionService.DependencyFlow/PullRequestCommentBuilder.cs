@@ -103,8 +103,6 @@ public class PullRequestCommentBuilder : IPullRequestCommentBuilder
                 ```bash
                 darc vmr resolve-conflict --subscription {subscription.Id}
                 ```
-                Optionally provide the `--source-repo` if you want to use an available local clone of the source repository.
-                If not provided the source repository will be cloned into TMP
 
                 This should apply the build `{update.BuildId}` with sources from [`{Microsoft.DotNet.DarcLib.Commit.GetShortSha(update.SourceSha)}`]({GitRepoUrlUtils.GetRepoAtCommitUri(update.SourceRepo, update.SourceSha)})
             4. Resolve the conflicts, commit & push the changes
