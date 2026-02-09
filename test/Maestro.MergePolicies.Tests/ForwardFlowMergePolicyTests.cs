@@ -4,6 +4,7 @@
 using AwesomeAssertions;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -23,6 +24,7 @@ public class ForwardFlowMergePolicyTests
     private const string CommitSha2 = "def456";
     private const string CommitSha3 = "ghi789";
     private const string UpdatedCommitSha = "updated123";
+    private const string MergeBaseCommit = "mergebase123";
     private const int BarId1 = 100;
     private const int BarId2 = 200;
     private const int BarId3 = 300;
@@ -54,6 +56,10 @@ public class ForwardFlowMergePolicyTests
                 targetDirectory: Mapping,
                 pullRequestFailureNotificationTags: null,
                 excludedAssets: null));
+
+        // Default GitDiffAsync setup to return merge base commit
+        _mockRemote.Setup(r => r.GitDiffAsync(RepoUrl, TargetBranch, HeadBranch))
+            .ReturnsAsync(new GitDiff { MergeBaseCommit = MergeBaseCommit });
     }
 
     private static PullRequestUpdateSummary CreatePrSummary(
@@ -96,7 +102,7 @@ public class ForwardFlowMergePolicyTests
 
         _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, HeadBranch))
             .ReturnsAsync(headManifest);
-        _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, TargetBranch))
+        _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, MergeBaseCommit))
             .ReturnsAsync(targetManifest);
 
         // Act
@@ -119,7 +125,7 @@ public class ForwardFlowMergePolicyTests
 
         _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, HeadBranch))
             .ReturnsAsync(headManifest);
-        _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, TargetBranch))
+        _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, MergeBaseCommit))
             .ReturnsAsync(headManifest);
 
         // Act
@@ -143,7 +149,7 @@ public class ForwardFlowMergePolicyTests
 
         _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, HeadBranch))
             .ReturnsAsync(headManifest);
-        _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, TargetBranch))
+        _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, MergeBaseCommit))
             .ReturnsAsync(headManifest);
 
         // Act
@@ -171,7 +177,7 @@ public class ForwardFlowMergePolicyTests
 
         _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, HeadBranch))
             .ReturnsAsync(headManifest);
-        _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, TargetBranch))
+        _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, MergeBaseCommit))
             .ReturnsAsync(targetManifest);
 
         // Act
@@ -200,7 +206,7 @@ public class ForwardFlowMergePolicyTests
 
         _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, HeadBranch))
             .ReturnsAsync(headManifest);
-        _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, TargetBranch))
+        _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, MergeBaseCommit))
             .ReturnsAsync(targetManifest);
 
         // Act
@@ -228,7 +234,7 @@ public class ForwardFlowMergePolicyTests
 
         _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, HeadBranch))
             .ReturnsAsync(headManifest);
-        _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, TargetBranch))
+        _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, MergeBaseCommit))
             .ReturnsAsync(targetManifest);
 
         // Act
@@ -254,11 +260,11 @@ public class ForwardFlowMergePolicyTests
 
         // Assert
         result.Status.Should().Be(MergePolicyEvaluationStatus.TransientFailure);
-        result.Title.Should().Contain("Error while retrieving head branch source manifest");
+        result.Title.Should().Contain("Error while fetching remote data");
     }
 
     [Test]
-    public async Task EvaluateAsync_WhenTargetManifestFetchFails_ShouldFailTransiently()
+    public async Task EvaluateAsync_WhenMergeBaseManifestFetchFails_ShouldFailTransiently()
     {
         // Arrange
         var prSummary = CreatePrSummary(UpdatedBarId, UpdatedCommitSha);
@@ -269,7 +275,7 @@ public class ForwardFlowMergePolicyTests
 
         _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, HeadBranch))
             .ReturnsAsync(headManifest);
-        _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, TargetBranch))
+        _mockRemote.Setup(r => r.GetSourceManifestAsync(RepoUrl, MergeBaseCommit))
             .ThrowsAsync(new Exception("Network error"));
 
         // Act
@@ -277,6 +283,6 @@ public class ForwardFlowMergePolicyTests
 
         // Assert
         result.Status.Should().Be(MergePolicyEvaluationStatus.TransientFailure);
-        result.Title.Should().Contain("Error while retrieving target branch source manifest");
+        result.Title.Should().Contain("Error while fetching remote data");
     }
 }

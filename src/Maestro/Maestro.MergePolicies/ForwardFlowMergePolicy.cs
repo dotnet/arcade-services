@@ -55,52 +55,30 @@ internal class ForwardFlowMergePolicy(IBasicBarClient barClient, ILogger<IMergeP
         }
         var mapping = subscription.TargetDirectory;
 
-        // Get the merge base commit between the head and target branches
         GitDiff diff;
-        try
-        {
-            diff = await remote.GitDiffAsync(pr.TargetRepoUrl, subscription.TargetBranch, pr.HeadBranch);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Error while calculating merge base for PR {PrUrl}", pr.Url);
-            return FailTransiently(
-                "Error while calculating merge base",
-                $"An issue occurred while calculating the merge base commit. This could be due to a server error."
-                + SeekHelpMsg);
-        }
-        if (string.IsNullOrEmpty(diff.MergeBaseCommit))
-        {
-            _logger.LogError("Merge base commit not found for PR {PrUrl}", pr.Url);
-            return FailTransiently(
-                "Could not determine merge base commit",
-                $"Unable to determine the merge base commit between the head branch and target branch. This could be due to the branches having no common ancestor."
-                + SeekHelpMsg);
-        }
-
         SourceManifest headBranchSourceManifest, mergeBaseSourceManifest;
         try
         {
+            // Get the merge base commit between the head and target branches
+            diff = await remote.GitDiffAsync(pr.TargetRepoUrl, subscription.TargetBranch, pr.HeadBranch);
+            if (string.IsNullOrEmpty(diff.MergeBaseCommit))
+            {
+                _logger.LogError("Merge base commit not found for PR {PrUrl}", pr.Url);
+                return FailTransiently(
+                    "Could not determine merge base commit",
+                    $"Unable to determine the merge base commit between the head branch and target branch. This could be due to the branches having no common ancestor."
+                    + SeekHelpMsg);
+            }
+
             headBranchSourceManifest = await remote.GetSourceManifestAsync(pr.TargetRepoUrl, pr.HeadBranch);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Error while retrieving head branch source manifest for PR {PrUrl}", pr.Url);
-            return FailTransiently(
-                "Error while retrieving head branch source manifest",
-                $"An issue occurred while retrieving the source manifest. This could be due to a misconfiguration of the `{VmrInfo.DefaultRelativeSourceManifestPath}` file, or because of a server error."
-                + SeekHelpMsg);
-        }
-        try
-        {
             mergeBaseSourceManifest = await remote.GetSourceManifestAsync(pr.TargetRepoUrl, diff.MergeBaseCommit);
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error while retrieving merge base source manifest for PR {PrUrl}", pr.Url);
+            _logger.LogError(e, "Error while fetching remote data for PR {PrUrl}", pr.Url);
             return FailTransiently(
-                "Error while retrieving merge base source manifest",
-                $"An issue occurred while retrieving the merge base source manifest. This could be due to a misconfiguration of the `{VmrInfo.DefaultRelativeSourceManifestPath}` file, or because of a server error."
+                "Error while fetching remote data",
+                $"An issue occurred while fetching remote data (merge base or source manifests). This could be due to a server error or a misconfiguration of the `{VmrInfo.DefaultRelativeSourceManifestPath}` file."
                 + SeekHelpMsg);
         }
 
