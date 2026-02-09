@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
@@ -54,7 +55,30 @@ internal class ForwardFlowMergePolicy(IBasicBarClient barClient, ILogger<IMergeP
         }
         var mapping = subscription.TargetDirectory;
 
-        SourceManifest headBranchSourceManifest, targetBranchSourceManifest;
+        // Get the merge base commit between the head and target branches
+        GitDiff diff;
+        try
+        {
+            diff = await remote.GitDiffAsync(pr.TargetRepoUrl, subscription.TargetBranch, pr.HeadBranch);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error while calculating merge base for PR {PrUrl}", pr.Url);
+            return FailTransiently(
+                "Error while calculating merge base",
+                $"An issue occurred while calculating the merge base commit. This could be due to a server error."
+                + SeekHelpMsg);
+        }
+        if (string.IsNullOrEmpty(diff.MergeBaseCommit))
+        {
+            _logger.LogError("Merge base commit not found for PR {PrUrl}", pr.Url);
+            return FailTransiently(
+                "Could not determine merge base commit",
+                $"Unable to determine the merge base commit between the head branch and target branch. This could be due to the branches having no common ancestor."
+                + SeekHelpMsg);
+        }
+
+        SourceManifest headBranchSourceManifest, mergeBaseSourceManifest;
         try
         {
             headBranchSourceManifest = await remote.GetSourceManifestAsync(pr.TargetRepoUrl, pr.HeadBranch);
@@ -69,14 +93,14 @@ internal class ForwardFlowMergePolicy(IBasicBarClient barClient, ILogger<IMergeP
         }
         try
         {
-            targetBranchSourceManifest = await remote.GetSourceManifestAsync(pr.TargetRepoUrl, subscription.TargetBranch);
+            mergeBaseSourceManifest = await remote.GetSourceManifestAsync(pr.TargetRepoUrl, diff.MergeBaseCommit);
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error while retrieving target branch source manifest for PR {PrUrl}", pr.Url);
+            _logger.LogError(e, "Error while retrieving merge base source manifest for PR {PrUrl}", pr.Url);
             return FailTransiently(
-                "Error while retrieving target branch source manifest",
-                $"An issue occurred while retrieving the target branch source manifest. This could be due to a misconfiguration of the `{VmrInfo.DefaultRelativeSourceManifestPath}` file, or because of a server error."
+                "Error while retrieving merge base source manifest",
+                $"An issue occurred while retrieving the merge base source manifest. This could be due to a misconfiguration of the `{VmrInfo.DefaultRelativeSourceManifestPath}` file, or because of a server error."
                 + SeekHelpMsg);
         }
 
@@ -86,7 +110,7 @@ internal class ForwardFlowMergePolicy(IBasicBarClient barClient, ILogger<IMergeP
                 update.BuildId,
                 update.CommitSha,
                 headBranchSourceManifest),
-            .. GetUnexpectedRepoChangeErrors(headBranchSourceManifest, targetBranchSourceManifest, mapping)
+            .. GetUnexpectedRepoChangeErrors(headBranchSourceManifest, mergeBaseSourceManifest, mapping)
         ];
 
         if (configurationErrors.Count != 0)

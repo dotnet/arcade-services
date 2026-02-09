@@ -1247,6 +1247,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             {
                 BaseVersion = baseVersion,
                 TargetVersion = targetVersion,
+                MergeBaseCommit = content["merge_base_commit"]?["sha"]?.Value<string>(),
                 Ahead = content["ahead_by"]!.Value<int>(),
                 Behind = content["behind_by"]!.Value<int>(),
                 Valid = true
