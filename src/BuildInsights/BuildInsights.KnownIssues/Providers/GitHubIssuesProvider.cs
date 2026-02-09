@@ -1,18 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
-using System.Threading.Tasks;
 using BuildInsights.KnownIssues.Models;
 using BuildInsights.KnownIssues.Services;
+using Maestro.Common;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Internal.Helix.GitHub.Providers;
-using Microsoft.Internal.Helix.Utility;
 using Octokit;
 
 namespace BuildInsights.KnownIssues.Providers;
@@ -43,7 +38,7 @@ public class GitHubIssuesProvider : IGitHubIssuesService
     {
         try
         {
-            (string owner, string name) = GithubRepositoryHelper.GetOwnerAndName(repository);
+            (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
             IGitHubClient client = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(owner, name);
             var criticalIssueFilter = new RepositoryIssueRequest
             {
@@ -78,7 +73,7 @@ public class GitHubIssuesProvider : IGitHubIssuesService
         }
     }
 
-    private async Task<List<KnownIssue>> GetIssuesWithOrLabels(string repository, KnownIssueType type,  IEnumerable<string> labels)
+    private async Task<List<KnownIssue>> GetIssuesWithOrLabels(string repository, KnownIssueType type, IEnumerable<string> labels)
     {
         var knownIssues = new List<KnownIssue>();
         foreach (string knownIssuesLabel in labels)
@@ -119,7 +114,7 @@ public class GitHubIssuesProvider : IGitHubIssuesService
 
     public async Task UpdateIssueBodyAsync(string repository, int issueNumber, string description)
     {
-        (string owner, string name) = GithubRepositoryHelper.GetOwnerAndName(repository);
+        (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
 
         IGitHubClient client = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(owner, name);
 
@@ -132,7 +127,7 @@ public class GitHubIssuesProvider : IGitHubIssuesService
 
     public async Task<Issue> GetIssueAsync(string repository, int issueNumber)
     {
-        (string owner, string name) = GithubRepositoryHelper.GetOwnerAndName(repository);
+        (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
 
         IGitHubClient client = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(owner, name);
         Issue issue = await client.Issue.Get(owner, name, issueNumber);
@@ -141,7 +136,7 @@ public class GitHubIssuesProvider : IGitHubIssuesService
 
     public async Task AddLabelToIssueAsync(string repository, int issueNumber, string label)
     {
-        (string owner, string name) = repository.Split("/"); //RepositoryId is formed owner/name
+        (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
 
         IGitHubClient client = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(owner, name);
         await client.Issue.Labels.AddToIssue(owner, name, issueNumber, [label]);
@@ -149,7 +144,7 @@ public class GitHubIssuesProvider : IGitHubIssuesService
 
     public async Task AddCommentToIssueAsync(string repository, int issueNumber, string comment)
     {
-        (string owner, string name) = GithubRepositoryHelper.GetOwnerAndName(repository);
+        (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
         IGitHubClient client = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(owner, name);
 
         try

@@ -61,7 +61,7 @@ public class GitHubChecksProvider : IGitHubChecksService
             commitHash
         );
 
-        (string owner, string name) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
+        (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
         IGitHubClient client = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(owner, name);
 
         Octokit.CheckStatus checkStatus = result switch
@@ -96,7 +96,7 @@ public class GitHubChecksProvider : IGitHubChecksService
 
     public async Task<bool> IsRepositorySupported(string repository)
     {
-        (string owner, string name) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
+        (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
         try
         {
             IGitHubClient client = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(owner, name);
@@ -112,7 +112,7 @@ public class GitHubChecksProvider : IGitHubChecksService
 
     public async Task<bool> RepositoryHasIssues(string repository)
     {
-        (string owner, string name) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
+        (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
         try
         {
             IGitHubClient client = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(owner, name);
@@ -137,7 +137,7 @@ public class GitHubChecksProvider : IGitHubChecksService
     public async Task<IEnumerable<Models.CheckRun>> GetBuildCheckRunsAsync(string repository, string sha)
     {
         _logger.LogInformation("Fetching build check run set for commit: {repository}/{commitHash}", repository, sha);
-        (string owner, string name) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
+        (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
         IGitHubClient client = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(owner, name);
 
         CheckRunsResponse allCheckRuns = await client.Check.Run.GetAllForReference(owner, name, sha);
@@ -162,7 +162,7 @@ public class GitHubChecksProvider : IGitHubChecksService
     public async Task<IEnumerable<Models.CheckRun>> GetAllCheckRunsAsync(string repository, string sha)
     {
         _logger.LogInformation("Fetching full check run set for commit: {repository}/{commitHash}", repository, sha);
-        (string owner, string name) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
+        (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
         IGitHubClient client = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(owner, name);
 
         CheckRunsResponse allCheckRuns = await client.Check.Run.GetAllForReference(owner, name, sha);
@@ -173,7 +173,7 @@ public class GitHubChecksProvider : IGitHubChecksService
     public async Task<Models.CheckRun> GetCheckRunAsyncForApp(string repository, string sha, int appId, string chenRunName)
     {
         _logger.LogInformation("Fetching build check run set for commit: {repository}/{commitHash}", repository, sha);
-        (string owner, string name) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
+        (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
         IGitHubClient client = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(owner, name);
 
         CheckRunsResponse allCheckRuns = await client.Check.Run.GetAllForReference(owner, name, sha);
@@ -185,7 +185,7 @@ public class GitHubChecksProvider : IGitHubChecksService
 
     public async Task<GitHubIssue> GetIssueAsync(string repository, long issueId)
     {
-        (string owner, string name) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
+        (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
         IGitHubClient client = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(owner, name);
         Issue issue = await client.Issue.Get(owner, name, Convert.ToInt32(issueId));
         return new GitHubIssue(
@@ -199,7 +199,7 @@ public class GitHubChecksProvider : IGitHubChecksService
 
     public async Task UpdateCheckRunConclusion(Models.CheckRun checkRun, string repository, string updatedBody, Octokit.CheckConclusion result)
     {
-        (string owner, string name) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
+        (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
 
         var checkRunUpdate = new CheckRunUpdate
         {

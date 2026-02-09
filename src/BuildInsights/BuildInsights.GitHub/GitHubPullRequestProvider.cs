@@ -30,7 +30,7 @@ public class GitHubPullRequestProvider : IGitHubPullRequestService
     {
         _logger.LogInformation($"Preparing to get pull request #{number} from {repository}");
 
-        (string owner, string name) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
+        (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
         IGitHubClient client = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(owner, name);
 
         PullRequest pullRequest = await client.PullRequest.Get(owner, name, number);

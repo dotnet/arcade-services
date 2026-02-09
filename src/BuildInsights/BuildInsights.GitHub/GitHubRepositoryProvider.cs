@@ -35,7 +35,7 @@ public class GithubRepositoryProvider : IGithubRepositoryService
 
         _logger.LogInformation("Getting build analysis settings file for repo {repository} for targetBranch {targetBranch}", repository, targetBranch);
 
-        (string owner, string name) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
+        (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
         IGitHubClient client = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(owner, name);
 
         try

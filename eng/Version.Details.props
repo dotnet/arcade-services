@@ -19,6 +19,7 @@ This file should be imported by eng/Versions.props
     <MicrosoftDotNetInternalTestingUtilityPackageVersion>1.1.0-beta.25608.1</MicrosoftDotNetInternalTestingUtilityPackageVersion>
     <MicrosoftDotNetKustoPackageVersion>1.1.0-beta.25608.1</MicrosoftDotNetKustoPackageVersion>
     <MicrosoftDotNetServicesUtilityPackageVersion>1.1.0-beta.25608.1</MicrosoftDotNetServicesUtilityPackageVersion>
+    <MicrosoftDotNetWebAuthenticationPackageVersion>1.1.0-beta.25564.1</MicrosoftDotNetWebAuthenticationPackageVersion>
     <!-- dotnet/arcade dependencies -->
     <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26066.3</MicrosoftDotNetArcadeSdkPackageVersion>
     <MicrosoftDotNetBuildTasksFeedPackageVersion>10.0.0-beta.26066.3</MicrosoftDotNetBuildTasksFeedPackageVersion>
@@ -47,6 +48,7 @@ This file should be imported by eng/Versions.props
     <MicrosoftDotNetInternalTestingUtilityVersion>$(MicrosoftDotNetInternalTestingUtilityPackageVersion)</MicrosoftDotNetInternalTestingUtilityVersion>
     <MicrosoftDotNetKustoVersion>$(MicrosoftDotNetKustoPackageVersion)</MicrosoftDotNetKustoVersion>
     <MicrosoftDotNetServicesUtilityVersion>$(MicrosoftDotNetServicesUtilityPackageVersion)</MicrosoftDotNetServicesUtilityVersion>
+    <MicrosoftDotNetWebAuthenticationVersion>$(MicrosoftDotNetWebAuthenticationPackageVersion)</MicrosoftDotNetWebAuthenticationVersion>
     <!-- dotnet/arcade dependencies -->
     <MicrosoftDotNetArcadeSdkVersion>$(MicrosoftDotNetArcadeSdkPackageVersion)</MicrosoftDotNetArcadeSdkVersion>
     <MicrosoftDotNetBuildTasksFeedVersion>$(MicrosoftDotNetBuildTasksFeedPackageVersion)</MicrosoftDotNetBuildTasksFeedVersion>

@@ -27,11 +27,11 @@ using Microsoft.Internal.Helix.GitHub.Models;
 using Microsoft.Internal.Helix.GitHub.Services;
 using Microsoft.Internal.Helix.KnownIssues.Models;
 using Microsoft.Internal.Helix.KnownIssues.Services;
-using Microsoft.Internal.Helix.QueueInsights.Services;
 using Microsoft.Internal.Helix.Utility;
 using Microsoft.Internal.Helix.Utility.Azure;
 using Microsoft.Internal.Helix.Utility.AzureDevOps.Models;
 using Octokit;
+using QueueInsights.Services;
 
 namespace BuildInsights.BuildResultProcessor;
 

@@ -14,16 +14,18 @@
     <PackageReference Include="Microsoft.Azure.Management.Storage" />
     <PackageReference Include="Microsoft.DotNet.Kusto" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
-    <PackageReference Include="System.Text.Json" />
+    <PackageReference Include="Microsoft.TeamFoundation.DistributedTask.Common" />
+    <PackageReference Include="Microsoft.TeamFoundationServer.Client" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\HelixMonitoringSql\Helix.Utilities.Sql\Helix.Utilities.Sql.csproj" />
     <ProjectReference Include="..\..\..\Utility\Helix.Utility.Azure\Helix.Utility.Azure.csproj" />
     <ProjectReference Include="..\..\..\Utility\Helix.Utility.AzureDevOps\Helix.Utility.AzureDevOps.csproj" />
     <ProjectReference Include="..\..\..\Utility\Helix.Utility.Common\Helix.Utility.Common.csproj" />
     <ProjectReference Include="..\BuildInsights.GitHub\BuildInsights.GitHub.csproj" />
     <ProjectReference Include="..\BuildInsights.UserSentiment\BuildInsights.UserSentiment.csproj" />
+    <ProjectReference Include="..\BuildInsights.Utilities.Parallel\BuildInsights.Utilities.Parallel.csproj" />
+    <ProjectReference Include="..\BuildInsights.Utilities.Sql\BuildInsights.Utilities.Sql.csproj" />
     <ProjectReference Include="..\Helix.Internal.KnownIssues\Helix.Internal.KnownIssues.csproj" />
     <ProjectReference Include="..\QueueInsights\QueueInsights.csproj" />
   </ItemGroup>

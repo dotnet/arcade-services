@@ -19,14 +19,14 @@ using Microsoft.Internal.Helix.GitHub.Services;
 using Microsoft.Internal.Helix.KnownIssues.Models;
 using Microsoft.Internal.Helix.KnownIssues.Providers;
 using Microsoft.Internal.Helix.KnownIssues.Services;
-using Microsoft.Internal.Helix.QueueInsights.Models;
-using Microsoft.Internal.Helix.QueueInsights.Providers;
-using Microsoft.Internal.Helix.QueueInsights.Services;
 using Microsoft.Internal.Helix.Utility;
 using Microsoft.Internal.Helix.Utility.Azure;
 using Microsoft.Internal.Helix.Utility.AzureDevOps.Models;
 using Microsoft.Internal.Helix.Utility.Parallel;
 using Microsoft.Internal.Helix.Utility.UserSentiment;
+using QueueInsights.Models;
+using QueueInsights.Providers;
+using QueueInsights.Services;
 
 namespace Microsoft.Internal.Helix.BuildResultAnalysisProcessor;
 

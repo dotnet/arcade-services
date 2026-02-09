@@ -25,6 +25,8 @@ using Microsoft.TeamFoundation.Build.WebApi;
 using Microsoft.TeamFoundation.Core.WebApi;
 using Microsoft.TeamFoundation.TestManagement.WebApi;
 using Microsoft.VisualStudio.Services.WebApi;
+using Maestro.Common;
+using BuildInsights.Utilities.Parallel;
 
 namespace BuildInsights.BuildAnalysis.Providers;
 
@@ -886,12 +888,12 @@ public sealed class BuildDataProvider : IBuildDataService
             prNumber = null;
         }
 
-        string organization = BuildParserHelper.ParseOrganizationFromBuildUrl(build.Url);
+        string organization = BuildUrlUtils.ParseOrganizationFromBuildUrl(build.Url);
 
         return new Models.Build(
             build.Id,
             build.BuildNumber,
-            BuildParserHelper.GetBuildUrl(organization, build.Project.Name, build.Id),
+            BuildUrlUtils.GetBuildUrl(organization, build.Project.Name, build.Id),
             build.Project.Name,
             build.Project.Id.ToString(),
             build.Definition.Name,

@@ -5,22 +5,24 @@ using System.Data.SqlClient;
 
 namespace BuildInsights.Utilities.Sql;
 
-public class SqlConnectionBuilderHelper
+internal class SqlConnectionBuilderHelper
 {
     public static string BuildConnectionString(SqlConnectionSettings _sqlSettings)
     {
-        SqlConnectionStringBuilder builder = new SqlConnectionStringBuilder();
-        builder.DataSource = _sqlSettings.DataSource;
-        builder.InitialCatalog = _sqlSettings.InitialCatalog;
-        builder.Authentication = _sqlSettings.Authentication;
-        builder.PersistSecurityInfo = _sqlSettings.PersistSecurityInfo;
-        builder.MultipleActiveResultSets = _sqlSettings.MultipleActiveResultSets;
-        builder.ConnectTimeout = _sqlSettings.ConnectTimeout;
-        builder.Encrypt = _sqlSettings.Encrypt;
-        builder.TrustServerCertificate = _sqlSettings.TrustServerCertificate;
-        builder.CommandTimeout = _sqlSettings.Timeout;
-        builder.MaxPoolSize = _sqlSettings.MaxPoolSize;
-        builder.UserID = _sqlSettings.UserId;
+        var builder = new SqlConnectionStringBuilder
+        {
+            DataSource = _sqlSettings.DataSource,
+            InitialCatalog = _sqlSettings.InitialCatalog,
+            Authentication = _sqlSettings.Authentication,
+            PersistSecurityInfo = _sqlSettings.PersistSecurityInfo,
+            MultipleActiveResultSets = _sqlSettings.MultipleActiveResultSets,
+            ConnectTimeout = _sqlSettings.ConnectTimeout,
+            Encrypt = _sqlSettings.Encrypt,
+            TrustServerCertificate = _sqlSettings.TrustServerCertificate,
+            CommandTimeout = _sqlSettings.Timeout,
+            MaxPoolSize = _sqlSettings.MaxPoolSize,
+            UserID = _sqlSettings.UserId
+        };
         return builder.ConnectionString;
     }
 }
