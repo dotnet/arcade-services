@@ -13,6 +13,10 @@ bool isDevelopment = builder.Environment.IsDevelopment();
 bool useSwagger = isDevelopment;
 
 // Add service defaults & Aspire client integrations.
+await builder.ConfigureBuildInsights(
+    addKeyVault: false /* TODO */,
+    authRedis: !isDevelopment,
+    addSwagger: useSwagger);
 builder.AddServiceDefaults();
 builder.AddRedisOutputCache("cache");
 

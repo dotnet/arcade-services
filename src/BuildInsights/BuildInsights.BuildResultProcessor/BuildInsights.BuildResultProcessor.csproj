@@ -1,12 +1,12 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <SelfContained>true</SelfContained>
-    <IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
-    <UserSecretsId>SecretManager</UserSecretsId>
-    <RootNamespace>Microsoft.Internal.Helix.BuildResultAnalysisProcessor</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- We're referencing Maestro.Data, which isn't signed and doesn't have a strong name, so we can't be signed neither -->
+    <SignAssembly>False</SignAssembly>
   </PropertyGroup>
-
+  
   <ItemGroup>
     <Content Include=".config\settings*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
