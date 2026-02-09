@@ -233,6 +233,7 @@ internal class ResolveConflictOperation(
                 build.GetRepository(),
                 DarcLib.Commit.GetShortSha(build.Commit));
 
+<<<<<<< HEAD
             bool isVmrPathProvided = !_options.VmrPath.Equals(Environment.CurrentDirectory, StringComparison.OrdinalIgnoreCase);
             bool isSourceRepoPathProvided = !string.IsNullOrEmpty(_options.SourceRepoPath);
             if (isVmrPathProvided && isSourceRepoPathProvided)
@@ -250,6 +251,14 @@ internal class ResolveConflictOperation(
                 providedVmrPath = new NativePath(_options.VmrPath);
             }
 
+=======
+            var providedVmrPath = string.IsNullOrEmpty(_options.VmrPath)
+                ? string.IsNullOrEmpty(_options.SourceRepoPath)
+                    ? null
+                    : new NativePath(_options.SourceRepoPath)
+                : new NativePath(_options.VmrPath);
+
+>>>>>>> dkurepa/dkurepa/ResolveConflictUX
             if (providedVmrPath == null)
             {
                 vmr = await _vmrCloneManager.PrepareVmrAsync(
