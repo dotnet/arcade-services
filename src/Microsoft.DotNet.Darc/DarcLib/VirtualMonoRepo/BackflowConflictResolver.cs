@@ -13,6 +13,7 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using NuGet.Versioning;
 
 #nullable enable
@@ -46,6 +47,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
     private readonly IFileSystem _fileSystem;
     private readonly IJsonFileMerger _jsonFileMerger;
     private readonly IVersionDetailsFileMerger _versionDetailsFileMerger;
+    private readonly ICommentCollector _commentCollector;
     private readonly ILogger<BackflowConflictResolver> _logger;
 
     public BackflowConflictResolver(
@@ -61,6 +63,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         IJsonFileMerger jsonFileMerger,
         IVersionDetailsFileMerger versionDetailsFileMerger,
         IFileSystem fileSystem,
+        ICommentCollector commentCollector,
         ILogger<BackflowConflictResolver> logger)
         : base(vmrInfo, patchHandler, fileSystem, logger)
     {
@@ -75,6 +78,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         _jsonFileMerger = jsonFileMerger;
         _versionDetailsFileMerger = versionDetailsFileMerger;
         _fileSystem = fileSystem;
+        _commentCollector = commentCollector;
         _logger = logger;
     }
 
@@ -95,16 +99,13 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             headBranchExisted,
             cancellationToken);
 
-        if (codeflowOptions.EnableRebase)
-        {
-            await DetectAndFixPartialReverts(
-                codeflowOptions,
-                vmr,
-                targetRepo,
-                conflictedFiles,
-                lastFlows,
-                cancellationToken);
-        }
+        await DetectAndFixPartialReverts(
+            codeflowOptions,
+            vmr,
+            targetRepo,
+            conflictedFiles,
+            lastFlows,
+            cancellationToken);
 
         try
         {
@@ -172,7 +173,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
     {
         // Known version file - check out the branch version, we want to override it
         // See https://github.com/dotnet/arcade-services/issues/4865
-        if (DependencyFileManager.CodeflowDependencyFiles.Any(f => f.Equals(conflictedFile, StringComparison.OrdinalIgnoreCase)))
+        if (DependencyFileManager.CodeflowDependencyFiles
+            .Any(f => f.Equals(conflictedFile, StringComparison.OrdinalIgnoreCase)))
         {
             // Revert files so that we can resolve the conflicts
             // We use the target branch version when we are flowing the first time (because we did not flow the version files yet)
@@ -182,16 +184,26 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             return true;
         }
 
+        // TODO https://github.com/dotnet/arcade-services/issues/5897 this should be handled differently
+        if (VersionFiles.NugetConfigNames.Any(n => n.Equals(conflictedFile, StringComparison.OrdinalIgnoreCase)))
+        {
+            // Nuget.Config from the repo should be preferred as it can contain additional sources that are not in the VMR's Nuget.Config
+            await targetRepo.ResolveConflict(conflictedFile, ours: headBranchExisted);
+            _commentCollector.AddComment("There was a conflict in Nuget.Config. Resolved by preferring the version from the repo. Please make sure to merge any necessary changes from the VMR's Nuget.Config if needed.",
+                CommentType.Caution);
+            return true;
+        }
+
         // eng/common is always preferred from the source side
         // In rebase mode: ours=true means keep the incoming changes (source)
         // In merge mode: ours=false means prefer theirs (source being merged in)
         if (conflictedFile.Path.StartsWith(Constants.CommonScriptFilesPath, StringComparison.InvariantCultureIgnoreCase))
         {
-            await targetRepo.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase /* rebase vs merge direction */);
+            await targetRepo.ResolveConflict(conflictedFile, ours: true);
             return true;
         }
 
-        if (codeflowOptions.EnableRebase && await TryDeletingFileMarkedForDeletion(targetRepo, conflictedFile, cancellationToken))
+        if (await TryDeletingFileMarkedForDeletion(targetRepo, conflictedFile, cancellationToken))
         {
             return true;
         }
@@ -416,20 +428,6 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                     || update.From.RepoUri != update.To.RepoUri
                     || update.From.Commit != update.To.Commit),
         ];
-
-        string commitMessage = string.Concat(
-            $"Update dependencies from {codeflowOptions.Build.GetRepository()} build {codeflowOptions.Build.Id}",
-            Environment.NewLine,
-            BuildDependencyUpdateCommitMessage(dependencyUpdates));
-
-        // When rebasing, we only want to stage the changes, not commit them
-        if (!codeflowOptions.EnableRebase)
-        {
-            await targetRepo.CommitAsync(
-                commitMessage,
-                allowEmpty: false,
-                cancellationToken: cancellationToken);
-        }
 
         return dependencyUpdates;
     }

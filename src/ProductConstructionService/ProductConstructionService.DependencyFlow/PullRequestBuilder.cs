@@ -784,7 +784,7 @@ internal class PullRequestBuilder : IPullRequestBuilder
         message.AppendLine();
     }
 
-    private static void AppendCoherencyCommitMessage(string relativeBasePath, List<DependencyUpdate> deps, StringBuilder message)
+    public static void AppendCoherencyCommitMessage(string relativeBasePath, List<DependencyUpdate> deps, StringBuilder message)
     {
         message.AppendLine($"On relative base path {(UnixPath.IsEmptyPath(relativeBasePath) ? "root" : relativeBasePath)}");
         
