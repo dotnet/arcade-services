@@ -111,11 +111,6 @@ internal class ForwardFlowMergePolicy(IBasicBarClient barClient, ILogger<IMergeP
 
         List<string> validationErrors = [];
 
-        if (headBranchDic.Keys.Count != targetBranchDic.Keys.Count)
-        {
-            validationErrors.Add($"The number of repositories in the head branch ({headBranchDic.Keys.Count}) does not match the target branch ({targetBranchDic.Keys.Count}).");
-        }
-
         foreach (var repo in headBranchDic.Keys.Where(r => r != mapping))
         {
             if (!targetBranchDic.TryGetValue(repo, out var targetRepo))
