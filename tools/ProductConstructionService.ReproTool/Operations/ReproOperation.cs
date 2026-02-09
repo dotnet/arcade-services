@@ -4,7 +4,6 @@
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ProductConstructionService.Client;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Octokit;
@@ -19,7 +18,6 @@ internal class ReproOperation(
         IBarApiClient prodBarClient,
         IProductConstructionServiceApi prodPcsApi,
         ReproOptions options,
-        DarcProcessManager darcProcessManager,
         [FromKeyedServices("local")] IProductConstructionServiceApi localPcsApi,
         GitHubClient ghClient,
         ILogger<ReproOperation> logger)
@@ -29,8 +27,6 @@ internal class ReproOperation(
 
     internal override async Task RunAsync()
     {
-        await darcProcessManager.InitializeAsync();
-
         logger.LogInformation("Fetching {subscriptionId} subscription from BAR",
             options.Subscription);
 
@@ -143,7 +139,8 @@ internal class ReproOperation(
             sourceRepoSha,
             build != null ? CreateAssetDataFromBuild(build) : []);
 
-        await darcProcessManager.AddBuildToChannelAsync(testBuild.Id, channelName, options.SkipCleanup);
+        var channel = (await _localPcsApi.Channels.ListChannelsAsync()).First(c => c.Name == channelName);
+        await _localPcsApi.Channels.AddBuildToChannelAsync(testBuild.Id, channel.Id);
 
         await CopyFeatureFlagsAsync(subscription.Id, testSubscription.Id);
 
@@ -208,7 +205,8 @@ internal class ReproOperation(
             build.Commit,
             CreateAssetDataFromBuild(build));
 
-        await darcProcessManager.AddBuildToChannelAsync(testBuild.Id, testSubscription.Channel, options.SkipCleanup);
+        var channel = (await _localPcsApi.Channels.ListChannelsAsync()).First(c => c.Name == testSubscription.Channel);
+        await _localPcsApi.Channels.AddBuildToChannelAsync(testBuild.Id, channel.Id);
 
         await CopyFeatureFlagsAsync(subscription.Id, testSubscription.Id);
 

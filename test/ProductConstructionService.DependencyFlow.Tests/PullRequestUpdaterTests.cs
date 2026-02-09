@@ -133,7 +133,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         var updatedDependencies = new List<List<DependencyDetail>>();
         DarcRemotes[TargetRepo]
             .Verify(
-                r => r.GetUpdatesAsync(
+                r => r.GetUpdatedDependencyFiles(
                     TargetRepo,
                     InProgressPrHeadBranch,
                     Capture.In(updatedDependencies),
@@ -765,7 +765,7 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         var updatedDependencies = new List<List<DependencyDetail>>();
         DarcRemotes[TargetRepo]
             .Verify(
-                r => r.GetUpdatesAsync(
+                r => r.GetUpdatedDependencyFiles(
                     TargetRepo,
                     InProgressPrHeadBranch,
                     Capture.In(updatedDependencies),
