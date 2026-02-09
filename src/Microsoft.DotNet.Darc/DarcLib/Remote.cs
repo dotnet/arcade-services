@@ -195,7 +195,7 @@ public sealed class Remote : IRemote
                 targetRepo,
                 branch,
                 oldDependencies,
-                null,
+                incomingDotNetSdkVersion: null,
                 relativeBasePath: targetDirectory);
 
             return updatedFiles.GetFilesToCommit();
@@ -242,7 +242,7 @@ public sealed class Remote : IRemote
             ..updatedEngCommonFiles];
     }
 
-    public async Task<List<GitFile>> GetUpdatedCommonScriptFilesAsync(
+    private async Task<List<GitFile>> GetUpdatedCommonScriptFilesAsync(
         string targetRepo,
         string branch,
         bool sourceRepoIsVmr,
