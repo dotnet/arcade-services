@@ -20,7 +20,10 @@
     <Project Path="C:/Users/prvysoky/source/repos/arcade-services/src/BuildInsights/BuildInsights.BuildAnalysis/BuildInsights.BuildAnalysis.csproj" />
     <Project Path="C:/Users/prvysoky/source/repos/arcade-services/src/BuildInsights/BuildInsights.BuildResultProcessor/BuildInsights.BuildResultProcessor.csproj" />
     <Project Path="C:/Users/prvysoky/source/repos/arcade-services/src/BuildInsights/BuildInsights.GitHub/BuildInsights.GitHub.csproj" />
+    <Project Path="C:/Users/prvysoky/source/repos/arcade-services/src/BuildInsights/BuildInsights.GitHubGraphQL/BuildInsights.GitHubGraphQL.csproj" />
+    <Project Path="C:/Users/prvysoky/source/repos/arcade-services/src/BuildInsights/BuildInsights.KnownIssues/BuildInsights.KnownIssues.csproj" />
     <Project Path="C:/Users/prvysoky/source/repos/arcade-services/src/BuildInsights/BuildInsights.UserSentiment/BuildInsights.UserSentiment.csproj" />
+    <Project Path="C:/Users/prvysoky/source/repos/arcade-services/src/BuildInsights/BuildInsights.Utilities.Sql/BuildInsights.Utilities.Sql.csproj" />
     <Project Path="C:/Users/prvysoky/source/repos/arcade-services/src/BuildInsights/QueueInsights/QueueInsights.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.Api/BuildInsights.Api.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.AppHost/BuildInsights.AppHost.csproj" />

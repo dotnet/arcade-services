@@ -1,0 +1,19 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System.Collections.Immutable;
+
+namespace BuildInsights.BuildAnalysis.Models;
+
+public class BuildsByPipelineConfiguration
+{
+    public ImmutableList<BuildReferenceIdentifier> IncludedPipelinesBuilds { get; }
+    public ImmutableList<BuildReferenceIdentifier> FilteredPipelinesBuilds { get; }
+
+    public BuildsByPipelineConfiguration(ImmutableList<BuildReferenceIdentifier> requestedBuilds,
+        ImmutableList<BuildReferenceIdentifier> skippedFilteredPipelinesBuilds)
+    {
+        IncludedPipelinesBuilds = requestedBuilds;
+        FilteredPipelinesBuilds = skippedFilteredPipelinesBuilds;
+    }
+}

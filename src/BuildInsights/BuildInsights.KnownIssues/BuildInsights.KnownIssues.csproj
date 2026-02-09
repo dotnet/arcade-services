@@ -17,9 +17,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\HelixMonitoringSql\Helix.Utilities.Sql\Helix.Utilities.Sql.csproj" />
     <ProjectReference Include="..\BuildInsights.GitHubGraphQL\BuildInsights.GitHubGraphQL.csproj" />
     <ProjectReference Include="..\BuildInsights.GitHub\BuildInsights.GitHub.csproj" />
+    <ProjectReference Include="..\BuildInsights.Utilities.Sql\BuildInsights.Utilities.Sql.csproj" />
   </ItemGroup>
 
 </Project>

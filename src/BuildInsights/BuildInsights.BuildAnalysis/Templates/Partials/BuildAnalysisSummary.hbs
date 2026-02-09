@@ -1,0 +1,42 @@
+{{> PendingPipelineList PendingBuildNames}}
+{{#unless (or HasBuildFailures HasTestFailures HasPendingBuildNames)}}
+## All checks completed
+{{#each SucceededPipelinesLinks}}
+  :white_check_mark: {{LinkTo Name Url}}
+
+{{/each}}
+{{#each FailingPipelinesLinks}}
+  :x: {{LinkTo Name Url}}
+
+{{/each}}
+{{else}}
+## Build Summary
+{{#each BuildAnalysisSummaries }}
+<h4>{{BuildStatusEmoji}} {{LinkToHtml BuildId BuildUrl }}</h4>
+<ul>
+    {{LinkToHtml [ :construction: Report infrastructure issue] CreateInfraIssueLink }} {{#if ../RepositoryHasIssues}}{{LinkToHtml [ :page_facing_up: Report repository issue] CreateRepoIssueLink }}{{/if}}
+</ul>
+{{#if (or HasUniqueBuildFailures HasBuildRepositoryKnownFailures HasBuildInfrastructureKnownFailures)}}
+<ul>
+    <b>Build</b> :arrow_right:
+    {{#if HasUniqueBuildFailures}}{{#if UniqueBuildFailureUrl}}{{LinkToHtml "Build Failures:" UniqueBuildFailureUrl}}{{else}}Build Failures: {{/if}} {{UniqueBuildFailuresCount}} :small_blue_diamond: {{else}}<buildAnalysisFormat/>{{/if}}
+    {{#if HasBuildRepositoryKnownFailures}}{{#if RepositoryKnownFailureUrl}}{{LinkToHtml "Repository known errors:" RepositoryKnownFailureUrl}}{{else}}Repository known errors: {{/if}} {{BuildRepositoryKnownFailuresCount}} :small_blue_diamond: {{else}}<buildAnalysisFormat/>{{/if}}
+    {{#if HasBuildInfrastructureKnownFailures}}{{#if InfrastructureKnownFailureUrl}} {{LinkToHtml "Infrastructure known errors:" InfrastructureKnownFailureUr}}{{else}}Infrastructure known errors: {{/if}} {{BuildInfrastructureKnownFailureCount}} {{/if}}
+</ul>
+{{/if}}
+{{#if (or HasUniqueTestIssues HasTestKnownIssues)}}
+<ul>
+    <b>Tests</b> :arrow_right:
+    {{#if HasUniqueTestIssues}}{{#if UniqueTestFailureUrl}}{{LinkToHtml "Test Failures:" UniqueTestFailureUrl}}{{else}}Test Failures:{{/if}} {{UniqueTestIssuesCount}} :small_blue_diamond: {{else}}<buildAnalysisFormat/>{{/if}}
+    {{#if HasTestKnownIssues}}Test known issues: {{TestKnownIssueCount}}{{/if}}
+</ul>
+{{/if}}
+{{/each}}
+
+<hr></hr>
+<h6>Annotations</h6>
+<sup> :white_check_mark: Succeeded</sup>
+<sup> :x: Failed</sup>
+<sup> :warning: All failures are known issues</sup>
+<sup> :clock9: In progress</sup>
+{{/unless}}
