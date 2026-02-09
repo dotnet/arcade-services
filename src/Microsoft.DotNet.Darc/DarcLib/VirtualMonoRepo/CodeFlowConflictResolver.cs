@@ -84,40 +84,23 @@ public abstract class CodeFlowConflictResolver
     {
         var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : productRepo;
 
-        IReadOnlyCollection<UnixPath> conflictedFiles = codeflowOptions.EnableRebase && (await targetRepo.GetStagedFilesAsync()).Count > 0
+        IReadOnlyCollection<UnixPath> conflictedFiles = (await targetRepo.GetStagedFilesAsync()).Count > 0
             ? await targetRepo.GetConflictedFilesAsync(cancellationToken)
             : await TryMergingBranch(targetRepo, codeflowOptions.HeadBranch, codeflowOptions.TargetBranch, cancellationToken);
 
-        if (conflictedFiles.Count != 0
-            && await TryResolvingConflicts(
+        if (conflictedFiles.Count != 0)
+        {
+            await TryResolvingConflicts(
                 codeflowOptions,
                 vmr,
                 productRepo,
                 conflictedFiles,
                 lastFlows.CrossingFlow,
                 headBranchExisted,
-                cancellationToken)
-            && !codeflowOptions.EnableRebase)
-        {
-            await targetRepo.CommitAsync(
-                $"""
-                Merge {codeflowOptions.TargetBranch} into {codeflowOptions.HeadBranch}
-                Auto-resolved conflicts:
-                - {string.Join(Environment.NewLine + "- ", conflictedFiles.Select(f => f.Path))}
-                """,
-                allowEmpty: true,
-            cancellationToken: CancellationToken.None);
-            conflictedFiles = [];
+                cancellationToken);
         }
 
-        if (codeflowOptions.EnableRebase)
-        {
-            return await targetRepo.GetConflictedFilesAsync(cancellationToken);
-        }
-        else
-        {
-            return conflictedFiles;
-        }
+        return await targetRepo.GetConflictedFilesAsync(cancellationToken);
     }
 
     private async Task<IReadOnlyCollection<UnixPath>> TryMergingBranch(
@@ -192,19 +175,9 @@ public abstract class CodeFlowConflictResolver
                 if (!await TryResolvingConflict(codeflowOptions, vmr, sourceRepo, filePath, crossingFlow, headBranchExisted, cancellationToken))
                 {
                     _logger.LogInformation("Failed to auto-resolve a conflict in {conflictedFile}", filePath);
-
-                    if (!codeflowOptions.EnableRebase)
-                    {
-                        _logger.LogDebug("Conflict in {filePath} cannot be resolved automatically", filePath);
-                        await AbortMerge(codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : sourceRepo);
-                        return false;
-                    }
-                    else
-                    {
-                        // When we fail to resolve conflicts during a rebase, we are fine with keeping it
-                        success = false;
-                        continue;
-                    }
+                    // When we fail to resolve conflicts during a rebase, we are fine with keeping it
+                    success = false;
+                    continue;
                 }
 
                 count++;
@@ -212,12 +185,7 @@ public abstract class CodeFlowConflictResolver
             catch (Exception e)
             {
                 _logger.LogError(e, "Failed to resolve conflicts in {filePath}", filePath);
-
-                if (!codeflowOptions.EnableRebase)
-                {
-                    await AbortMerge(codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : sourceRepo);
-                }
-                return false;
+                success = false;
             }
         }
 
@@ -296,7 +264,16 @@ public abstract class CodeFlowConflictResolver
         }
 
         var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : repo;
-        await targetRepo.ResolveConflict(conflictedFile, ours: codeflowOptions.EnableRebase);
+        try
+        {
+            await targetRepo.ResolveConflict(conflictedFile, ours: true);
+        }
+        // file does not exist in the target repo anymore
+        catch (ProcessFailedException e) when (e.Message.Contains("does not have our version"))
+        {
+            _logger.LogInformation("Detected conflicts in {filePath}", conflictedFile);
+            return false;
+        }
 
         if (_fileSystem.GetFileInfo(patches.First().Path).Length == 0)
         {
@@ -324,11 +301,8 @@ public abstract class CodeFlowConflictResolver
             // We will just leave it as is and let the user resolve it manually
             _logger.LogInformation("Detected conflicts in {filePath}", conflictedFile);
 
-            if (codeflowOptions.EnableRebase)
-            {
-                // Revert the file into the conflicted state for manual resolution
-                await targetRepo.ExecuteGitCommand(["checkout", "--conflict=merge", "--", conflictedFile], CancellationToken.None);
-            }
+            // Revert the file into the conflicted state for manual resolution
+            await targetRepo.ExecuteGitCommand(["checkout", "--conflict=merge", "--", conflictedFile], CancellationToken.None);
 
             return false;
         }
@@ -380,6 +354,13 @@ public abstract class CodeFlowConflictResolver
     {
         if (lastFlows.CrossingFlow == null)
         {
+            // Reverts can only happen if there was a crossing flow
+            return;
+        }
+
+        if (lastFlows.LastFlow.IsForwardFlow != codeflowOptions.CurrentFlow.IsForwardFlow)
+        {
+            // Reverts only happen for same direction flows
             return;
         }
 
@@ -464,7 +445,7 @@ public abstract class CodeFlowConflictResolver
 
         foreach (var revertedFile in revertedFiles)
         {
-            _logger.LogInformation("Detected a revert in {file}. Fixing using a crossing flow...",
+            _logger.LogInformation("Suspecting a revert in {file}. Trying to fix it using a crossing flow...",
                 revertedFile);
 
             string contentBefore = await _fileSystem.ReadAllTextAsync(targetRepo.Path / revertedFile);
@@ -480,7 +461,7 @@ public abstract class CodeFlowConflictResolver
                 crossingFlow,
                 cancellationToken))
             {
-                _logger.LogError("Failed to auto-resolve a conflict in {file} while fixing a partial revert",
+                _logger.LogInformation("Failed to auto-resolve a conflict in {file} while fixing a partial revert",
                     revertedFile);
                 _fileSystem.WriteToFile(targetRepo.Path / revertedFile, contentBefore);
                 await targetRepo.StageAsync([revertedFile], cancellationToken);

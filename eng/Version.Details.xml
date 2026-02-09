@@ -55,21 +55,21 @@
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.26062.3">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.26066.3">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>9f518f2be968c4c0102c2e3f8c793c5b7f28b731</Sha>
+      <Sha>af17297350d5e5357d2ab3d69369d2a58b8bc4ab</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.SignTool" Version="10.0.0-beta.26062.3">
+    <Dependency Name="Microsoft.DotNet.SignTool" Version="10.0.0-beta.26066.3">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>9f518f2be968c4c0102c2e3f8c793c5b7f28b731</Sha>
+      <Sha>af17297350d5e5357d2ab3d69369d2a58b8bc4ab</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.Build.Tasks.Feed" Version="10.0.0-beta.26062.3">
+    <Dependency Name="Microsoft.DotNet.Build.Tasks.Feed" Version="10.0.0-beta.26066.3">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>9f518f2be968c4c0102c2e3f8c793c5b7f28b731</Sha>
+      <Sha>af17297350d5e5357d2ab3d69369d2a58b8bc4ab</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="10.0.0-beta.26062.3">
+    <Dependency Name="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="10.0.0-beta.26066.3">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>9f518f2be968c4c0102c2e3f8c793c5b7f28b731</Sha>
+      <Sha>af17297350d5e5357d2ab3d69369d2a58b8bc4ab</Sha>
     </Dependency>
     <Dependency Name="Microsoft.DotNet.VersionTools" Version="8.0.0-beta.25555.2">
       <Uri>https://github.com/dotnet/arcade</Uri>
@@ -83,9 +83,9 @@
       <Uri>https://github.com/dotnet/dnceng</Uri>
       <Sha>cd39caadfdc198bfc3cb138675d6a031f2fef74b</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.MaestroConfiguration.Client" Version="1.1.0-beta.26079.6">
+    <Dependency Name="Microsoft.DotNet.MaestroConfiguration.Client" Version="1.1.0-beta.26103.3">
       <Uri>https://dev.azure.com/dnceng/internal/_git/maestro-configuration</Uri>
-      <Sha>594b3c83e560d14fa5a641ef254292072d7342b0</Sha>
+      <Sha>ef1b7d966f8bb2fb8a72950fa8ca6e979769381a</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>

@@ -29,7 +29,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
     - Verify mergeability
     */
     [Test]
-    public async Task Vmr_ConflictNoPrForwardFlowWithRebaseTest()
+    public async Task Vmr_ConflictNoPrForwardFlowTest()
     {
         var channelName = GetTestChannelName();
         var sourceBranchName = GetTestBranchName();
@@ -193,7 +193,7 @@ internal partial class ScenarioTests_CodeFlow : CodeFlowScenarioTestBase
     - Verify mergeability
     */
     [Test]
-    public async Task Vmr_ConflictNoPrBackFlowWithRebaseTest()
+    public async Task Vmr_ConflictNoPrBackFlowTest()
     {
         var channelName = GetTestChannelName();
         var sourceBranchName = GetTestBranchName();
