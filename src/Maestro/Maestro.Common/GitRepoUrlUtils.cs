@@ -103,7 +103,7 @@ public static class GitRepoUrlUtils
 
         if (repoType == GitRepoType.GitHub)
         {
-            string[] repoParts = uri.Substring(uri.IndexOf(GitHubComString) + GitHubComString.Length).Split(['/'], StringSplitOptions.RemoveEmptyEntries);
+            string[] repoParts = uri.Substring(uri.IndexOf(GitHubComString, StringComparison.OrdinalIgnoreCase) + GitHubComString.Length).Split(['/'], StringSplitOptions.RemoveEmptyEntries);
 
             if (repoParts.Length != 2)
             {
