@@ -54,7 +54,7 @@ internal class AuthenticateEditorPopUp : EditorPopUp
             new("- (Recommended) Leave empty and darc will sign you in via a browser or device code auth flow", isComment: true),
             new("- (Alternative) Create a PAT with the `Build.Execute` and `Code.Read` scopes", isComment: true),
             new("- (Alternative) Use the PatGeneratorTool https://dev.azure.com/dnceng/public/_artifacts/feed/dotnet-eng/NuGet/Microsoft.DncEng.PatGeneratorTool", isComment: true),
-            new("  - Run `dotnet pat-generator --scopes build_execute code --organizations dnceng devdiv --expires-in 7`", isComment: true),
+            new("  - Run `dotnet pat-generator --scopes build_execute code_write --organizations dnceng devdiv --expires-in 7`", isComment: true),
             new("  - Token lasts 7 days", isComment: true),
             new($"{AzureDevOpsTokenElement}={GetCurrentSettingForDisplay(settings.AzureDevOpsToken, string.Empty, true)}"),
             new(string.Empty),
