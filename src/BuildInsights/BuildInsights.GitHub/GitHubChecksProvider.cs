@@ -86,7 +86,7 @@ public class GitHubChecksProvider : IGitHubChecksService
         return created.Id;
     }
 
-    private Octokit.CheckConclusion? GetConclusion(CheckResult result) => result switch
+    private static Octokit.CheckConclusion? GetConclusion(CheckResult result) => result switch
     {
         CheckResult.Passed => Octokit.CheckConclusion.Success,
         CheckResult.Failed => Octokit.CheckConclusion.Failure,
@@ -116,7 +116,7 @@ public class GitHubChecksProvider : IGitHubChecksService
         try
         {
             IGitHubClient client = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(owner, name);
-            Octokit.Repository repo = await client.Repository.Get(owner, name);
+            Repository repo = await client.Repository.Get(owner, name);
             return repo.HasIssues;
         }
         catch (NotFoundException)
@@ -134,7 +134,7 @@ public class GitHubChecksProvider : IGitHubChecksService
     /// <param name="repository">example: dotnet/arcade</param>
     /// <param name="sha">SHA of the Pull Request</param>
     /// <returns></returns>
-    public async Task<IEnumerable<Models.CheckRun>> GetBuildCheckRunsAsync(string repository, string sha)
+    public async Task<IEnumerable<CheckRun>> GetBuildCheckRunsAsync(string repository, string sha)
     {
         _logger.LogInformation("Fetching build check run set for commit: {repository}/{commitHash}", repository, sha);
         (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
@@ -146,8 +146,8 @@ public class GitHubChecksProvider : IGitHubChecksService
 
         var filteredRuns = buildCheckRuns.Where(r => r.App.Id == AzurePipelinesAppID);
 
-        IEnumerable<Models.CheckRun> checkRuns = filteredRuns.Select(x => new Models.CheckRun(x));
-        HashSet<Models.CheckRun> filteredCheckRuns = checkRuns.ToHashSet(new CheckRunEqualityComparer());
+        IEnumerable<CheckRun> checkRuns = filteredRuns.Select(x => new CheckRun(x));
+        HashSet<CheckRun> filteredCheckRuns = checkRuns.ToHashSet(new CheckRunEqualityComparer());
         _logger.LogInformation("Found {count} build check runs", filteredCheckRuns.Count);
 
         return filteredCheckRuns;
@@ -159,7 +159,7 @@ public class GitHubChecksProvider : IGitHubChecksService
     /// <param name="repository">example: dotnet/arcade</param>
     /// <param name="sha">SHA of the Pull Request</param>
     /// <returns></returns>
-    public async Task<IEnumerable<Models.CheckRun>> GetAllCheckRunsAsync(string repository, string sha)
+    public async Task<IEnumerable<CheckRun>> GetAllCheckRunsAsync(string repository, string sha)
     {
         _logger.LogInformation("Fetching full check run set for commit: {repository}/{commitHash}", repository, sha);
         (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
@@ -167,10 +167,10 @@ public class GitHubChecksProvider : IGitHubChecksService
 
         CheckRunsResponse allCheckRuns = await client.Check.Run.GetAllForReference(owner, name, sha);
         _logger.LogInformation("Found {count} check runs", allCheckRuns.CheckRuns.Count);
-        return allCheckRuns.CheckRuns.Select(x => new Models.CheckRun(x));
+        return allCheckRuns.CheckRuns.Select(x => new CheckRun(x));
     }
 
-    public async Task<Models.CheckRun> GetCheckRunAsyncForApp(string repository, string sha, int appId, string chenRunName)
+    public async Task<CheckRun> GetCheckRunAsyncForApp(string repository, string sha, int appId, string chenRunName)
     {
         _logger.LogInformation("Fetching build check run set for commit: {repository}/{commitHash}", repository, sha);
         (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
@@ -178,7 +178,7 @@ public class GitHubChecksProvider : IGitHubChecksService
 
         CheckRunsResponse allCheckRuns = await client.Check.Run.GetAllForReference(owner, name, sha);
         IEnumerable<Octokit.CheckRun> filteredRuns = allCheckRuns.CheckRuns.Where(r => r.App.Id == appId);
-        IEnumerable<Models.CheckRun> checkRuns = filteredRuns.Select(x => new Models.CheckRun(x));
+        IEnumerable<CheckRun> checkRuns = filteredRuns.Select(x => new CheckRun(x));
 
         return checkRuns.FirstOrDefault(c => c.Name.Equals(chenRunName, StringComparison.CurrentCultureIgnoreCase));
     }
@@ -197,7 +197,7 @@ public class GitHubChecksProvider : IGitHubChecksService
             labels: issue.Labels.Select(l => l.Name).ToList());
     }
 
-    public async Task UpdateCheckRunConclusion(Models.CheckRun checkRun, string repository, string updatedBody, Octokit.CheckConclusion result)
+    public async Task UpdateCheckRunConclusion(CheckRun checkRun, string repository, string updatedBody, Octokit.CheckConclusion result)
     {
         (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
 

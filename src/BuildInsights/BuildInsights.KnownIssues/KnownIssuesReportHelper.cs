@@ -2,12 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
-using System;
-using System.Linq;
 using Microsoft.Extensions.Internal;
 using BuildInsights.KnownIssues.Models;
 
-namespace BuildInsights.KnownIssues.Providers;
+namespace BuildInsights.KnownIssues;
 
 public class KnownIssuesReportHelper
 {

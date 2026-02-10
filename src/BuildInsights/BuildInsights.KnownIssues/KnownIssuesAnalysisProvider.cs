@@ -2,15 +2,17 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text.Json;
-using System.Threading.Tasks;
 using Azure.Storage.Queues;
 using BuildInsights.KnownIssues.Models;
-using BuildInsights.KnownIssues.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Internal.Helix.Utility.Azure;
 
-namespace BuildInsights.KnownIssues.Providers;
+namespace BuildInsights.KnownIssues;
+
+public interface IKnownIssuesAnalysisService
+{
+    Task RequestKnownIssuesAnalysis(string organization, string repository, long issueId);
+}
 
 public class KnownIssuesAnalysisProvider : IKnownIssuesAnalysisService
 {

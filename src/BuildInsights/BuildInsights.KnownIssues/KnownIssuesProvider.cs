@@ -5,15 +5,22 @@ using System.Collections.Immutable;
 using System.Data;
 using Azure.Data.Tables;
 using BuildInsights.KnownIssues.Models;
-using BuildInsights.KnownIssues.Services;
-using BuildInsights.Utilities.Sql;
 using Kusto.Ingest;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace BuildInsights.KnownIssues.Providers;
+namespace BuildInsights.KnownIssues;
+
+public interface IKnownIssuesService
+{
+    Task<ImmutableList<KnownIssueMatch>> GetKnownIssuesMatchesForIssue(int issueId, string issueRepository);
+    Task<ImmutableList<TestKnownIssueMatch>> GetTestKnownIssuesMatchesForIssue(int issueId, string issueRepository);
+    Task SaveKnownIssuesMatches(int buildId, List<KnownIssueMatch> knownIssueMatches);
+    Task SaveTestsKnownIssuesMatches(int buildId, List<TestKnownIssueMatch> knownIssueMatches);
+    Task SaveKnownIssuesHistory(IEnumerable<KnownIssue> knownIssues, int id);
+}
 
 public class KnownIssuesProvider : IKnownIssuesService
 {

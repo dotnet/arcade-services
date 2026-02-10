@@ -19,7 +19,6 @@
   <ItemGroup>
     <ProjectReference Include="..\BuildInsights.GitHubGraphQL\BuildInsights.GitHubGraphQL.csproj" />
     <ProjectReference Include="..\BuildInsights.GitHub\BuildInsights.GitHub.csproj" />
-    <ProjectReference Include="..\BuildInsights.Utilities.Sql\BuildInsights.Utilities.Sql.csproj" />
   </ItemGroup>
 
 </Project>

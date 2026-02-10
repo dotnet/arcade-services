@@ -1,16 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using BuildInsights.KnownIssues.Models;
-using BuildInsights.KnownIssues.Services;
 using Microsoft.Extensions.Options;
 
-namespace BuildInsights.KnownIssues.Providers;
+namespace BuildInsights.KnownIssues;
+
+public interface IKnownIssuesMatchService
+{
+    Task<List<KnownIssue>> GetKnownIssuesInStream(Stream stream, IReadOnlyList<KnownIssue> knownIssues);
+    List<KnownIssue> GetKnownIssuesInString(string errorLine, IReadOnlyList<KnownIssue> knownIssues);
+}
 
 public class KnownIssuesMatchProvider : IKnownIssuesMatchService
 {
@@ -57,13 +57,12 @@ public class KnownIssuesMatchProvider : IKnownIssuesMatchService
     {
         if (string.IsNullOrEmpty(errorLine))
         {
-            return new List<KnownIssue>();
+            return [];
         }
 
-        List<KnownIssue> knownIssuesWithSingleLineError = knownIssues.Where(k => k.BuildErrorsType == KnownIssueBuildErrorsType.SingleLine).ToList();
-        List<KnownIssue> knownIssuesWithMultilineLineError = knownIssues.Where(k => k.BuildErrorsType == KnownIssueBuildErrorsType.Multiline).ToList();
-
-        List<KnownIssue> knownIssueMatched = knownIssuesWithSingleLineError.Where(knownIssue => knownIssue.IsMatch(errorLine)).ToList();
+        var knownIssuesWithSingleLineError = knownIssues.Where(k => k.BuildErrorsType == KnownIssueBuildErrorsType.SingleLine);
+        List<KnownIssue> knownIssuesWithMultilineLineError = [..knownIssues.Where(k => k.BuildErrorsType == KnownIssueBuildErrorsType.Multiline)];
+        List<KnownIssue> knownIssueMatched = [..knownIssuesWithSingleLineError.Where(knownIssue => knownIssue.IsMatch(errorLine))];
 
         string[] lines = errorLine.Split(["\r\n", "\r", "\n"], StringSplitOptions.None);
         if (lines.Length > 1)

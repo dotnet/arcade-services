@@ -1,20 +1,23 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Azure;
 using Azure.Data.Tables;
 using BuildInsights.KnownIssues.Models;
-using BuildInsights.KnownIssues.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Internal.Helix.Utility.Azure;
 
-namespace BuildInsights.KnownIssues.Providers;
+namespace BuildInsights.KnownIssues;
+
+public interface IKnownIssuesHistoryService
+{
+    Task SaveKnownIssuesHistory(IEnumerable<KnownIssue> knownIssues, int id);
+    Task<List<KnownIssueAnalysis>> GetKnownIssuesHistory(string issueRepo, long issueId, DateTimeOffset since, CancellationToken cancellationToken);
+    Task SaveKnownIssueError(string issueRepo, long issueId, List<string> errorMessages, CancellationToken cancellationToken);
+    Task<KnownIssueError> GetLatestKnownIssueError(string issueRepo, long issueId, CancellationToken cancellationToken);
+    Task SaveBuildKnownIssueValidation(int buildId, string issueRepo, long issueId, List<string> errorMessages, CancellationToken cancellationToken);
+    Task<List<KnownIssueAnalysis>> GetBuildKnownIssueValidatedRecords(string buildId, string issueRepo, long issueId, CancellationToken cancellationToken);
+}
 
 public class KnownIssuesHistoryProvider : IKnownIssuesHistoryService
 {

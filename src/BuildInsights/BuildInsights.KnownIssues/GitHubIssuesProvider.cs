@@ -3,14 +3,24 @@
 
 using System.Collections.Immutable;
 using BuildInsights.KnownIssues.Models;
-using BuildInsights.KnownIssues.Services;
 using Maestro.Common;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Octokit;
 
-namespace BuildInsights.KnownIssues.Providers;
+namespace BuildInsights.KnownIssues;
+
+public interface IGitHubIssuesService
+{
+    Task<ImmutableList<KnownIssue>> GetCriticalInfrastructureIssuesAsync();
+    Task<IEnumerable<KnownIssue>> GetInfrastructureKnownIssues();
+    Task<IEnumerable<KnownIssue>> GetRepositoryKnownIssues(string buildRepo);
+    Task UpdateIssueBodyAsync(string repository, int issueNumber, string description);
+    Task<Issue> GetIssueAsync(string repository, int issueNumber);
+    Task AddLabelToIssueAsync(string repository, int issueNumber, string label);
+    Task AddCommentToIssueAsync(string repository, int issueNumber, string comment);
+}
 
 public class GitHubIssuesProvider : IGitHubIssuesService
 {

@@ -13,7 +13,12 @@ using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace BuildInsights.KnownIssues.Providers;
+namespace BuildInsights.KnownIssues;
+
+public interface IKnownIssueReporter
+{
+    Task ExecuteKnownIssueReporter();
+}
 
 public class KnownIssueReporter : IKnownIssueReporter
 {
