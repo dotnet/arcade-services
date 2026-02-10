@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using System.Data;
-using Azure.Data.Tables;
 using BuildInsights.KnownIssues.Models;
 using Kusto.Ingest;
 using Microsoft.DotNet.Kusto;
@@ -126,10 +125,12 @@ public class KnownIssuesProvider : IKnownIssuesService
 
     public async Task<List<KnownIssueMatch>> GetSavedMatches(int buildId, int lastNDays)
     {
-        var query = new KustoQuery(@"
-KnownIssues
-| where BuildId == _buildId and StepStartTime > _datefilter
-| project BuildId, BuildRepository, StepStartTime, IssueId, IssueRepository, IssueType, JobId, StepName, LogURL, PullRequest, Project, Organization");
+        var query = new KustoQuery(
+            """
+            KnownIssues
+            | where BuildId == _buildId and StepStartTime > _datefilter
+            | project BuildId, BuildRepository, StepStartTime, IssueId, IssueRepository, IssueType, JobId, StepName, LogURL, PullRequest, Project, Organization
+            """);
         query.AddParameter("_buildId", buildId, KustoDataType.Int);
         query.AddParameter("_datefilter", _clock.UtcNow.AddDays(-lastNDays), KustoDataType.DateTime);
 
@@ -140,14 +141,16 @@ KnownIssues
 
     public async Task<ImmutableList<KnownIssueMatch>> GetKnownIssuesMatchesForIssue(int issueId, string issueRepository)
     {
-        var query = new KustoQuery(@"
-KnownIssues
-| extend StepStartTime = iff(isempty(StepStartTime), ingestion_time(), StepStartTime)
-| where StepStartTime > _dateFilter
-| where IssueId == _issueId
-| where IssueRepository == _issueRepository
-| summarize arg_max(StepStartTime, *) by BuildId, IssueRepository, IssueId
-| project BuildId, BuildRepository, StepStartTime, IssueId, IssueRepository, IssueType, JobId, StepName, LogURL, PullRequest, Project, Organization");
+        var query = new KustoQuery(
+            """
+            KnownIssues
+            | extend StepStartTime = iff(isempty(StepStartTime), ingestion_time(), StepStartTime)
+            | where StepStartTime > _dateFilter
+            | where IssueId == _issueId
+            | where IssueRepository == _issueRepository
+            | summarize arg_max(StepStartTime, *) by BuildId, IssueRepository, IssueId
+            | project BuildId, BuildRepository, StepStartTime, IssueId, IssueRepository, IssueType, JobId, StepName, LogURL, PullRequest, Project, Organization
+            """);
         query.AddParameter("_issueId", issueId, KustoDataType.Int);
         query.AddParameter("_issueRepository", issueRepository, KustoDataType.String);
         query.AddParameter("_dateFilter", _clock.UtcNow.AddDays(-TimeFilterDays), KustoDataType.DateTime);
@@ -159,10 +162,12 @@ KnownIssues
 
     private async Task<ImmutableList<TestKnownIssueMatch>> GetSavedTestsKnownIssuesMatches(int buildId, int lastNDays)
     {
-        var query = new KustoQuery(@"
-TestKnownIssues
-| where BuildId == _buildId and CompletedDate > _datefilter
-| project BuildId, BuildRepository, CompletedDate, IssueId, IssueRepository, IssueType, TestResultName, TestRunId, Url, PullRequest, Project, Organization");
+        var query = new KustoQuery(
+            """
+            TestKnownIssues
+            | where BuildId == _buildId and CompletedDate > _datefilter
+            | project BuildId, BuildRepository, CompletedDate, IssueId, IssueRepository, IssueType, TestResultName, TestRunId, Url, PullRequest, Project, Organization
+            """);
         query.AddParameter("_buildId", buildId, KustoDataType.Int);
         query.AddParameter("_datefilter", _clock.UtcNow.AddDays(-lastNDays), KustoDataType.DateTime);
 
@@ -173,12 +178,14 @@ TestKnownIssues
 
     public async Task<ImmutableList<TestKnownIssueMatch>> GetTestKnownIssuesMatchesForIssue(int issueId, string repository)
     {
-        var query = new KustoQuery(@"
-TestKnownIssues
-| extend CompletedDate = iff(isempty(CompletedDate), ingestion_time(), CompletedDate)
-| where IssueId == _issueId and IssueRepository == _issueRepository and CompletedDate > _dateFilter
-| summarize arg_max(CompletedDate, *) by BuildId, IssueRepository, IssueId
-| project BuildId, BuildRepository, CompletedDate, IssueId, IssueRepository, IssueType, TestResultName, TestRunId, Url, PullRequest, Project, Organization");
+        var query = new KustoQuery(
+            """
+            TestKnownIssues
+            | extend CompletedDate = iff(isempty(CompletedDate), ingestion_time(), CompletedDate)
+            | where IssueId == _issueId and IssueRepository == _issueRepository and CompletedDate > _dateFilter
+            | summarize arg_max(CompletedDate, *) by BuildId, IssueRepository, IssueId
+            | project BuildId, BuildRepository, CompletedDate, IssueId, IssueRepository, IssueType, TestResultName, TestRunId, Url, PullRequest, Project, Organization
+            """);
         query.AddParameter("_issueId", issueId, KustoDataType.Int);
         query.AddParameter("_issueRepository", repository, KustoDataType.String);
         query.AddParameter("_dateFilter", _clock.UtcNow.AddDays(-TimeFilterDays), KustoDataType.DateTime);
@@ -188,32 +195,32 @@ TestKnownIssues
         return GetTestsKnownIssuesFromDataReader(reader);
     }
 
-    public List<KnownIssueMatch> GetKnownIssueFromDataReader(IDataReader reader)
+    public static List<KnownIssueMatch> GetKnownIssueFromDataReader(IDataReader reader)
     {
         var knownIssueMatches = new List<KnownIssueMatch>();
         while (reader.Read())
         {
             var knownIssueMatch = new KnownIssueMatch
             {
-                BuildId = (int)reader.GetInt32(0),
-                BuildRepository = SqlHelper.GetReaderValue(reader, 1, reader.GetString),
-                StepStartTime = SqlHelper.GetNullableReaderValue(reader, 2, reader.GetDateTimeOffset),
-                IssueId = (int)reader.GetInt32(3),
-                IssueRepository = SqlHelper.GetReaderValue(reader, 4, reader.GetString),
-                IssueType = SqlHelper.GetReaderValue(reader, 5, reader.GetString),
-                JobId = SqlHelper.GetReaderValue(reader, 6, reader.GetString),
-                StepName = SqlHelper.GetReaderValue(reader, 7, reader.GetString),
-                LogURL = SqlHelper.GetReaderValue(reader, 8, reader.GetString),
-                PullRequest = SqlHelper.GetReaderValue(reader, 9, reader.GetString),
-                Project = SqlHelper.GetReaderValue(reader, 10, reader.GetString),
-                Organization = SqlHelper.GetReaderValue(reader, 11, reader.GetString)
+                BuildId = reader.GetInt32(0),
+                BuildRepository = DataReaderHelpers.GetReaderValue(reader, 1, reader.GetString),
+                StepStartTime = DataReaderHelpers.GetNullableReaderValue(reader, 2, reader.GetDateTimeOffset),
+                IssueId = reader.GetInt32(3),
+                IssueRepository = DataReaderHelpers.GetReaderValue(reader, 4, reader.GetString),
+                IssueType = DataReaderHelpers.GetReaderValue(reader, 5, reader.GetString),
+                JobId = DataReaderHelpers.GetReaderValue(reader, 6, reader.GetString),
+                StepName = DataReaderHelpers.GetReaderValue(reader, 7, reader.GetString),
+                LogURL = DataReaderHelpers.GetReaderValue(reader, 8, reader.GetString),
+                PullRequest = DataReaderHelpers.GetReaderValue(reader, 9, reader.GetString),
+                Project = DataReaderHelpers.GetReaderValue(reader, 10, reader.GetString),
+                Organization = DataReaderHelpers.GetReaderValue(reader, 11, reader.GetString)
             };
             knownIssueMatches.Add(knownIssueMatch);
         }
         return knownIssueMatches;
     }
 
-    private ImmutableList<TestKnownIssueMatch> GetTestsKnownIssuesFromDataReader(IDataReader reader)
+    private static ImmutableList<TestKnownIssueMatch> GetTestsKnownIssuesFromDataReader(IDataReader reader)
     {
         var knownIssueMatches = new List<TestKnownIssueMatch>();
         while (reader.Read())
@@ -221,17 +228,17 @@ TestKnownIssues
             var knownIssueMatch = new TestKnownIssueMatch
             {
                 BuildId = reader.GetInt32(0),
-                BuildRepository = SqlHelper.GetReaderValue(reader, 1, reader.GetString),
-                CompletedDate = SqlHelper.GetNullableReaderValue(reader, 2, reader.GetDateTimeOffset),
+                BuildRepository = DataReaderHelpers.GetReaderValue(reader, 1, reader.GetString),
+                CompletedDate = DataReaderHelpers.GetNullableReaderValue(reader, 2, reader.GetDateTimeOffset),
                 IssueId = reader.GetInt32(3),
-                IssueRepository = SqlHelper.GetReaderValue(reader, 4, reader.GetString),
-                IssueType = SqlHelper.GetReaderValue(reader, 5, reader.GetString),
-                TestResultName = SqlHelper.GetReaderValue(reader, 6, reader.GetString),
+                IssueRepository = DataReaderHelpers.GetReaderValue(reader, 4, reader.GetString),
+                IssueType = DataReaderHelpers.GetReaderValue(reader, 5, reader.GetString),
+                TestResultName = DataReaderHelpers.GetReaderValue(reader, 6, reader.GetString),
                 TestRunId = reader.GetInt32(7),
-                Url = SqlHelper.GetReaderValue(reader, 8, reader.GetString),
-                PullRequest = SqlHelper.GetReaderValue(reader, 9, reader.GetString),
-                Project = SqlHelper.GetReaderValue(reader, 10, reader.GetString),
-                Organization = SqlHelper.GetReaderValue(reader, 11, reader.GetString)
+                Url = DataReaderHelpers.GetReaderValue(reader, 8, reader.GetString),
+                PullRequest = DataReaderHelpers.GetReaderValue(reader, 9, reader.GetString),
+                Project = DataReaderHelpers.GetReaderValue(reader, 10, reader.GetString),
+                Organization = DataReaderHelpers.GetReaderValue(reader, 11, reader.GetString)
             };
             knownIssueMatches.Add(knownIssueMatch);
         }

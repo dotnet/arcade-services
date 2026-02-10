@@ -23,7 +23,6 @@
     <Project Path="C:/Users/prvysoky/source/repos/arcade-services/src/BuildInsights/BuildInsights.GitHubGraphQL/BuildInsights.GitHubGraphQL.csproj" />
     <Project Path="C:/Users/prvysoky/source/repos/arcade-services/src/BuildInsights/BuildInsights.KnownIssues/BuildInsights.KnownIssues.csproj" />
     <Project Path="C:/Users/prvysoky/source/repos/arcade-services/src/BuildInsights/BuildInsights.Utilities.Parallel/BuildInsights.Utilities.Parallel.csproj" />
-    <Project Path="C:/Users/prvysoky/source/repos/arcade-services/src/BuildInsights/BuildInsights.Utilities.Sql/BuildInsights.Utilities.Sql.csproj" />
     <Project Path="C:/Users/prvysoky/source/repos/arcade-services/src/BuildInsights/QueueInsights/QueueInsights.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.Api/BuildInsights.Api.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.AppHost/BuildInsights.AppHost.csproj" />

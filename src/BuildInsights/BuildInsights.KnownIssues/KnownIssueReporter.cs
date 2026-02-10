@@ -7,9 +7,7 @@ using BuildInsights.GitHub.Models;
 using BuildInsights.GitHubGraphQL;
 using BuildInsights.GitHubGraphQL.GitHubGraphQLAPI;
 using BuildInsights.KnownIssues.Models;
-using BuildInsights.KnownIssues.Services;
 using Maestro.Common;
-using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -24,7 +22,6 @@ public class KnownIssueReporter : IKnownIssueReporter
 {
     private const string InternalProject = "internal";
 
-    private readonly ISystemClock _clock;
     private readonly IGitHubGraphQLClient _graphQlClient;
     private readonly IGitHubIssuesService _issuesService;
     private readonly IOptions<KnownIssuesProjectOptions> _knownIssuesProjectOptions;
@@ -42,7 +39,6 @@ public class KnownIssueReporter : IKnownIssueReporter
         IOptions<KnownIssuesProjectOptions> knownIssuesProjectOptions,
         IOptions<GitHubIssuesSettings> gitHubIssuesSettings,
         IOptions<SsaCriteriaSettings> ssaCriteriaSettings,
-        ISystemClock clock,
         ILogger<KnownIssueReporter> logger)
     {
         _graphQlClient = graphQlClient;
@@ -52,7 +48,6 @@ public class KnownIssueReporter : IKnownIssueReporter
         _knownIssuesLabels = gitHubIssuesSettings.Value.KnownIssuesLabels;
         _ssaCriteriaSettings = ssaCriteriaSettings.Value;
         _knownIssueReportHelper = knownIssuesReportHelper;
-        _clock = clock;
         _logger = logger;
     }
 
