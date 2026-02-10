@@ -15,7 +15,7 @@ public enum GitRepoType
 public static class GitRepoUrlUtils
 {
     private const string GitHubComString = "github.com";
-    private const string GitHubUrlPrefix = "https://github.com/";
+    private const string GitHubUrlPrefix = $"https://{GitHubComString}/";
     private const string AzureDevOpsUrlPrefix = "https://dev.azure.com/";
 
     public static GitRepoType ParseTypeFromUri(string pathOrUri)
@@ -36,7 +36,7 @@ public static class GitRepoUrlUtils
         return parsedUri switch
         {
             { IsFile: true } => GitRepoType.Local,
-            { Scheme: "https" or "http", Host: "github.com" } => GitRepoType.GitHub,
+            { Scheme: "https" or "http", Host: GitHubComString } => GitRepoType.GitHub,
             { Scheme: "https" or "http", Host: "dev.azure.com" } => GitRepoType.AzureDevOps,
             { Scheme: "https" or "http", Host: var host } when host.EndsWith("visualstudio.com") => GitRepoType.AzureDevOps,
             _ => GitRepoType.None,
