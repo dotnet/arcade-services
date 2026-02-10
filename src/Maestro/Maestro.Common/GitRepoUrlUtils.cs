@@ -14,6 +14,7 @@ public enum GitRepoType
 
 public static class GitRepoUrlUtils
 {
+    private const string GitHubComString = "github.com";
     private const string GitHubUrlPrefix = "https://github.com/";
     private const string AzureDevOpsUrlPrefix = "https://dev.azure.com/";
 
@@ -102,7 +103,7 @@ public static class GitRepoUrlUtils
 
         if (repoType == GitRepoType.GitHub)
         {
-            string[] repoParts = uri.Substring(GitHubUrlPrefix.Length).Split(['/'], StringSplitOptions.RemoveEmptyEntries);
+            string[] repoParts = uri.Substring(uri.IndexOf(GitHubComString) + GitHubComString.Length).Split(['/'], StringSplitOptions.RemoveEmptyEntries);
 
             if (repoParts.Length != 2)
             {
