@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\BuildInsights.Data\BuildInsights.Data.csproj" />
     <ProjectReference Include="..\BuildInsights.GitHubGraphQL\BuildInsights.GitHubGraphQL.csproj" />
     <ProjectReference Include="..\BuildInsights.GitHub\BuildInsights.GitHub.csproj" />
     <ProjectReference Include="D:\repos\arcade-services\src\ProductConstructionService\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj" />

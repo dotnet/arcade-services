@@ -3,6 +3,7 @@
 
 using Azure;
 using Azure.Data.Tables;
+using BuildInsights.Data.Models;
 using BuildInsights.KnownIssues.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -21,24 +22,18 @@ public interface IKnownIssuesHistoryService
 
 public class KnownIssuesHistoryProvider : IKnownIssuesHistoryService
 {
-    private readonly TableConnectionSettings _tableOptions;
     private readonly KnownIssuesErrorsTableConnectionSettings _knownIssuesTableOptions;
     private readonly KnownIssueValidationTableConnectionSettings _knownIssueValidationTable;
-    private readonly ITableClientFactory _tableClientFactory;
     private readonly ILogger _logger;
 
     public KnownIssuesHistoryProvider(
-        IOptions<TableConnectionSettings> tableOptions,
         IOptions<KnownIssuesErrorsTableConnectionSettings> knownIssuesTableOptions,
         IOptions<KnownIssueValidationTableConnectionSettings> knownIssueValidationTable,
-        ITableClientFactory tableClientFactory,
         ILogger<KnownIssuesHistoryProvider> logger)
     {
         _logger = logger;
-        _tableOptions = tableOptions.Value;
         _knownIssuesTableOptions = knownIssuesTableOptions.Value;
         _knownIssueValidationTable = knownIssueValidationTable.Value;
-        _tableClientFactory = tableClientFactory;
     }
 
     public async Task SaveKnownIssuesHistory(IEnumerable<KnownIssue> knownIssues, int buildId)

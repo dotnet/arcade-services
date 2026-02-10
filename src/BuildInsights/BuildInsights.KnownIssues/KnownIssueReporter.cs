@@ -257,6 +257,6 @@ public class KnownIssueReporter : IKnownIssueReporter
             item.Content.Repository.NameWithOwner,
             item.Content.Body,
             item.Content.Url,
-            item.Content.Labels?.Nodes?.Select(n => n.Name).ToList() ?? new List<string>());
+            item.Content.Labels?.Nodes?.Select(n => n.Name).ToList() ?? []);
     }
 }
