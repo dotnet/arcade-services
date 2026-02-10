@@ -1,12 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using BuildInsights.UserSentiment;
 using HandlebarsDotNet;
-using HandlebarsDotNet.Helpers;
 using HandlebarsDotNet.IO;
-using HandlebarsDotNet.PathStructure;
-using QueueInsights.Models;
 
 namespace QueueInsights;
 
@@ -33,10 +29,9 @@ internal class InsightMarkdownHelpers
             .ToDictionary(Path.GetFileNameWithoutExtension, file => hb.Compile(File.ReadAllText(file)));
     }
 
-    public static void RegisterHelpers(IHandlebars hb, SentimentInjectorFactory factory)
+    public static void RegisterHelpers(IHandlebars hb)
     {
         hb.RegisterHelper("QueueLink", QueueLinkHelper);
-        hb.RegisterHelper(new SentimentTrackingHelper(factory));
     }
 
     public static void RegisterFormatters(IHandlebars hb)
@@ -92,66 +87,6 @@ internal class InsightMarkdownHelpers
 
             formatter = this;
             return true;
-        }
-    }
-
-    public class SentimentTrackingHelper : IHelperDescriptor<HelperOptions>
-    {
-        private readonly FeatureSentimentInjector _injector;
-
-        public SentimentTrackingHelper(SentimentInjectorFactory factory)
-        {
-            _injector = factory.CreateForFeature(SentimentFeature.HelixQueueInsights);
-        }
-
-
-        public object Invoke(in HelperOptions options, in Context context, in Arguments arguments)
-        {
-            return this.ReturnInvoke(options, context, arguments);
-        }
-
-        public void Invoke(in EncodedTextWriter output, in HelperOptions options, in Context context,
-            in Arguments arguments)
-        {
-            UserSentimentParameters parameters;
-            if (arguments.Hash.TryGetValue("params", out object parametersObject))
-                parameters = (UserSentimentParameters)parametersObject;
-            else
-                parameters = (UserSentimentParameters)arguments[0];
-
-            FeatureSentimentInjector injector = _injector;
-
-            if (parameters != null)
-            {
-                Add(ref injector, "r", parameters.Repository);
-                Add(ref injector, "pr", parameters.PullRequest);
-
-                string commitHash = parameters.CommitHash;
-                if (!string.IsNullOrEmpty(commitHash))
-                {
-                    if (commitHash.Length > 12)
-                        commitHash = commitHash[..12];
-                    injector = injector.WithProperty("c", commitHash);
-                }
-
-                Add(ref injector, "p", parameters.WasPending);
-            }
-
-            output.WriteSafeString(injector.GetMarkdown());
-        }
-
-        private static void Add(ref FeatureSentimentInjector injector, string key, bool value)
-        {
-            Add(ref injector, key, value ? "1" : "0");
-        }
-
-        public PathInfo Name => "SentimentTracking";
-
-        private static void Add(ref FeatureSentimentInjector injector, string key, string value)
-        {
-            if (string.IsNullOrEmpty(value))
-                return;
-            injector = injector.WithProperty(key, value);
         }
     }
 }

@@ -15,7 +15,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BuildInsights.GitHub\BuildInsights.GitHub.csproj" />
-    <ProjectReference Include="..\BuildInsights.UserSentiment\BuildInsights.UserSentiment.csproj" />
   </ItemGroup>
 
   <ItemGroup>
