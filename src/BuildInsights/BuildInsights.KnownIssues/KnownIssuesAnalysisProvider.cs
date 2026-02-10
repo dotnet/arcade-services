@@ -1,11 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Text.Json;
-using Azure.Storage.Queues;
-using BuildInsights.KnownIssues.Models;
+using BuildInsights.KnownIssues.WorkItems;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using ProductConstructionService.WorkItems;
 
 namespace BuildInsights.KnownIssues;
 
@@ -17,37 +15,27 @@ public interface IKnownIssuesAnalysisService
 public class KnownIssuesAnalysisProvider : IKnownIssuesAnalysisService
 {
     private readonly ILogger<KnownIssuesAnalysisProvider> _logger;
-    private readonly IQueueClientFactory _queueClientFactory;
-    private readonly KnownIssuesAnalysisOptions _options;
-
-    private QueueClientOptions _queueClientOptions = new QueueClientOptions()
-    {
-        MessageEncoding = QueueMessageEncoding.Base64
-    };
+    private readonly IWorkItemProducerFactory _workItemProducerFactory;
 
     public KnownIssuesAnalysisProvider(
-        IQueueClientFactory queueClientFactory,
-        IOptions<KnownIssuesAnalysisOptions> options,
+        IWorkItemProducerFactory workItemProducerFactory,
         ILogger<KnownIssuesAnalysisProvider> logger)
     {
         _logger = logger;
-        _queueClientFactory = queueClientFactory;
-        _options = options.Value;
+        _workItemProducerFactory = workItemProducerFactory;
     }
 
     public async Task RequestKnownIssuesAnalysis(string organization, string repository, long issueId)
     {
-        QueueClient queueClient = _queueClientFactory.GetQueueClient(_options.Name, _options.Endpoint, _queueClientOptions);
+        var queueProducer = _workItemProducerFactory.CreateProducer<AnalysisProcessRequest>();
 
         _logger.LogInformation("Requesting known issues analysis for issue {organization}/{issueRepo}#{issueId}", organization, repository, issueId);
-        AnalysisProcessRequest buildAnalysisMessage = new AnalysisProcessRequest
-        {
-            IssueId = issueId,
-            Repository = organization + "/" + repository
-        };
 
-        string jsonMessaje = JsonSerializer.Serialize(buildAnalysisMessage);
-
-        await queueClient.SendMessageAsync(jsonMessaje);
+        await queueProducer.ProduceWorkItemAsync(
+            new AnalysisProcessRequest
+            {
+                IssueId = issueId,
+                Repository = organization + "/" + repository
+            });
     }
 }
