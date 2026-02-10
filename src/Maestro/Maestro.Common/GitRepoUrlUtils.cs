@@ -36,9 +36,9 @@ public static class GitRepoUrlUtils
         return parsedUri switch
         {
             { IsFile: true } => GitRepoType.Local,
-            { Host: "github.com" } => GitRepoType.GitHub,
-            { Host: var host } when host is "dev.azure.com" => GitRepoType.AzureDevOps,
-            { Host: var host } when host.EndsWith("visualstudio.com") => GitRepoType.AzureDevOps,
+            { Scheme: "https" or "http", Host: "github.com" } => GitRepoType.GitHub,
+            { Scheme: "https" or "http", Host: "dev.azure.com" } => GitRepoType.AzureDevOps,
+            { Scheme: "https" or "http", Host: var host } when host.EndsWith("visualstudio.com") => GitRepoType.AzureDevOps,
             _ => GitRepoType.None,
         };
     }
