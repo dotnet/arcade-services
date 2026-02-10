@@ -181,7 +181,7 @@ public sealed class Remote : IRemote
 
         var arcadePackage = itemsToUpdate.GetArcadeUpdate();
 
-        bool isRecursiveUpdateTargetingRootDirectory = targetRepo == arcadePackage.RepoUri &&
+        bool isRecursiveUpdateTargetingRootDirectory = targetRepo == itemsToUpdate.FirstOrDefault()?.RepoUri &&
             (targetDirectory == UnixPath.Empty || targetDirectory == UnixPath.CurrentDir);
 
         var skipArcadeUpdates = arcadePackage == null
