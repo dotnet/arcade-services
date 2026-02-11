@@ -43,6 +43,11 @@ internal static class SubscriptionValidator
     {
         ArgumentNullException.ThrowIfNull(subscription);
 
+        if (subscription.Values.Id == Guid.Empty)
+        {
+            throw new EntityIngestionValidationException("Subscription id is required.", subscription);
+        }
+
         if (string.IsNullOrWhiteSpace(subscription.Values.Channel))
         {
             throw new EntityIngestionValidationException("Channel name is required.", subscription);
