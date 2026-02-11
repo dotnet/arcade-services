@@ -345,7 +345,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// </summary>
     /// <param name="repoUri">Repository URI</param>
     /// <param name="pullRequest">Pull request data</param>
-    public async Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest)
+    public async Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest, bool enablePrAutoComplete = false)
     {
         (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
 
@@ -363,7 +363,33 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             projectName,
             repoName);
 
+        if (enablePrAutoComplete)
+        {
+            await SetAutoCompleteOption(createdPr, client, projectName, repoName);
+        }
+
         return ToDarcLibPullRequest(createdPr);
+    }
+
+    private async Task SetAutoCompleteOption(GitPullRequest createdPr, GitHttpClient client, string projectName, string repoName)
+    {
+        var autoCompleteIdentity = createdPr.CreatedBy;
+
+        var update = new GitPullRequest
+        {
+            AutoCompleteSetBy = autoCompleteIdentity,
+
+            CompletionOptions = new GitPullRequestCompletionOptions
+            {
+                DeleteSourceBranch = true,
+            }
+        };
+
+        createdPr = await client.UpdatePullRequestAsync(
+            update,
+            projectName,
+            repoName,
+            createdPr.PullRequestId);
     }
 
     /// <summary>
