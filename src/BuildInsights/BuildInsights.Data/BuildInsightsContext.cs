@@ -12,7 +12,7 @@ public class BuildInsightsContextFactory : IDesignTimeDbContextFactory<BuildInsi
 {
     public BuildInsightsContext CreateDbContext(string[] args)
     {
-        var connectionString = GetConnectionString("BuildInsights");
+        var connectionString = GetLocalConnectionString("BuildInsights");
 
         DbContextOptions options = new DbContextOptionsBuilder()
             .UseSqlServer(connectionString, opts =>
@@ -25,23 +25,19 @@ public class BuildInsightsContextFactory : IDesignTimeDbContextFactory<BuildInsi
         return new BuildInsightsContext(options);
     }
 
-    public static string GetConnectionString(string databaseName)
+    public static string GetLocalConnectionString(string databaseName)
     {
         var connectionString = $@"Data Source=localhost\SQLEXPRESS;Initial Catalog={databaseName};Integrated Security=true;Encrypt=false"; // CodeQL [SM03452] This 'connection string' is only for the local SQLExpress instance and has no credentials, Encrypt=false for .NET 8+ compatibility
         var envVarConnectionString = Environment.GetEnvironmentVariable("BUILD_INSIGHTS_DB_CONNECTION_STRING");
-        if (string.IsNullOrEmpty(envVarConnectionString))
-        {
-            return connectionString;
-        }
-        else
-        {
-            return envVarConnectionString;
-        }
+        return string.IsNullOrEmpty(envVarConnectionString) ? connectionString : envVarConnectionString;
     }
 }
 
 public class BuildInsightsContext : DbContext
 {
+    public DbSet<BuildAnalysisEvent> BuildAnalysisEvents { get; set; }
+    public DbSet<BuildProcessingStatusEvent> BuildProcessingStatusEvents { get; set; }
+    public DbSet<KnownIssueAnalysis> KnownIssueAnalysis { get; set; }
     public DbSet<KnownIssueError> KnownIssueErrors { get; set; }
 
     public BuildInsightsContext(DbContextOptions options) : base(options)
