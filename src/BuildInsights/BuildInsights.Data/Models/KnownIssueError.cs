@@ -3,16 +3,11 @@
 
 using System;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BuildInsights.Data.Models;
 
 public class KnownIssueError
 {
-    [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public int Id { get; set; }
-
     [MaxLength(500)]
     public required string Repository { get; set; }
 
