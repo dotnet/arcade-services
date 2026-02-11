@@ -1,13 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using BuildInsights.GitHub.Models;
-using Microsoft.Internal.Helix.KnownIssues;
-using Microsoft.Internal.Helix.KnownIssues.Models;
+using BuildInsights.KnownIssues;
+using BuildInsights.KnownIssues.Models;
 
 namespace BuildInsights.BuildAnalysis.Models.Views;
 
@@ -45,7 +42,7 @@ public class TestResultView : IResult
     public FailureRate FailureRate { get; set; }
     public IImmutableList<KnownIssue> KnownIssues { get; set; } = ImmutableList<KnownIssue>.Empty;
 
-    private string _azDOUrl;
+    private readonly string _azDOUrl;
 
     public TestResultView() { }
 
@@ -112,6 +109,6 @@ public class TestResultView : IResult
             {"pr", pullRequest ?? "N/A"}
         };
 
-        return KnownIssueHelper.GetReportIssueUrl(parameters, issueParameters, host, repository,pullRequest);
+        return KnownIssueHelper.GetReportIssueUrl(parameters, issueParameters, host, repository, pullRequest);
     }
 }

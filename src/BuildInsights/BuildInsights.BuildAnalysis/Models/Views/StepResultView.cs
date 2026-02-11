@@ -6,8 +6,8 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using BuildInsights.GitHub.Models;
-using Microsoft.Internal.Helix.KnownIssues;
-using Microsoft.Internal.Helix.KnownIssues.Models;
+using BuildInsights.KnownIssues;
+using BuildInsights.KnownIssues.Models;
 
 namespace BuildInsights.BuildAnalysis.Models.Views;
 

@@ -1,16 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using HandlebarsDotNet;
 using HandlebarsDotNet.Helpers;
 using HandlebarsDotNet.IO;
 using HandlebarsDotNet.PathStructure;
 using Microsoft.Extensions.DependencyInjection;
 using BuildInsights.BuildAnalysis.Models;
-using Microsoft.Internal.Helix.Utility.UserSentiment;
 
 namespace BuildInsights.BuildAnalysis;
 
@@ -455,86 +452,9 @@ public class HandlebarHelpers
             output.WriteSafeString($"<!-- SnapshotId: {arguments[0]} -->");
         }
     }
-    public class SentimentTrackingHelper : InlineHelper
-    {
-        private readonly FeatureSentimentInjector _injector;
-
-        public SentimentTrackingHelper(SentimentInjectorFactory factory)
-        {
-            _injector = factory.CreateForFeature(SentimentFeature.DeveloperWorkflowGitHubCheckTab);
-        }
-
-        public override PathInfo Name => "SentimentTracking";
-
-        public override void Invoke(in EncodedTextWriter output, in HelperOptions options, in Context context, in Arguments arguments)
-        {
-            UserSentimentParameters parameters;
-            if (arguments.Hash.TryGetValue("params", out var parametersObject))
-            {
-                parameters = (UserSentimentParameters) parametersObject;
-            }
-            else
-            {
-                parameters = (UserSentimentParameters) arguments[0];
-            }
-
-            FeatureSentimentInjector injector = _injector;
-
-            if (parameters != null)
-            {
-                Add(ref injector, "r", parameters.Repository);
-                Add(ref injector, "b", parameters.BuildId);
-                Add(ref injector, "ut", parameters.HasUniqueTestFailures);
-                Add(ref injector, "ub", parameters.HasUniqueBuildFailures);
-                Add(ref injector, "rb", parameters.IsRetryWithUniqueBuildFailures);
-                Add(ref injector, "rt", parameters.IsRetryWithUniqueTestFailures);
-                Add(ref injector, "s", parameters.SnapshotId);
-                Add(ref injector, "ki", parameters.KnownIssues);
-
-                string commitHash = parameters.CommitHash;
-                if (!string.IsNullOrEmpty(commitHash))
-                {
-                    if (commitHash.Length > 12)
-                        commitHash = commitHash[..12];
-                    injector = injector.WithProperty("c", commitHash);
-                }
-
-                Add(ref injector, "e", parameters.IsEmpty);
-            }
-
-            output.WriteSafeString(injector.GetMarkdown());
-        }
-        
-        private static void Add(ref FeatureSentimentInjector injector, string key, bool? value)
-        {
-            if (!value.HasValue)
-                return;
-            injector = injector.WithProperty(key, value.Value ? "1" : "0");
-        }
-
-        private static void Add(ref FeatureSentimentInjector injector, string key, int? value)
-        {
-            if (!value.HasValue)
-                return;
-            injector = injector.WithProperty(key, value.Value.ToString());
-        }
-
-        private static void Add(ref FeatureSentimentInjector injector, string key, string value)
-        {
-            if (string.IsNullOrEmpty(value))
-                return;
-            injector = injector.WithProperty(key, value);
-        }
-    }
 
     public abstract class BaseLinkHelper : InlineHelper
     {
-        private readonly FeatureSentimentInjector _injector;
-
-        public BaseLinkHelper(SentimentInjectorFactory factory)
-        {
-            _injector = factory.CreateForFeature(SentimentFeature.DeveloperWorkflowGitHubCheckTab);
-        }
         public override void Invoke(in EncodedTextWriter output, in HelperOptions options, in Context context, in Arguments arguments)
         {
             if (arguments.Length > 1 && arguments[1] != null)
@@ -552,10 +472,6 @@ public class HandlebarHelpers
     {
         public override PathInfo Name => "LinkToHtml";
 
-        public HtmlLinkHelper(SentimentInjectorFactory factory) : base(factory)
-        {
-        }
-
         protected override void RenderString(EncodedTextWriter output, string url, string text)
         {
             // TODO: text isn't technically "safe" here, but it's sort of half safe (links don't work, but other things do)
@@ -566,10 +482,6 @@ public class HandlebarHelpers
     public class MarkdownLinkHelper : BaseLinkHelper
     {
         public override PathInfo Name => "LinkTo";
-
-        public MarkdownLinkHelper(SentimentInjectorFactory factory) : base(factory)
-        {
-        }
 
         protected override void RenderString(EncodedTextWriter output, string url, string text)
         {

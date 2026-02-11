@@ -6,7 +6,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using JetBrains.Annotations;
 using BuildInsights.BuildAnalysis.Providers;
-using Microsoft.Internal.Helix.KnownIssues.Models;
+using BuildInsights.KnownIssues.Models;
 
 namespace BuildInsights.BuildAnalysis.Models.Views;
 

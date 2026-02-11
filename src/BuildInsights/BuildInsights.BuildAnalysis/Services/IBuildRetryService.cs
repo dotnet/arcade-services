@@ -3,7 +3,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Internal.Helix.KnownIssues.Models;
+using BuildInsights.KnownIssues.Models;
 
 namespace BuildInsights.BuildAnalysis.Services;
 

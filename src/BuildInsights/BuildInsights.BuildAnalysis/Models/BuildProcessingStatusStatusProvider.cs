@@ -1,88 +1,65 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Azure;
-using Azure.Data.Tables;
-using Microsoft.Extensions.Options;
 using BuildInsights.BuildAnalysis.Services;
-using Microsoft.Internal.Helix.Utility.Azure;
+using BuildInsights.Data;
+using BuildInsights.Data.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace BuildInsights.BuildAnalysis.Models;
 
 public class BuildProcessingStatusStatusProvider : IBuildProcessingStatusService
 {
-    private readonly ProcessingStatusTableConnectionSettings _statusTableSettings;
-    private readonly ITableClientFactory _tableClientFactory;
+    private readonly BuildInsightsContext _context;
 
-    public BuildProcessingStatusStatusProvider(
-        IOptions<ProcessingStatusTableConnectionSettings> statusTableSettings,
-        ITableClientFactory tableClientFactory)
+    public BuildProcessingStatusStatusProvider(BuildInsightsContext context)
     {
-        _statusTableSettings = statusTableSettings.Value;
-        _tableClientFactory = tableClientFactory;
+        _context = context;
     }
 
     public async Task<bool> IsBuildBeingProcessed(DateTimeOffset since, string repository, int buildId, CancellationToken cancellationToken)
     {
-        TableClient tableClient = _tableClientFactory.GetTableClient(_statusTableSettings.Name, _statusTableSettings.Endpoint);
-
-        AsyncPageable<BuildProcessingStatusEvent> results = tableClient.QueryAsync<BuildProcessingStatusEvent>(
-            buildProcessingEvent => buildProcessingEvent.PartitionKey == NormalizeRepository(repository) &&
-                                    buildProcessingEvent.RowKey == buildId.ToString() &&
-                                    buildProcessingEvent.Status == BuildProcessingStatus.InProcess.Value &&
-                                    buildProcessingEvent.Timestamp > since, 100, cancellationToken: cancellationToken);
-
-        var buildAnalysisInProcess = new List<BuildProcessingStatusEvent>();
-        await foreach (Page<BuildProcessingStatusEvent> page in results.AsPages().WithCancellation(cancellationToken))
-        {
-            buildAnalysisInProcess.AddRange(page.Values);
-        }
-
-        return buildAnalysisInProcess.Any();
+        return await _context.BuildProcessingStatusEvents.AnyAsync(
+            e =>
+                e.Repository == NormalizeRepository(repository)
+                && e.BuildId == buildId
+                && e.Status == BuildProcessingStatus.InProcess
+                && e.Timestamp > since,
+            cancellationToken: cancellationToken);
     }
 
     public async Task SaveBuildAnalysisProcessingStatus(string repository, int buildId, BuildProcessingStatus processingStatus)
     {
-        TableClient tableClient = _tableClientFactory.GetTableClient(_statusTableSettings.Name, _statusTableSettings.Endpoint);
+        var buildEvent = new BuildProcessingStatusEvent
+        {
+            Repository = NormalizeRepository(repository),
+            BuildId = buildId,
+            Status = processingStatus,
+        };
 
-        var buildEvent = new BuildProcessingStatusEvent(NormalizeRepository(repository), buildId, processingStatus);
-        await tableClient.UpsertEntityAsync(buildEvent);
+        await _context.BuildProcessingStatusEvents.AddAsync(buildEvent);
+        await _context.SaveChangesAsync();
     }
 
     public async Task SaveBuildAnalysisProcessingStatus(List<(string repository, int buildId)> builds, BuildProcessingStatus processingStatus)
     {
-        TableClient tableClient = _tableClientFactory.GetTableClient(_statusTableSettings.Name, _statusTableSettings.Endpoint);
+        IEnumerable<BuildProcessingStatusEvent> events = builds.Select(build =>
+            new BuildProcessingStatusEvent
+            {
+                Repository = NormalizeRepository(build.repository),
+                BuildId = build.buildId,
+                Status = processingStatus,
+            });
 
-        IEnumerable<BuildProcessingStatusEvent> buildProcessingStatusEvents = builds.Select(build =>
-            new BuildProcessingStatusEvent(NormalizeRepository(build.repository), build.buildId, processingStatus));
-
-        foreach (BuildProcessingStatusEvent buildProcessingStatusEvent in buildProcessingStatusEvents)
-        {
-            await tableClient.UpsertEntityAsync(buildProcessingStatusEvent);
-        }
+        await _context.BuildProcessingStatusEvents.AddRangeAsync(events);
+        await _context.SaveChangesAsync();
     }
 
     public async Task<List<BuildProcessingStatusEvent>> GetBuildsWithOverrideConclusion(DateTimeOffset since, CancellationToken cancellationToken)
     {
-        TableClient tableClient = _tableClientFactory.GetTableClient(_statusTableSettings.Name, _statusTableSettings.Endpoint);
-
-        AsyncPageable<BuildProcessingStatusEvent> results = tableClient.QueryAsync<BuildProcessingStatusEvent>(
-            buildProcessingEvent => buildProcessingEvent.Timestamp > since &&
-                                    buildProcessingEvent.Status == BuildProcessingStatus.ConclusionOverridenByUser.Value,
-            100, cancellationToken: cancellationToken);
-
-        var buildAnalysisInProcess = new List<BuildProcessingStatusEvent>();
-        await foreach (Page<BuildProcessingStatusEvent> page in results.AsPages().WithCancellation(cancellationToken))
-        {
-            buildAnalysisInProcess.AddRange(page.Values);
-        }
-
-        return buildAnalysisInProcess.ToList();
+        return await _context.BuildProcessingStatusEvents
+            .Where(e => e.Timestamp > since && e.Status == BuildProcessingStatus.ConclusionOverridenByUser)
+            .ToListAsync(cancellationToken);
     }
 
 

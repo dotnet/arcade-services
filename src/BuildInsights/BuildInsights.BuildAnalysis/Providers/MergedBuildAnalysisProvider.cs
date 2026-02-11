@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Services;
 using BuildInsights.GitHub.Models;
-using Microsoft.Internal.Helix.KnownIssues.Models;
+using BuildInsights.KnownIssues.Models;
 using Microsoft.Internal.Helix.KnownIssues.Services;
 using Microsoft.Internal.Helix.Utility;
 using Microsoft.Internal.Helix.Utility.Azure;

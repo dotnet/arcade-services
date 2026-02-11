@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BuildInsights.BuildAnalysis.Models;
-using Microsoft.Internal.Helix.KnownIssues.Models;
+using BuildInsights.KnownIssues.Models;
 
 namespace BuildInsights.BuildAnalysis.Providers;
 

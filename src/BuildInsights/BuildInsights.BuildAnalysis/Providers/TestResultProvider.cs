@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Services;
-using Microsoft.Internal.Helix.KnownIssues.Models;
+using BuildInsights.KnownIssues.Models;
 using Microsoft.Internal.Helix.KnownIssues.Services;
 using Microsoft.Internal.Helix.Utility.AzureDevOps.Models;
 

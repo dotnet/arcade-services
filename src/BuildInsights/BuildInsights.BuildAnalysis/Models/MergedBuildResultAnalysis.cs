@@ -1,10 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using BuildInsights.GitHub.Models;
-using Microsoft.Internal.Helix.KnownIssues.Models;
+using BuildInsights.KnownIssues.Models;
 
 namespace BuildInsights.BuildAnalysis.Models;
 
@@ -29,10 +28,10 @@ public class MergedBuildResultAnalysis
         ImmutableList<KnownIssue> criticalIssues)
     {
         CommitHash = commitHash;
-        CompletedPipelines = completedPipelines?.ToImmutableList() ?? ImmutableList<BuildResultAnalysis>.Empty;
-        PendingBuildNames = pendingBuildNames?.ToImmutableList() ?? ImmutableList<Link>.Empty;
-        FilteredPipelinesBuilds = filteredPipelinesBuilds?.ToImmutableList() ?? ImmutableList<Link>.Empty;
+        CompletedPipelines = completedPipelines?.ToImmutableList() ?? [];
+        PendingBuildNames = pendingBuildNames?.ToImmutableList() ?? [];
+        FilteredPipelinesBuilds = filteredPipelinesBuilds?.ToImmutableList() ?? [];
         OverallStatus = overallStatus;
-        CriticalIssues = criticalIssues ?? ImmutableList<KnownIssue>.Empty;
+        CriticalIssues = criticalIssues ?? [];
     }
 }

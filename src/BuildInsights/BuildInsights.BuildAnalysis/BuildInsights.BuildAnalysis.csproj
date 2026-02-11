@@ -19,14 +19,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Utility\Helix.Utility.Azure\Helix.Utility.Azure.csproj" />
-    <ProjectReference Include="..\..\..\Utility\Helix.Utility.AzureDevOps\Helix.Utility.AzureDevOps.csproj" />
-    <ProjectReference Include="..\..\..\Utility\Helix.Utility.Common\Helix.Utility.Common.csproj" />
+    <ProjectReference Include="..\BuildInsights.Data\BuildInsights.Data.csproj" />
     <ProjectReference Include="..\BuildInsights.GitHub\BuildInsights.GitHub.csproj" />
-    <ProjectReference Include="..\BuildInsights.UserSentiment\BuildInsights.UserSentiment.csproj" />
+    <ProjectReference Include="..\BuildInsights.KnownIssues\BuildInsights.KnownIssues.csproj" />
     <ProjectReference Include="..\BuildInsights.Utilities.Parallel\BuildInsights.Utilities.Parallel.csproj" />
-    <ProjectReference Include="..\BuildInsights.Utilities.Sql\BuildInsights.Utilities.Sql.csproj" />
-    <ProjectReference Include="..\Helix.Internal.KnownIssues\Helix.Internal.KnownIssues.csproj" />
     <ProjectReference Include="..\QueueInsights\QueueInsights.csproj" />
   </ItemGroup>
 

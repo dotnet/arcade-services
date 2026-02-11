@@ -1,39 +1,32 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Azure;
 using Azure.Data.Tables;
-using Microsoft.Extensions.Options;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Services;
-using Microsoft.Internal.Helix.Utility.Azure;
+using BuildInsights.Data;
+using BuildInsights.Data.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace BuildInsights.BuildAnalysis.Providers;
 
 public class BuildAnalysisHistoryProvider : IBuildAnalysisHistoryService
 {
-    private readonly BuildAnalysisTableConnectionSettings _tableSettings;
-    private readonly ITableClientFactory _tableClientFactory;
+    private readonly BuildInsightsContext _context;
 
-    public BuildAnalysisHistoryProvider(
-        ITableClientFactory tableClientFactory,
-        IOptions<BuildAnalysisTableConnectionSettings> tableSettings)
+    public BuildAnalysisHistoryProvider(BuildInsightsContext context)
     {
-        _tableSettings = tableSettings.Value;
-        _tableClientFactory = tableClientFactory;
+        _context = context;
     }
 
-    public BuildAnalysisEvent GetLastBuildAnalysisRecord(int buildId, string definitionName)
+    public async Task<BuildAnalysisEvent> GetLastBuildAnalysisRecord(int buildId, string definitionName)
     {
-        TableClient tableClient = _tableClientFactory.GetTableClient(_tableSettings.Name, _tableSettings.Endpoint);
-        Pageable<BuildAnalysisEvent> results = tableClient.Query<BuildAnalysisEvent>(e => e.PartitionKey == definitionName && e.RowKey == buildId.ToString());
-        return results.FirstOrDefault();
+        return await _context.BuildAnalysisEvents
+            .Where(e => e.PipelineName == definitionName && e.BuildId == buildId)
+            .OrderByDescending(e => e.AnalysisTimestamp)
+            .FirstOrDefaultAsync();
     }
 
     public async Task SaveBuildAnalysisRecords(ImmutableList<BuildResultAnalysis> completedPipelines, string repositoryId, string project, DateTimeOffset analysisTimestamp)

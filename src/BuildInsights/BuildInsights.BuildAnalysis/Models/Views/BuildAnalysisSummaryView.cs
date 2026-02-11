@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using BuildInsights.GitHub.Models;
-using Microsoft.Internal.Helix.KnownIssues;
+using BuildInsights.KnownIssues;
 
 namespace BuildInsights.BuildAnalysis.Models.Views;
 
