@@ -345,6 +345,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
     /// </summary>
     /// <param name="repoUri">Repository URI</param>
     /// <param name="pullRequest">Pull request data</param>
+    /// <param name="enablePrAutoComplete">Whether the created PR should have auto-complete enabled</param>
     public async Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest, bool enablePrAutoComplete = false)
     {
         (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
@@ -365,13 +366,25 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
         if (enablePrAutoComplete)
         {
-            await SetAutoCompleteOption(createdPr, client, projectName, repoName);
+            try
+            {
+                await SetPullRequestAutoCompleteAsync(createdPr, client, projectName, repoName);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(
+                    ex,
+                    "Failed to enable auto-complete for pull request {PullRequestId} in {ProjectName}/{RepoName}. The pull request was created successfully but auto-complete will not be enabled.",
+                    createdPr.PullRequestId,
+                    projectName,
+                    repoName);
+            }
         }
 
         return ToDarcLibPullRequest(createdPr);
     }
 
-    private async Task SetAutoCompleteOption(GitPullRequest createdPr, GitHttpClient client, string projectName, string repoName)
+    private async Task SetPullRequestAutoCompleteAsync(GitPullRequest createdPr, GitHttpClient client, string projectName, string repoName)
     {
         var autoCompleteIdentity = createdPr.CreatedBy;
 
@@ -385,7 +398,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             }
         };
 
-        createdPr = await client.UpdatePullRequestAsync(
+        await client.UpdatePullRequestAsync(
             update,
             projectName,
             repoName,

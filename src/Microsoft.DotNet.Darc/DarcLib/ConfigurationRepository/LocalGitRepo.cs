@@ -36,12 +36,7 @@ public class LocalGitRepo : MaestroConfiguration.Client.IGitRepo
     public async Task CreateBranchAsync(string repositoryUri, string branch, string baseBranch)
         => await _gitRepo.CreateBranchAsync(repositoryUri, branch, baseBranch);
 
-    public Task<string> CreatePullRequestAsync(
-        string repositoryUri,
-        string headBranch,
-        string baseBranch,
-        string prTitle,
-        string prDescription = null)
+    public Task<string> CreatePullRequestAsync( string repositoryUri, string headBranch, string baseBranch, string prTitle, string prDescription = null)
     {
         _logger.LogWarning("Cannot create pull request when using local git repository.");
         return Task.FromResult(string.Empty);

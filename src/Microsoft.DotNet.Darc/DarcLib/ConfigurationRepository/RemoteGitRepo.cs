@@ -31,12 +31,7 @@ public class RemoteGitRepo : MaestroConfiguration.Client.IGitRepo
     public async Task CreateBranchAsync(string repositoryUri, string branch, string baseBranch)
         => await _gitRepo.CreateBranchAsync(repositoryUri, branch, baseBranch);
 
-    public async Task<string> CreatePullRequestAsync(
-        string repositoryUri,
-        string headBranch,
-        string baseBranch,
-        string prTitle,
-        string? prDescription = null)
+    public async Task<string> CreatePullRequestAsync(string repositoryUri, string headBranch, string baseBranch, string prTitle, string? prDescription = null)
     {
         var pr = await _remote.CreatePullRequestAsync(
             repositoryUri,
