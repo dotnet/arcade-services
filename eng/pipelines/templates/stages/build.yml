@@ -68,7 +68,7 @@ stages:
         displayName: Build/publish docker image
         pool:
           name: NetCore1ESPool-Internal
-          demands: ImageOverride -equals 1es-ubuntu-2204
+          demands: ImageOverride -equals build.ubuntu.2204.amd64.open
           os: linux
         steps:
         - checkout: self
