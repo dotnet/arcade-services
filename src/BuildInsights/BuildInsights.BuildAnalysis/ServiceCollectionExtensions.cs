@@ -3,9 +3,10 @@
 
 // ReSharper disable once CheckNamespace
 
-using BuildInsights.BuildAnalysis;
 using BuildInsights.BuildAnalysis.Providers;
 using BuildInsights.BuildAnalysis.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace BuildInsights.BuildAnalysis;
 

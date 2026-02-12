@@ -37,6 +37,7 @@ public class BuildInsightsContext : DbContext
 {
     public DbSet<BuildAnalysisEvent> BuildAnalysisEvents { get; set; }
     public DbSet<BuildProcessingStatusEvent> BuildProcessingStatusEvents { get; set; }
+    public DbSet<BuildAnalysisRepositoryConfiguration> BuildAnalysisRepositoryConfigurations { get; set; }
     public DbSet<KnownIssueAnalysis> KnownIssueAnalysis { get; set; }
     public DbSet<KnownIssueError> KnownIssueErrors { get; set; }
 

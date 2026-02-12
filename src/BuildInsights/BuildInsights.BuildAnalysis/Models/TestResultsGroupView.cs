@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using BuildInsights.BuildAnalysis.Models.Views;
-using System.Collections.Generic;
 
 namespace BuildInsights.BuildAnalysis.Models;
 

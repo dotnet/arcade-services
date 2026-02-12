@@ -1,24 +1,17 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Services;
 using BuildInsights.KnownIssues;
 using BuildInsights.KnownIssues.Models;
-using Microsoft.Internal.Helix.KnownIssues.Services;
-using Microsoft.Internal.Helix.Utility;
-using Microsoft.Internal.Helix.Utility.Azure;
 using Octokit;
+using BuildInsights.Data.Models;
+using Maestro.Common;
 
 namespace BuildInsights.BuildAnalysis.Providers;
 
@@ -99,7 +92,7 @@ public class KnownIssueValidationProvider : IKnownIssueValidationService
         KnownIssueValidationResult knownIssueValidationResult = isMatch ? KnownIssueValidationResult.Matched : KnownIssueValidationResult.NotMatched;
 
         _logger.LogInformation("Updating Github issue: {repository}#{issueId} with validation result: {result}", knownIssueValidationMessage.RepositoryWithOwner, knownIssueValidationMessage.IssueId, knownIssueValidationResult.Value);
-        await UpdateIssueWithValidationResult(knownIssueValidationResult, knownIssueValidationMessage, BuildParserHelper.GetBuildUrl(buildFromGitHubIssue.OrganizationId, buildFromGitHubIssue.ProjectId,
+        await UpdateIssueWithValidationResult(knownIssueValidationResult, knownIssueValidationMessage, BuildUrlUtils.GetBuildUrl(buildFromGitHubIssue.OrganizationId, buildFromGitHubIssue.ProjectId,
                 buildFromGitHubIssue.Id), knownIssue.BuildError);
 
         await _knownIssuesHistoryService.SaveBuildKnownIssueValidation(buildFromGitHubIssue.Id, knownIssueValidationMessage.RepositoryWithOwner,
@@ -142,7 +135,7 @@ public class KnownIssueValidationProvider : IKnownIssueValidationService
         validation.AppendLine(" ### Known issue validation");
         validation.AppendLine($"**Build: :mag_right:** {buildUrl}");
 
-        List<string> messagesValidated = errorValidated?.Where(e => !string.IsNullOrEmpty(e)).ToList() ?? new List<string>();
+        List<string> messagesValidated = errorValidated?.Where(e => !string.IsNullOrEmpty(e)).ToList() ?? [];
         if (messagesValidated.Count > 0)
         {
             validation.AppendLine($"**Error message validated:** `[{string.Join(" ", messagesValidated)}`]");

@@ -1,9 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.KnownIssues.Models;
 
@@ -13,7 +10,7 @@ public class KnownIssuesMatchHelper
 {
     public static List<KnownIssueMatch> GetKnownIssueMatchesInBuild(Build build, BuildResultAnalysis buildAnalysis)
     {
-        List<KnownIssueMatch> knownIssueMatches = new List<KnownIssueMatch>();
+        List<KnownIssueMatch> knownIssueMatches = [];
         foreach (StepResult step in buildAnalysis.BuildStepsResult)
         {
             foreach (KnownIssue issue in step.KnownIssues)
@@ -25,7 +22,7 @@ public class KnownIssuesMatchHelper
                     IssueId = issue.GitHubIssue.Id,
                     IssueRepository = issue.GitHubIssue.RepositoryWithOwner,
                     IssueType = issue.IssueType.ToString(),
-                    IssueLabels = string.Join(",", issue.GitHubIssue?.Labels ?? new List<string>()),
+                    IssueLabels = string.Join(",", issue.GitHubIssue?.Labels ?? []),
                     JobId = step.JobId,
                     StepName = step.StepName,
                     StepStartTime = step.StepStartTime ?? DateTimeOffset.UtcNow,
@@ -42,7 +39,7 @@ public class KnownIssuesMatchHelper
 
     public static List<TestKnownIssueMatch> GetKnownIssueMatchesInTests(Build build, BuildResultAnalysis buildAnalysis)
     {
-        List<TestKnownIssueMatch> knownIssueMatches = new List<TestKnownIssueMatch>();
+        List<TestKnownIssueMatch> knownIssueMatches = [];
 
         foreach (TestResult testResult in buildAnalysis.TestKnownIssuesAnalysis.TestResultWithKnownIssues)
         {
@@ -53,7 +50,7 @@ public class KnownIssuesMatchHelper
                 IssueId = issue.GitHubIssue.Id,
                 IssueRepository = issue.GitHubIssue.RepositoryWithOwner,
                 IssueType = KnownIssueType.Test.ToString(),
-                IssueLabels = string.Join(",", issue.GitHubIssue?.Labels ?? new List<string>()),
+                IssueLabels = string.Join(",", issue.GitHubIssue?.Labels ?? []),
                 TestResultName = testResult.TestCaseResult.Name,
                 TestRunId = testResult.TestCaseResult.TestRunId,
                 Url = testResult.Url,

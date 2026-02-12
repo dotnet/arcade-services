@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
-using System.Threading.Tasks;
 using BuildInsights.BuildAnalysis.Models;
 
 namespace BuildInsights.BuildAnalysis.Services;

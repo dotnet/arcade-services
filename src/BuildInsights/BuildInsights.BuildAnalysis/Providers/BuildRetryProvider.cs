@@ -1,18 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Services;
-using BuildInsights.KnownIssues.Models;
 
 namespace BuildInsights.BuildAnalysis.Providers;
 
@@ -20,6 +14,7 @@ public class BuildRetryProvider : IBuildRetryService
 {
     private const string ArtifactName = "BuildConfiguration";
     private const int InternalRetryLimit = 10;
+    private const int AttemptLimit = 1;
     private readonly string _fileName;
     private readonly IBuildDataService _buildDataService;
     private readonly IBuildOperationsService _buildOperations;
@@ -66,7 +61,7 @@ public class BuildRetryProvider : IBuildRetryService
         if (records.Count < 1) return false;
 
         int attempt = records.Max(r => r.Attempt);
-        if (attempt > KnownIssuesConstants.AttemptLimit || attempt > InternalRetryLimit)
+        if (attempt > AttemptLimit || attempt > InternalRetryLimit)
         {
             return false;
         }
@@ -243,7 +238,7 @@ public class BuildRetryProvider : IBuildRetryService
 
     private List<TimelineRecord> GetFilteredTimelineRecords(IReadOnlyCollection<string> matchingRecords, RecordType type, IReadOnlyList<TimelineRecord> timelineRecords)
     {
-        if (matchingRecords == null) return new List<TimelineRecord>();
+        if (matchingRecords == null) return [];
 
         return matchingRecords.SelectMany(m => timelineRecords.Where(t =>
                 t.RecordType == type && m != null && (m.Equals(t.Name, StringComparison.OrdinalIgnoreCase) ||
@@ -254,7 +249,7 @@ public class BuildRetryProvider : IBuildRetryService
     private IReadOnlyList<TimelineRecord> GetChildRecords(List<TimelineRecord> parentRecords, IReadOnlyList<TimelineRecord> timelineRecords)
     {
         var childRecords = new List<TimelineRecord>();
-        foreach (TimelineRecord parentRecord in parentRecords ?? new List<TimelineRecord>())
+        foreach (TimelineRecord parentRecord in parentRecords ?? [])
         {
             DepthFirstTraversal(timelineRecords, parentRecord.Id, childRecords.Add);
         }

@@ -1,35 +1,25 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Azure.Data.Tables;
-using Azure;
-using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Services;
-using Microsoft.Extensions.Options;
-using Microsoft.Internal.Helix.Utility.Azure;
+using BuildInsights.Data;
+using BuildInsights.Data.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System;
 
 namespace BuildInsights.BuildAnalysis.Providers;
 
 public class BuildAnalysisRepositoryConfigurationProvider : IBuildAnalysisRepositoryConfigurationService
 {
-    private readonly BuildAnalysisRepositoryConfigurationTableConnectionSettings _repoOptionsTable;
+    private readonly BuildInsightsContext _context;
     private readonly ILogger<BuildAnalysisRepositoryConfigurationProvider> _logger;
-    private readonly ITableClientFactory _tableClientFactory;
-    private const string branchWildCard = "*";
+    private const string BranchWildCard = "*";
 
     public BuildAnalysisRepositoryConfigurationProvider(
-        IOptions<BuildAnalysisRepositoryConfigurationTableConnectionSettings> repoOptionsTable,
-        ITableClientFactory tableClientFactory,
+        BuildInsightsContext context,
         ILogger<BuildAnalysisRepositoryConfigurationProvider> logger)
     {
-        _repoOptionsTable = repoOptionsTable.Value;
-        _tableClientFactory = tableClientFactory;
+        _context = context;
         _logger = logger;
     }
 
@@ -37,35 +27,23 @@ public class BuildAnalysisRepositoryConfigurationProvider : IBuildAnalysisReposi
     {
         string normalizedRepository = NormalizeString(repository);
         string normalizedBranch = NormalizeString(branch);
-        TableClient tableClient = _tableClientFactory.GetTableClient(_repoOptionsTable.Name, _repoOptionsTable.Endpoint);
 
-        AsyncPageable<BuildAnalysisRepositoryConfiguration> results = tableClient.QueryAsync<BuildAnalysisRepositoryConfiguration>(
-            o => o.PartitionKey == normalizedRepository &&
-            (o.RowKey.Equals(normalizedBranch, StringComparison.OrdinalIgnoreCase) || o.RowKey == branchWildCard),
-            cancellationToken: cancellationToken);
-
-        List<BuildAnalysisRepositoryConfiguration> repoConfigs = new();
-
-        await foreach (Page<BuildAnalysisRepositoryConfiguration> page in results.AsPages().WithCancellation(cancellationToken))
-        {
-            repoConfigs.AddRange(page.Values);
-        }
+        List<BuildAnalysisRepositoryConfiguration> repoConfigs = await _context.BuildAnalysisRepositoryConfigurations
+            .Where(c => c.Repository == normalizedRepository && (c.Branch.Equals(normalizedBranch, StringComparison.OrdinalIgnoreCase) || c.Branch == BranchWildCard))
+            .ToListAsync(cancellationToken);
 
         // We only expect a single entry per repo for a specific branch.
         // If there are multiple, log as this is an unexpected scenario.
-        if (repoConfigs.Count(c => c.RowKey.Equals(normalizedBranch, StringComparison.OrdinalIgnoreCase)) > 1)
+        if (repoConfigs.Count(c => c.Branch.Equals(normalizedBranch, StringComparison.OrdinalIgnoreCase)) > 1)
         {
             _logger.LogWarning("Found multiple Build Analysis configurations for repo {repo} at branch {branch}.", repository, branch);
         }
 
         // Attempt to return the branch specific configuration if it exists,
         // or the repo global configuration using the wildcard if it doesn't
-        return repoConfigs.FirstOrDefault(c => c.RowKey.Equals(normalizedBranch, StringComparison.OrdinalIgnoreCase)) ??
-            repoConfigs.FirstOrDefault(c => c.RowKey == branchWildCard);
+        return repoConfigs.FirstOrDefault(c => c.Branch.Equals(normalizedBranch, StringComparison.OrdinalIgnoreCase))
+            ?? repoConfigs.FirstOrDefault(c => c.Branch == BranchWildCard);
     }
 
-    private static string NormalizeString(string value)
-    {
-        return $"{value?.Replace('/', '-')}";
-    }
+    private static string NormalizeString(string value) => value?.Replace('/', '-') ?? string.Empty;
 }

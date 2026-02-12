@@ -1,28 +1,18 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using BuildInsights.BuildAnalysis;
-using Microsoft.ApplicationInsights;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Services;
 using BuildInsights.GitHub.Models;
+using BuildInsights.KnownIssues;
 using BuildInsights.KnownIssues.Models;
-using Microsoft.Internal.Helix.KnownIssues.Services;
-using Microsoft.Internal.Helix.Utility;
-using Microsoft.Internal.Helix.Utility.AzureDevOps.Models;
+using Microsoft.ApplicationInsights;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace BuildInsights.BuildAnalysis.Providers;
 
-[DependencyInjected]
 public class BuildAnalysisProvider : IBuildAnalysisService
 {
     private readonly IBuildDataService _buildDataService;
@@ -96,8 +86,8 @@ public class BuildAnalysisProvider : IBuildAnalysisService
             LinkAllTestResults = BuildTestResultsTabUri(build),
             Attempt = await BuildAttempt(buildReference.Org, buildReference.Project, build.Id, cancellationToken),
             BuildStatus = GetBuildStatus(build),
-            BuildStepsResult = new List<StepResult>(),
-            TestResults = new List<TestResult>()
+            BuildStepsResult = [],
+            TestResults = []
         };
 
         buildAnalysis.IsRerun = buildAnalysis.Attempt > 1;
@@ -123,7 +113,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
         IReadOnlyList<TimelineRecord> buildTimelineRecords = await _buildDataService.GetLatestBuildTimelineRecordsAsync(buildReference.Org, buildReference.Project, buildReference.BuildId, cancellationToken);
         if (isValidationAnalysis)
         {
-             buildTimelineRecords = await _buildDataService.GetTimelineRecordsFromAllAttempts(buildTimelineRecords, buildReference.Org, buildReference.Project, buildReference.BuildId, cancellationToken);
+            buildTimelineRecords = await _buildDataService.GetTimelineRecordsFromAllAttempts(buildTimelineRecords, buildReference.Org, buildReference.Project, buildReference.BuildId, cancellationToken);
         }
 
         var succeededWithIssuesPipelineReference = new List<PipelineReference>();
@@ -257,7 +247,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
         await _knownIssuesService.SaveKnownIssuesHistory(knownIssues, build.Id);
 
         await _knownIssuesService.SaveKnownIssuesMatches(build.Id, KnownIssuesMatchHelper.GetKnownIssueMatchesInBuild(build, buildAnalysis));
-        await _knownIssuesService.SaveTestsKnownIssuesMatches(build.Id,KnownIssuesMatchHelper.GetKnownIssueMatchesInTests(build, buildAnalysis));
+        await _knownIssuesService.SaveTestsKnownIssuesMatches(build.Id, KnownIssuesMatchHelper.GetKnownIssueMatchesInTests(build, buildAnalysis));
 
         if (_cache != null)
         {
@@ -286,7 +276,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
             knownIssues.AddRange(await _gitHubIssuesService.GetRepositoryKnownIssues(build.Repository.Name));
         }
 
-        knownIssues = knownIssues.Where(issue => issue.BuildError is {Count: > 0})
+        knownIssues = knownIssues.Where(issue => issue.BuildError is { Count: > 0 })
             .DistinctBy(k => k.GitHubIssue, new GitHubIssueComparer()).ToList();
 
         _logger.LogInformation($"Analyzing {knownIssues.Count} known issues in build: {build.Id}");
@@ -329,7 +319,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
         return uri;
     }
 
-    private PipelineReference BuildPipelineReference(Guid jobId, Dictionary<Guid, TimelineRecord> recordDictionary)
+    private static PipelineReference BuildPipelineReference(Guid jobId, Dictionary<Guid, TimelineRecord> recordDictionary)
     {
         JobReference jobReference = null;
         PhaseReference phaseReference = null;
@@ -363,9 +353,9 @@ public class BuildAnalysisProvider : IBuildAnalysisService
         return new PipelineReference(stageReference, phaseReference, jobReference);
     }
 
-    private List<string> BuildStepHierarchy(Guid taskId, Dictionary<Guid, TimelineRecord> recordDictionary)
+    private static List<string> BuildStepHierarchy(Guid taskId, Dictionary<Guid, TimelineRecord> recordDictionary)
     {
-        List<string> stepHierarchy = new List<string>();
+        List<string> stepHierarchy = [];
 
         Guid idToSearchFor = taskId;
         while (true)
@@ -457,7 +447,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
 
     private async Task<List<StepResult>> GetStepsResultsAsync(IEnumerable<TimelineRecord> failedTasks, Dictionary<Guid, TimelineRecord> recordDictionary, BuildReferenceIdentifier buildReference, List<KnownIssue> knownIssues)
     {
-        List<StepResult> result = new List<StepResult>();
+        List<StepResult> result = [];
 
         foreach (TimelineRecord record in failedTasks)
         {
@@ -472,7 +462,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
             };
 
             var issues = new List<KnownIssue>();
-            if (int.TryParse(record.LogUrl?.Split("/").Last(), out int logId) &&  record.RecordType != RecordType.Job)
+            if (int.TryParse(record.LogUrl?.Split("/").Last(), out int logId) && record.RecordType != RecordType.Job)
             {
                 Stream log = await _buildDataService.GetLogContent(buildReference.Org, buildReference.Project, buildReference.BuildId, logId);
                 issues.AddRange(await _knownIssuesMatchService.GetKnownIssuesInStream(log, knownIssues));
@@ -484,7 +474,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
             foreach (TimelineIssue issue in uniqueIssues)
             {
                 if (issue.Type != IssueType.Error) continue;
-                
+
                 var error = new Error
                 {
                     ErrorMessage = issue.Message
@@ -547,7 +537,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
         return testResults;
     }
 
-    private FailureRate GetTestFailureRate(IReadOnlyList<TestHistoryByBranch> testHistory)
+    private static FailureRate GetTestFailureRate(IReadOnlyList<TestHistoryByBranch> testHistory)
     {
         int failureCount = testHistory.Sum(r => r.Results.Count(x => TestOutcomeValue.Failed == x.Outcome));
         int totalCount = testHistory.Sum(r => r.Results.Count);

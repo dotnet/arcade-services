@@ -1,21 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Services;
 using BuildInsights.GitHub.Models;
-using BuildInsights.GitHub.Services;
-using Microsoft.Internal.Helix.Utility;
+using BuildInsights.GitHub;
 
 namespace BuildInsights.BuildAnalysis.Providers;
 
-[DependencyInjected]
 public class RelatedBuildProvider : IRelatedBuildService
 {
     private readonly IGitHubChecksService _gitHubChecksService;

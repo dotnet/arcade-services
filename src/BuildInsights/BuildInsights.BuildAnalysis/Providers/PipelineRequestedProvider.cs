@@ -1,26 +1,23 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Text.Json;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Services;
-using BuildInsights.GitHub.Services;
+using BuildInsights.GitHub;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace BuildInsights.BuildAnalysis.Providers;
 
 public class PipelineRequestedProvider : IPipelineRequestedService
 {
     private readonly BuildAnalysisFileSettings _buildAnalysisFileSettings;
-    private readonly IGithubRepositoryService _githubRepositoryService;
+    private readonly IGitHubRepositoryService _githubRepositoryService;
     private readonly ILogger<PipelineRequestedProvider> _logger;
 
-    public PipelineRequestedProvider(IGithubRepositoryService githubRepositoryService,
+    public PipelineRequestedProvider(IGitHubRepositoryService githubRepositoryService,
         IOptions<BuildAnalysisFileSettings> buildAnalysisFileSettings,
         ILogger<PipelineRequestedProvider> logger)
     {

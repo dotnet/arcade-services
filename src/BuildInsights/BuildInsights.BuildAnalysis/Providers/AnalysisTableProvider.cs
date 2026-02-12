@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
-using Azure;
-using Azure.Data.Tables;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Services;
 using BuildInsights.Data;
@@ -31,35 +29,39 @@ public class BuildAnalysisHistoryProvider : IBuildAnalysisHistoryService
 
     public async Task SaveBuildAnalysisRecords(ImmutableList<BuildResultAnalysis> completedPipelines, string repositoryId, string project, DateTimeOffset analysisTimestamp)
     {
-        TableClient tableClient = _tableClientFactory.GetTableClient(_tableSettings.Name, _tableSettings.Endpoint);
-        foreach (BuildResultAnalysis analysis in completedPipelines)
-        {
-            BuildAnalysisEvent buildEvent = new BuildAnalysisEvent(analysis.PipelineName, analysis.BuildId, repositoryId, project, analysisTimestamp);
-            await tableClient.UpsertEntityAsync(buildEvent);
-        }
+        var newEvents = completedPipelines
+            .Select(analysis => new BuildAnalysisEvent
+            {
+                PipelineName = analysis.PipelineName,
+                BuildId = analysis.BuildId,
+                Repository = repositoryId,
+                Project = project,
+                AnalysisTimestamp = analysisTimestamp
+            });
+
+        await _context.BuildAnalysisEvents.AddRangeAsync(newEvents);
+        await _context.SaveChangesAsync();
     }
 
     public async Task SaveBuildAnalysisRepositoryNotSupported(string pipeline, int buildId, string repositoryId, string project, DateTimeOffset analysisTimestamp)
     {
-        TableClient tableClient = _tableClientFactory.GetTableClient(_tableSettings.Name, _tableSettings.Endpoint);
-        var buildEvent = new BuildAnalysisEvent(pipeline, buildId, repositoryId, project, analysisTimestamp, false);
-        await tableClient.UpsertEntityAsync(buildEvent);
+        var newEvent = new BuildAnalysisEvent
+        {
+            PipelineName = pipeline,
+            BuildId = buildId,
+            Repository = repositoryId,
+            Project = project,
+            AnalysisTimestamp = analysisTimestamp
+        };
+
+        await _context.BuildAnalysisEvents.AddAsync(newEvent);
+        await _context.SaveChangesAsync();
     }
 
     public async Task<List<BuildAnalysisEvent>> GetBuildsWithRepositoryNotSupported(DateTimeOffset since, CancellationToken cancellationToken)
     {
-        TableClient tableClient = _tableClientFactory.GetTableClient(_tableSettings.Name, _tableSettings.Endpoint);
-
-        AsyncPageable<BuildAnalysisEvent> results = tableClient.QueryAsync<BuildAnalysisEvent>(
-            buildAnalysisEvent => buildAnalysisEvent.IsRepositorySupported == false && buildAnalysisEvent.Timestamp > since, 100,
-            cancellationToken: cancellationToken);
-
-        var buildAnalysisNotSupported = new List<BuildAnalysisEvent>();
-        await foreach (Page<BuildAnalysisEvent> page in results.AsPages().WithCancellation(cancellationToken))
-        {
-            buildAnalysisNotSupported.AddRange(page.Values);
-        }
-
-        return buildAnalysisNotSupported;
+        return await _context.BuildAnalysisEvents
+            .Where(e => e.IsRepositorySupported == false && e.AnalysisTimestamp > since)
+            .ToListAsync(cancellationToken);
     }
 }

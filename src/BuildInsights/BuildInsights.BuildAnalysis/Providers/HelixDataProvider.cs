@@ -1,25 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Data;
 using Microsoft.Data.SqlClient;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Microsoft.Helix.Utilities.Sql;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Services;
-using Microsoft.Internal.Helix.Utility;
-using SqlConnectionStringHelper = Microsoft.Internal.Helix.Utility.SqlConnectionBuilderHelper;
-using System.Runtime.CompilerServices;
 
 namespace BuildInsights.BuildAnalysis.Providers;
 
@@ -27,17 +17,14 @@ public class HelixDataProvider : IHelixDataService
 {
     private readonly IKustoClientProvider _kustoClientProvider;
     private readonly ILogger<HelixDataProvider> _logger;
-    private readonly IOptionsMonitor<SqlConnectionSettings> _sqlConnectionSettings;
 
     //https://learn.microsoft.com/en-us/azure/data-explorer/kusto/concepts/querylimits#limit-on-query-complexity
     private const int LimitQueryComplexity = 25;
 
     public HelixDataProvider(IKustoClientProvider kustoClientProvider,
-        IOptionsMonitor<SqlConnectionSettings> sqlConnectionSettings,
         ILogger<HelixDataProvider> logger)
     {
         _kustoClientProvider = kustoClientProvider;
-        _sqlConnectionSettings = sqlConnectionSettings;
         _logger = logger;
     }
 
@@ -81,7 +68,7 @@ public class HelixDataProvider : IHelixDataService
         {
             if (TryGetHelixWorkItemFromComment(workItemInfo, out HelixWorkItem workItem))
             {
-                helixWorkItem[GetKeyForHelixWorkItem(workItem)] = new List<HelixWorkItem>(){workItem};
+                helixWorkItem[GetKeyForHelixWorkItem(workItem)] = [workItem];
                 relationCommentWorkItemKey[workItemInfo] = GetKeyForHelixWorkItem(workItem);
             }
         }
@@ -90,7 +77,7 @@ public class HelixDataProvider : IHelixDataService
         foreach (HelixWorkItem workItemResult in helixWorkItemsOnKusto.Where(r => !string.IsNullOrEmpty(r.ConsoleLogUrl)))
         {
             string keyForHelixWorkItem = GetKeyForHelixWorkItem(workItemResult);
-            List<HelixWorkItem> helixWorkItems = helixWorkItem.GetValueOrDefault(keyForHelixWorkItem, new List<HelixWorkItem>())
+            List<HelixWorkItem> helixWorkItems = helixWorkItem.GetValueOrDefault(keyForHelixWorkItem, [])
                 .Where(t => !string.IsNullOrEmpty(t.ConsoleLogUrl)).ToList();
             helixWorkItems.Add(workItemResult);
 
@@ -102,7 +89,7 @@ public class HelixDataProvider : IHelixDataService
         foreach (HelixWorkItem workItemResult in helixWorkItemOnSql.Where(t => !string.IsNullOrEmpty(t.ConsoleLogUrl)))
         {
             string keyForHelixWorkItem = GetKeyForHelixWorkItem(workItemResult);
-            List<HelixWorkItem> helixWorkItems = helixWorkItem.GetValueOrDefault(keyForHelixWorkItem, new List<HelixWorkItem>())
+            List<HelixWorkItem> helixWorkItems = helixWorkItem.GetValueOrDefault(keyForHelixWorkItem, [])
                 .Where(t => !string.IsNullOrEmpty(t.ConsoleLogUrl)).ToList();
             helixWorkItems.Add(workItemResult);
 
@@ -133,7 +120,7 @@ public class HelixDataProvider : IHelixDataService
         return !reader.Read() ? null : new WorkItemInformation(reader.GetString(1), reader.GetInt32(0), reader.GetString(2));
     }
 
-    public async Task<WorkItemInformation> SqlWorkItemInformation(string workItemName, string helixJobName,
+    private async Task<WorkItemInformation> SqlWorkItemInformation(string workItemName, string helixJobName,
       CancellationToken cancellationToken)
     {
         await using SqlConnection connection = await GetConnectionAsync(cancellationToken);
@@ -185,7 +172,7 @@ INNER JOIN Jobs J on W.JobId = J.JobId
 
     public async Task<List<HelixWorkItem>> KustoWorkItemInformation(List<HelixWorkItem> helixWorkItems)
     {
-        if (helixWorkItems.Count == 0) return new List<HelixWorkItem>();
+        if (helixWorkItems.Count == 0) return [];
 
         var workItemInformation = new List<HelixWorkItem>();
         for (int i = 0; i < Math.Ceiling(helixWorkItems.Count/(double)LimitQueryComplexity); i++)
@@ -236,9 +223,9 @@ INNER JOIN Jobs J on W.JobId = J.JobId
     private async Task<List<HelixWorkItem>> SqlWorkItemInformation(List<HelixWorkItem> helixWorkItems,
       CancellationToken cancellationToken)
     {
-        if (helixWorkItems.Count == 0) return new List<HelixWorkItem>();
+        if (helixWorkItems.Count == 0) return [];
 
-        List<WorkItemSqlResult> sqlQueryResultForWorkItems = new List<WorkItemSqlResult>();
+        List<WorkItemSqlResult> sqlQueryResultForWorkItems = [];
         for (int i = 0; i < Math.Ceiling(helixWorkItems.Count / (double)LimitQueryComplexity); i++)
         {
             List<HelixWorkItem> recordsToQuery = helixWorkItems.Skip(LimitQueryComplexity * i).Take(LimitQueryComplexity).ToList();
@@ -333,19 +320,7 @@ AND (EventDataEx.Name = 'LogUri' OR EventDataEx.Name = 'ExitCode')
         return sqlQueryResult;
     }
 
-    private async Task<SqlConnection> GetConnectionAsync(CancellationToken cancellationToken)
-    {
-        var connectionString = SqlConnectionStringHelper.BuildConnectionString(_sqlConnectionSettings.CurrentValue);
-        var connection = new SqlConnection(connectionString);
-        if (connection.State == ConnectionState.Closed)
-        {
-            await connection.OpenAsync(cancellationToken);
-        }
-
-        return connection;
-    }
-
-    private bool TryGetHelixWorkItemFromComment(string comment, out HelixWorkItem helixWorkItem)
+    private static bool TryGetHelixWorkItemFromComment(string comment, out HelixWorkItem helixWorkItem)
     {
         helixWorkItem = null;
         if (string.IsNullOrEmpty(comment)) return false;
@@ -368,7 +343,7 @@ AND (EventDataEx.Name = 'LogUri' OR EventDataEx.Name = 'ExitCode')
         }
     }
 
-    public string GetKeyForHelixWorkItem(HelixWorkItem helixWorkItem)
+    public static string GetKeyForHelixWorkItem(HelixWorkItem helixWorkItem)
     {
         return $"{helixWorkItem.HelixWorkItemName}/{helixWorkItem.HelixJobId}";
     }

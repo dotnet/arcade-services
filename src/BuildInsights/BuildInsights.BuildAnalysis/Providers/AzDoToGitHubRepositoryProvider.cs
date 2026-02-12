@@ -1,13 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Threading.Tasks;
-using Microsoft.DotNet.GitHub.Authentication;
-using Microsoft.Extensions.Logging;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Services;
-using BuildInsights.GitHub.Providers;
-using BuildInsights.GitHub.Services;
+using BuildInsights.GitHub;
+using Maestro.Common;
+using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.Extensions.Logging;
 using Octokit;
 
 namespace BuildInsights.BuildAnalysis.Providers;
@@ -63,7 +62,7 @@ public class AzDoToGitHubRepositoryProvider : IAzDoToGitHubRepositoryService
         string repoIdentity = GetGithubRepoName(repository.Name);
         try
         {
-            (string owner, string name) = GithubRepositoryHelper.GetOwnerAndName(repoIdentity);
+            (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repoIdentity);
             IGitHubClient githubClient = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(owner, name);
             await githubClient.Repository.Get(owner, name);
             return repoIdentity;

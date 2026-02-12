@@ -1,8 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
-
 namespace BuildInsights.BuildAnalysis.Models;
 
 public class BuildConfiguration
@@ -11,7 +9,7 @@ public class BuildConfiguration
 
     public int RetryCountLimit { get; set; }
 
-    public List<Errors> RetryByErrors { get; set; } = new List<Errors>();
+    public List<Errors> RetryByErrors { get; set; } = [];
 
     public Pipeline RetryByPipeline { get; set; }
 
@@ -25,13 +23,13 @@ public class Errors
 
 public class Pipeline
 {
-    public List<Job> RetryJobs { get; set; } = new List<Job>();
+    public List<Job> RetryJobs { get; set; } = [];
 
-    public List<Stage> RetryStages { get; set; } = new List<Stage>();
+    public List<Stage> RetryStages { get; set; } = [];
 
-    public List<Phase> RetryPhases { get; set; } = new List<Phase>();
+    public List<Phase> RetryPhases { get; set; } = [];
 
-    public List<JobsInStage> RetryJobsInStage { get; set; } = new List<JobsInStage>();
+    public List<JobsInStage> RetryJobsInStage { get; set; } = [];
 }
 
 public class Job
@@ -53,16 +51,16 @@ public class JobsInStage
 {
     public string StageName { get; set; }
 
-    public List<string> JobsNames { get; set; } = new List<string>();
+    public List<string> JobsNames { get; set; } = [];
 }
 
 public class RetryByErrorsInPipeline
 {
-    public List<ErrorInPipelineByStage> ErrorInPipelineByStage { get; set; } = new List<ErrorInPipelineByStage>();
+    public List<ErrorInPipelineByStage> ErrorInPipelineByStage { get; set; } = [];
 
-    public List<ErrorInPipelineByJobs> ErrorInPipelineByJobs { get; set; } = new List<ErrorInPipelineByJobs>();
+    public List<ErrorInPipelineByJobs> ErrorInPipelineByJobs { get; set; } = [];
 
-    public List<ErrorInPipelineByJobsInStage> ErrorInPipelineByJobsInStage { get; set; } = new List<ErrorInPipelineByJobsInStage>();
+    public List<ErrorInPipelineByJobsInStage> ErrorInPipelineByJobsInStage { get; set; } = [];
 }
 
 public class ErrorInPipelineByStage
@@ -74,7 +72,7 @@ public class ErrorInPipelineByStage
 
 public class ErrorInPipelineByJobs
 {
-    public List<string> JobsNames { get; set; } = new List<string>();
+    public List<string> JobsNames { get; set; } = [];
 
     public string ErrorRegex { get; set; }
 }
@@ -83,7 +81,7 @@ public class ErrorInPipelineByJobsInStage
 {
     public string StageName { get; set; }
 
-    public List<string> JobsNames { get; set; } = new List<string>();
+    public List<string> JobsNames { get; set; } = [];
 
     public string ErrorRegex { get; set; }
 }

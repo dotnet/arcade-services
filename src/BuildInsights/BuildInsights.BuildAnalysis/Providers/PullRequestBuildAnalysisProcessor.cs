@@ -1,11 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.ApplicationInsights;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Logging;
@@ -13,10 +9,9 @@ using Microsoft.Extensions.Options;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Services;
 using BuildInsights.GitHub.Models;
-using BuildInsights.GitHub.Services;
-using QueueInsights.Providers;
-using QueueInsights.Services;
 using QueueInsights.Models;
+using BuildInsights.GitHub;
+using QueueInsights;
 
 namespace BuildInsights.BuildAnalysis.Providers;
 

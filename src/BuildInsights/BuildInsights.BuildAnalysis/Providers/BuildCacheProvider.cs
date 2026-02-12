@@ -1,19 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Services;
-using Microsoft.Internal.Helix.Utility;
-using Microsoft.Internal.Helix.Utility.Azure;
 
 namespace BuildInsights.BuildAnalysis.Providers;
 
-[DependencyInjected]
 public class BuildCacheProvider : IBuildCacheService
 {
     private readonly JsonSerializerOptions _options = new JsonSerializerOptions

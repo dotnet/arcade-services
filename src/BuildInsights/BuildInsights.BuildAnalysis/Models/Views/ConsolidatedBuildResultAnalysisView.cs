@@ -1,9 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using JetBrains.Annotations;
 using BuildInsights.BuildAnalysis.Providers;
 using BuildInsights.KnownIssues.Models;
@@ -56,14 +54,14 @@ public class ConsolidatedBuildResultAnalysisView : BasicResultsView
     public bool HasFlakyTests => FlakyTests.Count > 0;
     public bool HasTestKnownIssues => TestKnownIssues.Count > 0;
     public bool HasTestKnownIssueAnalysisUnavailablePipelines => TestKnownIssueAnalysisUnavailablePipelines.Count > 0;
-    public List<TestResultsGroupView> TestFailuresUnique { get; set; } = new List<TestResultsGroupView>();
-    public List<TestResultView> FlakyTests { get; set; } = new List<TestResultView>();
-    public List<StepResultView> BuildFailuresUnique { get; set; } = new List<StepResultView>();
-    public List<KnownIssueView> InfrastructureBuildBreaks { get; set; } = new List<KnownIssueView>();
-    public List<KnownIssueView> TestKnownIssues { get; set; } = new List<KnownIssueView>();
-    public List<KnownIssueView> RepoBuildBreaks { get; set; } = new List<KnownIssueView>();
-    public List<RetryInformationView> BuildRetryAutomatically { get; set; } = new List<RetryInformationView>();
-    public List<BuildAnalysisSummaryView> BuildAnalysisSummaries { get; set; } = new List<BuildAnalysisSummaryView>();
+    public List<TestResultsGroupView> TestFailuresUnique { get; set; } = [];
+    public List<TestResultView> FlakyTests { get; set; } = [];
+    public List<StepResultView> BuildFailuresUnique { get; set; } = [];
+    public List<KnownIssueView> InfrastructureBuildBreaks { get; set; } = [];
+    public List<KnownIssueView> TestKnownIssues { get; set; } = [];
+    public List<KnownIssueView> RepoBuildBreaks { get; set; } = [];
+    public List<RetryInformationView> BuildRetryAutomatically { get; set; } = [];
+    public List<BuildAnalysisSummaryView> BuildAnalysisSummaries { get; set; } = [];
     public MarkdownSummarizeInstructions SummarizeInstructions { get; set; }
     public int UniqueTestFailures { get; set; }
     public int TotalBuildFailuresUnique => BuildFailuresUnique.Count;
@@ -76,7 +74,7 @@ public class ConsolidatedBuildResultAnalysisView : BasicResultsView
     /// <summary>
     /// Latest attempt of the build
     /// </summary>
-    public List<AttemptView> LatestAttempt { get; set; } = new List<AttemptView>();
+    public List<AttemptView> LatestAttempt { get; set; } = [];
 
     public ConsolidatedBuildResultAnalysisView() : base(ImmutableList<Link>.Empty, ImmutableList<Link>.Empty, null, ImmutableList<KnownIssue>.Empty)
     { }

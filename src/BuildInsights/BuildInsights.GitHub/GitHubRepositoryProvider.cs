@@ -8,12 +8,12 @@ using Octokit;
 
 namespace BuildInsights.GitHub;
 
-public interface IGithubRepositoryService
+public interface IGitHubRepositoryService
 {
     Task<string> GetFileAsync(string repository, string path, string targetBranch);
 }
 
-public class GithubRepositoryProvider : IGithubRepositoryService
+public class GithubRepositoryProvider : IGitHubRepositoryService
 {
     private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
     private readonly ILogger<GithubRepositoryProvider> _logger;

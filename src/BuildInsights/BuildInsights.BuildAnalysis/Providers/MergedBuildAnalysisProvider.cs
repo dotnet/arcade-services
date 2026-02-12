@@ -1,21 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Services;
+using BuildInsights.Data.Models;
 using BuildInsights.GitHub.Models;
+using BuildInsights.KnownIssues;
 using BuildInsights.KnownIssues.Models;
-using Microsoft.Internal.Helix.KnownIssues.Services;
-using Microsoft.Internal.Helix.Utility;
-using Microsoft.Internal.Helix.Utility.Azure;
 
 namespace BuildInsights.BuildAnalysis.Providers;
 
@@ -65,7 +59,7 @@ public class MergedBuildAnalysisProvider : IMergedBuildAnalysisService
             await using Stream relatedBuildStream = await _storage.TryGetAsync("related-builds.json", cancellationToken);
             if (relatedBuildStream == null)
             {
-                buildStatus = new AggregateRelatedBuild {ByDefinition = new Dictionary<int, RelatedBuild>()};
+                buildStatus = new AggregateRelatedBuild { ByDefinition = [] };
             }
             else
             {

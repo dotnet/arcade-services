@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using BuildInsights.BuildAnalysis.Models;
 
+#nullable enable
 namespace BuildInsights.BuildAnalysis;
 
 public class RecordNode
@@ -18,14 +19,14 @@ public class RecordNode
         // Ignore timelines without parents (as from canceled and abandoned builds).
         if (timeline.All(t => t.ParentId != null))
         {
-            return ImmutableList<TimelineRecord>.Empty;
+            return [];
         }
 
         RecordNode rootNode = BuildTree(timeline);
         var ordered = new List<RecordNode>();
         DepthFirstTraversal(rootNode, ordered.Add);
 
-        return ordered.Select(n => n.Value).Where(t => t != null).ToImmutableList();
+        return [..ordered.Select(n => n.Value).Where(t => t != null).Cast<TimelineRecord>()];
     }
 
     public static RecordNode BuildTree(IEnumerable<TimelineRecord> timeline)
@@ -52,7 +53,7 @@ public class RecordNode
             else
             {
                 throw new ArgumentException(
-                    $"Record {recordNode.Value.Id} has parent {timelineRecord.ParentId}, which is not in timeline");
+                    $"Record {recordNode.Value?.Id} has parent {timelineRecord.ParentId}, which is not in timeline");
             }
         }
 

@@ -1,26 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.IO.Compression;
-using System.Linq;
-using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Web;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using BuildInsights.BuildAnalysis.Services;
-using Microsoft.Internal.Helix.Utility;
-using Microsoft.Internal.Helix.Utility.AzureDevOps.Providers;
-using Microsoft.Internal.Helix.Utility.Parallel;
 using Microsoft.TeamFoundation.Build.WebApi;
 using Microsoft.TeamFoundation.Core.WebApi;
 using Microsoft.TeamFoundation.TestManagement.WebApi;
@@ -30,7 +20,6 @@ using BuildInsights.Utilities.Parallel;
 
 namespace BuildInsights.BuildAnalysis.Providers;
 
-[DependencyInjected]
 public sealed class BuildDataProvider : IBuildDataService
 {
     private readonly VssConnectionProvider _connections;
@@ -68,7 +57,7 @@ public sealed class BuildDataProvider : IBuildDataService
                 cancellationToken: cancellationToken
             );
         }
-        catch (TeamFoundation.Build.WebApi.BuildNotFoundException e)
+        catch (Microsoft.TeamFoundation.Build.WebApi.BuildNotFoundException e)
         {
             throw new Services.BuildNotFoundException($"Unable to bind build '{buildId}' in project '{projectId}'", e);
         }
@@ -90,8 +79,8 @@ public sealed class BuildDataProvider : IBuildDataService
         IEnumerable<TestRun> runs = await GetCurrentTestRunsForBuild(build, cancellationToken);
         foreach (var run in runs)
         {
-            List<Models.TestCaseResult> failedResults = new List<Models.TestCaseResult>();
-            List<Models.TestCaseResult> passedOnRerunResults = new List<Models.TestCaseResult>();
+            List<Models.TestCaseResult> failedResults = [];
+            List<Models.TestCaseResult> passedOnRerunResults = [];
             if (run.RunStatistics.Any(s => s.Outcome == "Failed"))
             {
                 var shallowResults = new List<TestCaseResult>();
@@ -253,7 +242,7 @@ public sealed class BuildDataProvider : IBuildDataService
         using var connection = _connections.GetConnection(build.OrganizationName);
         TestManagementHttpClient testClient = connection.Value.GetClient<TestManagementHttpClient>();
 
-        List<TestRun> testRuns = new List<TestRun>();
+        List<TestRun> testRuns = [];
         string continuationToken = null;
         do
         {
@@ -295,7 +284,7 @@ public sealed class BuildDataProvider : IBuildDataService
 
         foreach (TestRun run in testRunsWithFailedOutcome)
         {
-            List<TestCaseResult> allTestCaseResults = new List<TestCaseResult>();
+            List<TestCaseResult> allTestCaseResults = [];
 
             do
             {
@@ -396,7 +385,7 @@ public sealed class BuildDataProvider : IBuildDataService
                 {
                     if (!allHistory.TryGetValue(testResultGroup.GroupByValue, out var list))
                     {
-                        allHistory.Add(testResultGroup.GroupByValue, list = new List<TestCaseResult>());
+                        allHistory.Add(testResultGroup.GroupByValue, list = []);
                     }
                     list.AddRange(testResultGroup.Results.Where(testCaseResult => testCaseResult.CompletedDate <= maxCompleted));
                     displayNames.TryAdd(testResultGroup.GroupByValue, testResultGroup.DisplayName);
@@ -463,13 +452,13 @@ public sealed class BuildDataProvider : IBuildDataService
     {
         using var connection = _connections.GetConnection(orgId);
         BuildHttpClient buildClient = connection.Value.GetClient<BuildHttpClient>();
-        Timeline timeline = await buildClient.GetBuildTimelineAsync(
+        Microsoft.TeamFoundation.Build.WebApi.Timeline timeline = await buildClient.GetBuildTimelineAsync(
             projectId,
             buildId,
             cancellationToken: cancellationToken
         );
 
-        return timeline?.Records.Select(MapModel).ToList() ?? new List<Models.TimelineRecord>();
+        return timeline?.Records.Select(MapModel).ToList() ?? [];
     }
 
     public async Task<IReadOnlyList<Models.TimelineRecord>> GetBuildTimelineRecordsAsync(
@@ -482,7 +471,7 @@ public sealed class BuildDataProvider : IBuildDataService
         _logger.LogInformation($"Fetching build timeline information from Azure DevOps for build '{buildId}' in project '{projectId}' and org '{orgId}'.");
         using var connection = _connections.GetConnection(orgId);
         BuildHttpClient buildClient = connection.Value.GetClient<BuildHttpClient>();
-        Timeline timeline = await buildClient.GetBuildTimelineAsync(
+        Microsoft.TeamFoundation.Build.WebApi.Timeline timeline = await buildClient.GetBuildTimelineAsync(
             projectId,
             buildId,
             timelineId,
