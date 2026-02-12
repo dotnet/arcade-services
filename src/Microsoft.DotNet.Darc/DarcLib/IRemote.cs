@@ -62,8 +62,9 @@ public interface IRemote
     /// </summary>
     /// <param name="repoUri">Repository uri.</param>
     /// <param name="pullRequest">Information about pull request to create.</param>
+    /// <param name="enablePrAutoComplete">Whether to enable auto-complete on the pull request, if the remote supports it.</param>
     /// <returns>Pull request information.</returns>
-    Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest);
+    Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest, bool enablePrAutoComplete = false);
 
     /// <summary>
     ///     Update a pull request with new data.

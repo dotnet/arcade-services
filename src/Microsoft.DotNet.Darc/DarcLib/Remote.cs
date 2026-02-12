@@ -346,9 +346,9 @@ public sealed class Remote : IRemote
         return _remoteGitClient.GetPullRequestAsync(pullRequestUri);
     }
 
-    public Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest)
+    public Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest, bool enablePrAutoComplete = false)
     {
-        return _remoteGitClient.CreatePullRequestAsync(repoUri, pullRequest);
+        return _remoteGitClient.CreatePullRequestAsync(repoUri, pullRequest, enablePrAutoComplete: enablePrAutoComplete);
     }
 
     /// <summary>
@@ -466,7 +466,7 @@ public sealed class Remote : IRemote
         if (stripBaseDirectory)
         {
             files = [.. files.Select(f => new GitFile(
-                f.FilePath.TrimStart(baseDirectory).ToString(),
+                StringUtils.StripStart(f.FilePath, baseDirectory),
                 f.Content,
                 f.ContentEncoding,
                 f.Mode,
