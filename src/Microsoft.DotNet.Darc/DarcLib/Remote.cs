@@ -457,11 +457,11 @@ public sealed class Remote : IRemote
         LocalPath baseDirectory = null,
         bool stripBaseDirectory = false)
     {
-        string path = baseDirectory == null
-            ? Constants.CommonScriptFilesPath
-            : baseDirectory / Constants.CommonScriptFilesPath;
+        baseDirectory = baseDirectory ?? UnixPath.Empty; 
 
-        List<GitFile> files = await _remoteGitClient.GetFilesAtCommitAsync(repoUri, commit, path);
+        string commonScriptsPath = baseDirectory / Constants.CommonScriptFilesPath;
+
+        List<GitFile> files = await _remoteGitClient.GetFilesAtCommitAsync(repoUri, commit, commonScriptsPath);
 
         if (stripBaseDirectory)
         {
@@ -474,10 +474,10 @@ public sealed class Remote : IRemote
         }
 
         _logger.LogInformation("Fetched common script files from repo {RepoUri} at commit {Commit}, "
-            + "at relative path {RelativeBasePath}",
+            + "at path {CommonScriptsPath}",
             repoUri,
             commit,
-            baseDirectory);
+            commonScriptsPath);
 
         return files;
     }
