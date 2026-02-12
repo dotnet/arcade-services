@@ -4,7 +4,6 @@
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -172,17 +171,4 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// Returns a list of tree names (directories) under a given path in a given branch
     /// </summary>
     Task<IReadOnlyCollection<string>> GetGitTreeNames(string path, string repoUri, string branch);
-}
-
-#nullable disable
-public class PullRequest
-{
-    public string Url { get; set; }
-    public string Title { get; set; }
-    public string Description { get; set; }
-    public string BaseBranch { get; set; }
-    public string HeadBranch { get; set; }
-    public PrStatus Status { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; }
-    public string HeadBranchSha { get; set; }
 }

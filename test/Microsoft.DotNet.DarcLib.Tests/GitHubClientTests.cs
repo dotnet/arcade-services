@@ -2,6 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using AwesomeAssertions;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -13,12 +20,6 @@ using Microsoft.Extensions.Primitives;
 using Moq;
 using NUnit.Framework;
 using Octokit;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib.Tests;
 
@@ -136,6 +137,15 @@ public class AbuseRateLimitFakeResponse : IResponse
 internal class TestGitHubClient : GitHubClient
 {
     private IGitHubClient _client;
+    private Dictionary<Tuple<string, string, int>, List<PullRequestReview>> _reviewData = [];
+    private static readonly Regex ReviewsUriPattern =
+        new(@"^/?repos/(?<owner>[^/]+)/(?<repo>[^/]+)/pulls/(?<id>\d+)/reviews/?$");
+
+    public void SetReviewData(Dictionary<Tuple<string, string, int>, List<PullRequestReview>> data)
+    {
+        _reviewData = data;
+    }
+
     public void SetGitHubClientObject(IGitHubClient value)
     {
         _client = value;
@@ -145,8 +155,29 @@ internal class TestGitHubClient : GitHubClient
     public override IGitHubClient GetClient(string repoUri) => _client;
 
     public TestGitHubClient(string gitExecutable, string accessToken, ILogger logger, string temporaryRepositoryPath, IMemoryCache cache)
-        : base(new ResolvedTokenProvider(accessToken), new ProcessManager(logger, gitExecutable), logger, temporaryRepositoryPath, cache)
+        : base(new ResolvedTokenProvider(accessToken), new ProcessManager(logger, gitExecutable), temporaryRepositoryPath, cache, new NoOpRedisClient(), logger)
     {
+    }
+    protected override async Task<T> RequestResourceUsingEtagsAsync<T, K>(
+        string resourceKey,
+        Uri resourceUri,
+        IGitHubClient client,
+        Func<K, T> resourceConverter)
+    {
+        if (typeof(K) == typeof(List<PullRequestReview>))
+        {
+            var match = ReviewsUriPattern.Match(resourceUri.ToString());
+
+            (string owner, string repo, int id) = (match.Groups["owner"].Value, match.Groups["repo"].Value, int.Parse(match.Groups["id"].Value));
+
+            var key = Tuple.Create(owner, repo, id);
+            if (_reviewData.TryGetValue(key, out var reviews))
+            {
+                return await Task.FromResult(resourceConverter((K)(object)reviews));
+            }
+            return await Task.FromResult(resourceConverter((K)(object)new List<PullRequestReview>()));
+        }
+        throw new NotImplementedException($"The test client has no implementation for the requested resources of type {typeof(K)}");
     }
 }
 #endregion
@@ -197,7 +228,7 @@ public class GitHubClientTests
     public async Task TreeItemCacheTest(bool enableCache)
     {
         SimpleCache cache = enableCache ? new SimpleCache() : null;
-        var client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, cache);
+        var client = new Mock<GitHubClient>(null, null, null, cache, new NoOpRedisClient(), NullLogger.Instance);
 
         List<(string, string, TreeItem)> treeItemsToGet =
         [
@@ -297,7 +328,7 @@ public class GitHubClientTests
     [Test]
     public async Task GetGitTreeItemAbuseExceptionRetryTest()
     {
-        var client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, new SimpleCache());
+        var client = new Mock<GitHubClient>(null, null, null, new SimpleCache(), new NoOpRedisClient(), NullLogger.Instance);
 
         var blob = new Blob("foo", "fakeContent", EncodingType.Utf8, "somesha", 10);
         var treeItem = new TreeItem("fakePath", "fakeMode", TreeType.Blob, 10, "1", "https://url");
@@ -323,7 +354,7 @@ public class GitHubClientTests
     [Test]
     public async Task GetGitTreeItemAbuseExceptionRetryWithRateLimitTest()
     {
-        var client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, new SimpleCache());
+        var client = new Mock<GitHubClient>(null, null, null, new SimpleCache(), new NoOpRedisClient(), NullLogger.Instance);
 
         var blob = new Blob("foo", "fakeContent", EncodingType.Utf8, "somesha", 10);
         var treeItem = new TreeItem("fakePath", "fakeMode", TreeType.Blob, 10, "1", "https://url");
@@ -392,18 +423,7 @@ public class GitHubClientTests
     {
         List<PullRequestReview> fakeReviews = [];
 
-        // Use Moq to put the return value 
-        OctoKitPullRequestReviewsClient.Setup(x => x.GetAll(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>()))
-            .Callback((string x, string y, int z) =>
-            {
-                var theKey = new Tuple<string, string, int>(x, y, z);
-                if (data.TryGetValue(theKey, out List<PullRequestReview> value))
-                {
-                    fakeReviews.AddRange(value);
-                }
-
-            })
-            .ReturnsAsync(fakeReviews);
+        _gitHubClientForTest.SetReviewData(data);
 
         return await _gitHubClientForTest.GetLatestPullRequestReviewsAsync(pullRequestUrl);
     }

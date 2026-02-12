@@ -25,6 +25,7 @@ public class RemoteFactory : IRemoteFactory
     private readonly IGitHubTokenProvider _gitHubTokenProvider;
     private readonly IAzureDevOpsTokenProvider _azdoTokenProvider;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IRedisCacheClient _redisCacheClient;
 
     public RemoteFactory(
         BuildAssetRegistryContext context,
@@ -34,6 +35,7 @@ public class RemoteFactory : IRemoteFactory
         DarcRemoteMemoryCache memoryCache,
         OperationManager operations,
         IProcessManager processManager,
+        IRedisCacheClient redisCacheClient,
         ILoggerFactory loggerFactory,
         IServiceProvider serviceProvider)
     {
@@ -45,6 +47,7 @@ public class RemoteFactory : IRemoteFactory
         _azdoTokenProvider = azdoTokenProvider;
         _cache = memoryCache;
         _serviceProvider = serviceProvider;
+        _redisCacheClient = redisCacheClient;
     }
 
     public async Task<IRemote> CreateRemoteAsync(string repoUrl)
@@ -88,7 +91,8 @@ public class RemoteFactory : IRemoteFactory
                     new Microsoft.DotNet.DarcLib.GitHubTokenProvider(_gitHubTokenProvider),
                     _processManager,
                     _loggerFactory.CreateLogger<GitHubClient>(),
-                    _cache.Cache),
+                    _cache.Cache,
+                    _redisCacheClient),
 
             GitRepoType.AzureDevOps => new AzureDevOpsClient(
                 _azdoTokenProvider,
