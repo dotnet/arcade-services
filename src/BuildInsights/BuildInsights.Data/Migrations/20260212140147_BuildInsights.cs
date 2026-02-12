@@ -4,6 +4,8 @@
 using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
+#nullable disable
+
 namespace BuildInsights.Data.Migrations;
 
 /// <inheritdoc />
@@ -28,6 +30,21 @@ public partial class BuildInsights : Migration
             constraints: table =>
             {
                 table.PrimaryKey("PK_BuildAnalysisEvents", x => x.Id);
+            });
+
+        migrationBuilder.CreateTable(
+            name: "BuildAnalysisRepositoryConfigurations",
+            columns: table => new
+            {
+                Id = table.Column<int>(type: "int", nullable: false)
+                    .Annotation("SqlServer:Identity", "1, 1"),
+                Repository = table.Column<string>(type: "nvarchar(512)", maxLength: 512, nullable: true),
+                Branch = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                ShouldMergeOnFailureWithKnownIssues = table.Column<bool>(type: "bit", nullable: false)
+            },
+            constraints: table =>
+            {
+                table.PrimaryKey("PK_BuildAnalysisRepositoryConfigurations", x => x.Id);
             });
 
         migrationBuilder.CreateTable(
@@ -82,6 +99,9 @@ public partial class BuildInsights : Migration
     {
         migrationBuilder.DropTable(
             name: "BuildAnalysisEvents");
+
+        migrationBuilder.DropTable(
+            name: "BuildAnalysisRepositoryConfigurations");
 
         migrationBuilder.DropTable(
             name: "BuildProcessingStatusEvents");

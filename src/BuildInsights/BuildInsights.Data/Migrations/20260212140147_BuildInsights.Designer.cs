@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BuildInsights.Data.Migrations
 {
     [DbContext(typeof(BuildInsightsContext))]
-    [Migration("20260211161339_BuildInsights")]
+    [Migration("20260212140147_BuildInsights")]
     partial class BuildInsights
     {
         /// <inheritdoc />
@@ -57,6 +57,30 @@ namespace BuildInsights.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("BuildAnalysisEvents");
+                });
+
+            modelBuilder.Entity("BuildInsights.Data.Models.BuildAnalysisRepositoryConfiguration", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Branch")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Repository")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<bool>("ShouldMergeOnFailureWithKnownIssues")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BuildAnalysisRepositoryConfigurations");
                 });
 
             modelBuilder.Entity("BuildInsights.Data.Models.BuildProcessingStatusEvent", b =>

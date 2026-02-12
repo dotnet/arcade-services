@@ -56,6 +56,30 @@ namespace BuildInsights.Data.Migrations
                     b.ToTable("BuildAnalysisEvents");
                 });
 
+            modelBuilder.Entity("BuildInsights.Data.Models.BuildAnalysisRepositoryConfiguration", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Branch")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Repository")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<bool>("ShouldMergeOnFailureWithKnownIssues")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BuildAnalysisRepositoryConfigurations");
+                });
+
             modelBuilder.Entity("BuildInsights.Data.Models.BuildProcessingStatusEvent", b =>
                 {
                     b.Property<int>("Id")
