@@ -166,12 +166,12 @@ public class KnownIssueReporter : IKnownIssueReporter
         }
     }
 
-    private object GetLogLink(string logURL)
+    private static string GetLogLink(string logURL)
     {
         return string.IsNullOrEmpty(logURL) ? string.Empty : $"[Log]({logURL})";
     }
 
-    private object GetPullRequestLink(string repository, string pullRequestNumber, string project, string organization)
+    private static string GetPullRequestLink(string repository, string pullRequestNumber, string project, string organization)
     {
         if (project == InternalProject)
         {
@@ -203,7 +203,7 @@ public class KnownIssueReporter : IKnownIssueReporter
             return knownIssue.BuildId.ToString();
     }
 
-    private string GetBuildLink(TestKnownIssueMatch testKnownIssue)
+    private static string GetBuildLink(TestKnownIssueMatch testKnownIssue)
     {
         if (string.IsNullOrEmpty(testKnownIssue.Project))
         {
@@ -217,12 +217,12 @@ public class KnownIssueReporter : IKnownIssueReporter
         return $"[{testKnownIssue.BuildId}]({link})";
     }
 
-    private string GetTestLink(TestKnownIssueMatch testKnownIssue)
+    private static string GetTestLink(TestKnownIssueMatch testKnownIssue)
     {
         return string.IsNullOrEmpty(testKnownIssue.Url) ? testKnownIssue.TestResultName : $"[{testKnownIssue.TestResultName}]({testKnownIssue.Url})";
     }
 
-    public string GetIssueBodyWithNewReport(string body, string report)
+    public static string GetIssueBodyWithNewReport(string body, string report)
     {
         if (string.IsNullOrEmpty(body)) return report;
 
