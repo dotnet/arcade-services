@@ -14,7 +14,7 @@ internal class BackflowCommandLineOptions : CodeFlowCommandLineOptions<BackflowO
 {
     [Value(0,
         Required = true,
-        MetaName = "Repo path",
+        MetaName = "Target repo path",
         HelpText = "Path to the local repository on disk to flow the current VMR commit to")]
     public string Repository { get; set; }
 
