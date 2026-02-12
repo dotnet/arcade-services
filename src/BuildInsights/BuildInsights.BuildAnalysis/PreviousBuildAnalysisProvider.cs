@@ -1,0 +1,29 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using BuildInsights.BuildAnalysis.Models;
+
+namespace BuildInsights.BuildAnalysis;
+
+public interface IPreviousBuildAnalysisService : IBuildAnalysisService
+{
+}
+
+public class PreviousBuildAnalysisProvider : IPreviousBuildAnalysisService
+{
+    private readonly IBuildCacheService _cache;
+
+    public PreviousBuildAnalysisProvider(IBuildCacheService cache)
+    {
+        _cache = cache;
+    }
+
+    public Task<BuildResultAnalysis> GetBuildResultAnalysisAsync(BuildReferenceIdentifier buildReference, CancellationToken cancellationToken, bool isValidationAnalysis = false)
+    {
+        return _cache.TryGetBuildAsync(buildReference, cancellationToken);
+    }
+}

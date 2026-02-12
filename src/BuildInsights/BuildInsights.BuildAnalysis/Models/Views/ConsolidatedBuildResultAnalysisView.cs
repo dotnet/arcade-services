@@ -3,7 +3,6 @@
 
 using System.Collections.Immutable;
 using JetBrains.Annotations;
-using BuildInsights.BuildAnalysis.Providers;
 using BuildInsights.KnownIssues.Models;
 
 namespace BuildInsights.BuildAnalysis.Models.Views;
