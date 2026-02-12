@@ -10,7 +10,7 @@
     <PackageVersion Include="Aspire.Hosting.Azure.Storage" Version="13.1.0" />
     <PackageVersion Include="Aspire.Hosting.Azure" Version="13.1.0" />
     <PackageVersion Include="Aspire.Hosting.Redis" Version="13.1.0" />
-    <PackageVersion Include="Azure.Core" Version="1.50.0" />
+    <PackageVersion Include="Azure.Core" Version="1.51.1" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.4.0" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.5.1" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.6.1" />
@@ -24,7 +24,7 @@
     <PackageVersion Include="DistributedLock.Redis" Version="1.1.1" />
     <PackageVersion Include="EntityFrameworkCore.Triggers" Version="1.2.3" />
     <PackageVersion Include="AwesomeAssertions" Version="9.3.0" />
-    <PackageVersion Include="FluentValidation.AspNetCore" Version="11.3.0" />
+    <PackageVersion Include="FluentValidation.AspNetCore" Version="11.3.1" />
     <PackageVersion Include="LibGit2Sharp" Version="0.31.0" />
     <PackageVersion Include="Microsoft.AspNetCore.ApiPagination" Version="$(MicrosoftAspNetCoreApiPaginationVersion)" />
     <PackageVersion Include="Microsoft.AspNetCore.ApiVersioning.Swashbuckle" Version="$(MicrosoftAspNetCoreApiVersioningSwashbuckleVersion)" />
@@ -69,9 +69,9 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.2" />
-    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.13.1" />
-    <PackageVersion Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.13.1" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.2.0" />
+    <PackageVersion Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.13.2" />
+    <PackageVersion Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.13.2" />
     <PackageVersion Include="Microsoft.Identity.Web" Version="4.0.1" />
     <PackageVersion Include="Microsoft.TeamFoundationServer.Client" Version="20.264.0-preview" />
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />

@@ -11,6 +11,7 @@ public class GitDiff
         {
             BaseVersion = version,
             TargetVersion = version,
+            MergeBaseCommit = version,
             Ahead = 0,
             Behind = 0,
             Valid = true,
@@ -27,6 +28,7 @@ public class GitDiff
 
     public string BaseVersion { get; set; }
     public string TargetVersion { get; set; }
+    public string MergeBaseCommit { get; set; }
     public int Ahead { get; set; }
     public int Behind { get; set; }
     public bool Valid { get; set; }

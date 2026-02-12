@@ -312,7 +312,8 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
     /// </summary>
     /// <param name="repoUri">Repo to create the pull request for.</param>
     /// <param name="pullRequest">Pull request data</param>
-    public async Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest)
+    /// <param name="enablePrAutoComplete">Used only for AzDo PRs, irrelevant for github client</param>
+    public async Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest, bool enablePrAutoComplete = false)
     {
         (string owner, string repo) = ParseRepoUri(repoUri);
 
@@ -1247,6 +1248,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             {
                 BaseVersion = baseVersion,
                 TargetVersion = targetVersion,
+                MergeBaseCommit = content["merge_base_commit"]?["sha"]?.Value<string>(),
                 Ahead = content["ahead_by"]!.Value<int>(),
                 Behind = content["behind_by"]!.Value<int>(),
                 Valid = true

@@ -41,7 +41,8 @@ public class RemoteGitRepo : MaestroConfiguration.Client.IGitRepo
                 HeadBranch = headBranch,
                 Title = prTitle,
                 Description = prDescription
-            });
+            },
+            enablePrAutoComplete: true);
         return pr.Url;
     }
 

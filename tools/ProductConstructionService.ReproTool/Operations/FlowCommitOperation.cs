@@ -17,7 +17,6 @@ internal class FlowCommitOperation : Operation
     private readonly FlowCommitOptions _options;
     private readonly ILogger<FlowCommitOperation> _logger;
     private readonly GitHubClient _ghClient;
-    private readonly DarcProcessManager _darc;
     private readonly IProductConstructionServiceApi _localPcsApi;
     private readonly IBarApiClient _barApiClient;
 
@@ -25,7 +24,6 @@ internal class FlowCommitOperation : Operation
             FlowCommitOptions options,
             ILogger<FlowCommitOperation> logger,
             GitHubClient ghClient,
-            DarcProcessManager darc,
             [FromKeyedServices("local")] IProductConstructionServiceApi localPcsApi,
             IBarApiClient barApiClient)
         : base(logger, ghClient, localPcsApi)
@@ -33,7 +31,6 @@ internal class FlowCommitOperation : Operation
         _options = options;
         _logger = logger;
         _ghClient = ghClient;
-        _darc = darc;
         _localPcsApi = localPcsApi;
         _barApiClient = barApiClient;
     }
@@ -44,8 +41,6 @@ internal class FlowCommitOperation : Operation
         {
             throw new ArgumentException("Cannot specify both --packages and --realBuildId options.");
         }
-
-        await _darc.InitializeAsync();
 
         _logger.LogInformation("Flowing commit from {sourceRepo}@{sourceBranch} to {targetRepo}@{targetBranch}",
             _options.SourceRepository,
@@ -126,7 +121,8 @@ internal class FlowCommitOperation : Operation
                 Assets = assets
             });
 
-        await _darc.AddBuildToChannelAsync(build.Id, channelName, _options.SkipCleanup);
+        var channel = (await _localPcsApi.Channels.ListChannelsAsync()).First(c => c.Name == channelName);
+        await _localPcsApi.Channels.AddBuildToChannelAsync(build.Id, channel.Id);
 
         _logger.LogInformation("Build created: {buildId}", build.Id);
 
