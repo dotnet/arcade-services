@@ -71,8 +71,9 @@ public interface IRemoteGitRepo : IGitRepoCloner, IGitRepo
     /// </summary>
     /// <param name="repoUri">Repo to create the pull request for.</param>
     /// <param name="pullRequest">Pull request data</param>
+    /// <param name="enablePrAutoComplete">Whether to enable auto-complete on the pull request, if the remote supports it.</param>
     /// <returns>Pull request information.</returns>
-    Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest);
+    Task<PullRequest> CreatePullRequestAsync(string repoUri, PullRequest pullRequest, bool enablePrAutoComplete = false);
 
     /// <summary>
     ///     Update a pull request with new information

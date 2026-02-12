@@ -249,8 +249,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             : prUrl;
 
         DarcRemotes.GetOrAddValue(repo, () => new Mock<IRemote>())
-            .Setup(s => s.CreatePullRequestAsync(It.IsAny<string>(), It.IsAny<PullRequest>()))
-            .Callback<string, PullRequest>((repo, pr) =>
+            .Setup(s => s.CreatePullRequestAsync(It.IsAny<string>(), It.IsAny<PullRequest>(), It.IsAny<bool>()))
+            .Callback<string, PullRequest, bool>((repo, pr, enableAutoComplete) =>
             {
                 if (repo == VmrUri)
                 {
