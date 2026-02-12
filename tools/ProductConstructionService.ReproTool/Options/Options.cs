@@ -23,7 +23,6 @@ namespace ProductConstructionService.ReproTool.Options;
 
 internal abstract class Options
 {
-    private const string LocalDbConnectionString = "Server=localhost\\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Trusted_Connection=True;Encrypt=False";
     private const string MaestroProdUri = "https://maestro.dot.net";
     internal const string PcsLocalUri = "https://localhost:53180";
 
@@ -44,34 +43,12 @@ internal abstract class Options
             managedIdentityId: null,
             disableInteractiveAuth: false,
             MaestroProdUri));
-        services.AddSingleton<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
-        services.AddSingleton<DarcProcessManager>();
         services.AddKeyedSingleton("local", PcsApiFactory.GetAnonymous(PcsLocalUri));
         services.AddSingleton(PcsApiFactory.GetAuthenticated(MaestroProdUri, null, null, false));
         services.AddSingleton(_ => new GitHubClient(new ProductHeaderValue("repro-tool"))
         {
             Credentials = new Credentials(GitHubToken)
         });
-
-        services.TryAddTransient<IBasicBarClient, SqlBarClient>();
-
-        services.AddDbContext<BuildAssetRegistryContext>(options =>
-        {
-            // Do not log DB context initialization and command executed events
-            options.ConfigureWarnings(w =>
-            {
-                w.Ignore(CoreEventId.ContextInitialized);
-                w.Ignore(RelationalEventId.CommandExecuted);
-            });
-
-            options.UseSqlServer(LocalDbConnectionString, sqlOptions =>
-            {
-                sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);
-            });
-        });
-
-        services.AddKustoClientProvider("Kusto");
-        services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>();
 
         return services;
     }

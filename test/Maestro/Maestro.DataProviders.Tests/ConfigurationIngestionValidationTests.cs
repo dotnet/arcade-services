@@ -15,6 +15,29 @@ public class ConfigurationIngestionValidationTests
     #region SubscriptionValidator Tests
 
     [Test]
+    public void ValidateSubscription_EmptyId_ThrowsWithEntityInfo()
+    {
+        // Arrange
+        var subscription = new IngestedSubscription(new SubscriptionYaml
+        {
+            Id = Guid.Empty,
+            Channel = ".NET 8",
+            SourceRepository = "https://github.com/dotnet/runtime",
+            TargetRepository = "https://github.com/dotnet/aspnetcore",
+            TargetBranch = "main",
+        });
+
+        // Act & Assert
+        var exception = Assert.Throws<EntityIngestionValidationException>(
+            () => SubscriptionValidator.ValidateSubscription(subscription));
+
+        exception.Should().NotBeNull();
+        exception.Message.Should().Contain("id is required");
+        exception.Message.Should().Contain(subscription.Values.Id.ToString());
+        exception.EntityInfo.Should().Contain(subscription.Values.Id.ToString());
+    }
+
+    [Test]
     public void ValidateSubscription_NullChannel_ThrowsWithEntityInfo()
     {
         // Arrange

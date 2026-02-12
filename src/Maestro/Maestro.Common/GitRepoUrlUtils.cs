@@ -13,7 +13,8 @@ public enum GitRepoType
 
 public static class GitRepoUrlUtils
 {
-    private const string GitHubUrlPrefix = "https://github.com/";
+    private const string GitHubComString = "github.com";
+    private const string GitHubUrlPrefix = $"https://{GitHubComString}/";
     private const string AzureDevOpsUrlPrefix = "https://dev.azure.com/";
 
     public static GitRepoType ParseTypeFromUri(string pathOrUri)
@@ -34,9 +35,9 @@ public static class GitRepoUrlUtils
         return parsedUri switch
         {
             { IsFile: true } => GitRepoType.Local,
-            { Host: "github.com" } => GitRepoType.GitHub,
-            { Host: var host } when host is "dev.azure.com" => GitRepoType.AzureDevOps,
-            { Host: var host } when host.EndsWith("visualstudio.com") => GitRepoType.AzureDevOps,
+            { Scheme: "https" or "http", Host: GitHubComString } => GitRepoType.GitHub,
+            { Scheme: "https" or "http", Host: "dev.azure.com" } => GitRepoType.AzureDevOps,
+            { Scheme: "https" or "http", Host: var host } when host.EndsWith("visualstudio.com") => GitRepoType.AzureDevOps,
             _ => GitRepoType.None,
         };
     }
@@ -101,7 +102,7 @@ public static class GitRepoUrlUtils
 
         if (repoType == GitRepoType.GitHub)
         {
-            string[] repoParts = uri.Substring(GitHubUrlPrefix.Length).Split(['/'], StringSplitOptions.RemoveEmptyEntries);
+            string[] repoParts = uri.Substring(uri.IndexOf(GitHubComString, StringComparison.OrdinalIgnoreCase) + GitHubComString.Length).Split(['/'], StringSplitOptions.RemoveEmptyEntries);
 
             if (repoParts.Length != 2)
             {

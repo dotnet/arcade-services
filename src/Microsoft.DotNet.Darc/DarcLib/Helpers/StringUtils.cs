@@ -92,4 +92,14 @@ public class StringUtils
 
         return true;
     }
+
+    public static string StripStart(string str, string prefix)
+    {
+        if (str.StartsWith(prefix))
+        {
+            return str.Substring(prefix.Length);
+        }
+        return str;
+    }
+
 }

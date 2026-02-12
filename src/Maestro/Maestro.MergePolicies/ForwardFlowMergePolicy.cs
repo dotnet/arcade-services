@@ -3,39 +3,94 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Extensions.Logging;
 
 namespace Maestro.MergePolicies;
-internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
+internal class ForwardFlowMergePolicy(IBasicBarClient barClient, ILogger<IMergePolicy> logger) : CodeFlowMergePolicy(barClient, logger)
 {
     public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote remote)
     {
-        SourceManifest sourceManifest;
+        // codeflow subscriptions can't be batched, so there can only be one update (the updates are per subscription)
+        if (pr.ContainedUpdates.Count == 0)
+        {
+            _logger.LogError("No updates found in PR {PrUrl} when calculating {policy}", pr.Url, Name);
+            return FailDecisively(
+                "No updates found in pull request",
+                $"The pull request does not contain any updates to evaluate. This could be due to a misconfiguration of the subscription or an issue with the pull request itself."
+                + SeekHelpMsg);
+        }
+        if (pr.ContainedUpdates.Count > 1)
+        {
+            _logger.LogError("Updates from multile subscriptions found in forward flow pr {PrUrl} when calculating {policy}", pr.Url, Name);
+            return FailDecisively(
+                "Multiple subscription IDs found in pull request updates",
+                $"The pull request contains updates from multiple subscriptions, which is an illegal state."
+                + SeekHelpMsg);
+        }
+        var update = pr.ContainedUpdates.First();
+
+        var subscription = await _barClient.GetSubscriptionAsync(update.SubscriptionId);
+        if (subscription == null)
+        {
+            _logger.LogError("Subscription with ID {SubscriptionId} not found when calculating {policy} PR {PrUrl}", pr.ContainedUpdates.First().SubscriptionId, Name, pr.Url);
+            return FailTransiently(
+                "Error while retrieving subscription information",
+                $"An issue occurred while retrieving subscription information for the pull request updates. This could be due to a transient server error."
+                + SeekHelpMsg);
+        }
+        if (string.IsNullOrEmpty(subscription.TargetDirectory))
+        {
+            _logger.LogError("Forwardflow Subscription {SubscriptionId} has null or empty TargetDirectory when calculating {policy} PR {PrUrl}", subscription.Id, Name, pr.Url);
+            return FailDecisively(
+                "Subscription misconfiguration: Target directory not set",
+                $"The subscription associated with this pull request does not have a target directory configured. Please ensure that the subscription is correctly configured with a target directory."
+                + SeekHelpMsg);
+        }
+        var mapping = subscription.TargetDirectory;
+
+        string mergeBaseSha;
+        SourceManifest headBranchSourceManifest, mergeBaseSourceManifest;
         try
         {
-            sourceManifest = await remote.GetSourceManifestAsync(pr.TargetRepoUrl, pr.HeadBranch);
+            // Get the merge base commit between the head and target branches
+            var diff = await remote.GitDiffAsync(pr.TargetRepoUrl, subscription.TargetBranch, pr.HeadBranch);
+            mergeBaseSha = diff.MergeBaseCommit;
+            if (string.IsNullOrEmpty(mergeBaseSha))
+            {
+                _logger.LogError("Merge base commit not found for PR {PrUrl}", pr.Url);
+                return FailTransiently(
+                    "Could not determine merge base commit",
+                    $"Unable to determine the merge base commit between the head branch and target branch. This could be due to the branches having no common ancestor."
+                    + SeekHelpMsg);
+            }
+
+            headBranchSourceManifest = await remote.GetSourceManifestAsync(pr.TargetRepoUrl, pr.HeadBranch);
+            mergeBaseSourceManifest = await remote.GetSourceManifestAsync(pr.TargetRepoUrl, diff.MergeBaseCommit);
         }
-        catch (Exception)
+        catch (Exception e)
         {
+            _logger.LogError(e, "Error while fetching remote data for PR {PrUrl}", pr.Url);
             return FailTransiently(
-                "Error while retrieving source manifest",
-                $"An issue occurred while retrieving the source manifest. This could be due to a misconfiguration of the `{VmrInfo.DefaultRelativeSourceManifestPath}` file, or because of a server error."
+                "Error while fetching remote data",
+                $"An issue occurred while fetching remote data (merge base or source manifests). This could be due to a server error or a misconfiguration of the `{VmrInfo.DefaultRelativeSourceManifestPath}` file."
                 + SeekHelpMsg);
         }
 
-        if (!TryCreateBarIdDictionaryFromSourceManifest(sourceManifest, out Dictionary<string, int?> repoNamesToBarIds) ||
-            !TryCreateCommitShaDictionaryFromSourceManifest(sourceManifest, out Dictionary<string, string> repoNamesToCommitSha))
-        {
-            return FailDecisively(
-                "The source manifest file is malformed",
-                $"Duplicate repository URIs were found in {VmrInfo.DefaultRelativeSourceManifestPath}." + SeekHelpMsg);
-        }
-
-        List<string> configurationErrors = CalculateConfigurationErrors(pr, repoNamesToBarIds, repoNamesToCommitSha);
+        List<string> configurationErrors = [
+            .. CalculateConfigurationErrors(
+                mapping,
+                update.BuildId,
+                update.CommitSha,
+                headBranchSourceManifest),
+            .. GetUnexpectedRepoChangeErrors(headBranchSourceManifest, mergeBaseSourceManifest, mapping)
+        ];
 
         if (configurationErrors.Count != 0)
         {
@@ -49,47 +104,90 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
         return SucceedDecisively("Forward flow checks succeeded.");
     }
 
-    private static List<string> CalculateConfigurationErrors(
-        PullRequestUpdateSummary pr,
-        Dictionary<string, int?> repoNamesToBarIds,
-        Dictionary<string, string> repoNamesToCommitSha)
+    private static List<string> GetUnexpectedRepoChangeErrors(
+        SourceManifest headBranchSourceManifest,
+        SourceManifest targetBranchSourceManifest,
+        string mapping)
     {
-        List<string> configurationErrors = [];
-        foreach (SubscriptionUpdateSummary PRUpdateSummary in pr.ContainedUpdates)
+        var headBranchDic = headBranchSourceManifest.Repositories.ToDictionary(r => r.Path);
+        var targetBranchDic = targetBranchSourceManifest.Repositories.ToDictionary(r => r.Path);
+
+        List<string> validationErrors = [];
+
+        foreach (var repo in headBranchDic.Keys.Where(r => r != mapping))
         {
-            if (!repoNamesToBarIds.TryGetValue(PRUpdateSummary.SourceRepo, out int? sourceManifestBarId) || sourceManifestBarId == null)
+            if (!targetBranchDic.TryGetValue(repo, out var targetRepo))
             {
-                configurationErrors.Add($"""
-                    #### {configurationErrors.Count + 1}. Missing BAR ID in `{VmrInfo.DefaultRelativeSourceManifestPath}`
-                    - **Source Repository**: {PRUpdateSummary.SourceRepo}
-                    - **Error**: The BAR ID for the current update from the source repository is not found in the source manifest.
-                    """);
+                validationErrors.Add($"Detected new entry for `{repo}` repository in `{VmrInfo.DefaultRelativeSourceManifestPath}`. Only changes to the `{mapping}` entry are allowed in the current codeflow.");
+                continue;
             }
-            if (sourceManifestBarId != null && sourceManifestBarId != PRUpdateSummary.BuildId)
+
+            if (headBranchDic[repo].CommitSha != targetRepo.CommitSha
+                || headBranchDic[repo].BarId != targetRepo.BarId)
             {
-                configurationErrors.Add($"""
-                     #### {configurationErrors.Count + 1}. BAR ID Mismatch in `{VmrInfo.DefaultRelativeSourceManifestPath}`
-                     - **Source Repository**: {PRUpdateSummary.SourceRepo}
-                     - **Error**: BAR ID `{sourceManifestBarId}` found in the source manifest does not match the build ID of the current update (`{PRUpdateSummary.BuildId}`).
-                     """);
-            }
-            if (!repoNamesToCommitSha.TryGetValue(PRUpdateSummary.SourceRepo, out string sourceManifestCommitSha) || string.IsNullOrEmpty(sourceManifestCommitSha))
-            {
-                configurationErrors.Add($"""
-                    #### {configurationErrors.Count + 1}. Missing Commit SHA in `{VmrInfo.DefaultRelativeSourceManifestPath}`
-                    - **Source Repository**: {PRUpdateSummary.SourceRepo}
-                    - **Error**: The commit SHA for the current update from the source repository is not found in the source manifest.
-                    """);
-            }
-            if (!string.IsNullOrEmpty(sourceManifestCommitSha) && sourceManifestCommitSha != PRUpdateSummary.CommitSha)
-            {
-                configurationErrors.Add($"""
-                     #### {configurationErrors.Count + 1}. Commit SHA Mismatch in `{VmrInfo.DefaultRelativeSourceManifestPath}`
-                     - **Source Repository**: {PRUpdateSummary.SourceRepo}
-                     - **Error**: Commit SHA `{sourceManifestCommitSha}` found in the source manifest does not match the commit SHA of the current update (`{PRUpdateSummary.CommitSha}`).
-                     """);
+                validationErrors.Add($"Detected changes to the `{repo}` repository in `{VmrInfo.DefaultRelativeSourceManifestPath}`. Only changes to the `{mapping}` entry are allowed in the current codeflow.");
             }
         }
+
+        foreach (var repo in targetBranchDic.Keys.Where(r => r != mapping && !headBranchDic.ContainsKey(r)))
+        {
+            validationErrors.Add($"Detected removal of entry `{repo}` repository in `{VmrInfo.DefaultRelativeSourceManifestPath}`. Only changes to the `{mapping}` entry are allowed in the current codeflow.");
+        }
+
+        return validationErrors;
+    }
+
+    private static List<string> CalculateConfigurationErrors(
+        string mapping,
+        int expectedBuildId,
+        string expectedSha,
+        SourceManifest headBranchSourceManifest)
+    {
+        if (!TryCreateBarIdDictionaryFromSourceManifest(headBranchSourceManifest, out Dictionary<string, int?> repMappingsToBarIds)
+                || !TryCreateCommitShaDictionaryFromSourceManifest(headBranchSourceManifest, out Dictionary<string, string> repoMappingsToCommitSha))
+        {
+            return [$"""
+                The source manifest file is malformed,
+                Duplicate repository URIs were found in {VmrInfo.DefaultRelativeSourceManifestPath}
+                {SeekHelpMsg});
+                """];
+        }
+
+        List<string> configurationErrors = [];
+
+        if (!repMappingsToBarIds.TryGetValue(mapping, out int? sourceManifestBarId) || sourceManifestBarId == null)
+        {
+            configurationErrors.Add($"""
+                #### {configurationErrors.Count + 1}. Missing BAR ID in `{VmrInfo.DefaultRelativeSourceManifestPath}`
+                - **Source Repository**: {mapping}
+                - **Error**: The BAR ID for the current update from the source repository is not found in the source manifest.
+                """);
+        }
+        if (sourceManifestBarId != null && sourceManifestBarId != expectedBuildId)
+        {
+            configurationErrors.Add($"""
+                 #### {configurationErrors.Count + 1}. BAR ID Mismatch in `{VmrInfo.DefaultRelativeSourceManifestPath}`
+                 - **Source Repository**: {mapping}
+                 - **Error**: BAR ID `{sourceManifestBarId}` found in the source manifest does not match the build ID of the current update (`{expectedBuildId}`).
+                 """);
+        }
+        if (!repoMappingsToCommitSha.TryGetValue(mapping, out string sourceManifestCommitSha) || string.IsNullOrEmpty(sourceManifestCommitSha))
+        {
+            configurationErrors.Add($"""
+                #### {configurationErrors.Count + 1}. Missing Commit SHA in `{VmrInfo.DefaultRelativeSourceManifestPath}`
+                - **Source Repository**: {mapping}
+                - **Error**: The commit SHA for the current update from the source repository is not found in the source manifest.
+                """);
+        }
+        if (!string.IsNullOrEmpty(sourceManifestCommitSha) && sourceManifestCommitSha != expectedSha)
+        {
+            configurationErrors.Add($"""
+                 #### {configurationErrors.Count + 1}. Commit SHA Mismatch in `{VmrInfo.DefaultRelativeSourceManifestPath}`
+                 - **Source Repository**: {mapping}
+                 - **Error**: Commit SHA `{sourceManifestCommitSha}` found in the source manifest does not match the commit SHA of the current update (`{expectedSha}`).
+                 """);
+        }
+
         return configurationErrors;
     }
 
@@ -98,11 +196,11 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
         repoNamesToBarIds = [];
         foreach (var repo in sourceManifest.Repositories)
         {
-            if (repoNamesToBarIds.ContainsKey(repo.RemoteUri))
+            if (repoNamesToBarIds.ContainsKey(repo.Path))
             {
                 return false;
             }
-            repoNamesToBarIds.Add(repo.RemoteUri, repo.BarId);
+            repoNamesToBarIds.Add(repo.Path, repo.BarId);
         }
         return true;
     }
@@ -113,11 +211,11 @@ internal class ForwardFlowMergePolicy : CodeFlowMergePolicy
         repoNamesToCommitSha = [];
         foreach (var repo in sourceManifest.Repositories)
         {
-            if (repoNamesToCommitSha.ContainsKey(repo.RemoteUri))
+            if (repoNamesToCommitSha.ContainsKey(repo.Path))
             {
                 return false;
             }
-            repoNamesToCommitSha.Add(repo.RemoteUri, repo.CommitSha);
+            repoNamesToCommitSha.Add(repo.Path, repo.CommitSha);
         }
         return true;
     }

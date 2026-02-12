@@ -8,10 +8,15 @@ using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
+using Microsoft.Extensions.Logging;
 
 namespace Maestro.MergePolicies;
-internal class CodeFlowMergePolicy : MergePolicy
+
+internal abstract class CodeFlowMergePolicy(IBasicBarClient barClient, ILogger<IMergePolicy> logger) : MergePolicy
 {
+    protected readonly IBasicBarClient _barClient = barClient;
+    protected readonly ILogger<IMergePolicy> _logger = logger;
+
     public override string DisplayName => "Codeflow verification";
 
     public override string Name => "CodeFlow";
@@ -43,26 +48,21 @@ internal class CodeFlowMergePolicy : MergePolicy
         - [opening an issue](https://github.com/dotnet/arcade-services/issues/new?template=BLANK_ISSUE) in [dotnet/arcade-services](https://github.com/dotnet/arcade-services),
         - contacting the [.NET Product Construction Services team via e-mail](mailto:dotnetprodconsvcs@microsoft.com).
         """;
-
-    public override async Task<MergePolicyEvaluationResult> EvaluateAsync(PullRequestUpdateSummary pr, IRemote darc)
-    {
-        CodeFlowMergePolicy mergePolicy = pr.CodeFlowDirection switch
-        {
-            CodeFlowDirection.BackFlow => new BackFlowMergePolicy(),
-            CodeFlowDirection.ForwardFlow => new ForwardFlowMergePolicy(),
-            _ => throw new ArgumentException("PR is not a codeflow PR, can't evaluate CodeFlow Merge Policy"),
-        };
-
-        return await mergePolicy.EvaluateAsync(pr, darc);
-    }
 }
 
-public class CodeFlowMergePolicyBuilder : IMergePolicyBuilder
+public class CodeFlowMergePolicyBuilder(IBasicBarClient barClient, ILogger<IMergePolicy> logger) : IMergePolicyBuilder
 {
     public string Name => MergePolicyConstants.CodeflowMergePolicyName;
 
     public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, PullRequestUpdateSummary pr)
     {
-        return Task.FromResult<IReadOnlyList<IMergePolicy>>([new CodeFlowMergePolicy()]);
+        IMergePolicy policy = pr.CodeFlowDirection switch
+        {
+            CodeFlowDirection.BackFlow => new BackFlowMergePolicy(barClient, logger),
+            CodeFlowDirection.ForwardFlow => new ForwardFlowMergePolicy(barClient, logger),
+            _ => throw new ArgumentException("PR is not a codeflow PR, can't build CodeFlow Merge Policy"),
+        };
+
+        return Task.FromResult<IReadOnlyList<IMergePolicy>>([policy]);
     }
 }
