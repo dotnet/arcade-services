@@ -1,17 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Threading;
 using Microsoft.DotNet.Services.Utility;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 #nullable enable
 namespace Microsoft.DotNet.DarcLib.Helpers;
@@ -77,12 +76,6 @@ public class ProcessManager : IProcessManager
 
     public string GitExecutable { get; }
 
-    public static ExponentialRetry GitExponentialRetry = new(Options.Create(new ExponentialRetryOptions
-    {
-        RetryCount = 15,
-        RetryBackOffFactor = 1.3
-    }));
-
     public ProcessManager(ILogger logger, string gitExecutable)
     {
         _logger = logger;
@@ -111,7 +104,7 @@ public class ProcessManager : IProcessManager
         CancellationToken cancellationToken = default)
     {
         // When another process is using the directory, we retry a few times
-        return await GitExponentialRetry.RetryAsync(
+        return await ExponentialRetry.Default.RetryAsync(
             async () => await Execute(
                 GitExecutable,
                 (new[] { "-C", repoPath }).Concat(arguments),
