@@ -366,8 +366,42 @@ public abstract class CodeFlowConflictResolver
         var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : productRepo;
         var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
 
-        // We create the patch minus the version, conflicted and cloaked files
+        // first we strip changes made in the target repo between the crossing flow and the current one
         IReadOnlyCollection<string> excludedFiles =
+        [
+            .. conflictedFiles.Select(conflictedFile => VmrPatchHandler.GetExclusionRule(codeflowOptions.CurrentFlow.IsForwardFlow
+                ? new UnixPath(conflictedFile.Path.Substring(vmrSourcesPath.Length + 1))
+                : conflictedFile)),
+            .. GetPatchExclusions(codeflowOptions.Mapping),
+        ];
+        var stripRepoChangesPatches = await _patchHandler.CreatePatches(
+            _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch",
+            codeflowOptions.CurrentFlow.IsForwardFlow
+                ? lastFlows.CrossingFlow.VmrSha
+                : lastFlows.CrossingFlow.RepoSha,
+            Constants.HEAD,
+            path: null,
+            filters: excludedFiles,
+            relativePaths: true,
+            workingDir: codeflowOptions.CurrentFlow.IsForwardFlow
+                ? _vmrInfo.GetRepoSourcesPath(codeflowOptions.Mapping)
+                : productRepo.Path,
+            applicationPath: codeflowOptions.CurrentFlow.IsForwardFlow
+                ? vmrSourcesPath
+                : null,
+            ignoreLineEndings: true,
+            cancellationToken);
+        await _patchHandler.ApplyPatches(
+            stripRepoChangesPatches,
+            targetRepo.Path,
+            removePatchAfter: false,
+            keepConflicts: false, // also don't know about this
+            reverseApply: true,
+            applyToIndex: true,
+            cancellationToken);
+
+        // We create the patch minus the version, conflicted and cloaked files
+        excludedFiles =
         [
             .. conflictedFiles.Select(conflictedFile => VmrPatchHandler.GetExclusionRule(codeflowOptions.CurrentFlow.IsForwardFlow
                 ? new UnixPath(conflictedFile.Path.Substring(vmrSourcesPath.Length + 1))
@@ -423,6 +457,18 @@ public abstract class CodeFlowConflictResolver
                 productRepo,
                 lastFlows.CrossingFlow,
                 revertedFiles,
+                cancellationToken);
+        }
+        finally
+        {
+            // now reapply the stripped changes
+            await _patchHandler.ApplyPatches(
+                stripRepoChangesPatches,
+                targetRepo.Path,
+                removePatchAfter: false,
+                keepConflicts: true,
+                reverseApply: false,
+                applyToIndex: true,
                 cancellationToken);
         }
     }

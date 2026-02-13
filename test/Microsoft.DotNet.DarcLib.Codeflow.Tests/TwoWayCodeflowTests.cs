@@ -1258,16 +1258,16 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.CommitAll(ProductRepoPath, "adding the file");
         var result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
         result.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, ffBranchName);
+        await FinalizeForwardFlow(ffBranchName);
 
         // do some flows now
         result = await ChangeRepoFileAndFlowIt("1", ffBranchName);
         result.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(VmrPath, ffBranchName);
+        await FinalizeForwardFlow(ffBranchName);
 
         result = await ChangeVmrFileAndFlowIt("2", bfBranchName);
         result.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(ProductRepoPath, bfBranchName);
+        await FinalizeBackFlow(bfBranchName);
 
         // now change the problematic file, open the ff, but don't merge yet
         await GitOperations.Checkout(ProductRepoPath, "main");
@@ -1275,16 +1275,17 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await GitOperations.CommitAll(ProductRepoPath, "change to the file");
         result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
         result.ShouldHaveUpdates();
+        await GitOperations.CommitAll(VmrPath, "Commit flown changes to ff branch");
 
         // now do a few backflows
         result = await ChangeVmrFileAndFlowIt("3", bfBranchName);
         result.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(ProductRepoPath, bfBranchName);
+        await FinalizeBackFlow(bfBranchName);
 
         // this second backflow will be the opposite direction flow
         result = await ChangeVmrFileAndFlowIt("4", bfBranchName);
         result.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(ProductRepoPath, bfBranchName);
+        await FinalizeBackFlow(bfBranchName);
 
         // merge the ff
         await GitOperations.MergePrBranch(VmrPath, ffBranchName);
@@ -1297,6 +1298,9 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         // so now we need to call a backflow
         result = await ChangeVmrFileAndFlowIt("5", bfBranchName);
         result.ShouldHaveUpdates();
-        await GitOperations.MergePrBranch(ProductRepoPath, bfBranchName);
+        await FinalizeBackFlow(bfBranchName);
+
+        // file should still say 1
+        File.ReadAllText(ProductRepoPath / problematicFilePath).Should().Be("1");
     }
 }
