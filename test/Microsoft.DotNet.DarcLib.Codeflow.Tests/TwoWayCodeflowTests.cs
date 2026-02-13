@@ -1243,10 +1243,10 @@ internal class TwoWayCodeflowTests : CodeFlowTests
     }
 
     [Test]
-    public async Task NewTest()
+    public async Task BackflowOppositeDirectionFlowRevertsTest()
     {
-        const string ffBranchName = nameof(NewTest);
-        const string bfBranchName = nameof(NewTest) + "bf";
+        const string ffBranchName = nameof(BackflowOppositeDirectionFlowRevertsTest);
+        const string bfBranchName = nameof(BackflowOppositeDirectionFlowRevertsTest) + "bf";
 
         var problematicFilePath = "badFile.txt";
 

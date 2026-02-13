@@ -366,7 +366,7 @@ public abstract class CodeFlowConflictResolver
         var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : productRepo;
         var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
 
-        // first we strip changes made in the target repo between the crossing flow and the current one
+        // We create the patches minus the version, conflicted and cloaked files
         IReadOnlyCollection<string> excludedFiles =
         [
             .. conflictedFiles.Select(conflictedFile => VmrPatchHandler.GetExclusionRule(codeflowOptions.CurrentFlow.IsForwardFlow
@@ -374,6 +374,9 @@ public abstract class CodeFlowConflictResolver
                 : conflictedFile)),
             .. GetPatchExclusions(codeflowOptions.Mapping),
         ];
+
+        // The changes made to the target repo since the crossing flow might conflict with the crossing flow changes in the source
+        // We need to revert the changes in the target repo so we don't get false red flags
         var stripRepoChangesPatches = await _patchHandler.CreatePatches(
             _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch",
             codeflowOptions.CurrentFlow.IsForwardFlow
@@ -462,7 +465,7 @@ public abstract class CodeFlowConflictResolver
         finally
         {
             // now reapply the stripped changes
-            await _patchHandler.ApplyPatches(
+            var conflicts = await _patchHandler.ApplyPatches(
                 stripRepoChangesPatches,
                 targetRepo.Path,
                 removePatchAfter: false,
@@ -470,6 +473,11 @@ public abstract class CodeFlowConflictResolver
                 reverseApply: false,
                 applyToIndex: true,
                 cancellationToken);
+
+            if (conflicts.Count > 0)
+            {
+                _logger.LogWarning("Conflicts occurred while reapplying stripped changes after detecting partial reverts");
+            }
         }
     }
 
