@@ -8,7 +8,6 @@ using System.Runtime.Serialization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
-using BuildInsights.BuildAnalysis.Models;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.Build.WebApi;
@@ -22,33 +21,33 @@ namespace BuildInsights.BuildAnalysis;
 
 public interface IBuildDataService
 {
-    Task<Build> GetBuildAsync(string orgId, string projectId, int buildId, CancellationToken cancellationToken);
-    Task<IReadOnlyList<Build>> GetFailedBuildsAsync(string orgId, string projectId, string repository, CancellationToken cancellationToken);
-    Task<List<TestRunDetails>> GetFailingTestsForBuildAsync(
-        Build build,
+    Task<Models.Build> GetBuildAsync(string orgId, string projectId, int buildId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<Models.Build>> GetFailedBuildsAsync(string orgId, string projectId, string repository, CancellationToken cancellationToken);
+    Task<List<Models.TestRunDetails>> GetFailingTestsForBuildAsync(
+        Models.Build build,
         CancellationToken cancellationToken);
-    Task<IReadOnlyList<TestRunDetails>> GetAllFailingTestsForBuildAsync(
-        Build build,
+    Task<IReadOnlyList<Models.TestRunDetails>> GetAllFailingTestsForBuildAsync(
+        Models.Build build,
         CancellationToken cancellationToken);
-    Task<List<TestHistoryByBranch>> GetTestHistoryAsync(
+    Task<List<Models.TestHistoryByBranch>> GetTestHistoryAsync(
         string orgId,
         string projectId,
         string testName,
         DateTimeOffset maxCompleted,
         CancellationToken cancellationToken);
-    Task<TestCaseResult> GetTestResultByIdAsync(string orgId, string projectId, int testRunId, int testCaseResultId, CancellationToken cancellationToken, ResultDetails resultDetails = ResultDetails.None);
-    Task<IReadOnlyList<Build>> GetLatestBuildsForBranchAsync(string orgId, string projectId, int definitionId, GitRef targetBranch, DateTimeOffset latestDate, CancellationToken cancellationToken);
-    Task<IReadOnlyList<TimelineRecord>> GetLatestBuildTimelineRecordsAsync(string orgId, string projectId, int buildId, CancellationToken cancellationToken);
-    Task<IReadOnlyList<TimelineRecord>> GetBuildTimelineRecordsAsync(string orgId, string projectId, int buildId, Guid timelineId, CancellationToken cancellationToken);
-    Task<IReadOnlyList<TimelineRecord>> GetTimelineRecordsFromAllAttempts(IReadOnlyCollection<TimelineRecord> latestTimelineRecords, string orgId, string projectId, int buildId, CancellationToken cancellationToken);
-    Task<BuildConfiguration> GetBuildConfiguration(string orgId, string projectId, int buildId, string artifactName, string fileName, CancellationToken cancellationToken);
+    Task<Models.TestCaseResult> GetTestResultByIdAsync(string orgId, string projectId, int testRunId, int testCaseResultId, CancellationToken cancellationToken, Models.ResultDetails resultDetails = Models.ResultDetails.None);
+    Task<IReadOnlyList<Models.Build>> GetLatestBuildsForBranchAsync(string orgId, string projectId, int definitionId, Models.GitRef targetBranch, DateTimeOffset latestDate, CancellationToken cancellationToken);
+    Task<IReadOnlyList<Models.TimelineRecord>> GetLatestBuildTimelineRecordsAsync(string orgId, string projectId, int buildId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<Models.TimelineRecord>> GetBuildTimelineRecordsAsync(string orgId, string projectId, int buildId, Guid timelineId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<Models.TimelineRecord>> GetTimelineRecordsFromAllAttempts(IReadOnlyCollection<Models.TimelineRecord> latestTimelineRecords, string orgId, string projectId, int buildId, CancellationToken cancellationToken);
+    Task<Models.BuildConfiguration> GetBuildConfiguration(string orgId, string projectId, int buildId, string artifactName, string fileName, CancellationToken cancellationToken);
     Task<string> GetProjectName(string orgId, string projectId);
 
-    Task<ImmutableList<TestRunDetails>> GetTestsForBuildAsync(
-        Build build,
+    Task<ImmutableList<Models.TestRunDetails>> GetTestsForBuildAsync(
+        Models.Build build,
         CancellationToken cancellationToken);
 
-    IAsyncEnumerable<HelixMetadata> GetTestRunMetaDataAsync(
+    IAsyncEnumerable<Models.HelixMetadata> GetTestRunMetaDataAsync(
         ImmutableList<string> attachmentUrl,
         CancellationToken cancellationToken);
     Task<Stream> GetLogContent(string orgId, string project, int buildId, int logId);
@@ -93,7 +92,7 @@ public sealed class BuildDataProvider : IBuildDataService
         }
         catch (Microsoft.TeamFoundation.Build.WebApi.BuildNotFoundException e)
         {
-            throw new Services.BuildNotFoundException($"Unable to bind build '{buildId}' in project '{projectId}'", e);
+            throw new BuildNotFoundException($"Unable to bind build '{buildId}' in project '{projectId}'", e);
         }
 
         return MapModel(azdoBuild);
@@ -980,7 +979,7 @@ public sealed class BuildDataProvider : IBuildDataService
         BuildHttpClient buildClient = connection.Value.GetClient<BuildHttpClient>();
         var buildList = await buildClient.GetBuildsAsync(project: projectId, repositoryId: repository, resultFilter: BuildResult.Failed, repositoryType: "Github", minFinishTime: DateTime.Now.AddDays(-1));
 
-        return buildList.Select(build => MapModel(build)).ToList();
+        return buildList.Select(MapModel).ToList();
     }
 
     [DataContract]

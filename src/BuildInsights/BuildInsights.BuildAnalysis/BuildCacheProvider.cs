@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using BuildInsights.AzureStorage.Cache;
 using BuildInsights.BuildAnalysis.Models;
 
 namespace BuildInsights.BuildAnalysis;

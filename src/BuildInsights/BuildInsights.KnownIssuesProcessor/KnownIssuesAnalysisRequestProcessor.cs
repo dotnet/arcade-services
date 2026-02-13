@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text;
-using System.Text.Json;
 using BuildInsights.BuildAnalysis;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.Data.Models;
@@ -14,14 +13,15 @@ using BuildInsights.KnownIssues.WorkItems;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ProductConstructionService.WorkItems;
 
 namespace BuildInsights.KnownIssuesProcessor;
 
-public class KnownIssuesMessageHandler : IQueueMessageHandler
+public class KnownIssuesAnalysisRequestProcessor : WorkItemProcessor<AnalysisProcessRequest>
 {
     private readonly IRequestAnalysisService _buildAnaylysisRequestProvider;
     private readonly IOptionsMonitor<KnownIssuesProcessorOptions> _options;
-    private readonly ILogger<KnownIssuesMessageHandler> _logger;
+    private readonly ILogger<KnownIssuesAnalysisRequestProcessor> _logger;
     private readonly IBuildDataService _buildDataService;
     private readonly IKnownIssuesHistoryService _knownIssuesHistoryService;
     private readonly IBuildAnalysisHistoryService _buildAnalysisHistoryService;
@@ -30,7 +30,7 @@ public class KnownIssuesMessageHandler : IQueueMessageHandler
     private readonly IBuildProcessingStatusService _processingStatusService;
     private readonly ISystemClock _clock;
 
-    public KnownIssuesMessageHandler(
+    public KnownIssuesAnalysisRequestProcessor(
         IOptionsMonitor<KnownIssuesProcessorOptions> options,
         IBuildDataService buildDataService,
         IRequestAnalysisService buildRequestService,
@@ -40,7 +40,7 @@ public class KnownIssuesMessageHandler : IQueueMessageHandler
         IGitHubIssuesService gitHubIssuesService,
         IBuildProcessingStatusService processingStatusService,
         ISystemClock systemClock,
-        ILogger<KnownIssuesMessageHandler> logger)
+        ILogger<KnownIssuesAnalysisRequestProcessor> logger)
     {
         _options = options;
         _buildAnaylysisRequestProvider = buildRequestService;
@@ -54,13 +54,9 @@ public class KnownIssuesMessageHandler : IQueueMessageHandler
         _logger = logger;
     }
 
-    public async Task HandleMessageAsync(IQueuedWork message, bool isLastAttempt, CancellationToken cancellationToken)
+    public override async Task<bool> ProcessWorkItemAsync(AnalysisProcessRequest workItem, CancellationToken cancellationToken)
     {
-        string messageString = await message.GetStringAsync();
-
-        var processRequest = JsonSerializer.Deserialize<AnalysisProcessRequest>(messageString)!;
-
-        GitHubIssue issue = await _gitHubChecksService.GetIssueAsync(processRequest.Repository, processRequest.IssueId);
+        GitHubIssue issue = await _gitHubChecksService.GetIssueAsync(workItem.Repository, workItem.IssueId);
         KnownIssueJson issueJson = KnownIssueHelper.GetKnownIssueJson(issue.Body);
 
         if (issueJson.ErrorMessage is null or { Count: 0 } && issueJson.ErrorPattern is null or { Count: 0 })
@@ -79,12 +75,12 @@ public class KnownIssuesMessageHandler : IQueueMessageHandler
             if (latestKnownIssueError?.ErrorMessage?.Equals(issueJson.ErrorMessage) ?? false)
             {
                 _logger.LogInformation("The error message: {errorMessage} from github {issueRepository}#{issueId} has been already processed. Skipping it", issueJson.ErrorMessage, issue.RepositoryWithOwner, issue.Id);
-                return;
+                return false;
             }
 
             // Filter builds, all builds for infra issues
             // In staging, RepositoryIssuesOnly will be true and the scope of infrastructure issues will be limited to the test repo
-            string repositoryFilter = null;
+            string? repositoryFilter = null;
             if (!issue.RepositoryWithOwner.Equals(_options.CurrentValue.KnownIssuesRepo) || _options.CurrentValue.RepositoryIssuesOnly)
                 repositoryFilter = issue.RepositoryWithOwner;
 
@@ -94,20 +90,21 @@ public class KnownIssuesMessageHandler : IQueueMessageHandler
             DateTimeOffset dateTimeOFilter = _clock.UtcNow.AddDays(-2);
             List<KnownIssueAnalysis> analysisList = await _knownIssuesHistoryService.GetKnownIssuesHistory(issue.RepositoryWithOwner, issue.Id,
                     dateTimeOFilter, cancellationToken);
-            IReadOnlyList<int> analyzedBuildIds = analysisList.Where(knownIssueAnalysis =>
+            IReadOnlyList<int> analyzedBuildIds = [..analysisList
+                .Where(knownIssueAnalysis =>
                      knownIssueAnalysis.ErrorMessage.Equals(KnownIssueHelper.GetKnownIssueErrorMessageStringConversion(issueJson.ErrorMessage)) ||
                      knownIssueAnalysis.ErrorMessage.Equals(KnownIssueHelper.GetKnownIssueErrorMessageStringConversion(issueJson.ErrorPattern)))
-                .Select(a => int.Parse(a.RowKey)).ToList();
+                .Select(a => a.BuildId)];
 
             List<BuildAnalysisEvent> buildsEventWithRepositoryNotSupported = await _buildAnalysisHistoryService.GetBuildsWithRepositoryNotSupported(dateTimeOFilter, cancellationToken);
-            IReadOnlyList<int> buildsWithRepositoryNotSupported = buildsEventWithRepositoryNotSupported.Select(b => int.Parse(b.RowKey)).ToList();
+            IReadOnlyList<int> buildsWithRepositoryNotSupported = buildsEventWithRepositoryNotSupported.Select(b => b.BuildId).ToList();
 
             List<BuildProcessingStatusEvent> buildEventsWithOverrideForConclusion = await _processingStatusService.GetBuildsWithOverrideConclusion(dateTimeOFilter, cancellationToken);
-            IReadOnlyList<int> buildWithOverrideForConclusion = buildEventsWithOverrideForConclusion.Select(b => int.Parse(b.RowKey)).ToList();
+            IReadOnlyList<int> buildWithOverrideForConclusion = buildEventsWithOverrideForConclusion.Select(b => b.BuildId).ToList();
 
             foreach (AzureDevOpsProjects project in _options.CurrentValue.AzureDevOpsProjects)
             {
-                string repositoryFilterForProject = project.IsInternal ? GetAzureRepoName(repositoryFilter) : repositoryFilter;
+                string? repositoryFilterForProject = project.IsInternal ? GetAzureRepoName(repositoryFilter) : repositoryFilter;
                 IReadOnlyList<Build> buildList = await _buildDataService.GetFailedBuildsAsync(project.OrgId, project.ProjectId, repositoryFilterForProject, cancellationToken);
 
                 buildList = buildList.Where(b => !analyzedBuildIds.Contains(b.Id) && !buildsWithRepositoryNotSupported.Contains(b.Id) && !buildWithOverrideForConclusion.Contains(b.Id)).ToList();
@@ -118,24 +115,25 @@ public class KnownIssuesMessageHandler : IQueueMessageHandler
             }
         }
 
-        await _knownIssuesHistoryService.SaveKnownIssueError(issue.RepositoryWithOwner, issue.Id, issueJson.ErrorMessage,
-            cancellationToken);
+        await _knownIssuesHistoryService.SaveKnownIssueError(issue.RepositoryWithOwner, issue.Id, issueJson.ErrorMessage ?? [], cancellationToken);
+        return true;
     }
 
     private async Task AddErrorMessageTemplate(GitHubIssue issue)
     {
-        string errorMessageTemplate = $@"
-{KnownIssueHelper.ErrorMessageTemplateIdentifier}
-### Known Issue Error Message
-{KnownIssueHelper.GetKnownIssueSectionTemplate()}
-";
+        string errorMessageTemplate =
+            $"""
+            {KnownIssueHelper.ErrorMessageTemplateIdentifier}
+            ### Known Issue Error Message
+            {KnownIssueHelper.GetKnownIssueSectionTemplate()}
+            """;
         var bodyWithReport = new StringBuilder();
         bodyWithReport.Append(issue.Body);
         bodyWithReport.Append(errorMessageTemplate);
         await _issuesService.UpdateIssueBodyAsync(issue.RepositoryWithOwner, issue.Id, bodyWithReport.ToString());
     }
 
-    private string GetAzureRepoName(string repositoryWithOwner)
+    private static string? GetAzureRepoName(string? repositoryWithOwner)
     {
         return string.IsNullOrEmpty(repositoryWithOwner) ? repositoryWithOwner : repositoryWithOwner.Replace("/", "-");
     }

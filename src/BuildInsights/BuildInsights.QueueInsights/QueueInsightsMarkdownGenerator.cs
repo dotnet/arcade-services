@@ -1,10 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using BuildInsights.QueueInsights.Models;
 using HandlebarsDotNet;
 using QueueInsights.Models;
 
-namespace QueueInsights;
+namespace BuildInsights.QueueInsights;
 
 /// <summary>
 ///     Generates the markdown for Helix queue insights.

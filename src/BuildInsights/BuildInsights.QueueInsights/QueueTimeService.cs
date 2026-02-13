@@ -3,11 +3,11 @@
 
 using System.Collections.Immutable;
 using System.Data;
+using BuildInsights.QueueInsights.Models;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.Logging;
-using QueueInsights.Models;
 
-namespace QueueInsights;
+namespace BuildInsights.QueueInsights;
 
 /// <summary>
 ///     Obtains the Work Item Wait Times for Helix queues.

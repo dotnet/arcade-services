@@ -1,13 +1,10 @@
-using System.Collections.Generic;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Azure.Storage.Queues;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using BuildInsights.BuildAnalysis.Models;
+using BuildInsights.KnownIssues.WorkItems;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Microsoft.Internal.Helix.BuildFailureAnalysis.Models;
-using Microsoft.Internal.Helix.KnownIssues.Models;
-using Microsoft.Internal.Helix.KnownIssuesProcessor.Services;
-using Microsoft.Internal.Helix.Utility.Azure;
+using ProductConstructionService.WorkItems;
 
 namespace BuildInsights.KnownIssuesProcessor;
 
@@ -18,43 +15,31 @@ public interface IRequestAnalysisService
 
 public class RequestAnalysisProvider : IRequestAnalysisService
 {
-    private readonly IOptionsMonitor<KnownIssuesProcessorOptions> _options;
     private readonly ILogger<RequestAnalysisProvider> _logger;
-    private readonly IQueueClientFactory _queueClientFactory;
-
-    private QueueClientOptions queueClientOptions = new QueueClientOptions()
-    {
-        MessageEncoding = QueueMessageEncoding.Base64
-    };
-
-    private QueueClient queueClient => _queueClientFactory.GetQueueClient(_options.CurrentValue.BuildAnalysisQueueName, _options.CurrentValue.BuildAnalysisQueueEndpoint, queueClientOptions);
+    private readonly IWorkItemProducerFactory _workItemProducerFactory;
 
     public RequestAnalysisProvider(
-        IQueueClientFactory queueClientFactory,
-        IOptionsMonitor<KnownIssuesProcessorOptions> options,
+        IWorkItemProducerFactory workItemProducerFactory,
         ILogger<RequestAnalysisProvider> logger)
     {
-        _options = options;
         _logger = logger;
-        _queueClientFactory = queueClientFactory;
+        _workItemProducerFactory = workItemProducerFactory;
     }
 
     public async Task RequestAnalysisAsync(IReadOnlyList<Build> buildList)
     {
+        var producer = _workItemProducerFactory.CreateProducer<KnownIssueReprocessBuildWorkItem>(false);
+
         foreach (Build build in buildList)
         {
             _logger.LogInformation("Requesting reprocess of build {buildId}", build.Id);
 
-            KnownIssueReprocessBuildMessage knownIssueReprocessBuildMessage = new KnownIssueReprocessBuildMessage
+            await producer.ProduceWorkItemAsync(new()
             {
                 ProjectId = build.ProjectName,
                 BuildId = build.Id,
                 OrganizationId = build.OrganizationName
-            };
-
-            string jsonMessage = JsonSerializer.Serialize(knownIssueReprocessBuildMessage);
-
-            await queueClient.SendMessageAsync(jsonMessage);
+            });
         }
     }
 }

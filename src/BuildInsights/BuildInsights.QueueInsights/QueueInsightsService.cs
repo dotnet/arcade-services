@@ -4,13 +4,13 @@
 using System.Collections.Immutable;
 using BuildInsights.GitHub;
 using BuildInsights.GitHub.Models;
+using BuildInsights.QueueInsights.Models;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Internal.Helix.Machines.MatrixOfTruthOutputDeserialization.V1.Models;
-using QueueInsights.Models;
 
-namespace QueueInsights;
+namespace BuildInsights.QueueInsights;
 
 /// <summary>
 ///     Provides insight and visibility into the current state of Helix queues by posting a Check Run.

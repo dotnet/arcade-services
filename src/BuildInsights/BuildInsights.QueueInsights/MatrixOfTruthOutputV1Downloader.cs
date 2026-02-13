@@ -7,7 +7,7 @@ using Azure.Storage.Blobs;
 using Microsoft.Internal.Helix.Machines.MatrixOfTruthOutputDeserialization.V1.Models;
 using Microsoft.Internal.Helix.Machines.MatrixOfTruthOutputDeserialization.V1;
 
-namespace QueueInsights;
+namespace BuildInsights.QueueInsights;
 
 public class MatrixOfTruthOutputV1Downloader
 {

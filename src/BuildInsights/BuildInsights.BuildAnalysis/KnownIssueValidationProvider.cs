@@ -11,6 +11,7 @@ using BuildInsights.KnownIssues.Models;
 using Octokit;
 using BuildInsights.Data.Models;
 using Maestro.Common;
+using BuildInsights.AzureStorage.Cache;
 
 namespace BuildInsights.BuildAnalysis;
 

@@ -2,8 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
+using BuildInsights.QueueInsights;
 
-namespace QueueInsights.Models;
+namespace BuildInsights.QueueInsights.Models;
 
 public class MarkdownView
 {

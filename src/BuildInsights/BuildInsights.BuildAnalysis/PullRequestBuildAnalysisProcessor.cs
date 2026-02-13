@@ -8,9 +8,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.GitHub.Models;
-using QueueInsights.Models;
+using BuildInsights.QueueInsights.Models;
 using BuildInsights.GitHub;
-using QueueInsights;
+using BuildInsights.QueueInsights;
 
 namespace BuildInsights.BuildAnalysis;
 

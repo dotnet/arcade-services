@@ -6,7 +6,7 @@ using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Specialized;
 
-namespace QueueInsights;
+namespace BuildInsights.QueueInsights;
 
 public interface IBlobClientFactory
 {

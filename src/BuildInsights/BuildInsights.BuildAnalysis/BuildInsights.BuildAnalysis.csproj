@@ -14,16 +14,16 @@
     <PackageReference Include="Microsoft.Azure.Management.Storage" />
     <PackageReference Include="Microsoft.DotNet.Kusto" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
-    <PackageReference Include="Microsoft.TeamFoundation.DistributedTask.Common" />
     <PackageReference Include="Microsoft.TeamFoundationServer.Client" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\BuildInsights.AzureStorage.Cache\BuildInsights.AzureStorage.Cache.csproj" />
     <ProjectReference Include="..\BuildInsights.Data\BuildInsights.Data.csproj" />
     <ProjectReference Include="..\BuildInsights.GitHub\BuildInsights.GitHub.csproj" />
     <ProjectReference Include="..\BuildInsights.KnownIssues\BuildInsights.KnownIssues.csproj" />
     <ProjectReference Include="..\BuildInsights.Utilities.Parallel\BuildInsights.Utilities.Parallel.csproj" />
-    <ProjectReference Include="..\QueueInsights\QueueInsights.csproj" />
+    <ProjectReference Include="..\BuildInsights.QueueInsights\BuildInsights.QueueInsights.csproj" />
   </ItemGroup>
 
   <ItemGroup>

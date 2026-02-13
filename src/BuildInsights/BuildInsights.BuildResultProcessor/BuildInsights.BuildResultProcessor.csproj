@@ -21,10 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Utility\Helix.Utility.Azure\Helix.Utility.Azure.csproj" />
-    <ProjectReference Include="..\..\..\Utility\Helix.Utility.AzureDevOps\Helix.Utility.AzureDevOps.csproj" />
-    <ProjectReference Include="..\Helix.Internal.BuildFailureAnalysis\Helix.Internal.BuildFailureAnalysis.csproj" />
-    <ProjectReference Include="..\QueueInsights\QueueInsights.csproj" />
+    <ProjectReference Include="..\BuildInsights.QueueInsights\BuildInsights.QueueInsights.csproj" />
   </ItemGroup>
 
 </Project>

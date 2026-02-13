@@ -54,7 +54,7 @@ public class Program
     {
         services.AddHttpClient();
         services.AddAzureStorageQueue();
-        services.AddQueueProcessing<KnownIssuesMessageHandler>(
+        services.AddQueueProcessing<KnownIssuesAnalysisRequestProcessor>(
             queueOptions => { },
             parallelismOptions => { parallelismOptions.WorkerCount = Environment.ProcessorCount; }
         );

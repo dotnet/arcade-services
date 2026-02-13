@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using BuildInsights.AzureStorage.Cache;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.Data.Models;
 using BuildInsights.GitHub.Models;

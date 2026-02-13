@@ -4,7 +4,7 @@
 using HandlebarsDotNet;
 using HandlebarsDotNet.IO;
 
-namespace QueueInsights;
+namespace BuildInsights.QueueInsights;
 
 internal class InsightMarkdownHelpers
 {

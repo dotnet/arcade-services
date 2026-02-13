@@ -4,7 +4,7 @@
 using System.Collections.Immutable;
 using Microsoft.Internal.Helix.Machines.MatrixOfTruthOutputDeserialization.V1.Models;
 
-namespace QueueInsights;
+namespace BuildInsights.QueueInsights;
 
 public static class PipelineExtensions
 {

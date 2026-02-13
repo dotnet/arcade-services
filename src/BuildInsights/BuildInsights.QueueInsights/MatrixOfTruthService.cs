@@ -1,11 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using BuildInsights.QueueInsights.Models;
 using Microsoft.Extensions.Options;
 using Microsoft.Internal.Helix.Machines.MatrixOfTruthOutputDeserialization.V1.Models;
-using QueueInsights.Models;
 
-namespace QueueInsights;
+namespace BuildInsights.QueueInsights;
 
 public interface IMatrixOfTruthService
 {
