@@ -240,6 +240,7 @@ internal abstract class CodeFlowTestsBase
             forceUpdate,
             unsafeFlow: false,
             cancellationToken: _cancellationToken.Token);
+        await GitOperations.CommitAll(ProductRepoPath, "Back flow");
 
         _lastFlowCollectedComments = scope.ServiceProvider.GetRequiredService<ICommentCollector>()
             .GetComments()
@@ -273,6 +274,7 @@ internal abstract class CodeFlowTestsBase
             forceUpdate,
             unsafeFlow: false,
             cancellationToken: _cancellationToken.Token);
+        await GitOperations.CommitAll(VmrPath, "Forward flow");
 
         _lastFlowCollectedComments = scope.ServiceProvider.GetRequiredService<ICommentCollector>()
             .GetComments()

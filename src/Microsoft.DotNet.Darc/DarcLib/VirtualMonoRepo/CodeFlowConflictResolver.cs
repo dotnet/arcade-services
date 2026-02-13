@@ -358,12 +358,6 @@ public abstract class CodeFlowConflictResolver
             return;
         }
 
-        if (lastFlows.LastFlow.IsForwardFlow != codeflowOptions.CurrentFlow.IsForwardFlow)
-        {
-            // Reverts only happen for same direction flows
-            return;
-        }
-
         // Create patch representing the current flow (minus the recreated previous flows)
         var (fromSha, toSha) = codeflowOptions.CurrentFlow.IsForwardFlow
             ? (lastFlows.CrossingFlow.RepoSha, codeflowOptions.CurrentFlow.RepoSha)
