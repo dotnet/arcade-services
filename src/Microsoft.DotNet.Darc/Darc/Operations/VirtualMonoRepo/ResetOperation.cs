@@ -57,6 +57,7 @@ internal class ResetOperation : Operation
         }
 
         string mappingName, targetSha = default!;
+        int? buildId = null;
         
         if (_options.Build.HasValue || !string.IsNullOrEmpty(_options.Channel))
         {
@@ -116,11 +117,11 @@ internal class ResetOperation : Operation
         // Determine the target SHA from build or channel option
         if (_options.Build.HasValue)
         {
-            targetSha = await GetShaFromBuildAsync(_options.Build.Value, mappingName);
+            (targetSha, buildId) = await GetShaFromBuildAsync(_options.Build.Value, mappingName);
         }
         else if (!string.IsNullOrEmpty(_options.Channel))
         {
-            targetSha = await GetShaFromChannelAsync(_options.Channel, mapping);
+            (targetSha, buildId) = await GetShaFromChannelAsync(_options.Channel, mapping);
         }
 
         _logger.LogInformation("Resetting VMR mapping '{mapping}' to SHA '{sha}'", mappingName, targetSha);
@@ -176,7 +177,7 @@ internal class ResetOperation : Operation
                 DarcLib.Constants.EmptyGitObject,
                 Parent: null,
                 OfficialBuildId: null,
-                BarId: null));
+                BarId: buildId));
 
             await _vmrUpdater.UpdateRepository(
                 mappingName,
@@ -197,9 +198,10 @@ internal class ResetOperation : Operation
     }
 
     /// <summary>
-    /// Gets the commit SHA from a BAR build ID and validates that the build's repository matches the mapping.
+    /// Gets the commit SHA and build ID from a BAR build ID and validates that the build's repository matches the mapping.
     /// </summary>
-    private async Task<string> GetShaFromBuildAsync(int buildId, string mappingName)
+    /// <returns>A tuple containing the commit SHA and the build ID.</returns>
+    private async Task<(string sha, int buildId)> GetShaFromBuildAsync(int buildId, string mappingName)
     {
         var build = await _barClient.GetBuildAsync(buildId)
             ?? throw new DarcException($"Build with ID {buildId} not found in BAR.");
@@ -222,13 +224,14 @@ internal class ResetOperation : Operation
                 $"but you specified mapping '{mappingName}'. These must match.");
         }
 
-        return build.Commit;
+        return (build.Commit, build.Id);
     }
 
     /// <summary>
-    /// Gets the commit SHA from the latest build on a channel for the mapping's default remote.
+    /// Gets the commit SHA and build ID from the latest build on a channel for the mapping's default remote.
     /// </summary>
-    private async Task<string> GetShaFromChannelAsync(string channelName, SourceMapping mapping)
+    /// <returns>A tuple containing the commit SHA and the build ID.</returns>
+    private async Task<(string sha, int buildId)> GetShaFromChannelAsync(string channelName, SourceMapping mapping)
     {
         _logger.LogInformation("Finding latest build for repository '{repo}' on channel '{channel}'...", 
             mapping.DefaultRemote, channelName);
@@ -247,6 +250,6 @@ internal class ResetOperation : Operation
             "Found latest build on channel '{channel}': Build {buildId} @ {commit}",
             channel.Name, build.Id, build.Commit);
 
-        return build.Commit;
+        return (build.Commit, build.Id);
     }
 }
