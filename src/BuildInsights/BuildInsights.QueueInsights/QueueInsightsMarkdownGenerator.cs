@@ -3,7 +3,6 @@
 
 using BuildInsights.QueueInsights.Models;
 using HandlebarsDotNet;
-using QueueInsights.Models;
 
 namespace BuildInsights.QueueInsights;
 

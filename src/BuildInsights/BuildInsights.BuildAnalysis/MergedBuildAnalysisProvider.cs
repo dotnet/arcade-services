@@ -90,10 +90,9 @@ public class MergedBuildAnalysisProvider : IMergedBuildAnalysisService
             Url = referenceBuild.WebUrl,
         };
 
-        await Helpers.StreamDataAsync(
+        await StreamHelpers.StreamDataAsync(
             s => JsonSerializer.SerializeAsync(s, buildStatus, _options, cancellationToken),
-            s => _storage.PutAsync("related-builds.json", s, cancellationToken)
-        );
+            s => _storage.PutAsync("related-builds.json", s, cancellationToken));
 
         var builds = ImmutableList.CreateBuilder<BuildResultAnalysis>();
         if (action == MergeBuildAnalysisAction.Include)

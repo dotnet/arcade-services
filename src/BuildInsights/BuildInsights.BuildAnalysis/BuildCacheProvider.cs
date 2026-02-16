@@ -38,9 +38,8 @@ public class BuildCacheProvider : IBuildCacheService
 
     public async Task PutBuildAsync(BuildReferenceIdentifier build, BuildResultAnalysis analysis, CancellationToken cancellationToken)
     {
-        await Helpers.StreamDataAsync(
+        await StreamHelpers.StreamDataAsync(
             s => JsonSerializer.SerializeAsync(s, analysis, _options, cancellationToken),
-            s => _storage.PutAsync(build.BuildId.ToString(), s, cancellationToken)
-        );
+            s => _storage.PutAsync(build.BuildId.ToString(), s, cancellationToken));
     }
 }
