@@ -53,7 +53,7 @@ internal class ExportConfigurationOperation : IOperation
         var yamlGroups = data
             .Select(convertToYaml)
             .Select(yaml => (filePath: getFilePath(yaml), yaml))
-            .GroupBy(t => t.filePath.ToLower(), t => t.yaml);
+            .GroupBy(t => t.filePath, t => t.yaml);
 
         _fileSystem.CreateDirectory(exportPath / folderPath);
         WriteGroupsToFiles(exportPath, yamlGroups, comparer);
