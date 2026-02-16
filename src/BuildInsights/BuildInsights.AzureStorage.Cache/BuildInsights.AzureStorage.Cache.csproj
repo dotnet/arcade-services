@@ -12,19 +12,6 @@
     <PackageReference Include="Azure.Storage.Blobs" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Options" />
-    <!--
-    <PackageReference Include="Azure.Data.Tables" />
-    <PackageReference Include="Azure.Messaging.EventHubs.Processor" />
-    <PackageReference Include="Azure.Messaging.ServiceBus" />
-    <PackageReference Include="Azure.Monitor.Query" />
-    <PackageReference Include="Azure.ResourceManager" />
-    <PackageReference Include="Microsoft.Azure.Management.ServiceBus" />
-    <PackageReference Include="Microsoft.DotNet.Metrics" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
-    <PackageReference Include="Microsoft.Rest.ClientRuntime" />
-    <PackageReference Include="Newtonsoft.Json" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
-    -->
   </ItemGroup>
 </Project>
 

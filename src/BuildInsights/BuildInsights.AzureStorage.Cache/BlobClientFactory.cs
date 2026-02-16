@@ -2,9 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
-using Azure.Identity;
+using Azure.Core;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Specialized;
+using Maestro.Common.AppCredentials;
 using Microsoft.Extensions.Options;
 
 namespace BuildInsights.AzureStorage.Cache;
@@ -12,6 +13,7 @@ namespace BuildInsights.AzureStorage.Cache;
 public interface IBlobClientFactory
 {
     BlobServiceClient CreateBlobServiceClient(string endpoint);
+
     BlobClient CreateBlobClient(string endpoint, string blobContainerName, string blobName);
 
     BlobLeaseClient CreateBlobLeaseClient(BlobClient blobClient, string leaseId = null);
@@ -22,16 +24,11 @@ public interface IBlobClientFactory
 
 public class BlobClientFactory : IBlobClientFactory
 {
-    private readonly ChainedTokenCredential _credential;
+    private readonly TokenCredential _credential;
 
-    public BlobClientFactory()
+    public BlobClientFactory(IOptions<CredentialResolverOptions> credentialOptions)
     {
-        _credential = TokenCredentialHelper.GetChainedTokenCredential(string.Empty);
-    }
-
-    public BlobClientFactory(IOptions<ManagedIdentity> managedIdentity)
-    {
-        _credential = TokenCredentialHelper.GetChainedTokenCredential(managedIdentity.Value.ManagedIdentityId);
+        _credential = CredentialResolver.CreateCredential(credentialOptions.Value);
     }
 
     public BlobServiceClient CreateBlobServiceClient(string endpoint)
