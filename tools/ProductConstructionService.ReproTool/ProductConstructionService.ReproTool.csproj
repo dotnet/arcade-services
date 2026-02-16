@@ -4,7 +4,6 @@
     <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <SignAssembly>False</SignAssembly>
     <UserSecretsId>d1deb1c4-c45b-4d37-8e76-cc23515470a4</UserSecretsId>
   </PropertyGroup>
 

@@ -5,7 +5,6 @@
     <RollForward>Major</RollForward>
 
     <OutputType>Exe</OutputType>
-    <SignAssembly>false</SignAssembly>
     <IsPackable>true</IsPackable>
     <Description>Darc CLI</Description>
     <PackageTags>Arcade Darc CLI Dependency Flow</PackageTags>

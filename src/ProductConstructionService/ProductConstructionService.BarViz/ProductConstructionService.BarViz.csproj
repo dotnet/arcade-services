@@ -3,8 +3,6 @@
   <PropertyGroup>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- We're referencing Maestro.Data, which isn't signed and doesn't have a strong name, so we can't be signed neither -->
-    <SignAssembly>False</SignAssembly>
   </PropertyGroup>
 
   <ItemGroup>
