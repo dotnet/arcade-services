@@ -1,34 +1,24 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System;
 using System.Net.Http.Headers;
-using BuildInsights.BuildResultProcessor;
+using BuildInsights.AzureStorage.Cache;
+using BuildInsights.BuildAnalysis;
+using BuildInsights.GitHub;
+using BuildInsights.KnownIssues;
+using BuildInsights.QueueInsights;
+using BuildInsights.Utilities.AzureDevOps.Models;
 using Microsoft.ApplicationInsights.Extensibility.EventCounterCollector;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
-using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http;
-using Microsoft.Internal.Helix.BuildFailureAnalysis.Models;
-using Microsoft.Internal.Helix.BuildFailureAnalysis.Providers;
-using Microsoft.Internal.Helix.BuildFailureAnalysis.Services;
-using Microsoft.Internal.Helix.GitHub.Models;
-using Microsoft.Internal.Helix.GitHub.Providers;
-using Microsoft.Internal.Helix.GitHub.Services;
-using Microsoft.Internal.Helix.KnownIssues.Models;
-using Microsoft.Internal.Helix.KnownIssues.Providers;
-using Microsoft.Internal.Helix.KnownIssues.Services;
-using Microsoft.Internal.Helix.Utility;
-using Microsoft.Internal.Helix.Utility.Azure;
-using Microsoft.Internal.Helix.Utility.AzureDevOps.Models;
-using Microsoft.Internal.Helix.Utility.Parallel;
-using Microsoft.Internal.Helix.Utility.UserSentiment;
-using QueueInsights.Models;
-using QueueInsights.Providers;
-using QueueInsights.Services;
 
-namespace Microsoft.Internal.Helix.BuildResultAnalysisProcessor;
+namespace BuildInsights.BuildResultProcessor;
 
 public class Program
 {
@@ -53,9 +43,6 @@ public class Program
 
         services.AddDefaultJsonConfiguration();
         services.Configure<ManagedIdentity>("Secrets", (o, c) => c.Bind(o));
-        services.Configure<StorageQueueConnectionSettings>("BuildResultAnalysisStorageQueue", (o, c) => c.Bind(o));
-        services.Configure<TableConnectionSettings>("KnownIssuesAnalysisTable", (o, c) => c.Bind(o));
-        services.Configure<BuildAnalysisTableConnectionSettings>("BuildAnalysisTable", (o, c) => c.Bind(o));
         services.Configure<KnownIssueValidationTableConnectionSettings>("KnownIssuesValidationTable", (o, c) => c.Bind(o));
         services.Configure<BlobStorageSettings>("BuildResultAnalysisBlobStorage", (o, c) => c.Bind(o));
         services.Configure<InternalProject>("InternalProject", (o, c) => c.Bind(o));
@@ -77,8 +64,6 @@ public class Program
         services.Configure<QueueInsightsBetaSettings>("QueueInsightsBeta", (o, c) => c.Bind(o));
         services.Configure<MatrixOfTruthSettings>("MatrixOfTruth", (o, c) => c.Bind(o));
         services.Configure<RelatedBuildProviderSettings>("RelatedBuildProviderSettings", (o, c) => c.Bind(o));
-        services.Configure<KnownIssuesErrorsTableConnectionSettings>("KnownIssuesErrorsTable", (o, c) => c.Bind(o));
-        services.Configure<ProcessingStatusTableConnectionSettings>("ProcessingStatusTable", (o, c) => c.Bind(o));
         services.Configure<BuildAnalysisFileSettings>("BuildAnalysisFileSettings", (o, c ) => c.Bind(o));
         services.Configure<HttpClientFactoryOptions>(options =>
         {
@@ -119,13 +104,12 @@ public class Program
             parallelismOptions => { parallelismOptions.WorkerCount = Environment.ProcessorCount; }
         );
 
-        services.AddUserSentiment(o => o.Host = "https://helix.int-dot.net");
         services.AddMarkdownGenerator();
 
         services.TryAddSingleton<IGitHubChecksService, GitHubChecksProvider>();
         services.TryAddSingleton<IGitHubIssuesService, GitHubIssuesProvider>();
         services.TryAddSingleton<IRelatedBuildService, RelatedBuildProvider>();
-        services.TryAddSingleton<IGithubRepositoryService, GithubRepositoryProvider>();
+        services.TryAddSingleton<IGitHubRepositoryService, GithubRepositoryProvider>();
 
         services.TryAddScoped<IBuildAnalysisService, BuildAnalysisProvider>();
         services.TryAddScoped<IMergedBuildAnalysisService, MergedBuildAnalysisProvider>();
@@ -147,7 +131,6 @@ public class Program
         services.TryAddSingleton<IBuildRetryService, BuildRetryProvider>();
 
         services.TryAddSingleton<IKustoIngestClientFactory, KustoIngestClientFactory>();
-        services.TryAddSingleton<ITableClientFactory, TableClientFactory>();
         services.TryAddSingleton<IKnownIssuesService, KnownIssuesProvider>();
         services.TryAddSingleton<IKnownIssuesHistoryService, KnownIssuesHistoryProvider>();
         services.TryAddSingleton<IKnownIssuesMatchService, KnownIssuesMatchProvider>();

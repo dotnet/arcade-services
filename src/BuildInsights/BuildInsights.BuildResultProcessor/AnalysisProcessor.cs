@@ -1,18 +1,22 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
+using BuildInsights.AzureStorage.Cache;
+using BuildInsights.BuildAnalysis;
+using BuildInsights.BuildAnalysis.Models;
+using BuildInsights.Data.Models;
+using BuildInsights.GitHub;
+using BuildInsights.GitHub.Models;
+using BuildInsights.KnownIssues;
+using BuildInsights.KnownIssues.Models;
+using BuildInsights.KnownIssues.WorkItems;
+using BuildInsights.QueueInsights;
+using BuildInsights.Utilities.AzureDevOps.Models;
 using Kusto.Data.Exceptions;
 using Microsoft.ApplicationInsights;
 using Microsoft.DotNet.GitHub.Authentication;
@@ -20,19 +24,9 @@ using Microsoft.DotNet.Internal.Logging;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Internal.Helix.BuildFailureAnalysis.Models;
-using Microsoft.Internal.Helix.BuildFailureAnalysis.Providers;
-using Microsoft.Internal.Helix.BuildFailureAnalysis.Services;
-using Microsoft.Internal.Helix.GitHub.Models;
-using Microsoft.Internal.Helix.GitHub.Services;
-using Microsoft.Internal.Helix.KnownIssues.Models;
-using Microsoft.Internal.Helix.KnownIssues.Services;
-using Microsoft.Internal.Helix.Utility;
-using Microsoft.Internal.Helix.Utility.Azure;
-using Microsoft.Internal.Helix.Utility.AzureDevOps.Models;
 using Octokit;
-using QueueInsights.Services;
 
+#nullable disable
 namespace BuildInsights.BuildResultProcessor;
 
 public class AnalysisProcessor : IQueueMessageHandler
@@ -146,14 +140,14 @@ public class AnalysisProcessor : IQueueMessageHandler
                 buildId = buildMessage.Resource.Id;
                 break;
             case "knownissue.reprocessing":
-                KnownIssueReprocessBuildMessage knownIssueReprocessBuildMessage = JsonSerializer.Deserialize<KnownIssueReprocessBuildMessage>(messageString);
+                KnownIssueReprocessBuildWorkItem knownIssueReprocessBuildMessage = JsonSerializer.Deserialize<KnownIssueReprocessBuildWorkItem>(messageString);
                 orgId = knownIssueReprocessBuildMessage.OrganizationId;
                 projectId = knownIssueReprocessBuildMessage.ProjectId;
                 buildId = knownIssueReprocessBuildMessage.BuildId;
                 break;
             case "knownissue.validate":
                 KnownIssueValidationMessage knownIssueValidationMessage = JsonSerializer.Deserialize<KnownIssueValidationMessage>(messageString);
-                 await ValidateKnownIssueMessage(knownIssueValidationMessage, cancellationToken);
+                await ValidateKnownIssueMessage(knownIssueValidationMessage, cancellationToken);
                 return;
             case "ms.vss-pipelines.run-state-changed-event":
             case "ms.vss-pipelines.stage-state-changed-event":
@@ -246,7 +240,7 @@ public class AnalysisProcessor : IQueueMessageHandler
             return;
         }
 
-        if (! await _pipelineRequestedService.IsBuildPipelineRequested(buildReference.RepositoryId, buildReference.TargetBranch, buildReference.DefinitionId, buildReference.BuildId))
+        if (!await _pipelineRequestedService.IsBuildPipelineRequested(buildReference.RepositoryId, buildReference.TargetBranch, buildReference.DefinitionId, buildReference.BuildId))
         {
             _logger.LogInformation("Pipeline {pipeline} of repository {repositoryName} has been filtered by repository configuration", build.DefinitionName, buildReference.RepositoryId);
             await _processingStatusService.SaveBuildAnalysisProcessingStatus(buildReference.RepositoryId, buildId, BuildProcessingStatus.Completed);
@@ -304,7 +298,7 @@ public class AnalysisProcessor : IQueueMessageHandler
             await _processingStatusService.SaveBuildAnalysisProcessingStatus(buildReference.RepositoryId, buildId, BuildProcessingStatus.Completed);
         }
 
-        BuildFailureAnalysis.Models.Repository repository = new BuildFailureAnalysis.Models.Repository(buildReference.RepositoryId,
+        BuildAnalysis.Models.Repository repository = new(buildReference.RepositoryId,
             await _gitHubChecksService.RepositoryHasIssues(buildReference.RepositoryId));
 
         string markdown = _markdownGenerator.GenerateMarkdown(
@@ -380,7 +374,7 @@ public class AnalysisProcessor : IQueueMessageHandler
             await using var mdStream = new MemoryStream(Encoding.UTF8.GetBytes(markdown));
             await _contextualStorage.PutAsync($"markdown-{snapshotId}.md", mdStream, CancellationToken.None);
 
-            await Helpers.StreamDataAsync(
+            await StreamHelpers.StreamDataAsync(
                 w => JsonSerializer.SerializeAsync(
                     w,
                     analysis,

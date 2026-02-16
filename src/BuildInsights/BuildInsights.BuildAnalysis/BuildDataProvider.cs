@@ -8,14 +8,15 @@ using System.Runtime.Serialization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
+using BuildInsights.Utilities.AzureDevOps;
+using BuildInsights.Utilities.Parallel;
+using Maestro.Common;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.Build.WebApi;
 using Microsoft.TeamFoundation.Core.WebApi;
 using Microsoft.TeamFoundation.TestManagement.WebApi;
 using Microsoft.VisualStudio.Services.WebApi;
-using Maestro.Common;
-using BuildInsights.Utilities.Parallel;
 
 namespace BuildInsights.BuildAnalysis;
 
@@ -79,7 +80,7 @@ public sealed class BuildDataProvider : IBuildDataService
         _logger.LogInformation($"Fetching build information from Azure DevOps for build '{buildId}' in project '{projectId}' and org '{orgId}'.");
 
         using var connection = _connections.GetConnection(orgId);
-        BuildHttpClient buildClient = connection.Value.GetClient<BuildHttpClient>();
+        BuildHttpClient buildClient = connection.GetClient<BuildHttpClient>();
 
         Build azdoBuild;
         try
@@ -98,16 +99,16 @@ public sealed class BuildDataProvider : IBuildDataService
         return MapModel(azdoBuild);
     }
 
-    private static readonly Regex s_helixMetadataFilePattern = new Regex(@"^__helix_metadata_.*\.json\.gz$");
+    private static readonly Regex s_helixMetadataFilePattern = new(@"^__helix_metadata_.*\.json\.gz$");
 
-    private static readonly VssJsonMediaTypeFormatter s_helixMetadataFormatter = new VssJsonMediaTypeFormatter();
+    private static readonly VssJsonMediaTypeFormatter s_helixMetadataFormatter = new();
 
     public async Task<ImmutableList<Models.TestRunDetails>> GetTestsForBuildAsync(
         Models.Build build,
         CancellationToken cancellationToken)
     {
         using var connection = _connections.GetConnection(build.OrganizationName);
-        TestManagementHttpClient testClient = connection.Value.GetClient<TestManagementHttpClient>();
+        TestManagementHttpClient testClient = connection.GetClient<TestManagementHttpClient>();
         var builder = ImmutableList.CreateBuilder<Models.TestRunDetails>();
         IEnumerable<TestRun> runs = await GetCurrentTestRunsForBuild(build, cancellationToken);
         foreach (var run in runs)
@@ -160,7 +161,7 @@ public sealed class BuildDataProvider : IBuildDataService
                 // The attachment is a gzipped, json serialized HelixMetadata structure
                 await using Stream rawStream = await testClient.HttpClient.GetStreamAsync(attachment.Url);
                 await using var stream = new GZipStream(rawStream, CompressionMode.Decompress);
-                var metadata = (HelixMetadataContract) await s_helixMetadataFormatter.ReadFromStreamAsync(
+                var metadata = (HelixMetadataContract)await s_helixMetadataFormatter.ReadFromStreamAsync(
                     typeof(HelixMetadataContract),
                     stream,
                     null,
@@ -198,7 +199,7 @@ public sealed class BuildDataProvider : IBuildDataService
             await using Stream rawStream = await _httpFactory.CreateClient(GetType().Name).GetStreamAsync(attachment);
             await using var stream = new GZipStream(rawStream, CompressionMode.Decompress);
             var helixMetaDataJson =
-                (HelixMetadataContract) await s_helixMetadataFormatter.ReadFromStreamAsync(
+                (HelixMetadataContract)await s_helixMetadataFormatter.ReadFromStreamAsync(
                     typeof(HelixMetadataContract),
                     stream,
                     content: null,
@@ -273,7 +274,7 @@ public sealed class BuildDataProvider : IBuildDataService
     private async Task<List<TestRun>> GetTestRuns(Models.Build build, CancellationToken cancellationToken)
     {
         using var connection = _connections.GetConnection(build.OrganizationName);
-        TestManagementHttpClient testClient = connection.Value.GetClient<TestManagementHttpClient>();
+        TestManagementHttpClient testClient = connection.GetClient<TestManagementHttpClient>();
 
         List<TestRun> testRuns = [];
         string continuationToken = null;
@@ -299,7 +300,7 @@ public sealed class BuildDataProvider : IBuildDataService
     public async Task<string> GetProjectName(string orgId, string projectId)
     {
         using var connection = _connections.GetConnection(orgId);
-        ProjectHttpClient projectClient = connection.Value.GetClient<ProjectHttpClient>();
+        ProjectHttpClient projectClient = connection.GetClient<ProjectHttpClient>();
 
         TeamProject teamProject = await projectClient.GetProject(id: projectId);
         return teamProject.Name;
@@ -312,7 +313,7 @@ public sealed class BuildDataProvider : IBuildDataService
         CancellationToken cancellationToken)
     {
         using var connection = _connections.GetConnection(orgId);
-        TestManagementHttpClient testClient = connection.Value.GetClient<TestManagementHttpClient>();
+        TestManagementHttpClient testClient = connection.GetClient<TestManagementHttpClient>();
         var testCaseResultsByTestRun = new List<Models.TestRunDetails>();
 
         foreach (TestRun run in testRunsWithFailedOutcome)
@@ -325,7 +326,7 @@ public sealed class BuildDataProvider : IBuildDataService
                 IEnumerable<TestCaseResult> testCaseResults = await testClient.GetTestResultsAsync(
                     projectId,
                     run.Id,
-                    outcomes: new List<TestOutcome> {TestOutcome.Failed},
+                    outcomes: new List<TestOutcome> { TestOutcome.Failed },
                     detailsToInclude: ResultDetails.SubResults,
                     skip: allTestCaseResults.Count,
                     cancellationToken: cancellationToken
@@ -355,7 +356,7 @@ public sealed class BuildDataProvider : IBuildDataService
         CancellationToken cancellationToken)
     {
         using var connection = _connections.GetConnection(orgId);
-        TestManagementHttpClient testClient = connection.Value.GetClient<TestManagementHttpClient>();
+        TestManagementHttpClient testClient = connection.GetClient<TestManagementHttpClient>();
 
         Dictionary<int, TestCaseResult> dict = results.ToDictionary(r => r.Id);
         var needSubTest = dict.Values.Where(
@@ -389,7 +390,7 @@ public sealed class BuildDataProvider : IBuildDataService
         CancellationToken cancellationToken)
     {
         using var connection = _connections.GetConnection(orgId);
-        TestManagementHttpClient testClient = connection.Value.GetClient<TestManagementHttpClient>();
+        TestManagementHttpClient testClient = connection.GetClient<TestManagementHttpClient>();
         var allHistory = new Dictionary<string, List<TestCaseResult>>();
         var displayNames = new Dictionary<string, string>();
 
@@ -445,9 +446,9 @@ public sealed class BuildDataProvider : IBuildDataService
     {
         _logger.LogInformation($"Fetching test result information from Azure DevOps for test run '{testRunId}' and test case '{testCaseId}' in project '{projectId}'  and org '{orgId}'.");
         using var connection = _connections.GetConnection(orgId);
-        TestManagementHttpClient testClient = connection.Value.GetClient<TestManagementHttpClient>();
+        TestManagementHttpClient testClient = connection.GetClient<TestManagementHttpClient>();
         TestCaseResult testResult =
-            await testClient.GetTestResultByIdAsync(projectId, testRunId, testCaseId, detailsToInclude: MapModel(resultDetails) ,cancellationToken: cancellationToken);
+            await testClient.GetTestResultByIdAsync(projectId, testRunId, testCaseId, detailsToInclude: MapModel(resultDetails), cancellationToken: cancellationToken);
 
         return MapModel(testResult);
     }
@@ -462,7 +463,7 @@ public sealed class BuildDataProvider : IBuildDataService
     {
         using var connection = _connections.GetConnection(orgId);
         _logger.LogInformation($"Fetching latest builds from Azure DevOps for project '{projectId}'  and org '{orgId}' and branch '{targetBranch}'.");
-        BuildHttpClient buildClient = connection.Value.GetClient<BuildHttpClient>();
+        BuildHttpClient buildClient = connection.GetClient<BuildHttpClient>();
         IEnumerable<Build> latestCompletedBuildsForBranch = await buildClient.GetBuildsAsync(
             projectId,
             definitions: new[] { definitionId },
@@ -484,7 +485,7 @@ public sealed class BuildDataProvider : IBuildDataService
         CancellationToken cancellationToken)
     {
         using var connection = _connections.GetConnection(orgId);
-        BuildHttpClient buildClient = connection.Value.GetClient<BuildHttpClient>();
+        BuildHttpClient buildClient = connection.GetClient<BuildHttpClient>();
         Microsoft.TeamFoundation.Build.WebApi.Timeline timeline = await buildClient.GetBuildTimelineAsync(
             projectId,
             buildId,
@@ -503,7 +504,7 @@ public sealed class BuildDataProvider : IBuildDataService
     {
         _logger.LogInformation($"Fetching build timeline information from Azure DevOps for build '{buildId}' in project '{projectId}' and org '{orgId}'.");
         using var connection = _connections.GetConnection(orgId);
-        BuildHttpClient buildClient = connection.Value.GetClient<BuildHttpClient>();
+        BuildHttpClient buildClient = connection.GetClient<BuildHttpClient>();
         Microsoft.TeamFoundation.Build.WebApi.Timeline timeline = await buildClient.GetBuildTimelineAsync(
             projectId,
             buildId,
@@ -530,7 +531,9 @@ public sealed class BuildDataProvider : IBuildDataService
             .Distinct()
             .ToList();
 
-        List<Task<IReadOnlyList<Models.TimelineRecord>>> previousTimelineTask = timelineIdsPreviousAttempts.Select(timelineId =>  GetBuildTimelineRecordsAsync(orgId, projectId, buildId, timelineId, cancellationToken)).ToList();
+        List<Task<IReadOnlyList<Models.TimelineRecord>>> previousTimelineTask = timelineIdsPreviousAttempts
+            .Select(timelineId => GetBuildTimelineRecordsAsync(orgId, projectId, buildId, timelineId, cancellationToken))
+            .ToList();
 
         IReadOnlyList<Models.TimelineRecord>[] previousTimelineRecords = await Task.WhenAll(previousTimelineTask);
         IReadOnlyList<Models.TimelineRecord> recordsFromAllAttempts = latestTimelineRecords.Concat(previousTimelineRecords.SelectMany(r => r)).ToList();
@@ -547,7 +550,7 @@ public sealed class BuildDataProvider : IBuildDataService
         CancellationToken cancellationToken)
     {
         using var connection = _connections.GetConnection(orgId);
-        BuildHttpClient buildClient = connection.Value.GetClient<BuildHttpClient>();
+        BuildHttpClient buildClient = connection.GetClient<BuildHttpClient>();
         try
         {
             _logger.LogInformation($"Fetching BuildConfiguration from Azure DevOps for build '{buildId}' in project '{projectId}'  and org '{orgId}' from artifact {artifactName} and file name {fileName} ");
@@ -588,7 +591,7 @@ public sealed class BuildDataProvider : IBuildDataService
         CancellationToken cancellationToken)
     {
         using var connection = _connections.GetConnection(orgId);
-        BuildHttpClient buildClient = connection.Value.GetClient<BuildHttpClient>();
+        BuildHttpClient buildClient = connection.GetClient<BuildHttpClient>();
         Stream streamFile = await buildClient.GetFileAsync(projectId, buildId, artifactName, fileId, "", cancellationToken: cancellationToken);
         using var fileReader = new StreamReader(streamFile);
         return await fileReader.ReadToEndAsync();
@@ -647,7 +650,7 @@ public sealed class BuildDataProvider : IBuildDataService
             {
                 if (e.Name.Equals("system.pullrequest.pullRequestNumber", StringComparison.OrdinalIgnoreCase))
                 {
-                     pullRequestNumber = e.Value.GetString();
+                    pullRequestNumber = e.Value.GetString();
                 }
 
                 if (e.Name.Equals("system.pullrequest.sourceRepositoryUri", StringComparison.OrdinalIgnoreCase))
@@ -835,7 +838,8 @@ public sealed class BuildDataProvider : IBuildDataService
     {
         if (!r.HasValue)
             return Models.TaskResult.None;
-        return r.Value switch {
+        return r.Value switch
+        {
             TaskResult.Succeeded => Models.TaskResult.Succeeded,
             TaskResult.SucceededWithIssues => Models.TaskResult.SucceededWithIssues,
             TaskResult.Failed => Models.TaskResult.Failed,
@@ -969,14 +973,14 @@ public sealed class BuildDataProvider : IBuildDataService
     public async Task<Stream> GetLogContent(string orgId, string project, int buildId, int logId)
     {
         using var connection = _connections.GetConnection(orgId);
-        BuildHttpClient buildClient = connection.Value.GetClient<BuildHttpClient>();
+        BuildHttpClient buildClient = connection.GetClient<BuildHttpClient>();
         return await buildClient.GetBuildLogAsync(project, buildId, logId);
     }
 
     public async Task<IReadOnlyList<Models.Build>> GetFailedBuildsAsync(string orgId, string projectId, string repository, CancellationToken cancellationToken)
     {
         using var connection = _connections.GetConnection(orgId);
-        BuildHttpClient buildClient = connection.Value.GetClient<BuildHttpClient>();
+        BuildHttpClient buildClient = connection.GetClient<BuildHttpClient>();
         var buildList = await buildClient.GetBuildsAsync(project: projectId, repositoryId: repository, resultFilter: BuildResult.Failed, repositoryType: "Github", minFinishTime: DateTime.Now.AddDays(-1));
 
         return buildList.Select(MapModel).ToList();
@@ -990,8 +994,6 @@ public sealed class BuildDataProvider : IBuildDataService
 
         [DataMember(Name = "rerun_tests", EmitDefaultValue = false, IsRequired = false, Order = 1)]
         public TestCaseResult[] RerunTests { get; set; }
-
-        //private Dictionary<string, string> _testlists;
 
         [DataMember(Name = "test_lists", EmitDefaultValue = false, IsRequired = false, Order = 2)]
         public Dictionary<string, string> TestLists { get; set; }

@@ -5,6 +5,7 @@
     <IsPackable>true</IsPackable>
     <Description>This package provides access to the PCS API</Description>
     <LangVersion>8.0</LangVersion>
+    <SignAssembly>True</SignAssembly>
 
     <SwaggerOutputDirectory>$(MSBuildProjectDirectory)\Generated</SwaggerOutputDirectory>
     <SwaggerClientName>ProductConstructionServiceApi</SwaggerClientName>

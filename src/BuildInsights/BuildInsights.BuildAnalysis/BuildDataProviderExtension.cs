@@ -3,7 +3,8 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using BuildInsights.BuildAnalysis.Services;
+using BuildInsights.Utilities.AzureDevOps;
+using BuildInsights.Utilities.AzureDevOps.Models;
 
 namespace BuildInsights.BuildAnalysis;
 
@@ -13,8 +14,6 @@ public static class BuildDataProviderExtension
     {
         services.AddVssConnection(configure);
         services.TryAddSingleton<IBuildDataService, BuildDataProvider>();
-        
-
         return services;
     }
 }

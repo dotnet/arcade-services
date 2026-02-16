@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.KnownIssues.Models;
 using BuildInsights.KnownIssues;
+using BuildInsights.Utilities.AzureDevOps.Models;
 
 namespace BuildInsights.BuildAnalysis;
 

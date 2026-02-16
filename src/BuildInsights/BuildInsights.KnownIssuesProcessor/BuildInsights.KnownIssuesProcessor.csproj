@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -16,7 +16,8 @@
     <ProjectReference Include="..\BuildInsights.Data\BuildInsights.Data.csproj" />
     <ProjectReference Include="..\BuildInsights.GitHubGraphQL\BuildInsights.GitHubGraphQL.csproj" />
     <ProjectReference Include="..\BuildInsights.KnownIssues\BuildInsights.KnownIssues.csproj" />
-    <ProjectReference Include="D:\repos\arcade-services\src\ProductConstructionService\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj" />
+    <ProjectReference Include="..\BuildInsights.Utilities.AzureDevOps\BuildInsights.Utilities.AzureDevOps.csproj" />
+    <ProjectReference Include="..\..\ProductConstructionService\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj" />
   </ItemGroup>
 
 </Project>

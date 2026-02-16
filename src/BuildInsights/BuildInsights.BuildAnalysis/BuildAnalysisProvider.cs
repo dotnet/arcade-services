@@ -6,6 +6,7 @@ using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.GitHub.Models;
 using BuildInsights.KnownIssues;
 using BuildInsights.KnownIssues.Models;
+using BuildInsights.Utilities.AzureDevOps.Models;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

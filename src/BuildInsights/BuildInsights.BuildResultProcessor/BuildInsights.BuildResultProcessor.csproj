@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -15,10 +15,10 @@
     <PackageReference Include="Azure.Storage.Queues" />
     <PackageReference Include="Azure.Storage.Blobs" />
     <PackageReference Include="Microsoft.DotNet.GitHub.Authentication" />
-    <PackageReference Include="Microsoft.DotNet.ServiceFabric.ServiceHost" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\BuildInsights.BuildAnalysis\BuildInsights.BuildAnalysis.csproj" />
     <ProjectReference Include="..\BuildInsights.QueueInsights\BuildInsights.QueueInsights.csproj" />
   </ItemGroup>
 
