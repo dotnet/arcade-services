@@ -54,6 +54,7 @@
     <PackageVersion Include="Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions" Version="$(MicrosoftDotNetInternalTestingDependencyInjectionAbstractionsVersion)" />
     <PackageVersion Include="Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen" Version="$(MicrosoftDotNetInternalTestingDependencyInjectionCodeGenVersion)" />
     <PackageVersion Include="Microsoft.DotNet.Internal.Testing.Utility" Version="$(MicrosoftDotNetInternalTestingUtilityVersion)" />
+    <PackageVersion Include="Microsoft.DotNet.Helix.Client" Version="$(MicrosoftDotNetHelixClientPackageVersion)" />
     <PackageVersion Include="Microsoft.DotNet.Kusto" Version="$(MicrosoftDotNetKustoVersion)" />
     <PackageVersion Include="Microsoft.DotNet.MaestroConfiguration.Client" Version="$(MicrosoftDotNetMaestroConfigurationClientPackageVersion)" />
     <PackageVersion Include="Microsoft.DotNet.Services.Utility" Version="$(MicrosoftDotNetServicesUtilityVersion)" />

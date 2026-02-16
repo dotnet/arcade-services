@@ -23,6 +23,7 @@ This file should be imported by eng/Versions.props
     <!-- dotnet/arcade dependencies -->
     <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26106.4</MicrosoftDotNetArcadeSdkPackageVersion>
     <MicrosoftDotNetBuildTasksFeedPackageVersion>10.0.0-beta.26106.4</MicrosoftDotNetBuildTasksFeedPackageVersion>
+    <MicrosoftDotNetHelixClientPackageVersion>10.0.0-beta.26110.1</MicrosoftDotNetHelixClientPackageVersion>
     <MicrosoftDotNetSignToolPackageVersion>10.0.0-beta.26106.4</MicrosoftDotNetSignToolPackageVersion>
     <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>10.0.0-beta.26106.4</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
     <MicrosoftDotNetVersionToolsPackageVersion>8.0.0-beta.25555.2</MicrosoftDotNetVersionToolsPackageVersion>
@@ -52,6 +53,7 @@ This file should be imported by eng/Versions.props
     <!-- dotnet/arcade dependencies -->
     <MicrosoftDotNetArcadeSdkVersion>$(MicrosoftDotNetArcadeSdkPackageVersion)</MicrosoftDotNetArcadeSdkVersion>
     <MicrosoftDotNetBuildTasksFeedVersion>$(MicrosoftDotNetBuildTasksFeedPackageVersion)</MicrosoftDotNetBuildTasksFeedVersion>
+    <MicrosoftDotNetHelixClientVersion>$(MicrosoftDotNetHelixClientPackageVersion)</MicrosoftDotNetHelixClientVersion>
     <MicrosoftDotNetSignToolVersion>$(MicrosoftDotNetSignToolPackageVersion)</MicrosoftDotNetSignToolVersion>
     <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>$(MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion)</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
     <MicrosoftDotNetVersionToolsVersion>$(MicrosoftDotNetVersionToolsPackageVersion)</MicrosoftDotNetVersionToolsVersion>
