@@ -145,27 +145,34 @@ public class GitHubWebhooksController : ControllerBase
             "Processing event: 'issues', action: {action}, organization: {organization}, repository: {repository}, issue: {number}",
             issue.Action, issue.Organization, issue.Repository, issue.IssueNumber);
 
-        if (IsBuildAnalysisEvent() && issue.SenderType != Octokit.AccountType.Bot.ToString() && _knownIssuesProjectBoardOptions.CurrentValue.KnownIssueLabels.Intersect(issue.Labels).Any())
+        if (IsBuildAnalysisEvent()
+            && issue.SenderType != Octokit.AccountType.Bot.ToString()
+            && _knownIssuesProjectBoardOptions.CurrentValue.KnownIssueLabels.Intersect(issue.Labels).Any()
+            && new[] { "opened", "reopened", "labeled", "edited" }.Contains(issue.Action))
         {
-            string[] processingTriggerActions = { "opened", "reopened", "labeled", "edited" };
-            if (processingTriggerActions.Contains(issue.Action))
+            if (issue.Action != "labeled" || _knownIssuesProjectBoardOptions.CurrentValue.KnownIssueLabels.Contains(issue.AddedLabel))
             {
-                if (issue.Action != "labeled" || _knownIssuesProjectBoardOptions.CurrentValue.KnownIssueLabels.Contains(issue.AddedLabel))
+                try
                 {
-                    try
-                    {
-                        await _knownIssuesAnalysisService.RequestKnownIssuesAnalysis(issue.Organization, issue.Repository, issue.IssueNumber);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to send analysis request for issue {issueRepo}#{issueId}", issue.Repository, issue.IssueNumber);
-                    }
+                    await _knownIssuesAnalysisService.RequestKnownIssuesAnalysis(issue.Organization, issue.Repository, issue.IssueNumber);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send analysis request for issue {issueRepo}#{issueId}", issue.Repository, issue.IssueNumber);
+                }
 
-                    if (issue.Action != "reopened")
+                if (issue.Action != "reopened")
+                {
+                    _logger.LogInformation("Sending validation request for {organization}/{repository}#{issueNumber}", issue.Organization, issue.Repository, issue.IssueNumber);
+
+                    var producer = _workItemProducerFactory.CreateProducer<KnownIssueValidationRequest>();
+                    await producer.ProduceWorkItemAsync(new()
                     {
-                        _logger.LogInformation("Sending validation request for {organization}/{repository}#{issueNumber}", issue.Organization, issue.Repository, issue.IssueNumber);
-                        await _ingestMessageToQueue.SendKnownIssueValidationToQueue(issue.Organization, issue.Repository, (int)issue.IssueNumber, GitHubAppName);
-                    }
+                        Organization = issue.Organization,
+                        Repository = issue.Repository,
+                        IssueId = issue.IssueNumber,
+                        RepositoryWithOwner = $"{issue.Organization}/{issue.Repository}",
+                    });
                 }
             }
         }
@@ -219,8 +226,11 @@ public class GitHubWebhooksController : ControllerBase
         var comment = IssueCommentData.Parse(data);
 
         // validate comment - contains data, this is from a PR, starts with specific command
-        if (IsBuildAnalysisEvent() && comment.Action.ToLower() == "created" && comment.IsPullRequestComment &&
-            !string.IsNullOrWhiteSpace(comment.Comment) && comment.Comment.StartsWith(BuildAnalysisEscapeMechanismHelper.ChangeToGreenCommand))
+        if (IsBuildAnalysisEvent()
+            && comment.Action.Equals("created", StringComparison.CurrentCultureIgnoreCase)
+            && comment.IsPullRequestComment
+            && !string.IsNullOrWhiteSpace(comment.Comment)
+            && comment.Comment.StartsWith(BuildAnalysisEscapeMechanismHelper.ChangeToGreenCommand, StringComparison.InvariantCultureIgnoreCase))
         {
             _logger.LogInformation("Processing a change-to-green command for PR {repository}/pulls/{prNumber}",
                 comment.Repository,
@@ -230,8 +240,16 @@ public class GitHubWebhooksController : ControllerBase
 
             Octokit.PullRequest pullRequest = await _prService.GetPullRequest(comment.Repository, comment.IssueNumber);
             string currentHeadSha = pullRequest.Head?.Sha;
-            await _ingestMessageToQueue.SendCheckRunConclusionUpdateMessageToQueue(justification, currentHeadSha,
-                comment.Repository, comment.IssueNumber, Octokit.CheckConclusion.Success, GitHubAppName);
+
+            var producer = _workItemProducerFactory.CreateProducer<CheckRunConclusionUpdateEvent>();
+            await producer.ProduceWorkItemAsync(new CheckRunConclusionUpdateEvent
+            {
+                Repository = comment.Repository,
+                IssueNumber = comment.IssueNumber,
+                HeadSha = currentHeadSha,
+                Justification = justification,
+                CheckResultString = Octokit.CheckConclusion.Success.ToString(),
+            });
         }
 
         return NoContent();

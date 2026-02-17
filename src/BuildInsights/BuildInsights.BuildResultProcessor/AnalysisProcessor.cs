@@ -9,16 +9,13 @@ using System.Text.RegularExpressions;
 using BuildInsights.AzureStorage.Cache;
 using BuildInsights.BuildAnalysis;
 using BuildInsights.BuildAnalysis.Models;
-using BuildInsights.BuildAnalysis.WorkItems;
 using BuildInsights.BuildAnalysis.WorkItems.Models;
 using BuildInsights.Data.Models;
 using BuildInsights.GitHub;
 using BuildInsights.GitHub.Models;
 using BuildInsights.KnownIssues;
 using BuildInsights.KnownIssues.Models;
-using BuildInsights.KnownIssues.WorkItems;
 using BuildInsights.QueueInsights;
-using BuildInsights.Utilities.AzureDevOps.Models;
 using Kusto.Data.Exceptions;
 using Microsoft.ApplicationInsights;
 using Microsoft.DotNet.GitHub.Authentication;
@@ -117,73 +114,6 @@ public class AnalysisProcessor : IQueueMessageHandler
 
     public async Task HandleMessageAsync(IQueuedWork message, bool isLastAttempt, CancellationToken cancellationToken)
     {
-        // DONE
-        //string messageString = await message.GetStringAsync();
-        //if (_pullRequestProcessor.IsPullRequestMessage(messageString, out PullRequestData pullRequestData))
-        //{
-        //    await _pullRequestProcessor.ProcessPullRequestMessage(pullRequestData);
-
-        //    //The message was processed as a pull request message and there is nothing left to process
-        //    return;
-        //}
-
-        string orgId;
-        string projectId;
-        int buildId;
-        // Convert to the AzDO Event Base class
-        AzureDevOpsEventBase baseMessage = JsonSerializer.Deserialize<AzureDevOpsEventBase>(messageString);
-
-        // Determine what kind of event it is
-        switch (baseMessage.EventType)
-        {
-            // DONE
-            //case "build.complete":
-            //    CompletedBuildMessage buildMessage = JsonSerializer.Deserialize<CompletedBuildMessage>(messageString);
-            //    orgId = buildMessage.Resource.OrgId;
-            //    projectId = buildMessage.ResourceContainers.Project.Id;
-            //    buildId = buildMessage.Resource.Id;
-            //    break;
-            //case "knownissue.reprocessing":
-            //    BuildAnalysisRequestWorkItem knownIssueReprocessBuildMessage = JsonSerializer.Deserialize<BuildAnalysisRequestWorkItem>(messageString);
-            //    orgId = knownIssueReprocessBuildMessage.OrganizationId;
-            //    projectId = knownIssueReprocessBuildMessage.ProjectId;
-            //    buildId = knownIssueReprocessBuildMessage.BuildId;
-            //    break;
-            //case "ms.vss-pipelines.run-state-changed-event":
-            //case "ms.vss-pipelines.stage-state-changed-event":
-            //    StartedBuildMessage startedBuildMessage = JsonSerializer.Deserialize<StartedBuildMessage>(messageString);
-            //    orgId = startedBuildMessage.GetOrgId();
-            //    projectId = startedBuildMessage.GetProjectId();
-            //    buildId = startedBuildMessage.Resource.Id;
-            //    break;
-            //case "checkrun.rerun":
-            //    RerunCheckRunAnalysisMessage rerunMessage = JsonSerializer.Deserialize<RerunCheckRunAnalysisMessage>(messageString);
-            //    Build relatedBuild = await _relatedBuildService.GetRelatedBuildFromCheckRun(rerunMessage?.Repository, rerunMessage?.HeadSha);
-            //    if (relatedBuild == null)
-            //    {
-            //        _logger.LogInformation("No authorized related build found for rerun of commit {commit} on repository {repository}", rerunMessage?.HeadSha, rerunMessage?.Repository);
-            //        return;
-            //    }
-            //    orgId = relatedBuild.OrganizationName;
-            //    projectId = relatedBuild.ProjectId;
-            //    buildId = relatedBuild.Id;
-            //    break;
-
-            case "knownissue.validate":
-                KnownIssueValidationMessage knownIssueValidationMessage = JsonSerializer.Deserialize<KnownIssueValidationMessage>(messageString);
-                await ValidateKnownIssueMessage(knownIssueValidationMessage, cancellationToken);
-                return;
-
-            case "checkrun.conclusion-update":
-                CheckRunConclusionUpdateMessage checkRunConclusionUpdateMessage = JsonSerializer.Deserialize<CheckRunConclusionUpdateMessage>(messageString);
-                await UpdateBuildAnalysisCheckRun(checkRunConclusionUpdateMessage);
-                return;
-
-            default:
-                _logger.LogError("Unexpected event type from Azure DevOps {eventType}, aborting", baseMessage.EventType);
-                return;
-        }
-
         _logger.LogInformation("Event: {EventType} received for projectId:{projectId}, buildId:{buildId}", baseMessage.EventType, projectId, buildId);
 
         using Operation operation = _operations.BeginLoggingScope(
@@ -396,41 +326,6 @@ public class AnalysisProcessor : IQueueMessageHandler
         }
     }
 
-    private async Task UpdateBuildAnalysisCheckRun(CheckRunConclusionUpdateMessage checkRunConclusionUpdateMessage)
-    {
-        GitHub.Models.CheckRun buildAnalysisCheckRun = await _gitHubChecksService.GetCheckRunAsyncForApp(
-            checkRunConclusionUpdateMessage.Repository, checkRunConclusionUpdateMessage.HeadSha, _gitHubTokenProviderOptions.GitHubAppId, CheckRunName);
-
-        if (buildAnalysisCheckRun == null)
-        {
-            _logger.LogInformation("Unable to find Build Analysis check run of commit {commit} on repository {repository}",
-                checkRunConclusionUpdateMessage.HeadSha, checkRunConclusionUpdateMessage.Repository);
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(checkRunConclusionUpdateMessage.Justification))
-        {
-            string justificationMissingMessage = $"Unable to override the build analysis check run because no reason was provided. Please provide a reason. Post a request in the following format: {BuildAnalysisEscapeMechanismHelper.ChangeToGreenCommand} <*reason*>";
-            await _githubIssuesService.AddCommentToIssueAsync(checkRunConclusionUpdateMessage.Repository, checkRunConclusionUpdateMessage.IssueNumber, justificationMissingMessage);
-            return;
-        }
-
-        var buildAnalysisUpdateOverrideResultView = new BuildAnalysisUpdateOverridenResult(checkRunConclusionUpdateMessage.Justification, buildAnalysisCheckRun.Conclusion.ToString(),
-            checkRunConclusionUpdateMessage.CheckResultString, buildAnalysisCheckRun.Body);
-
-        _logger.LogInformation("Starting update of build analysis check run from {prevStatus} to {newStatus}", buildAnalysisCheckRun.Status.ToString(), checkRunConclusionUpdateMessage.CheckResultString);
-        string markdownAnalysisOverridenResult = _markdownGenerator.GenerateMarkdown(buildAnalysisUpdateOverrideResultView);
-        await _gitHubChecksService.UpdateCheckRunConclusion(buildAnalysisCheckRun, checkRunConclusionUpdateMessage.Repository, markdownAnalysisOverridenResult, checkRunConclusionUpdateMessage.GetCheckConclusion());
-        _logger.LogInformation("Build analysis check run updated");
-
-        _logger.LogInformation("Saving builds that were part of the check run analyzed");
-        List<GitHub.Models.CheckRun> buildCheckRuns = (await _gitHubChecksService.GetBuildCheckRunsAsync(checkRunConclusionUpdateMessage.Repository, checkRunConclusionUpdateMessage.HeadSha)).ToList();
-        List<(string repository, int buildId)> buildCheckRunsToUpdate = buildCheckRuns.Select(t => (checkRunConclusionUpdateMessage.Repository, t.AzureDevOpsBuildId)).ToList();
-        await _processingStatusService.SaveBuildAnalysisProcessingStatus(buildCheckRunsToUpdate, BuildProcessingStatus.ConclusionOverridenByUser);
-        _logger.LogInformation("Builds saved as overridden: {buildsOverridden}", buildCheckRunsToUpdate.Select(t => t.buildId));
-
-    }
-
     private async Task GenerateQueueInsights(Build build, BuildReferenceIdentifier buildReference,
         CancellationToken cancellationToken)
     {
@@ -458,13 +353,5 @@ public class AnalysisProcessor : IQueueMessageHandler
         _logger.LogInformation("Created Queue Insights Check: {checkId} repo: {repo} pr: {pr}", checkId,
             build.Repository, build.PullRequest);
 
-    }
-
-    private async Task ValidateKnownIssueMessage(KnownIssueValidationMessage knownIssueValidationMessage, CancellationToken cancellationToken)
-    {
-        if (await _gitHubChecksService.IsRepositorySupported(knownIssueValidationMessage.RepositoryWithOwner))
-        {
-            await _knownIssueValidationService.ValidateKnownIssue(knownIssueValidationMessage, cancellationToken);
-        }
     }
 }

@@ -1,10 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.Extensions.Logging;
-using ProductConstructionService.WorkItems;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.WorkItems.Models;
+using Microsoft.Extensions.Logging;
+using ProductConstructionService.WorkItems;
 
 namespace BuildInsights.BuildAnalysis.WorkItems.Processors;
 
@@ -35,6 +35,6 @@ public class CheckRunRerunEventProcessor : WorkItemProcessor<CheckRunRerunGitHub
             return false;
         }
 
-        // TODO: Run the rest of the analysis
+        // TODO: Run the rest of the analysis which will be the same as for build completed
     }
 }

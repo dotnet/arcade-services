@@ -16,10 +16,10 @@ public interface IGitHubIssuesService
     Task<ImmutableList<KnownIssue>> GetCriticalInfrastructureIssuesAsync();
     Task<IEnumerable<KnownIssue>> GetInfrastructureKnownIssues();
     Task<IEnumerable<KnownIssue>> GetRepositoryKnownIssues(string buildRepo);
-    Task UpdateIssueBodyAsync(string repository, int issueNumber, string description);
-    Task<Issue> GetIssueAsync(string repository, int issueNumber);
-    Task AddLabelToIssueAsync(string repository, int issueNumber, string label);
-    Task AddCommentToIssueAsync(string repository, int issueNumber, string comment);
+    Task UpdateIssueBodyAsync(string repository, long issueNumber, string description);
+    Task<Issue> GetIssueAsync(string repository, long issueNumber);
+    Task AddLabelToIssueAsync(string repository, long issueNumber, string label);
+    Task AddCommentToIssueAsync(string repository, long issueNumber, string comment);
 }
 
 public class GitHubIssuesProvider : IGitHubIssuesService
@@ -122,7 +122,7 @@ public class GitHubIssuesProvider : IGitHubIssuesService
         return knownIssues;
     }
 
-    public async Task UpdateIssueBodyAsync(string repository, int issueNumber, string description)
+    public async Task UpdateIssueBodyAsync(string repository, long issueNumber, string description)
     {
         (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
 
@@ -135,7 +135,7 @@ public class GitHubIssuesProvider : IGitHubIssuesService
         await client.Issue.Update(owner, name, issueNumber, issueUpdate);
     }
 
-    public async Task<Issue> GetIssueAsync(string repository, int issueNumber)
+    public async Task<Issue> GetIssueAsync(string repository, long issueNumber)
     {
         (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
 
@@ -144,7 +144,7 @@ public class GitHubIssuesProvider : IGitHubIssuesService
         return issue;
     }
 
-    public async Task AddLabelToIssueAsync(string repository, int issueNumber, string label)
+    public async Task AddLabelToIssueAsync(string repository, long issueNumber, string label)
     {
         (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
 
@@ -152,7 +152,7 @@ public class GitHubIssuesProvider : IGitHubIssuesService
         await client.Issue.Labels.AddToIssue(owner, name, issueNumber, [label]);
     }
 
-    public async Task AddCommentToIssueAsync(string repository, int issueNumber, string comment)
+    public async Task AddCommentToIssueAsync(string repository, long issueNumber, string comment)
     {
         (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);
         IGitHubClient client = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(owner, name);

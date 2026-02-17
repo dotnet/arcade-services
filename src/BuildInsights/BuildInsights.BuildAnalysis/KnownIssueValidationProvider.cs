@@ -4,21 +4,21 @@
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
-using Microsoft.Extensions.Logging;
+using BuildInsights.AzureStorage.Cache;
 using BuildInsights.BuildAnalysis.Models;
+using BuildInsights.BuildAnalysis.WorkItems.Models;
+using BuildInsights.Data.Models;
 using BuildInsights.KnownIssues;
 using BuildInsights.KnownIssues.Models;
-using Octokit;
-using BuildInsights.Data.Models;
 using Maestro.Common;
-using BuildInsights.AzureStorage.Cache;
-using BuildInsights.BuildAnalysis.WorkItems.Models;
+using Microsoft.Extensions.Logging;
+using Octokit;
 
 namespace BuildInsights.BuildAnalysis;
 
 public interface IKnownIssueValidationService
 {
-    Task ValidateKnownIssue(KnownIssueValidationMessage knownIssueValidationMessage, CancellationToken cancellationToken);
+    Task ValidateKnownIssue(KnownIssueValidationRequest request, CancellationToken cancellationToken);
 }
 
 public class KnownIssueValidationProvider : IKnownIssueValidationService
@@ -46,7 +46,7 @@ public class KnownIssueValidationProvider : IKnownIssueValidationService
         _logger = logger;
     }
 
-    public async Task ValidateKnownIssue(KnownIssueValidationMessage knownIssueValidationMessage, CancellationToken cancellationToken)
+    public async Task ValidateKnownIssue(KnownIssueValidationRequest knownIssueValidationMessage, CancellationToken cancellationToken)
     {
         Issue issue = await _gitHubIssuesService.GetIssueAsync(knownIssueValidationMessage.RepositoryWithOwner, knownIssueValidationMessage.IssueId);
         if (!TryGetKnownIssue(issue, knownIssueValidationMessage.RepositoryWithOwner, out KnownIssue knownIssue, out string exceptionMessage))
@@ -123,7 +123,7 @@ public class KnownIssueValidationProvider : IKnownIssueValidationService
         return new BuildFromGitHubIssue(organizationId, projectId, int.Parse(buildId));
     }
 
-    private async Task UpdateIssueWithValidationResult(KnownIssueValidationResult knownIssueValidationResult, KnownIssueValidationMessage knownIssueValidationMessage, string buildUrl = "", List<string> errorValidated = null)
+    private async Task UpdateIssueWithValidationResult(KnownIssueValidationResult knownIssueValidationResult, KnownIssueValidationRequest knownIssueValidationMessage, string buildUrl = "", List<string> errorValidated = null)
     {
         Issue issue = await _gitHubIssuesService.GetIssueAsync(knownIssueValidationMessage.RepositoryWithOwner, knownIssueValidationMessage.IssueId);
 
@@ -134,7 +134,7 @@ public class KnownIssueValidationProvider : IKnownIssueValidationService
             knownIssueValidationMessage.IssueId, body);
     }
 
-    private string WriteValidationSection(KnownIssueValidationResult result, string buildUrl = "", List<string> errorValidated = null)
+    private static string WriteValidationSection(KnownIssueValidationResult result, string buildUrl = "", List<string> errorValidated = null)
     {
         var validation = new StringBuilder();
         validation.AppendLine(KnownIssueHelper.StartKnownIssueValidationIdentifier);
@@ -154,7 +154,7 @@ public class KnownIssueValidationProvider : IKnownIssueValidationService
         return validation.ToString();
     }
 
-    private string GetKnownIssueValidation(string body)
+    private static string GetKnownIssueValidation(string body)
     {
         int startIndex = body.IndexOf(KnownIssueHelper.StartKnownIssueValidationIdentifier, StringComparison.OrdinalIgnoreCase);
         int endIndex = body.LastIndexOf(KnownIssueHelper.EndKnownIssueValidationIdentifier, StringComparison.OrdinalIgnoreCase);
@@ -166,7 +166,7 @@ public class KnownIssueValidationProvider : IKnownIssueValidationService
     }
 
 
-    private string GetBodyWithoutKnownIssueReport(string body)
+    private static string GetBodyWithoutKnownIssueReport(string body)
     {
         int startIndex = body.IndexOf(KnownIssueHelper.StartKnownIssueReportIdentifier, StringComparison.OrdinalIgnoreCase);
         int endIndex = body.LastIndexOf(KnownIssueHelper.EndKnownIssueReportIdentifier, StringComparison.OrdinalIgnoreCase);
@@ -184,7 +184,7 @@ public class KnownIssueValidationProvider : IKnownIssueValidationService
         return bodyWithoutReport.ToString();
     }
 
-    private string UpdateIssueValidation(string body, string validation)
+    private static string UpdateIssueValidation(string body, string validation)
     {
         if (string.IsNullOrEmpty(body)) return validation;
 
@@ -232,7 +232,7 @@ public class KnownIssueValidationProvider : IKnownIssueValidationService
         return knownIssues;
     }
 
-    private bool TryGetKnownIssue(Issue issue, string repositoryWithOwner, out KnownIssue knownIssue, out string exceptionMessage)
+    private static bool TryGetKnownIssue(Issue issue, string repositoryWithOwner, out KnownIssue knownIssue, out string exceptionMessage)
     {
         exceptionMessage = string.Empty;
         try

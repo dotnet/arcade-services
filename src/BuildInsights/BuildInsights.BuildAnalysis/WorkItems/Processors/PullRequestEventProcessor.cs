@@ -152,7 +152,7 @@ public class PullRequestEventProcessor : WorkItemProcessor<PullRequestGitHubEven
         }
 
         string preliminaryMarkdown = _markdownGenerator.GenerateEmptyMarkdown(
-            new Models.UserSentimentParameters
+            new()
             {
                 Repository = repository,
                 CommitHash = pullRequest.HeadSha,
