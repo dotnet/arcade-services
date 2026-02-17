@@ -12,4 +12,6 @@ public class BuildAnalysisRequestWorkItem : WorkItem
     public int BuildId { get; set; }
 
     public string OrganizationId { get; set; }
+
+    public DateTimeOffset QueuedAt { get; set; } = DateTimeOffset.UtcNow;
 }

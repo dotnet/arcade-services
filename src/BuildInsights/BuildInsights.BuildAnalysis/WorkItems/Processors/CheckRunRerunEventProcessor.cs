@@ -10,13 +10,16 @@ namespace BuildInsights.BuildAnalysis.WorkItems.Processors;
 
 public class CheckRunRerunEventProcessor : WorkItemProcessor<CheckRunRerunGitHubEvent>
 {
+    private readonly IBuildAnalyzer _buildAnalyzer;
     private readonly IRelatedBuildService _relatedBuildService;
     private readonly ILogger<CheckRunRerunEventProcessor> _logger;
 
     public CheckRunRerunEventProcessor(
+        IBuildAnalyzer buildAnalyzer,
         IRelatedBuildService relatedBuildService,
         ILogger<CheckRunRerunEventProcessor> logger)
     {
+        _buildAnalyzer = buildAnalyzer;
         _relatedBuildService = relatedBuildService;
         _logger = logger;
     }
@@ -35,6 +38,13 @@ public class CheckRunRerunEventProcessor : WorkItemProcessor<CheckRunRerunGitHub
             return false;
         }
 
-        // TODO: Run the rest of the analysis which will be the same as for build completed
+        await _buildAnalyzer.AnalyzeBuild(
+            relatedBuild.OrganizationName,
+            relatedBuild.ProjectId,
+            relatedBuild.Id,
+            workItem.QueuedAt,
+            cancellationToken);
+
+        return true;
     }
 }

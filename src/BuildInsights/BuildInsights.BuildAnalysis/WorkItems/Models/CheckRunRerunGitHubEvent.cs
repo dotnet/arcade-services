@@ -10,4 +10,6 @@ public class CheckRunRerunGitHubEvent : WorkItem
     public string Repository { get; set; }
 
     public string HeadSha { get; set; }
+
+    public DateTimeOffset QueuedAt { get; set; } = DateTimeOffset.UtcNow;
 }

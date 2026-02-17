@@ -7,9 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using BuildInsights.AzureStorage.Cache;
-using BuildInsights.BuildAnalysis;
 using BuildInsights.BuildAnalysis.Models;
-using BuildInsights.BuildAnalysis.WorkItems.Models;
 using BuildInsights.Data.Models;
 using BuildInsights.GitHub;
 using BuildInsights.GitHub.Models;
@@ -26,40 +24,47 @@ using Microsoft.Extensions.Options;
 using Octokit;
 
 #nullable disable
-namespace BuildInsights.BuildResultProcessor;
+namespace BuildInsights.BuildAnalysis;
 
-public class AnalysisProcessor : IQueueMessageHandler
+public interface IBuildAnalyzer
 {
+    Task AnalyzeBuild(
+        string orgId,
+        string projectId,
+        int buildId,
+        DateTimeOffset requestCreationTime,
+        CancellationToken cancellationToken);
+}
+
+public class BuildAnalyzer : IBuildAnalyzer
+{
+    private const string CheckRunName = "Build Analysis";
+    private const string CheckRunOutputName = ".NET Result Analysis";
+    private const int ErrorMessageLimitLength = 1000;
+    private const int TestKnownIssueDisplayLimit = 50;
+
     private readonly IMergedBuildAnalysisService _buildAnalysis;
     private readonly IBuildAnalysisService _buildAnalysisService;
     private readonly IMarkdownGenerator _markdownGenerator;
     private readonly IGitHubChecksService _gitHubChecksService;
     private readonly IBuildDataService _build;
-    private readonly ILogger<AnalysisProcessor> _logger;
+    private readonly ILogger<BuildAnalyzer> _logger;
     private readonly TelemetryClient _telemetry;
     private readonly IContextualStorage _contextualStorage;
     private readonly IDistributedLockService _distributedLockService;
     private readonly ISystemClock _clock;
     private readonly KnownIssueUrlOptions _knownIssueUrlOptions;
     private readonly InternalProject _internalProject;
-    private readonly IPullRequestService _pullRequestProcessor;
     private readonly OperationManager _operations;
-    private readonly IBuildAnalysisHistoryService _tableService;
+    private readonly IBuildAnalysisHistoryService _analysisHistory;
     private readonly IBuildProcessingStatusService _processingStatusService;
     private readonly IRelatedBuildService _relatedBuildService;
     private readonly IQueueInsightsService _queueInsightsService;
     private readonly IGitHubIssuesService _githubIssuesService;
     private readonly IAzDoToGitHubRepositoryService _azDoToGitHubRepositoryService;
-    private readonly IKnownIssueValidationService _knownIssueValidationService;
     private readonly IPipelineRequestedService _pipelineRequestedService;
-    private readonly IBuildAnalysisRepositoryConfigurationService _buildAnalysisConfiguration;
-    private readonly GitHubTokenProviderOptions _gitHubTokenProviderOptions;
-    private const string CheckRunName = "Build Analysis";
-    private const string CheckRunOutputName = ".NET Result Analysis";
-    private const int ErrorMessageLimitLength = 1000;
-    private const int TestKnownIssueDisplayLimit = 50;
 
-    public AnalysisProcessor(
+    public BuildAnalyzer(
         IMergedBuildAnalysisService buildAnalysis,
         IBuildAnalysisService buildAnalysisService,
         IMarkdownGenerator markdownGenerator,
@@ -70,19 +75,17 @@ public class AnalysisProcessor : IQueueMessageHandler
         IDistributedLockService distributedLockService,
         ISystemClock clock,
         OperationManager operations,
-        IPullRequestService pullRequestProcessor,
         IOptions<KnownIssueUrlOptions> knownIssueUrlOptions,
         IOptions<InternalProject> internalProject,
-        IBuildAnalysisHistoryService tableService,
+        IBuildAnalysisHistoryService analysisHistory,
         IBuildProcessingStatusService processingStatusService,
-        ILogger<AnalysisProcessor> logger,
+        ILogger<BuildAnalyzer> logger,
         IRelatedBuildService relatedBuildService,
         IQueueInsightsService queueInsightsService,
         IGitHubIssuesService gitHubIssuesService,
         IKnownIssueValidationService knownIssueValidationService,
         IAzDoToGitHubRepositoryService azDoToGitHubRepositoryService,
         IPipelineRequestedService pipelineRequestedService,
-        IBuildAnalysisRepositoryConfigurationService buildAnalysisConfiguration,
         IOptions<GitHubTokenProviderOptions> gitHubTokenProviderOptions)
     {
         _buildAnalysis = buildAnalysis;
@@ -99,29 +102,27 @@ public class AnalysisProcessor : IQueueMessageHandler
         _operations = operations;
         _knownIssueUrlOptions = knownIssueUrlOptions.Value;
         _internalProject = internalProject.Value;
-        _tableService = tableService;
+        _analysisHistory = analysisHistory;
         _processingStatusService = processingStatusService;
         _relatedBuildService = relatedBuildService;
         _queueInsightsService = queueInsightsService;
-        _pullRequestProcessor = pullRequestProcessor;
         _githubIssuesService = gitHubIssuesService;
         _azDoToGitHubRepositoryService = azDoToGitHubRepositoryService;
-        _knownIssueValidationService = knownIssueValidationService;
         _pipelineRequestedService = pipelineRequestedService;
-        _buildAnalysisConfiguration = buildAnalysisConfiguration;
-        _gitHubTokenProviderOptions = gitHubTokenProviderOptions.Value;
     }
 
-    public async Task HandleMessageAsync(IQueuedWork message, bool isLastAttempt, CancellationToken cancellationToken)
+    public async Task AnalyzeBuild(
+        string orgId,
+        string projectId,
+        int buildId,
+        DateTimeOffset requestCreationTime,
+        CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Event: {EventType} received for projectId:{projectId}, buildId:{buildId}", baseMessage.EventType, projectId, buildId);
-
         using Operation operation = _operations.BeginLoggingScope(
             "Build: {buildId}, Project: {projectId}, Org: {orgId}",
             buildId,
             projectId,
-            orgId
-        );
+            orgId);
 
         _logger.LogInformation("HandleMessage for buildId: {buildId} and project: {projectId} and org: {orgId}", buildId, projectId, orgId);
 
@@ -141,9 +142,10 @@ public class AnalysisProcessor : IQueueMessageHandler
             build.TargetBranch?.BranchName
         );
 
-        BuildAnalysisEvent lastAnalysisEvent = _tableService.GetLastBuildAnalysisRecord(build.Id, build.DefinitionName);
+        BuildAnalysisEvent lastAnalysisEvent = await _analysisHistory.GetLastBuildAnalysisRecord(build.Id, build.DefinitionName);
 
-        if (lastAnalysisEvent != null && message.CreatedTime < lastAnalysisEvent.AnalysisTimestamp
+        if (lastAnalysisEvent != null
+            && requestCreationTime < lastAnalysisEvent.AnalysisTimestamp
             || await _processingStatusService.IsBuildBeingProcessed(_clock.UtcNow.AddDays(-1), buildReference.RepositoryId, buildId, cancellationToken))
         {
             _logger.LogInformation("Skipping processing of build {buildId} as it was recently processed or is under processing and there are no new changes", build.Id);
@@ -161,7 +163,7 @@ public class AnalysisProcessor : IQueueMessageHandler
             else
             {
                 _logger.LogInformation("Repository {repositoryName} is not supported", buildReference.RepositoryId);
-                await _tableService.SaveBuildAnalysisRepositoryNotSupported(buildReference.Name, buildReference.BuildId,
+                await _analysisHistory.SaveBuildAnalysisRepositoryNotSupported(buildReference.Name, buildReference.BuildId,
                     buildReference.RepositoryId, build.ProjectName, _clock.UtcNow);
             }
             return;
@@ -170,7 +172,7 @@ public class AnalysisProcessor : IQueueMessageHandler
         if (!await _gitHubChecksService.IsRepositorySupported(buildReference.RepositoryId))
         {
             _logger.LogInformation("Repository {repositoryName} is not supported", buildReference.RepositoryId);
-            await _tableService.SaveBuildAnalysisRepositoryNotSupported(buildReference.Name, buildReference.BuildId,
+            await _analysisHistory.SaveBuildAnalysisRepositoryNotSupported(buildReference.Name, buildReference.BuildId,
                 buildReference.RepositoryId, build.ProjectName, _clock.UtcNow);
 
             return;
@@ -204,14 +206,15 @@ public class AnalysisProcessor : IQueueMessageHandler
             }
         }
 
-
         string snapshotId = $"{_clock.UtcNow:yyyy-MM-ddTHH-mm-ss}";
         _logger.LogInformation("Generating report for snapshot {snapshotId}", snapshotId);
 
         MergedBuildResultAnalysis analysis;
         try
         {
-            await _processingStatusService.SaveBuildAnalysisProcessingStatus(buildReference.RepositoryId, buildId,
+            await _processingStatusService.SaveBuildAnalysisProcessingStatus(
+                buildReference.RepositoryId,
+                buildId,
                 BuildProcessingStatus.InProcess);
 
             string storageContext = $"{buildReference.RepositoryId}/{buildReference.SourceSha}";
@@ -224,8 +227,7 @@ public class AnalysisProcessor : IQueueMessageHandler
             analysis = await _buildAnalysis.GetMergedAnalysisAsync(
                 buildReference,
                 build.IsComplete ? MergeBuildAnalysisAction.Include : MergeBuildAnalysisAction.Exclude,
-                cancellationToken: cancellationToken
-            );
+                cancellationToken: cancellationToken);
 
             _logger.LogInformation("MergedBuildResultAnalysis created for build Id: '{buildId}'", buildReference.BuildId);
         }
@@ -234,11 +236,16 @@ public class AnalysisProcessor : IQueueMessageHandler
             await _processingStatusService.SaveBuildAnalysisProcessingStatus(buildReference.RepositoryId, buildId, BuildProcessingStatus.Completed);
         }
 
-        BuildAnalysis.Models.Repository repository = new(buildReference.RepositoryId,
+        Models.Repository repository = new(buildReference.RepositoryId,
             await _gitHubChecksService.RepositoryHasIssues(buildReference.RepositoryId));
 
         string markdown = _markdownGenerator.GenerateMarkdown(
-            new MarkdownParameters(analysis, snapshotId, build.PullRequestUrl, repository, _knownIssueUrlOptions));
+            new MarkdownParameters(
+                analysis,
+                snapshotId,
+                build.PullRequestUrl,
+                repository,
+                _knownIssueUrlOptions));
 
         long checkRunId;
         try
@@ -250,21 +257,32 @@ public class AnalysisProcessor : IQueueMessageHandler
                 buildReference.RepositoryId,
                 buildReference.SourceSha,
                 analysis.OverallStatus,
-                cancellationToken
-            );
+                cancellationToken);
         }
         catch (ApiValidationException ex) when (Regex.IsMatch(ex.Message, "(.*)Only(.*)characters are allowed(.*)"))
         {
             string errorMatch = Regex.Match(ex.Message, "Only (\\d*) characters are allowed").Groups[1].Value;
             int checkCharactersLimit = int.Parse(errorMatch);
 
-            markdown = _markdownGenerator.GenerateMarkdown(new MarkdownParameters(analysis, snapshotId, build.PullRequestUrl, repository,
-                    _knownIssueUrlOptions, new MarkdownSummarizeInstructions(true, ErrorMessageLimitLength, TestKnownIssueDisplayLimit)));
+            markdown = _markdownGenerator.GenerateMarkdown(
+                new MarkdownParameters(
+                    analysis,
+                    snapshotId,
+                    build.PullRequestUrl,
+                    repository,
+                    _knownIssueUrlOptions,
+                    new MarkdownSummarizeInstructions(true, ErrorMessageLimitLength, TestKnownIssueDisplayLimit)));
 
             if (markdown.Length > checkCharactersLimit)
             {
-                markdown = _markdownGenerator.GenerateMarkdown(new MarkdownParameters(analysis, snapshotId, build.PullRequestUrl, repository,
-                        _knownIssueUrlOptions, new MarkdownSummarizeInstructions(generateSummaryVersion: true)));
+                markdown = _markdownGenerator.GenerateMarkdown(
+                    new MarkdownParameters(
+                        analysis,
+                        snapshotId,
+                        build.PullRequestUrl,
+                        repository,
+                        _knownIssueUrlOptions,
+                        new MarkdownSummarizeInstructions(generateSummaryVersion: true)));
             }
 
             checkRunId = await _gitHubChecksService.PostChecksResultAsync(
@@ -274,35 +292,32 @@ public class AnalysisProcessor : IQueueMessageHandler
                 buildReference.RepositoryId,
                 buildReference.SourceSha,
                 analysis.OverallStatus,
-                cancellationToken
-            );
+                cancellationToken);
         }
 
         DateTimeOffset analysisTimestamp = DateTimeOffset.UtcNow;
-        await _tableService.SaveBuildAnalysisRecords(analysis.CompletedPipelines, buildReference.RepositoryId, build.ProjectName, analysisTimestamp);
+        await _analysisHistory.SaveBuildAnalysisRecords(analysis.CompletedPipelines, buildReference.RepositoryId, build.ProjectName, analysisTimestamp);
 
         _logger.LogInformation(
             "Created check run {checkRunId} triggered by build {buildId} for commit {commitHash}",
             checkRunId,
             buildId,
-            buildReference.SourceSha
-        );
+            buildReference.SourceSha);
 
         _telemetry.TrackEvent(
             "DevWfCheckCreated",
             new Dictionary<string, string>
             {
-            {"checkRunId", checkRunId.ToString()},
-            {"buildId", buildId.ToString()},
-            {"commitHash", buildReference.SourceSha},
-            {"snapshotId", snapshotId},
-            {"pullRequest", build.PullRequest}
+                {"checkRunId", checkRunId.ToString()},
+                {"buildId", buildId.ToString()},
+                {"commitHash", buildReference.SourceSha},
+                {"snapshotId", snapshotId},
+                {"pullRequest", build.PullRequest}
             },
             new Dictionary<string, double>
             {
-            {"markdownLength", markdown.Length},
-            }
-        );
+                {"markdownLength", markdown.Length},
+            });
 
         try
         {
@@ -326,14 +341,18 @@ public class AnalysisProcessor : IQueueMessageHandler
         }
     }
 
-    private async Task GenerateQueueInsights(Build build, BuildReferenceIdentifier buildReference,
+    private async Task GenerateQueueInsights(
+        Build build,
+        BuildReferenceIdentifier buildReference,
         CancellationToken cancellationToken)
     {
         RelatedBuilds relatedBuilds =
             await _relatedBuildService.GetRelatedBuilds(buildReference, cancellationToken);
 
-        ImmutableHashSet<int> definitions = relatedBuilds.RelatedBuildsList.Select(x => x.DefinitionId)
-            .Append(buildReference.DefinitionId).ToImmutableHashSet();
+        ImmutableHashSet<int> definitions = relatedBuilds.RelatedBuildsList
+            .Select(x => x.DefinitionId)
+            .Append(buildReference.DefinitionId)
+            .ToImmutableHashSet();
 
         _logger.LogInformation("Found Pipelines: {pipelines} for repo: {repo} pr: {pr}",
             string.Join(", ", definitions), build.Repository, build.PullRequest);
@@ -352,6 +371,5 @@ public class AnalysisProcessor : IQueueMessageHandler
 
         _logger.LogInformation("Created Queue Insights Check: {checkId} repo: {repo} pr: {pr}", checkId,
             build.Repository, build.PullRequest);
-
     }
 }

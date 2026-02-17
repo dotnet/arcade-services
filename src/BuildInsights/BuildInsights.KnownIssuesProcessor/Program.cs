@@ -5,6 +5,8 @@ using BuildInsights.BuildAnalysis;
 using BuildInsights.GitHub;
 using BuildInsights.KnownIssues;
 using BuildInsights.KnownIssues.Models;
+using BuildInsights.Utilities.AzureDevOps.Models;
+using BuildInsights.Utilities.Parallel;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Configuration;
@@ -15,15 +17,6 @@ namespace BuildInsights.KnownIssuesProcessor;
 
 public class Program
 {
-    public static void Main(string[] args)
-    {
-        ServiceHost.Run(host =>
-        {
-            host.RegisterStatelessService<KnownIssuesProcessor>("KnownIssuesProcessorType");
-            host.ConfigureServices(ConfigureServices);
-        });
-    }
-
     public static void ConfigureServices(IServiceCollection services)
     {
         AddServices(services);
@@ -53,18 +46,9 @@ public class Program
     public static void AddServices(IServiceCollection services)
     {
         services.AddHttpClient();
-        services.AddAzureStorageQueue();
-        services.AddQueueProcessing<KnownIssuesAnalysisRequestProcessor>(
-            queueOptions => { },
-            parallelismOptions => { parallelismOptions.WorkerCount = Environment.ProcessorCount; }
-        );
-        services.Configure<TableConnectionSettings>("KnownIssuesAnalysisTable", (o, c) => c.Bind(o));
-        services.Configure<ProcessingStatusTableConnectionSettings>("ProcessingStatusTable", (o, c) => c.Bind(o));
 
-        services.TryAddSingleton<IQueueClientFactory, QueueClientFactory>();
         services.TryAddSingleton<IKnownIssuesHistoryService, KnownIssuesHistoryProvider>();
         services.TryAddSingleton<IBuildAnalysisHistoryService, BuildAnalysisHistoryProvider>();
-        services.TryAddSingleton<IRequestAnalysisService, RequestAnalysisProvider>();
         services.TryAddSingleton<IBuildProcessingStatusService, BuildProcessingStatusStatusProvider>();
 
         services.TryAddSingleton(_ => TimeProvider.System);
