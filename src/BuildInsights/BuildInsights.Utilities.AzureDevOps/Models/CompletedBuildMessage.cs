@@ -7,12 +7,11 @@ using System.Text.Json.Serialization;
 #nullable disable
 namespace BuildInsights.Utilities.AzureDevOps.Models;
 
-public class CompletedBuildMessage
+public class CompletedBuildMessage : AzureDevOpsEventBase
 {
-    [JsonPropertyName("eventType")]
-    public string EventType { get => "build.complete"; }
     [JsonPropertyName("resource")]
     public BuildCompletedResource Resource { get; set; }
+
     [JsonPropertyName("resourceContainers")]
     public BuildCompletedResourceContainers ResourceContainers { get; set; }
 }

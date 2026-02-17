@@ -5,7 +5,7 @@ using ProductConstructionService.WorkItems;
 
 namespace BuildInsights.KnownIssues.WorkItems;
 
-public class KnownIssueReprocessBuildWorkItem : WorkItem
+public class BuildAnalysisRequestWorkItem : WorkItem
 {
     public string ProjectId { get; set; }
 

@@ -19,7 +19,7 @@ namespace BuildInsights.KnownIssuesProcessor;
 
 public class KnownIssuesAnalysisRequestProcessor : WorkItemProcessor<AnalysisProcessRequest>
 {
-    private readonly IRequestAnalysisService _buildAnaylysisRequestProvider;
+    private readonly IWorkItemProducerFactory _workItemProducerFactory;
     private readonly IOptionsMonitor<KnownIssuesProcessorOptions> _options;
     private readonly ILogger<KnownIssuesAnalysisRequestProcessor> _logger;
     private readonly IBuildDataService _buildDataService;
@@ -33,7 +33,7 @@ public class KnownIssuesAnalysisRequestProcessor : WorkItemProcessor<AnalysisPro
     public KnownIssuesAnalysisRequestProcessor(
         IOptionsMonitor<KnownIssuesProcessorOptions> options,
         IBuildDataService buildDataService,
-        IRequestAnalysisService buildRequestService,
+        IWorkItemProducerFactory workItemProducerFactory,
         IKnownIssuesHistoryService knownIssuesHistoryService,
         IBuildAnalysisHistoryService buildAnalysisHistoryService,
         IGitHubChecksService gitHubChecksService,
@@ -43,7 +43,7 @@ public class KnownIssuesAnalysisRequestProcessor : WorkItemProcessor<AnalysisPro
         ILogger<KnownIssuesAnalysisRequestProcessor> logger)
     {
         _options = options;
-        _buildAnaylysisRequestProvider = buildRequestService;
+        _workItemProducerFactory = workItemProducerFactory;
         _buildDataService = buildDataService;
         _knownIssuesHistoryService = knownIssuesHistoryService;
         _buildAnalysisHistoryService = buildAnalysisHistoryService;
@@ -111,7 +111,20 @@ public class KnownIssuesAnalysisRequestProcessor : WorkItemProcessor<AnalysisPro
 
                 _logger.LogInformation("Reprocessing {buildCount} builds for issue: {issueRepo}#{issueNumber} on {project}",
                     buildList.Count, issue.RepositoryWithOwner, issue.Id, project);
-                await _buildAnaylysisRequestProvider.RequestAnalysisAsync(buildList);
+
+                var producer = _workItemProducerFactory.CreateProducer<BuildAnalysisRequestWorkItem>(false);
+
+                foreach (Build build in buildList)
+                {
+                    _logger.LogInformation("Requesting reprocess of build {buildId}", build.Id);
+
+                    await producer.ProduceWorkItemAsync(new()
+                    {
+                        ProjectId = build.ProjectName,
+                        BuildId = build.Id,
+                        OrganizationId = build.OrganizationName
+                    });
+                }
             }
         }
 

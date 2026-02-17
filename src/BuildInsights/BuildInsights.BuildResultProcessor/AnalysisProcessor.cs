@@ -140,15 +140,11 @@ public class AnalysisProcessor : IQueueMessageHandler
                 buildId = buildMessage.Resource.Id;
                 break;
             case "knownissue.reprocessing":
-                KnownIssueReprocessBuildWorkItem knownIssueReprocessBuildMessage = JsonSerializer.Deserialize<KnownIssueReprocessBuildWorkItem>(messageString);
+                BuildAnalysisRequestWorkItem knownIssueReprocessBuildMessage = JsonSerializer.Deserialize<BuildAnalysisRequestWorkItem>(messageString);
                 orgId = knownIssueReprocessBuildMessage.OrganizationId;
                 projectId = knownIssueReprocessBuildMessage.ProjectId;
                 buildId = knownIssueReprocessBuildMessage.BuildId;
                 break;
-            case "knownissue.validate":
-                KnownIssueValidationMessage knownIssueValidationMessage = JsonSerializer.Deserialize<KnownIssueValidationMessage>(messageString);
-                await ValidateKnownIssueMessage(knownIssueValidationMessage, cancellationToken);
-                return;
             case "ms.vss-pipelines.run-state-changed-event":
             case "ms.vss-pipelines.stage-state-changed-event":
                 StartedBuildMessage startedBuildMessage = JsonSerializer.Deserialize<StartedBuildMessage>(messageString);
@@ -168,6 +164,12 @@ public class AnalysisProcessor : IQueueMessageHandler
                 projectId = relatedBuild.ProjectId;
                 buildId = relatedBuild.Id;
                 break;
+
+            case "knownissue.validate":
+                KnownIssueValidationMessage knownIssueValidationMessage = JsonSerializer.Deserialize<KnownIssueValidationMessage>(messageString);
+                await ValidateKnownIssueMessage(knownIssueValidationMessage, cancellationToken);
+                return;
+
             case "checkrun.conclusion-update":
                 CheckRunConclusionUpdateMessage checkRunConclusionUpdateMessage = JsonSerializer.Deserialize<CheckRunConclusionUpdateMessage>(messageString);
                 await UpdateBuildAnalysisCheckRun(checkRunConclusionUpdateMessage);
