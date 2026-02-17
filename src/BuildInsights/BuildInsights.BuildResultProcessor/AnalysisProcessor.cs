@@ -9,6 +9,8 @@ using System.Text.RegularExpressions;
 using BuildInsights.AzureStorage.Cache;
 using BuildInsights.BuildAnalysis;
 using BuildInsights.BuildAnalysis.Models;
+using BuildInsights.BuildAnalysis.WorkItems;
+using BuildInsights.BuildAnalysis.WorkItems.Models;
 using BuildInsights.Data.Models;
 using BuildInsights.GitHub;
 using BuildInsights.GitHub.Models;
@@ -115,14 +117,15 @@ public class AnalysisProcessor : IQueueMessageHandler
 
     public async Task HandleMessageAsync(IQueuedWork message, bool isLastAttempt, CancellationToken cancellationToken)
     {
-        string messageString = await message.GetStringAsync();
-        if (_pullRequestProcessor.IsPullRequestMessage(messageString, out PullRequestData pullRequestData))
-        {
-            await _pullRequestProcessor.ProcessPullRequestMessage(pullRequestData);
+        // DONE
+        //string messageString = await message.GetStringAsync();
+        //if (_pullRequestProcessor.IsPullRequestMessage(messageString, out PullRequestData pullRequestData))
+        //{
+        //    await _pullRequestProcessor.ProcessPullRequestMessage(pullRequestData);
 
-            //The message was processed as a pull request message and there is nothing left to process
-            return;
-        }
+        //    //The message was processed as a pull request message and there is nothing left to process
+        //    return;
+        //}
 
         string orgId;
         string projectId;
@@ -133,37 +136,38 @@ public class AnalysisProcessor : IQueueMessageHandler
         // Determine what kind of event it is
         switch (baseMessage.EventType)
         {
-            case "build.complete":
-                CompletedBuildMessage buildMessage = JsonSerializer.Deserialize<CompletedBuildMessage>(messageString);
-                orgId = buildMessage.Resource.OrgId;
-                projectId = buildMessage.ResourceContainers.Project.Id;
-                buildId = buildMessage.Resource.Id;
-                break;
-            case "knownissue.reprocessing":
-                BuildAnalysisRequestWorkItem knownIssueReprocessBuildMessage = JsonSerializer.Deserialize<BuildAnalysisRequestWorkItem>(messageString);
-                orgId = knownIssueReprocessBuildMessage.OrganizationId;
-                projectId = knownIssueReprocessBuildMessage.ProjectId;
-                buildId = knownIssueReprocessBuildMessage.BuildId;
-                break;
-            case "ms.vss-pipelines.run-state-changed-event":
-            case "ms.vss-pipelines.stage-state-changed-event":
-                StartedBuildMessage startedBuildMessage = JsonSerializer.Deserialize<StartedBuildMessage>(messageString);
-                orgId = startedBuildMessage.GetOrgId();
-                projectId = startedBuildMessage.GetProjectId();
-                buildId = startedBuildMessage.Resource.Id;
-                break;
-            case "checkrun.rerun":
-                RerunCheckRunAnalysisMessage rerunMessage = JsonSerializer.Deserialize<RerunCheckRunAnalysisMessage>(messageString);
-                Build relatedBuild = await _relatedBuildService.GetRelatedBuildFromCheckRun(rerunMessage?.Repository, rerunMessage?.HeadSha);
-                if (relatedBuild == null)
-                {
-                    _logger.LogInformation("No authorized related build found for rerun of commit {commit} on repository {repository}", rerunMessage?.HeadSha, rerunMessage?.Repository);
-                    return;
-                }
-                orgId = relatedBuild.OrganizationName;
-                projectId = relatedBuild.ProjectId;
-                buildId = relatedBuild.Id;
-                break;
+            // DONE
+            //case "build.complete":
+            //    CompletedBuildMessage buildMessage = JsonSerializer.Deserialize<CompletedBuildMessage>(messageString);
+            //    orgId = buildMessage.Resource.OrgId;
+            //    projectId = buildMessage.ResourceContainers.Project.Id;
+            //    buildId = buildMessage.Resource.Id;
+            //    break;
+            //case "knownissue.reprocessing":
+            //    BuildAnalysisRequestWorkItem knownIssueReprocessBuildMessage = JsonSerializer.Deserialize<BuildAnalysisRequestWorkItem>(messageString);
+            //    orgId = knownIssueReprocessBuildMessage.OrganizationId;
+            //    projectId = knownIssueReprocessBuildMessage.ProjectId;
+            //    buildId = knownIssueReprocessBuildMessage.BuildId;
+            //    break;
+            //case "ms.vss-pipelines.run-state-changed-event":
+            //case "ms.vss-pipelines.stage-state-changed-event":
+            //    StartedBuildMessage startedBuildMessage = JsonSerializer.Deserialize<StartedBuildMessage>(messageString);
+            //    orgId = startedBuildMessage.GetOrgId();
+            //    projectId = startedBuildMessage.GetProjectId();
+            //    buildId = startedBuildMessage.Resource.Id;
+            //    break;
+            //case "checkrun.rerun":
+            //    RerunCheckRunAnalysisMessage rerunMessage = JsonSerializer.Deserialize<RerunCheckRunAnalysisMessage>(messageString);
+            //    Build relatedBuild = await _relatedBuildService.GetRelatedBuildFromCheckRun(rerunMessage?.Repository, rerunMessage?.HeadSha);
+            //    if (relatedBuild == null)
+            //    {
+            //        _logger.LogInformation("No authorized related build found for rerun of commit {commit} on repository {repository}", rerunMessage?.HeadSha, rerunMessage?.Repository);
+            //        return;
+            //    }
+            //    orgId = relatedBuild.OrganizationName;
+            //    projectId = relatedBuild.ProjectId;
+            //    buildId = relatedBuild.Id;
+            //    break;
 
             case "knownissue.validate":
                 KnownIssueValidationMessage knownIssueValidationMessage = JsonSerializer.Deserialize<KnownIssueValidationMessage>(messageString);

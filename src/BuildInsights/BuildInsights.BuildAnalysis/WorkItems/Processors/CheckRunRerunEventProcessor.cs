@@ -1,0 +1,40 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using Microsoft.Extensions.Logging;
+using ProductConstructionService.WorkItems;
+using BuildInsights.BuildAnalysis.Models;
+using BuildInsights.BuildAnalysis.WorkItems.Models;
+
+namespace BuildInsights.BuildAnalysis.WorkItems.Processors;
+
+public class CheckRunRerunEventProcessor : WorkItemProcessor<CheckRunRerunGitHubEvent>
+{
+    private readonly IRelatedBuildService _relatedBuildService;
+    private readonly ILogger<CheckRunRerunEventProcessor> _logger;
+
+    public CheckRunRerunEventProcessor(
+        IRelatedBuildService relatedBuildService,
+        ILogger<CheckRunRerunEventProcessor> logger)
+    {
+        _relatedBuildService = relatedBuildService;
+        _logger = logger;
+    }
+
+    public override async Task<bool> ProcessWorkItemAsync(
+        CheckRunRerunGitHubEvent workItem,
+        CancellationToken cancellationToken)
+    {
+        Build relatedBuild = await _relatedBuildService.GetRelatedBuildFromCheckRun(
+            workItem.Repository,
+            workItem.HeadSha);
+
+        if (relatedBuild == null)
+        {
+            _logger.LogInformation("No authorized related build found for rerun of commit {commit} on repository {repository}", rerunMessage?.HeadSha, rerunMessage?.Repository);
+            return false;
+        }
+
+        // TODO: Run the rest of the analysis
+    }
+}

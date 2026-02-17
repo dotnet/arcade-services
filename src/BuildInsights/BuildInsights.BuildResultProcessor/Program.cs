@@ -5,6 +5,7 @@ using System;
 using System.Net.Http.Headers;
 using BuildInsights.AzureStorage.Cache;
 using BuildInsights.BuildAnalysis;
+using BuildInsights.BuildAnalysis.WorkItems.Processors;
 using BuildInsights.GitHub;
 using BuildInsights.KnownIssues;
 using BuildInsights.QueueInsights;
@@ -140,7 +141,7 @@ public class Program
         services.TryAddSingleton<ICheckResultService, CheckResultProvider>();
         services.TryAddSingleton<ITestResultService, TestResultProvider>();
         services.AddSingleton<IHelixDataService, HelixDataProvider>();
-        services.AddSingleton<IPullRequestService,PullRequestBuildAnalysisProcessor>();
+        services.AddSingleton<IPullRequestService,PullRequestEventProcessor>();
         services.AddScoped<IAzDoToGitHubRepositoryService, AzDoToGitHubRepositoryProvider>();
         services.TryAddSingleton<IPipelineRequestedService, PipelineRequestedProvider>();
 

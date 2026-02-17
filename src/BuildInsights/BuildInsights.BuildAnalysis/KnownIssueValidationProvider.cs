@@ -12,6 +12,7 @@ using Octokit;
 using BuildInsights.Data.Models;
 using Maestro.Common;
 using BuildInsights.AzureStorage.Cache;
+using BuildInsights.BuildAnalysis.WorkItems.Models;
 
 namespace BuildInsights.BuildAnalysis;
 

@@ -3,16 +3,11 @@
 
 using System.Text.Json.Serialization;
 
-namespace BuildInsights.BuildAnalysis.Models;
+#nullable disable
+namespace BuildInsights.Api.Controllers.Models;
 
-public class RerunCheckRunAnalysisMessage
+public class AzureDevOpsEventBase
 {
     [JsonPropertyName("eventType")]
     public string EventType { get; set; }
-
-    [JsonPropertyName("repository")]
-    public string Repository { get; set; }
-
-    [JsonPropertyName("headSha")]
-    public string HeadSha { get; set; }
 }

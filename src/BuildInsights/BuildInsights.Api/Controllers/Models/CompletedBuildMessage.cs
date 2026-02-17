@@ -1,14 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Text.Json.Serialization;
 
 #nullable disable
-namespace BuildInsights.Utilities.AzureDevOps.Models;
+namespace BuildInsights.Api.Controllers.Models;
 
 public class CompletedBuildMessage : AzureDevOpsEventBase
 {
+    public const string MessageEventType = "build.complete";
+
     [JsonPropertyName("resource")]
     public BuildCompletedResource Resource { get; set; }
 

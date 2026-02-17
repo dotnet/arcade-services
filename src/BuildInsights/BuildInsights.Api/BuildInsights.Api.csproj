@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\BuildInsights.BuildAnalysis\BuildInsights.BuildAnalysis.csproj" />
+    <ProjectReference Include="..\BuildInsights.GitHubGraphQL\BuildInsights.GitHubGraphQL.csproj" />
+    <ProjectReference Include="..\BuildInsights.GitHub\BuildInsights.GitHub.csproj" />
+    <ProjectReference Include="..\BuildInsights.KnownIssues\BuildInsights.KnownIssues.csproj" />
     <ProjectReference Include="..\BuildInsights.ServiceDefaults\BuildInsights.ServiceDefaults.csproj" />
     <ProjectReference Include="..\BuildInsights.Utilities.AzureDevOps\BuildInsights.Utilities.AzureDevOps.csproj" />
     <ProjectReference Include="..\..\ProductConstructionService\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />
@@ -17,6 +21,13 @@
     <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
     <PackageReference Include="Azure.Identity" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers" />
+    <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="WorkItems\Models\" />
+    <Folder Include="WorkItems\Processors\" />
   </ItemGroup>
 
 </Project>

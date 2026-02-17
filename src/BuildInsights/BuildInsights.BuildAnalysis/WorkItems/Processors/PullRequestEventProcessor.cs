@@ -1,26 +1,20 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Text.Json;
 using Microsoft.ApplicationInsights;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.GitHub.Models;
 using BuildInsights.QueueInsights.Models;
 using BuildInsights.GitHub;
 using BuildInsights.QueueInsights;
+using ProductConstructionService.WorkItems;
+using BuildInsights.BuildAnalysis.WorkItems.Models;
 
-namespace BuildInsights.BuildAnalysis;
+namespace BuildInsights.BuildAnalysis.WorkItems.Processors;
 
-public interface IPullRequestService
-{
-    bool IsPullRequestMessage(string message, out PullRequestData pullRequestData);
-    Task ProcessPullRequestMessage(PullRequestData pullRequestData);
-}
-
-public class PullRequestBuildAnalysisProcessor : IPullRequestService
+public class PullRequestEventProcessor : WorkItemProcessor<PullRequestGitHubEventWorkItem>
 {
     private readonly IGitHubChecksService _gitHubChecksService;
     private readonly IInstallationLookup _installationLookup;
@@ -28,15 +22,15 @@ public class PullRequestBuildAnalysisProcessor : IPullRequestService
     private readonly IQueueInsightsMarkdownGenerator _qiMarkdownGenerator;
     private readonly IOptions<QueueInsightsBetaSettings> _qiSettings;
     private readonly TelemetryClient _telemetry;
-    private readonly ILogger<PullRequestBuildAnalysisProcessor> _logger;
+    private readonly ILogger<PullRequestEventProcessor> _logger;
 
-    public PullRequestBuildAnalysisProcessor(IGitHubChecksService gitHubChecksService,
+    public PullRequestEventProcessor(IGitHubChecksService gitHubChecksService,
         IInstallationLookup installationLookup,
         IMarkdownGenerator markdownGenerator,
         IQueueInsightsMarkdownGenerator qiMarkdownGenerator,
         IOptions<QueueInsightsBetaSettings> qiSettings,
         TelemetryClient telemetry,
-        ILogger<PullRequestBuildAnalysisProcessor> logger)
+        ILogger<PullRequestEventProcessor> logger)
     {
         _gitHubChecksService = gitHubChecksService;
         _installationLookup = installationLookup;
@@ -47,40 +41,28 @@ public class PullRequestBuildAnalysisProcessor : IPullRequestService
         _logger = logger;
     }
 
-    public bool IsPullRequestMessage(string message, out PullRequestData pullRequestData)
+    public override async Task<bool> ProcessWorkItemAsync(
+        PullRequestGitHubEventWorkItem workItem,
+        CancellationToken cancellationToken)
     {
-        try
-        {
-            pullRequestData = JsonSerializer.Deserialize<PullRequestData>(message);
-            return pullRequestData != null && !string.IsNullOrEmpty(pullRequestData.Action);
-        }
-        catch
-        {
-            pullRequestData = null;
-            return false;
-        }
-    }
-
-    public async Task ProcessPullRequestMessage(PullRequestData pullRequestData)
-    {
-        switch (pullRequestData?.Action)
+        switch (workItem.Action)
         {
             case "opened":
             case "synchronize":
             case "reopened":
-                await CreateNewCheckRun(pullRequestData);
-                await CreateQueueInsightsCheck(pullRequestData);
-                break;
+                await CreateNewCheckRun(workItem);
+                await CreateQueueInsightsCheck(workItem);
+                return true;
             case "closed":
-                await RecordMergedPullRequestMetrics(pullRequestData);
-                break;
+                await RecordMergedPullRequestMetrics(workItem);
+                return true;
             default:
-                _logger.LogError("Unexpected action from Pull Request {action}, aborting", pullRequestData?.Action);
-                return;
+                _logger.LogError("Unexpected action from Pull Request {action}, aborting", workItem?.Action);
+                return false;
         }
     }
 
-    private async Task RecordMergedPullRequestMetrics(PullRequestData pullRequest)
+    private async Task RecordMergedPullRequestMetrics(PullRequestGitHubEventWorkItem pullRequest)
     {
         if (!pullRequest.Merged) return;
 
@@ -147,7 +129,7 @@ public class PullRequestBuildAnalysisProcessor : IPullRequestService
         );
     }
 
-    private async Task CreateNewCheckRun(PullRequestData pullRequest)
+    private async Task CreateNewCheckRun(PullRequestGitHubEventWorkItem pullRequest)
     {
         _logger.LogInformation("Starting new check run for {organization} repository: {repository}, commit: {commit}, pr: {pr} ",
             pullRequest.Organization, pullRequest.Repository, pullRequest.HeadSha, pullRequest.Number.ToString());
@@ -195,7 +177,7 @@ public class PullRequestBuildAnalysisProcessor : IPullRequestService
         );
     }
 
-    private async Task CreateQueueInsightsCheck(PullRequestData pullRequestData)
+    private async Task CreateQueueInsightsCheck(PullRequestGitHubEventWorkItem pullRequestData)
     {
         string repo = $"{pullRequestData.Organization}/{pullRequestData.Repository}";
 
