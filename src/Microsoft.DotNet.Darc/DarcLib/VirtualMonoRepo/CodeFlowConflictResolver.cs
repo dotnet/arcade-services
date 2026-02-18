@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -375,34 +376,6 @@ public abstract class CodeFlowConflictResolver
             .. GetPatchExclusions(codeflowOptions.Mapping),
         ];
 
-        // The changes made to the target repo since the crossing flow might conflict with the crossing flow changes in the source
-        // We need to revert the changes in the target repo so we don't get false red flags
-        var stripRepoChangesPatches = await _patchHandler.CreatePatches(
-            _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch",
-            codeflowOptions.CurrentFlow.IsForwardFlow
-                ? lastFlows.CrossingFlow.VmrSha
-                : lastFlows.CrossingFlow.RepoSha,
-            Constants.HEAD,
-            path: null,
-            filters: excludedFiles,
-            relativePaths: true,
-            workingDir: codeflowOptions.CurrentFlow.IsForwardFlow
-                ? _vmrInfo.GetRepoSourcesPath(codeflowOptions.Mapping)
-                : productRepo.Path,
-            applicationPath: codeflowOptions.CurrentFlow.IsForwardFlow
-                ? vmrSourcesPath
-                : null,
-            ignoreLineEndings: true,
-            cancellationToken);
-        await _patchHandler.ApplyPatches(
-            stripRepoChangesPatches,
-            targetRepo.Path,
-            removePatchAfter: false,
-            keepConflicts: false, // also don't know about this
-            reverseApply: true,
-            applyToIndex: true,
-            cancellationToken);
-
         // We create the patch minus the version, conflicted and cloaked files
         excludedFiles =
         [
@@ -462,23 +435,6 @@ public abstract class CodeFlowConflictResolver
                 revertedFiles,
                 cancellationToken);
         }
-        finally
-        {
-            // now reapply the stripped changes
-            var conflicts = await _patchHandler.ApplyPatches(
-                stripRepoChangesPatches,
-                targetRepo.Path,
-                removePatchAfter: true,
-                keepConflicts: true,
-                reverseApply: false,
-                applyToIndex: true,
-                cancellationToken);
-
-            if (conflicts.Count > 0)
-            {
-                _logger.LogWarning("Conflicts occurred while reapplying stripped changes after detecting partial reverts");
-            }
-        }
     }
 
     private async Task FixRevertedFiles(
@@ -495,6 +451,16 @@ public abstract class CodeFlowConflictResolver
         {
             _logger.LogInformation("Suspecting a revert in {file}. Trying to fix it using a crossing flow...",
                 revertedFile);
+
+            if (!await CheckIfRealRevertAsync(
+                revertedFile,
+                codeflowOptions,
+                crossingFlow, vmr,
+                productRepo,
+                cancellationToken))
+            {
+                continue;
+            }
 
             string contentBefore = await _fileSystem.ReadAllTextAsync(targetRepo.Path / revertedFile);
 
@@ -514,6 +480,105 @@ public abstract class CodeFlowConflictResolver
                 _fileSystem.WriteToFile(targetRepo.Path / revertedFile, contentBefore);
                 await targetRepo.StageAsync([revertedFile], cancellationToken);
             }
+        }
+    }
+
+    /// To check if a file actually got reverted, we need to strip it of the changes since the last crossing flow.
+    /// Returns true if a real reverted happened, false if it was a false positive
+    private async Task<bool> CheckIfRealRevertAsync(
+        UnixPath filePath,
+        CodeflowOptions codeflowOptions,
+        Codeflow crossingFlow,
+        ILocalGitRepo vmr,
+        ILocalGitRepo productRepo,
+        CancellationToken cancellationToken)
+    {
+        var vmrRepoSourcesPath = _vmrInfo.GetRepoSourcesPath(codeflowOptions.Mapping);
+
+        ILocalGitRepo targetRepo;
+        string fromSha, toSha, stripFromSha;
+        NativePath targetWorkingDir, sourceWorkingDir;
+        UnixPath? applicationPath;
+        UnixPath relativeFilePath;
+
+        if (codeflowOptions.CurrentFlow.IsForwardFlow)
+        {
+            targetRepo = vmr;
+            fromSha = crossingFlow.RepoSha;
+            toSha = codeflowOptions.CurrentFlow.RepoSha;
+            stripFromSha = crossingFlow.VmrSha;
+            targetWorkingDir = vmrRepoSourcesPath;
+            sourceWorkingDir = productRepo.Path;
+            applicationPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
+            relativeFilePath = new UnixPath(filePath.Path.Substring(VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name).Length + 1));
+        }
+        else
+        {
+            targetRepo = productRepo;
+            fromSha = crossingFlow.VmrSha;
+            toSha = codeflowOptions.CurrentFlow.VmrSha;
+            stripFromSha = crossingFlow.RepoSha;
+            targetWorkingDir = productRepo.Path;
+            sourceWorkingDir = vmrRepoSourcesPath;
+            applicationPath = null;
+            relativeFilePath = filePath;
+        }
+        string contentBefore = await _fileSystem.ReadAllTextAsync(targetRepo.Path / filePath);
+
+        // strip the changes in the target repo that might be causing a false flag
+        var stripRepoChangesPatches = await _patchHandler.CreatePatches(
+            _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch",
+            stripFromSha,
+            Constants.HEAD,
+            path: relativeFilePath,
+            filters: [],
+            relativePaths: true,
+            workingDir: targetWorkingDir,
+            applicationPath: applicationPath,
+            ignoreLineEndings: true,
+            cancellationToken);
+        await _patchHandler.ApplyPatches(
+            stripRepoChangesPatches,
+            targetRepo.Path,
+            removePatchAfter: true,
+            keepConflicts: false,
+            reverseApply: true,
+            applyToIndex: false,
+            cancellationToken);
+
+        // now reverse apply the patch again. If we get an exception, then it was a real issue, otherwise it was just a false alert
+        List<VmrIngestionPatch> reverseApplyPatch = await _patchHandler.CreatePatches(
+            _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch",
+            fromSha,
+            toSha,
+            path: relativeFilePath,
+            filters: [],
+            relativePaths: true,
+            workingDir: sourceWorkingDir,
+            applicationPath: applicationPath,
+            ignoreLineEndings: true,
+            cancellationToken);
+
+        try
+        {
+            await _patchHandler.ApplyPatches(
+                reverseApplyPatch,
+                targetRepo.Path,
+                removePatchAfter: false,
+                keepConflicts: false,
+                reverseApply: true,
+                applyToIndex: false,
+                cancellationToken);
+            return false;
+        }
+        catch (PatchApplicationFailedException)
+        {
+            return true;
+        }
+        finally
+        {
+            _fileSystem.WriteToFile(targetRepo.Path / filePath, contentBefore);
+            await targetRepo.StageAsync([filePath], cancellationToken);
         }
     }
 
