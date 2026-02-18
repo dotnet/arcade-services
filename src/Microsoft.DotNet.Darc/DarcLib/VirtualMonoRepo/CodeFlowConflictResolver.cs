@@ -376,15 +376,6 @@ public abstract class CodeFlowConflictResolver
             .. GetPatchExclusions(codeflowOptions.Mapping),
         ];
 
-        // We create the patch minus the version, conflicted and cloaked files
-        excludedFiles =
-        [
-            .. conflictedFiles.Select(conflictedFile => VmrPatchHandler.GetExclusionRule(codeflowOptions.CurrentFlow.IsForwardFlow
-                ? new UnixPath(conflictedFile.Path.Substring(vmrSourcesPath.Length + 1))
-                : conflictedFile)),
-            .. GetPatchExclusions(codeflowOptions.Mapping),
-        ];
-
         List<VmrIngestionPatch> patches = await _patchHandler.CreatePatches(
             _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch",
             fromSha,
