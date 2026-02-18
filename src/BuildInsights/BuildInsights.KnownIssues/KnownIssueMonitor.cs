@@ -13,12 +13,12 @@ using Microsoft.Extensions.Options;
 
 namespace BuildInsights.KnownIssues;
 
-public interface IKnownIssueReporter
+public interface IKnownIssueMonitor
 {
     Task RunAsync();
 }
 
-public class KnownIssueReporter : IKnownIssueReporter
+public class KnownIssueMonitor : IKnownIssueMonitor
 {
     private const string InternalProject = "internal";
 
@@ -29,9 +29,9 @@ public class KnownIssueReporter : IKnownIssueReporter
     private readonly IEnumerable<string> _knownIssuesLabels;
     private readonly KnownIssuesReportHelper _knownIssueReportHelper;
     private readonly SsaCriteriaSettings _ssaCriteriaSettings;
-    private readonly ILogger<KnownIssueReporter> _logger;
+    private readonly ILogger<KnownIssueMonitor> _logger;
 
-    public KnownIssueReporter(
+    public KnownIssueMonitor(
         IGitHubGraphQLClient graphQlClient,
         IGitHubIssuesService issuesService,
         IKnownIssuesService knownIssuesService,
@@ -39,7 +39,7 @@ public class KnownIssueReporter : IKnownIssueReporter
         IOptions<KnownIssuesProjectOptions> knownIssuesProjectOptions,
         IOptions<GitHubIssuesSettings> gitHubIssuesSettings,
         IOptions<SsaCriteriaSettings> ssaCriteriaSettings,
-        ILogger<KnownIssueReporter> logger)
+        ILogger<KnownIssueMonitor> logger)
     {
         _graphQlClient = graphQlClient;
         _issuesService = issuesService;

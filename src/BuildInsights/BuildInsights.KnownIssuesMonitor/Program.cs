@@ -10,33 +10,27 @@ using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Http;
 
-namespace BuildInsights.KnownIssuesMonitor;
+var builder = Host.CreateApplicationBuilder();
+var knowIssueMonitor = builder.Services
+    .RegisterServices()
+    .ConfigureServices()
+    .BuildServiceProvider()
+    .CreateScope()
+    .ServiceProvider
+    .GetRequiredService<IKnownIssueMonitor>();
 
-public class Program
+await knowIssueMonitor.RunAsync();
+
+static class Configuration
 {
-    public static void Main(string[] args)
-    {
-        ServiceHost.Run(host =>
-        {
-            host.RegisterStatelessService<KnownIssuesMonitor>("KnownIssuesMonitorType");
-            host.ConfigureServices(ConfigureServices);
-        });
-    }
-
-    public static void ConfigureServices(IServiceCollection services)
-    {
-        AddServices(services);
-        SetConfiguration(services);
-    }
-
-    private static void SetConfiguration(IServiceCollection services)
+    public static IServiceCollection ConfigureServices(this IServiceCollection services)
     {
         (string assemblyName, string assemblyVersion) = Helpers.GetAssemblyVersion();
 
         services.AddDefaultJsonConfiguration();
-        services.Configure<ManagedIdentity>("Secrets", (o, c) => c.Bind(o));
         services.Configure<GitHubTokenProviderOptions>("GitHubAppAuth", (o, c) => c.Bind(o));
         services.Configure<GitHubClientOptions>("GitHubClient", (o, c) => c.Bind(o));
         services.Configure<GitHubClientOptions>(
@@ -56,9 +50,11 @@ public class Program
                 client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue(assemblyName, assemblyVersion));
             });
         });
+
+        return services;
     }
 
-    public static void AddServices(IServiceCollection services)
+    public static IServiceCollection RegisterServices(this IServiceCollection services)
     {
         services.AddHttpClient();
 
@@ -78,7 +74,9 @@ public class Program
         services.AddSingleton<IGitHubIssuesService, GitHubIssuesProvider>();
         services.AddSingleton<IKnownIssuesService, KnownIssuesProvider>();
         services.AddSingleton<IKnownIssuesHistoryService, KnownIssuesHistoryProvider>();
-        services.AddSingleton<IKnownIssueReporter, KnownIssueReporter>();
+        services.AddSingleton<IKnownIssueMonitor, KnownIssueMonitor>();
         services.AddSingleton<KnownIssuesReportHelper>();
+
+        return services;
     }
 }
