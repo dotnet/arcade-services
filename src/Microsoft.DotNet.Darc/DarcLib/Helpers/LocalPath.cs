@@ -52,12 +52,12 @@ public abstract class LocalPath
 
     protected string Combine(string left, string right)
     {
-        if (left == "")
+        if (string.IsNullOrEmpty(left))
         {
             return right;
         }
 
-        if (right == "")
+        if (string.IsNullOrEmpty(right))
         {
             return left;
         }
