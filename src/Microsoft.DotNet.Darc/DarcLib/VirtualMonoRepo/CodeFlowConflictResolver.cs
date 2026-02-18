@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -475,7 +474,7 @@ public abstract class CodeFlowConflictResolver
     }
 
     /// To check if a file actually got reverted, we need to strip it of the changes since the last crossing flow.
-    /// Returns true if a real reverted happened, false if it was a false positive
+    /// Returns true if a real revert happened, false if it was a false positive
     private async Task<bool> CheckIfRealRevertAsync(
         UnixPath filePath,
         CodeflowOptions codeflowOptions,
@@ -556,7 +555,7 @@ public abstract class CodeFlowConflictResolver
             await _patchHandler.ApplyPatches(
                 reverseApplyPatch,
                 targetRepo.Path,
-                removePatchAfter: false,
+                removePatchAfter: true,
                 keepConflicts: false,
                 reverseApply: true,
                 applyToIndex: false,
