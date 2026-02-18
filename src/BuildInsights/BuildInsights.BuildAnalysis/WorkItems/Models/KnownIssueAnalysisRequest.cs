@@ -3,9 +3,9 @@
 
 using ProductConstructionService.WorkItems;
 
-namespace BuildInsights.KnownIssues.WorkItems;
+namespace BuildInsights.BuildAnalysis.WorkItems.Models;
 
-public class AnalysisProcessRequest : WorkItem
+public class KnownIssueAnalysisRequest : WorkItem
 {
     public long IssueId { get; set; }
 

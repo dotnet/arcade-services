@@ -34,7 +34,9 @@ public class CheckRunRerunEventProcessor : WorkItemProcessor<CheckRunRerunGitHub
 
         if (relatedBuild == null)
         {
-            _logger.LogInformation("No authorized related build found for rerun of commit {commit} on repository {repository}", rerunMessage?.HeadSha, rerunMessage?.Repository);
+            _logger.LogInformation("No authorized related build found for rerun of commit {commit} on repository {repository}",
+                workItem.HeadSha,
+                workItem.Repository);
             return false;
         }
 

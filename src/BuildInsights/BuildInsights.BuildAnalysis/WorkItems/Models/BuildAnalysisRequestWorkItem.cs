@@ -3,7 +3,7 @@
 
 using ProductConstructionService.WorkItems;
 
-namespace BuildInsights.KnownIssues.WorkItems;
+namespace BuildInsights.BuildAnalysis.WorkItems.Models;
 
 public class BuildAnalysisRequestWorkItem : WorkItem
 {

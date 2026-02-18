@@ -15,7 +15,7 @@ namespace BuildInsights.KnownIssues;
 
 public interface IKnownIssueReporter
 {
-    Task ExecuteKnownIssueReporter();
+    Task RunAsync();
 }
 
 public class KnownIssueReporter : IKnownIssueReporter
@@ -51,7 +51,7 @@ public class KnownIssueReporter : IKnownIssueReporter
         _logger = logger;
     }
 
-    public async Task ExecuteKnownIssueReporter()
+    public async Task RunAsync()
     {
         ImmutableList<GitHubIssue> issues = await GetKnownIssues();
         _logger.LogInformation("Execute known issues report for {issueCount} issues", issues.Count);

@@ -7,7 +7,6 @@ using BuildInsights.GitHub;
 using BuildInsights.GitHub.Models;
 using BuildInsights.GitHubGraphQL;
 using BuildInsights.GitHubGraphQL.GitHubGraphQLAPI;
-using BuildInsights.KnownIssues;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebHooks;
 using Microsoft.DotNet.Internal.Logging;
@@ -30,7 +29,6 @@ public class GitHubWebhooksController : ControllerBase
     private readonly IOptionsMonitor<KnownIssuesProjectUpdatingOptions> _knownIssuesProjectBoardOptions;
     private readonly IOptionsMonitor<GitHubAppSettings> _appSettings;
     private readonly ILogger<GitHubWebhooksController> _logger;
-    private readonly IKnownIssuesAnalysisService _knownIssuesAnalysisService;
     private readonly IGitHubPullRequestService _prService;
     private readonly IWorkItemProducerFactory _workItemProducerFactory;
 
@@ -39,7 +37,6 @@ public class GitHubWebhooksController : ControllerBase
         IGitHubGraphQLClient graphQLClient,
         OperationManager operations,
         IOptionsMonitor<KnownIssuesProjectUpdatingOptions> knownIssuesProjectBoardOptions,
-        IKnownIssuesAnalysisService knownIssuesAnalysisService,
         IOptionsMonitor<GitHubAppSettings> appSettings,
         IGitHubPullRequestService prService,
         IWorkItemProducerFactory workItemProducerFactory,
@@ -49,7 +46,6 @@ public class GitHubWebhooksController : ControllerBase
         _graphQLClient = graphQLClient;
         _operations = operations;
         _knownIssuesProjectBoardOptions = knownIssuesProjectBoardOptions;
-        _knownIssuesAnalysisService = knownIssuesAnalysisService;
         _appSettings = appSettings;
         _prService = prService;
         _workItemProducerFactory = workItemProducerFactory;
@@ -148,32 +144,32 @@ public class GitHubWebhooksController : ControllerBase
         if (IsBuildAnalysisEvent()
             && issue.SenderType != Octokit.AccountType.Bot.ToString()
             && _knownIssuesProjectBoardOptions.CurrentValue.KnownIssueLabels.Intersect(issue.Labels).Any()
-            && new[] { "opened", "reopened", "labeled", "edited" }.Contains(issue.Action))
+            && new[] { "opened", "reopened", "labeled", "edited" }.Contains(issue.Action)
+            && (issue.Action != "labeled" || _knownIssuesProjectBoardOptions.CurrentValue.KnownIssueLabels.Contains(issue.AddedLabel)))
         {
-            if (issue.Action != "labeled" || _knownIssuesProjectBoardOptions.CurrentValue.KnownIssueLabels.Contains(issue.AddedLabel))
+            var queueProducer = _workItemProducerFactory.CreateProducer<KnownIssueAnalysisRequest>();
+
+            _logger.LogInformation("Requesting known issues analysis for issue {organization}/{issueRepo}#{issueId}", issue.Organization, issue.Repository, issue.IssueNumber);
+
+            await queueProducer.ProduceWorkItemAsync(
+                new KnownIssueAnalysisRequest
+                {
+                    IssueId = issue.IssueNumber,
+                    Repository = issue.Organization + "/" + issue.Repository
+                });
+
+            if (issue.Action != "reopened")
             {
-                try
-                {
-                    await _knownIssuesAnalysisService.RequestKnownIssuesAnalysis(issue.Organization, issue.Repository, issue.IssueNumber);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to send analysis request for issue {issueRepo}#{issueId}", issue.Repository, issue.IssueNumber);
-                }
+                _logger.LogInformation("Sending validation request for {organization}/{repository}#{issueNumber}", issue.Organization, issue.Repository, issue.IssueNumber);
 
-                if (issue.Action != "reopened")
+                var producer = _workItemProducerFactory.CreateProducer<KnownIssueValidationRequest>();
+                await producer.ProduceWorkItemAsync(new()
                 {
-                    _logger.LogInformation("Sending validation request for {organization}/{repository}#{issueNumber}", issue.Organization, issue.Repository, issue.IssueNumber);
-
-                    var producer = _workItemProducerFactory.CreateProducer<KnownIssueValidationRequest>();
-                    await producer.ProduceWorkItemAsync(new()
-                    {
-                        Organization = issue.Organization,
-                        Repository = issue.Repository,
-                        IssueId = issue.IssueNumber,
-                        RepositoryWithOwner = $"{issue.Organization}/{issue.Repository}",
-                    });
-                }
+                    Organization = issue.Organization,
+                    Repository = issue.Repository,
+                    IssueId = issue.IssueNumber,
+                    RepositoryWithOwner = $"{issue.Organization}/{issue.Repository}",
+                });
             }
         }
 

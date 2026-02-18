@@ -2,22 +2,22 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text;
-using BuildInsights.BuildAnalysis;
 using BuildInsights.BuildAnalysis.Models;
+using BuildInsights.BuildAnalysis.WorkItems.Models;
 using BuildInsights.Data.Models;
 using BuildInsights.GitHub;
 using BuildInsights.GitHub.Models;
 using BuildInsights.KnownIssues;
 using BuildInsights.KnownIssues.Models;
-using BuildInsights.KnownIssues.WorkItems;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ProductConstructionService.WorkItems;
 
-namespace BuildInsights.KnownIssuesProcessor;
+#nullable enable
+namespace BuildInsights.BuildAnalysis.WorkItems.Processors;
 
-public class KnownIssuesAnalysisRequestProcessor : WorkItemProcessor<AnalysisProcessRequest>
+public class KnownIssuesAnalysisRequestProcessor : WorkItemProcessor<KnownIssueAnalysisRequest>
 {
     private readonly IWorkItemProducerFactory _workItemProducerFactory;
     private readonly IOptionsMonitor<KnownIssuesProcessorOptions> _options;
@@ -54,7 +54,7 @@ public class KnownIssuesAnalysisRequestProcessor : WorkItemProcessor<AnalysisPro
         _logger = logger;
     }
 
-    public override async Task<bool> ProcessWorkItemAsync(AnalysisProcessRequest workItem, CancellationToken cancellationToken)
+    public override async Task<bool> ProcessWorkItemAsync(KnownIssueAnalysisRequest workItem, CancellationToken cancellationToken)
     {
         GitHubIssue issue = await _gitHubChecksService.GetIssueAsync(workItem.Repository, workItem.IssueId);
         KnownIssueJson issueJson = KnownIssueHelper.GetKnownIssueJson(issue.Body);
@@ -102,7 +102,7 @@ public class KnownIssuesAnalysisRequestProcessor : WorkItemProcessor<AnalysisPro
             List<BuildProcessingStatusEvent> buildEventsWithOverrideForConclusion = await _processingStatusService.GetBuildsWithOverrideConclusion(dateTimeOFilter, cancellationToken);
             IReadOnlyList<int> buildWithOverrideForConclusion = buildEventsWithOverrideForConclusion.Select(b => b.BuildId).ToList();
 
-            foreach (AzureDevOpsProjects project in _options.CurrentValue.AzureDevOpsProjects)
+            foreach (AzureDevOpsProject project in _options.CurrentValue.AzureDevOpsProjects)
             {
                 string? repositoryFilterForProject = project.IsInternal ? GetAzureRepoName(repositoryFilter) : repositoryFilter;
                 IReadOnlyList<Build> buildList = await _buildDataService.GetFailedBuildsAsync(project.OrgId, project.ProjectId, repositoryFilterForProject, cancellationToken);

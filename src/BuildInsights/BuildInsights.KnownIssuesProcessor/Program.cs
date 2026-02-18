@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using BuildInsights.BuildAnalysis;
+using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.GitHub;
 using BuildInsights.KnownIssues;
 using BuildInsights.KnownIssues.Models;

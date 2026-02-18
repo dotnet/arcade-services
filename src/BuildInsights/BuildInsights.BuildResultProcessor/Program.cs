@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Net.Http.Headers;
 using BuildInsights.AzureStorage.Cache;
 using BuildInsights.BuildAnalysis;
@@ -73,7 +72,6 @@ public class Program
                 client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue(assemblyName, assemblyVersion));
             });
         });
-        services.Configure<BuildAnalysisRepositoryConfigurationTableConnectionSettings>("BuildAnalysisRepoConfigurationTable", (o, c) => c.Bind(o));
         services.AddKustoClientProvider("KnownIssuesKustoOptions");
         services.ConfigureTelemetryModule<EventCounterCollectionModule>((module, o) =>
         {
