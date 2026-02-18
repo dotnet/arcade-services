@@ -468,7 +468,7 @@ public abstract class CodeFlowConflictResolver
             var conflicts = await _patchHandler.ApplyPatches(
                 stripRepoChangesPatches,
                 targetRepo.Path,
-                removePatchAfter: false,
+                removePatchAfter: true,
                 keepConflicts: true,
                 reverseApply: false,
                 applyToIndex: true,
