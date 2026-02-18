@@ -496,49 +496,50 @@ public abstract class CodeFlowConflictResolver
         var vmrRepoSourcesPath = _vmrInfo.GetRepoSourcesPath(codeflowOptions.Mapping);
 
         ILocalGitRepo targetRepo;
-        string fromSha, toSha, stripFromSha;
-        NativePath targetWorkingDir, sourceWorkingDir;
+        string stripPatchFromSha;
+        string reverseApplyFromSha, reverseApplyToSha;
+        NativePath stripPatchWorkingDir, reverseApplyWorkingDir;
         UnixPath? applicationPath;
         UnixPath relativeFilePath;
 
         if (codeflowOptions.CurrentFlow.IsForwardFlow)
         {
             targetRepo = vmr;
-            fromSha = crossingFlow.RepoSha;
-            toSha = codeflowOptions.CurrentFlow.RepoSha;
-            stripFromSha = crossingFlow.VmrSha;
-            targetWorkingDir = vmrRepoSourcesPath;
-            sourceWorkingDir = productRepo.Path;
+            stripPatchFromSha = crossingFlow.VmrSha;
+            stripPatchWorkingDir = vmrRepoSourcesPath;
+            reverseApplyFromSha = crossingFlow.RepoSha;
+            reverseApplyToSha = codeflowOptions.CurrentFlow.RepoSha;
+            reverseApplyWorkingDir = productRepo.Path;
             applicationPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
             relativeFilePath = new UnixPath(filePath.Path.Substring(VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name).Length + 1));
         }
         else
         {
             targetRepo = productRepo;
-            fromSha = crossingFlow.VmrSha;
-            toSha = codeflowOptions.CurrentFlow.VmrSha;
-            stripFromSha = crossingFlow.RepoSha;
-            targetWorkingDir = productRepo.Path;
-            sourceWorkingDir = vmrRepoSourcesPath;
+            stripPatchFromSha = crossingFlow.RepoSha;
+            stripPatchWorkingDir = productRepo.Path;
+            reverseApplyFromSha = crossingFlow.VmrSha;
+            reverseApplyToSha = codeflowOptions.CurrentFlow.VmrSha;
+            reverseApplyWorkingDir = vmrRepoSourcesPath;
             applicationPath = null;
             relativeFilePath = filePath;
         }
         string contentBefore = await _fileSystem.ReadAllTextAsync(targetRepo.Path / filePath);
 
-        // strip the changes in the target repo that might be causing a false flag
-        var stripRepoChangesPatches = await _patchHandler.CreatePatches(
+        // strip the changes in the target repo that might be causing a false positive
+        var stripCrossingFlowChangesPatch = await _patchHandler.CreatePatches(
             _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch",
-            stripFromSha,
+            stripPatchFromSha,
             Constants.HEAD,
             path: relativeFilePath,
             filters: [],
             relativePaths: true,
-            workingDir: targetWorkingDir,
+            workingDir: stripPatchWorkingDir,
             applicationPath: applicationPath,
             ignoreLineEndings: true,
             cancellationToken);
         await _patchHandler.ApplyPatches(
-            stripRepoChangesPatches,
+            stripCrossingFlowChangesPatch,
             targetRepo.Path,
             removePatchAfter: true,
             keepConflicts: false,
@@ -546,15 +547,15 @@ public abstract class CodeFlowConflictResolver
             applyToIndex: false,
             cancellationToken);
 
-        // now reverse apply the patch again. If we get an exception, then it was a real issue, otherwise it was just a false alert
+        // now reverse apply the current flow's changes. If it fails, it was a real revert; otherwise a false positive
         List<VmrIngestionPatch> reverseApplyPatch = await _patchHandler.CreatePatches(
             _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch",
-            fromSha,
-            toSha,
+            reverseApplyFromSha,
+            reverseApplyToSha,
             path: relativeFilePath,
             filters: [],
             relativePaths: true,
-            workingDir: sourceWorkingDir,
+            workingDir: reverseApplyWorkingDir,
             applicationPath: applicationPath,
             ignoreLineEndings: true,
             cancellationToken);
