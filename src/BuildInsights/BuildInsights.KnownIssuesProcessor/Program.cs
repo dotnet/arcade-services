@@ -6,7 +6,6 @@ using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.GitHub;
 using BuildInsights.KnownIssues;
 using BuildInsights.KnownIssues.Models;
-using BuildInsights.Utilities.AzureDevOps.Models;
 using BuildInsights.Utilities.Parallel;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.GitHub.Authentication;

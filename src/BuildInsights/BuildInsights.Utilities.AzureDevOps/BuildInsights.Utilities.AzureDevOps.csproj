@@ -11,5 +11,9 @@
     <PackageReference Include="Microsoft.TeamFoundationServer.Client" />
     <PackageReference Include="Microsoft.DotNet.Services.Utility" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\..\Maestro\Maestro.Common\Maestro.Common.csproj" />
+  </ItemGroup>
 
 </Project>

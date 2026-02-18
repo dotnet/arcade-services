@@ -14,8 +14,8 @@ namespace BuildInsights.KnownIssues;
 public interface IGitHubIssuesService
 {
     Task<ImmutableList<KnownIssue>> GetCriticalInfrastructureIssuesAsync();
-    Task<IEnumerable<KnownIssue>> GetInfrastructureKnownIssues();
-    Task<IEnumerable<KnownIssue>> GetRepositoryKnownIssues(string buildRepo);
+    Task<List<KnownIssue>> GetInfrastructureKnownIssues();
+    Task<List<KnownIssue>> GetRepositoryKnownIssues(string buildRepo);
     Task UpdateIssueBodyAsync(string repository, long issueNumber, string description);
     Task<Issue> GetIssueAsync(string repository, long issueNumber);
     Task AddLabelToIssueAsync(string repository, long issueNumber, string label);
@@ -105,13 +105,13 @@ public class GitHubIssuesProvider : IGitHubIssuesService
         return criticalInfraIssues.ToImmutableList();
     }
 
-    public async Task<IEnumerable<KnownIssue>> GetRepositoryKnownIssues(string buildRepo)
+    public async Task<List<KnownIssue>> GetRepositoryKnownIssues(string buildRepo)
     {
         KnownIssueType knownIssueType = _knownIssuesRepositories.Contains(buildRepo) ? KnownIssueType.Infrastructure : KnownIssueType.Repo;
         return await GetIssuesWithOrLabels(buildRepo, knownIssueType, _knownIssuesLabels);
     }
 
-    public async Task<IEnumerable<KnownIssue>> GetInfrastructureKnownIssues()
+    public async Task<List<KnownIssue>> GetInfrastructureKnownIssues()
     {
         var knownIssues = new List<KnownIssue>();
         foreach (string repository in _knownIssuesRepositories.Distinct())

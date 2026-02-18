@@ -1,23 +1,19 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Net;
-using System.Text;
 using Azure.Core;
 using BuildInsights.Api.Configuration;
 using BuildInsights.ServiceDefaults;
+using BuildInsights.Utilities.AzureDevOps;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.AspNetCore.HttpLogging;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 using ProductConstructionService.Common;
 using ProductConstructionService.Common.Telemetry;
 using ProductConstructionService.WorkItems;
@@ -32,8 +28,10 @@ internal static class BuildInsightsStartup
         public const string KeyVaultSecretPrefix = "KeyVaultSecrets:";
 
         // Secrets coming from the KeyVault
-        public const string GitHubClientId = $"{KeyVaultSecretPrefix}github-app-id";
-        public const string GitHubClientSecret = $"{KeyVaultSecretPrefix}github-app-private-key";
+        public const string GitHubAppId = $"{KeyVaultSecretPrefix}github-app-id";
+        public const string GitHubAppPrivateKey = $"{KeyVaultSecretPrefix}github-app-private-key";
+        public const string GitHubWebHookSecret = $"{KeyVaultSecretPrefix}github-app-webhook-secret";
+        public const string AzDoServiceHookSecret = $"{KeyVaultSecretPrefix}azdo-service-hook-secret";
 
         // Configuration from appsettings.json
         public const string AzureDevOpsConfiguration = "AzureDevOps";
@@ -51,13 +49,10 @@ internal static class BuildInsightsStartup
     /// <summary>
     /// Registers all necessary services for the Product Construction Service
     /// </summary>
-    /// <param name="builder"></param>
-    /// <param name="addKeyVault">Use KeyVault for secrets?</param>
     /// <param name="authRedis">Use authenticated connection for Redis?</param>
     /// <param name="addSwagger">Add Swagger?</param>
     internal static async Task ConfigureBuildInsights(
         this WebApplicationBuilder builder,
-        bool addKeyVault,
         bool authRedis,
         bool addSwagger)
     {
@@ -66,20 +61,18 @@ internal static class BuildInsightsStartup
         // Read configuration
         string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
+        builder.Services.AddVssConnection();
 
         TokenCredential azureCredential = AzureAuthentication.GetServiceCredential(isDevelopment, managedIdentityId);
 
         builder.AddDataProtection(azureCredential);
         builder.AddTelemetry();
 
-        if (addKeyVault)
-        {
-            Uri keyVaultUri = new($"https://{builder.Configuration.GetRequiredValue(ConfigurationKeys.KeyVaultName)}.vault.azure.net/");
-            builder.Configuration.AddAzureKeyVault(
-                keyVaultUri,
-                azureCredential,
-                new KeyVaultSecretsWithPrefix(ConfigurationKeys.KeyVaultSecretPrefix));
-        }
+        Uri keyVaultUri = new($"https://{builder.Configuration.GetRequiredValue(ConfigurationKeys.KeyVaultName)}.vault.azure.net/");
+        builder.Configuration.AddAzureKeyVault(
+            keyVaultUri,
+            azureCredential,
+            new KeyVaultSecretsWithPrefix(ConfigurationKeys.KeyVaultSecretPrefix));
 
         builder.Services.TryAddSingleton<IRemoteTokenProvider>(sp =>
         {
@@ -98,8 +91,8 @@ internal static class BuildInsightsStartup
         builder.AddWorkItemProducerFactory(azureCredential, workItemQueueName, specialWorkItemQueueName);
 
         builder.AddGitHubClientFactory(
-            builder.Configuration[ConfigurationKeys.GitHubClientId],
-            builder.Configuration[ConfigurationKeys.GitHubClientSecret]);
+            builder.Configuration[ConfigurationKeys.GitHubAppId],
+            builder.Configuration[ConfigurationKeys.GitHubAppPrivateKey]);
         builder.Services.AddGitHubTokenProvider();
         builder.Services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();
         builder.Services.AddSingleton<ExponentialRetry>();
@@ -146,11 +139,11 @@ internal static class BuildInsightsStartup
         {
             builder.Services.AddCors(policy =>
             {
-                policy.AddDefaultPolicy(p =>
-                    // These come from BarViz project's launchsettings.json
-                    p.WithOrigins("https://localhost:7287", "http://localhost:5015")
-                      .AllowAnyHeader()
-                      .AllowAnyMethod());
+                //policy.AddDefaultPolicy(p =>
+                //    // These come from BarViz project's launchsettings.json
+                //    p.WithOrigins("https://localhost:7287", "http://localhost:5015")
+                //      .AllowAnyHeader()
+                //      .AllowAnyMethod());
             });
         }
 
@@ -181,17 +174,17 @@ internal static class BuildInsightsStartup
 
     public static void ConfigureApi(this IApplicationBuilder app, bool isDevelopment)
     {
-        // app.UseApiRedirection(requireAuth: !isDevelopment);
-        app.UseExceptionHandler(a =>
-            a.Run(async ctx =>
-            {
-                var result = new ApiError("An error occured.");
-                MvcNewtonsoftJsonOptions jsonOptions =
-                    ctx.RequestServices.GetRequiredService<IOptions<MvcNewtonsoftJsonOptions>>().Value;
-                string output = JsonConvert.SerializeObject(result, jsonOptions.SerializerSettings);
-                ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                await ctx.Response.WriteAsync(output, Encoding.UTF8);
-            }));
+        //app.UseApiRedirection(requireAuth: !isDevelopment);
+        //app.UseExceptionHandler(a =>
+        //    a.Run(async ctx =>
+        //    {
+        //        var result = new ApiError("An error occured.");
+        //        MvcNewtonsoftJsonOptions jsonOptions =
+        //            ctx.RequestServices.GetRequiredService<IOptions<MvcNewtonsoftJsonOptions>>().Value;
+        //        string output = JsonConvert.SerializeObject(result, jsonOptions.SerializerSettings);
+        //        ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        //        await ctx.Response.WriteAsync(output, Encoding.UTF8);
+        //    }));
         app.UseEndpoints(e =>
         {
             var controllers = e.MapControllers();

@@ -82,7 +82,7 @@ public class BuildReferenceIdentifier
         if (obj == null) return false;
         if (obj.GetType() != typeof(BuildReferenceIdentifier)) return false;
 
-        BuildReferenceIdentifier input = (BuildReferenceIdentifier)obj;
+        var input = (BuildReferenceIdentifier)obj;
 
         if (Org == input.Org &&
             Project == input.Project &&
@@ -100,7 +100,7 @@ public class BuildReferenceIdentifier
 
     public override int GetHashCode()
     {
-        HashCode hash = new HashCode();
+        var hash = new HashCode();
         hash.Add(Org);
         hash.Add(Project);
         hash.Add(BuildId);

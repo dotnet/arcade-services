@@ -14,7 +14,6 @@ bool useSwagger = isDevelopment;
 
 // Add service defaults & Aspire client integrations.
 await builder.ConfigureBuildInsights(
-    addKeyVault: false /* TODO */,
     authRedis: !isDevelopment,
     addSwagger: useSwagger);
 builder.AddServiceDefaults();

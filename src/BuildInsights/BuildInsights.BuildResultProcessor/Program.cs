@@ -8,7 +8,6 @@ using BuildInsights.BuildAnalysis.WorkItems.Processors;
 using BuildInsights.GitHub;
 using BuildInsights.KnownIssues;
 using BuildInsights.QueueInsights;
-using BuildInsights.Utilities.AzureDevOps.Models;
 using Microsoft.ApplicationInsights.Extensibility.EventCounterCollector;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.GitHub.Authentication;

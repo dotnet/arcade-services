@@ -7,7 +7,6 @@ using Microsoft.Extensions.Options;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.KnownIssues.Models;
 using BuildInsights.KnownIssues;
-using BuildInsights.Utilities.AzureDevOps.Models;
 
 namespace BuildInsights.BuildAnalysis;
 
@@ -21,21 +20,18 @@ public class TestResultProvider : ITestResultService
     private readonly IHelixDataService _helixDataService;
     private readonly IHttpClientFactory _httpFactory;
     private readonly IKnownIssuesMatchService _knownIssuesMatchService;
-    private readonly AzureDevOpsSettingsCollection _azdoSettings;
     private readonly KnownIssuesAnalysisLimits _analysisLimits;
     private readonly ILogger<TestResultProvider> _logger;
 
     public TestResultProvider(IHelixDataService helixDataService,
         IHttpClientFactory httpFactory,
         IKnownIssuesMatchService knownIssuesMatchService,
-        IOptions<AzureDevOpsSettingsCollection> azdoSettings,
         IOptions<KnownIssuesAnalysisLimits> analysisLimits,
         ILogger<TestResultProvider> logger)
     {
         _helixDataService = helixDataService;
         _httpFactory = httpFactory;
         _knownIssuesMatchService = knownIssuesMatchService;
-        _azdoSettings = azdoSettings.Value;
         _analysisLimits = analysisLimits.Value;
         _logger = logger;
     }
@@ -45,9 +41,10 @@ public class TestResultProvider : ITestResultService
         IReadOnlyList<KnownIssue> knownIssues,
         string orgId)
     {
+        var azdoUrl = $"https://dev.azure.com/{orgId}";
         List<TestResult> testResults = failingTestCaseResults
             .SelectMany(run => run.Results)
-            .Select(result => new TestResult(result, _azdoSettings.Settings.First(x => x.OrgId == orgId).CollectionUri))
+            .Select(result => new TestResult(result, azdoUrl))
             .ToList();
 
         List<TestResult> testResultsToAnalyze = testResults.Take(_analysisLimits.FailingTestCountLimit).ToList();

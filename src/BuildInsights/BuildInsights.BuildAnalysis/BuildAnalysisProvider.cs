@@ -6,7 +6,7 @@ using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.GitHub.Models;
 using BuildInsights.KnownIssues;
 using BuildInsights.KnownIssues.Models;
-using BuildInsights.Utilities.AzureDevOps.Models;
+using Maestro.Common;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -21,7 +21,6 @@ public interface IBuildAnalysisService
 public class BuildAnalysisProvider : IBuildAnalysisService
 {
     private readonly IBuildDataService _buildDataService;
-    private readonly IOptions<AzureDevOpsSettingsCollection> _azdoSettings;
     private readonly ILogger<BuildAnalysisProvider> _logger;
     private readonly TelemetryClient _telemetryClient;
     private readonly IBuildCacheService _cache;
@@ -38,7 +37,6 @@ public class BuildAnalysisProvider : IBuildAnalysisService
     public BuildAnalysisProvider(
         IBuildDataService buildDataService,
         IBuildRetryService buildRetryService,
-        IOptions<AzureDevOpsSettingsCollection> azdoSettings,
         IOptions<KnownIssuesAnalysisLimits> analysisLimits,
         IOptions<InternalProject> internalProject,
         ILogger<BuildAnalysisProvider> logger,
@@ -53,7 +51,6 @@ public class BuildAnalysisProvider : IBuildAnalysisService
     {
         _buildDataService = buildDataService;
         _buildRetryService = buildRetryService;
-        _azdoSettings = azdoSettings;
         _internalProject = internalProject.Value;
         _logger = logger;
         _telemetryClient = telemetryClient;
@@ -158,7 +155,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
         TestKnownIssuesAnalysis testKnownIssuesAnalysis = await _testResultService.GetTestFailingWithKnownIssuesAnalysis(testResultsCausingBuildToFail, knownIssues.ToList(), buildReference.Org);
         buildAnalysis.TestKnownIssuesAnalysis = testKnownIssuesAnalysis;
         buildAnalysis.TotalTestFailures = testResultsCausingBuildToFail.Sum(t => t.Results.Count);
-        buildAnalysis.TestResults.AddRange(await GetTestResults(testResultsCausingBuildToFail, buildReference, buildAnalysis.TargetBranch, testKnownIssuesAnalysis, cancellationToken)); // short name
+        buildAnalysis.TestResults.AddRange(await GetTestResults(testResultsCausingBuildToFail, buildReference, testKnownIssuesAnalysis, cancellationToken)); // short name
 
         //If the build succeeds gathering information about previous failures
         if (buildAnalysis.BuildStatus == BuildStatus.Succeeded && !isValidationAnalysis)
@@ -170,7 +167,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
                 IReadOnlyList<TestRunDetails> allFailuresTestCaseResults = await _buildDataService.GetAllFailingTestsForBuildAsync(build, cancellationToken);
                 buildAnalysis.LatestAttempt = new Attempt
                 {
-                    TestResults = await GetTestResults(allFailuresTestCaseResults, buildReference, buildAnalysis.TargetBranch, new TestKnownIssuesAnalysis(), cancellationToken)
+                    TestResults = await GetTestResults(allFailuresTestCaseResults, buildReference, new TestKnownIssuesAnalysis(), cancellationToken)
                 };
 
                 _logger.LogInformation($"BuildId {build.Id} in org {buildReference.Org} in project {buildReference.Project}. Fetching timeline records from previous attempt");
@@ -195,7 +192,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
                 }
             }
 
-            buildAnalysis.TestResults.AddRange(await GetTestResults(ImmutableList<TestRunDetails>.Empty, buildReference, buildAnalysis.TargetBranch, new TestKnownIssuesAnalysis(), cancellationToken));
+            buildAnalysis.TestResults.AddRange(await GetTestResults(ImmutableList<TestRunDetails>.Empty, buildReference, new TestKnownIssuesAnalysis(), cancellationToken));
         }
 
         // Update or remove build messages
@@ -204,7 +201,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
         //Verified the status of the build to be sure that hasn't be retry manually
         if (build.Result == BuildResult.Failed)
         {
-            buildAnalysis.BuildAutomaticRetry = await TryRetryBuild(buildReference, cancellationToken, buildAnalysis);
+            buildAnalysis.BuildAutomaticRetry = await TryRetryBuild(buildReference, buildAnalysis, cancellationToken);
             if (buildAnalysis.BuildAutomaticRetry.HasRerunAutomatically)
             {
                 buildAnalysis.BuildStatus = BuildStatus.InProgress;
@@ -250,7 +247,6 @@ public class BuildAnalysisProvider : IBuildAnalysisService
         CaptureStepsTelemetry(buildAnalysis, build);
 
         await _knownIssuesService.SaveKnownIssuesHistory(knownIssues, build.Id);
-
         await _knownIssuesService.SaveKnownIssuesMatches(build.Id, KnownIssuesMatchHelper.GetKnownIssueMatchesInBuild(build, buildAnalysis));
         await _knownIssuesService.SaveTestsKnownIssuesMatches(build.Id, KnownIssuesMatchHelper.GetKnownIssueMatchesInTests(build, buildAnalysis));
 
@@ -264,8 +260,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
 
     private async Task<IEnumerable<KnownIssue>> GetKnownIssues(Build build)
     {
-        IEnumerable<KnownIssue> infrastructureKnownIssues = await _gitHubIssuesService.GetInfrastructureKnownIssues();
-        List<KnownIssue> knownIssues = infrastructureKnownIssues.ToList();
+        List<KnownIssue> knownIssues = await _gitHubIssuesService.GetInfrastructureKnownIssues();
 
         if (build.ProjectId?.Equals(_internalProject.Id) ?? false)
         {
@@ -288,7 +283,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
         return knownIssues;
     }
 
-    private async Task<BuildAutomaticRetry> TryRetryBuild(BuildReferenceIdentifier buildReference, CancellationToken cancellationToken, BuildResultAnalysis buildAnalysis)
+    private async Task<BuildAutomaticRetry> TryRetryBuild(BuildReferenceIdentifier buildReference, BuildResultAnalysis buildAnalysis, CancellationToken cancellationToken)
     {
         if (await _buildRetryService.RetryIfSuitable(buildReference.Org, buildReference.Project, buildReference.BuildId, cancellationToken))
         {
@@ -307,14 +302,14 @@ public class BuildAnalysisProvider : IBuildAnalysisService
         return new BuildAutomaticRetry(false);
     }
 
-    private string CreateLinkToStep(BuildReferenceIdentifier buildReference, TimelineRecord record)
+    private static string CreateLinkToStep(BuildReferenceIdentifier buildReference, TimelineRecord record)
     {
-        return $"{_azdoSettings.Value.Settings.First(x => x.OrgId == buildReference.Org).CollectionUri}/{buildReference.Project}/_build/results?buildId={buildReference.BuildId}&view=logs&j={record.ParentId:D}";
+        return BuildUrlUtils.GetBuildJobUrl(buildReference.Org, buildReference.Project, buildReference.BuildId, record.ParentId);
     }
 
-    private string CreateConsoleLogLink(BuildReferenceIdentifier buildReference, TimelineRecord record, TimelineIssue issue)
+    private static string CreateConsoleLogLink(BuildReferenceIdentifier buildReference, TimelineRecord record, TimelineIssue issue)
     {
-        string uri = $"{_azdoSettings.Value.Settings.First(x => x.OrgId == buildReference.Org).CollectionUri}/{buildReference.Project}/_build/results?buildId={buildReference.BuildId}&view=logs&j={record.ParentId:D}&t={record.Id}";
+        string uri = CreateLinkToStep(buildReference, record) + $"&t={record.Id}";
 
         if (issue.Data.TryGetValue("logFileLineNumber", out string lineNumber))
         {
@@ -505,7 +500,6 @@ public class BuildAnalysisProvider : IBuildAnalysisService
     private async Task<List<TestResult>> GetTestResults(
         IReadOnlyList<TestRunDetails> failingTestCaseResults,
         BuildReferenceIdentifier buildReference,
-        Branch targetBranch,
         TestKnownIssuesAnalysis testKnownIssuesAnalysis,
         CancellationToken cancellationToken)
     {
@@ -527,7 +521,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
                 cancellationToken
             );
 
-            var testResult = new TestResult(testCaseResult, _azdoSettings.Value.Settings.First(x => x.OrgId == buildReference.Org).CollectionUri, GetTestFailureRate(testHistory))
+            var testResult = new TestResult(testCaseResult, $"https://dev.azure.com/{buildReference.Org}", GetTestFailureRate(testHistory))
             {
                 FailingConfigurations = BuildFailingConfiguration(buildReference, failingTestCaseResults, testCaseResult.Name),
                 HelixWorkItem = await _helixDataService.TryGetHelixWorkItem(testCaseResult.Comment, cancellationToken)
@@ -581,9 +575,9 @@ public class BuildAnalysisProvider : IBuildAnalysisService
         return previousTimelineRecords.SelectMany(r => r).ToList();
     }
 
-    private string BuildTestResultsTabUri(Build build)
+    private static string BuildTestResultsTabUri(Build build)
     {
-        return $"{_azdoSettings.Value.Settings.First(x => x.OrgId == build.OrganizationName).CollectionUri}/{build.ProjectName}/_build/results?buildId={build.Id}&view=ms.vss-test-web.build-test-results-tab";
+        return $"{BuildUrlUtils.GetBuildUrl(build.OrganizationName, build.ProjectName, build.Id)}&view=ms.vss-test-web.build-test-results-tab";
     }
 
     private async Task<int> BuildAttempt(string org, string project, int buildId, CancellationToken cancellationToken)
@@ -597,7 +591,10 @@ public class BuildAnalysisProvider : IBuildAnalysisService
         return timelineRecords.Any() ? timelineRecords.Max(r => r.Attempt) : 0;
     }
 
-    private void CleanBuildMessages(List<StepResult> stepResults, List<TestRunDetails> testRunDetails, Dictionary<Guid, TimelineRecord> recordDictionary = null)
+    private static void CleanBuildMessages(
+        List<StepResult> stepResults,
+        List<TestRunDetails> testRunDetails,
+        Dictionary<Guid, TimelineRecord> recordDictionary = null)
     {
         string suffixMatch = "exited with code '1'.";
 
