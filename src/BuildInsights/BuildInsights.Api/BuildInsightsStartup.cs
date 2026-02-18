@@ -3,6 +3,7 @@
 
 using Azure.Core;
 using BuildInsights.Api.Configuration;
+using BuildInsights.KnownIssues.Models;
 using BuildInsights.ServiceDefaults;
 using BuildInsights.Utilities.AzureDevOps;
 using Maestro.Common;
@@ -40,6 +41,7 @@ internal static class BuildInsightsStartup
         public const string EntraAuthenticationKey = "EntraAuthentication";
         public const string KeyVaultName = "KeyVaultName";
         public const string ManagedIdentityId = "ManagedIdentityClientId";
+        public const string KnownIssuesProjectKey = "KnownIssuesProject";
 
         public const string WorkItemQueueName = "WorkItemQueueName";
         public const string SpecialWorkItemQueueName = "SpecialWorkItemQueueName";
@@ -61,12 +63,13 @@ internal static class BuildInsightsStartup
         // Read configuration
         string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
-        builder.Services.AddVssConnection();
 
         TokenCredential azureCredential = AzureAuthentication.GetServiceCredential(isDevelopment, managedIdentityId);
 
         builder.AddDataProtection(azureCredential);
         builder.AddTelemetry();
+
+        builder.Services.Configure<KnownIssuesProjectOptions>(ConfigurationKeys.KnownIssuesProjectKey, (o, s) => s.Bind(o));
 
         Uri keyVaultUri = new($"https://{builder.Configuration.GetRequiredValue(ConfigurationKeys.KeyVaultName)}.vault.azure.net/");
         builder.Configuration.AddAzureKeyVault(
@@ -80,6 +83,7 @@ internal static class BuildInsightsStartup
             var gitHubTokenProvider = sp.GetRequiredService<IGitHubTokenProvider>();
             return new RemoteTokenProvider(azdoTokenProvider, new Microsoft.DotNet.DarcLib.GitHubTokenProvider(gitHubTokenProvider));
         });
+        builder.Services.AddVssConnection();
 
         await builder.AddRedisCache(authRedis);
         var workItemQueueName = builder.Configuration.GetRequiredValue(ConfigurationKeys.WorkItemQueueName);

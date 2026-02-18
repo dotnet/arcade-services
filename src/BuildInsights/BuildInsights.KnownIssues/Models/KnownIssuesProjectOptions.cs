@@ -5,6 +5,9 @@ namespace BuildInsights.KnownIssues.Models;
 
 public class KnownIssuesProjectOptions
 {
-    public string Organization { get; set; }
     public int ProjectNumber { get; set; }
+    public string Organization { get; set; }
+    public string[] KnownIssueLabels { get; set; }
+    public string[] CriticalIssueLabels { get; set; }
+    public string IssueTypeField { get; set; }
 }

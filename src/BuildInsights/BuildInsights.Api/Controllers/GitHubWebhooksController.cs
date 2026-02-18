@@ -7,6 +7,7 @@ using BuildInsights.GitHub;
 using BuildInsights.GitHub.Models;
 using BuildInsights.GitHubGraphQL;
 using BuildInsights.GitHubGraphQL.GitHubGraphQLAPI;
+using BuildInsights.KnownIssues.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebHooks;
 using Microsoft.DotNet.Internal.Logging;
@@ -26,7 +27,7 @@ public class GitHubWebhooksController : ControllerBase
     private readonly IGitHubChecksService _checks;
     private readonly IGitHubGraphQLClient _graphQLClient;
     private readonly OperationManager _operations;
-    private readonly IOptionsMonitor<KnownIssuesProjectUpdatingOptions> _knownIssuesProjectBoardOptions;
+    private readonly IOptionsMonitor<KnownIssuesProjectOptions> _knownIssuesProjectBoardOptions;
     private readonly IOptionsMonitor<GitHubAppSettings> _appSettings;
     private readonly ILogger<GitHubWebhooksController> _logger;
     private readonly IGitHubPullRequestService _prService;
@@ -36,7 +37,7 @@ public class GitHubWebhooksController : ControllerBase
         IGitHubChecksService checks,
         IGitHubGraphQLClient graphQLClient,
         OperationManager operations,
-        IOptionsMonitor<KnownIssuesProjectUpdatingOptions> knownIssuesProjectBoardOptions,
+        IOptionsMonitor<KnownIssuesProjectOptions> knownIssuesProjectBoardOptions,
         IOptionsMonitor<GitHubAppSettings> appSettings,
         IGitHubPullRequestService prService,
         IWorkItemProducerFactory workItemProducerFactory,

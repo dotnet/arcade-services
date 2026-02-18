@@ -34,14 +34,9 @@ public partial class BuildUrlUtils
         return $"https://dev.azure.com/{organization}/{project}/_build/results?buildId={buildId}";
     }
 
-    public static string GetBuildJobUrl(string organization, string project, int buildId, string jobId)
+    public static string GetBuildJobUrl(string organization, string project, int buildId, Guid? jobId)
     {
-        if (string.IsNullOrEmpty(organization) || string.IsNullOrEmpty(project) || string.IsNullOrEmpty(jobId))
-        {
-            return string.Empty;
-        }
-
-        return $"https://dev.azure.com//{organization}/{project}/_build/results?buildId={buildId}&view=logs&j={jobId}";
+        return $"https://dev.azure.com//{organization}/{project}/_build/results?buildId={buildId}&view=logs&j={jobId:D}";
     }
 
     [GeneratedRegex("(dev.azure.com/[a-z]+-?[a-z]+)")]
