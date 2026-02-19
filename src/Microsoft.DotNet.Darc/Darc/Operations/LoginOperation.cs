@@ -36,7 +36,7 @@ internal class LoginOperation : Operation
             _logger.LogInformation("Authenticating with Maestro at {barUri}", barUri);
 
             // Get the appropriate app ID for the Maestro URI
-            string appId = GetAppIdForUri(barUri);
+            string appId = ProductConstructionServiceApiOptions.GetAppIdForUri(barUri);
             
             _logger.LogInformation("Opening browser for authentication...");
             
@@ -68,30 +68,5 @@ internal class LoginOperation : Operation
             _logger.LogInformation("If authentication continues to fail, you can use 'darc authenticate' to manually configure tokens.");
             return Constants.ErrorCode;
         }
-    }
-
-    /// <summary>
-    /// Gets the Entra app ID for a given Maestro URI
-    /// </summary>
-    private string GetAppIdForUri(string uri)
-    {
-        string normalizedUri = uri.TrimEnd('/');
-        
-        // Production Maestro
-        if (normalizedUri == ProductConstructionServiceApiOptions.ProductionMaestroUri.TrimEnd('/') ||
-            normalizedUri == ProductConstructionServiceApiOptions.OldProductionMaestroUri.TrimEnd('/'))
-        {
-            return "54c17f3d-7325-4eca-9db7-f090bfc765a8"; // MaestroProductionAppId
-        }
-        
-        // Staging Maestro or localhost
-        if (normalizedUri == ProductConstructionServiceApiOptions.StagingMaestroUri.TrimEnd('/') ||
-            normalizedUri == ProductConstructionServiceApiOptions.OldStagingMaestroUri.TrimEnd('/') ||
-            normalizedUri == ProductConstructionServiceApiOptions.PcsLocalUri.TrimEnd('/'))
-        {
-            return "baf98f1b-374e-487d-af42-aa33807f11e4"; // MaestroStagingAppId
-        }
-        
-        throw new ArgumentException($"Unknown Maestro URI: {uri}. Please use one of the known Maestro endpoints or configure authentication manually using 'darc authenticate'.");
     }
 }

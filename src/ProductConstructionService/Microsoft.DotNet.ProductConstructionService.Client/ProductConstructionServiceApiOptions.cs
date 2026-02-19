@@ -39,6 +39,24 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         };
 
         /// <summary>
+        /// Gets the Entra app ID for a given Maestro URI
+        /// </summary>
+        /// <param name="baseUri">The Maestro base URI</param>
+        /// <returns>The Entra app ID for the given URI</returns>
+        /// <exception cref="ArgumentException">Thrown when the URI is not a known Maestro endpoint</exception>
+        public static string GetAppIdForUri(string baseUri)
+        {
+            string normalizedUri = baseUri.TrimEnd('/');
+            
+            if (EntraAppIds.TryGetValue(normalizedUri, out string appId))
+            {
+                return appId;
+            }
+            
+            throw new ArgumentException($"Unknown Maestro URI: {baseUri}. Please use one of the known Maestro endpoints.");
+        }
+
+        /// <summary>
         /// Creates a new instance of <see cref="ProductConstructionServiceApiOptions"/> with the provided base URI.
         /// </summary>
         /// <param name="baseUri">API base URI</param>
