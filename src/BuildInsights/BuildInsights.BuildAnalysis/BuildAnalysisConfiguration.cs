@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using BuildInsights.AzureStorage.Cache;
 using BuildInsights.BuildAnalysis.HandleBar;
 using BuildInsights.GitHub;
 using BuildInsights.KnownIssues;
@@ -17,6 +18,9 @@ public static class BuildAnalysisConfiguration
     {
         services.TryAddSingleton<IMarkdownGenerator, MarkdownGenerator>();
         services.AddHandleBarHelpers();
+        services.AddBlobStorageCaching();
+        services.AddKnownIssues();
+        services.AddQueueInsights();
 
         services.TryAddScoped<IGitHubChecksService, GitHubChecksProvider>();
         services.TryAddScoped<IGitHubIssuesService, GitHubIssuesProvider>();
@@ -33,9 +37,6 @@ public static class BuildAnalysisConfiguration
         services.TryAddScoped<IBuildRetryService, BuildRetryProvider>();
         services.TryAddScoped<ICheckResultService, CheckResultProvider>();
         services.TryAddScoped<IHelixDataService, HelixDataProvider>();
-        services.TryAddScoped<IKnownIssuesHistoryService, KnownIssuesHistoryProvider>();
-        services.TryAddScoped<IKnownIssuesMatchService, KnownIssuesMatchProvider>();
-        services.TryAddScoped<IKnownIssuesService, KnownIssuesProvider>();
         services.TryAddScoped<IKnownIssueValidationService, KnownIssueValidationProvider>();
         services.TryAddScoped<IKustoClientProvider, KustoClientProvider>();
         services.TryAddScoped<IKustoIngestClientFactory, KustoIngestClientFactory>();
@@ -44,10 +45,14 @@ public static class BuildAnalysisConfiguration
         services.TryAddScoped<IPreviousBuildAnalysisService, PreviousBuildAnalysisProvider>();
         services.TryAddScoped<ITestResultService, TestResultProvider>();
 
-        services.AddSingleton<IQueueInsightsMarkdownGenerator, QueueInsightsMarkdownGenerator>();
-        services.TryAddScoped<IQueueInsightsService, QueueInsightsService>();
-        services.TryAddScoped<IQueueTimeService, QueueTimeService>();
-        services.TryAddScoped<IMatrixOfTruthService, MatrixOfTruthService>();
+        services.AddDefaultJsonConfiguration();
+        services.Configure<InternalProject>("InternalProject", (o, c) => c.Bind(o));
+        services.Configure<SentimentUrlOptions>("UserSentiment", (o, c) => c.Bind(o));
+        services.Configure<BuildConfigurationFileSettings>("BuildConfigurationFileSettings", (o, c) => c.Bind(o));
+        services.Configure<GitHubIssuesSettings>("GitHubIssuesSettings", (o, c) => c.Bind(o));
+        services.Configure<RelatedBuildProviderSettings>("RelatedBuildProviderSettings", (o, c) => c.Bind(o));
+        services.Configure<BuildAnalysisFileSettings>("BuildAnalysisFileSettings", (o, c) => c.Bind(o));
+        services.AddKustoClientProvider("KnownIssuesKustoOptions");
 
         return services;
     }
