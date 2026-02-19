@@ -48,6 +48,7 @@ internal static class BuildInsightsStartup
         public const string KnownIssuesCreationKey = "KnownIssuesCreation";
         public const string KnownIssuesAnalysisLimitsKey = "KnownIssuesAnalysisLimits";
         public const string KnownIssuesKustoKey = "KnownIssuesKusto";
+        public const string BlobStorageKey = "KnownIssuesKusto";
 
         public const string WorkItemQueueName = "WorkItemQueueName";
         public const string SpecialWorkItemQueueName = "SpecialWorkItemQueueName";
@@ -112,9 +113,10 @@ internal static class BuildInsightsStartup
         await builder.AddRedisCache(authRedis);
 
         builder.Services.AddBuildAnalysis(
-            ConfigurationKeys.KnownIssuesCreationKey,
-            ConfigurationKeys.KnownIssuesAnalysisLimitsKey,
-            ConfigurationKeys.KnownIssuesKustoKey);
+            builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesCreationKey),
+            builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesAnalysisLimitsKey),
+            builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesKustoKey),
+            builder.Configuration.GetSection(ConfigurationKeys.BlobStorageKey));
 
         // Set up telemetry
         builder.AddServiceDefaults();
