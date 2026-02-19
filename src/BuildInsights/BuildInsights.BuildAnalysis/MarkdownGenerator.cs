@@ -2,9 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using HandlebarsDotNet;
-using Microsoft.Extensions.Logging;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Models.Views;
+using BuildInsights.BuildAnalysis.HandleBar;
 
 namespace BuildInsights.BuildAnalysis;
 
@@ -17,15 +17,11 @@ public interface IMarkdownGenerator
 
 public class MarkdownGenerator : IMarkdownGenerator
 {
-    private readonly ILogger<MarkdownGenerator> _logger;
     private readonly IHandlebars _hb = Handlebars.Create(new HandlebarsConfiguration { TextEncoder = new MarkdownEncoder() });
     private readonly Dictionary<string, HandlebarsTemplate<object, object>> _templates;
 
-    public MarkdownGenerator(
-        HandlebarHelpers helpers,
-        ILogger<MarkdownGenerator> logger)
+    public MarkdownGenerator(HandlebarHelpers helpers)
     {
-        _logger = logger;
         helpers.AddHelpers(_hb);
         _templates = Templates.Compile(_hb);
     }

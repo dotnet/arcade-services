@@ -91,7 +91,7 @@ public class TestResultView : IResult
     {
         string uri = $"{_azDOUrl}/{testResult.ProjectName}/_build/results?buildId={testResult.BuildId}&view=ms.vss-test-web.build-test-results-tab&runId={testResult.TestRunId}&resultId={testResult.Id}";
 
-        if (!(panel is null))
+        if (panel is not null)
         {
             uri += $"&paneView={Uri.EscapeDataString(panel)}";
         }
