@@ -31,12 +31,6 @@ static file class Configuration
         (string assemblyName, string assemblyVersion) = Helpers.GetAssemblyVersion();
 
         services.AddDefaultJsonConfiguration();
-        services.Configure<GitHubTokenProviderOptions>("GitHubAppAuth", (o, c) => c.Bind(o));
-        services.Configure<GitHubClientOptions>("GitHubClient", (o, c) => c.Bind(o));
-        services.Configure<GitHubClientOptions>(
-            options => { options.ProductHeader = new Octokit.ProductHeaderValue(assemblyName, assemblyVersion); }
-        );
-        services.Configure<GitHubGraphQLOptions>("GitHubGraphQLOptions", (o, c) => c.Bind(o));
         services.Configure<GitHubIssuesSettings>("GitHubIssuesSettings", (o, c) => c.Bind(o));
         services.Configure<KnownIssuesProjectOptions>("KnownIssuesProjectOptions", (o, c) => c.Bind(o));
         services.Configure<KustoOptions>("Kusto", (o, c) => c.Bind(o));

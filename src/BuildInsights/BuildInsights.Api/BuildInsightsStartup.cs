@@ -3,6 +3,7 @@
 
 using Azure.Core;
 using BuildInsights.Api.Configuration;
+using BuildInsights.GitHubGraphQL;
 using BuildInsights.KnownIssues.Models;
 using BuildInsights.ServiceDefaults;
 using BuildInsights.Utilities.AzureDevOps;
@@ -52,40 +53,40 @@ internal static class BuildInsightsStartup
     /// Registers all necessary services for the Product Construction Service
     /// </summary>
     /// <param name="authRedis">Use authenticated connection for Redis?</param>
-    /// <param name="addSwagger">Add Swagger?</param>
     internal static async Task ConfigureBuildInsights(
         this WebApplicationBuilder builder,
-        bool authRedis,
-        bool addSwagger)
+        bool authRedis)
     {
         bool isDevelopment = builder.Environment.IsDevelopment();
 
-        // Read configuration
+        // Register configuration settings
         string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
-
-        TokenCredential azureCredential = AzureAuthentication.GetServiceCredential(isDevelopment, managedIdentityId);
-
-        builder.AddDataProtection(azureCredential);
-        builder.AddTelemetry();
-
         builder.Services.Configure<KnownIssuesProjectOptions>(ConfigurationKeys.KnownIssuesProjectKey, (o, s) => s.Bind(o));
 
+        // Set up Key Vault access for some secrets
+        TokenCredential azureCredential = AzureAuthentication.GetServiceCredential(isDevelopment, managedIdentityId);
         Uri keyVaultUri = new($"https://{builder.Configuration.GetRequiredValue(ConfigurationKeys.KeyVaultName)}.vault.azure.net/");
         builder.Configuration.AddAzureKeyVault(
             keyVaultUri,
             azureCredential,
             new KeyVaultSecretsWithPrefix(ConfigurationKeys.KeyVaultSecretPrefix));
 
+        // Set up GitHub and Azure DevOps auth
+        builder.Services.AddVssConnection();
+        builder.AddGitHubClientFactory(
+            builder.Configuration[ConfigurationKeys.GitHubAppId],
+            builder.Configuration[ConfigurationKeys.GitHubAppPrivateKey]);
+        builder.Services.AddGitHubTokenProvider();
+        builder.Services.AddGitHubGraphQL();
         builder.Services.TryAddSingleton<IRemoteTokenProvider>(sp =>
         {
             var azdoTokenProvider = sp.GetRequiredService<IAzureDevOpsTokenProvider>();
             var gitHubTokenProvider = sp.GetRequiredService<IGitHubTokenProvider>();
             return new RemoteTokenProvider(azdoTokenProvider, new Microsoft.DotNet.DarcLib.GitHubTokenProvider(gitHubTokenProvider));
         });
-        builder.Services.AddVssConnection();
 
-        await builder.AddRedisCache(authRedis);
+        // Set up background queue processing
         var workItemQueueName = builder.Configuration.GetRequiredValue(ConfigurationKeys.WorkItemQueueName);
         var specialWorkItemQueueName = builder.Configuration.GetRequiredValue(ConfigurationKeys.SpecialWorkItemQueueName);
         builder.AddWorkItemQueues(azureCredential, waitForInitialization: false, new()
@@ -94,17 +95,19 @@ internal static class BuildInsightsStartup
         });
         builder.AddWorkItemProducerFactory(azureCredential, workItemQueueName, specialWorkItemQueueName);
 
-        builder.AddGitHubClientFactory(
-            builder.Configuration[ConfigurationKeys.GitHubAppId],
-            builder.Configuration[ConfigurationKeys.GitHubAppPrivateKey]);
-        builder.Services.AddGitHubTokenProvider();
+        // Set up DI
         builder.Services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();
         builder.Services.AddSingleton<ExponentialRetry>();
         builder.Services.Configure<ExponentialRetryOptions>(_ => { });
         builder.Services.AddMemoryCache();
         builder.Services.AddSingleton(builder.Configuration);
 
+        await builder.AddRedisCache(authRedis);
+
+        // Set up telemetry
         builder.AddServiceDefaults();
+        builder.AddDataProtection(azureCredential);
+        builder.AddTelemetry();
         builder.Services.AddOperationTracking(_ => { });
         builder.Services.AddHttpLogging(
             options =>
@@ -134,10 +137,11 @@ internal static class BuildInsightsStartup
         //            });
         //    });
 
-        if (addSwagger)
-        {
-            builder.ConfigureSwagger();
-        }
+        // TODO: Use OpenAPI instead of Swagger?
+        //if (isDevelopment)
+        //{
+        //    builder.ConfigureSwagger();
+        //}
 
         if (isDevelopment)
         {

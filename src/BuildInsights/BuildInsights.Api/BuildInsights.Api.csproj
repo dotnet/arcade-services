@@ -6,6 +6,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="WorkItems\**" />
+    <Content Remove="WorkItems\**" />
+    <EmbeddedResource Remove="WorkItems\**" />
+    <None Remove="WorkItems\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\BuildInsights.BuildAnalysis\BuildInsights.BuildAnalysis.csproj" />
     <ProjectReference Include="..\BuildInsights.GitHubGraphQL\BuildInsights.GitHubGraphQL.csproj" />
     <ProjectReference Include="..\BuildInsights.GitHub\BuildInsights.GitHub.csproj" />
@@ -23,11 +30,6 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers" />
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="WorkItems\Models\" />
-    <Folder Include="WorkItems\Processors\" />
   </ItemGroup>
 
 </Project>
