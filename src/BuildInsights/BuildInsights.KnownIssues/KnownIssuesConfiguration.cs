@@ -22,6 +22,7 @@ public static class KnownIssuesConfiguration
         services.TryAddScoped<IKnownIssuesHistoryService, KnownIssuesHistoryProvider>();
         services.TryAddScoped<IKnownIssuesMatchService, KnownIssuesMatchProvider>();
         services.TryAddScoped<IKnownIssuesService, KnownIssuesProvider>();
+        services.TryAddScoped<IGitHubIssuesService, GitHubIssuesProvider>();
 
         services.Configure<KnownIssueUrlOptions>(knownIssuesCreationConfiguration);
         services.Configure<KnownIssuesAnalysisLimits>(knownIssuesAnalysisLimitsConfiguration);

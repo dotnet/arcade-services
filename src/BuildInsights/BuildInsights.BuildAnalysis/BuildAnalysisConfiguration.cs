@@ -38,7 +38,6 @@ public static class BuildAnalysisConfiguration
         services.AddKustoClientProvider(knownIssuesKustoConfig.Key); // Same as known issues kusto config
 
         services.TryAddScoped<IGitHubChecksService, GitHubChecksProvider>();
-        services.TryAddScoped<IGitHubIssuesService, GitHubIssuesProvider>();
         services.TryAddScoped<IRelatedBuildService, RelatedBuildProvider>();
         services.TryAddScoped<IGitHubRepositoryService, GithubRepositoryProvider>();
         services.TryAddScoped<IAzDoToGitHubRepositoryService, AzDoToGitHubRepositoryProvider>();
