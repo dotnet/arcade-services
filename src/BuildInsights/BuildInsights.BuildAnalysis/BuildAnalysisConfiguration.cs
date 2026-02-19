@@ -27,7 +27,8 @@ public static class BuildAnalysisConfiguration
         IConfigurationSection internalProjectConfig,
         IConfigurationSection buildConfigurationFileConfig,
         IConfigurationSection gitHubIssuesConfig,
-        IConfigurationSection relatedBuildsConfig)
+        IConfigurationSection relatedBuildsConfig,
+        IConfigurationSection buildAnalysisFileConfig)
     {
         services.TryAddSingleton<IMarkdownGenerator, MarkdownGenerator>();
         services.AddHandleBarHelpers();
@@ -62,7 +63,7 @@ public static class BuildAnalysisConfiguration
         services.Configure<InternalProject>(internalProjectConfig);
         services.Configure<BuildConfigurationFileSettings>(buildConfigurationFileConfig);
         services.Configure<RelatedBuildProviderSettings>(relatedBuildsConfig);
-        services.Configure<BuildAnalysisFileSettings>("BuildAnalysisFileSettings", (o, c) => c.Bind(o));
+        services.Configure<BuildAnalysisFileSettings>(buildAnalysisFileConfig);
 
         return services;
     }

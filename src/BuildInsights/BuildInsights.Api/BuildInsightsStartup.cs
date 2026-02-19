@@ -55,6 +55,7 @@ internal static class BuildInsightsStartup
         public const string BuildConfigurationFile = "BuildConfigurationFile";
         public const string GitHubIssues = "GitHubIssues";
         public const string RelatedBuilds = "RelatedBuilds";
+        public const string BuildAnalysisFile = "BuildAnalysisFile";
 
         public const string WorkItemQueueName = "WorkItemQueueName";
         public const string SpecialWorkItemQueueName = "SpecialWorkItemQueueName";
@@ -129,7 +130,7 @@ internal static class BuildInsightsStartup
             builder.Configuration.GetSection(ConfigurationKeys.BuildConfigurationFile),
             builder.Configuration.GetSection(ConfigurationKeys.GitHubIssues),
             builder.Configuration.GetSection(ConfigurationKeys.RelatedBuilds),
-            );
+            builder.Configuration.GetSection(ConfigurationKeys.BuildAnalysisFile));
 
         // Set up telemetry
         builder.AddServiceDefaults();
