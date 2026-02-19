@@ -67,7 +67,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             : this(
                   new Uri(baseUri),
                   AppCredentialResolver.CreateCredential(
-                      new AppCredentialResolverOptions(EntraAppIds[baseUri.TrimEnd('/')])
+                      new AppCredentialResolverOptions(GetAppIdForUri(baseUri))
                       {
                           DisableInteractiveAuth = disableInteractiveAuth,
                           Token = accessToken,

@@ -1634,21 +1634,15 @@ This is the recommended authentication method for local development and automati
 **Sample:**
 ```
 PS D:\enlistments\arcade> darc login
-Authenticating with Maestro at https://maestro.dot.net/
-Opening browser for authentication...
+Authenticating with Maestro at https://maestro.dot.net/ (a browser window might open)
 Successfully authenticated with Maestro!
-Authentication credentials have been stored in /Users/username/.darc
-These credentials will be used by automation tools and the darc CLI.
 ```
 
 To authenticate with staging Maestro:
 ```
 PS D:\enlistments\arcade> darc login --bar-uri https://maestro.int-dot.net/
-Authenticating with Maestro at https://maestro.int-dot.net/
-Opening browser for authentication...
+Authenticating with Maestro at https://maestro.int-dot.net/ (a browser window might open)
 Successfully authenticated with Maestro!
-Authentication credentials have been stored in /Users/username/.darc
-These credentials will be used by automation tools and the darc CLI.
 ```
 
 **Notes:**
