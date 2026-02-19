@@ -3,6 +3,7 @@
 
 using BuildInsights.AzureStorage.Cache;
 using BuildInsights.BuildAnalysis.HandleBar;
+using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.GitHub;
 using BuildInsights.KnownIssues;
 using BuildInsights.QueueInsights;
@@ -22,7 +23,8 @@ public static class BuildAnalysisConfiguration
         IConfigurationSection knownIssuesKustoConfig,
         IConfigurationSection blobStorageConfig,
         IConfigurationSection queueInsightsBetaConfig,
-        IConfigurationSection matrixOfTruthConfig)
+        IConfigurationSection matrixOfTruthConfig,
+        IConfigurationSection internalProjectConfig)
     {
         services.TryAddSingleton<IMarkdownGenerator, MarkdownGenerator>();
         services.AddHandleBarHelpers();
@@ -54,8 +56,7 @@ public static class BuildAnalysisConfiguration
         services.TryAddScoped<IPreviousBuildAnalysisService, PreviousBuildAnalysisProvider>();
         services.TryAddScoped<ITestResultService, TestResultProvider>();
 
-        services.AddDefaultJsonConfiguration();
-        services.Configure<InternalProject>("InternalProject", (o, c) => c.Bind(o));
+        services.Configure<InternalProject>(internalProjectConfig);
         services.Configure<SentimentUrlOptions>("UserSentiment", (o, c) => c.Bind(o));
         services.Configure<BuildConfigurationFileSettings>("BuildConfigurationFileSettings", (o, c) => c.Bind(o));
         services.Configure<GitHubIssuesSettings>("GitHubIssuesSettings", (o, c) => c.Bind(o));

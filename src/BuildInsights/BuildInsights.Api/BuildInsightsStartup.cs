@@ -40,17 +40,18 @@ internal static class BuildInsightsStartup
         public const string AzureDevOpsConfiguration = "AzureDevOps";
         public const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
         public const string DependencyFlowSLAs = "DependencyFlowSLAs";
-        public const string EntraAuthenticationKey = "EntraAuthentication";
+        public const string EntraAuthentication = "EntraAuthentication";
         public const string KeyVaultName = "KeyVaultName";
         public const string ManagedIdentityId = "ManagedIdentityClientId";
-        public const string GitHubAppKey = "GitHubApp";
-        public const string KnownIssuesProjectKey = "KnownIssuesProject";
-        public const string KnownIssuesCreationKey = "KnownIssuesCreation";
-        public const string KnownIssuesAnalysisLimitsKey = "KnownIssuesAnalysisLimits";
-        public const string KnownIssuesKustoKey = "KnownIssuesKusto";
-        public const string BlobStorageKey = "BlobStorage";
-        public const string QueueInsightsBetaKey = "QueueInsightsBeta";
-        public const string MatrixOfTruthKey = "MatrixOfTruth";
+        public const string GitHubApp = "GitHubApp";
+        public const string KnownIssuesProject = "KnownIssuesProject";
+        public const string KnownIssuesCreation = "KnownIssuesCreation";
+        public const string KnownIssuesAnalysisLimits = "KnownIssuesAnalysisLimits";
+        public const string KnownIssuesKusto = "KnownIssuesKusto";
+        public const string BlobStorage = "BlobStorage";
+        public const string QueueInsightsBeta = "QueueInsightsBeta";
+        public const string MatrixOfTruth = "MatrixOfTruth";
+        public const string InternalProject = "InternalProject";
 
         public const string WorkItemQueueName = "WorkItemQueueName";
         public const string SpecialWorkItemQueueName = "SpecialWorkItemQueueName";
@@ -69,10 +70,10 @@ internal static class BuildInsightsStartup
 
         // Register configuration settings
         string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
-        var gitHubAppSettings = builder.Configuration.GetSection(ConfigurationKeys.GitHubAppKey).Get<GitHubAppSettings>()!;
+        var gitHubAppSettings = builder.Configuration.GetSection(ConfigurationKeys.GitHubApp).Get<GitHubAppSettings>()!;
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
-        builder.Services.Configure<KnownIssuesProjectOptions>(ConfigurationKeys.KnownIssuesProjectKey, (o, s) => s.Bind(o));
-        builder.Services.Configure<GitHubAppSettings>(ConfigurationKeys.GitHubAppKey, (o, s) => s.Bind(o));
+        builder.Services.Configure<KnownIssuesProjectOptions>(ConfigurationKeys.KnownIssuesProject, (o, s) => s.Bind(o));
+        builder.Services.Configure<GitHubAppSettings>(ConfigurationKeys.GitHubApp, (o, s) => s.Bind(o));
 
         // Set up Key Vault access for some secrets
         TokenCredential azureCredential = AzureAuthentication.GetServiceCredential(isDevelopment, managedIdentityId);
@@ -115,12 +116,13 @@ internal static class BuildInsightsStartup
         await builder.AddRedisCache(authRedis);
 
         builder.Services.AddBuildAnalysis(
-            builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesCreationKey),
-            builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesAnalysisLimitsKey),
-            builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesKustoKey),
-            builder.Configuration.GetSection(ConfigurationKeys.BlobStorageKey),
-            builder.Configuration.GetSection(ConfigurationKeys.QueueInsightsBetaKey),
-            builder.Configuration.GetSection(ConfigurationKeys.MatrixOfTruthKey));
+            builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesCreation),
+            builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesAnalysisLimits),
+            builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesKusto),
+            builder.Configuration.GetSection(ConfigurationKeys.BlobStorage),
+            builder.Configuration.GetSection(ConfigurationKeys.QueueInsightsBeta),
+            builder.Configuration.GetSection(ConfigurationKeys.MatrixOfTruth),
+            builder.Configuration.GetSection(ConfigurationKeys.InternalProject));
 
         // Set up telemetry
         builder.AddServiceDefaults();
