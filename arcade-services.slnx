@@ -16,6 +16,10 @@
     <File Path="global.json" />
   </Folder>
   <Folder Name="/src/" />
+  <Folder Name="/src/BuildInsights/">
+    <Project Path="src/BuildInsights/BuildInsights.Core/BuildInsights.Core.csproj" />
+    <Project Path="src/BuildInsights/BuildInsights.BuildAnalysis/BuildInsights.BuildAnalysis.csproj" />
+  </Folder>
   <Folder Name="/src/Darc/">
     <Project Path="src/Microsoft.DotNet.Darc/Darc/Microsoft.DotNet.Darc.csproj" />
     <Project Path="src/Microsoft.DotNet.Darc/DarcLib/Microsoft.DotNet.DarcLib.csproj" />
@@ -41,6 +45,8 @@
     <Project Path="src/ProductConstructionService/ProductConstructionService.WorkItems/ProductConstructionService.WorkItems.csproj" />
   </Folder>
   <Folder Name="/test/">
+    <Project Path="test/BuildInsights.Core.Tests/BuildInsights.Core.Tests.csproj" />
+    <Project Path="test/BuildInsights.BuildAnalysis.Tests/BuildInsights.BuildAnalysis.Tests.csproj" />
     <Project Path="test/Maestro.Data.Tests/Maestro.Data.Tests.csproj" />
     <Project Path="test/Maestro.DataProviders.Tests/Maestro.DataProviders.Tests.csproj" />
     <Project Path="test/Maestro.MergePolicies.Tests/Maestro.MergePolicies.Tests.csproj" />

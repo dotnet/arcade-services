@@ -1,0 +1,17 @@
+<!-- This test project was copied from the old BuildMonitor repository.
+     The source projects have been renamed from BuildMonitor.Core/BuildMonitor.Analysis to
+     BuildInsights.Core/BuildInsights.BuildAnalysis. These tests need to be migrated to the
+     new test projects: BuildInsights.Core.Tests and BuildInsights.BuildAnalysis.Tests. -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\BuildInsights\BuildInsights.Core\BuildInsights.Core.csproj" />
+    <ProjectReference Include="..\..\..\src\BuildInsights\BuildInsights.BuildAnalysis\BuildInsights.BuildAnalysis.csproj" />
+  </ItemGroup>
+
+</Project>
