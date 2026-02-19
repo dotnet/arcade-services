@@ -120,6 +120,13 @@ public class LocalGitClient : ILocalGitClient
                 _fileSystem.DeleteDirectory(repoPath / relativePath, true);
             }
         }
+        else if (result.StandardError.Contains("is unmerged"))
+        {
+            var unstagedNonConflictingFiles = await GetUnstagedNonConflictingFilesAsync(repoPath, relativePath);
+            args = ["checkout", .. unstagedNonConflictingFiles];
+            result = await _processManager.ExecuteGit(repoPath, args);
+            result.ThrowIfFailed("failed to clean unmerged non conflicting files from the working tree");
+        }
 
         // Also remove untracked files (in case files were removed in index)
         result = await _processManager.ExecuteGit(repoPath, ["clean", "-xdf", relativePath], cancellationToken: CancellationToken.None);
@@ -653,6 +660,32 @@ public class LocalGitClient : ILocalGitClient
         result.ThrowIfFailed("Failed to get a list of conflicted files");
 
         return [.. result.GetOutputLines().Select(f => new UnixPath(f))];
+    }
+
+    private async Task<IReadOnlyCollection<UnixPath>> GetUnstagedNonConflictingFilesAsync(
+            string repoPath,
+            UnixPath? relativePath = null,
+            CancellationToken cancellationToken = default)
+    {
+        // we don't want to keep files with the following flags
+        // ' ' whitespace for unmodified in staging
+        // 'U' u for unmerged files
+        // '?' for files unknown to git
+        // '!' git ignored files
+        char[] excludedChars = [' ', 'U', '?', '!'];
+
+        var result = await _processManager.ExecuteGit(
+            repoPath,
+            ["status", "--porcelain", relativePath ?? string.Empty],
+            cancellationToken: cancellationToken);
+        result.ThrowIfFailed("Failed to perform 'git status --porcelain'");
+
+        var files = result.GetOutputLines()
+            .Where(line => !excludedChars.Contains(line[1]))
+            .Select(line => line.Split(' ', StringSplitOptions.RemoveEmptyEntries)[1])
+            .Select(file => new UnixPath(file));
+
+        return [.. files];
     }
 
     public async Task<bool> DoesBranchExistAsync(string repoUri, string branch)

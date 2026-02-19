@@ -534,7 +534,7 @@ public abstract class CodeFlowConflictResolver
             removePatchAfter: true,
             keepConflicts: false,
             reverseApply: true,
-            applyToIndex: false,
+            applyToIndex: true,
             cancellationToken);
 
         // now reverse apply the current flow's changes. If it fails, it was a real revert; otherwise a false positive
