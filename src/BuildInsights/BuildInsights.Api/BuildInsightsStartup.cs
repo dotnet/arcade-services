@@ -4,6 +4,7 @@
 using Azure.Core;
 using BuildInsights.Api.Configuration;
 using BuildInsights.Api.Configuration.Models;
+using BuildInsights.BuildAnalysis;
 using BuildInsights.GitHubGraphQL;
 using BuildInsights.KnownIssues.Models;
 using BuildInsights.ServiceDefaults;
@@ -106,6 +107,8 @@ internal static class BuildInsightsStartup
         builder.Services.AddSingleton(builder.Configuration);
 
         await builder.AddRedisCache(authRedis);
+
+        builder.Services.AddBuildAnalysis();
 
         // Set up telemetry
         builder.AddServiceDefaults();
