@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using BuildInsights.Api.Configuration.Models;
 using BuildInsights.BuildAnalysis;
 using BuildInsights.BuildAnalysis.WorkItems.Models;
 using BuildInsights.GitHub;
@@ -102,8 +103,7 @@ public class GitHubWebhooksController : ControllerBase
             case "rerequested":
                 var producer = _workItemProducerFactory.CreateProducer<CheckRunRerunGitHubEvent>();
 
-                if (applicationId.Equals(_appSettings.Get(GitHubAppNames.NetHelix).AppId) &&
-                    checkRun.Name.Equals("Build Analysis")) // TODO - Wrong name
+                if (applicationId.Equals(_appSettings.CurrentValue.AppId) && checkRun.Name.Equals(_appSettings.CurrentValue.AppName))
                 {
                     await PostBuildAnalysisDeprecatedMessage(checkSuite);
                     await producer.ProduceWorkItemAsync(new CheckRunRerunGitHubEvent()

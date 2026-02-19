@@ -3,6 +3,7 @@
 
 using Azure.Core;
 using BuildInsights.Api.Configuration;
+using BuildInsights.Api.Configuration.Models;
 using BuildInsights.GitHubGraphQL;
 using BuildInsights.KnownIssues.Models;
 using BuildInsights.ServiceDefaults;
@@ -30,7 +31,6 @@ internal static class BuildInsightsStartup
         public const string KeyVaultSecretPrefix = "KeyVaultSecrets:";
 
         // Secrets coming from the KeyVault
-        public const string GitHubAppId = $"{KeyVaultSecretPrefix}github-app-id";
         public const string GitHubAppPrivateKey = $"{KeyVaultSecretPrefix}github-app-private-key";
         public const string GitHubWebHookSecret = $"{KeyVaultSecretPrefix}github-app-webhook-secret";
         public const string AzDoServiceHookSecret = $"{KeyVaultSecretPrefix}azdo-service-hook-secret";
@@ -43,6 +43,7 @@ internal static class BuildInsightsStartup
         public const string KeyVaultName = "KeyVaultName";
         public const string ManagedIdentityId = "ManagedIdentityClientId";
         public const string KnownIssuesProjectKey = "KnownIssuesProject";
+        public const string GitHubAppKey = "GitHubApp";
 
         public const string WorkItemQueueName = "WorkItemQueueName";
         public const string SpecialWorkItemQueueName = "SpecialWorkItemQueueName";
@@ -61,8 +62,10 @@ internal static class BuildInsightsStartup
 
         // Register configuration settings
         string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
+        var gitHubAppSettings = builder.Configuration.GetSection(ConfigurationKeys.GitHubAppKey).Get<GitHubAppSettings>()!;
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
         builder.Services.Configure<KnownIssuesProjectOptions>(ConfigurationKeys.KnownIssuesProjectKey, (o, s) => s.Bind(o));
+        builder.Services.Configure<GitHubAppSettings>(ConfigurationKeys.GitHubAppKey, (o, s) => s.Bind(o));
 
         // Set up Key Vault access for some secrets
         TokenCredential azureCredential = AzureAuthentication.GetServiceCredential(isDevelopment, managedIdentityId);
@@ -75,7 +78,7 @@ internal static class BuildInsightsStartup
         // Set up GitHub and Azure DevOps auth
         builder.Services.AddVssConnection();
         builder.AddGitHubClientFactory(
-            builder.Configuration[ConfigurationKeys.GitHubAppId],
+            gitHubAppSettings.AppId,
             builder.Configuration[ConfigurationKeys.GitHubAppPrivateKey]);
         builder.Services.AddGitHubTokenProvider();
         builder.Services.AddGitHubGraphQL();

@@ -10,7 +10,7 @@ internal static class GitHubClientFactoryConfiguration
 {
     public static void AddGitHubClientFactory(
         this WebApplicationBuilder builder,
-        string? appId,
+        int? appId,
         string? appSecret)
     {
         builder.Services.Configure<GitHubClientOptions>(o =>
@@ -25,7 +25,7 @@ internal static class GitHubClientFactoryConfiguration
         builder.Services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         builder.Services.Configure<GitHubTokenProviderOptions>(o =>
         {
-            o.GitHubAppId = !string.IsNullOrEmpty(appId) ? int.Parse(appId) : 0;
+            o.GitHubAppId = appId ?? 0;
             o.PrivateKey = appSecret;
         });
     }
