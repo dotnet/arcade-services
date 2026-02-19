@@ -7,7 +7,7 @@ namespace ProductConstructionService.BarViz.Model;
 
 public static class MockCodeflowData
 {
-    public static CodeflowPage GetMockCodeflowPage()
+    public static CodeflowPageData GetMockCodeflowPage()
     {
         var vmrBuild = new Build(
             id: 12345,
@@ -79,39 +79,39 @@ public static class MockCodeflowData
         var newestSdkBuild = CreateNewestBuild("https://github.com/dotnet/sdk", daysAgo: 0);
         var newestAspnetBuild = CreateNewestBuild("https://github.com/dotnet/aspnetcore", daysAgo: 0);
 
-        var entries = new List<CodeflowSubscriptionPageEntry>
+        var entries = new List<CodeflowEntry>
         {
             new(
                 RepositoryUrl: "https://github.com/dotnet/runtime",
                 MappingName: "runtime",
                 Enabled: true,
-                ForwardFlowSubscription: new SubscriptionEntry(
+                ForwardFlowSubscription: new SubscriptionDetail(
                     runtimeSubscriptionFf,
                     LastAppliedBuildStaleness: 1,
                     NewestApplicableBuild: newestRuntimeBuild,
-                    ActivePr: new ActivePr(
+                    ActivePullRequest: new ActivePullRequest(
                         CreatedDate: new DateTime(2026, 2, 18, 14, 0, 0),
                         Url: "https://github.com/dotnet/runtime/pull/112345")),
-                BackflowSubscription: new SubscriptionEntry(
+                BackflowSubscription: new SubscriptionDetail(
                     runtimeSubscriptionBf,
                     LastAppliedBuildStaleness: 2,
                     NewestApplicableBuild: vmrBuild,
-                    ActivePr: null)),
+                    ActivePullRequest: null)),
 
             new(
                 RepositoryUrl: "https://github.com/dotnet/sdk",
                 MappingName: "sdk",
                 Enabled: true,
-                ForwardFlowSubscription: new SubscriptionEntry(
+                ForwardFlowSubscription: new SubscriptionDetail(
                     sdkSubscriptionFf,
                     LastAppliedBuildStaleness: 1,
                     NewestApplicableBuild: newestSdkBuild,
-                    ActivePr: null),
-                BackflowSubscription: new SubscriptionEntry(
+                    ActivePullRequest: null),
+                BackflowSubscription: new SubscriptionDetail(
                     sdkSubscriptionBf,
                     LastAppliedBuildStaleness: 3,
                     NewestApplicableBuild: vmrBuild,
-                    ActivePr: new ActivePr(
+                    ActivePullRequest: new ActivePullRequest(
                         CreatedDate: new DateTime(2026, 2, 17, 9, 15, 0),
                         Url: "https://github.com/dotnet/dotnet/pull/54321"))),
 
@@ -119,15 +119,15 @@ public static class MockCodeflowData
                 RepositoryUrl: "https://github.com/dotnet/aspnetcore",
                 MappingName: "aspnetcore",
                 Enabled: false,
-                ForwardFlowSubscription: new SubscriptionEntry(
+                ForwardFlowSubscription: new SubscriptionDetail(
                     aspnetSubscriptionFf,
                     LastAppliedBuildStaleness: 5,
                     NewestApplicableBuild: newestAspnetBuild,
-                    ActivePr: null),
+                    ActivePullRequest: null),
                 BackflowSubscription: null),
         };
 
-        return new CodeflowPage(entries);
+        return new CodeflowPageData(entries);
     }
 
     private static Subscription CreateSubscription(

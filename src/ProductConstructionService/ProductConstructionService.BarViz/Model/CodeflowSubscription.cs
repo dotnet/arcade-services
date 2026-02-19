@@ -15,23 +15,4 @@ public record CodeflowSubscription(
     string? BackflowPr,
     string? ForwardflowPr);
 
-public record CodeflowPage(
-    List<CodeflowSubscriptionPageEntry> CodeflowRow);
-
-public record CodeflowSubscriptionPageEntry(
-    string RepositoryUrl,
-    string MappingName,
-    bool Enabled,
-    SubscriptionEntry? ForwardFlowSubscription,
-    SubscriptionEntry? BackflowSubscription);
-
-public record SubscriptionEntry(
-    Subscription Subscription,
-    int LastAppliedBuildStaleness,
-    Build? NewestApplicableBuild,
-    ActivePr? ActivePr);
-
-public record ActivePr(
-    DateTime CreatedDate,
-    string Url);
 

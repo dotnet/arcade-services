@@ -64,7 +64,7 @@
     <Content>
         <FluentDataGrid Items="@CodeFlows"
                         AutoFit="true"
-                        TGridItem=CodeflowSubscriptionPageEntry
+                        TGridItem=CodeflowEntry
                         ResizableColumns="true"
                         ShowHover="true"
                         RowClass="@(sub => sub.Enabled ? null : "disabled-subscription")"
@@ -101,9 +101,9 @@
                             <span style="margin-left: 8px; color: #888; font-size: 0.85em;">@context.BackflowSubscription.LastAppliedBuildStaleness build(s) behind latest</span>
                         }
 
-                        @if (context.BackflowSubscription?.ActivePr != null)
+                        @if (context.BackflowSubscription?.ActivePullRequest != null)
                         {
-                            <FluentAnchor Href="@context.BackflowSubscription.ActivePr.Url" Target="_blank" Appearance="Appearance.Hypertext" style="margin-left: 8px;">Active PR (@GetPrAge(context.BackflowSubscription.ActivePr))</FluentAnchor>
+                            <FluentAnchor Href="@context.BackflowSubscription.ActivePullRequest.Url" Target="_blank" Appearance="Appearance.Hypertext" style="margin-left: 8px;">Active PR (@GetPrAge(context.BackflowSubscription.ActivePullRequest))</FluentAnchor>
                         }
                     </FluentLabel>
                 </TemplateColumn>
@@ -126,9 +126,9 @@
                             <span style="margin-left: 8px; color: #888; font-size: 0.85em;">@context.ForwardFlowSubscription.LastAppliedBuildStaleness build(s) behind latest</span>
                         }
 
-                        @if (context.ForwardFlowSubscription?.ActivePr != null)
+                        @if (context.ForwardFlowSubscription?.ActivePullRequest != null)
                         {
-                            <FluentAnchor Href="@context.ForwardFlowSubscription.ActivePr.Url" Target="_blank" Appearance="Appearance.Hypertext" style="margin-left: 8px;">Active PR (@GetPrAge(context.ForwardFlowSubscription.ActivePr))</FluentAnchor>
+                            <FluentAnchor Href="@context.ForwardFlowSubscription.ActivePullRequest.Url" Target="_blank" Appearance="Appearance.Hypertext" style="margin-left: 8px;">Active PR (@GetPrAge(context.ForwardFlowSubscription.ActivePullRequest))</FluentAnchor>
                         }
                     </FluentLabel>
                 </TemplateColumn>
@@ -141,15 +141,15 @@
 </GridViewTemplate>
 
 @code {
-    IQueryable<CodeflowSubscriptionPageEntry>? CodeFlows;
+    IQueryable<CodeflowEntry>? CodeFlows;
 
-    GridSort<CodeflowSubscriptionPageEntry> SortBy(Expression<Func<CodeflowSubscriptionPageEntry, string?>> sorter)
-        => GridSort<CodeflowSubscriptionPageEntry>.ByAscending(sorter);
+    GridSort<CodeflowEntry> SortBy(Expression<Func<CodeflowEntry, string?>> sorter)
+        => GridSort<CodeflowEntry>.ByAscending(sorter);
 
     protected override void OnInitialized()
     {
         var mockData = MockCodeflowData.GetMockCodeflowPage();
-        CodeFlows = mockData.CodeflowRow
+        CodeFlows = mockData.Entries
             .OrderBy(c => c.MappingName)
             .AsQueryable();
     }
@@ -179,7 +179,7 @@
             : "—";
     }
 
-    static CodeflowSubscription ToCodeflowSubscription(CodeflowSubscriptionPageEntry entry)
+    static CodeflowSubscription ToCodeflowSubscription(CodeflowEntry entry)
     {
         return new CodeflowSubscription(
             RepositoryUrl: entry.RepositoryUrl,
@@ -188,13 +188,13 @@
             Enabled: entry.Enabled,
             BackflowSubscription: entry.BackflowSubscription?.Subscription,
             ForwardflowSubscription: entry.ForwardFlowSubscription?.Subscription,
-            BackflowPr: entry.BackflowSubscription?.ActivePr?.Url,
-            ForwardflowPr: entry.ForwardFlowSubscription?.ActivePr?.Url);
+            BackflowPr: entry.BackflowSubscription?.ActivePullRequest?.Url,
+            ForwardflowPr: entry.ForwardFlowSubscription?.ActivePullRequest?.Url);
     }
 
     static string GetShortSha(string sha) => sha.Substring(0, 7);
 
-    string GetBuildAgeDifference(SubscriptionEntry? entry)
+    string GetBuildAgeDifference(SubscriptionDetail? entry)
     {
         if (entry?.NewestApplicableBuild == null || entry.Subscription.LastAppliedBuild == null)
         {
@@ -210,7 +210,7 @@
         return diff.ToTimeAgo().Replace(" ago", " older than the newest VMR build");
     }
 
-    static string GetPrAge(ActivePr pr)
+    static string GetPrAge(ActivePullRequest pr)
     {
         var age = (DateTime.UtcNow - pr.CreatedDate).ToTimeAgo();
         return age.Replace(" ago", " old");
