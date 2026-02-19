@@ -3,6 +3,7 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Options;
 
@@ -11,4 +12,6 @@ internal class LoginCommandLineOptions : CommandLineOptions<LoginOperation>
 {
     [Option("bar-uri", HelpText = "URI of the Build Asset Registry service to authenticate with. Defaults to production Maestro")]
     public string BarUri { get; set; }
+
+    protected override LogLevel DefaultLogVerbosity => LogLevel.Information;
 }

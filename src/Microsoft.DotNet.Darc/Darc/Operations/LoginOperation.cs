@@ -30,12 +30,10 @@ internal class LoginOperation : Operation
         {
             // Determine which Maestro URI to use
             string barUri = _options.BarUri ?? ProductConstructionServiceApiOptions.ProductionMaestroUri;
-            _logger.LogInformation("Authenticating with Maestro at {barUri}", barUri);
+            _logger.LogInformation("Authenticating with Maestro at {barUri} (a browser window might open)", barUri);
 
             // Get the appropriate app ID for the Maestro URI
             string appId = ProductConstructionServiceApiOptions.GetAppIdForUri(barUri);
-            
-            _logger.LogInformation("Opening browser for authentication...");
             
             // Create a user credential which will trigger interactive browser login
             // The authentication record will be stored automatically in ~/.darc/.auth-record-{appId}
