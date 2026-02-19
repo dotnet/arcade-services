@@ -33,7 +33,7 @@ internal class LoginOperation : Operation
         {
             // Determine which Maestro URI to use
             string barUri = _options.BarUri ?? ProductConstructionServiceApiOptions.ProductionMaestroUri;
-            _logger.LogInformation($"Authenticating with Maestro at {barUri}");
+            _logger.LogInformation("Authenticating with Maestro at {barUri}", barUri);
 
             // Get the appropriate app ID for the Maestro URI
             string appId = GetAppIdForUri(barUri);
@@ -51,7 +51,7 @@ internal class LoginOperation : Operation
             if (token.Token != null)
             {
                 _logger.LogInformation("Successfully authenticated with Maestro!");
-                _logger.LogInformation($"Authentication credentials have been stored in {AppCredential.AUTH_CACHE}");
+                _logger.LogInformation("Authentication credentials have been stored in {authCache}", AppCredential.AUTH_CACHE);
                 _logger.LogInformation("These credentials will be used by automation tools and the darc CLI.");
                 return Constants.SuccessCode;
             }
