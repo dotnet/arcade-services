@@ -29,7 +29,7 @@ public static class BuildAnalysisConfiguration
         services.AddBlobStorageCaching(blobStorageConfig);
         services.AddKnownIssues(knownIssuesCreationConfig, knownIssuesAnalysisLimitsConfig, knownIssuesKustoConfig);
         services.AddQueueInsights(queueInsightsBetaConfig, matrixOfTruthConfig);
-        services.AddKustoClientProvider(/* TODO */);
+        services.AddKustoClientProvider(knownIssuesKustoConfig.Key); // Same as known issues kusto config
 
         services.TryAddScoped<IGitHubChecksService, GitHubChecksProvider>();
         services.TryAddScoped<IGitHubIssuesService, GitHubIssuesProvider>();
