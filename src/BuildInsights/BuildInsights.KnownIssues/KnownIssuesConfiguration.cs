@@ -16,7 +16,8 @@ public static class KnownIssuesConfiguration
         this IServiceCollection services,
         IConfigurationSection knownIssuesCreationConfiguration,
         IConfigurationSection knownIssuesAnalysisLimitsConfiguration,
-        IConfigurationSection knownIssuesKustoConfiguration)
+        IConfigurationSection knownIssuesKustoConfiguration,
+        IConfigurationSection gitHubIssuesConfig)
     {
         services.TryAddScoped<IKnownIssuesHistoryService, KnownIssuesHistoryProvider>();
         services.TryAddScoped<IKnownIssuesMatchService, KnownIssuesMatchProvider>();
@@ -25,6 +26,7 @@ public static class KnownIssuesConfiguration
         services.Configure<KnownIssueUrlOptions>(knownIssuesCreationConfiguration);
         services.Configure<KnownIssuesAnalysisLimits>(knownIssuesAnalysisLimitsConfiguration);
         services.Configure<KustoOptions>(knownIssuesKustoConfiguration);
+        services.Configure<GitHubIssuesSettings>(gitHubIssuesConfig);
 
         return services;
     }

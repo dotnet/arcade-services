@@ -52,6 +52,8 @@ internal static class BuildInsightsStartup
         public const string QueueInsightsBeta = "QueueInsightsBeta";
         public const string MatrixOfTruth = "MatrixOfTruth";
         public const string InternalProject = "InternalProject";
+        public const string BuildConfigurationFile = "BuildConfigurationFile";
+        public const string GitHubIssues = "GitHubIssues";
 
         public const string WorkItemQueueName = "WorkItemQueueName";
         public const string SpecialWorkItemQueueName = "SpecialWorkItemQueueName";
@@ -122,7 +124,10 @@ internal static class BuildInsightsStartup
             builder.Configuration.GetSection(ConfigurationKeys.BlobStorage),
             builder.Configuration.GetSection(ConfigurationKeys.QueueInsightsBeta),
             builder.Configuration.GetSection(ConfigurationKeys.MatrixOfTruth),
-            builder.Configuration.GetSection(ConfigurationKeys.InternalProject));
+            builder.Configuration.GetSection(ConfigurationKeys.InternalProject),
+            builder.Configuration.GetSection(ConfigurationKeys.BuildConfigurationFile),
+            builder.Configuration.GetSection(ConfigurationKeys.GitHubIssues),
+            );
 
         // Set up telemetry
         builder.AddServiceDefaults();

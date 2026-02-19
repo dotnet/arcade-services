@@ -24,12 +24,14 @@ public static class BuildAnalysisConfiguration
         IConfigurationSection blobStorageConfig,
         IConfigurationSection queueInsightsBetaConfig,
         IConfigurationSection matrixOfTruthConfig,
-        IConfigurationSection internalProjectConfig)
+        IConfigurationSection internalProjectConfig,
+        IConfigurationSection buildConfigurationFileConfig,
+        IConfigurationSection gitHubIssuesConfig)
     {
         services.TryAddSingleton<IMarkdownGenerator, MarkdownGenerator>();
         services.AddHandleBarHelpers();
         services.AddBlobStorageCaching(blobStorageConfig);
-        services.AddKnownIssues(knownIssuesCreationConfig, knownIssuesAnalysisLimitsConfig, knownIssuesKustoConfig);
+        services.AddKnownIssues(knownIssuesCreationConfig, knownIssuesAnalysisLimitsConfig, knownIssuesKustoConfig, gitHubIssuesConfig);
         services.AddQueueInsights(queueInsightsBetaConfig, matrixOfTruthConfig);
         services.AddKustoClientProvider(knownIssuesKustoConfig.Key); // Same as known issues kusto config
 
@@ -57,9 +59,7 @@ public static class BuildAnalysisConfiguration
         services.TryAddScoped<ITestResultService, TestResultProvider>();
 
         services.Configure<InternalProject>(internalProjectConfig);
-        services.Configure<SentimentUrlOptions>("UserSentiment", (o, c) => c.Bind(o));
-        services.Configure<BuildConfigurationFileSettings>("BuildConfigurationFileSettings", (o, c) => c.Bind(o));
-        services.Configure<GitHubIssuesSettings>("GitHubIssuesSettings", (o, c) => c.Bind(o));
+        services.Configure<BuildConfigurationFileSettings>(buildConfigurationFileConfig);
         services.Configure<RelatedBuildProviderSettings>("RelatedBuildProviderSettings", (o, c) => c.Bind(o));
         services.Configure<BuildAnalysisFileSettings>("BuildAnalysisFileSettings", (o, c) => c.Bind(o));
 
