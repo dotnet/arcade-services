@@ -43,8 +43,11 @@ internal static class BuildInsightsStartup
         public const string EntraAuthenticationKey = "EntraAuthentication";
         public const string KeyVaultName = "KeyVaultName";
         public const string ManagedIdentityId = "ManagedIdentityClientId";
-        public const string KnownIssuesProjectKey = "KnownIssuesProject";
         public const string GitHubAppKey = "GitHubApp";
+        public const string KnownIssuesProjectKey = "KnownIssuesProject";
+        public const string KnownIssuesCreationKey = "KnownIssuesCreation";
+        public const string KnownIssuesAnalysisLimitsKey = "KnownIssuesAnalysisLimits";
+        public const string KnownIssuesKustoKey = "KnownIssuesKusto";
 
         public const string WorkItemQueueName = "WorkItemQueueName";
         public const string SpecialWorkItemQueueName = "SpecialWorkItemQueueName";
@@ -108,7 +111,10 @@ internal static class BuildInsightsStartup
 
         await builder.AddRedisCache(authRedis);
 
-        builder.Services.AddBuildAnalysis();
+        builder.Services.AddBuildAnalysis(
+            ConfigurationKeys.KnownIssuesCreationKey,
+            ConfigurationKeys.KnownIssuesAnalysisLimitsKey,
+            ConfigurationKeys.KnownIssuesKustoKey);
 
         // Set up telemetry
         builder.AddServiceDefaults();

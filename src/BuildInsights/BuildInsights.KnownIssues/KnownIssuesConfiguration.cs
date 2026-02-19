@@ -4,6 +4,7 @@
 using BuildInsights.GitHub.Models;
 using BuildInsights.KnownIssues.Models;
 using Microsoft.DotNet.Kusto;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -11,16 +12,19 @@ namespace BuildInsights.KnownIssues;
 
 public static class KnownIssuesConfiguration
 {
-    public static IServiceCollection AddKnownIssues(this IServiceCollection services)
+    public static IServiceCollection AddKnownIssues(
+        this IServiceCollection services,
+        IConfigurationSection knownIssuesCreationConfiguration,
+        IConfigurationSection knownIssuesAnalysisLimitsConfiguration,
+        IConfigurationSection knownIssuesKustoConfiguration)
     {
         services.TryAddScoped<IKnownIssuesHistoryService, KnownIssuesHistoryProvider>();
         services.TryAddScoped<IKnownIssuesMatchService, KnownIssuesMatchProvider>();
         services.TryAddScoped<IKnownIssuesService, KnownIssuesProvider>();
 
-        // TODO
-        services.Configure<KnownIssueUrlOptions>("KnownIssueUrlOptions", (o, c) => c.Bind(o));
-        services.Configure<KnownIssuesAnalysisLimits>("KnownIssuesAnalysisLimits", (o, c) => c.Bind(o));
-        services.Configure<KustoOptions>("KnownIssuesKustoOptions", (o, c) => c.Bind(o));
+        services.Configure<KnownIssueUrlOptions>(knownIssuesCreationConfiguration);
+        services.Configure<KnownIssuesAnalysisLimits>(knownIssuesAnalysisLimitsConfiguration);
+        services.Configure<KustoOptions>(knownIssuesKustoConfiguration);
 
         return services;
     }

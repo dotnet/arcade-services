@@ -7,6 +7,7 @@ using BuildInsights.GitHub;
 using BuildInsights.KnownIssues;
 using BuildInsights.QueueInsights;
 using Microsoft.DotNet.Kusto;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -14,13 +15,18 @@ namespace BuildInsights.BuildAnalysis;
 
 public static class BuildAnalysisConfiguration
 {
-    public static IServiceCollection AddBuildAnalysis(this IServiceCollection services)
+    public static IServiceCollection AddBuildAnalysis(
+        this IServiceCollection services,
+        IConfigurationSection knownIssuesCreationConfig,
+        IConfigurationSection knownIssuesAnalysisLimitsConfig,
+        IConfigurationSection knownIssuesKustoConfig)
     {
         services.TryAddSingleton<IMarkdownGenerator, MarkdownGenerator>();
         services.AddHandleBarHelpers();
         services.AddBlobStorageCaching();
-        services.AddKnownIssues();
+        services.AddKnownIssues(knownIssuesCreationConfig, knownIssuesAnalysisLimitsConfig, knownIssuesKustoConfig);
         services.AddQueueInsights();
+        services.AddKustoClientProvider(/* TODO */);
 
         services.TryAddScoped<IGitHubChecksService, GitHubChecksProvider>();
         services.TryAddScoped<IGitHubIssuesService, GitHubIssuesProvider>();
@@ -52,7 +58,6 @@ public static class BuildAnalysisConfiguration
         services.Configure<GitHubIssuesSettings>("GitHubIssuesSettings", (o, c) => c.Bind(o));
         services.Configure<RelatedBuildProviderSettings>("RelatedBuildProviderSettings", (o, c) => c.Bind(o));
         services.Configure<BuildAnalysisFileSettings>("BuildAnalysisFileSettings", (o, c) => c.Bind(o));
-        services.AddKustoClientProvider("KnownIssuesKustoOptions");
 
         return services;
     }
