@@ -667,23 +667,30 @@ public class LocalGitClient : ILocalGitClient
             UnixPath? relativePath = null,
             CancellationToken cancellationToken = default)
     {
-        // we don't want to keep files with the following flags
-        // ' ' whitespace for unmodified in staging
-        // 'U' u for unmerged files
-        // '?' for files unknown to git
-        // '!' git ignored files
-        char[] excludedChars = [' ', 'U', '?', '!'];
-
         var result = await _processManager.ExecuteGit(
             repoPath,
-            ["status", "--porcelain", relativePath ?? string.Empty],
+            ["status", relativePath ?? string.Empty],
             cancellationToken: cancellationToken);
-        result.ThrowIfFailed("Failed to perform 'git status --porcelain'");
+        result.ThrowIfFailed("Failed to perform 'git status'");
 
-        var files = result.GetOutputLines()
-            .Where(line => !excludedChars.Contains(line[1]))
-            .Select(line => line.Split(' ', StringSplitOptions.RemoveEmptyEntries)[1])
-            .Select(file => new UnixPath(file));
+        // Split output into sections separated by empty lines
+        var sections = result.StandardOutput.Split(
+            ["\n\n", "\r\n\r\n"],
+            StringSplitOptions.RemoveEmptyEntries);
+
+        // Find the "Changes not staged for commit" section
+        var unstagedSection = sections.FirstOrDefault(s => s.TrimStart().StartsWith("Changes not staged for commit"));
+
+        if (unstagedSection == null)
+        {
+            return [];
+        }
+
+        // Parse file names from lines like "        deleted:    file_1.txt"
+        var files = unstagedSection
+            .Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Skip(3) // first the information lines
+            .Select(line => new UnixPath(line.Split(':', 2, StringSplitOptions.TrimEntries)[1]));
 
         return [.. files];
     }
