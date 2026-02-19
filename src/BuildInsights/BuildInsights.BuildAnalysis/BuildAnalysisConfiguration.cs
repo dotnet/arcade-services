@@ -19,13 +19,16 @@ public static class BuildAnalysisConfiguration
         this IServiceCollection services,
         IConfigurationSection knownIssuesCreationConfig,
         IConfigurationSection knownIssuesAnalysisLimitsConfig,
-        IConfigurationSection knownIssuesKustoConfig)
+        IConfigurationSection knownIssuesKustoConfig,
+        IConfigurationSection blobStorageConfig,
+        IConfigurationSection queueInsightsBetaConfig,
+        IConfigurationSection matrixOfTruthConfig)
     {
         services.TryAddSingleton<IMarkdownGenerator, MarkdownGenerator>();
         services.AddHandleBarHelpers();
-        services.AddBlobStorageCaching();
+        services.AddBlobStorageCaching(blobStorageConfig);
         services.AddKnownIssues(knownIssuesCreationConfig, knownIssuesAnalysisLimitsConfig, knownIssuesKustoConfig);
-        services.AddQueueInsights();
+        services.AddQueueInsights(queueInsightsBetaConfig, matrixOfTruthConfig);
         services.AddKustoClientProvider(/* TODO */);
 
         services.TryAddScoped<IGitHubChecksService, GitHubChecksProvider>();

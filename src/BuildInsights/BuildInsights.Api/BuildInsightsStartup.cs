@@ -48,7 +48,9 @@ internal static class BuildInsightsStartup
         public const string KnownIssuesCreationKey = "KnownIssuesCreation";
         public const string KnownIssuesAnalysisLimitsKey = "KnownIssuesAnalysisLimits";
         public const string KnownIssuesKustoKey = "KnownIssuesKusto";
-        public const string BlobStorageKey = "KnownIssuesKusto";
+        public const string BlobStorageKey = "BlobStorage";
+        public const string QueueInsightsBetaKey = "QueueInsightsBeta";
+        public const string MatrixOfTruthKey = "MatrixOfTruth";
 
         public const string WorkItemQueueName = "WorkItemQueueName";
         public const string SpecialWorkItemQueueName = "SpecialWorkItemQueueName";
@@ -116,7 +118,9 @@ internal static class BuildInsightsStartup
             builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesCreationKey),
             builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesAnalysisLimitsKey),
             builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesKustoKey),
-            builder.Configuration.GetSection(ConfigurationKeys.BlobStorageKey));
+            builder.Configuration.GetSection(ConfigurationKeys.BlobStorageKey),
+            builder.Configuration.GetSection(ConfigurationKeys.QueueInsightsBetaKey),
+            builder.Configuration.GetSection(ConfigurationKeys.MatrixOfTruthKey));
 
         // Set up telemetry
         builder.AddServiceDefaults();
