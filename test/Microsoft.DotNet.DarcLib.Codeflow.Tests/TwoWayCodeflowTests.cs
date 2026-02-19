@@ -1295,6 +1295,11 @@ internal class TwoWayCodeflowTests : CodeFlowTests
         await File.WriteAllTextAsync(ProductRepoPath / problematicFilePath, "1");
         await GitOperations.CommitAll(ProductRepoPath, "revert the problematic file");
 
+        // add more "pink stuff" commits https://github.com/dotnet/arcade-services/issues/5767#issuecomment-3754523287
+        await File.WriteAllTextAsync(ProductRepoPath / "pink_file.txt", "pink stuff");
+        await File.WriteAllTextAsync(ProductRepoPath / _productRepoFileName, "a twist");
+        await GitOperations.CommitAll(ProductRepoPath, "Pink stuff changes");
+
         // so now we need to call a backflow
         result = await ChangeVmrFileAndFlowIt("5", bfBranchName);
         result.ShouldHaveUpdates();

@@ -122,7 +122,7 @@ public class LocalGitClient : ILocalGitClient
         }
         else if (result.StandardError.Contains("is unmerged"))
         {
-            var unstagedNonConflictingFiles = await GetUnstagedNonConflictingFilesAsync(repoPath, relativePath);
+            var unstagedNonConflictingFiles = await GetUnstagedFilesAsync(repoPath, relativePath);
             args = ["checkout", .. unstagedNonConflictingFiles];
             result = await _processManager.ExecuteGit(repoPath, args);
             result.ThrowIfFailed("failed to clean unmerged non conflicting files from the working tree");
@@ -662,7 +662,7 @@ public class LocalGitClient : ILocalGitClient
         return [.. result.GetOutputLines().Select(f => new UnixPath(f))];
     }
 
-    private async Task<IReadOnlyCollection<UnixPath>> GetUnstagedNonConflictingFilesAsync(
+    private async Task<IReadOnlyCollection<UnixPath>> GetUnstagedFilesAsync(
             string repoPath,
             UnixPath? relativePath = null,
             CancellationToken cancellationToken = default)
