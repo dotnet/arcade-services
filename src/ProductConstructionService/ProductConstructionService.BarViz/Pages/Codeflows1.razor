@@ -9,7 +9,6 @@
 @using ProductConstructionService.BarViz.Components
 @using ProductConstructionService.BarViz.Model
 @inject NavigationManager NavManager
-@inject IProductConstructionServiceApi PcsApi
 @inject IDialogService DialogService
 
 <style>
@@ -46,8 +45,8 @@
 
 <PageTitle>Codeflows – Maestro++</PageTitle>
 
-<GridViewTemplate Title="Codeflows" ShowSkeleton="CodeFlows == null">
-    <Header>
+<GridViewTemplate Title="Codeflows1234" ShowSkeleton="CodeFlows == null">
+    <!--<Header>
         <FluentSelect TOption="DefaultChannel"
                       Items="@DefaultChannels"
                       OptionValue="@(channel => channel.Branch)"
@@ -61,11 +60,11 @@
                 <span title="Channel ID: @context.Channel.Id">@context.Branch / @context.Channel.Name</span>
             </OptionTemplate>
         </FluentSelect>
-    </Header>
+    </Header> -->
     <Content>
         <FluentDataGrid Items="@CodeFlows"
                         AutoFit="true"
-                        TGridItem=CodeflowSubscription
+                        TGridItem=CodeflowSubscriptionPageEntry
                         ResizableColumns="true"
                         ShowHover="true"
                         RowClass="@(sub => sub.Enabled ? null : "disabled-subscription")"
@@ -77,60 +76,64 @@
                 <TemplateColumn Title="Repository" Sortable="true" SortBy="SortBy(sub => sub.MappingName)" Align="Align.Start">
                     <FluentAnchor Href="@context.RepositoryUrl" Target="_blank" Appearance="Appearance.Hypertext">@context.MappingName</FluentAnchor>
                 </TemplateColumn>
-                <TemplateColumn Title="Backflow branch" Sortable="true" SortBy="SortBy(sub => sub.RepositoryBranch)" Align="Align.Center">
-                    <FluentLabel>@context.RepositoryBranch</FluentLabel>
+                <TemplateColumn Title="Backflow branch" Sortable="true" SortBy="SortBy(sub => sub.BackflowSubscription != null ? sub.BackflowSubscription.Subscription.TargetBranch : null)" Align="Align.Center">
+                    <FluentLabel>@context.BackflowSubscription?.Subscription.TargetBranch</FluentLabel>
                 </TemplateColumn>
-                <TemplateColumn Title="Forward flow channel" Sortable="true" SortBy="SortBy(sub => sub.ForwardflowSubscription != null ? sub.ForwardflowSubscription.Channel.Name : null)" Align="Align.Center">
-                    <FluentLabel>@context.ForwardflowSubscription?.Channel.Name</FluentLabel>
+                <TemplateColumn Title="Forward flow channel" Sortable="true" SortBy="SortBy(sub => sub.ForwardFlowSubscription != null && sub.ForwardFlowSubscription.Subscription.Channel != null ? sub.ForwardFlowSubscription.Subscription.Channel.Name : null)" Align="Align.Center">
+                    <FluentLabel>@context.ForwardFlowSubscription?.Subscription.Channel?.Name</FluentLabel>
                 </TemplateColumn>
                 <TemplateColumn Title="Backflow"
                                 Sortable="true"
-                                SortBy="@SortBy(sub => sub.BackflowSubscription != null && sub.BackflowSubscription.LastAppliedBuild != null ? sub.BackflowSubscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
+                                SortBy="@SortBy(sub => sub.BackflowSubscription != null && sub.BackflowSubscription.Subscription.LastAppliedBuild != null ? sub.BackflowSubscription.Subscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
                                 Align="Align.Start">
-                    <FluentLabel Title="@(context.BackflowSubscription?.LastAppliedBuild?.DateProduced.ToString("f"))">
-                        @if (context.BackflowSubscription?.LastAppliedBuild != null)
+                    <FluentLabel Title="@(context.BackflowSubscription?.Subscription.LastAppliedBuild?.DateProduced.ToString("f"))">
+                        @if (context.BackflowSubscription?.Subscription.LastAppliedBuild != null)
                         {
-                            @(GetLastAppliedBuildTimeAgo(context.BackflowSubscription))
-                            <FluentAnchor Href="@context.BackflowSubscription.LastAppliedBuild.GetCommitLink()" Target="_blank" class="commitSha" title="@context.BackflowSubscription.LastAppliedBuild.Commit">
-                                &commat;@GetShortSha(context.BackflowSubscription.LastAppliedBuild.Commit)
-                            </FluentAnchor>
+                            @(GetBuildAgeDifference(context.BackflowSubscription))
                         }
                         else
                         {
                             <span>—</span>
                         }
 
-                        @if (context.BackflowPr != null)
+                        @if (context.BackflowSubscription != null && context.BackflowSubscription.LastAppliedBuildStaleness > 0)
                         {
-                            <FluentAnchor Href="@context.BackflowPr" Target="_blank" Appearance="Appearance.Hypertext">Active PR</FluentAnchor>
+                            <span style="margin-left: 8px; color: #888; font-size: 0.85em;">@context.BackflowSubscription.LastAppliedBuildStaleness build(s) behind latest</span>
+                        }
+
+                        @if (context.BackflowSubscription?.ActivePr != null)
+                        {
+                            <FluentAnchor Href="@context.BackflowSubscription.ActivePr.Url" Target="_blank" Appearance="Appearance.Hypertext" style="margin-left: 8px;">Active PR (@GetPrAge(context.BackflowSubscription.ActivePr))</FluentAnchor>
                         }
                     </FluentLabel>
                 </TemplateColumn>
                 <TemplateColumn Title="Forward flow"
                                 Sortable="true"
-                                SortBy="@SortBy(sub => sub.ForwardflowSubscription != null && sub.ForwardflowSubscription.LastAppliedBuild != null ? sub.ForwardflowSubscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
+                                SortBy="@SortBy(sub => sub.ForwardFlowSubscription != null && sub.ForwardFlowSubscription.Subscription.LastAppliedBuild != null ? sub.ForwardFlowSubscription.Subscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
                                 Align="Align.Start">
-                    <FluentLabel Title="@(context.ForwardflowSubscription?.LastAppliedBuild?.DateProduced.ToString("f"))">
-                        @if (context.ForwardflowSubscription?.LastAppliedBuild != null)
+                    <FluentLabel Title="@(context.ForwardFlowSubscription?.Subscription.LastAppliedBuild?.DateProduced.ToString("f"))">
+                        @if (context.ForwardFlowSubscription?.Subscription.LastAppliedBuild != null)
                         {
-                            @(GetLastAppliedBuildTimeAgo(context.ForwardflowSubscription))
-                            <FluentAnchor Href="@context.ForwardflowSubscription.LastAppliedBuild.GetCommitLink()" Target="_blank" class="commitSha" title="@context.ForwardflowSubscription.LastAppliedBuild.Commit">
-                                &commat;@GetShortSha(context.ForwardflowSubscription.LastAppliedBuild.Commit)
-                            </FluentAnchor>
+                            @(GetBuildAgeDifference(context.ForwardFlowSubscription))
                         }
                         else
                         {
                             <span>—</span>
                         }
 
-                        @if (context.ForwardflowPr != null)
+                        @if (context.ForwardFlowSubscription != null && context.ForwardFlowSubscription.LastAppliedBuildStaleness > 0)
                         {
-                            <FluentAnchor Href="@context.ForwardflowPr" Target="_blank" Appearance="Appearance.Hypertext">Active PR</FluentAnchor>
+                            <span style="margin-left: 8px; color: #888; font-size: 0.85em;">@context.ForwardFlowSubscription.LastAppliedBuildStaleness build(s) behind latest</span>
+                        }
+
+                        @if (context.ForwardFlowSubscription?.ActivePr != null)
+                        {
+                            <FluentAnchor Href="@context.ForwardFlowSubscription.ActivePr.Url" Target="_blank" Appearance="Appearance.Hypertext" style="margin-left: 8px;">Active PR (@GetPrAge(context.ForwardFlowSubscription.ActivePr))</FluentAnchor>
                         }
                     </FluentLabel>
                 </TemplateColumn>
                 <TemplateColumn Width="60px">
-                    <CodeflowContextMenu Codeflow="@context" ShowDetails="@ShowDetails" />
+                    <CodeflowContextMenu Codeflow="@ToCodeflowSubscription(context)" ShowDetails="@ShowDetails" />
                 </TemplateColumn>
             </ChildContent>
         </FluentDataGrid>
@@ -138,108 +141,17 @@
 </GridViewTemplate>
 
 @code {
-    [SupplyParameterFromQuery(Name = "branch")]
-    private string? branchQuery { get; set; }
+    IQueryable<CodeflowSubscriptionPageEntry>? CodeFlows;
 
-    string? VmrBranch = null;
-    DefaultChannel? DefaultChannel = null;
-    List<DefaultChannel> DefaultChannels = [];
-    Dictionary<Guid, string> PullRequests = [];
-    List<Subscription>? Subscriptions = null;
-    IQueryable<CodeflowSubscription>? CodeFlows;
+    GridSort<CodeflowSubscriptionPageEntry> SortBy(Expression<Func<CodeflowSubscriptionPageEntry, string?>> sorter)
+        => GridSort<CodeflowSubscriptionPageEntry>.ByAscending(sorter);
 
-    GridSort<CodeflowSubscription> SortBy(Expression<Func<CodeflowSubscription, string?>> sorter)
-        => GridSort<CodeflowSubscription>.ByAscending(sorter);
-
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        CodeFlows = null;
-
-        Subscriptions = await PcsApi.Subscriptions.ListSubscriptionsAsync(sourceEnabled: true);
-        DefaultChannels = await GetDefaultChannels();
-
-        var prs = await PcsApi.PullRequest.GetTrackedPullRequestsAsync();
-        foreach (var pr in prs)
-        {
-            foreach (var update in pr.Updates)
-            {
-                if (Subscriptions.Any(s => s.Id == update.SubscriptionId))
-                {
-                    PullRequests[update.SubscriptionId] = pr.Url;
-                }
-            }
-        }
-
-        // Try to set the default channel from query parameter first, then fall back to "main"
-        if (!string.IsNullOrEmpty(branchQuery))
-        {
-            DefaultChannel = DefaultChannels.FirstOrDefault(c => c.Branch == branchQuery);
-        }
-        
-        if (DefaultChannel == null)
-        {
-            DefaultChannel = DefaultChannels.FirstOrDefault(c => c.Branch == "main");
-        }
-        
-        VmrBranch = DefaultChannel?.Branch;
-
-        await GenerateCodeflows();
-    }
-
-    Task GenerateCodeflows()
-    {
-        // Select subscriptions to/from the selected VMR branch
-        var subscriptions = Subscriptions!
-            .Where(s => (!string.IsNullOrEmpty(s.TargetDirectory) && s.TargetBranch == VmrBranch)
-                     || (!string.IsNullOrEmpty(s.SourceDirectory) && s.Channel.Id == DefaultChannel?.Channel.Id))
-            .ToList();
-
-        // Get all unique mappings
-        var allMappings = subscriptions
-            .Select(s => string.IsNullOrEmpty(s.TargetDirectory) ? s.SourceDirectory : s.TargetDirectory)
-            .Where(s => !string.IsNullOrEmpty(s))
-            .Distinct()
-            .ToList();
-
-        List<CodeflowSubscription> codeflows = new List<CodeflowSubscription>(allMappings.Count);
-        foreach (var mapping in allMappings)
-        {
-            var backflowSubscription = subscriptions!.FirstOrDefault(s => s.SourceDirectory == mapping);
-            var forwardflowSubscription = subscriptions!.FirstOrDefault(s => s.TargetDirectory == mapping);
-            PullRequests.TryGetValue(backflowSubscription?.Id ?? default, out var backflowPr);
-            PullRequests.TryGetValue(forwardflowSubscription?.Id ?? default, out var forwardflowPr);
-            codeflows.Add(new CodeflowSubscription(
-                RepositoryUrl: backflowSubscription?.TargetRepository ?? forwardflowSubscription?.SourceRepository!,
-                RepositoryBranch: backflowSubscription?.TargetBranch,
-                MappingName: mapping,
-                Enabled: backflowSubscription?.Enabled ?? forwardflowSubscription?.Enabled ?? false,
-                BackflowSubscription: backflowSubscription,
-                ForwardflowSubscription: forwardflowSubscription,
-                BackflowPr: backflowPr,
-                ForwardflowPr: forwardflowPr));
-        }
-
-        CodeFlows = codeflows.OrderBy(c => c.MappingName).AsQueryable();
-        StateHasChanged();
-        return Task.CompletedTask;
-    }
-
-    async Task OnDefaultChannelSelected(DefaultChannel channel)
-    {
-        DefaultChannel = channel;
-        VmrBranch = channel.Branch;
-        UpdateQueryParams();
-        await GenerateCodeflows();
-    }
-
-    private void UpdateQueryParams()
-    {
-        var newUri = NavManager.GetUriWithQueryParameters(new Dictionary<string, object?>
-        {
-            ["branch"] = VmrBranch
-        });
-
-        NavManager.NavigateTo(newUri);
+        var mockData = MockCodeflowData.GetMockCodeflowPage();
+        CodeFlows = mockData.CodeflowRow
+            .OrderBy(c => c.MappingName)
+            .AsQueryable();
     }
 
     async Task ShowDetails(Subscription subscription)
@@ -267,39 +179,40 @@
             : "—";
     }
 
-    async Task<List<DefaultChannel>> GetDefaultChannels()
+    static CodeflowSubscription ToCodeflowSubscription(CodeflowSubscriptionPageEntry entry)
     {
-        string[] possibleVmrs =
-        [
-            "https://github.com/dotnet/dotnet",
-            "https://github.com/maestro-auth-test/dotnet",
-            "https://github.com/maestro-auth-test/dnceng-vmr",
-        ];
-
-        foreach (var vmrUri in possibleVmrs)
-        {
-            var defaultChannels = await PcsApi.DefaultChannels.ListAsync(repository: vmrUri);
-
-            if (defaultChannels.Count > 0)
-            {
-                // Make the main branch go first
-                return defaultChannels
-                    .OrderByDescending(c => c.Branch == "main")
-                    .ThenByDescending(c => c.Branch)
-                    .ToList();
-            }
-        }
-
-        return
-        [
-            // This can happen in local dev when there's no codeflow subscriptions found
-            new DefaultChannel(0, string.Empty, true)
-            {
-                Branch = "No VMR",
-                Channel = new Microsoft.DotNet.ProductConstructionService.Client.Models.Channel(0, "codeflows found", string.Empty),
-            }
-        ];
+        return new CodeflowSubscription(
+            RepositoryUrl: entry.RepositoryUrl,
+            RepositoryBranch: entry.BackflowSubscription?.Subscription.TargetBranch,
+            MappingName: entry.MappingName,
+            Enabled: entry.Enabled,
+            BackflowSubscription: entry.BackflowSubscription?.Subscription,
+            ForwardflowSubscription: entry.ForwardFlowSubscription?.Subscription,
+            BackflowPr: entry.BackflowSubscription?.ActivePr?.Url,
+            ForwardflowPr: entry.ForwardFlowSubscription?.ActivePr?.Url);
     }
 
     static string GetShortSha(string sha) => sha.Substring(0, 7);
+
+    string GetBuildAgeDifference(SubscriptionEntry? entry)
+    {
+        if (entry?.NewestApplicableBuild == null || entry.Subscription.LastAppliedBuild == null)
+        {
+            return string.Empty;
+        }
+
+        var diff = entry.NewestApplicableBuild.DateProduced - entry.Subscription.LastAppliedBuild.DateProduced;
+        if (diff.TotalMinutes < 1)
+        {
+            return string.Empty;
+        }
+
+        return diff.ToTimeAgo().Replace(" ago", " older than the newest VMR build");
+    }
+
+    static string GetPrAge(ActivePr pr)
+    {
+        var age = (DateTime.UtcNow - pr.CreatedDate).ToTimeAgo();
+        return age.Replace(" ago", " old");
+    }
 }

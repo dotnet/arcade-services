@@ -31,6 +31,7 @@ public static class MockCodeflowData
             targetBranch: "main",
             sourceDirectory: null,
             targetDirectory: "src/runtime",
+            channelName: ".NET 10 Dev",
             enabled: true,
             lastAppliedBuildDaysAgo: 1);
 
@@ -40,6 +41,7 @@ public static class MockCodeflowData
             targetBranch: "main",
             sourceDirectory: "src/runtime",
             targetDirectory: null,
+            channelName: ".NET 10 Dev",
             enabled: true,
             lastAppliedBuildDaysAgo: 2);
 
@@ -49,6 +51,7 @@ public static class MockCodeflowData
             targetBranch: "main",
             sourceDirectory: null,
             targetDirectory: "src/sdk",
+            channelName: ".NET 10 Dev",
             enabled: true,
             lastAppliedBuildDaysAgo: 0);
 
@@ -58,6 +61,7 @@ public static class MockCodeflowData
             targetBranch: "main",
             sourceDirectory: "src/sdk",
             targetDirectory: null,
+            channelName: ".NET 10 Dev",
             enabled: true,
             lastAppliedBuildDaysAgo: 3);
 
@@ -67,8 +71,13 @@ public static class MockCodeflowData
             targetBranch: "main",
             sourceDirectory: null,
             targetDirectory: "src/aspnetcore",
+            channelName: ".NET 10 Dev",
             enabled: false,
             lastAppliedBuildDaysAgo: 5);
+
+        var newestRuntimeBuild = CreateNewestBuild("https://github.com/dotnet/runtime", daysAgo: 0);
+        var newestSdkBuild = CreateNewestBuild("https://github.com/dotnet/sdk", daysAgo: 0);
+        var newestAspnetBuild = CreateNewestBuild("https://github.com/dotnet/aspnetcore", daysAgo: 0);
 
         var entries = new List<CodeflowSubscriptionPageEntry>
         {
@@ -78,13 +87,15 @@ public static class MockCodeflowData
                 Enabled: true,
                 ForwardFlowSubscription: new SubscriptionEntry(
                     runtimeSubscriptionFf,
-                    lastAppliedBuildDistanceDays: 1,
+                    LastAppliedBuildStaleness: 1,
+                    NewestApplicableBuild: newestRuntimeBuild,
                     ActivePr: new ActivePr(
                         CreatedDate: new DateTime(2026, 2, 18, 14, 0, 0),
                         Url: "https://github.com/dotnet/runtime/pull/112345")),
                 BackflowSubscription: new SubscriptionEntry(
                     runtimeSubscriptionBf,
-                    lastAppliedBuildDistanceDays: 2,
+                    LastAppliedBuildStaleness: 2,
+                    NewestApplicableBuild: vmrBuild,
                     ActivePr: null)),
 
             new(
@@ -93,11 +104,13 @@ public static class MockCodeflowData
                 Enabled: true,
                 ForwardFlowSubscription: new SubscriptionEntry(
                     sdkSubscriptionFf,
-                    lastAppliedBuildDistanceDays: 0,
+                    LastAppliedBuildStaleness: 1,
+                    NewestApplicableBuild: newestSdkBuild,
                     ActivePr: null),
                 BackflowSubscription: new SubscriptionEntry(
                     sdkSubscriptionBf,
-                    lastAppliedBuildDistanceDays: 3,
+                    LastAppliedBuildStaleness: 3,
+                    NewestApplicableBuild: vmrBuild,
                     ActivePr: new ActivePr(
                         CreatedDate: new DateTime(2026, 2, 17, 9, 15, 0),
                         Url: "https://github.com/dotnet/dotnet/pull/54321"))),
@@ -108,12 +121,13 @@ public static class MockCodeflowData
                 Enabled: false,
                 ForwardFlowSubscription: new SubscriptionEntry(
                     aspnetSubscriptionFf,
-                    lastAppliedBuildDistanceDays: 5,
+                    LastAppliedBuildStaleness: 5,
+                    NewestApplicableBuild: newestAspnetBuild,
                     ActivePr: null),
                 BackflowSubscription: null),
         };
 
-        return new CodeflowPage(vmrBuild, entries);
+        return new CodeflowPage(entries);
     }
 
     private static Subscription CreateSubscription(
@@ -122,6 +136,7 @@ public static class MockCodeflowData
         string targetBranch,
         string? sourceDirectory,
         string? targetDirectory,
+        string channelName,
         bool enabled,
         int lastAppliedBuildDaysAgo)
     {
@@ -137,9 +152,10 @@ public static class MockCodeflowData
             pullRequestFailureNotificationTags: string.Empty,
             excludedAssets: [])
         {
+            Channel = new Channel(id: Random.Shared.Next(100, 999), channelName, "none"),
             LastAppliedBuild = new Build(
                 id: Random.Shared.Next(10000, 99999),
-                dateProduced: DateTimeOffset.UtcNow.AddDays(-lastAppliedBuildDaysAgo),
+                dateProduced: DateTimeOffset.UtcNow.AddMinutes(-Random.Shared.Next(1, 14 * 24 * 60)),
                 staleness: lastAppliedBuildDaysAgo,
                 released: false,
                 stable: true,
@@ -155,5 +171,24 @@ public static class MockCodeflowData
         };
 
         return subscription;
+    }
+
+    private static Build CreateNewestBuild(string repository, int daysAgo)
+    {
+        return new Build(
+            id: Random.Shared.Next(10000, 99999),
+            dateProduced: DateTimeOffset.UtcNow.AddDays(-daysAgo),
+            staleness: 0,
+            released: false,
+            stable: true,
+            commit: Guid.NewGuid().ToString("N")[..16],
+            channels: [],
+            assets: [],
+            dependencies: [],
+            incoherencies: [])
+        {
+            GitHubRepository = repository,
+            GitHubBranch = "main",
+        };
     }
 }

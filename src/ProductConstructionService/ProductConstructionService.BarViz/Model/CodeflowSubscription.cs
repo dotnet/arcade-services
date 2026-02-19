@@ -16,7 +16,6 @@ public record CodeflowSubscription(
     string? ForwardflowPr);
 
 public record CodeflowPage(
-    Build VmrBuild,
     List<CodeflowSubscriptionPageEntry> CodeflowRow);
 
 public record CodeflowSubscriptionPageEntry(
@@ -28,7 +27,8 @@ public record CodeflowSubscriptionPageEntry(
 
 public record SubscriptionEntry(
     Subscription Subscription,
-    int lastAppliedBuildDistanceDays,
+    int LastAppliedBuildStaleness,
+    Build? NewestApplicableBuild,
     ActivePr? ActivePr);
 
 public record ActivePr(
