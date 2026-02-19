@@ -24,9 +24,6 @@ internal class LoginOperation : Operation
         _logger = logger;
     }
 
-    /// <summary>
-    /// Implements the 'login' verb
-    /// </summary>
     public override async Task<int> ExecuteAsync()
     {
         try
@@ -51,13 +48,11 @@ internal class LoginOperation : Operation
             if (token.Token != null)
             {
                 _logger.LogInformation("Successfully authenticated with Maestro!");
-                _logger.LogInformation("Authentication credentials have been stored in {authCache}", AppCredential.AUTH_CACHE);
-                _logger.LogInformation("These credentials will be used by automation tools and the darc CLI.");
                 return Constants.SuccessCode;
             }
             else
             {
-                _logger.LogError("Failed to obtain authentication token.");
+                _logger.LogError("Failed to obtain authentication token");
                 _logger.LogInformation("If authentication continues to fail, you can use 'darc authenticate' to manually configure tokens.");
                 return Constants.ErrorCode;
             }
