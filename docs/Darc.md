@@ -41,6 +41,7 @@ use darc to achieve them, as well as a general reference guide to darc commands.
   - [add-build-to-channel](#add-build-to-channel) - Adds an existing build to a channel
   - [authenticate](#authenticate) - Stores the Azure DevOps and GitHub tokens
     required for remote operations.
+  - [login](#login) - Authenticate with Maestro and store credentials for use by automation tools.
   - [clone](#clone) - Clone a remote repo and all of its dependency repos.
   - [gather-drop](#gather-drop) - Gather a drop of the outputs for a build.
   - [get-asset](#get-asset) - Get information about an asset.
@@ -1618,6 +1619,42 @@ build_asset_registry_base_uri=https://maestro.dot.net/
 # Set elements above depending on what you need
 
 ```
+
+### **`login`**
+
+Authenticate with Maestro using interactive browser login and store the credentials for use by the darc CLI and automation tools like MCP agents. 
+This command triggers an interactive browser-based authentication flow and stores the authentication record in the `~/.darc` directory.
+The stored credentials will be automatically used by subsequent darc commands and by automation tools that rely on darc authentication.
+
+This is the recommended authentication method for local development and automation. For manual token configuration, use [`darc authenticate`](#authenticate) instead.
+
+**Parameters:**
+- `--bar-uri` - (Optional) URI of the Build Asset Registry (Maestro) service to authenticate with. Defaults to production Maestro (`https://maestro.dot.net/`).
+
+**Sample:**
+```
+PS D:\enlistments\arcade> darc login
+Authenticating with Maestro at https://maestro.dot.net/
+Opening browser for authentication...
+Successfully authenticated with Maestro!
+Authentication credentials have been stored in /Users/username/.darc
+These credentials will be used by automation tools and the darc CLI.
+```
+
+To authenticate with staging Maestro:
+```
+PS D:\enlistments\arcade> darc login --bar-uri https://maestro.int-dot.net/
+Authenticating with Maestro at https://maestro.int-dot.net/
+Opening browser for authentication...
+Successfully authenticated with Maestro!
+Authentication credentials have been stored in /Users/username/.darc
+These credentials will be used by automation tools and the darc CLI.
+```
+
+**Notes:**
+- If authentication fails, the command will suggest using `darc authenticate` as an alternative for manual token configuration.
+- The authentication record is stored in `~/.darc/.auth-record-{appId}` where `{appId}` is the Entra app ID for the Maestro environment.
+- These credentials are separate from GitHub and Azure DevOps tokens managed by `darc authenticate`.
 
 ### **`clone`**
 
