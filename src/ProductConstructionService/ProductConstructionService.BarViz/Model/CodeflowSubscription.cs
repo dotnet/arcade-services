@@ -14,3 +14,24 @@ public record CodeflowSubscription(
     Subscription? ForwardflowSubscription,
     string? BackflowPr,
     string? ForwardflowPr);
+
+public record CodeflowPage(
+    Build VmrBuild,
+    List<CodeflowSubscriptionPageEntry> CodeflowRow);
+
+public record CodeflowSubscriptionPageEntry(
+    string RepositoryUrl,
+    string MappingName,
+    bool Enabled,
+    SubscriptionEntry? ForwardFlowSubscription,
+    SubscriptionEntry? BackflowSubscription);
+
+public record SubscriptionEntry(
+    Subscription Subscription,
+    int lastAppliedBuildDistanceDays,
+    ActivePr? ActivePr);
+
+public record ActivePr(
+    DateTime CreatedDate,
+    string Url);
+
