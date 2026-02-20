@@ -4,7 +4,6 @@ using '../provision.bicep'
 param location = 'westus2'
 param environmentName = 'Development'
 param serviceName = 'build-insights-dev'
-param infrastructureResourceGroupName = 'build-insights-service-ip-dev'
 
 // Container app runtime
 param containerEnvironmentName = 'build-insights-service-env-dev'
@@ -32,6 +31,7 @@ param storageAccountName = 'buildinsightsdev'
 param virtualNetworkName = 'build-insights-service-vnet-dev'
 param serviceSubnetName = 'build-insights-service-subnet'
 param networkSecurityGroupName = 'build-insights-service-nsg-dev'
+param infrastructureResourceGroupName = 'build-insights-service-ip-dev'
 param publicIpAddressName = 'build-insights-service-public-ip-dev'
 param publicIpAddressServiceTag = 'DotNetBuildInsightsDev'
 
