@@ -44,7 +44,7 @@ resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   }
 }
 
-// allow acr pulls to the identity used for the feed cleaner
+// allow acr pulls to the identity used for the scheduled job
 resource scheduledJobIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: containerRegistry
   name: guid(subscription().id, resourceGroup().id, 'scheduledJobAcrPull')

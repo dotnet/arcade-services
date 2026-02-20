@@ -52,7 +52,7 @@ param deploymentIdentityName string
 param virtualNetworkName string
 
 @description('Feed Cleaner Job name')
-param feedCleanerJobName string
+param scheduledJobName string
 
 @description('Feed Cleaner Identity name')
 param scheduledJobIdentityName string
@@ -147,10 +147,10 @@ module containerAppModule 'modules/container-app.bicep' = {
     ]
 }
 
-module feedCleaner 'modules/scheduledContainerJob.bicep' = {
-    name: 'feedCleaner'
+module scheduledJob 'modules/scheduledContainerJob.bicep' = {
+    name: 'scheduledJob'
     params: {
-        jobName: feedCleanerJobName
+        jobName: scheduledJobName
         location: location
         environmentName: environmentName
         applicationInsightsConnectionString: containerEnvironmentModule.outputs.applicationInsightsConnectionString

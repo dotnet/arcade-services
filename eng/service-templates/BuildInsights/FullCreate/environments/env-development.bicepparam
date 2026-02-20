@@ -40,4 +40,4 @@ param publicIpAddressName = '${serviceNameKebabCase}-service-public-ip-${environ
 param publicIpAddressServiceTag = 'DotNet${serviceNamePascalCase}${environmentPascalCase}'
 
 // Jobs
-param feedCleanerJobName = 'feed-cleaner-${environmentSuffix}'
+param scheduledJobName = '${serviceNameKebabCase}-scheduled-job-${environmentSuffix}'
