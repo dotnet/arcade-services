@@ -33,7 +33,8 @@ public static class MockCodeflowData
             targetDirectory: "src/runtime",
             channelName: ".NET 10 Dev",
             enabled: true,
-            lastAppliedBuildDaysAgo: 1);
+            lastAppliedBuildDaysAgo: 1,
+            staleness: 1);
 
         var runtimeSubscriptionBf = CreateSubscription(
             sourceRepository: "https://github.com/dotnet/dotnet",
@@ -43,7 +44,8 @@ public static class MockCodeflowData
             targetDirectory: null,
             channelName: ".NET 10 Dev",
             enabled: true,
-            lastAppliedBuildDaysAgo: 2);
+            lastAppliedBuildDaysAgo: 2,
+            staleness: 2);
 
         var sdkSubscriptionFf = CreateSubscription(
             sourceRepository: "https://github.com/dotnet/sdk",
@@ -53,7 +55,8 @@ public static class MockCodeflowData
             targetDirectory: "src/sdk",
             channelName: ".NET 10 Dev",
             enabled: true,
-            lastAppliedBuildDaysAgo: 0);
+            lastAppliedBuildDaysAgo: 0,
+            staleness: 1);
 
         var sdkSubscriptionBf = CreateSubscription(
             sourceRepository: "https://github.com/dotnet/dotnet",
@@ -63,7 +66,8 @@ public static class MockCodeflowData
             targetDirectory: null,
             channelName: ".NET 10 Dev",
             enabled: true,
-            lastAppliedBuildDaysAgo: 3);
+            lastAppliedBuildDaysAgo: 3,
+            staleness: 3);
 
         var aspnetSubscriptionFf = CreateSubscription(
             sourceRepository: "https://github.com/dotnet/aspnetcore",
@@ -73,7 +77,8 @@ public static class MockCodeflowData
             targetDirectory: "src/aspnetcore",
             channelName: ".NET 10 Dev",
             enabled: false,
-            lastAppliedBuildDaysAgo: 5);
+            lastAppliedBuildDaysAgo: 5,
+            staleness: 5);
 
         var newestRuntimeBuild = CreateNewestBuild("https://github.com/dotnet/runtime", daysAgo: 0);
         var newestSdkBuild = CreateNewestBuild("https://github.com/dotnet/sdk", daysAgo: 0);
@@ -87,14 +92,12 @@ public static class MockCodeflowData
                 Enabled: true,
                 ForwardFlowSubscription: new SubscriptionInformation(
                     runtimeSubscriptionFf,
-                    LastAppliedBuildStaleness: 1,
                     NewestApplicableBuild: newestRuntimeBuild,
                     ActivePullRequest: new ActivePullRequest(
                         CreatedDate: new DateTime(2026, 2, 18, 14, 0, 0),
                         Url: "https://github.com/dotnet/runtime/pull/112345")),
                 BackflowSubscription: new SubscriptionInformation(
                     runtimeSubscriptionBf,
-                    LastAppliedBuildStaleness: 2,
                     NewestApplicableBuild: vmrBuild,
                     ActivePullRequest: null)),
 
@@ -104,12 +107,10 @@ public static class MockCodeflowData
                 Enabled: true,
                 ForwardFlowSubscription: new SubscriptionInformation(
                     sdkSubscriptionFf,
-                    LastAppliedBuildStaleness: 1,
                     NewestApplicableBuild: newestSdkBuild,
                     ActivePullRequest: null),
                 BackflowSubscription: new SubscriptionInformation(
                     sdkSubscriptionBf,
-                    LastAppliedBuildStaleness: 3,
                     NewestApplicableBuild: vmrBuild,
                     ActivePullRequest: new ActivePullRequest(
                         CreatedDate: new DateTime(2026, 2, 17, 9, 15, 0),
@@ -121,7 +122,6 @@ public static class MockCodeflowData
                 Enabled: false,
                 ForwardFlowSubscription: new SubscriptionInformation(
                     aspnetSubscriptionFf,
-                    LastAppliedBuildStaleness: 5,
                     NewestApplicableBuild: newestAspnetBuild,
                     ActivePullRequest: null),
                 BackflowSubscription: null),
@@ -138,7 +138,8 @@ public static class MockCodeflowData
         string? targetDirectory,
         string channelName,
         bool enabled,
-        int lastAppliedBuildDaysAgo)
+        int lastAppliedBuildDaysAgo,
+        int staleness)
     {
         var subscription = new Subscription(
             id: Guid.NewGuid(),
@@ -156,7 +157,7 @@ public static class MockCodeflowData
             LastAppliedBuild = new Build(
                 id: Random.Shared.Next(10000, 99999),
                 dateProduced: DateTimeOffset.UtcNow.AddMinutes(-Random.Shared.Next(1, 14 * 24 * 60)),
-                staleness: lastAppliedBuildDaysAgo,
+                staleness: staleness,
                 released: false,
                 stable: true,
                 commit: Guid.NewGuid().ToString("N")[..16],

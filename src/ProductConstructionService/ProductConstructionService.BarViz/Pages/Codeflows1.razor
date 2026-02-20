@@ -96,9 +96,9 @@
                             <span>—</span>
                         }
 
-                        @if (context.BackflowSubscription != null && context.BackflowSubscription.LastAppliedBuildStaleness > 0)
+                        @if (context.BackflowSubscription?.Subscription.LastAppliedBuild != null && context.BackflowSubscription.Subscription.LastAppliedBuild.Staleness > 0)
                         {
-                            <span style="margin-left: 8px; color: #888; font-size: 0.85em;">@context.BackflowSubscription.LastAppliedBuildStaleness build(s) behind latest</span>
+                            <span style="margin-left: 8px; color: #888; font-size: 0.85em;">@context.BackflowSubscription.Subscription.LastAppliedBuild.Staleness build(s) behind latest</span>
                         }
 
                         @if (context.BackflowSubscription?.ActivePullRequest != null)
@@ -121,9 +121,9 @@
                             <span>—</span>
                         }
 
-                        @if (context.ForwardFlowSubscription != null && context.ForwardFlowSubscription.LastAppliedBuildStaleness > 0)
+                        @if (context.ForwardFlowSubscription?.Subscription.LastAppliedBuild != null && context.ForwardFlowSubscription.Subscription.LastAppliedBuild.Staleness > 0)
                         {
-                            <span style="margin-left: 8px; color: #888; font-size: 0.85em;">@context.ForwardFlowSubscription.LastAppliedBuildStaleness build(s) behind latest</span>
+                            <span style="margin-left: 8px; color: #888; font-size: 0.85em;">@context.ForwardFlowSubscription.Subscription.LastAppliedBuild.Staleness build(s) behind latest</span>
                         }
 
                         @if (context.ForwardFlowSubscription?.ActivePullRequest != null)

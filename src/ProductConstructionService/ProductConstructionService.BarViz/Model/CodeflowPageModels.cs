@@ -17,7 +17,6 @@ public record CodeflowEntry(
 
 public record SubscriptionInformation(
     Subscription Subscription,
-    int LastAppliedBuildStaleness,
     Build NewestApplicableBuild,
     ActivePullRequest? ActivePullRequest);
 
