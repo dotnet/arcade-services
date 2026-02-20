@@ -75,6 +75,9 @@ param publicIpAddressName string
 @description('Public IP address service tag')
 param publicIpAddressServiceTag string
 
+@description('Enable creation of public IP address resources')
+param enablePublicIpAddress bool = (environmentName == 'Production')
+
 module networkSecurityGroupModule 'modules/nsg.bicep' = {
     name: 'networkSecurityGroupModule'
     params: {
@@ -191,7 +194,7 @@ module storageAccountModule 'modules/storage-account.bicep' = {
     }
 }
 
-module ipAddressModule 'modules/public-ip-address.bicep' = {
+module ipAddressModule 'modules/public-ip-address.bicep' = if (enablePublicIpAddress) {
     name: 'ipAddressModule'
     params: {
         location: location

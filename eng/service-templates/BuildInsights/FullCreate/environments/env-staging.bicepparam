@@ -38,6 +38,7 @@ param networkSecurityGroupName = '${serviceNameKebabCase}-service-nsg-${environm
 param infrastructureResourceGroupName = '${serviceNameKebabCase}-service-ip-${environmentSuffix}'
 param publicIpAddressName = '${serviceNameKebabCase}-service-public-ip-${environmentSuffix}'
 param publicIpAddressServiceTag = 'DotNet${serviceNamePascalCase}${environmentPascalCase}'
+param enablePublicIpAddress = false
 
 // Jobs
 param scheduledJobName = '${serviceNameKebabCase}-scheduled-job-${environmentSuffix}'
