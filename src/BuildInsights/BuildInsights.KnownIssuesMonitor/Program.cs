@@ -13,22 +13,22 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Http;
 
-var builder = Host.CreateApplicationBuilder();
-var knowIssueMonitor = builder.Services
-    .RegisterServices()
-    .ConfigureServices()
-    .BuildServiceProvider()
-    .CreateScope()
-    .ServiceProvider
-    .GetRequiredService<IKnownIssueMonitor>();
+//var builder = Host.CreateApplicationBuilder();
+//var knowIssueMonitor = builder.Services
+//    .RegisterServices()
+//    .ConfigureServices()
+//    .BuildServiceProvider()
+//    .CreateScope()
+//    .ServiceProvider
+//    .GetRequiredService<IKnownIssueMonitor>();
 
-await knowIssueMonitor.RunAsync();
+//await knowIssueMonitor.RunAsync();
 
 static file class Configuration
 {
     public static IServiceCollection ConfigureServices(this IServiceCollection services)
     {
-        (string assemblyName, string assemblyVersion) = Helpers.GetAssemblyVersion();
+        //(string assemblyName, string assemblyVersion) = Helpers.GetAssemblyVersion();
 
         services.AddDefaultJsonConfiguration();
         services.Configure<GitHubIssuesSettings>("GitHubIssuesSettings", (o, c) => c.Bind(o));
@@ -41,7 +41,7 @@ static file class Configuration
         {
             options.HttpClientActions.Add(client =>
             {
-                client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue(assemblyName, assemblyVersion));
+                // client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue(assemblyName, assemblyVersion));
             });
         });
 

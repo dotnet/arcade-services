@@ -241,7 +241,7 @@ public class GitHubGraphQLClient : IGitHubGraphQLClient
 
         // Add feature header for tracking information
         request.Headers.Add("GraphQL-Features", "tracked_issues_graphql_access");
-        using HttpClient httpClient = await _clientFactory.GetClient();
+        using HttpClient httpClient = _clientFactory.GetClient();
 
         using (var response = await httpClient.SendAsync(request))
         {
