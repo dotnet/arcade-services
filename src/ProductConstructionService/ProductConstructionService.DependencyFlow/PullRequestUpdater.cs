@@ -1158,7 +1158,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             return;
         }
 
-        if (pr?.BlockedFromFutureUpdates == true)
+        if (pr?.BlockedFromFutureUpdates == true && !forceUpdate)
         {
             _logger.LogInformation("Failed to update pr {url} for {subscription} because it is blocked from future updates",
                 pr.Url,
@@ -1328,6 +1328,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             pullRequest.SourceSha = update.SourceSha;
             pullRequest.LastUpdate = DateTime.UtcNow;
             pullRequest.NextBuildsToProcess.Remove(update.SubscriptionId);
+            pullRequest.BlockedFromFutureUpdates = false; // if a sub is blocked, and someone force triggers it, we can continue flowing afterwards
             await SetPullRequestCheckReminder(pullRequest, prInfo!, isCodeFlow: true);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
         }
