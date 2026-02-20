@@ -1,38 +1,44 @@
 using '../provision.bicep'
 
+var serviceNameKebabCase = 'build-insights'
+var serviceNamePascalCase = 'BuildInsights'
+var environmentSuffix = 'prod'
+var environmentPascalCase = 'Prod'
+var optionalEnvironmentSuffix = ''
+
 // Core deployment
 param location = 'westus2'
 param environmentName = 'Production'
-param serviceName = 'build-insights'
+param serviceName = '${serviceNameKebabCase}${optionalEnvironmentSuffix}'
 
 // Container app runtime
-param containerEnvironmentName = 'build-insights-service-env'
+param containerEnvironmentName = '${serviceNameKebabCase}-service-env${optionalEnvironmentSuffix}'
 param containerCpuCoreCount = '1.0'
 param containerMemory = '2Gi'
 param containerReplicas = 3
-param containerRegistryName = 'buildinsights'
+param containerRegistryName = '${toLower(replace(serviceNameKebabCase, '-', ''))}${optionalEnvironmentSuffix}'
 
 // Identities
-param appIdentityName = 'BuildInsightsServiceProd'
-param deploymentIdentityName = 'BuildInsightsServiceDeploymentProd'
-param scheduledJobIdentityName = 'BuildInsightsScheduledJobProd'
+param appIdentityName = '${serviceNamePascalCase}Service${environmentPascalCase}'
+param deploymentIdentityName = '${serviceNamePascalCase}ServiceDeployment${environmentPascalCase}'
+param scheduledJobIdentityName = '${serviceNamePascalCase}ScheduledJob${environmentPascalCase}'
 
 // Observability
-param applicationInsightsName = 'build-insights-service-ai'
-param logAnalyticsName = 'build-insights-service-workspace'
+param applicationInsightsName = '${serviceNameKebabCase}-service-ai${optionalEnvironmentSuffix}'
+param logAnalyticsName = '${serviceNameKebabCase}-service-workspace${optionalEnvironmentSuffix}'
 
 // Data and secrets
-param keyVaultName = 'BuildInsightsProd'
-param azureCacheRedisName = 'build-insights-service-redis'
-param storageAccountName = 'buildinsightsprod'
+param keyVaultName = '${serviceNamePascalCase}${environmentPascalCase}'
+param azureCacheRedisName = '${serviceNameKebabCase}-service-redis${optionalEnvironmentSuffix}'
+param storageAccountName = '${toLower(replace(serviceNameKebabCase, '-', ''))}${environmentSuffix}'
 
 // Networking
-param virtualNetworkName = 'build-insights-service-vnet'
-param serviceSubnetName = 'build-insights-service-subnet'
-param networkSecurityGroupName = 'build-insights-service-nsg'
-param infrastructureResourceGroupName = 'build-insights-service-ip'
-param publicIpAddressName = 'build-insights-service-public-ip'
-param publicIpAddressServiceTag = 'DotNetBuildInsightsProd'
+param virtualNetworkName = '${serviceNameKebabCase}-service-vnet${optionalEnvironmentSuffix}'
+param serviceSubnetName = '${serviceNameKebabCase}-service-subnet'
+param networkSecurityGroupName = '${serviceNameKebabCase}-service-nsg${optionalEnvironmentSuffix}'
+param infrastructureResourceGroupName = '${serviceNameKebabCase}-service-ip${optionalEnvironmentSuffix}'
+param publicIpAddressName = '${serviceNameKebabCase}-service-public-ip${optionalEnvironmentSuffix}'
+param publicIpAddressServiceTag = 'DotNet${serviceNamePascalCase}${environmentPascalCase}'
 
 // Jobs
-param feedCleanerJobName = 'feed-cleaner-prod'
+param feedCleanerJobName = 'feed-cleaner-${environmentSuffix}'
