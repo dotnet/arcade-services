@@ -1,6 +1,5 @@
 param location string
 param containerRegistryName string
-param containerDefaultImageName string
 param containerCpuCoreCount string
 param containerMemory string
 param environmentName string
@@ -8,9 +7,16 @@ param serviceName string
 param applicationInsightsConnectionString string
 param appIdentityId string
 param containerEnvironmentId string
-param contributorRoleId string
 param deploymentIdentityPrincipalId string
 param containerReplicas int
+
+module roles './roles.bicep' = {
+  name: 'roles'
+}
+
+module shared './shared.bicep' = {
+  name: 'shared'
+}
 
 // common environment variables used by the app
 var containerAppEnv = [
@@ -86,7 +92,7 @@ resource containerApp 'Microsoft.App/containerApps@2023-04-01-preview' = {
       serviceBinds: []
       containers: [
         {
-          image: containerDefaultImageName
+          image: shared.outputs.containerDefaultImageName
           name: 'api'
           env: containerAppEnv
           resources: {
@@ -142,7 +148,7 @@ resource deploymentSubscriptionTriggerContributor 'Microsoft.Authorization/roleA
   scope: containerApp
   name: guid(subscription().id, resourceGroup().id, '${serviceName}-contributor')
   properties: {
-    roleDefinitionId: contributorRoleId
+    roleDefinitionId: roles.outputs.contributorRole
     principalType: 'ServicePrincipal'
     principalId: deploymentIdentityPrincipalId
   }

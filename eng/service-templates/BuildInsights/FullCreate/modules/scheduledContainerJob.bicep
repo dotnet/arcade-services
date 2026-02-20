@@ -6,10 +6,16 @@ param userAssignedIdentityId string
 param cronSchedule string
 param containerRegistryName string
 param containerAppsEnvironmentId string
-param containerDefaultImageName string
 param command string
-param contributorRoleId string
 param deploymentIdentityPrincipalId string
+
+module roles './roles.bicep' = {
+  name: 'roles'
+}
+
+module shared './shared.bicep' = {
+  name: 'shared'
+}
 
 var env = [
   {
@@ -70,7 +76,7 @@ resource containerJob 'Microsoft.App/jobs@2024-03-01' = {
     template: {
       containers: [
         {
-          image: containerDefaultImageName
+          image: shared.outputs.containerDefaultImageName
           name: 'job'
           env: env
           command: [
@@ -92,7 +98,7 @@ resource deploymentSubscriptionTriggerContributor 'Microsoft.Authorization/roleA
   scope: containerJob
   name: guid(subscription().id, resourceGroup().id, '${jobName}-contributor')
   properties: {
-    roleDefinitionId: contributorRoleId
+    roleDefinitionId: roles.outputs.contributorRole
     principalType: 'ServicePrincipal'
     principalId: deploymentIdentityPrincipalId
   }

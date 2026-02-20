@@ -48,9 +48,6 @@ param appIdentityName string
 @description('Name of the identity used for the PCS deployment')
 param deploymentIdentityName string
 
-@description('Bicep requires an image when creating a containerapp. Using a dummy image for that.')
-param containerDefaultImageName string
-
 @description('Virtual network name')
 param virtualNetworkName string
 
@@ -77,25 +74,6 @@ param publicIpAddressName string
 
 @description('Public IP address service tag')
 param publicIpAddressServiceTag string
-
-// azure system role for setting up acr pull access
-var acrPullRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
-// azure system role for granting push access
-var acrPushRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '8311e382-0749-4cb8-b61a-304f252e45ec')
-// azure system role for setting secret access
-var kvSecretUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
-// azure system role for setting storage queue access
-var storageQueueContrubutorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '974c5e8b-45b9-4653-ba55-5f855dd0fb88')
-// azure system role for setting contributor access
-var contributorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
-// storage account blob contributor
-var blobContributorRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
-// Key Vault Crypto User role
-var kvCryptoUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '12338af0-0e69-4776-bea7-57ae8d297424')
-// Reader role
-var readerRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')
-// Container Apps ManagedEnvironments Contributor Role
-var containerAppsManagedEnvironmentsContributor = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '57cc5028-e6a7-4284-868d-0611c5923f8d')
 
 module networkSecurityGroupModule 'modules/nsg.bicep' = {
     name: 'networkSecurityGroupModule'
@@ -124,7 +102,6 @@ module containerEnvironmentModule 'modules/container-environment.bicep' = {
         productConstructionServiceSubnetId: virtualNetworkModule.outputs.productConstructionServiceSubnetId
         infrastructureResourceGroupName: infrastructureResourceGroupName
         applicationInsightsName: applicationInsightsName
-        containerAppsManagedEnvironmentsContributor: containerAppsManagedEnvironmentsContributor
         deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
 }
@@ -136,7 +113,6 @@ module managedIdentitiesModule 'modules/managed-identities.bicep' = {
         deploymentIdentityName: deploymentIdentityName
         appIdentityName: appIdentityName
         scheduledJobIdentityName: scheduledJobIdentityName
-        contributorRole: contributorRole
     }
 }
 
@@ -145,10 +121,8 @@ module containerRegistryModule 'modules/container-registry.bicep' = {
     params: {
         location: location
         containerRegistryName: containerRegistryName
-        acrPullRole: acrPullRole
         appIdentityPrincipalId: managedIdentitiesModule.outputs.appIdentityPrincipalId
         scheduledJobIdentityPrincipalId: managedIdentitiesModule.outputs.scheduledJobIdentityPrincipalId
-        acrPushRole: acrPushRole
         deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
 }
@@ -158,14 +132,12 @@ module containerAppModule 'modules/container-app.bicep' = {
     params: {
         location: location
         containerEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
-        containerDefaultImageName: containerDefaultImageName
         containerRegistryName: containerRegistryName
         containerCpuCoreCount: containerCpuCoreCount
         containerMemory: containerMemory
         serviceName: serviceName
         applicationInsightsConnectionString: containerEnvironmentModule.outputs.applicationInsightsConnectionString
         environmentName: environmentName
-        contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
         appIdentityId: managedIdentitiesModule.outputs.appIdentityId
         containerReplicas: containerReplicas
@@ -186,9 +158,7 @@ module feedCleaner 'modules/scheduledContainerJob.bicep' = {
         cronSchedule: '0 2 * * *'
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
-        containerDefaultImageName: containerDefaultImageName
         command: 'cd /app/FeedCleaner && dotnet ProductConstructionService.FeedCleaner.dll'
-        contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
 }
@@ -198,8 +168,6 @@ module keyVaultsModule 'modules/key-vaults.bicep' = {
     params: {
         location: location
         keyVaultName: keyVaultName
-        kvSecretUserRole: kvSecretUserRole
-        kvCryptoUserRole: kvCryptoUserRole
         appIdentityPrincipalId: managedIdentitiesModule.outputs.appIdentityPrincipalId
     }
 }
@@ -220,8 +188,6 @@ module storageAccountModule 'modules/storage-account.bicep' = {
         location: location
         storageAccountName: storageAccountName
         appIdentityPrincipalId: managedIdentitiesModule.outputs.appIdentityPrincipalId
-        blobContributorRole: blobContributorRole
-        storageQueueContrubutorRole: storageQueueContrubutorRole
     }
 }
 

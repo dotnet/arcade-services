@@ -7,7 +7,6 @@ param serviceName = 'build-insights'
 
 // Container app runtime
 param containerEnvironmentName = 'build-insights-service-env'
-param containerDefaultImageName = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
 param containerCpuCoreCount = '1.0'
 param containerMemory = '2Gi'
 param containerReplicas = 3

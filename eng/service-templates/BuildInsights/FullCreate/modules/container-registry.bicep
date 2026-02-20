@@ -1,10 +1,12 @@
 param location string
 param containerRegistryName string
-param acrPullRole string
 param appIdentityPrincipalId string
 param scheduledJobIdentityPrincipalId string
-param acrPushRole string
 param deploymentIdentityPrincipalId string
+
+module roles './roles.bicep' = {
+  name: 'roles'
+}
 
 resource containerRegistry 'Microsoft.ContainerRegistry/registries@2022-02-01-preview' = {
   name: containerRegistryName
@@ -36,7 +38,7 @@ resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: containerRegistry
   name: guid(subscription().id, resourceGroup().id, 'pcsAcrPull')
   properties: {
-    roleDefinitionId: acrPullRole
+    roleDefinitionId: roles.outputs.acrPullRole
     principalType: 'ServicePrincipal'
     principalId: appIdentityPrincipalId
   }
@@ -47,7 +49,7 @@ resource scheduledJobIdentityAcrPull 'Microsoft.Authorization/roleAssignments@20
   scope: containerRegistry
   name: guid(subscription().id, resourceGroup().id, 'scheduledJobAcrPull')
   properties: {
-    roleDefinitionId: acrPullRole
+    roleDefinitionId: roles.outputs.acrPullRole
     principalType: 'ServicePrincipal'
     principalId: scheduledJobIdentityPrincipalId
   }
@@ -58,7 +60,7 @@ resource deploymentAcrPush 'Microsoft.Authorization/roleAssignments@2022-04-01' 
   scope: containerRegistry
   name: guid(subscription().id, resourceGroup().id, 'deploymentAcrPush')
   properties: {
-    roleDefinitionId: acrPushRole
+    roleDefinitionId: roles.outputs.acrPushRole
     principalType: 'ServicePrincipal'
     principalId: deploymentIdentityPrincipalId
   }
