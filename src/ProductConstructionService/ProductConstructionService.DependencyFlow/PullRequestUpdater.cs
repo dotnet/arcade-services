@@ -155,7 +155,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// <param name="forceUpdate">If true, force update even for PRs with pending or successful checks.</param>
     public async Task ProcessPendingUpdatesAsync(SubscriptionUpdateWorkItem update, bool applyNewestOnly, bool forceUpdate, BuildDTO build)
     {
-        _logger.LogInformation("Processing pending updates for subscription {subscriptionId}", update.SubscriptionId);
+        _logger.LogInformation("Processing pending updates for subscription {subscriptionId} with build {buildId}", update.SubscriptionId, build.Id);
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
         InProgressPullRequest? pr = await _pullRequestState.TryGetStateAsync();
         PullRequest? prInfo;
