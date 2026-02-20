@@ -12,13 +12,13 @@ public record CodeflowEntry(
     string RepositoryUrl,
     string MappingName,
     bool Enabled,
-    SubscriptionDetail? ForwardFlowSubscription,
-    SubscriptionDetail? BackflowSubscription);
+    SubscriptionInformation? ForwardFlowSubscription,
+    SubscriptionInformation? BackflowSubscription);
 
-public record SubscriptionDetail(
+public record SubscriptionInformation(
     Subscription Subscription,
     int LastAppliedBuildStaleness,
-    Build? NewestApplicableBuild,
+    Build NewestApplicableBuild,
     ActivePullRequest? ActivePullRequest);
 
 public record ActivePullRequest(

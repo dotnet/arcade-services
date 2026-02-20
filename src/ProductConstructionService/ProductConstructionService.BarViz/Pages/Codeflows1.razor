@@ -194,7 +194,7 @@
 
     static string GetShortSha(string sha) => sha.Substring(0, 7);
 
-    string GetBuildAgeDifference(SubscriptionDetail? entry)
+    string GetBuildAgeDifference(SubscriptionInformation? entry)
     {
         if (entry?.NewestApplicableBuild == null || entry.Subscription.LastAppliedBuild == null)
         {

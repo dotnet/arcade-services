@@ -85,14 +85,14 @@ public static class MockCodeflowData
                 RepositoryUrl: "https://github.com/dotnet/runtime",
                 MappingName: "runtime",
                 Enabled: true,
-                ForwardFlowSubscription: new SubscriptionDetail(
+                ForwardFlowSubscription: new SubscriptionInformation(
                     runtimeSubscriptionFf,
                     LastAppliedBuildStaleness: 1,
                     NewestApplicableBuild: newestRuntimeBuild,
                     ActivePullRequest: new ActivePullRequest(
                         CreatedDate: new DateTime(2026, 2, 18, 14, 0, 0),
                         Url: "https://github.com/dotnet/runtime/pull/112345")),
-                BackflowSubscription: new SubscriptionDetail(
+                BackflowSubscription: new SubscriptionInformation(
                     runtimeSubscriptionBf,
                     LastAppliedBuildStaleness: 2,
                     NewestApplicableBuild: vmrBuild,
@@ -102,12 +102,12 @@ public static class MockCodeflowData
                 RepositoryUrl: "https://github.com/dotnet/sdk",
                 MappingName: "sdk",
                 Enabled: true,
-                ForwardFlowSubscription: new SubscriptionDetail(
+                ForwardFlowSubscription: new SubscriptionInformation(
                     sdkSubscriptionFf,
                     LastAppliedBuildStaleness: 1,
                     NewestApplicableBuild: newestSdkBuild,
                     ActivePullRequest: null),
-                BackflowSubscription: new SubscriptionDetail(
+                BackflowSubscription: new SubscriptionInformation(
                     sdkSubscriptionBf,
                     LastAppliedBuildStaleness: 3,
                     NewestApplicableBuild: vmrBuild,
@@ -119,7 +119,7 @@ public static class MockCodeflowData
                 RepositoryUrl: "https://github.com/dotnet/aspnetcore",
                 MappingName: "aspnetcore",
                 Enabled: false,
-                ForwardFlowSubscription: new SubscriptionDetail(
+                ForwardFlowSubscription: new SubscriptionInformation(
                     aspnetSubscriptionFf,
                     LastAppliedBuildStaleness: 5,
                     NewestApplicableBuild: newestAspnetBuild,
