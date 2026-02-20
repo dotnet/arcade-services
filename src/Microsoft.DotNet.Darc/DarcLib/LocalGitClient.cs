@@ -120,6 +120,13 @@ public class LocalGitClient : ILocalGitClient
                 _fileSystem.DeleteDirectory(repoPath / relativePath, true);
             }
         }
+        else if (result.StandardError.Contains("is unmerged"))
+        {
+            var unstagedNonConflictingFiles = await GetUnstagedFilesAsync(repoPath, relativePath);
+            args = ["checkout", .. unstagedNonConflictingFiles];
+            result = await _processManager.ExecuteGit(repoPath, args);
+            result.ThrowIfFailed("failed to clean unmerged non conflicting files from the working tree");
+        }
 
         // Also remove untracked files (in case files were removed in index)
         result = await _processManager.ExecuteGit(repoPath, ["clean", "-xdf", relativePath], cancellationToken: CancellationToken.None);
@@ -653,6 +660,39 @@ public class LocalGitClient : ILocalGitClient
         result.ThrowIfFailed("Failed to get a list of conflicted files");
 
         return [.. result.GetOutputLines().Select(f => new UnixPath(f))];
+    }
+
+    private async Task<IReadOnlyCollection<UnixPath>> GetUnstagedFilesAsync(
+            string repoPath,
+            UnixPath? relativePath = null,
+            CancellationToken cancellationToken = default)
+    {
+        var result = await _processManager.ExecuteGit(
+            repoPath,
+            ["status", relativePath ?? string.Empty],
+            cancellationToken: cancellationToken);
+        result.ThrowIfFailed("Failed to perform 'git status'");
+
+        // Split output into sections separated by empty lines
+        var sections = result.StandardOutput.Split(
+            ["\n\n", "\r\n\r\n"],
+            StringSplitOptions.RemoveEmptyEntries);
+
+        // Find the "Changes not staged for commit" section
+        var unstagedSection = sections.FirstOrDefault(s => s.TrimStart().StartsWith("Changes not staged for commit"));
+
+        if (unstagedSection == null)
+        {
+            return [];
+        }
+
+        // Parse file names from lines like "        deleted:    file_1.txt"
+        var files = unstagedSection
+            .Split(['\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Skip(3) // first the information lines
+            .Select(line => new UnixPath(line.Split(':', 2, StringSplitOptions.TrimEntries)[1]));
+
+        return [.. files];
     }
 
     public async Task<bool> DoesBranchExistAsync(string repoUri, string branch)
