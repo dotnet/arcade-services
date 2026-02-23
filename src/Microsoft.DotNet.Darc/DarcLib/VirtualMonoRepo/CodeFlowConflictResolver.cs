@@ -358,12 +358,6 @@ public abstract class CodeFlowConflictResolver
             return;
         }
 
-        if (lastFlows.LastFlow.IsForwardFlow != codeflowOptions.CurrentFlow.IsForwardFlow)
-        {
-            // Reverts only happen for same direction flows
-            return;
-        }
-
         // Create patch representing the current flow (minus the recreated previous flows)
         var (fromSha, toSha) = codeflowOptions.CurrentFlow.IsForwardFlow
             ? (lastFlows.CrossingFlow.RepoSha, codeflowOptions.CurrentFlow.RepoSha)
@@ -372,7 +366,7 @@ public abstract class CodeFlowConflictResolver
         var targetRepo = codeflowOptions.CurrentFlow.IsForwardFlow ? vmr : productRepo;
         var vmrSourcesPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
 
-        // We create the patch minus the version, conflicted and cloaked files
+        // We create the patches minus the version, conflicted and cloaked files
         IReadOnlyCollection<string> excludedFiles =
         [
             .. conflictedFiles.Select(conflictedFile => VmrPatchHandler.GetExclusionRule(codeflowOptions.CurrentFlow.IsForwardFlow
@@ -448,6 +442,16 @@ public abstract class CodeFlowConflictResolver
             _logger.LogInformation("Suspecting a revert in {file}. Trying to fix it using a crossing flow...",
                 revertedFile);
 
+            if (!await CheckIfRealRevertAsync(
+                revertedFile,
+                codeflowOptions,
+                crossingFlow, vmr,
+                productRepo,
+                cancellationToken))
+            {
+                continue;
+            }
+
             string contentBefore = await _fileSystem.ReadAllTextAsync(targetRepo.Path / revertedFile);
 
             (await targetRepo.ExecuteGitCommand(["checkout", codeflowOptions.TargetBranch, revertedFile], cancellationToken))
@@ -466,6 +470,106 @@ public abstract class CodeFlowConflictResolver
                 _fileSystem.WriteToFile(targetRepo.Path / revertedFile, contentBefore);
                 await targetRepo.StageAsync([revertedFile], cancellationToken);
             }
+        }
+    }
+
+    /// To check if a file actually got reverted, we need to strip it of the changes since the last crossing flow.
+    /// Returns true if a real revert happened, false if it was a false positive
+    private async Task<bool> CheckIfRealRevertAsync(
+        UnixPath filePath,
+        CodeflowOptions codeflowOptions,
+        Codeflow crossingFlow,
+        ILocalGitRepo vmr,
+        ILocalGitRepo productRepo,
+        CancellationToken cancellationToken)
+    {
+        var vmrRepoSourcesPath = _vmrInfo.GetRepoSourcesPath(codeflowOptions.Mapping);
+
+        ILocalGitRepo targetRepo;
+        string stripPatchFromSha;
+        string reverseApplyFromSha, reverseApplyToSha;
+        NativePath stripPatchWorkingDir, reverseApplyWorkingDir;
+        UnixPath? applicationPath;
+        UnixPath relativeFilePath;
+
+        if (codeflowOptions.CurrentFlow.IsForwardFlow)
+        {
+            targetRepo = vmr;
+            stripPatchFromSha = crossingFlow.VmrSha;
+            stripPatchWorkingDir = vmrRepoSourcesPath;
+            reverseApplyFromSha = crossingFlow.RepoSha;
+            reverseApplyToSha = codeflowOptions.CurrentFlow.RepoSha;
+            reverseApplyWorkingDir = productRepo.Path;
+            applicationPath = VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping);
+            relativeFilePath = new UnixPath(filePath.Path.Substring(VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name).Length + 1));
+        }
+        else
+        {
+            targetRepo = productRepo;
+            stripPatchFromSha = crossingFlow.RepoSha;
+            stripPatchWorkingDir = productRepo.Path;
+            reverseApplyFromSha = crossingFlow.VmrSha;
+            reverseApplyToSha = codeflowOptions.CurrentFlow.VmrSha;
+            reverseApplyWorkingDir = vmrRepoSourcesPath;
+            applicationPath = null;
+            relativeFilePath = filePath;
+        }
+        string contentBefore = await _fileSystem.ReadAllTextAsync(targetRepo.Path / filePath);
+
+        // strip the changes in the target repo that might be causing a false positive
+        var stripCrossingFlowChangesPatch = await _patchHandler.CreatePatches(
+            _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch",
+            stripPatchFromSha,
+            Constants.HEAD,
+            path: relativeFilePath,
+            filters: [],
+            relativePaths: true,
+            workingDir: stripPatchWorkingDir,
+            applicationPath: applicationPath,
+            ignoreLineEndings: true,
+            cancellationToken);
+        await _patchHandler.ApplyPatches(
+            stripCrossingFlowChangesPatch,
+            targetRepo.Path,
+            removePatchAfter: true,
+            keepConflicts: false,
+            reverseApply: true,
+            applyToIndex: true,
+            cancellationToken);
+
+        // now reverse apply the current flow's changes. If it fails, it was a real revert; otherwise a false positive
+        List<VmrIngestionPatch> reverseApplyPatch = await _patchHandler.CreatePatches(
+            _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch",
+            reverseApplyFromSha,
+            reverseApplyToSha,
+            path: relativeFilePath,
+            filters: [],
+            relativePaths: true,
+            workingDir: reverseApplyWorkingDir,
+            applicationPath: applicationPath,
+            ignoreLineEndings: true,
+            cancellationToken);
+
+        try
+        {
+            await _patchHandler.ApplyPatches(
+                reverseApplyPatch,
+                targetRepo.Path,
+                removePatchAfter: true,
+                keepConflicts: false,
+                reverseApply: true,
+                applyToIndex: false,
+                cancellationToken);
+            return false;
+        }
+        catch (PatchApplicationFailedException)
+        {
+            return true;
+        }
+        finally
+        {
+            _fileSystem.WriteToFile(targetRepo.Path / filePath, contentBefore);
+            await targetRepo.StageAsync([filePath], cancellationToken);
         }
     }
 
