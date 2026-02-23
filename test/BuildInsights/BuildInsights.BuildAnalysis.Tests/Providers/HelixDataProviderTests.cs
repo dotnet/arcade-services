@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Data;
 using AwesomeAssertions;
+using Microsoft.DotNet.Helix.Client;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Kusto;
@@ -23,6 +24,7 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
             public static void Defaults(IServiceCollection collection)
             {
                 collection.AddLogging(l => l.AddProvider(new NUnitLogger()));
+                collection.AddSingleton(Mock.Of<IHelixApi>());
                 collection.Configure<KustoOptions>(
                     o =>
                     {

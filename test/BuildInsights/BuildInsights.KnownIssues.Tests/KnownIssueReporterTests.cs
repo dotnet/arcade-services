@@ -134,11 +134,11 @@ namespace BuildInsights.KnownIssues.Tests
                 mock.Setup(
                         m => m.UpdateIssueBodyAsync(
                             It.IsAny<string>(),
-                            It.IsAny<int>(),
+                            It.IsAny<long>(),
                             It.IsAny<string>()
                         )
                     )
-                    .Callback<string, int, string>(
+                    .Callback<string, long, string>(
                         (repository, issueId, body) =>
                         {
                             reports.Add(body);
@@ -146,7 +146,7 @@ namespace BuildInsights.KnownIssues.Tests
                     )
                     .Returns(Task.CompletedTask);
 
-                mock.Setup(g => g.AddLabelToIssueAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>())).Returns(Task.CompletedTask).Verifiable();
+                mock.Setup(g => g.AddLabelToIssueAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>())).Returns(Task.CompletedTask).Verifiable();
 
                 services.AddSingleton(mock.Object);
                 return _ => new GitHubIssuesServiceResult(reports, mock);
@@ -375,7 +375,7 @@ namespace BuildInsights.KnownIssues.Tests
             await testData.Processor.RunAsync();
 
             testData.UpdateIssueBody.MockGitHubService.Verify(
-                g => g.AddLabelToIssueAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>()),
+                g => g.AddLabelToIssueAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>()),
                 Times.Exactly(expectedRuns));
         }
 

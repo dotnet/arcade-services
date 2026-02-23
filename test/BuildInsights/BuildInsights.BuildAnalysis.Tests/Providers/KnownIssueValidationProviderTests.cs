@@ -61,10 +61,10 @@ public partial class KnownIssueValidationProviderTests
             var issueBody = new List<string>();
 
             var mockGithubIssueService = new Mock<IGitHubIssuesService>();
-            mockGithubIssueService.Setup(g => g.GetIssueAsync(It.IsAny<string>(), It.IsAny<int>())).ReturnsAsync(issue);
+            mockGithubIssueService.Setup(g => g.GetIssueAsync(It.IsAny<string>(), It.IsAny<long>())).ReturnsAsync(issue);
 
             mockGithubIssueService.Setup(g =>
-                    g.UpdateIssueBodyAsync(It.IsAny<string>(), It.IsAny<int>(), Capture.In(issueBody)))
+                    g.UpdateIssueBodyAsync(It.IsAny<string>(), It.IsAny<long>(), Capture.In(issueBody)))
                 .Returns(Task.CompletedTask);
             collection.AddSingleton(mockGithubIssueService.Object);
 
@@ -90,7 +90,7 @@ public partial class KnownIssueValidationProviderTests
         await using TestData testData = await TestData.Default.WithIssue(MockGithubIssue("")).BuildAsync();
         await testData.Processor.ValidateKnownIssue(TestKnownIssueValidationRequest(), CancellationToken.None);
         testData.GitHubIssueService.Item2.Verify(
-            t => t.UpdateIssueBodyAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>()), Times.Never());
+            t => t.UpdateIssueBodyAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>()), Times.Never());
     }
 
     [Test]
@@ -220,7 +220,7 @@ https://dev.azure.com/dnceng/internal/_build/results?buildId=123456
 
         await testData.Processor.ValidateKnownIssue(TestKnownIssueValidationRequest(), CancellationToken.None);
         testData.GitHubIssueService.Item2.Verify(
-            t => t.UpdateIssueBodyAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>()), Times.Never());
+            t => t.UpdateIssueBodyAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>()), Times.Never());
     }
 
     [Test]

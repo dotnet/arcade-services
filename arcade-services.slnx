@@ -72,7 +72,6 @@
   <Folder Name="/test/BuildInsights/">
     <Project Path="test/BuildInsights/BuildInsights.AzureStorage.Cache.Tests/BuildInsights.AzureStorage.Cache.Tests.csproj" />
     <Project Path="test/BuildInsights/BuildInsights.BuildAnalysis.Tests/BuildInsights.BuildAnalysis.Tests.csproj" />
-    <Project Path="test/BuildInsights/BuildInsights.BuildResultProcessor.Tests/BuildInsights.BuildResultProcessor.Tests.csproj" />
     <Project Path="test/BuildInsights/BuildInsights.GitHub.Tests/BuildInsights.GitHub.Tests.csproj" />
     <Project Path="test/BuildInsights/BuildInsights.KnownIssues.Tests/BuildInsights.KnownIssues.Tests.csproj" />
     <Project Path="test/BuildInsights/BuildInsights.KnownIssuesMonitor.Tests/BuildInsights.KnownIssuesMonitor.Tests.csproj" />

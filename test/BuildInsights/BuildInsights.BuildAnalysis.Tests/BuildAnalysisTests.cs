@@ -197,6 +197,7 @@ namespace BuildInsights.BuildAnalysis.Tests
 
                     var githubIssuesServiceMock = new Mock<IGitHubIssuesService>();
                     githubIssuesServiceMock.Setup(t => t.GetRepositoryKnownIssues(It.IsAny<string>())).ReturnsAsync(_knownIssues.ToList());
+                    githubIssuesServiceMock.Setup(t => t.GetInfrastructureKnownIssues()).ReturnsAsync([]);
 
                     var knownIssuesServiceMock = new Mock<IKnownIssuesService>();
                     var helixDataServiceMock = new Mock<IHelixDataService>();

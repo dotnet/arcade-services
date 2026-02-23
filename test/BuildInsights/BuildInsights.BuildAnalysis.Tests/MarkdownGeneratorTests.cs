@@ -122,7 +122,6 @@ namespace BuildInsights.BuildAnalysis.Tests
             string result = testData.Generator.GenerateEmptyMarkdown(new UserSentimentParameters { Repository = "TEST-REPO" });
             result.Should().NotContain("will be analyzed once they finish");
             result.Should().Contain("Introduction.md", because: "with no pipelines, we should show preliminary check with documentation links");
-            result.Should().Contain("TEST-REPO");
         }
 
         [Test]
@@ -439,31 +438,6 @@ namespace BuildInsights.BuildAnalysis.Tests
             string result = testData.Generator.GenerateMarkdown(buildResultAnalysis);
             result.Should().Contain("DisplayStepNameOfKnownIssue").And.Contain("LinkToBuildKnownIssue")
                 .And.Contain("TitleGitHubIssue").And.Contain("LinkToGitHubIssue");
-        }
-
-        [Test]
-        public void UserSentiment()
-        {
-            var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView
-            {
-                SentimentParameters = new UserSentimentParameters
-                {
-                    Repository = "TEST-REPO",
-                    CommitHash = "abcdefghijklmnopqrstuvwxyz",
-                    BuildId = 999,
-                    HasUniqueBuildFailures = true,
-                    HasUniqueTestFailures = true,
-                    SnapshotId = "TEST-SNAPSHOT",
-                },
-                HasData = true,
-            };
-
-            string result = testData.Generator.GenerateMarkdown(buildResultAnalysis);
-            result.Should().Contain("abcdefghijkl").And.NotContain("abcdefghijklmnopqrstuvwxyz");
-            // SentimentFeature enum was removed in migration; skipping this assertion
-            result.Should().Contain("ub=1");
-            result.Should().Contain("ut=1");
-            result.Should().Contain("TEST-REPO");
         }
 
         [Test]

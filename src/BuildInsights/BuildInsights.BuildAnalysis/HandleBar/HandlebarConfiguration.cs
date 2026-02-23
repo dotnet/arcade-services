@@ -12,14 +12,14 @@ public static class HandlebarConfiguration
 {
     public static IServiceCollection AddHandleBarHelpers(this IServiceCollection services)
     {
-        services.TryAddSingleton<HandlebarHelpers>();
-        services.TryAddSingleton<IHelperDescriptor<HelperOptions>, MarkdownLinkHelper>();
-        services.TryAddSingleton<IHelperDescriptor<HelperOptions>, HtmlLinkHelper>();
-        services.TryAddSingleton<IHelperDescriptor<HelperOptions>, SnapshotIdCommentHelper>();
-        services.TryAddSingleton<IHelperDescriptor<HelperOptions>, TruncateHelper>();
-        services.TryAddSingleton<IHelperDescriptor<HelperOptions>, RenderKnownLinks>();
-        services.TryAddSingleton<IHelperDescriptor<HelperOptions>, SplitMessageIntoCollapsibleSectionsByLength>();
-        services.TryAddSingleton<IHelperDescriptor<HelperOptions>, FailingConfigurationBlock>();
+        services.AddSingleton<HandlebarHelpers>();
+        services.AddSingleton<IHelperDescriptor<HelperOptions>, MarkdownLinkHelper>();
+        services.AddSingleton<IHelperDescriptor<HelperOptions>, HtmlLinkHelper>();
+        services.AddSingleton<IHelperDescriptor<HelperOptions>, SnapshotIdCommentHelper>();
+        services.AddSingleton<IHelperDescriptor<HelperOptions>, TruncateHelper>();
+        services.AddSingleton<IHelperDescriptor<HelperOptions>, RenderKnownLinks>();
+        services.AddSingleton<IHelperDescriptor<HelperOptions>, SplitMessageIntoCollapsibleSectionsByLength>();
+        services.AddSingleton<IHelperDescriptor<HelperOptions>, FailingConfigurationBlock>();
         return services;
     }
 }
