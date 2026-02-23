@@ -13,7 +13,7 @@ public static class BlobStorageCacheConfiguration
         this IServiceCollection services,
         IConfigurationSection configuration)
     {
-        services.TryAddSingleton<IBlobClientFactory, BlobClientFactory>();
+        services.TryAddScoped<IBlobClientFactory, BlobClientFactory>();
         services.TryAddScoped<IContextualStorage, BlobContextualStorage>();
         services.TryAddScoped<IDistributedLockService, BlobContextualStorage>();
 

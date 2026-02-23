@@ -5,6 +5,7 @@ using Azure.Core;
 using BuildInsights.Api.Configuration;
 using BuildInsights.Api.Configuration.Models;
 using BuildInsights.BuildAnalysis;
+using BuildInsights.GitHub;
 using BuildInsights.GitHubGraphQL;
 using BuildInsights.KnownIssues.Models;
 using BuildInsights.ServiceDefaults;
@@ -99,6 +100,7 @@ internal static class BuildInsightsStartup
             gitHubAppSettings.AppId,
             builder.Configuration[ConfigurationKeys.GitHubAppPrivateKey]);
         builder.Services.AddGitHubTokenProvider();
+        builder.Services.AddGitHub();
         builder.Services.AddGitHubGraphQL();
         builder.Services.TryAddSingleton<IRemoteTokenProvider>(sp =>
         {

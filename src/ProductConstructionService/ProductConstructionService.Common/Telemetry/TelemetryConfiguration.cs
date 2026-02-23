@@ -15,6 +15,6 @@ public static class TelemetryConfiguration
         builder.Services.AddSingleton<ITelemetryInitializer, TelemetryRoleNameInitializer>();
         builder.Services.AddApplicationInsightsTelemetry();
         builder.Services.AddApplicationInsightsTelemetryProcessor<RemoveDefaultPropertiesTelemetryProcessor>();
-        builder.Services.AddSingleton<ITelemetryRecorder, TelemetryRecorder>();     
+        builder.Services.AddSingleton<ITelemetryRecorder, TelemetryRecorder>();
     }
 }
