@@ -7,21 +7,21 @@ param(
 $environmentConfig = switch ($environment) {
     'prod' {
         @{
-            bicepParamFileName = 'env-production.bicepparam';
+            bicepParamFileName = 'prod.bicepparam';
             subscriptionId     = '00000000-0000-0000-0000-000000000001';
             resourceGroupName  = 'build-insights-rg'
         }
     }
     'stage' {
         @{
-            bicepParamFileName = 'env-staging.bicepparam';
+            bicepParamFileName = 'stage.bicepparam';
             subscriptionId     = '00000000-0000-0000-0000-000000000002';
             resourceGroupName  = 'build-insights-stage-rg'
         }
     }
     'dev' {
         @{
-            bicepParamFileName = 'env-development.bicepparam';
+            bicepParamFileName = 'dev.bicepparam';
             subscriptionId     = '3fd7c137-8faa-4309-9822-de5701a6dd7a'; # .NET Release Infrastructure - Dev
             resourceGroupName  = 'build-insights-dev-rg'
         }
