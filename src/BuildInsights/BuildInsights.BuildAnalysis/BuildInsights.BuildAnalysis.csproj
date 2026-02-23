@@ -27,7 +27,6 @@
     <ProjectReference Include="..\BuildInsights.KnownIssues\BuildInsights.KnownIssues.csproj" />
     <ProjectReference Include="..\BuildInsights.QueueInsights\BuildInsights.QueueInsights.csproj" />
     <ProjectReference Include="..\BuildInsights.Utilities.AzureDevOps\BuildInsights.Utilities.AzureDevOps.csproj" />
-    <ProjectReference Include="..\BuildInsights.Utilities.Parallel\BuildInsights.Utilities.Parallel.csproj" />
   </ItemGroup>
 
   <ItemGroup>

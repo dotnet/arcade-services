@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
@@ -9,7 +10,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
 using BuildInsights.Utilities.AzureDevOps;
-using BuildInsights.Utilities.Parallel;
 using Maestro.Common;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
@@ -358,26 +358,28 @@ public sealed class BuildDataProvider : IBuildDataService
         using var connection = _connections.GetConnection(orgId);
         TestManagementHttpClient testClient = connection.GetClient<TestManagementHttpClient>();
 
-        Dictionary<int, TestCaseResult> dict = results.ToDictionary(r => r.Id);
-        var needSubTest = dict.Values.Where(
-            v => v.ResultGroupType != ResultGroupType.None && (v.SubResults?.Count ?? 0) == 0
-        ).ToList();
+        var dict = new ConcurrentDictionary<int, TestCaseResult>(results.ToDictionary(r => r.Id));
+        var needSubTest = dict.Values
+            .Where(v => v.ResultGroupType != ResultGroupType.None && (v.SubResults?.Count ?? 0) == 0)
+            .ToList();
 
-        await foreach (TestCaseResult item in LimitedParallel.WhenAllAsync(
-                needSubTest,
-                t => testClient.GetTestResultByIdAsync(
+        await Parallel.ForEachAsync(
+            needSubTest,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = 5,
+                CancellationToken = cancellationToken
+            },
+            async (t, ct) =>
+            {
+                var item = await testClient.GetTestResultByIdAsync(
                     t.Project.Id,
                     int.Parse(t.TestRun.Id),
                     t.Id,
                     ResultDetails.SubResults,
-                    cancellationToken: cancellationToken
-                ),
-                parallelism: 5
-            )
-            .WithCancellation(cancellationToken))
-        {
-            dict[item.Id] = item;
-        }
+                    cancellationToken: ct);
+                dict[item.Id] = item;
+            });
 
         return dict.Values;
     }
