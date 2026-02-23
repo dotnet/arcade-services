@@ -24,7 +24,7 @@ var knowIssueMonitor = builder.Services
 
 await knowIssueMonitor.RunAsync();
 
-static file class Configuration
+internal static class Configuration
 {
     public static IServiceCollection ConfigureServices(this IServiceCollection services)
     {
