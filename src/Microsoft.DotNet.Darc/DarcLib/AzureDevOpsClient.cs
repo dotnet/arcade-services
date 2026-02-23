@@ -540,7 +540,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             {
                 PrComment lastComment = comments.LastOrDefault();
                 if (lastComment?.CommentType == TeamFoundation.SourceControl.WebApi.CommentType.Text
-                    && lastComment.Content != null
+                    && !string.IsNullOrEmpty(lastComment.Content)
                     && lastComment.Content.EndsWith(CommentMarker))
                 {
                     await client.UpdateCommentAsync(prComment, repoName, id, commentThread.Id, lastComment.Id);
