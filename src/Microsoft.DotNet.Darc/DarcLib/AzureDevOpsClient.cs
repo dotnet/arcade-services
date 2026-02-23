@@ -523,7 +523,8 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
 
         foreach (GitPullRequestCommentThread commentThread in commentThreads)
         {
-            if (commentThread.Status is not (CommentThreadStatus.Active or CommentThreadStatus.Unknown))
+            // Skip non-active and non-unknown threads.  Threads that are active may appear as unknown.
+            if (commentThread.Status != CommentThreadStatus.Active && commentThread.Status != CommentThreadStatus.Unknown)
             {
                 continue;
             }
@@ -547,7 +548,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
                 }
                 else
                 {
-                    // Last comment has no marker - create a new one at the end of the thread
+                    // Add a new comment to the end of the thread
                     await client.CreateCommentAsync(prComment, repoName, id, commentThread.Id);
                 }
                 return;
