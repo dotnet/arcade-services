@@ -36,7 +36,7 @@ public class HandlebarHelpers
         ForTake(hb);
     }
 
-    private static void TargetBranchName(IHandlebars hb)
+    internal static void TargetBranchName(IHandlebars hb)
     {
         hb.RegisterHelper("TargetBranchName", (writer, context, parameters) =>
         {
@@ -51,7 +51,7 @@ public class HandlebarHelpers
         });
     }
 
-    private static void GreaterThanLimit(IHandlebars hb)
+    internal static void GreaterThanLimit(IHandlebars hb)
     {
         hb.RegisterHelper("gt", (context, parameters) =>
         {
@@ -65,7 +65,7 @@ public class HandlebarHelpers
         });
     }
 
-    private static void GetNumberOfRecordsNotDisplayed(IHandlebars hb)
+    internal static void GetNumberOfRecordsNotDisplayed(IHandlebars hb)
     {
         hb.RegisterHelper("GetNumberOfRecordsNotDisplayed", (writer, context, parameters) =>
         {
@@ -80,7 +80,7 @@ public class HandlebarHelpers
         });
     }
 
-    private static void OrHelper(IHandlebars hb)
+    internal static void OrHelper(IHandlebars hb)
     {
         hb.RegisterHelper("or", (context, parameters) =>
         {
@@ -105,7 +105,7 @@ public class HandlebarHelpers
     /// The string comparison is case sensitive
     /// </summary>
 
-    private static void EqHelper(IHandlebars hb)
+    internal static void EqHelper(IHandlebars hb)
     {
         hb.RegisterHelper("eq", (context, parameters) =>
         {
@@ -198,7 +198,7 @@ public class HandlebarHelpers
         });
     }
 
-    private static void DateTimeFormatter(IHandlebars hb)
+    internal static void DateTimeFormatter(IHandlebars hb)
     {
         var formatter = new CustomDateTimeFormatter("yyyy-MM-dd");
         hb.Configuration.FormatterProviders.Add(formatter);
