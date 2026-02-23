@@ -69,6 +69,7 @@
     <Project Path="test/Microsoft.DotNet.Darc/Microsoft.DotNet.DarcLib.Tests/Microsoft.DotNet.DarcLib.Tests.csproj" />
   </Folder>
   <Folder Name="/test/BuildInsights/">
+    <Project Path="test/BuildInsights/BuildInsights.Api.Tests/BuildInsights.Api.Tests.csproj" />
     <Project Path="test/BuildInsights/BuildInsights.AzureStorage.Cache.Tests/BuildInsights.AzureStorage.Cache.Tests.csproj" />
     <Project Path="test/BuildInsights/BuildInsights.BuildAnalysis.Tests/BuildInsights.BuildAnalysis.Tests.csproj" />
     <Project Path="test/BuildInsights/BuildInsights.GitHub.Tests/BuildInsights.GitHub.Tests.csproj" />
