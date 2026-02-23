@@ -519,8 +519,8 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             Content = $"{message}{CommentMarker}"
         };
 
-        // Search threads to find ones with comment markers.
         List<GitPullRequestCommentThread> commentThreads = await client.GetThreadsAsync(repoName, id);
+
         foreach (GitPullRequestCommentThread commentThread in commentThreads)
         {
             // Skip non-active and non-unknown threads.  Threads that are active may appear as unknown.
@@ -528,15 +528,22 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             {
                 continue;
             }
-            List<PrComment> comments = await client.GetCommentsAsync(repoName, id, commentThread.Id);
-            bool threadHasCommentWithMarker = comments.Any(comment => comment.CommentType == TeamFoundation.SourceControl.WebApi.CommentType.Text && comment.Content.EndsWith(CommentMarker));
+
+            List<PrComment> comments = await client.GetCommentsAsync(repoName, id, commentThread.Id) ?? [];
+
+            bool threadHasCommentWithMarker = comments.Any(comment =>
+                comment != null
+                && comment.CommentType == TeamFoundation.SourceControl.WebApi.CommentType.Text
+                && !string.IsNullOrEmpty(comment.Content)
+                && comment.Content.EndsWith(CommentMarker));
+
             if (threadHasCommentWithMarker)
             {
-                // Check if last comment in that thread has the marker.
-                PrComment lastComment = comments.Last();
-                if (lastComment.CommentType == TeamFoundation.SourceControl.WebApi.CommentType.Text && lastComment.Content.EndsWith(CommentMarker))
+                PrComment lastComment = comments.LastOrDefault();
+                if (lastComment?.CommentType == TeamFoundation.SourceControl.WebApi.CommentType.Text
+                    && !string.IsNullOrEmpty(lastComment.Content)
+                    && lastComment.Content.EndsWith(CommentMarker))
                 {
-                    // Update comment
                     await client.UpdateCommentAsync(prComment, repoName, id, commentThread.Id, lastComment.Id);
                 }
                 else
