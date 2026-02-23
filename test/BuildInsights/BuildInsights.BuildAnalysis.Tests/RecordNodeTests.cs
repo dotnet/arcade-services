@@ -1,12 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using AwesomeAssertions;
-using BuildInsights.BuildAnalysis;
 using BuildInsights.BuildAnalysis.Models;
 using NUnit.Framework;
 
-namespace BuildInsights.BuildResultProcessor.Tests
+namespace BuildInsights.BuildAnalysis.Tests
 {
     [TestFixture]
     public class RecordNodeTests
@@ -15,7 +14,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
         [Test]
         public void GetTimelineRecordsOrdererByTreeStructureTest()
         {
-            var expected = new List<string> {"A", "AA", "AAA", "AAAA", "AAB", "AABA", "AB", "ABA", "ABAA", "ABB", "ABC"};
+            var expected = new List<string> { "A", "AA", "AAA", "AAAA", "AAB", "AABA", "AB", "ABA", "ABAA", "ABB", "ABC" };
             IEnumerable<TimelineRecord> timeline = CreateTimeline();
 
             IEnumerable<TimelineRecord> result = RecordNode.GetTimelineRecordsOrdererByTreeStructure(timeline);
@@ -25,7 +24,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
         [Test]
         public void GetTimelineRecordsOrdererByTreeStructureNullOrderTest()
         {
-            var expected = new List<string> {"A", "AA", "AAA", "AAAC", "AAAA", "AAAB"};
+            var expected = new List<string> { "A", "AA", "AAA", "AAAC", "AAAA", "AAAB" };
             IEnumerable<TimelineRecord> timeline = CreateTimelineWithNullOrder().ToList();
 
             IEnumerable<TimelineRecord> result = RecordNode.GetTimelineRecordsOrdererByTreeStructure(timeline);
@@ -38,10 +37,10 @@ namespace BuildInsights.BuildResultProcessor.Tests
         {
             // Some timelines from canceled or abandoned builds have no root.
 
-            List<TimelineRecord> timeline = new List<TimelineRecord>()
-            {
+            List<TimelineRecord> timeline =
+            [
                 MockRecord("A", "B")
-            };
+            ];
 
             Action act = () => RecordNode.GetTimelineRecordsOrdererByTreeStructure(timeline);
 
@@ -115,7 +114,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
                 order: order,
                 parentId: parent != null
                     ? Guid.Parse($"00000000-0000-0000-0000-{parent.PadLeft(12, '0')}")
-                    : (Guid?)null
+                    : null
             );
         }
 
@@ -127,7 +126,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
                 name: name,
                 parentId: parent != null
                     ? Guid.Parse($"00000000-0000-0000-0000-{parent.PadLeft(12, '0')}")
-                    : (Guid?)null
+                    : null
             );
         }
     }

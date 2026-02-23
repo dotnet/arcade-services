@@ -1,24 +1,18 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using AwesomeAssertions;
+using BuildInsights.BuildAnalysis;
+using BuildInsights.BuildAnalysis.Models;
+using BuildInsights.GitHub;
+using BuildInsights.GitHub.Models;
+using BuildInsights.KnownIssues;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
-using BuildInsights.BuildAnalysis.Models;
-using BuildInsights.BuildAnalysis;
-using BuildInsights.GitHub.Models;
-using BuildInsights.GitHub;
-using BuildInsights.KnownIssues;
-using BuildInsights.KnownIssues.Models;
-using BuildInsights.KnownIssues;
-using BuildInsights.KnownIssuesProcessor;
-using BuildInsights.AzureStorage.Cache;
 using Moq;
 using NUnit.Framework;
 
@@ -53,7 +47,7 @@ namespace BuildInsights.KnownIssuesProcessor.Tests
                 var repositories = new List<string>();
 
                 buildDataServiceMock.Setup(m => m.GetFailedBuildsAsync("dnceng-public", It.IsAny<string>(), Capture.In(repositories), It.IsAny<CancellationToken>()))
-                    .ReturnsAsync(builds ?? new List<Build>());
+                    .ReturnsAsync(builds ?? []);
                 buildDataServiceMock.Setup(m => m.GetFailedBuildsAsync("dnceng", It.IsAny<string>(), Capture.In(repositories), It.IsAny<CancellationToken>()))
                     .ReturnsAsync(new List<Build>());
                 collection.AddSingleton(buildDataServiceMock.Object);
@@ -63,9 +57,9 @@ namespace BuildInsights.KnownIssuesProcessor.Tests
             public static Func<IServiceProvider, List<Build>> RequestAnalysisService(IServiceCollection collection)
             {
                 var requestAnalysisServiceMock = new Mock<IRequestAnalysisService>();
-                List<Build> builds = new List<Build>();
+                List<Build> builds = [];
                 requestAnalysisServiceMock.Setup(m => m.RequestAnalysisAsync(It.IsAny<IReadOnlyList<Build>>()))
-                    .Callback<IReadOnlyList<Build>>((buildsRequested) => builds.AddRange(buildsRequested))
+                    .Callback<IReadOnlyList<Build>>(builds.AddRange)
                     .Returns(Task.CompletedTask);
                 collection.AddSingleton(requestAnalysisServiceMock.Object);
                 return _ => builds;
@@ -75,15 +69,15 @@ namespace BuildInsights.KnownIssuesProcessor.Tests
             {
                 GitHubIssue issue = new GitHubIssue(id: 1234, body: body, repositoryWithOwner: repositoryWithOwner ?? "dotnet/test");
                 var gitHubChecksServiceMock = new Mock<IGitHubChecksService>();
-                gitHubChecksServiceMock.Setup(m => m.GetIssueAsync(It.IsAny<string>(),  It.IsAny<long>()))
+                gitHubChecksServiceMock.Setup(m => m.GetIssueAsync(It.IsAny<string>(), It.IsAny<long>()))
                     .ReturnsAsync(issue);
-               
+
                 collection.AddSingleton(gitHubChecksServiceMock.Object);
             }
 
             public static Func<IServiceProvider, List<string>> GitHubIssueService(IServiceCollection collection)
             {
-                List<string> issueBody = new List<string>();
+                List<string> issueBody = [];
 
                 var gitHubIssueServiceMock = new Mock<IGitHubIssuesService>();
                 gitHubIssueServiceMock.Setup(t =>
@@ -97,7 +91,7 @@ namespace BuildInsights.KnownIssuesProcessor.Tests
             public static Func<IServiceProvider, List<KnownIssueAnalysis>> KnownIssuesHistoryService(IServiceCollection collection, List<KnownIssueAnalysis> knownIssueAnalysis)
             {
                 var historyServiceMock = new Mock<IKnownIssuesHistoryService>();
-                historyServiceMock.Setup(m => m.GetKnownIssuesHistory(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<DateTimeOffset>(),It.IsAny<CancellationToken>()))
+                historyServiceMock.Setup(m => m.GetKnownIssuesHistory(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
                     .ReturnsAsync(knownIssueAnalysis ?? new List<KnownIssueAnalysis>());
                 collection.AddSingleton(historyServiceMock.Object);
                 return _ => knownIssueAnalysis;
@@ -181,7 +175,7 @@ namespace BuildInsights.KnownIssuesProcessor.Tests
         {
             string body = "```\r\n{\r\n    \"errorMessage\" : \"test error message\"\r\n}\r\n```";
             using var testData = TestData.Default.WithBody(body)
-                .WithBuilds(new List<Build>{new (12334) })
+                .WithBuilds(new List<Build> { new(12334) })
                 .Build();
             await testData.Processor.HandleMessageAsync(new MockWork(1234), false, CancellationToken.None);
             testData.RequestAnalysisService.Should().HaveCount(1);
@@ -209,8 +203,8 @@ namespace BuildInsights.KnownIssuesProcessor.Tests
         public async Task ReprocessBuildsByErrorPattern()
         {
             string body = "```\r\n{\r\n    \"errorPattern\" : \"test error message.*\"\r\n}\r\n```";
-            var knownIssueAnalyzes = new List<KnownIssueAnalysis> { new("test error message.*" ,12345, "1234")};
-            var buildList = new List<Build> {new(12345)};
+            var knownIssueAnalyzes = new List<KnownIssueAnalysis> { new("test error message.*", 12345, "1234") };
+            var buildList = new List<Build> { new(12345) };
 
             using TestData testData = TestData.Default.WithBody(body)
                 .WithBuilds(buildList)
@@ -225,8 +219,8 @@ namespace BuildInsights.KnownIssuesProcessor.Tests
         public async Task ReprocessBuildsByErrorMessage()
         {
             string body = "```\r\n{\r\n    \"errorMessage\" : \"test error message\"\r\n}\r\n```";
-            var knownIssueAnalyzes = new List<KnownIssueAnalysis> {new( "test error message", 12345, "1234")};
-            var buildList = new List<Build> {new(12345)};
+            var knownIssueAnalyzes = new List<KnownIssueAnalysis> { new("test error message", 12345, "1234") };
+            var buildList = new List<Build> { new(12345) };
 
             using TestData testData = TestData.Default.WithBody(body)
                 .WithBuilds(buildList)
@@ -242,8 +236,8 @@ namespace BuildInsights.KnownIssuesProcessor.Tests
         {
             string body = "```\r\n{\r\n    \"errorMessage\" : \"test error message\"\r\n}\r\n```";
 
-            var buildList = new List<Build> {new(12345), new(56789), new(54321)};
-            var buildAnalysisEvents = new List<BuildAnalysisEvent> {MockBuildAnalysisEvent(54321)};
+            var buildList = new List<Build> { new(12345), new(56789), new(54321) };
+            var buildAnalysisEvents = new List<BuildAnalysisEvent> { MockBuildAnalysisEvent(54321) };
 
             using TestData testData = TestData.Default.WithBody(body)
                 .WithBuilds(buildList)

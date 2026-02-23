@@ -1,5 +1,6 @@
-using System;
-using System.Collections.Generic;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using AwesomeAssertions;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Models.Views;
@@ -14,7 +15,7 @@ namespace BuildInsights.BuildAnalysis.Tests.Views
         [Test]
         public void BuildTestLogWebUriTest()
         {
-            DateTimeOffset dateTimeOffset = new DateTimeOffset(2021,5,21,3,0,0,TimeSpan.Zero);
+            DateTimeOffset dateTimeOffset = new DateTimeOffset(2021, 5, 21, 3, 0, 0, TimeSpan.Zero);
             var testCaseResult = new TestCaseResult("", dateTimeOffset, TestOutcomeValue.Failed, 123, 456, 789,
                 new PreviousBuildRef("", dateTimeOffset), "", "", "TestProjectName", null, 55000);
 
@@ -33,12 +34,12 @@ namespace BuildInsights.BuildAnalysis.Tests.Views
             var creationDate = new DateTimeOffset(2021, 5, 26, 5, 30, 0, TimeSpan.Zero);
             var testCaseCreationDate = new DateTimeOffset(2021, 6, 26, 5, 30, 0, TimeSpan.Zero);
             var testCaseResult = new TestCaseResult("AutomatedTestName", testCaseCreationDate, TestOutcomeValue.PassedOnRerun, 123, 456, 789,
-                new PreviousBuildRef("", testCaseCreationDate), "TestErrorMessage", "", "TestProjectName", null, 55000, attempt:2);
+                new PreviousBuildRef("", testCaseCreationDate), "TestErrorMessage", "", "TestProjectName", null, 55000, attempt: 2);
 
             var testResult = new TestResult(testCaseResult, "https://example.test", new FailureRate())
             {
-                FailingConfigurations = new List<FailingConfiguration>
-                {
+                FailingConfigurations =
+                [
                     new FailingConfiguration
                     {
                         Configuration = MockConfiguration(""),
@@ -46,7 +47,7 @@ namespace BuildInsights.BuildAnalysis.Tests.Views
                         HistoryLink = "",
                         ArtifactLink = ""
                     }
-                },
+                ],
                 HelixWorkItem = new HelixWorkItem()
                 {
                     HelixJobId = "HelixJobIdTest",

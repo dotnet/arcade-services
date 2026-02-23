@@ -1,27 +1,19 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using AwesomeAssertions;
+using BuildInsights.AzureStorage.Cache;
+using BuildInsights.BuildAnalysis.Models;
+using BuildInsights.KnownIssues;
+using BuildInsights.KnownIssues.Models;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using BuildInsights.BuildAnalysis.Models;
-using BuildInsights.BuildAnalysis;
-using BuildInsights.KnownIssues.Models;
-using BuildInsights.KnownIssues;
-using BuildInsights.AzureStorage.Cache;
 using Moq;
 using NUnit.Framework;
 
-namespace BuildInsights.BuildResultProcessor.Tests
+namespace BuildInsights.BuildAnalysis.Tests
 {
     public partial class MergedBuildAnalysisProviderTests
     {
@@ -41,7 +33,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
                 private readonly ImmutableList<BuildResultAnalysis> _previousAnalyses = ImmutableList<BuildResultAnalysis>.Empty;
                 private readonly BuildResultAnalysis _currentAnalysis;
                 private readonly ImmutableList<int> _relatedBuildIds = ImmutableList<int>.Empty;
-                private readonly ImmutableList<BuildReferenceIdentifier>  _filteredBuilds = ImmutableList<BuildReferenceIdentifier>.Empty;
+                private readonly ImmutableList<BuildReferenceIdentifier> _filteredBuilds = ImmutableList<BuildReferenceIdentifier>.Empty;
                 private readonly Mock<ICheckResultService> _mockCheckResult = new();
                 private readonly Mock<IBuildAnalysisRepositoryConfigurationService> _mockRepoConfiguration = new();
 
@@ -87,7 +79,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
                 public Builder WithRelatedBuild(int id)
                 {
                     return With(
-                        previousAnalyses: _previousAnalyses.Add(new BuildResultAnalysis{BuildId = id, BuildStatus = BuildStatus.Succeeded}),
+                        previousAnalyses: _previousAnalyses.Add(new BuildResultAnalysis { BuildId = id, BuildStatus = BuildStatus.Succeeded }),
                         relatedBuildIds: _relatedBuildIds.Add(id)
                     );
                 }
@@ -95,7 +87,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
                 public Builder WithUnrelatedBuild(int id)
                 {
                     return With(
-                        previousAnalyses: _previousAnalyses.Add(new BuildResultAnalysis{BuildId = id, BuildStatus = BuildStatus.Succeeded})
+                        previousAnalyses: _previousAnalyses.Add(new BuildResultAnalysis { BuildId = id, BuildStatus = BuildStatus.Succeeded })
                     );
                 }
 
@@ -103,7 +95,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
 
                 public Builder WithCurrentBuild(int id)
                 {
-                    return With(currentAnalysis: new BuildResultAnalysis{BuildId = id});
+                    return With(currentAnalysis: new BuildResultAnalysis { BuildId = id });
                 }
 
                 public Builder WithMockCheckResult(Mock<ICheckResultService> checkResult)
@@ -197,7 +189,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
                 }
             }
 
-            public static Builder Create() => new Builder();
+            public static Builder Create() => new();
 
             public void Dispose()
             {
@@ -218,7 +210,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
 
         public static string GetBuildNameFromId(int id) => "test pipeline name " + id;
 
-        public NamedBuildReference GetRefId(int id) => new NamedBuildReference(
+        public NamedBuildReference GetRefId(int id) => new(
             GetBuildNameFromId(id),
             $"https://example.test/build/{id}",
             OrgId,
@@ -331,7 +323,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
         [Test]
         public async Task ExcludedBuild()
         {
-            List<int> pendingBuildNames = new List<int>();
+            List<int> pendingBuildNames = [];
             var checkResultService = new Mock<ICheckResultService>();
             checkResultService.Setup(t => t.GetCheckResult(It.IsAny<NamedBuildReference>(),
                 It.IsAny<ImmutableList<BuildResultAnalysis>>(), Capture.In(pendingBuildNames), It.IsAny<bool>()));
@@ -360,7 +352,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
         [Test]
         public async Task SingleExcludedBuild()
         {
-            List<int> pendingBuildNames = new List<int>();
+            List<int> pendingBuildNames = [];
             var checkResultService = new Mock<ICheckResultService>();
             checkResultService.Setup(t => t.GetCheckResult(It.IsAny<NamedBuildReference>(),
                 It.IsAny<ImmutableList<BuildResultAnalysis>>(), Capture.In(pendingBuildNames), It.IsAny<bool>()));
@@ -369,7 +361,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
                 .WithCurrentBuild(123)
                 .WithMockCheckResult(checkResultService)
                 .Build();
-            
+
             // Pretend something told us to exclude build 456 for some reason (presumably because it's been restarted)
             MergedBuildResultAnalysis analysis = await test.Provider.GetMergedAnalysisAsync(GetRefId(123), MergeBuildAnalysisAction.Exclude, CancellationToken.None);
             analysis.PendingBuildNames.Should().SatisfyRespectively(b => b.Name.Should().Be(GetBuildNameFromId(123)));
@@ -413,7 +405,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
 
 internal class MockContextualStorage : BaseContextualStorage
 {
-    readonly Dictionary<string, byte[]> _data = new Dictionary<string, byte[]>();
+    readonly Dictionary<string, byte[]> _data = [];
     protected override async Task PutAsync(string root, string name, Stream data, CancellationToken cancellationToken)
     {
         using MemoryStream stream = new MemoryStream();

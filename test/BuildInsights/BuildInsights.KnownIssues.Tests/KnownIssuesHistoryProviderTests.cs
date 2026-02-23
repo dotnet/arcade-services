@@ -1,21 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
-using Azure.Data.Tables;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using AwesomeAssertions;
-using Kusto.Ingest;
-using Microsoft.DotNet.Internal.Testing.Utility;
-using Microsoft.DotNet.Kusto;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Internal;
-using Microsoft.Extensions.Logging;
-using BuildInsights.KnownIssues.Models;
-using BuildInsights.KnownIssues;
-using BuildInsights.AzureStorage.Cache;
-using Moq;
 using NUnit.Framework;
 
 namespace BuildInsights.KnownIssues.Tests

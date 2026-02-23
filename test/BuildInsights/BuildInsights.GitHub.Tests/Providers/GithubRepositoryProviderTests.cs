@@ -1,14 +1,13 @@
-using System;
-using System.Collections.Generic;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Text;
-using System.Threading.Tasks;
+using AwesomeAssertions;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using AwesomeAssertions;
-using BuildInsights.GitHub;
 using Moq;
 using NUnit.Framework;
 using Octokit;
@@ -37,7 +36,7 @@ public partial class GithubRepositoryProviderTests
             var mockGitHubClient = new Mock<IGitHubClient>();
             mockGitHubClient
                 .Setup(m => m.Repository.Content.GetAllContentsByRef(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), TestTargetBranch))
-                .ReturnsAsync(repositoryContents ?? new List<RepositoryContent>());
+                .ReturnsAsync(repositoryContents ?? []);
             mockGitHubClient
                 .Setup(m => m.Repository.Content.GetAllContentsByRef(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsNotIn(TestTargetBranch)))
                 .Throws(new NotFoundException(responseMock.Object));
@@ -85,7 +84,7 @@ public partial class GithubRepositoryProviderTests
     {
         string expectedContent = "Expected content test";
         await using TestData testData = await TestData.Default
-            .WithRepositoryContents(new List<RepositoryContent> {MockRepositoryContent(expectedContent)})
+            .WithRepositoryContents(new List<RepositoryContent> { MockRepositoryContent(expectedContent) })
             .BuildAsync();
 
         string result = await testData.Processor.GetFileAsync("any/repository", "anypath", TestSetup.TestTargetBranch);

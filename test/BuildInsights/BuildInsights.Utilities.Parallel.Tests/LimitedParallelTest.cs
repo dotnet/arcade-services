@@ -1,8 +1,7 @@
-using System;
-using System.Collections.Generic;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
 using AwesomeAssertions;
 using NUnit.Framework;
 
@@ -60,7 +59,7 @@ namespace BuildInsights.Utilities.Parallel.Tests
             Func<Task<List<int>>> whenNull = () => LimitedParallel.WhenAllAsync(new int[0], (Func<int, Task<int>>)null!, 5).ToListAsync().AsTask();
             whenNull.Should().ThrowExactlyAsync<ArgumentNullException>();
         }
-        
+
         [Test]
         public async Task NullSourceThrows()
         {
@@ -143,7 +142,7 @@ namespace BuildInsights.Utilities.Parallel.Tests
             public int MaxParallel = 0;
             public int CurrentParallel = 0;
 
-            private readonly object _updateLock = new object();
+            private readonly object _updateLock = new();
 
             public async Task<T> Track<T>(Task<T> thing)
             {

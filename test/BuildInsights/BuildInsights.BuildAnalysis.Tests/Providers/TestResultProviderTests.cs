@@ -1,22 +1,17 @@
-using System;
-using System.Collections.Generic;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Collections.Immutable;
-using System.IO;
-using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using AwesomeAssertions;
+using BuildInsights.BuildAnalysis.Models;
+using BuildInsights.KnownIssues;
+using BuildInsights.KnownIssues.Models;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using BuildInsights.BuildAnalysis.Models;
-using BuildInsights.BuildAnalysis;
-using BuildInsights.KnownIssues;
-using BuildInsights.KnownIssues.Models;
 using Moq;
 using Moq.Protected;
 using NUnit.Framework;
@@ -43,7 +38,7 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
                     }
                 );
 
-               collection.AddSingleton<IKnownIssuesMatchService, KnownIssuesMatchProvider >();
+                collection.AddSingleton<IKnownIssuesMatchService, KnownIssuesMatchProvider>();
             }
 
             public static Func<IServiceProvider, TestResultProvider> Provider(IServiceCollection collection)
@@ -56,7 +51,7 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
             public static Func<IServiceProvider, Mock<IHelixDataService>> HelixDataService(IServiceCollection services,
                 Dictionary<string, List<HelixWorkItem>> testHelixWorkItems)
             {
-                testHelixWorkItems ??= new Dictionary<string, List<HelixWorkItem>>();
+                testHelixWorkItems ??= [];
                 Mock<IHelixDataService> helixDataService = new Mock<IHelixDataService>();
                 helixDataService.Setup(h =>
                         h.TryGetHelixWorkItems(It.IsAny<ImmutableList<string>>(), It.IsAny<CancellationToken>()))
@@ -95,14 +90,14 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
         public async Task GetTestFailingWithKnownIssuesAnalysisTestsWithManyTestFailures()
         {
 
-            List<TestCaseResult> testCaseResults = new List<TestCaseResult>();
+            List<TestCaseResult> testCaseResults = [];
             for (int i = 0; i < 1200; i++)
                 testCaseResults.Add(MockTestCaseResult($"{i} - Test", ""));
 
-            List<TestRunDetails> failingTestCaseResults = new List<TestRunDetails>()
-            {
+            List<TestRunDetails> failingTestCaseResults =
+            [
                 new TestRunDetails(MockTestRunSummary(),testCaseResults,DateTimeOffset.MaxValue)
-            };
+            ];
 
             await using TestData testData = await TestData.Default.BuildAsync();
             TestKnownIssuesAnalysis result =
@@ -133,16 +128,16 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
                 }
             };
 
-            List<TestCaseResult> testCaseResults = new List<TestCaseResult> { MockTestCaseResult("TestABC", comment) };
-            List<TestRunDetails> failingTestCaseResults = new List<TestRunDetails>()
-            {
+            List<TestCaseResult> testCaseResults = [MockTestCaseResult("TestABC", comment)];
+            List<TestRunDetails> failingTestCaseResults =
+            [
                 new TestRunDetails(MockTestRunSummary(),testCaseResults,DateTimeOffset.MaxValue)
-            };
+            ];
 
-            List<KnownIssue> knownIssues = new List<KnownIssue>
-            {
+            List<KnownIssue> knownIssues =
+            [
                 KnownIssueHelper.ParseGithubIssue(MockGithubIssue("```\r\n{\r\n    \"errorMessage\" : \"ran longer than the maximum time\"\r\n}\r\n```"), "test-repo", KnownIssueType.Test)
-            };
+            ];
 
             MemoryStream memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(@"ran longer than the maximum time"));
 
@@ -178,16 +173,16 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
                 }
             };
 
-            List<TestCaseResult> testCaseResults = new List<TestCaseResult> { MockTestCaseResult("TestABC", comment) };
-            List<TestRunDetails> failingTestCaseResults = new List<TestRunDetails>()
-            {
+            List<TestCaseResult> testCaseResults = [MockTestCaseResult("TestABC", comment)];
+            List<TestRunDetails> failingTestCaseResults =
+            [
                 new TestRunDetails(MockTestRunSummary(),testCaseResults,DateTimeOffset.MaxValue)
-            };
+            ];
 
-            List<KnownIssue> knownIssues = new List<KnownIssue>
-            {
+            List<KnownIssue> knownIssues =
+            [
                 KnownIssueHelper.ParseGithubIssue(MockGithubIssue("```\r\n{\r\n    \"errorMessage\" : \"ran longer than the maximum time\",\r\n    \"ExcludeConsoleLog\": true\r\n}\r\n```"), "test-repo", KnownIssueType.Test)
-            };
+            ];
 
             MemoryStream memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(@"ran longer than the maximum time"));
 
@@ -204,18 +199,18 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
             string comment = "{\r\n  \"HelixJobId\": \"abc-def-ghi\",\r\n  \"HelixWorkItemName\": \"TestHelixWorkItemNameCommentA\"\r\n}";
             string testErrorMessage = "ran longer than the maximum time";
 
-            List<TestCaseResult> testCaseResults = new List<TestCaseResult> { MockTestCaseResult("TestABC", comment, testErrorMessage) };
-            List<TestRunDetails> failingTestCaseResults = new List<TestRunDetails>()
-            {
+            List<TestCaseResult> testCaseResults = [MockTestCaseResult("TestABC", comment, testErrorMessage)];
+            List<TestRunDetails> failingTestCaseResults =
+            [
                 new TestRunDetails(MockTestRunSummary(),testCaseResults,DateTimeOffset.MaxValue)
-            };
+            ];
 
-            List<KnownIssue> knownIssues = new List<KnownIssue> {
+            List<KnownIssue> knownIssues = [
                 KnownIssueHelper.ParseGithubIssue(
                     MockGithubIssue("```\r\n{\r\n    \"errorMessage\" : \"ran longer than the maximum time\"\r\n}\r\n```"),
                     "test-repository",
                     KnownIssueType.Test)
-            };
+            ];
 
 
             await using TestData testData = await TestData.Default.BuildAsync();

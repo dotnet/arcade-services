@@ -1,4 +1,6 @@
-using System.Collections.Generic;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using AwesomeAssertions;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Models.Views;
@@ -18,7 +20,7 @@ public class TestGroupViewHelperTests
         TestResultsGroupView groupViewB = MockTestResultsGroupView("B", MockListTestResultView(1));
         TestResultsGroupView groupViewC = MockTestResultsGroupView("C", MockListTestResultView(3));
 
-        var testResultsGroupViews = new List<TestResultsGroupView> {groupViewA, groupViewB, groupViewC};
+        var testResultsGroupViews = new List<TestResultsGroupView> { groupViewA, groupViewB, groupViewC };
 
         List<TestResultsGroupView> result = TestGroupViewHelper.DistributeDisplayedTestResults(testResultsGroupViews);
         result[0].DisplayTestsCount.Should().Be(limitOfTestToDisplay);
@@ -32,7 +34,7 @@ public class TestGroupViewHelperTests
         TestResultsGroupView groupViewA = MockTestResultsGroupView("A", MockListTestResultView(15));
         TestResultsGroupView groupViewB = MockTestResultsGroupView("B", MockListTestResultView(15));
 
-        var testResultsGroupViews = new List<TestResultsGroupView> {groupViewA, groupViewB};
+        var testResultsGroupViews = new List<TestResultsGroupView> { groupViewA, groupViewB };
         List<TestResultsGroupView> result = TestGroupViewHelper.DistributeDisplayedTestResults(testResultsGroupViews);
         result[0].DisplayTestsCount.Should().Be(3);
         result[1].DisplayTestsCount.Should().Be(2);
@@ -45,7 +47,7 @@ public class TestGroupViewHelperTests
         TestResultsGroupView groupViewB = MockTestResultsGroupView("B", MockListTestResultView(2));
         TestResultsGroupView groupViewC = MockTestResultsGroupView("C", MockListTestResultView(4));
 
-        var testResultsGroupViews = new List<TestResultsGroupView> {groupViewA, groupViewB, groupViewC};
+        var testResultsGroupViews = new List<TestResultsGroupView> { groupViewA, groupViewB, groupViewC };
         List<TestResultsGroupView> result = TestGroupViewHelper.DistributeDisplayedTestResults(testResultsGroupViews);
         result[0].DisplayTestsCount.Should().Be(1);
         result[1].DisplayTestsCount.Should().Be(2);
@@ -59,7 +61,7 @@ public class TestGroupViewHelperTests
         TestResultsGroupView groupViewB = MockTestResultsGroupView("B", MockListTestResultView(2));
         TestResultsGroupView groupViewA = MockTestResultsGroupView("A", MockListTestResultView(4));
 
-        var testResultsGroupViews = new List<TestResultsGroupView> {groupViewA, groupViewB, groupViewC};
+        var testResultsGroupViews = new List<TestResultsGroupView> { groupViewA, groupViewB, groupViewC };
 
         List<TestResultsGroupView> result = TestGroupViewHelper.DistributeDisplayedTestResults(testResultsGroupViews);
         result[0].PipelineName.Should().Be("A");

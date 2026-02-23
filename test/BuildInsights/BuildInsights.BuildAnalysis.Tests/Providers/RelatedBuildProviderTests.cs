@@ -1,15 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using AwesomeAssertions;
+using BuildInsights.BuildAnalysis.Models;
+using BuildInsights.GitHub;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using BuildInsights.BuildAnalysis.Models;
-using BuildInsights.BuildAnalysis;
-using BuildInsights.GitHub;
 using Moq;
 using NUnit.Framework;
 using Octokit;
@@ -21,7 +18,7 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
     public class RelatedBuildProviderTests
     {
         private const int AzurePipelinesAppID = 9426;
-        private static Dictionary<string, string> AllowedTargetProjects = new() { { "TEST-TEST-NAME", "9ee6d478-d288-47f7-aacc-f6e6d082ae6d" } };
+        private static readonly Dictionary<string, string> AllowedTargetProjects = new() { { "TEST-TEST-NAME", "9ee6d478-d288-47f7-aacc-f6e6d082ae6d" } };
 
         public sealed class TestData : IDisposable, IAsyncDisposable
         {
@@ -36,7 +33,7 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
 
             public class Builder
             {
-                private readonly List<CheckRun> _checkRuns = new List<CheckRun>();
+                private readonly List<CheckRun> _checkRuns = [];
 
                 public Builder()
                 {
@@ -71,7 +68,7 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
                         .AddSingleton(gitHubChecksServiceMock.Object)
                         .AddSingleton(pipelineRequested.Object)
                         .AddSingleton(buildDataProvider.Object)
-                        .Configure<RelatedBuildProviderSettings>(o => { o.AllowedTargetProjects = AllowedTargetProjects;})
+                        .Configure<RelatedBuildProviderSettings>(o => { o.AllowedTargetProjects = AllowedTargetProjects; })
                         .BuildServiceProvider();
 
                     return new TestData(services, services.GetRequiredService<RelatedBuildProvider>());
@@ -94,10 +91,10 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
         [Test]
         public async Task GetRelatedBuildsTestForDefinedRelatedProject()
         {
-            List<CheckRun> checkRuns = new List<CheckRun>()
-            {
+            List<CheckRun> checkRuns =
+            [
                 new (CreateOctokitCheckRun(AzurePipelinesAppID, AllowedTargetProjects.Values.First()))
-            };
+            ];
 
             TestData.Builder builder = TestData.Default
             .WithCheckRuns(checkRuns);
@@ -111,10 +108,10 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
         public async Task GetRelatedBuildsTestForDifferentRelatedProject()
         {
             TestData.Builder builder = TestData.Default;
-            List<CheckRun> checkRuns = new List<CheckRun>()
-            {
+            List<CheckRun> checkRuns =
+            [
                 new CheckRun(CreateOctokitCheckRun(0,"9ee6d477-d266-47f7-aacc-f6e6d082ae6d"))
-            };
+            ];
 
             builder = builder.WithCheckRuns(checkRuns);
             await using TestData testData = builder.Build();

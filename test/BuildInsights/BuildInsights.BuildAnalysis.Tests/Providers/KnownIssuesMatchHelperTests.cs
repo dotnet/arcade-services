@@ -1,5 +1,6 @@
-using System;
-using System.Collections.Generic;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Collections.Immutable;
 using AwesomeAssertions;
 using BuildInsights.BuildAnalysis.Models;
@@ -18,8 +19,8 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
             Build build = new Build(id: 12345);
             BuildResultAnalysis analysis = new BuildResultAnalysis
             {
-                BuildStepsResult = new List<StepResult>
-                {
+                BuildStepsResult =
+                [
                     new StepResult
                     {
                         KnownIssues = CreateImmutableKnownIssuesList(new[]{ 1234, 5678})
@@ -28,7 +29,7 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
                     {
                         KnownIssues = CreateImmutableKnownIssuesList(new[]{ 4356, 7891})
                     }
-                }
+                ]
             };
 
             List<KnownIssueMatch> knownIssuesMatch = KnownIssuesMatchHelper.GetKnownIssueMatchesInBuild(build, analysis);
@@ -41,11 +42,11 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
             Build build = new Build(id: 12345);
             BuildResultAnalysis analysis = new BuildResultAnalysis
             {
-                BuildStepsResult = new List<StepResult>(),
-                TestKnownIssuesAnalysis = new TestKnownIssuesAnalysis(true, new List<TestResult>()
-                {
+                BuildStepsResult = [],
+                TestKnownIssuesAnalysis = new TestKnownIssuesAnalysis(true,
+                [
                     MockTestResult(CreateImmutableKnownIssuesList(new[]{ 9876, 54321}))
-                })
+                ])
             };
 
             List<TestKnownIssueMatch> testKnownIssuesMatch = KnownIssuesMatchHelper.GetKnownIssueMatchesInTests(build, analysis);
@@ -59,7 +60,7 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
             foreach (int issueId in issueIds)
             {
                 var githubIssue = new GitHubIssue(id: issueId);
-                var knownIssue = new KnownIssue(githubIssue, new List<string>(){"String to match"}, KnownIssueType.Infrastructure, new KnownIssueOptions());
+                var knownIssue = new KnownIssue(githubIssue, ["String to match"], KnownIssueType.Infrastructure, new KnownIssueOptions());
                 matchListBuilder.Add(knownIssue);
             }
             return matchListBuilder.ToImmutable();

@@ -1,13 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Text;
-using System.Threading.Tasks;
 using AwesomeAssertions;
+using BuildInsights.KnownIssues.Models;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
-using BuildInsights.KnownIssues.Models;
-using BuildInsights.KnownIssues;
 using NUnit.Framework;
 
 namespace BuildInsights.KnownIssues.Tests;
@@ -43,7 +41,7 @@ public partial class KnownIssueMatchProviderTests
     public async Task KnownIssueMatchProviderMultiLineStringTest(string firstErrorMessage, string secondErrorMessage, int expectedResult)
     {
         string errorLine = "Assert.True() Failure\r\nExpected: True\r\nActual:   False";
-        var errorMessages = new List<string> {firstErrorMessage, secondErrorMessage};
+        var errorMessages = new List<string> { firstErrorMessage, secondErrorMessage };
 
         await using TestData testData = await TestData.Default.BuildAsync();
         List<KnownIssue> result = testData.Provider.GetKnownIssuesInString(errorLine, MockKnownIssue(errorMessages, false));
@@ -56,7 +54,7 @@ public partial class KnownIssueMatchProviderTests
     public async Task KnownIssueMatchProviderMultiLineStringSingleErrorTest(string errorMessage, int expectedResult)
     {
         string errorLine = "Assert.True() Failure\r\nExpected: True\r\nActual:   False";
-        var errorMessages = new List<string> {errorMessage};
+        var errorMessages = new List<string> { errorMessage };
 
         await using TestData testData = await TestData.Default.BuildAsync();
         List<KnownIssue> result = testData.Provider.GetKnownIssuesInString(errorLine, MockKnownIssue(errorMessages, false));
@@ -68,7 +66,7 @@ public partial class KnownIssueMatchProviderTests
     public async Task KnownIssueMatchProviderSimpleStringMultiErrorsTest()
     {
         string errorLine = "Assert.True() Failure";
-        var errorMessages = new List<string> {"Assert.True() Failure", "Expected: True"};
+        var errorMessages = new List<string> { "Assert.True() Failure", "Expected: True" };
 
         await using TestData testData = await TestData.Default.BuildAsync();
         List<KnownIssue> result = testData.Provider.GetKnownIssuesInString(errorLine, MockKnownIssue(errorMessages, false));
@@ -80,7 +78,7 @@ public partial class KnownIssueMatchProviderTests
     public async Task KnownIssueMatchProviderSimpleStringSingleErrorsTest()
     {
         string errorLine = "Assert.True() Failure";
-        var errorMessage = new List<string> {"Assert.True() Failure"};
+        var errorMessage = new List<string> { "Assert.True() Failure" };
 
         await using TestData testData = await TestData.Default.BuildAsync();
         List<KnownIssue> result = testData.Provider.GetKnownIssuesInString(errorLine, MockKnownIssue(errorMessage, false));
@@ -94,7 +92,7 @@ public partial class KnownIssueMatchProviderTests
     [TestCase("Actual:   False", "Assert.True() Failure", 0)] // all errors present but different order
     public async Task KnownIssueMatchProviderStreamTest(string firstErrorMessage, string secondErrorMessage, int expectedResult)
     {
-        var errorMessages = new List<string> {firstErrorMessage, secondErrorMessage};
+        var errorMessages = new List<string> { firstErrorMessage, secondErrorMessage };
         Stream stream = new MemoryStream(Encoding.UTF8.GetBytes("Assert.True() Failure\r\nExpected: True\r\nActual:   False"));
 
         await using TestData testData = await TestData.Default.BuildAsync();
@@ -108,7 +106,7 @@ public partial class KnownIssueMatchProviderTests
     public async Task KnownIssueMatchProviderStreamSingleErrorTest(string errorMessage, int expectedResult)
     {
         Stream stream = new MemoryStream(Encoding.UTF8.GetBytes("Assert.True() Failure\r\nExpected: True\r\nActual:   False"));
-        var errorMessages = new List<string> {errorMessage};
+        var errorMessages = new List<string> { errorMessage };
 
         await using TestData testData = await TestData.Default.BuildAsync();
         List<KnownIssue> result = await testData.Provider.GetKnownIssuesInStream(stream, MockKnownIssue(errorMessages, false));
@@ -118,6 +116,6 @@ public partial class KnownIssueMatchProviderTests
 
     private List<KnownIssue> MockKnownIssue(List<string> errorsToMatch, bool isRegex)
     {
-        return new List<KnownIssue> {new(null, errorsToMatch, KnownIssueType.Infrastructure, new KnownIssueOptions(regexMatching: isRegex))};
+        return [new(null, errorsToMatch, KnownIssueType.Infrastructure, new KnownIssueOptions(regexMatching: isRegex))];
     }
 }

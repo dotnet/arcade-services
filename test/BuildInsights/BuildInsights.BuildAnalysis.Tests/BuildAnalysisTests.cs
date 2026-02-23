@@ -1,30 +1,25 @@
-using System;
-using System.Collections.Generic;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Collections.Immutable;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Threading;
-using System.Threading.Tasks;
 using AwesomeAssertions;
+using BuildInsights.BuildAnalysis.Models;
+using BuildInsights.KnownIssues;
+using BuildInsights.KnownIssues.Models;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using BuildInsights.BuildAnalysis.Models;
-using BuildInsights.BuildAnalysis;
-using BuildInsights.KnownIssues;
-using BuildInsights.KnownIssues.Models;
 using Moq;
 using NUnit.Framework;
 
-namespace BuildInsights.BuildResultProcessor.Tests
+namespace BuildInsights.BuildAnalysis.Tests
 {
     [TestFixture]
     public class BuildAnalysisTests
     {
-        private static readonly BuildReferenceIdentifier _buildReference = new BuildReferenceIdentifier("dnceng-public", "public", 12345, "",686, null, null, null, null);
+        private static readonly BuildReferenceIdentifier _buildReference = new("dnceng-public", "public", 12345, "", 686, null, null, null, null);
         private static readonly Branch TargetBranch = Branch.Parse("main");
 
         private class TestData : IDisposable, IAsyncDisposable
@@ -152,7 +147,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
                     buildDataServiceMock
                         .Setup(m => m.GetTestHistoryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
                         .Returns<string, string, string, DateTimeOffset, CancellationToken>((orgId, projectId, testName, maxCompleted, cancellationToken) =>
-                              Task.FromResult(_testHistory.ContainsKey(testName) ? _testHistory[testName].ToList() : new List<TestHistoryByBranch>()));
+                              Task.FromResult(_testHistory.ContainsKey(testName) ? _testHistory[testName].ToList() : []));
                     buildDataServiceMock
                         .Setup(b => b.GetTestResultByIdAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(),
                             It.IsAny<CancellationToken>(), ResultDetails.None))
@@ -198,7 +193,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
                     testResultsServiceMock.Setup(t =>
                         t.GetTestFailingWithKnownIssuesAnalysis(It.IsAny<IReadOnlyList<TestRunDetails>>(),
                             It.IsAny<List<KnownIssue>>(), It.IsAny<string>()))
-                        .ReturnsAsync(new TestKnownIssuesAnalysis(false, new List<TestResult>()));
+                        .ReturnsAsync(new TestKnownIssuesAnalysis(false, []));
 
                     var githubIssuesServiceMock = new Mock<IGitHubIssuesService>();
                     githubIssuesServiceMock.Setup(t => t.GetRepositoryKnownIssues(It.IsAny<string>())).ReturnsAsync(_knownIssues.ToList());
@@ -413,7 +408,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
                     "ACA",
                     3,
                     TaskResult.Failed,
-                    new List<TimelineIssue> {new TimelineIssue("TimelineAC - Error Message")},
+                    new List<TimelineIssue> {new("TimelineAC - Error Message")},
                     RecordType.Task
                 )
             };
@@ -423,7 +418,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
                     "BCA",
                     3,
                     TaskResult.Failed,
-                    new List<TimelineIssue> {new TimelineIssue("TimelineBC - Error Message")},
+                    new List<TimelineIssue> {new("TimelineBC - Error Message")},
                     RecordType.Task
                 )
             };
@@ -433,7 +428,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
                     "CBA",
                     2,
                     TaskResult.Failed,
-                    new List<TimelineIssue> {new TimelineIssue("TimelineCB - Error Message")},
+                    new List<TimelineIssue> {new("TimelineCB - Error Message")},
                     RecordType.Task
                 )
             };
@@ -470,7 +465,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
 
             var testResult = new List<TestRunDetails>
             {
-                new TestRunDetails(new TestRunSummary(123, "TestRunNameTest", MockPipelineReference("","","")),
+                new(new TestRunSummary(123, "TestRunNameTest", MockPipelineReference("","","")),
                     new List<TestCaseResult>
                     {
                         MockTestCaseResult("AutomatedTestNameTest", TestOutcomeValue.Failed)
@@ -483,7 +478,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
                 .WithTimeline(latestTimelineRecords)
                 .WithTestCaseResultFailuresBuild(testResult);
 
-            builder = builder.WithPreviousTimeline("AA", new List<TimelineRecord>());
+            builder = builder.WithPreviousTimeline("AA", []);
 
             await using TestData testData = builder.Build();
 
@@ -530,7 +525,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
         {
             return new DateTimeOffset(2021, 5, 12, 0, 0, 0, TimeSpan.Zero);
         }
-        
+
         [Test]
         public async Task BuildWithNullTargetBranch()
         {
@@ -544,7 +539,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
             // Source branch test failure
             var testResult = new List<TestRunDetails>
             {
-                new TestRunDetails(new TestRunSummary(123, "TestRunNameTest", MockPipelineReference("","","")),
+                new(new TestRunSummary(123, "TestRunNameTest", MockPipelineReference("","","")),
                     new List<TestCaseResult>
                     {
                         MockTestCaseResult(failingTestName, TestOutcomeValue.Failed)
@@ -571,7 +566,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
             ImmutableDictionary<string, string> data = ImmutableDictionary.Create<string, string>().Add("logFileLineNumber", "1547");
             var latestTimelineRecords = new List<TimelineRecord>
             {
-                MockRecord("A", 0, TaskResult.Failed, new List<TimelineIssue> {new TimelineIssue("", data:data)}, RecordType.Task, "url")
+                MockRecord("A", 0, TaskResult.Failed, new List<TimelineIssue> {new("", data:data)}, RecordType.Task, "url")
             };
 
             TestData.Builder builder = TestData.Default
@@ -623,19 +618,19 @@ namespace BuildInsights.BuildResultProcessor.Tests
         {
             TestData.Builder builder = TestData.Default
                 .AddBuild(BuildBuilder.Default.WithResult(BuildResult.Succeeded).Build())
-                .WithTimeline(new List<TimelineRecord>()
-                {
+                .WithTimeline(
+                [
                     MockRecord(
                         name: "A",
                         attempt: 1,
                         result: TaskResult.Canceled,
                         issues: new List<TimelineIssue>()
                         {
-                            new TimelineIssue("TaskCanceledTest")
+                            new("TaskCanceledTest")
                         },
                         RecordType.Task
                     ),
-                });
+                ]);
 
             await using TestData testData = builder.Build();
             BuildResultAnalysis result = await testData.BuildAnalysis.GetBuildResultAnalysisAsync(_buildReference, CancellationToken.None);
@@ -650,19 +645,19 @@ namespace BuildInsights.BuildResultProcessor.Tests
         {
             TestData.Builder builder = TestData.Default
                 .AddBuild(BuildBuilder.Default.WithResult(BuildResult.Succeeded).Build())
-                .WithTimeline(new List<TimelineRecord>()
-                {
+                .WithTimeline(
+                [
                     MockRecord(
                         name: "A",
                         attempt: 1,
                         result: TaskResult.Failed,
                         issues: new List<TimelineIssue>()
                         {
-                            new TimelineIssue("Cmd.exe exited with code '1'.")
+                            new("Cmd.exe exited with code '1'.")
                         },
                         RecordType.Task
                     )
-                });
+                ]);
 
             await using TestData testData = builder.Build();
             BuildResultAnalysis result = await testData.BuildAnalysis.GetBuildResultAnalysisAsync(_buildReference, CancellationToken.None);
@@ -677,20 +672,20 @@ namespace BuildInsights.BuildResultProcessor.Tests
         {
             TestData.Builder builder = TestData.Default
                 .AddBuild(BuildBuilder.Default.WithResult(BuildResult.Succeeded).Build())
-                .WithTimeline(new List<TimelineRecord>()
-                {
+                .WithTimeline(
+                [
                     MockRecord(
                         name: "A",
                         attempt: 1,
                         result: TaskResult.Failed,
                         issues: new List<TimelineIssue>()
                         {
-                            new TimelineIssue("Cmd.exe exited with code '1'."),
-                            new TimelineIssue("Failure running tests")
+                            new("Cmd.exe exited with code '1'."),
+                            new("Failure running tests")
                         },
                         RecordType.Task
                     )
-                });
+                ]);
 
             await using TestData testData = builder.Build();
             BuildResultAnalysis result = await testData.BuildAnalysis.GetBuildResultAnalysisAsync(_buildReference, CancellationToken.None);
@@ -711,20 +706,20 @@ namespace BuildInsights.BuildResultProcessor.Tests
 
             TestData.Builder builder = TestData.Default
                 .AddBuild(BuildBuilder.Default.WithResult(BuildResult.Succeeded).Build())
-                .WithTimeline(new List<TimelineRecord>()
-                {
+                .WithTimeline(
+                [
                     MockRecord(
                         name: "A",
                         attempt: 1,
                         result: TaskResult.Failed,
                         issues: new List<TimelineIssue>()
                         {
-                            new TimelineIssue(exitCodeMessages[0]),
-                            new TimelineIssue(exitCodeMessages[1]),
+                            new(exitCodeMessages[0]),
+                            new(exitCodeMessages[1]),
                         },
                         RecordType.Task
                     )
-                });
+                ]);
 
             await using TestData testData = builder.Build();
             BuildResultAnalysis result = await testData.BuildAnalysis.GetBuildResultAnalysisAsync(_buildReference, CancellationToken.None);
@@ -744,21 +739,21 @@ namespace BuildInsights.BuildResultProcessor.Tests
 
             TestData.Builder builder = TestData.Default
                 .AddBuild(BuildBuilder.Default.WithResult(BuildResult.Succeeded).Build())
-                .WithTimeline(new List<TimelineRecord>()
-                {
+                .WithTimeline(
+                [
                     MockRecord(
                         name: "A",
                         attempt: 1,
                         result: TaskResult.Failed,
                         issues: new List<TimelineIssue>()
                         {
-                            new TimelineIssue(exitCodeMessages[0]),
-                            new TimelineIssue(exitCodeMessages[1]),
-                            new TimelineIssue("Something else is wrong")
+                            new(exitCodeMessages[0]),
+                            new(exitCodeMessages[1]),
+                            new("Something else is wrong")
                         },
                         RecordType.Task
                     )
-                });
+                ]);
 
             await using TestData testData = builder.Build();
             BuildResultAnalysis result = await testData.BuildAnalysis.GetBuildResultAnalysisAsync(_buildReference, CancellationToken.None);
@@ -775,19 +770,19 @@ namespace BuildInsights.BuildResultProcessor.Tests
         {
             TestData.Builder builder = TestData.Default
                 .AddBuild(BuildBuilder.Default.WithResult(BuildResult.Succeeded).Build())
-                .WithTimeline(new List<TimelineRecord>()
-                {
+                .WithTimeline(
+                [
                     MockRecord(
                         name: "A",
                         attempt: 1,
                         result: TaskResult.Failed,
                         issues: new List<TimelineIssue>()
                         {
-                            new TimelineIssue(errorMessage)
+                            new(errorMessage)
                         },
                         RecordType.Task
                     ),
-                });
+                ]);
 
             await using TestData testData = builder.Build();
             BuildResultAnalysis result = await testData.BuildAnalysis.GetBuildResultAnalysisAsync(_buildReference, CancellationToken.None);
@@ -804,7 +799,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
             // Source branch test failure
             var testResult = new List<TestRunDetails>
             {
-                new TestRunDetails(new TestRunSummary(123, testRunName, MockPipelineReference("","","")),
+                new(new TestRunSummary(123, testRunName, MockPipelineReference("","","")),
                     new List<TestCaseResult>
                     {
                         MockTestCaseResult("TestA", TestOutcomeValue.Failed)
@@ -813,7 +808,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
                 )
             };
 
-            var latestBuilds = new List<Build> { new Build(1) };
+            var latestBuilds = new List<Build> { new(1) };
 
             TestData.Builder builder = TestData.Default
                 .AddBuild(BuildBuilder.Default.Build())
@@ -825,7 +820,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
             result.TestResults.First().FailingConfigurations.Select(t => t.Configuration).First().Name.Should().Be(expectedConfigurationName);
         }
 
-        [TestCase("Job_Name_A_Test",0)]
+        [TestCase("Job_Name_A_Test", 0)]
         [TestCase("Job_Name_B_Test", 1)]
         public async Task BuildTestMessageIsCleaned_WhenFailureIsListedAsTestFailure(string testFailingInJob, int expectedBuildFailures)
         {
@@ -845,7 +840,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
                     result: TaskResult.Failed,
                     issues: new List<TimelineIssue>()
                     {
-                        new TimelineIssue("(NETCORE_ENGINEERING_TELEMETRY=Test) TestFailed")
+                        new("(NETCORE_ENGINEERING_TELEMETRY=Test) TestFailed")
                     },
                     RecordType.Task,
                     parent:"AAA"
@@ -871,19 +866,19 @@ namespace BuildInsights.BuildResultProcessor.Tests
             TestData.Builder builder = TestData.Default
                 .AddBuild(BuildBuilder.Default.WithResult(BuildResult.Failed).Build())
                 .WithKnownIssues(ImmutableList.Create(KnownIssueHelper.ParseGithubIssue(MockIssue(issueBody), "testRepo", KnownIssueType.Infrastructure)))
-                .WithTimeline(new List<TimelineRecord>()
-                {
+                .WithTimeline(
+                [
                     MockRecord(
                         name: "A",
                         attempt: 1,
                         result: TaskResult.Failed,
                         issues: new List<TimelineIssue>()
                         {
-                            new TimelineIssue("The command 'Cmd.exe exited with code 1' failed")
+                            new("The command 'Cmd.exe exited with code 1' failed")
                         },
                         RecordType.Task
                     )
-                });
+                ]);
 
 
             await using TestData testData = builder.Build();
@@ -900,19 +895,19 @@ namespace BuildInsights.BuildResultProcessor.Tests
             TestData.Builder builder = TestData.Default
                 .AddBuild(BuildBuilder.Default.WithResult(BuildResult.Failed).Build())
                 .WithKnownIssues(ImmutableList.Create(KnownIssueHelper.ParseGithubIssue(MockIssue(issueBody), "testRepo", KnownIssueType.Infrastructure)))
-                .WithTimeline(new List<TimelineRecord>()
-                {
+                .WithTimeline(
+                [
                     MockRecord(
                         name: "A",
                         attempt: 1,
                         result: TaskResult.Failed,
                         issues: new List<TimelineIssue>()
                         {
-                            new TimelineIssue("The command 'open explorer' failed")
+                            new("The command 'open explorer' failed")
                         },
                         RecordType.Task
                     )
-                });
+                ]);
 
             await using TestData testData = builder.Build();
             BuildResultAnalysis result = await testData.BuildAnalysis.GetBuildResultAnalysisAsync(_buildReference, CancellationToken.None);
@@ -927,19 +922,19 @@ namespace BuildInsights.BuildResultProcessor.Tests
             TestData.Builder builder = TestData.Default
                 .AddBuild(BuildBuilder.Default.WithResult(BuildResult.Failed).Build())
                 .WithKnownIssues(ImmutableList.Create(KnownIssueHelper.ParseGithubIssue(MockIssue(""), "testRepo", KnownIssueType.Infrastructure)))
-                .WithTimeline(new List<TimelineRecord>()
-                {
+                .WithTimeline(
+                [
                     MockRecord(
                         name: "A",
                         attempt: 1,
                         result: TaskResult.Failed,
                         issues: new List<TimelineIssue>()
                         {
-                            new TimelineIssue("The command 'open explorer' failed")
+                            new("The command 'open explorer' failed")
                         },
                         RecordType.Task
                     )
-                });
+                ]);
 
             await using TestData testData = builder.Build();
             BuildResultAnalysis result = await testData.BuildAnalysis.GetBuildResultAnalysisAsync(_buildReference, CancellationToken.None);
@@ -962,7 +957,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
                 .AddBuild(BuildBuilder.Default.WithResult(BuildResult.Failed).Build())
                 .WithTimeline(timelineRecords);
             await using TestData testData = builder.Build();
- 
+
             await testData.BuildAnalysis.GetBuildResultAnalysisAsync(_buildReference, CancellationToken.None, true);
             testData.BuildDataService.Verify(b => b.GetTimelineRecordsFromAllAttempts(It.IsAny<IReadOnlyCollection<TimelineRecord>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Once);
             testData.BuildDataService.Verify(b => b.GetAllFailingTestsForBuildAsync(It.IsAny<Build>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -979,7 +974,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
                 recordType: recordType,
                 issues: ImmutableList.CreateRange(issues),
                 logUrl: logUrl,
-                parentId: parent != null ? CreateGuid(parent) : (Guid?)null
+                parentId: parent != null ? CreateGuid(parent) : null
 
             );
             return timelineRecord;
@@ -1002,7 +997,7 @@ namespace BuildInsights.BuildResultProcessor.Tests
             var timelineRecord = new TimelineRecord(
                 id: CreateGuid(name),
                 name: name,
-                parentId: parent != null ? CreateGuid(parent) : (Guid?)null,
+                parentId: parent != null ? CreateGuid(parent) : null,
                 identifier: identifier,
                 recordType: recordType,
                 result: result
@@ -1048,13 +1043,13 @@ namespace BuildInsights.BuildResultProcessor.Tests
                 attempt: attempt
             );
         }
-        
+
         private static TestRunDetails MockTestCaseResultsByTestRun(int id, string name, PipelineReference pipelineReference)
         {
             return new TestRunDetails(new TestRunSummary(123, "TestRunNameTest", pipelineReference),
                 new List<TestCaseResult>
                 {
-                    new TestCaseResult(name,
+                    new(name,
                         new DateTimeOffset(2021, 5, 12, 0, 0, 0, TimeSpan.Zero), TestOutcomeValue.Failed, 1, id, 1,
                         new PreviousBuildRef(), "", "", "", null, 55000)
                 },

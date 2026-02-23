@@ -1,14 +1,13 @@
-using System;
-using System.Collections.Generic;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Collections.Immutable;
-using System.Threading.Tasks;
 using AwesomeAssertions;
+using BuildInsights.KnownIssues.Models;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using BuildInsights.KnownIssues.Models;
-using BuildInsights.KnownIssues;
 using Moq;
 using NUnit.Framework;
 using Octokit;
@@ -39,8 +38,8 @@ namespace BuildInsights.KnownIssues.Tests
 
             public class Builder
             {
-                private readonly Mock<IGitHubClient> _gitHubClientMock = new Mock<IGitHubClient>();
-                private readonly Mock<IGitHubApplicationClientFactory> _gitHubApplicationClientFactoryMock = new Mock<IGitHubApplicationClientFactory>();
+                private readonly Mock<IGitHubClient> _gitHubClientMock = new();
+                private readonly Mock<IGitHubApplicationClientFactory> _gitHubApplicationClientFactoryMock = new();
 
                 public Builder()
                 {
@@ -83,7 +82,7 @@ namespace BuildInsights.KnownIssues.Tests
                 return new Builder().Build();
             }
 
-            public static Builder Create() => new Builder();
+            public static Builder Create() => new();
         }
 
         [Test]
@@ -121,10 +120,10 @@ namespace BuildInsights.KnownIssues.Tests
 
         private List<Issue> GenerateIssueList(int elements)
         {
-            List<Issue> issues = new List<Issue>();
-            for(int x = 0; x < elements; x++)
+            List<Issue> issues = [];
+            for (int x = 0; x < elements; x++)
             {
-                Issue issue =  new Issue(default, default, default, default, default, ItemState.Open, "Test Issue " + x, string.Empty, default,
+                Issue issue = new Issue(default, default, default, default, default, ItemState.Open, "Test Issue " + x, string.Empty, default,
                     default, default, default, default, default, 1, default, DateTimeOffset.MaxValue, DateTimeOffset.MaxValue,
                     DateTimeOffset.MaxValue, 1, default, default, default, default, default, default);
                 issues.Add(issue);

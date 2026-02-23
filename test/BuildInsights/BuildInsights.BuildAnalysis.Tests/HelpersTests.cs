@@ -1,16 +1,15 @@
-using System;
-using System.Collections.Generic;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Collections.Immutable;
-using System.Threading.Tasks;
 using AwesomeAssertions;
+using BuildInsights.BuildAnalysis.HandleBar;
+using BuildInsights.BuildAnalysis.Models;
+using BuildInsights.BuildAnalysis.Models.Views;
+using BuildInsights.KnownIssues.Models;
 using HandlebarsDotNet;
 using HandlebarsDotNet.Helpers;
 using Microsoft.Extensions.DependencyInjection;
-using BuildInsights.BuildAnalysis.Models;
-using BuildInsights.BuildAnalysis.Models.Views;
-using BuildInsights.BuildAnalysis.HandleBar;
-using BuildInsights.GitHub.Models;
-using BuildInsights.KnownIssues.Models;
 using NUnit.Framework;
 
 namespace BuildInsights.BuildAnalysis.Tests
@@ -48,14 +47,15 @@ namespace BuildInsights.BuildAnalysis.Tests
                 public TestData<THelper> Build()
                 {
                     ServiceCollection collection = new ServiceCollection();
-                    
+
                     ServiceProvider provider = collection.BuildServiceProvider();
                     IHandlebars hb = HandlebarsDotNet.Handlebars.Create();
                     var helper = ActivatorUtilities.CreateInstance<THelper>(provider);
                     if (helper is IHelperDescriptor<HelperOptions> inlineHelper)
                     {
                         hb.RegisterHelper(inlineHelper);
-                    } else if (helper is IHelperDescriptor<BlockHelperOptions> blockHelper)
+                    }
+                    else if (helper is IHelperDescriptor<BlockHelperOptions> blockHelper)
                     {
                         hb.RegisterHelper(blockHelper);
                     }
@@ -75,7 +75,7 @@ namespace BuildInsights.BuildAnalysis.Tests
             string source = "{{LinkTo Text Url}}";
             HandlebarsTemplate<object, object> template = testData.Handlebars.Compile(source);
 
-            string output = template(new {Text = text, Url = url});
+            string output = template(new { Text = text, Url = url });
 
             output.Should().Be(expectedOutput);
         }
@@ -88,7 +88,7 @@ namespace BuildInsights.BuildAnalysis.Tests
             string source = "{{LinkToHtml Text Url}}";
             HandlebarsTemplate<object, object> template = testData.Handlebars.Compile(source);
 
-            string output = template(new {Text = text, Url = url});
+            string output = template(new { Text = text, Url = url });
             output.Should().Be(expectedOutput);
         }
 
@@ -102,7 +102,7 @@ namespace BuildInsights.BuildAnalysis.Tests
 
             HandlebarsTemplate<object, object> template = hb.Compile(source);
 
-            string output = template(new {target = target});
+            string output = template(new { target = target });
             output.Should().Be(expectedOutput);
         }
 
@@ -117,7 +117,7 @@ namespace BuildInsights.BuildAnalysis.Tests
                 failureRate: null,
                 stepHierarchy: ImmutableList<string>.Empty,
                 knownIssues: ImmutableList<KnownIssue>.Empty,
-                parameters: new MarkdownParameters(new MergedBuildResultAnalysis(), "TEST-SNAPSHOT" , "TEST-PULL-REQUEST", new Repository("TEST=REPOSITORY", true))
+                parameters: new MarkdownParameters(new MergedBuildResultAnalysis(), "TEST-SNAPSHOT", "TEST-PULL-REQUEST", new Repository("TEST=REPOSITORY", true))
             );
         }
 
@@ -133,7 +133,7 @@ namespace BuildInsights.BuildAnalysis.Tests
             string source = "{{#if (or value1 value2)}}TrueOr{{/if}}";
             HandlebarsTemplate<object, object> template = hb.Compile(source);
 
-            string output = template(new {value1, value2 });
+            string output = template(new { value1, value2 });
             output.Should().Be(expectedResult);
         }
 
@@ -160,7 +160,7 @@ namespace BuildInsights.BuildAnalysis.Tests
             string source = "{{Date}}";
             HandlebarsTemplate<object, object> template = hb.Compile(source);
 
-            string output = template(new {Date = new DateTimeOffset(2021, 2, 26, 0, 0, 0, 0, TimeSpan.Zero)});
+            string output = template(new { Date = new DateTimeOffset(2021, 2, 26, 0, 0, 0, 0, TimeSpan.Zero) });
 
             output.Should().Be("2021-02-26");
         }
@@ -241,7 +241,7 @@ namespace BuildInsights.BuildAnalysis.Tests
         [TestCase(HandlebarHelpers.ResultsLimit)]
         public void GetNumberOfRecordsNotDisplayed(int totalRecords)
         {
-            int expectedResult = totalRecords-HandlebarHelpers.ResultsLimit;
+            int expectedResult = totalRecords - HandlebarHelpers.ResultsLimit;
 
             IHandlebars hb = Handlebars.Create();
             HandlebarHelpers.GetNumberOfRecordsNotDisplayed(hb);
@@ -276,22 +276,19 @@ namespace BuildInsights.BuildAnalysis.Tests
             {
                 { "FailingConfigurations", new List<FailingConfiguration>()
                     {
-                        new FailingConfiguration
-                        {
+                        new() {
                             Configuration = MockConfiguration("FAKE.CONFIGURATION.WINDOWS"),
                             TestLogs = "https://www.test.com/TestLogs1",
                             HistoryLink = "https://www.test.com/HistoryLink1",
                             ArtifactLink = "https://www.test.com/ArtifactLink1"
                         },
-                        new FailingConfiguration
-                        {
+                        new() {
                             Configuration = MockConfiguration("FAKE.CONFIGURATION.LINUX"),
                             TestLogs = "https://www.test.com/TestLogs2",
                             HistoryLink = "https://www.test.com/HistoryLink2",
                             ArtifactLink = "https://www.test.com/ArtifactLink2"
                         },
-                        new FailingConfiguration
-                        {
+                        new() {
                             Configuration = MockConfiguration("FAKE.CONFIGURATION.ARM"),
                             TestLogs = "https://www.test.com/TestLogs3",
                             HistoryLink = "https://www.test.com/HistoryLink3",
@@ -309,7 +306,7 @@ namespace BuildInsights.BuildAnalysis.Tests
 
             output.Should().Contain("<details open>");
             output.Should().Contain("Failing Configurations (3)");
-            foreach(var config in (context["FailingConfigurations"] as List<FailingConfiguration>))
+            foreach (var config in (context["FailingConfigurations"] as List<FailingConfiguration>))
             {
                 output.Should().Contain(config.Configuration.Name);
                 output.Should().Contain(config.TestLogs);
@@ -325,20 +322,16 @@ namespace BuildInsights.BuildAnalysis.Tests
             {
                 { "FailingConfigurations", new List<FailingConfiguration>()
                     {
-                        new FailingConfiguration
-                        {
+                        new() {
                             Configuration = MockConfiguration("FAKE.CONFIGURATION.WINDOWS")
                         },
-                        new FailingConfiguration
-                        {
+                        new() {
                             Configuration = MockConfiguration("FAKE.CONFIGURATION.LINUX")
                         },
-                        new FailingConfiguration
-                        {
+                        new() {
                             Configuration = MockConfiguration("FAKE.CONFIGURATION.ARM")
                         },
-                        new FailingConfiguration
-                        {
+                        new() {
                             Configuration = MockConfiguration("FAKE.CONFIGURATION.DOCKER")
                         }
                     }

@@ -1,6 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Reactive.Disposables;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using AwesomeAssertions;
 using BuildInsights.KnownIssues.Models;
 using NUnit.Framework;
@@ -13,7 +13,7 @@ public class KnownIssueTests
     [Test]
     public void KnownIssueSingleErrorCreationTest()
     {
-        KnownIssue knownIssue = new KnownIssue(null, new List<string>(){ "Assert.True() Failure" }, KnownIssueType.Infrastructure, new KnownIssueOptions());
+        KnownIssue knownIssue = new KnownIssue(null, ["Assert.True() Failure"], KnownIssueType.Infrastructure, new KnownIssueOptions());
         knownIssue.BuildErrorsType.Should().Be(KnownIssueBuildErrorsType.SingleLine);
     }
 
@@ -22,7 +22,7 @@ public class KnownIssueTests
     public void KnownIssueSingleErrorMessage(string errorMessage, bool expectedResult)
     {
         string errorLine = "Assert.True() Failure";
-        KnownIssue knownIssue = new KnownIssue(null, new List<string>() { errorMessage}, KnownIssueType.Infrastructure, new KnownIssueOptions());
+        KnownIssue knownIssue = new KnownIssue(null, [errorMessage], KnownIssueType.Infrastructure, new KnownIssueOptions());
         knownIssue.IsMatch(errorLine).Should().Be(expectedResult);
     }
 
@@ -30,7 +30,7 @@ public class KnownIssueTests
     public void KnownIssueSingleMessageMatchWithPositionTest()
     {
         string errorLine = "Assert.True() Failure";
-        KnownIssue knownIssue = new KnownIssue(null, new List<string>() { errorLine }, KnownIssueType.Infrastructure, new KnownIssueOptions());
+        KnownIssue knownIssue = new KnownIssue(null, [errorLine], KnownIssueType.Infrastructure, new KnownIssueOptions());
         knownIssue.IsMatchByErrorPosition(errorLine, 0).Should().BeTrue();
     }
 
@@ -39,7 +39,7 @@ public class KnownIssueTests
     {
         string errorLine = "Assert.True() Failure";
         string regex = ".* Failure";
-        KnownIssue knownIssue = new KnownIssue(null, new List<string>() { regex }, KnownIssueType.Infrastructure, new KnownIssueOptions(regexMatching:true));
+        KnownIssue knownIssue = new KnownIssue(null, [regex], KnownIssueType.Infrastructure, new KnownIssueOptions(regexMatching: true));
         knownIssue.IsMatch(errorLine).Should().BeTrue();
     }
 
@@ -47,14 +47,14 @@ public class KnownIssueTests
     public void KnownIssueMultiErrorMessageSingleMatchShouldFailTest()
     {
         string errorLine = "Assert.True() Failure";
-        KnownIssue knownIssue = new KnownIssue(null, new List<string>() { errorLine, "Expected: True" }, KnownIssueType.Infrastructure, new KnownIssueOptions());
+        KnownIssue knownIssue = new KnownIssue(null, [errorLine, "Expected: True"], KnownIssueType.Infrastructure, new KnownIssueOptions());
         knownIssue.IsMatch(errorLine).Should().BeFalse();
     }
 
     [Test]
     public void KnownIssueMultiErrorMessageCreationTest()
     {
-        KnownIssue knownIssue = new KnownIssue(null, new List<string>() { "Assert.True() Failure", "Expected: True" }, KnownIssueType.Infrastructure, new KnownIssueOptions());
+        KnownIssue knownIssue = new KnownIssue(null, ["Assert.True() Failure", "Expected: True"], KnownIssueType.Infrastructure, new KnownIssueOptions());
         knownIssue.BuildErrorsType.Should().Be(KnownIssueBuildErrorsType.Multiline);
     }
 
@@ -64,7 +64,7 @@ public class KnownIssueTests
     public void KnownIssueMultiErrorMessageWithPositionTest(string firstErrorMessage, string secondErrorMessage, int position, bool expectedResult)
     {
         string errorLine = "Assert.True() Failure";
-        KnownIssue knownIssue = new KnownIssue(null, new List<string>() { firstErrorMessage, secondErrorMessage }, KnownIssueType.Infrastructure, new KnownIssueOptions());
+        KnownIssue knownIssue = new KnownIssue(null, [firstErrorMessage, secondErrorMessage], KnownIssueType.Infrastructure, new KnownIssueOptions());
         knownIssue.IsMatchByErrorPosition(errorLine, position).Should().Be(expectedResult);
     }
 
@@ -72,7 +72,7 @@ public class KnownIssueTests
     public void KnownIssueMultiRegexSingleMatchWithPositionTest()
     {
         string errorLine = "Assert.True() Failure";
-        KnownIssue knownIssue = new KnownIssue(null, new List<string>() { "Assert.*Failure", "Expected:.*" }, KnownIssueType.Infrastructure, new KnownIssueOptions(regexMatching: true));
+        KnownIssue knownIssue = new KnownIssue(null, ["Assert.*Failure", "Expected:.*"], KnownIssueType.Infrastructure, new KnownIssueOptions(regexMatching: true));
         knownIssue.IsMatchByErrorPosition(errorLine, 0).Should().BeTrue();
     }
 
@@ -81,7 +81,7 @@ public class KnownIssueTests
     {
         string errorLine = "Assert.True() Failure";
         string regex = ".* Failure";
-        KnownIssue knownIssue = new KnownIssue(null, new List<string>() { regex }, KnownIssueType.Infrastructure, new KnownIssueOptions(regexMatching: true));
+        KnownIssue knownIssue = new KnownIssue(null, [regex], KnownIssueType.Infrastructure, new KnownIssueOptions(regexMatching: true));
         knownIssue.IsMatchByErrorPosition(errorLine, 0).Should().BeTrue();
     }
 
@@ -89,7 +89,7 @@ public class KnownIssueTests
     [TestCase(1, true)]
     public void KnownIssueIsLastErrorTest(int position, bool expectedResult)
     {
-        KnownIssue knownIssue = new KnownIssue(null, new List<string>() { "Assert.True() Failure", "Expected: True" }, KnownIssueType.Infrastructure, new KnownIssueOptions());
+        KnownIssue knownIssue = new KnownIssue(null, ["Assert.True() Failure", "Expected: True"], KnownIssueType.Infrastructure, new KnownIssueOptions());
         knownIssue.IsLastError(position).Should().Be(expectedResult);
     }
 }

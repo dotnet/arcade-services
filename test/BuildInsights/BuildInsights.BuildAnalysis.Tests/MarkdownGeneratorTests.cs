@@ -1,20 +1,18 @@
-using System;
-using System.Collections.Generic;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Collections.Immutable;
-using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using AwesomeAssertions;
-using Microsoft.DotNet.Internal.Testing.Utility;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using BuildInsights.BuildAnalysis.HandleBar;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Models.Views;
-using BuildInsights.BuildAnalysis;
-using BuildInsights.BuildAnalysis.HandleBar;
 using BuildInsights.GitHub.Models;
 using BuildInsights.KnownIssues.Models;
+using Microsoft.DotNet.Internal.Testing.Utility;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using NUnit.Framework;
 
 namespace BuildInsights.BuildAnalysis.Tests
@@ -47,9 +45,10 @@ namespace BuildInsights.BuildAnalysis.Tests
             {
                 public TestData Build()
                 {
-                    ServiceCollection collection = new ServiceCollection();
+                    ServiceCollection collection = [];
                     collection.AddLogging(l => l.AddProvider(new NUnitLogger()));
-                    collection.Configure<KnownIssueUrlOptions>(o => {
+                    collection.Configure<KnownIssueUrlOptions>(o =>
+                    {
                         o.Host = "https://knownissue.example/new";
                         o.InfrastructureIssueParameters = new IssueParameters { GithubTemplateName = "InfrastructureTemplate", };
                         o.RepositoryIssueParameters = new IssueParameters { GithubTemplateName = "RepositoryTemplate", };
@@ -57,7 +56,7 @@ namespace BuildInsights.BuildAnalysis.Tests
                     collection.AddHandleBarHelpers();
                     collection.TryAddSingleton<IMarkdownGenerator, MarkdownGenerator>();
                     var services = collection.BuildServiceProvider();
-                    return new TestData(services, (MarkdownGenerator) services.GetRequiredService<IMarkdownGenerator>());
+                    return new TestData(services, (MarkdownGenerator)services.GetRequiredService<IMarkdownGenerator>());
                 }
             }
 
@@ -101,7 +100,7 @@ namespace BuildInsights.BuildAnalysis.Tests
             );
             a.Should().Throw<ArgumentException>();
         }
-        
+
         [Test]
         public void GenerateMarkdownNoPipelines()
         {
@@ -116,16 +115,16 @@ namespace BuildInsights.BuildAnalysis.Tests
             result.Should().NotContain("will be analyzed once they finish");
             result.Should().Contain("Introduction.md", because: "with no pipelines, we should show preliminary check with documentation links");
         }
-        
+
         [Test]
         public void GenerateEmtpyMarkdown()
         {
-            string result = testData.Generator.GenerateEmptyMarkdown(new UserSentimentParameters{Repository = "TEST-REPO"});
+            string result = testData.Generator.GenerateEmptyMarkdown(new UserSentimentParameters { Repository = "TEST-REPO" });
             result.Should().NotContain("will be analyzed once they finish");
             result.Should().Contain("Introduction.md", because: "with no pipelines, we should show preliminary check with documentation links");
             result.Should().Contain("TEST-REPO");
         }
-        
+
         [Test]
         public void GenerateMarkdownNoFailuresPipelines()
         {
@@ -135,8 +134,8 @@ namespace BuildInsights.BuildAnalysis.Tests
                     {
                         new BuildResultAnalysis
                         {
-                            BuildStepsResult = new List<StepResult>(),
-                            TestResults = new List<TestResult>(),
+                            BuildStepsResult = [],
+                            TestResults = [],
                             TestKnownIssuesAnalysis = new TestKnownIssuesAnalysis()
                         }
                     }, CheckResult.Passed, null, null, null),
@@ -157,7 +156,7 @@ namespace BuildInsights.BuildAnalysis.Tests
                     "COMMIT-HASH",
                     null,
                     CheckResult.Passed,
-                    new[] {new Link("PENDING-PIPELINE-1", "https://dev.azure.text/link/to/build/777"),new Link("PENDING-PIPELINE-2", "https://dev.azure.text/link/to/build/888")},
+                    new[] { new Link("PENDING-PIPELINE-1", "https://dev.azure.text/link/to/build/777"), new Link("PENDING-PIPELINE-2", "https://dev.azure.text/link/to/build/888") },
                     null,
                     null
                 ),
@@ -183,7 +182,7 @@ namespace BuildInsights.BuildAnalysis.Tests
                     {
                         new()
                         {
-                            BuildStepsResult = new List<StepResult>(), TestResults = new List<TestResult>(),
+                            BuildStepsResult = [], TestResults = [],
                             TestKnownIssuesAnalysis = new TestKnownIssuesAnalysis(),
                             PipelineName = "PENDING-PIPELINE-1",
                             LinkToBuild = "https://dev.azure.text/link/to/build/777"
@@ -211,10 +210,10 @@ namespace BuildInsights.BuildAnalysis.Tests
         {
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView
             {
-                BuildFailuresUnique = new List<StepResultView>(),
-                TestFailuresUnique = new List<TestResultsGroupView>(),
-                SucceededPipelinesLinks = new List<Link>() { new Link("COMPLETED-PIPELINE-1", "https://dev.azure.text/link/to/build/1234") }.ToImmutableList(),
-                FailingPipelinesLinks = new List<Link>() { new Link("COMPLETED-PIPELINE-2", "https://dev.azure.text/link/to/build/5678") }.ToImmutableList(),
+                BuildFailuresUnique = [],
+                TestFailuresUnique = [],
+                SucceededPipelinesLinks = new List<Link>() { new("COMPLETED-PIPELINE-1", "https://dev.azure.text/link/to/build/1234") }.ToImmutableList(),
+                FailingPipelinesLinks = new List<Link>() { new("COMPLETED-PIPELINE-2", "https://dev.azure.text/link/to/build/5678") }.ToImmutableList(),
                 HasData = true,
             };
 
@@ -242,8 +241,8 @@ namespace BuildInsights.BuildAnalysis.Tests
                         LinkAllTestResults = "",
                         IsRerun = false,
                         BuildStatus = BuildStatus.Failed,
-                        TestResults = new List<TestResult>(),
-                        BuildStepsResult = new List<StepResult>(),
+                        TestResults = [],
+                        BuildStepsResult = [],
                         LatestAttempt = new Attempt(),
                         TestKnownIssuesAnalysis = new TestKnownIssuesAnalysis()
                     }
@@ -269,7 +268,7 @@ namespace BuildInsights.BuildAnalysis.Tests
                 stepName: "StepNameTest",
                 pipelineBuildName: null,
                 linkToBuild: null,
-                linkToStep:null,
+                linkToStep: null,
                 errors: errors.ToImmutableList(),
                 failureRate: failureRate,
                 stepHierarchy: ImmutableList<string>.Empty,
@@ -281,23 +280,23 @@ namespace BuildInsights.BuildAnalysis.Tests
         [Test]
         public void GenerateMarkDownWithLinksToTestFailuresTest()
         {
-            List<TestResultView> fakeTest = new List<TestResultView>()
-            {
+            List<TestResultView> fakeTest =
+            [
                 new()
                 {
                     TestName = "FakeTestName",
                     ExceptionMessage = "FakeMessage",
                     FailureRate = new FailureRate()
                 }
-            };
+            ];
 
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView()
             {
-                TestFailuresUnique = new List<TestResultsGroupView>()
-                {
+                TestFailuresUnique =
+                [
                     new("https://example.test", "example-test",fakeTest, 1 ),
                     new("https://example2.test", "example-test-special",fakeTest, 1 ),
-                },
+                ],
                 HasData = true,
             };
 
@@ -311,8 +310,8 @@ namespace BuildInsights.BuildAnalysis.Tests
         {
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView
             {
-                BuildFailuresUnique = new List<StepResultView>
-                {
+                BuildFailuresUnique =
+                [
                     BuildStep(
                         new[]
                         {
@@ -320,7 +319,7 @@ namespace BuildInsights.BuildAnalysis.Tests
                             new Error() {ErrorMessage = "TestErrorMessage02"}
                         }
                     )
-                },
+                ],
                 HasData = true,
             };
 
@@ -335,18 +334,18 @@ namespace BuildInsights.BuildAnalysis.Tests
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView
             {
                 IsRerun = true,
-                LatestAttempt = new List<AttemptView>
-                {
+                LatestAttempt =
+                [
                     new AttemptView
                     {
-                        BuildStepsResult = new List<StepResultView>
-                        {
+                        BuildStepsResult =
+                        [
                             BuildStep(
                                 new[] {new Error {ErrorMessage = "ErrorPassedOnRetry"}}
                             )
-                        }
+                        ]
                     }
-                },
+                ],
                 HasData = true,
             };
 
@@ -360,13 +359,13 @@ namespace BuildInsights.BuildAnalysis.Tests
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView
             {
                 IsRerun = true,
-                LatestAttempt = new List<AttemptView>
-                {
+                LatestAttempt =
+                [
                     new AttemptView
                     {
                         LinkToBuild = "example.link.test",
                     }
-                },
+                ],
                 HasData = true,
             };
 
@@ -380,24 +379,24 @@ namespace BuildInsights.BuildAnalysis.Tests
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView
             {
                 IsRerun = true,
-                BuildFailuresUnique = new List<StepResultView>
-                {
+                BuildFailuresUnique =
+                [
                     BuildStep(
                         new[] {new Error {ErrorMessage = "TestErrorMessage"}}
                     )
-                },
-                LatestAttempt = new List<AttemptView>()
-                {
+                ],
+                LatestAttempt =
+                [
                     new AttemptView()
                     {
-                        BuildStepsResult = new List<StepResultView>
-                        {
+                        BuildStepsResult =
+                        [
                             BuildStep(
                                 new[] {new Error {ErrorMessage = "ErrorPassedOnRetry"}}
                             )
-                        }
+                        ]
                     }
-                },
+                ],
                 HasData = true,
             };
 
@@ -411,11 +410,11 @@ namespace BuildInsights.BuildAnalysis.Tests
         {
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView
             {
-                InfrastructureBuildBreaks = new List<KnownIssueView>
-                {
+                InfrastructureBuildBreaks =
+                [
                     new KnownIssueView("DisplayStepNameOfKnownIssue", "LinkToBuildKnownIssue", "IssueRepositoryTest",
                         "IssueIdTest", "LinkToGitHubIssue", "TitleGitHubIssue")
-                },
+                ],
                 HasData = true
             };
 
@@ -429,11 +428,11 @@ namespace BuildInsights.BuildAnalysis.Tests
         {
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView
             {
-                RepoBuildBreaks = new List<KnownIssueView>
-                {
+                RepoBuildBreaks =
+                [
                     new KnownIssueView("DisplayStepNameOfKnownIssue", "LinkToBuildKnownIssue", "IssueRepositoryTest",
                         "IssueIdTest", "LinkToGitHubIssue", "TitleGitHubIssue")
-                },
+                ],
                 HasData = true
             };
 
@@ -486,10 +485,10 @@ namespace BuildInsights.BuildAnalysis.Tests
 
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView()
             {
-                TestFailuresUnique  = new List<TestResultsGroupView>()
-                {
+                TestFailuresUnique =
+                [
                     new("https://example.test", "example-test",testResultView, 1 ),
-                },
+                ],
                 HasData = true,
             };
 
@@ -500,7 +499,7 @@ namespace BuildInsights.BuildAnalysis.Tests
         [Test]
         public void GenerateMarkDownTestFailureRate()
         {
-            var testResultView  = new List<TestResultView>
+            var testResultView = new List<TestResultView>
             {
                 new()
                 {
@@ -518,10 +517,10 @@ namespace BuildInsights.BuildAnalysis.Tests
 
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView()
             {
-                TestFailuresUnique = new List<TestResultsGroupView>()
-                {
+                TestFailuresUnique =
+                [
                     new("https://example.test", "example-test",testResultView, 1 ) { DisplayTestsCount = 1 }
-                },
+                ],
                 HasData = true,
             };
 
@@ -532,18 +531,18 @@ namespace BuildInsights.BuildAnalysis.Tests
         [Test]
         public void GenerateMarkDownTestLinkToOpenNewKnownIssue()
         {
-            List<TestResult> testResults = new List<TestResult>()
-            {
+            List<TestResult> testResults =
+            [
                 MockTestResult("Test-A")
-            };
+            ];
 
             MergedBuildResultAnalysis mergedBuildResultAnalysis = MockMergedBuildResultAnalysis(testResults: testResults);
 
             var knownIssueUrlOptions = new KnownIssueUrlOptions
             {
                 Host = "https://example.test-new-infra.com",
-                RepositoryIssueParameters = new IssueParameters { Labels = new List<string> { "RepositoryIssueLabel" } },
-                InfrastructureIssueParameters = new IssueParameters { Labels = new List<string> { "InfrastructureIssueLabel" }, Repository = "INFRA-REPO" }
+                RepositoryIssueParameters = new IssueParameters { Labels = ["RepositoryIssueLabel"] },
+                InfrastructureIssueParameters = new IssueParameters { Labels = ["InfrastructureIssueLabel"], Repository = "INFRA-REPO" }
             };
 
             string result = testData.Generator.GenerateMarkdown(new MarkdownParameters(mergedBuildResultAnalysis, "TEST-SNAPSHOT",
@@ -559,12 +558,12 @@ namespace BuildInsights.BuildAnalysis.Tests
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView
             {
                 IsRerun = true,
-                LatestAttempt = new List<AttemptView>
-                {
+                LatestAttempt =
+                [
                     new AttemptView
                     {
-                        TestResults = new List<TestResultView>
-                        {
+                        TestResults =
+                        [
                             new TestResultView
                             {
                                 TestName = "TestResultViewRetryTest",
@@ -576,9 +575,9 @@ namespace BuildInsights.BuildAnalysis.Tests
                                     FailedRuns = 2
                                 }
                             }
-                        }
+                        ]
                     }
-                },
+                ],
                 HasData = true,
             };
 
@@ -591,12 +590,12 @@ namespace BuildInsights.BuildAnalysis.Tests
         {
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView()
             {
-                BuildFailuresUnique = new List<StepResultView>
-                {
+                BuildFailuresUnique =
+                [
                     BuildStep(
                         new[] {new Error() {ErrorMessage = "TestErrorMessage"}}
                     )
-                },
+                ],
                 HasData = true,
             };
             string result = testData.Generator.GenerateMarkdown(buildResultAnalysis);
@@ -606,7 +605,7 @@ namespace BuildInsights.BuildAnalysis.Tests
         [Test]
         public void GenerateMarkDownUniqueTestFailureTest()
         {
-            var testResultView  = new List<TestResultView>
+            var testResultView = new List<TestResultView>
             {
                 new()
                 {
@@ -618,10 +617,10 @@ namespace BuildInsights.BuildAnalysis.Tests
 
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView()
             {
-                TestFailuresUnique = new List<TestResultsGroupView>()
-                {
+                TestFailuresUnique =
+                [
                     new("https://example.test", "example-test",testResultView, 1 ) { DisplayTestsCount = 1 }
-                },
+                ],
                 HasData = true,
             };
 
@@ -632,10 +631,9 @@ namespace BuildInsights.BuildAnalysis.Tests
         [Test]
         public void GenerateMarkDownTestAndBuildFailureTest()
         {
-            var testResultView  = new List<TestResultView>
+            var testResultView = new List<TestResultView>
             {
-                new TestResultView
-                {
+                new() {
                     TestName = "TestTestName",
                     ExceptionMessage = "TestExceptionMessage",
                     FailureRate = new FailureRate {TotalRuns = 0}
@@ -644,16 +642,16 @@ namespace BuildInsights.BuildAnalysis.Tests
 
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView()
             {
-                BuildFailuresUnique = new List<StepResultView>()
-                {
+                BuildFailuresUnique =
+                [
                     BuildStep(
                         new[] {new Error{ErrorMessage = "BuildErrorMessage"}}
                     )
-                },
-                TestFailuresUnique = new List<TestResultsGroupView>()
-                {
+                ],
+                TestFailuresUnique =
+                [
                     new("https://example.test", "example-test",testResultView, 1 ) { DisplayTestsCount = 1 }
-                },
+                ],
                 HasData = true,
             };
 
@@ -667,11 +665,11 @@ namespace BuildInsights.BuildAnalysis.Tests
         {
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView
             {
-                BuildFailuresUnique = new List<StepResultView> {BuildStep(Enumerable.Empty<Error>())},
-                BuildRetryAutomatically = new List<RetryInformationView>
-                {
+                BuildFailuresUnique = [BuildStep(Enumerable.Empty<Error>())],
+                BuildRetryAutomatically =
+                [
                     new RetryInformationView("PipelineRetryNameTest", 1, "BuildNumberRetry", "linkToBuildRetry", new GitHubIssue())
-                },
+                ],
                 HasData = true,
             };
 
@@ -684,26 +682,26 @@ namespace BuildInsights.BuildAnalysis.Tests
         {
             var testResultView = new List<TestResultView>()
             {
-                new TestResultView()
+                new()
                 {
                     TestName = "TestNameTest",
                     FailureRate = new FailureRate {TotalRuns = 0},
-                    TestSubResults = new List<TestSubResultView>()
-                    {
+                    TestSubResults =
+                    [
                         new TestSubResultView(
                             "SubResultTestNameTest", "SubResultErrorMessageTest", "SubResultStackTrace"
                         )
-                    }
+                    ]
                 }
             };
 
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView
             {
-                BuildFailuresUnique = new List<StepResultView> {BuildStep(Enumerable.Empty<Error>())},
-                TestFailuresUnique = new List<TestResultsGroupView>()
-                {
+                BuildFailuresUnique = [BuildStep(Enumerable.Empty<Error>())],
+                TestFailuresUnique =
+                [
                     new("https://example.test", "example-test",testResultView, 1 ) { DisplayTestsCount = 1 }
-                },
+                ],
                 HasData = true,
             };
 
@@ -717,23 +715,23 @@ namespace BuildInsights.BuildAnalysis.Tests
         {
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView
             {
-                BuildFailuresUnique = new List<StepResultView> (),
-                TestFailuresUnique = new List<TestResultsGroupView>(),
-                FlakyTests = new List<TestResultView>()
-                {
+                BuildFailuresUnique = [],
+                TestFailuresUnique = [],
+                FlakyTests =
+                [
                     new TestResultView()
                     {
                         TestName = "TestNameFailOnceThenPass ",
                         FailureRate = new FailureRate {TotalRuns = 6},
-                        TestSubResults = new List<TestSubResultView>()
-                        {
+                        TestSubResults =
+                        [
                             new TestSubResultView(
                                 "Attempt", "SubResultErrorMessage_Test", "StackTrace"
                             )
-                        },
+                        ],
                         Attempt = 12
                     }
-                },
+                ],
                 HasData = true,
             };
 
@@ -758,25 +756,25 @@ namespace BuildInsights.BuildAnalysis.Tests
                 {
                     TestName = "TestNameB",
                     FailureRate = new FailureRate {TotalRuns = 0},
-                    TestSubResults = new List<TestSubResultView>()
-                    {
+                    TestSubResults =
+                    [
                         new TestSubResultView(
                             "SubResultTestNameTest", "2A4B6C8D", "SubResultStackTrace"
                         )
-                    }
+                    ]
                 }
             };
 
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView
             {
-                BuildFailuresUnique = new List<StepResultView> { BuildStep(Enumerable.Empty<Error>()) },
-                TestFailuresUnique = new List<TestResultsGroupView>()
-                {
+                BuildFailuresUnique = [BuildStep(Enumerable.Empty<Error>())],
+                TestFailuresUnique =
+                [
                     new("https://example.test", "example-test",testResultView, 1 )
                     {
                         DisplayTestsCount = 2
                     }
-                },
+                ],
                 HasData = true,
                 SummarizeInstructions = new MarkdownSummarizeInstructions(true, 5, 100)
             };
@@ -793,15 +791,15 @@ namespace BuildInsights.BuildAnalysis.Tests
         {
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView
             {
-                BuildFailuresUnique = new List<StepResultView>(),
-                TestFailuresUnique = new List<TestResultsGroupView>(),
+                BuildFailuresUnique = [],
+                TestFailuresUnique = [],
                 IsRerun = true,
-                LatestAttempt = new List<AttemptView>()
-                {
+                LatestAttempt =
+                [
                     new AttemptView()
                     {
-                        TestResults = new List<TestResultView>()
-                        {
+                        TestResults =
+                        [
                             new TestResultView()
                             {
                                 TestName = "TestNameA",
@@ -812,18 +810,18 @@ namespace BuildInsights.BuildAnalysis.Tests
                             {
                                 TestName = "TestNameB",
                                 FailureRate = new FailureRate {TotalRuns = 0},
-                                TestSubResults = new List<TestSubResultView>()
-                                {
+                                TestSubResults =
+                                [
                                     new TestSubResultView(
                                         "SubResultTestNameTest", "2A4B6C8D", "SubResultStackTrace"
                                     )
-                                }
+                                ]
                             }
-                        }
+                        ]
                     }
-                },
-                FlakyTests = new List<TestResultView>()
-                {
+                ],
+                FlakyTests =
+                [
                     new TestResultView()
                     {
                         TestName = "FlakyTestNameA",
@@ -834,14 +832,14 @@ namespace BuildInsights.BuildAnalysis.Tests
                     {
                         TestName = "FlakyTestNameB",
                         FailureRate = new FailureRate {TotalRuns = 0},
-                        TestSubResults = new List<TestSubResultView>()
-                        {
+                        TestSubResults =
+                        [
                             new TestSubResultView(
                                 "SubResultTestNameFlakyTest", "NOPQRSTUW", "SubResultStackTrace"
                             )
-                        }
+                        ]
                     }
-                },
+                ],
                 HasData = true,
                 SummarizeInstructions = new MarkdownSummarizeInstructions(true, 5, 100)
             };
@@ -864,8 +862,8 @@ namespace BuildInsights.BuildAnalysis.Tests
             var knownIssueUrlOptions = new KnownIssueUrlOptions
             {
                 Host = "example.host/ki/new",
-                RepositoryIssueParameters = new IssueParameters {Labels = new List<string> {"RepositoryIssueLabel"}},
-                InfrastructureIssueParameters = new IssueParameters {Labels = new List<string> {"InfrastructureIssueLabel"}, Repository = "INFRA-REPO"}
+                RepositoryIssueParameters = new IssueParameters { Labels = ["RepositoryIssueLabel"] },
+                InfrastructureIssueParameters = new IssueParameters { Labels = ["InfrastructureIssueLabel"], Repository = "INFRA-REPO" }
             };
 
             string result = testData.Generator.GenerateMarkdown(new MarkdownParameters(mergedBuildResultAnalysis, "TEST-SNAPSHOT",
@@ -885,7 +883,7 @@ namespace BuildInsights.BuildAnalysis.Tests
                 LinkBuild = "null",
                 AttemptId = 1,
                 BuildStepsResult = stepResults,
-                TestResults = new List<TestResult>()
+                TestResults = []
             };
 
             MergedBuildResultAnalysis mergedBuildResultAnalysis = MockMergedBuildResultAnalysis(latestAttempt: latestAttempt);
@@ -893,8 +891,8 @@ namespace BuildInsights.BuildAnalysis.Tests
             var knownIssueUrlOptions = new KnownIssueUrlOptions
             {
                 Host = "example.host/ki/new",
-                RepositoryIssueParameters = new IssueParameters {Labels = new List<string> {"RepositoryIssueLabel"}},
-                InfrastructureIssueParameters = new IssueParameters {Labels = new List<string> {"InfrastructureIssueLabel"}, Repository = "INFRA-REPO"}
+                RepositoryIssueParameters = new IssueParameters { Labels = ["RepositoryIssueLabel"] },
+                InfrastructureIssueParameters = new IssueParameters { Labels = ["InfrastructureIssueLabel"], Repository = "INFRA-REPO" }
             };
 
             string result = testData.Generator.GenerateMarkdown(new MarkdownParameters(mergedBuildResultAnalysis, "TEST-SNAPSHOT",
@@ -922,10 +920,10 @@ namespace BuildInsights.BuildAnalysis.Tests
 
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView()
             {
-                TestFailuresUnique = new List<TestResultsGroupView>()
-                {
+                TestFailuresUnique =
+                [
                     new("https://example.test", "example-test",testResultView, 1 ) { DisplayTestsCount = 1 }
-                },
+                ],
                 HasData = true,
             };
 
@@ -956,7 +954,7 @@ namespace BuildInsights.BuildAnalysis.Tests
 
             var testResultView = new List<TestResultView>()
             {
-                new TestResultView()
+                new()
                 {
                     TestName = "FakeTestName",
                     ExceptionMessage = "FakeMessage",
@@ -969,10 +967,10 @@ namespace BuildInsights.BuildAnalysis.Tests
 
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView()
             {
-                TestFailuresUnique = new List<TestResultsGroupView>()
-                {
+                TestFailuresUnique =
+                [
                     new("https://example.test", "example-test",testResultView, 1 ) { DisplayTestsCount = 1 }
-                },
+                ],
                 HasData = true,
             };
 
@@ -996,9 +994,9 @@ namespace BuildInsights.BuildAnalysis.Tests
         [TestCase(false, false)]
         public void GenerateMarkdownWithHelixWorkItemConsoleLog(bool hasRepositoryIssues, bool expectedResult)
         {
-            var testResultView =  new List<TestResultView>()
+            var testResultView = new List<TestResultView>()
             {
-                new TestResultView()
+                new()
                 {
                     TestName = "TestNameA",
                     FailureRate = new FailureRate() {TotalRuns = 0},
@@ -1009,11 +1007,11 @@ namespace BuildInsights.BuildAnalysis.Tests
 
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView
             {
-                BuildFailuresUnique = new List<StepResultView> { BuildStep(Enumerable.Empty<Error>()) },
-                TestFailuresUnique = new List<TestResultsGroupView>()
-                {
+                BuildFailuresUnique = [BuildStep(Enumerable.Empty<Error>())],
+                TestFailuresUnique =
+                [
                     new("https://example.test", "example-test",testResultView, 1 ) { DisplayTestsCount = 1 }
-                },
+                ],
                 HasData = true
             };
 
@@ -1029,8 +1027,8 @@ namespace BuildInsights.BuildAnalysis.Tests
             knownIssueListBuilder.Add(new KnownIssueView("IssueNameCritical", "https://helix.example", "test/repo", "issueId123", "", ""));
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView
             {
-                BuildFailuresUnique = new List<StepResultView> { BuildStep(Enumerable.Empty<Error>()) },
-                TestFailuresUnique = new List<TestResultsGroupView>() { },
+                BuildFailuresUnique = [BuildStep(Enumerable.Empty<Error>())],
+                TestFailuresUnique = [],
                 CriticalIssues = knownIssueListBuilder.ToImmutable(),
                 HasData = true
             };
@@ -1047,7 +1045,7 @@ namespace BuildInsights.BuildAnalysis.Tests
         {
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView()
             {
-                TestKnownIssues = new List<KnownIssueView>() {new KnownIssueView("test-known-issue-name", "https://helix.example", "issue-repository-tes", "1234", "link", "https://helix.example") },
+                TestKnownIssues = [new KnownIssueView("test-known-issue-name", "https://helix.example", "issue-repository-tes", "1234", "link", "https://helix.example")],
                 HasData = true,
             };
 
@@ -1064,8 +1062,8 @@ namespace BuildInsights.BuildAnalysis.Tests
             var buildResultAnalysis = new ConsolidatedBuildResultAnalysisView
             {
                 RenderSummary = true,
-                BuildAnalysisSummaries = new List<BuildAnalysisSummaryView>(),
-                BuildFailuresUnique = new List<StepResultView>(){ new (MockStepResults().First(), "PIPELINE_TEST", "BUILD_TEST", markdownParameters)},
+                BuildAnalysisSummaries = [],
+                BuildFailuresUnique = [new(MockStepResults().First(), "PIPELINE_TEST", "BUILD_TEST", markdownParameters)],
                 HasData = true
             };
 
@@ -1093,18 +1091,18 @@ namespace BuildInsights.BuildAnalysis.Tests
 
         private static List<StepResult> MockStepResults()
         {
-            return new List<StepResult>
-            {
+            return
+            [
                 new StepResult
                 {
                     StepName = "StepNameError",
-                    Errors = new List<Error>
-                    {
+                    Errors =
+                    [
                         new Error {ErrorMessage = "StepErrorMessage"}
-                    },
+                    ],
                     FailureRate = new FailureRate {TotalRuns = 0}
                 }
-            };
+            ];
         }
 
         private static MergedBuildResultAnalysis MockMergedBuildResultAnalysis(
@@ -1125,8 +1123,8 @@ namespace BuildInsights.BuildAnalysis.Tests
                         LinkAllTestResults = "",
                         IsRerun = false,
                         BuildStatus = BuildStatus.Failed,
-                        TestResults = testResults ?? new List<TestResult>(),
-                        BuildStepsResult = stepResults ?? new List<StepResult>(),
+                        TestResults = testResults ?? [],
+                        BuildStepsResult = stepResults ?? [],
                         LatestAttempt = latestAttempt ?? new Attempt(),
                         TestKnownIssuesAnalysis = new TestKnownIssuesAnalysis()
                     }

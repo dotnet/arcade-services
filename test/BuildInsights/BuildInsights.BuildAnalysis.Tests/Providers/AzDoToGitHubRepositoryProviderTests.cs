@@ -1,13 +1,14 @@
-using System;
-using System.Threading.Tasks;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using AwesomeAssertions;
+using BuildInsights.BuildAnalysis.Models;
+using BuildInsights.GitHub;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using BuildInsights.BuildAnalysis.Models;
-using BuildInsights.GitHub;
 using Moq;
 using NUnit.Framework;
 using Octokit;

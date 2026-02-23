@@ -1,14 +1,13 @@
-using System;
-using System.Collections.Generic;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Collections.Immutable;
-using System.Linq;
 using AwesomeAssertions;
-using Microsoft.ApplicationInsights;
-using Microsoft.ApplicationInsights.Extensibility;
 using BuildInsights.BuildAnalysis.Models;
-using BuildInsights.BuildAnalysis;
 using BuildInsights.GitHub.Models;
 using BuildInsights.KnownIssues.Models;
+using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.Extensibility;
 using NUnit.Framework;
 
 namespace BuildInsights.BuildAnalysis.Tests.Providers;
@@ -22,8 +21,8 @@ public class CheckResultProviderTests
     [TestCase(false, CheckResult.Failed)]
     public void BuildStatusWithStepFailures(bool isKnownIssueResult, CheckResult expectedResult)
     {
-        ImmutableList<StepResult> stepResults = ImmutableList.Create(MockStepResult(new List<KnownIssue>()));
-        BuildResultAnalysis buildAnalysis = MockBuildResultAnalysis(BuildStatus.Failed, stepResults.ToList(), new List<TestResult>());
+        ImmutableList<StepResult> stepResults = ImmutableList.Create(MockStepResult([]));
+        BuildResultAnalysis buildAnalysis = MockBuildResultAnalysis(BuildStatus.Failed, stepResults.ToList(), []);
 
         CheckResult result = _checkResultProvider.GetCheckResult(MockBuildReference(), ImmutableList.Create(buildAnalysis), 0, isKnownIssueResult);
         result.Should().Be(expectedResult);
@@ -34,12 +33,12 @@ public class CheckResultProviderTests
     public void BuildStatusWithStepKnownIssuesFailuresKnown(bool isKnownIssueResult, CheckResult expectedResult)
     {
         var knownIssues = new List<KnownIssue>
-            {new(new GitHubIssue(), new List<string>(){"Any build error"}, KnownIssueType.Repo, new KnownIssueOptions())};
-        var stepResults = new List<StepResult> {MockStepResult(knownIssues)};
-        BuildResultAnalysis buildAnalysis = MockBuildResultAnalysis(BuildStatus.Failed, stepResults, new List<TestResult>());
+            {new(new GitHubIssue(), ["Any build error"], KnownIssueType.Repo, new KnownIssueOptions())};
+        var stepResults = new List<StepResult> { MockStepResult(knownIssues) };
+        BuildResultAnalysis buildAnalysis = MockBuildResultAnalysis(BuildStatus.Failed, stepResults, []);
 
         CheckResult result =
-            _checkResultProvider.GetCheckResult(MockBuildReference(),ImmutableList.Create(buildAnalysis), 0, isKnownIssueResult);
+            _checkResultProvider.GetCheckResult(MockBuildReference(), ImmutableList.Create(buildAnalysis), 0, isKnownIssueResult);
         result.Should().Be(expectedResult);
     }
 
@@ -49,12 +48,12 @@ public class CheckResultProviderTests
     {
         TestResult testResult = MockTestResult();
         testResult.KnownIssues = ImmutableList.Create(new KnownIssue(new GitHubIssue(),
-            new List<string>(){"Any build error"}, KnownIssueType.Repo, new KnownIssueOptions()));
-        var testResults = new List<TestResult> {testResult};
+            ["Any build error"], KnownIssueType.Repo, new KnownIssueOptions()));
+        var testResults = new List<TestResult> { testResult };
 
-        BuildResultAnalysis buildAnalysis = MockBuildResultAnalysis(BuildStatus.Failed, new List<StepResult>(), testResults);
+        BuildResultAnalysis buildAnalysis = MockBuildResultAnalysis(BuildStatus.Failed, [], testResults);
 
-        CheckResult result = _checkResultProvider.GetCheckResult(MockBuildReference(),ImmutableList.Create(buildAnalysis),
+        CheckResult result = _checkResultProvider.GetCheckResult(MockBuildReference(), ImmutableList.Create(buildAnalysis),
             0, isKnownIssueResult);
         result.Should().Be(expectedResult);
     }
@@ -64,11 +63,11 @@ public class CheckResultProviderTests
     public void BuildStatusWithTestKnownIssuesFailuresUnique(bool isKnownIssueResult, CheckResult expectedResult)
     {
         TestResult testResult = MockTestResult();
-        var testResults = new List<TestResult> {testResult};
+        var testResults = new List<TestResult> { testResult };
 
-        BuildResultAnalysis buildAnalysis = MockBuildResultAnalysis(BuildStatus.Failed, new List<StepResult>(), testResults);
+        BuildResultAnalysis buildAnalysis = MockBuildResultAnalysis(BuildStatus.Failed, [], testResults);
 
-        CheckResult result = _checkResultProvider.GetCheckResult(MockBuildReference(),ImmutableList.Create(buildAnalysis),
+        CheckResult result = _checkResultProvider.GetCheckResult(MockBuildReference(), ImmutableList.Create(buildAnalysis),
             0, isKnownIssueResult);
         result.Should().Be(expectedResult);
     }
@@ -81,11 +80,11 @@ public class CheckResultProviderTests
     {
         var buildAnalysis = new List<BuildResultAnalysis>
         {
-            MockBuildResultAnalysis(buildStatusA, new List<StepResult>(), new List<TestResult>()),
-            MockBuildResultAnalysis(buildStatusB, new List<StepResult>(), new List<TestResult>())
+            MockBuildResultAnalysis(buildStatusA, [], []),
+            MockBuildResultAnalysis(buildStatusB, [], [])
         };
 
-        CheckResult result = _checkResultProvider.GetCheckResult(MockBuildReference(),buildAnalysis.ToImmutableList(), pending, false);
+        CheckResult result = _checkResultProvider.GetCheckResult(MockBuildReference(), buildAnalysis.ToImmutableList(), pending, false);
 
         result.Should().Be(expectedResult);
     }
@@ -94,13 +93,13 @@ public class CheckResultProviderTests
     [TestCase(false)]
     public void GetOverallBuildStatusNoResults(bool isKnownIssues)
     {
-        CheckResult result = _checkResultProvider.GetCheckResult(MockBuildReference(),ImmutableList<BuildResultAnalysis>.Empty, 0, isKnownIssues);
+        CheckResult result = _checkResultProvider.GetCheckResult(MockBuildReference(), ImmutableList<BuildResultAnalysis>.Empty, 0, isKnownIssues);
         result.Should().Be(CheckResult.InProgress);
     }
 
     private NamedBuildReference MockBuildReference()
     {
-        return new NamedBuildReference("", "", "", "", 12345, "", 6789, "", "","", "");
+        return new NamedBuildReference("", "", "", "", 12345, "", 6789, "", "", "", "");
     }
 
     private TestResult MockTestResult()
@@ -116,11 +115,11 @@ public class CheckResultProviderTests
         return new StepResult
         {
             StepName = "StepNameError",
-            Errors = new List<Error>
-            {
+            Errors =
+            [
                 new() {ErrorMessage = "StepErrorMessage"}
-            },
-            FailureRate = new FailureRate {TotalRuns = 0},
+            ],
+            FailureRate = new FailureRate { TotalRuns = 0 },
             KnownIssues = knownIssues?.ToImmutableList() ?? ImmutableList<KnownIssue>.Empty
         };
     }
@@ -136,7 +135,7 @@ public class CheckResultProviderTests
             TestResults = testResults,
             BuildStepsResult = stepResults,
             TotalTestFailures = 2,
-            TestKnownIssuesAnalysis = new TestKnownIssuesAnalysis(true, new List<TestResult>())
+            TestKnownIssuesAnalysis = new TestKnownIssuesAnalysis(true, [])
         };
     }
 }

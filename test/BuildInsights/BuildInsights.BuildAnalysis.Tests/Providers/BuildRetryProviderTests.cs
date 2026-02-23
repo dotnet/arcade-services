@@ -1,16 +1,13 @@
-using System;
-using System.Collections.Generic;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Collections.Immutable;
-using System.Threading;
-using System.Threading.Tasks;
 using AwesomeAssertions;
+using BuildInsights.BuildAnalysis.Models;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using BuildInsights.BuildAnalysis.Models;
-using BuildInsights.BuildAnalysis;
-using BuildInsights.KnownIssues.Models;
 using Moq;
 using NUnit.Framework;
 
@@ -45,7 +42,7 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
 
             public class Builder
             {
-                private readonly Build _build = new Build(result: BuildResult.Failed);
+                private readonly Build _build = new(result: BuildResult.Failed);
                 private readonly BuildConfiguration _buildConfiguration;
                 private readonly ImmutableList<TimelineRecord> _timeline = ImmutableList.Create(new TimelineRecord());
 
@@ -136,11 +133,11 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
         [TestCase(2, false)]
         public async Task BuildSuitableNotSuitableToRetryByAttempts(int retryCountLimit, bool expectedOutput)
         {
-            var buildConfiguration = new BuildConfiguration { RetryCountLimit = retryCountLimit, RetryByAnyError = true};
+            var buildConfiguration = new BuildConfiguration { RetryCountLimit = retryCountLimit, RetryByAnyError = true };
 
             var records = new List<TimelineRecord>
             {
-                new TimelineRecord(result: TaskResult.Failed, attempt: 3)
+                new(result: TaskResult.Failed, attempt: 3)
             };
 
             await using TestData testData = TestData.Default
@@ -179,7 +176,7 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
         [TestCase(false)]
         public async Task BuildSuitableToRetryByAny(bool retryByAnyError)
         {
-            var buildConfiguration = new BuildConfiguration {RetryByAnyError = retryByAnyError};
+            var buildConfiguration = new BuildConfiguration { RetryByAnyError = retryByAnyError };
             await using TestData testData = TestData.Default
                 .WithBuildConfiguration(buildConfiguration)
                 .Build();
@@ -195,14 +192,14 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
             ImmutableList<TimelineIssue> timelineIssues = ImmutableList.Create(new TimelineIssue("Vstest failed with error. Check logs for failures. There might be failed tests."));
             var buildConfiguration = new BuildConfiguration
             {
-                RetryByErrors = new List<Errors>
-                {
+                RetryByErrors =
+                [
                     new Errors {ErrorRegex = errorRegex}
-                }
+                ]
             };
             var records = new List<TimelineRecord>
             {
-                new TimelineRecord(result: TaskResult.Failed, issues: timelineIssues)
+                new(result: TaskResult.Failed, issues: timelineIssues)
             };
 
             await using TestData testData = TestData.Default
@@ -223,20 +220,20 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
             {
                 RetryByPipeline = new Pipeline
                 {
-                    RetryJobs = new List<Job>
-                    {
+                    RetryJobs =
+                    [
                         new Job
                         {
                             JobName = jobName
                         }
-                    }
+                    ]
                 }
             };
 
             var records = new List<TimelineRecord>
             {
-                new TimelineRecord(id: CreateGuid("A"), result: TaskResult.Failed, name:"ExtraJobName", identifier: "Extra_Job_Identifier", recordType:RecordType.Job),
-                new TimelineRecord(id: CreateGuid("B"), result: TaskResult.Failed, name:"JobNameRestarting", identifier: "Job_Name_Restarting", recordType:RecordType.Job)
+                new(id: CreateGuid("A"), result: TaskResult.Failed, name:"ExtraJobName", identifier: "Extra_Job_Identifier", recordType:RecordType.Job),
+                new(id: CreateGuid("B"), result: TaskResult.Failed, name:"JobNameRestarting", identifier: "Job_Name_Restarting", recordType:RecordType.Job)
             };
 
             await using TestData testData = TestData.Default
@@ -257,20 +254,20 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
             {
                 RetryByPipeline = new Pipeline
                 {
-                    RetryPhases = new List<Phase>
-                    {
+                    RetryPhases =
+                    [
                         new Phase()
                         {
                             PhaseName = phaseName
                         }
-                    }
+                    ]
                 }
             };
 
             var records = new List<TimelineRecord>
             {
-                new TimelineRecord(id: CreateGuid("A"), result: TaskResult.Failed, name:"ExtraPhaseName", identifier: "Extra_Phase_Identifier", recordType:RecordType.Job),
-                new TimelineRecord(id: CreateGuid("B"), result: TaskResult.Failed, name:"PhaseNameRestarting", identifier: "Phase_Name_Restarting", recordType:RecordType.Phase)
+                new(id: CreateGuid("A"), result: TaskResult.Failed, name:"ExtraPhaseName", identifier: "Extra_Phase_Identifier", recordType:RecordType.Job),
+                new(id: CreateGuid("B"), result: TaskResult.Failed, name:"PhaseNameRestarting", identifier: "Phase_Name_Restarting", recordType:RecordType.Phase)
             };
 
             await using TestData testData = TestData.Default
@@ -291,20 +288,20 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
             {
                 RetryByPipeline = new Pipeline
                 {
-                    RetryStages = new List<Stage>
-                    {
+                    RetryStages =
+                    [
                         new Stage()
                         {
                             StageName = stageName
                         }
-                    }
+                    ]
                 }
             };
 
             var records = new List<TimelineRecord>
             {
-                new TimelineRecord(id: CreateGuid("A"), result: TaskResult.Failed, name:"ExtraStageName", identifier: "Extra_Stage_Identifier", recordType:RecordType.Job),
-                new TimelineRecord(id: CreateGuid("B"), result: TaskResult.Failed, name:"StageNameRestarting", identifier: "Stage_Name_Restarting", recordType:RecordType.Stage)
+                new(id: CreateGuid("A"), result: TaskResult.Failed, name:"ExtraStageName", identifier: "Extra_Stage_Identifier", recordType:RecordType.Job),
+                new(id: CreateGuid("B"), result: TaskResult.Failed, name:"StageNameRestarting", identifier: "Stage_Name_Restarting", recordType:RecordType.Stage)
             };
 
             await using TestData testData = TestData.Default
@@ -324,14 +321,14 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
             {
                 RetryByErrorsInPipeline = new RetryByErrorsInPipeline
                 {
-                    ErrorInPipelineByJobs = new List<ErrorInPipelineByJobs>()
-                    {
+                    ErrorInPipelineByJobs =
+                    [
                         new ErrorInPipelineByJobs
                         {
-                            JobsNames = new List<string> {jobName},
+                            JobsNames = [jobName],
                             ErrorRegex = ".*Vstest failed with error.*"
                         }
-                    }
+                    ]
                 }
             };
 
@@ -339,8 +336,8 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
 
             var records = new List<TimelineRecord>
             {
-                new TimelineRecord(id: CreateGuid("A"), result: TaskResult.Failed, recordType: RecordType.Job, name: "JobNameTestAny"),
-                new TimelineRecord(id: CreateGuid("B"), result: TaskResult.Failed, issues: timelineIssues, recordType: RecordType.Job, name: "JobNameTestRetry")
+                new(id: CreateGuid("A"), result: TaskResult.Failed, recordType: RecordType.Job, name: "JobNameTestAny"),
+                new(id: CreateGuid("B"), result: TaskResult.Failed, issues: timelineIssues, recordType: RecordType.Job, name: "JobNameTestRetry")
             };
 
             await using TestData testData = TestData.Default
@@ -361,14 +358,14 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
             {
                 RetryByErrorsInPipeline = new RetryByErrorsInPipeline
                 {
-                    ErrorInPipelineByStage = new List<ErrorInPipelineByStage>()
-                    {
+                    ErrorInPipelineByStage =
+                    [
                         new ErrorInPipelineByStage()
                         {
                             StageName =  stageName ,
                             ErrorRegex = ".*Vstest failed with error.*"
                          }
-                    }
+                    ]
                 }
             };
 
@@ -376,8 +373,8 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
 
             var records = new List<TimelineRecord>
             {
-                new TimelineRecord(id: CreateGuid("A"), result: TaskResult.Failed, recordType: RecordType.Stage, name: "StageNameTestRetry"),
-                new TimelineRecord(id: CreateGuid("B"), parentId: CreateGuid("A"), result: TaskResult.Failed, issues: timelineIssues, recordType: RecordType.Task, name: "TaskNameAny")
+                new(id: CreateGuid("A"), result: TaskResult.Failed, recordType: RecordType.Stage, name: "StageNameTestRetry"),
+                new(id: CreateGuid("B"), parentId: CreateGuid("A"), result: TaskResult.Failed, issues: timelineIssues, recordType: RecordType.Task, name: "TaskNameAny")
             };
 
             await using TestData testData = TestData.Default
@@ -398,15 +395,15 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
             {
                 RetryByErrorsInPipeline = new RetryByErrorsInPipeline
                 {
-                    ErrorInPipelineByJobsInStage = new List<ErrorInPipelineByJobsInStage>()
-                    {
+                    ErrorInPipelineByJobsInStage =
+                    [
                         new ErrorInPipelineByJobsInStage
                         {
                             StageName = stageName ,
-                            JobsNames = new List<string>() {jobName},
+                            JobsNames = [jobName],
                             ErrorRegex = ".*Vstest failed with error.*"
                         }
-                    }
+                    ]
 
                 }
             };
@@ -416,9 +413,9 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
             //STARTING FOR THE HIERARCHY THING
             var records = new List<TimelineRecord>
             {
-                new TimelineRecord(id: CreateGuid("A"), result: TaskResult.Failed, recordType: RecordType.Stage, name: "StageNameTestAny"),
-                new TimelineRecord(id: CreateGuid("B"), result: TaskResult.Failed, recordType: RecordType.Stage, name: "StageNameTestRetry"),
-                new TimelineRecord(id: CreateGuid("C"), parentId: CreateGuid("B"), result: TaskResult.Failed, issues: timelineIssues, recordType: RecordType.Job, name: "JobNameTestRetry")
+                new(id: CreateGuid("A"), result: TaskResult.Failed, recordType: RecordType.Stage, name: "StageNameTestAny"),
+                new(id: CreateGuid("B"), result: TaskResult.Failed, recordType: RecordType.Stage, name: "StageNameTestRetry"),
+                new(id: CreateGuid("C"), parentId: CreateGuid("B"), result: TaskResult.Failed, issues: timelineIssues, recordType: RecordType.Job, name: "JobNameTestRetry")
             };
 
             await using TestData testData = TestData.Default
@@ -438,21 +435,21 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
             {
                 RetryByPipeline = new Pipeline
                 {
-                    RetryJobsInStage = new List<JobsInStage>
-                    {
+                    RetryJobsInStage =
+                    [
                         new JobsInStage()
                         {
                             StageName = "StageNameRetryTest",
-                            JobsNames = new List<string>(){ "JobNameRetryTest" }
+                            JobsNames = ["JobNameRetryTest"]
                         }
-                    }
+                    ]
                 }
             };
 
             var records = new List<TimelineRecord>
             {
-                new TimelineRecord(id: CreateGuid("A"), result: TaskResult.Failed, name:"StageNameRetryTest", identifier: "Stage_Name_Restarting", recordType:RecordType.Stage),
-                new TimelineRecord(id: CreateGuid("B"), parentId: CreateGuid("A"), result: TaskResult.Failed, name:"JobNameRetryTest", identifier: "Job_Name_Retry_Test", recordType:RecordType.Job),
+                new(id: CreateGuid("A"), result: TaskResult.Failed, name:"StageNameRetryTest", identifier: "Stage_Name_Restarting", recordType:RecordType.Stage),
+                new(id: CreateGuid("B"), parentId: CreateGuid("A"), result: TaskResult.Failed, name:"JobNameRetryTest", identifier: "Job_Name_Retry_Test", recordType:RecordType.Job),
             };
 
             await using TestData testData = TestData.Default
@@ -470,7 +467,7 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
         {
             var records = new List<TimelineRecord>
             {
-                new TimelineRecord(result: TaskResult.Failed, attempt: currentBuildAttempts)
+                new(result: TaskResult.Failed, attempt: currentBuildAttempts)
             };
 
             await using TestData testData = TestData.Default

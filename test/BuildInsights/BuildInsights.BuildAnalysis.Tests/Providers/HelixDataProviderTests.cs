@@ -1,3 +1,9 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+using System.Collections.Immutable;
+using System.Data;
+using AwesomeAssertions;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Kusto;
@@ -5,14 +11,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Threading;
-using System.Threading.Tasks;
-using AwesomeAssertions;
-using System.Data;
-using System.Linq;
 
 namespace BuildInsights.BuildAnalysis.Tests.Providers
 {
@@ -92,7 +90,7 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
                 .Returns(0)
                 .Returns(0);
 
-            List<string> comments = new List<string>() {commentA, commentB};
+            List<string> comments = [commentA, commentB];
 
             await using TestData testData = await TestData.Default.WithReader(readerMock.Object).BuildAsync();
             var result = await testData.Provider.TryGetHelixWorkItems(comments.ToImmutableList(), CancellationToken.None);
@@ -116,7 +114,7 @@ namespace BuildInsights.BuildAnalysis.Tests.Providers
 
         private List<string> MockHelixJobsComments(int count)
         {
-            List<string> helixJobsComments = new List<string>();
+            List<string> helixJobsComments = [];
             for (int i = 0; i < count; i++)
             {
                 helixJobsComments.Add($"{{\"HelixJobId\": \"abc-def-ghi-{i}\",\"HelixWorkItemName\": \"TestHelixWorkItemNameComment{i}\"}}");

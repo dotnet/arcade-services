@@ -1,15 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using AwesomeAssertions;
+using BuildInsights.GitHub.Models;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using BuildInsights.GitHub.Models;
-using BuildInsights.GitHub;
 using Moq;
 using NUnit.Framework;
 using Octokit;
@@ -74,7 +71,7 @@ namespace BuildInsights.GitHub.Tests
             responseMock.SetupGet(r => r.ContentType).Returns("ignored");
             var gitHubClientMock = new Mock<IGitHubClient>();
             gitHubClientMock.Setup(g => g.GitHubApps.Installation.GetAllRepositoriesForCurrent()).ReturnsAsync(
-                new RepositoriesResponse(1, new List<Repository> {repo}));
+                new RepositoriesResponse(1, new List<Repository> { repo }));
 
             var gitHubApplicationClientFactoryMock = new Mock<IGitHubApplicationClientFactory>();
             gitHubApplicationClientFactoryMock
@@ -93,9 +90,9 @@ namespace BuildInsights.GitHub.Tests
         [Test]
         public async Task PostChecksResultAsyncTest()
         {
-            IList<string> orgInput = new List<string>();
-            IList<string> repoInput = new List<string>();
-            IList<NewCheckRun> newCheckRunInput = new List<NewCheckRun>();
+            IList<string> orgInput = [];
+            IList<string> repoInput = [];
+            IList<NewCheckRun> newCheckRunInput = [];
 
             var checkRunsClientMock = new Mock<ICheckRunsClient>();
             var checkRun = new CheckRun(12345, "COMMIT", default, default, default, default, CheckStatus.Completed,
@@ -119,9 +116,9 @@ namespace BuildInsights.GitHub.Tests
         [Test]
         public async Task PostChecksResultAsyncTestWhenReturningInProgress()
         {
-            IList<string> orgInput = new List<string>();
-            IList<string> repoInput = new List<string>();
-            IList<NewCheckRun> newCheckRunInput = new List<NewCheckRun>();
+            IList<string> orgInput = [];
+            IList<string> repoInput = [];
+            IList<NewCheckRun> newCheckRunInput = [];
 
             var checkRun = CreateOctokitCheckRun(1, "12345");
             var checkRunsClientMock = new Mock<ICheckRunsClient>();
@@ -130,7 +127,7 @@ namespace BuildInsights.GitHub.Tests
                 .Returns(Task.FromResult(checkRun));
 
             GitHubChecksProvider gitHubCheckService = SetUp(checkRunsClientMockOverride: checkRunsClientMock);
-            await gitHubCheckService.PostChecksResultAsync("", "", "","a/b",
+            await gitHubCheckService.PostChecksResultAsync("", "", "", "a/b",
                 "", CheckResult.InProgress, CancellationToken.None);
 
             newCheckRunInput[0].Status.Should().Be(new StringEnum<CheckStatus>(CheckStatus.InProgress));
@@ -139,15 +136,15 @@ namespace BuildInsights.GitHub.Tests
         }
 
 
-        [TestCase(AzurePipelinesAppID, "",0)]
+        [TestCase(AzurePipelinesAppID, "", 0)]
         [TestCase(987, "123|456|00000000-0000-0000-0000-0000000000ab", 0)]
         [TestCase(AzurePipelinesAppID, "123|456|00000000-0000-0000-0000-0000000000ab", 1)]
         public async Task GetBuildCheckRunsAsyncTest(int id, string externalId, int expectedCount)
         {
-            List<CheckRun> checkRuns = new List<CheckRun>()
-            {
+            List<CheckRun> checkRuns =
+            [
                 CreateOctokitCheckRun(id, externalId)
-            };
+            ];
 
             Mock<IGitHubApplicationClientFactory> mockGitHubApplicationClientFactory = GetMockGitHubApplicationClientFactory(checkRuns);
 
@@ -160,10 +157,10 @@ namespace BuildInsights.GitHub.Tests
         [TestCase(1, 2, false)]
         public async Task GeCheckRunsForAppAsyncTest(int checkRunAppId, int appId, bool shouldMatch)
         {
-            List<CheckRun> checkRuns = new List<CheckRun>()
-            {
+            List<CheckRun> checkRuns =
+            [
                 CreateOctokitCheckRun(checkRunAppId, "TestExternalId")
-            };
+            ];
 
             Mock<IGitHubApplicationClientFactory> mockGitHubApplicationClientFactory = GetMockGitHubApplicationClientFactory(checkRuns);
 
@@ -180,15 +177,15 @@ namespace BuildInsights.GitHub.Tests
             }
         }
 
-        [TestCase("TestCheckRunName",  true)]
+        [TestCase("TestCheckRunName", true)]
         [TestCase("AyOtherCheckRunName", false)]
         public async Task GeCheckRunsForAppFilterByCheckRunNameTest(string checkRunAppNameFiltered, bool shouldMatch)
         {
             string checkRunName = "TestCheckRunName";
-            List<CheckRun> checkRuns = new List<CheckRun>()
-            {
+            List<CheckRun> checkRuns =
+            [
                 CreateOctokitCheckRun(1, "TestExternalId", checkRunName)
-            };
+            ];
 
             Mock<IGitHubApplicationClientFactory> mockGitHubApplicationClientFactory = GetMockGitHubApplicationClientFactory(checkRuns);
 

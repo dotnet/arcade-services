@@ -1,3 +1,6 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using AwesomeAssertions;
 using BuildInsights.BuildAnalysis.Models;
 using NUnit.Framework;
@@ -15,7 +18,7 @@ namespace BuildInsights.BuildAnalysis.Tests.Models
         [TestCase("OrgA", "ProjectB", 1, 1, "RepositoryB", "abcd1234", false)]
         public void BuildReferenceIdentifierEqualsTest(string org, string project, int buildId, int definitionId, string repositoryId, string sha, bool expected)
         {
-            BuildReferenceIdentifier buildReferenceIdentifier = new BuildReferenceIdentifier("OrgA", "ProjectA", 0,"any_buildUrl", 1, "definitionNameA","RepositoryA", "abcd123", "");
+            BuildReferenceIdentifier buildReferenceIdentifier = new BuildReferenceIdentifier("OrgA", "ProjectA", 0, "any_buildUrl", 1, "definitionNameA", "RepositoryA", "abcd123", "");
             BuildReferenceIdentifier buildReferenceIdentifierB = new BuildReferenceIdentifier(org, project, buildId, "any_buildUrl", definitionId, "definitionNameB", repositoryId, sha, "any_targetBranch");
 
             buildReferenceIdentifier.Equals(buildReferenceIdentifierB).Should().Be(expected);
@@ -24,7 +27,7 @@ namespace BuildInsights.BuildAnalysis.Tests.Models
         [Test]
         public void BuildReferenceIdentifierNullTest()
         {
-            BuildReferenceIdentifier buildReferenceIdentifier = new BuildReferenceIdentifier("TestingOrg", "TestingProject", 0, "any_buildUrl", 1, "","TestingRepositoryId", "abcdefgijklmn", "");
+            BuildReferenceIdentifier buildReferenceIdentifier = new BuildReferenceIdentifier("TestingOrg", "TestingProject", 0, "any_buildUrl", 1, "", "TestingRepositoryId", "abcdefgijklmn", "");
 
             buildReferenceIdentifier.Equals(null).Should().BeFalse();
         }

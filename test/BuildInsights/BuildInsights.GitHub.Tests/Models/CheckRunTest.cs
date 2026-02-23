@@ -1,5 +1,6 @@
-using System;
-using System.Collections.Generic;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using AwesomeAssertions;
 using BuildInsights.GitHub.Models;
 using NUnit.Framework;
@@ -21,7 +22,7 @@ namespace BuildInsights.GitHub.Tests.Models
             CheckRun checkRunB = new CheckRun(CreateOctokitCheckRun(AzurePipelinesAppID, "abcdefghijklmnopqrz", "123|456|" + CreateGuid("AB"), "B"));
             CheckRun checkRunC = new CheckRun(CreateOctokitCheckRun(AzurePipelinesAppID + 1, "abcdefghijklmnopqrz", "123|456|" + CreateGuid("AB"), "B"));
 
-            var checkRunEqualityComparer= new CheckRunEqualityComparer();
+            var checkRunEqualityComparer = new CheckRunEqualityComparer();
             checkRunEqualityComparer.Equals(checkRunA, checkRunB).Should().BeTrue();
             checkRunEqualityComparer.Equals(checkRunB, checkRunC).Should().BeFalse();
         }
@@ -56,7 +57,7 @@ namespace BuildInsights.GitHub.Tests.Models
         [Test]
         public void CheckRunExceptionWhenMissingProjectId()
         {
-            Action act = () =>  new CheckRun(CreateOctokitCheckRun(AzurePipelinesAppID, "abcdefghijklmnopqrz", "123|456", "name"));
+            Action act = () => new CheckRun(CreateOctokitCheckRun(AzurePipelinesAppID, "abcdefghijklmnopqrz", "123|456", "name"));
             act.Should().Throw<ExternalIdParseException>().WithMessage("External Id '123|456' was not in an expected format.");
         }
 
@@ -94,7 +95,7 @@ namespace BuildInsights.GitHub.Tests.Models
 
         private static Octokit.CheckRun CreateOctokitCheckRun(int gitHubAppId, string headShad, string? externalId, string name)
         {
-            DateTimeOffset dateTimeOffset = new DateTimeOffset(2021,5,27,12,0,0,0,TimeSpan.Zero);
+            DateTimeOffset dateTimeOffset = new DateTimeOffset(2021, 5, 27, 12, 0, 0, 0, TimeSpan.Zero);
             var gitHubApp = new GitHubApp(gitHubAppId, default, default, default, default, default, default, default,
                 dateTimeOffset, dateTimeOffset, default, default);
 

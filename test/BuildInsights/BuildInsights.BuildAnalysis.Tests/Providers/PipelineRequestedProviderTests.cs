@@ -1,17 +1,15 @@
-using System;
-using System.Collections.Generic;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Collections.Immutable;
-using System.Linq;
 using System.Text.Json;
-using System.Threading.Tasks;
 using AwesomeAssertions;
+using BuildInsights.BuildAnalysis.Models;
+using BuildInsights.GitHub;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using BuildInsights.BuildAnalysis.Models;
-using BuildInsights.BuildAnalysis;
-using BuildInsights.GitHub;
 using Moq;
 using NUnit.Framework;
 
@@ -70,7 +68,7 @@ public partial class PipelineRequestedProviderTests
     [Test]
     public async Task IsBuildPipelineRequestedWhenPipelineIsNotAnalyze()
     {
-        string buildAnalysisSettingsFile = GetBuildAnalysisSettingsFile(new List<int> {2});
+        string buildAnalysisSettingsFile = GetBuildAnalysisSettingsFile([2]);
         await using TestData testData = await TestData.Default.WithBuildAnalysisFile(buildAnalysisSettingsFile).BuildAsync();
         bool result = await testData.Provider.IsBuildPipelineRequested("", "", 1, 0);
         result.Should().BeFalse();
@@ -79,7 +77,7 @@ public partial class PipelineRequestedProviderTests
     [Test]
     public async Task IsBuildPipelineRequestedWhenPipelineIsRequested()
     {
-        string buildAnalysisSettingsFile = GetBuildAnalysisSettingsFile(new List<int> {1});
+        string buildAnalysisSettingsFile = GetBuildAnalysisSettingsFile([1]);
         await using TestData testData = await TestData.Default.WithBuildAnalysisFile(buildAnalysisSettingsFile).BuildAsync();
         bool result = await testData.Provider.IsBuildPipelineRequested("", "", 1, 0);
         result.Should().BeTrue();
@@ -89,7 +87,7 @@ public partial class PipelineRequestedProviderTests
     public async Task GetBuildsByPipelineWhenNoBuildAnalysisSettingsFiles()
     {
         await using TestData testData = await TestData.Default.WithBuildAnalysisFile(string.Empty).BuildAsync();
-        var relatedBuilds = new List<BuildReferenceIdentifier> {MockBuildReference(1), MockBuildReference(2), MockBuildReference(3)};
+        var relatedBuilds = new List<BuildReferenceIdentifier> { MockBuildReference(1), MockBuildReference(2), MockBuildReference(3) };
         NamedBuildReference mainBuild = MockBuildReference(1);
 
         BuildsByPipelineConfiguration result = await testData.Provider.GetBuildsByPipelineConfiguration(relatedBuilds.ToImmutableList(), mainBuild);
@@ -100,10 +98,10 @@ public partial class PipelineRequestedProviderTests
     [Test]
     public async Task GetBuildsByPipelineWhenAllPipelinesFiltered()
     {
-        string buildAnalysisSettingsFile = GetBuildAnalysisSettingsFile(new List<int> {6});
+        string buildAnalysisSettingsFile = GetBuildAnalysisSettingsFile([6]);
 
         await using TestData testData = await TestData.Default.WithBuildAnalysisFile(buildAnalysisSettingsFile).BuildAsync();
-        var relatedBuilds = new List<BuildReferenceIdentifier> {MockBuildReference(1), MockBuildReference(2), MockBuildReference(3)};
+        var relatedBuilds = new List<BuildReferenceIdentifier> { MockBuildReference(1), MockBuildReference(2), MockBuildReference(3) };
         NamedBuildReference mainBuild = MockBuildReference(1);
 
         BuildsByPipelineConfiguration result = await testData.Provider.GetBuildsByPipelineConfiguration(relatedBuilds.ToImmutableList(), mainBuild);
@@ -114,10 +112,10 @@ public partial class PipelineRequestedProviderTests
     [Test]
     public async Task GetBuildsByPipelineSomeFilteredOtherIncluded()
     {
-        string buildAnalysisSettingsFile = GetBuildAnalysisSettingsFile(new List<int> {1, 3});
+        string buildAnalysisSettingsFile = GetBuildAnalysisSettingsFile([1, 3]);
 
         await using TestData testData = await TestData.Default.WithBuildAnalysisFile(buildAnalysisSettingsFile).BuildAsync();
-        var relatedBuilds = new List<BuildReferenceIdentifier> {MockBuildReference(123, 1), MockBuildReference(345, 2), MockBuildReference(456, 3)};
+        var relatedBuilds = new List<BuildReferenceIdentifier> { MockBuildReference(123, 1), MockBuildReference(345, 2), MockBuildReference(456, 3) };
         NamedBuildReference mainBuild = MockBuildReference(123, 1);
 
         BuildsByPipelineConfiguration result = await testData.Provider.GetBuildsByPipelineConfiguration(relatedBuilds.ToImmutableList(), mainBuild);
@@ -142,7 +140,7 @@ public partial class PipelineRequestedProviderTests
     {
         var buildAnalysisRepositorySettings = new BuildAnalysisRepositorySettings
         {
-            PipelinesToAnalyze = pipelineIdsToAnalyze.Select(pipelineId => new PipelineData {PipelineId = pipelineId})
+            PipelinesToAnalyze = pipelineIdsToAnalyze.Select(pipelineId => new PipelineData { PipelineId = pipelineId })
                 .ToList()
         };
 

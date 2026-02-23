@@ -1,22 +1,19 @@
-using System;
-using System.Collections.Generic;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Collections.Immutable;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using AwesomeAssertions;
-using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
-using Microsoft.DotNet.Internal.Testing.Utility;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using BuildInsights.AzureStorage.Cache;
 using BuildInsights.BuildAnalysis.Models;
-using BuildInsights.BuildAnalysis;
 using BuildInsights.BuildAnalysis.WorkItems.Models;
 using BuildInsights.Data.Models;
 using BuildInsights.GitHub.Models;
 using BuildInsights.KnownIssues;
 using BuildInsights.KnownIssues.Models;
-using BuildInsights.AzureStorage.Cache;
+using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
+using Microsoft.DotNet.Internal.Testing.Utility;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
 using Octokit;
@@ -80,7 +77,7 @@ public partial class KnownIssueValidationProviderTests
             var mockKnownIssuesHistory = new Mock<IKnownIssuesHistoryService>();
             mockKnownIssuesHistory.Setup(t => t.GetBuildKnownIssueValidatedRecords(It.IsAny<string>(),
                     It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(knownIssueAnalyses ?? new List<KnownIssueAnalysis>());
+                .ReturnsAsync(knownIssueAnalyses ?? []);
             collection.AddSingleton(mockKnownIssuesHistory.Object);
 
             return _ => mockKnownIssuesHistory;
@@ -157,7 +154,7 @@ https://dev.azure.com/dnceng/internal/_build/results?buildId=123456
         };
         var issue = new GitHubIssue((int)KnownIssueValidationRequest.IssueId, body: "issue_body",
             repositoryWithOwner: $"{KnownIssueValidationRequest.Organization}/{KnownIssueValidationRequest.Repository}");
-        var knownIssues = new List<KnownIssue> {new(issue, new List<string>(){""}, KnownIssueType.Test, new KnownIssueOptions())};
+        var knownIssues = new List<KnownIssue> { new(issue, [""], KnownIssueType.Test, new KnownIssueOptions()) };
 
         await using TestData testData = await TestData.Default
             .WithIssue(MockGithubIssue(bodyWithKnownIssueAndWithBuild, (int)KnownIssueValidationRequest.IssueId))
@@ -398,7 +395,7 @@ https://dev.azure.com/dnceng-public/public/_build/results?buildId=123456
     [TestCase(
         "https://dev.azure.com/dnceng/internal/_build/results?buildId=654321&view=ms.vss-test-web.build-test-results-tab&runId=51548624&resultId=100543&paneView=debug",
         "dnceng", "internal", 654321)]
-    [TestCase("https://dev.azure.com/dnceng-public/cbb18261-c48f-4abb-8651-8cdcb5474649/_build/results?buildId=310510","dnceng-public", "any_project", 310510)]
+    [TestCase("https://dev.azure.com/dnceng-public/cbb18261-c48f-4abb-8651-8cdcb5474649/_build/results?buildId=310510", "dnceng-public", "any_project", 310510)]
     public async Task GetUrl(string body, string organizationId, string projectId, int buildId)
     {
         await using TestData testData = await TestData.Default.BuildAsync();
@@ -440,17 +437,17 @@ https://dev.azure.com/dnceng-public/public/_build/results?buildId=123456
             BuildId = 123456,
             BuildNumber = "2021.23.34",
             BuildStatus = BuildStatus.Failed,
-            TestResults = new List<TestResult>(),
-            BuildStepsResult = new List<StepResult> {new() {KnownIssues = buildKnownIssue.ToImmutableList()}},
+            TestResults = [],
+            BuildStepsResult = [new() { KnownIssues = buildKnownIssue.ToImmutableList() }],
             TotalTestFailures = 2,
-            TestKnownIssuesAnalysis = new TestKnownIssuesAnalysis(true, new List<TestResult>())
+            TestKnownIssuesAnalysis = new TestKnownIssuesAnalysis(true, [])
         };
     }
 
 
     internal class MockContextualStorage : BaseContextualStorage
     {
-        readonly Dictionary<string, byte[]> _data = new Dictionary<string, byte[]>();
+        readonly Dictionary<string, byte[]> _data = [];
         protected override async Task PutAsync(string root, string name, Stream data, CancellationToken cancellationToken)
         {
             using MemoryStream stream = new MemoryStream();

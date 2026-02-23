@@ -1,7 +1,7 @@
-using System;
-using System.Collections.Generic;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Collections.Immutable;
-using System.Linq;
 using AwesomeAssertions;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Models.Views;
@@ -18,11 +18,11 @@ namespace BuildInsights.BuildAnalysis.Tests.Views
         public void ConsolidatedBuildResultAnalysisViewConstructionTest()
         {
             BuildResultAnalysis buildResultAnalysisA = MockBuildResultAnalysis(1,
-                new List<TestResult> { MockTestResult(), MockTestResult(), MockTestResult() },
-                new List<StepResult> { new StepResult() });
+                [MockTestResult(), MockTestResult(), MockTestResult()],
+                [new StepResult()]);
             BuildResultAnalysis buildResultAnalysisB = MockBuildResultAnalysis(1,
-                new List<TestResult> { MockTestResult(), MockTestResult() },
-                new List<StepResult> { new StepResult() });
+                [MockTestResult(), MockTestResult()],
+                [new StepResult()]);
 
             var mergedBuildResultAnalysis = new MergedBuildResultAnalysis(
                 "abcdeghijklmnopqrstuwxyz",
@@ -45,7 +45,7 @@ namespace BuildInsights.BuildAnalysis.Tests.Views
         public void ConsolidatedBuildResultAnalysisViewLatestAttempt()
         {
             BuildResultAnalysis buildResultAnalysisA =
-                MockBuildResultAnalysis(1, new List<TestResult>(), new List<StepResult>());
+                MockBuildResultAnalysis(1, [], []);
             buildResultAnalysisA.LatestAttempt = new Attempt();
 
             var mergedBuildResultAnalysis = new MergedBuildResultAnalysis(
@@ -69,11 +69,11 @@ namespace BuildInsights.BuildAnalysis.Tests.Views
         public void ConsolidatedBuildResultAnalysisViewKnownIssues()
         {
             var stepResult = new StepResult();
-            var issueList = new List<KnownIssue> { new KnownIssue(new GitHubIssue(), new List<string>(){ "testRepo" }, KnownIssueType.Infrastructure, new KnownIssueOptions()) };
+            var issueList = new List<KnownIssue> { new(new GitHubIssue(), ["testRepo"], KnownIssueType.Infrastructure, new KnownIssueOptions()) };
             stepResult.KnownIssues = issueList.ToImmutableList();
 
             BuildResultAnalysis buildResultAnalysisA =
-                MockBuildResultAnalysis(1, new List<TestResult>(), new List<StepResult> { stepResult });
+                MockBuildResultAnalysis(1, [], [stepResult]);
             buildResultAnalysisA.LatestAttempt = new Attempt();
 
             var mergedBuildResultAnalysis = new MergedBuildResultAnalysis(
@@ -95,13 +95,13 @@ namespace BuildInsights.BuildAnalysis.Tests.Views
         public void ConsolidatedBuildResultAnalysisWithFailedTestsAndPassedOnRerunTests()
         {
             TestResult testPassedOnRerun = MockTestResultFlaky();
-            List<TestResult> testResults = new List<TestResult>()
-            {
+            List<TestResult> testResults =
+            [
                 MockTestResult(), testPassedOnRerun
-            };
+            ];
 
             BuildResultAnalysis buildResultAnalysisA =
-                MockBuildResultAnalysis(1, testResults, new List<StepResult>());
+                MockBuildResultAnalysis(1, testResults, []);
 
             var mergedBuildResultAnalysis = new MergedBuildResultAnalysis(
                 "abcdeghijklmnopqrstuwxyz",
@@ -125,7 +125,7 @@ namespace BuildInsights.BuildAnalysis.Tests.Views
         [Test]
         public void ConsolidatedBuildResultAnalysisCompletedPipelines()
         {
-            BuildResultAnalysis buildResultAnalysisA = MockBuildResultAnalysis(1, new List<TestResult>(), new List<StepResult>());
+            BuildResultAnalysis buildResultAnalysisA = MockBuildResultAnalysis(1, [], []);
             buildResultAnalysisA.PipelineName = "COMPLETED-PIPELINE-1";
             buildResultAnalysisA.LinkToBuild = "https://dev.azure.text/link/to/build/1234";
 
@@ -151,11 +151,11 @@ namespace BuildInsights.BuildAnalysis.Tests.Views
         public void ConsolidatedBuildResultAnalysisUniqueTestFailuresTest()
         {
             BuildResultAnalysis buildResultAnalysisA = MockBuildResultAnalysis(1,
-                new List<TestResult> { },
-                new List<StepResult> { new StepResult() });
+                [],
+                [new StepResult()]);
             buildResultAnalysisA.TotalTestFailures = 5;
             buildResultAnalysisA.TestKnownIssuesAnalysis = new TestKnownIssuesAnalysis(true,
-                new List<TestResult>() { MockTestResult(isKnownIssue: true) });
+                [MockTestResult(isKnownIssue: true)]);
 
             var mergedBuildResultAnalysis = new MergedBuildResultAnalysis(
                 "abcdeghijklmnopqrstuwxyz",
@@ -175,13 +175,13 @@ namespace BuildInsights.BuildAnalysis.Tests.Views
         [Test]
         public void ConsolidatedBuildResultAnalysisSummarizeKnownIssues()
         {
-            var issueList = new List<KnownIssue> { new KnownIssue(new GitHubIssue(id: 1234, repositoryWithOwner: "owner/repo"), new List<string>() { "testRepo" }, KnownIssueType.Infrastructure, new KnownIssueOptions()) };
+            var issueList = new List<KnownIssue> { new(new GitHubIssue(id: 1234, repositoryWithOwner: "owner/repo"), ["testRepo"], KnownIssueType.Infrastructure, new KnownIssueOptions()) };
             var stepResult = new StepResult
             {
                 KnownIssues = issueList.ToImmutableList()
             };
 
-            BuildResultAnalysis buildResultAnalysisA = MockBuildResultAnalysis(1, new List<TestResult>(), new List<StepResult> { stepResult, stepResult, stepResult });
+            BuildResultAnalysis buildResultAnalysisA = MockBuildResultAnalysis(1, [], [stepResult, stepResult, stepResult]);
             buildResultAnalysisA.LatestAttempt = new Attempt();
 
             var mergedBuildResultAnalysis = new MergedBuildResultAnalysis(

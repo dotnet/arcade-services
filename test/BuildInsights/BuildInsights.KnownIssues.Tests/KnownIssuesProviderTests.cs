@@ -1,18 +1,15 @@
-using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
 using AwesomeAssertions;
+using BuildInsights.KnownIssues.Models;
 using Kusto.Ingest;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
-using BuildInsights.KnownIssues.Models;
-using BuildInsights.KnownIssues;
 using Moq;
 using NUnit.Framework;
 
@@ -42,10 +39,10 @@ namespace BuildInsights.KnownIssues.Tests
 
             public class Builder
             {
-                private readonly Mock<IKustoIngestClientFactory> _kustoClientFactory = new Mock<IKustoIngestClientFactory>();
-                private readonly Mock<IKustoClientProvider> _kustoClientProviderMock = new Mock<IKustoClientProvider>();
-                private readonly Mock<IKustoIngestClient> _kustoIngestClientMock = new Mock<IKustoIngestClient>();
-                private readonly Mock<IKnownIssuesHistoryService> _historyProviderMock = new Mock<IKnownIssuesHistoryService>();
+                private readonly Mock<IKustoIngestClientFactory> _kustoClientFactory = new();
+                private readonly Mock<IKustoClientProvider> _kustoClientProviderMock = new();
+                private readonly Mock<IKustoIngestClient> _kustoIngestClientMock = new();
+                private readonly Mock<IKnownIssuesHistoryService> _historyProviderMock = new();
 
                 public Builder()
                 {
@@ -68,7 +65,7 @@ namespace BuildInsights.KnownIssues.Tests
                         .ReturnsAsync(reader);
                     return this;
                 }
-                
+
                 public TestData Build()
                 {
                     ServiceCollection collection = new ServiceCollection();
@@ -78,7 +75,7 @@ namespace BuildInsights.KnownIssues.Tests
                             o.Database = "TestDB";
                             o.KustoClusterUri = "QueryClusterUri";
                             o.KustoIngestionUri = "IngestConnectionString";
-                            o.ManagedIdentityId = "ManagedIdentityId";  
+                            o.ManagedIdentityId = "ManagedIdentityId";
                         }
                     );
                     collection.AddSingleton<ISystemClock, TestClock>();
@@ -101,7 +98,7 @@ namespace BuildInsights.KnownIssues.Tests
                 return new Builder().Build();
             }
 
-            public static Builder Create() => new Builder();
+            public static Builder Create() => new();
         }
 
         [Test]
@@ -135,7 +132,7 @@ namespace BuildInsights.KnownIssues.Tests
                 .Returns("TestProject");
 
             readerMock.Setup(x => x.GetDateTime(It.IsAny<int>()))
-                .Returns(new DateTime(2022,1,1));
+                .Returns(new DateTime(2022, 1, 1));
 
             using var testData = TestData.Create().Build();
             List<KnownIssueMatch> savedMatches = KnownIssuesProvider.GetKnownIssueFromDataReader(readerMock.Object);

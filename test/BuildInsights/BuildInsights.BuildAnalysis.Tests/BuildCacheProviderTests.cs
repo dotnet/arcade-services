@@ -1,14 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using AwesomeAssertions;
-using Microsoft.Extensions.DependencyInjection;
-using BuildInsights.BuildAnalysis.Models;
-using BuildInsights.GitHub.Models;
-using BuildInsights.KnownIssues.Models;
 using BuildInsights.AzureStorage.Cache;
+using BuildInsights.BuildAnalysis.Models;
+using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 
 namespace BuildInsights.BuildAnalysis.Tests
@@ -48,7 +44,7 @@ namespace BuildInsights.BuildAnalysis.Tests
                 }
             }
 
-            public static Builder Create() => new Builder();
+            public static Builder Create() => new();
             public static TestData BuildDefault() => Create().Build();
 
             public void Dispose()
@@ -71,7 +67,7 @@ namespace BuildInsights.BuildAnalysis.Tests
                 buildId: 12345,
                 buildUrl: "any.example.url",
                 definitionId: 1,
-                definitionName:"FAKE-DEFINITION-NAME",
+                definitionName: "FAKE-DEFINITION-NAME",
                 repositoryId: "fake/repo",
                 sourceSha: "FAKE-SHA",
                 targetBranch: "FAKE-TARGET-BRANCH"
@@ -87,8 +83,8 @@ namespace BuildInsights.BuildAnalysis.Tests
                 LinkAllTestResults = "",
                 IsRerun = false,
                 BuildStatus = BuildStatus.Failed,
-                TestResults = new List<TestResult>
-                {
+                TestResults =
+                [
                     new TestResult(
                         new TestCaseResult(
                             "TEST-NAME",
@@ -115,35 +111,35 @@ namespace BuildInsights.BuildAnalysis.Tests
                             TotalRuns = 10,
                         }
                     )
-                },
-                BuildStepsResult = new List<StepResult>
-                {
+                ],
+                BuildStepsResult =
+                [
                     new StepResult
                     {
-                        Errors = new List<Error>
-                        {
+                        Errors =
+                        [
                             new Error
                             {
                                 ErrorMessage = "FAKE BUILD ERROR",
                                 LinkLog = "https://dev.azure.test/build-log",
                             }
-                        },
+                        ],
                         FailureRate = new FailureRate
                         {
                             DateOfRate = DateTimeOffset.Parse("2020-09-02T15:04:06.07Z"),
                             FailedRuns = 75,
                             TotalRuns = 100,
                         },
-                        StepHierarchy = new List<string> {"__default", "STAGE", "JOB", "STEP"},
+                        StepHierarchy = ["__default", "STAGE", "JOB", "STEP"],
                         StepName = "TEST-STEP"
                     }
-                },
+                ],
                 LatestAttempt = new Attempt
                 {
                     AttemptId = 899,
                     LinkBuild = "https://dev.azure.test/attempt-failure-build-link",
-                    TestResults = new List<TestResult>
-                    {
+                    TestResults =
+                    [
                         new TestResult(
                             new TestCaseResult(
                                 "PREV-TEST-NAME",
@@ -170,29 +166,29 @@ namespace BuildInsights.BuildAnalysis.Tests
                                 TotalRuns = 9,
                             }
                         )
-                    },
-                    BuildStepsResult = new List<StepResult>
-                    {
+                    ],
+                    BuildStepsResult =
+                    [
                         new StepResult
                         {
-                            Errors = new List<Error>
-                            {
+                            Errors =
+                            [
                                 new Error
                                 {
                                     ErrorMessage = "FAKE PREV BUILD ERROR",
                                     LinkLog = "https://dev.azure.test/prev-build-log",
                                 }
-                            },
+                            ],
                             FailureRate = new FailureRate
                             {
                                 DateOfRate = DateTimeOffset.Parse("2020-07-07T15:04:06.07Z"),
                                 FailedRuns = 4,
                                 TotalRuns = 20,
                             },
-                            StepHierarchy = new List<string> {"__default", "PREV", "JOB", "STEP"},
+                            StepHierarchy = ["__default", "PREV", "JOB", "STEP"],
                             StepName = "PREV-TEST-STEP"
                         }
-                    }
+                    ]
                 },
             };
 
@@ -204,7 +200,7 @@ namespace BuildInsights.BuildAnalysis.Tests
 
         private class MockContextualStorage : BaseContextualStorage
         {
-            readonly Dictionary<string, byte[]> _data = new Dictionary<string, byte[]>();
+            readonly Dictionary<string, byte[]> _data = [];
             protected override async Task PutAsync(string root, string name, Stream data, CancellationToken cancellationToken)
             {
                 using MemoryStream stream = new MemoryStream();

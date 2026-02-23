@@ -1,8 +1,11 @@
-using System;
-using System.Collections.Generic;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
 using System.Collections.Immutable;
-using System.Threading.Tasks;
 using AwesomeAssertions;
+using BuildInsights.GitHubGraphQL;
+using BuildInsights.GitHubGraphQL.GitHubGraphQLAPI;
+using BuildInsights.KnownIssues.Models;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.DotNet.Internal.Logging;
@@ -11,10 +14,6 @@ using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
-using BuildInsights.KnownIssues;
-using BuildInsights.KnownIssues.Models;
-using BuildInsights.GitHubGraphQL;
-using BuildInsights.GitHubGraphQL.GitHubGraphQLAPI;
 using Moq;
 using NUnit.Framework;
 
@@ -42,12 +41,12 @@ namespace BuildInsights.KnownIssues.Tests
                 });
                 services.Configure<GitHubIssuesSettings>(o =>
                 {
-                    o.KnownIssuesLabels = new List<string>() {"KNOWN-TEST-ERROR-ABC"};
+                    o.KnownIssuesLabels = new List<string>() { "KNOWN-TEST-ERROR-ABC" };
                 });
                 services.Configure<SsaCriteriaSettings>(o =>
                 {
                     o.DailyHitsForEscalation = 5;
-                    o.SsaRepositories = new List<string>{ "REPOSITORY/OWNER-TEST" };
+                    o.SsaRepositories = ["REPOSITORY/OWNER-TEST"];
                     o.SsaLabel = "SSA_LABEL";
                 });
             }
@@ -66,8 +65,7 @@ namespace BuildInsights.KnownIssues.Tests
             {
                 var projectItems = new List<GitHubGraphQLProjectV2Item>
                 {
-                    new GitHubGraphQLProjectV2Item
-                    {
+                    new() {
                         Id = "1",
                         IsArchived = false,
                         Content = new GitHubGraphQLIssue
@@ -86,8 +84,7 @@ namespace BuildInsights.KnownIssues.Tests
                             {
                                 Nodes = new List<GitHubGraphQLLabel>
                                 {
-                                    new GitHubGraphQLLabel
-                                    {
+                                    new() {
                                         Name = "KNOWN-TEST-ERROR-ABC"
                                     }
                                 }
@@ -141,7 +138,7 @@ namespace BuildInsights.KnownIssues.Tests
                             It.IsAny<string>()
                         )
                     )
-                    .Callback<string,int, string>(
+                    .Callback<string, int, string>(
                         (repository, issueId, body) =>
                         {
                             reports.Add(body);
@@ -179,7 +176,7 @@ namespace BuildInsights.KnownIssues.Tests
             }
         }
 
-        [TestCase("Only having message before", "" )]
+        [TestCase("Only having message before", "")]
         [TestCase("", "Only having message after")]
         [TestCase("Having message before", "And having message after")]
         public async Task WriteReportUpdateTest(string messageBeforeReport, string messageAfterReport)
@@ -212,8 +209,8 @@ namespace BuildInsights.KnownIssues.Tests
         [Test]
         public async Task TestCalculations()
         {
-            List<KnownIssueMatch> knownIssueMatches = new List<KnownIssueMatch>()
-            {
+            List<KnownIssueMatch> knownIssueMatches =
+            [
                 MockKnownIssueMatch(1, TestSetup.DefaultTime.AddHours(1).UtcDateTime),
                 MockKnownIssueMatch(2, TestSetup.DefaultTime.AddHours(1).UtcDateTime),
                 MockKnownIssueMatch(3, TestSetup.DefaultTime.AddDays(-3).UtcDateTime),
@@ -222,7 +219,7 @@ namespace BuildInsights.KnownIssues.Tests
                 MockKnownIssueMatch(6, TestSetup.DefaultTime.AddDays(-10).UtcDateTime),
                 MockKnownIssueMatch(7, TestSetup.DefaultTime.AddDays(-12).UtcDateTime),
                 MockKnownIssueMatch(8, TestSetup.DefaultTime.AddDays(-15).UtcDateTime)
-            };
+            ];
 
             await using TestData testData = await TestData.Default
                 .WithKnownIssueMatches(knownIssueMatches.ToImmutableList())
@@ -240,8 +237,8 @@ namespace BuildInsights.KnownIssues.Tests
         [Test]
         public async Task TestKnownIssueCalculation()
         {
-            List<TestKnownIssueMatch> knownIssueMatches = new List<TestKnownIssueMatch>()
-            {
+            List<TestKnownIssueMatch> knownIssueMatches =
+            [
                 MockTestKnownIssueMatch(1, TestSetup.DefaultTime.AddHours(1).UtcDateTime),
                 MockTestKnownIssueMatch(2, TestSetup.DefaultTime.AddHours(1).UtcDateTime),
                 MockTestKnownIssueMatch(3, TestSetup.DefaultTime.AddDays(-3).UtcDateTime),
@@ -250,7 +247,7 @@ namespace BuildInsights.KnownIssues.Tests
                 MockTestKnownIssueMatch(6, TestSetup.DefaultTime.AddDays(-10).UtcDateTime),
                 MockTestKnownIssueMatch(7, TestSetup.DefaultTime.AddDays(-12).UtcDateTime),
                 MockTestKnownIssueMatch(8, TestSetup.DefaultTime.AddDays(-15).UtcDateTime)
-            };
+            ];
 
             await using TestData testData = await TestData.Default
                 .WithTestKnownIssueMatches(knownIssueMatches.ToImmutableList())
@@ -268,19 +265,19 @@ namespace BuildInsights.KnownIssues.Tests
         [Test]
         public async Task MixKnownIssuesCalculation()
         {
-            List<TestKnownIssueMatch> testKnownIssueMatches = new List<TestKnownIssueMatch>()
-            {
+            List<TestKnownIssueMatch> testKnownIssueMatches =
+            [
                 MockTestKnownIssueMatch(1, TestSetup.DefaultTime.AddHours(1).UtcDateTime),
                 MockTestKnownIssueMatch(5, TestSetup.DefaultTime.AddDays(-5).UtcDateTime),
                 MockTestKnownIssueMatch(7, TestSetup.DefaultTime.AddDays(-12).UtcDateTime)
-            };
+            ];
 
-            List<KnownIssueMatch> knownIssueMatches = new List<KnownIssueMatch>()
-            {
+            List<KnownIssueMatch> knownIssueMatches =
+            [
                 MockKnownIssueMatch(1, TestSetup.DefaultTime.AddHours(1).UtcDateTime),
                 MockKnownIssueMatch(3, TestSetup.DefaultTime.AddDays(-3).UtcDateTime),
                 MockKnownIssueMatch(8, TestSetup.DefaultTime.AddDays(-15).UtcDateTime)
-            };
+            ];
 
             await using TestData testData = await TestData.Default
                 .WithTestKnownIssueMatches(testKnownIssueMatches.ToImmutableList())
@@ -299,12 +296,12 @@ namespace BuildInsights.KnownIssues.Tests
         [Test]
         public async Task BuildShowedOnReport()
         {
-            List<KnownIssueMatch> knownIssueMatches = new List<KnownIssueMatch>()
-            {
+            List<KnownIssueMatch> knownIssueMatches =
+            [
                 MockKnownIssueMatch(123456, TestSetup.DefaultTime.AddHours(1).DateTime),
                 MockKnownIssueMatch(654321, TestSetup.DefaultTime.AddHours(1).DateTime),
                 MockKnownIssueMatch(123654, TestSetup.DefaultTime.AddDays(-3).DateTime)
-            };
+            ];
 
             await using TestData testData = await TestData.Default
                 .WithKnownIssueMatches(knownIssueMatches.ToImmutableList())
@@ -323,12 +320,12 @@ namespace BuildInsights.KnownIssues.Tests
         [Test]
         public async Task TestKnownIssuesShowedOnReport()
         {
-            List<TestKnownIssueMatch> testKnownIssueMatches = new List<TestKnownIssueMatch>()
-            {
+            List<TestKnownIssueMatch> testKnownIssueMatches =
+            [
                 MockTestKnownIssueMatch(1, TestSetup.DefaultTime.AddHours(1).UtcDateTime, "Test-Name-A"),
                 MockTestKnownIssueMatch(5, TestSetup.DefaultTime.AddDays(-5).UtcDateTime, "Test-Name-B"),
                 MockTestKnownIssueMatch(7, TestSetup.DefaultTime.AddDays(-12).UtcDateTime, "Test-Name-C")
-            };
+            ];
 
             await using TestData testData = await TestData.Default
                 .WithTestKnownIssueMatches(testKnownIssueMatches.ToImmutableList())
