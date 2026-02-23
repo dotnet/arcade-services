@@ -112,6 +112,7 @@ internal static class Program
         typeof(AddSubscriptionCommandLineOptions),
         typeof(AddBuildToChannelCommandLineOptions),
         typeof(AuthenticateCommandLineOptions),
+        typeof(LoginCommandLineOptions),
         typeof(CloneCommandLineOptions),
         typeof(DefaultChannelStatusCommandLineOptions),
         typeof(DeleteBuildFromChannelCommandLineOptions),
