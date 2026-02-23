@@ -412,14 +412,14 @@ https://dev.azure.com/dnceng-public/public/_build/results?buildId=123456
         return build;
     }
 
-    private Issue MockGithubIssue(string body, int issueId = 1)
+    private static Issue MockGithubIssue(string body, int issueId = 1)
     {
         return new Issue(default, default, default, default, issueId, ItemState.Open, default, body, default, default,
             default, default, default, default, 1, default, DateTimeOffset.MaxValue, DateTimeOffset.MaxValue,
             DateTimeOffset.MaxValue, 1, default, default, default, default, default, default);
     }
 
-    private KnownIssueValidationRequest TestKnownIssueValidationRequest()
+    private static KnownIssueValidationRequest TestKnownIssueValidationRequest()
     {
         return new KnownIssueValidationRequest
         {
@@ -429,7 +429,7 @@ https://dev.azure.com/dnceng-public/public/_build/results?buildId=123456
         };
     }
 
-    public BuildResultAnalysis MockBuildResultAnalysis(List<KnownIssue> buildKnownIssue)
+    public static BuildResultAnalysis MockBuildResultAnalysis(List<KnownIssue> buildKnownIssue)
     {
         return new BuildResultAnalysis
         {

@@ -21,10 +21,10 @@ public class CheckResultProviderTests
     [TestCase(false, CheckResult.Failed)]
     public void BuildStatusWithStepFailures(bool isKnownIssueResult, CheckResult expectedResult)
     {
-        ImmutableList<StepResult> stepResults = ImmutableList.Create(MockStepResult([]));
+        ImmutableList<StepResult> stepResults = [MockStepResult([])];
         BuildResultAnalysis buildAnalysis = MockBuildResultAnalysis(BuildStatus.Failed, stepResults.ToList(), []);
 
-        CheckResult result = _checkResultProvider.GetCheckResult(MockBuildReference(), ImmutableList.Create(buildAnalysis), 0, isKnownIssueResult);
+        CheckResult result = _checkResultProvider.GetCheckResult(MockBuildReference(), [buildAnalysis], 0, isKnownIssueResult);
         result.Should().Be(expectedResult);
     }
 
@@ -38,7 +38,7 @@ public class CheckResultProviderTests
         BuildResultAnalysis buildAnalysis = MockBuildResultAnalysis(BuildStatus.Failed, stepResults, []);
 
         CheckResult result =
-            _checkResultProvider.GetCheckResult(MockBuildReference(), ImmutableList.Create(buildAnalysis), 0, isKnownIssueResult);
+            _checkResultProvider.GetCheckResult(MockBuildReference(), [buildAnalysis], 0, isKnownIssueResult);
         result.Should().Be(expectedResult);
     }
 
@@ -53,7 +53,7 @@ public class CheckResultProviderTests
 
         BuildResultAnalysis buildAnalysis = MockBuildResultAnalysis(BuildStatus.Failed, [], testResults);
 
-        CheckResult result = _checkResultProvider.GetCheckResult(MockBuildReference(), ImmutableList.Create(buildAnalysis),
+        CheckResult result = _checkResultProvider.GetCheckResult(MockBuildReference(), [buildAnalysis],
             0, isKnownIssueResult);
         result.Should().Be(expectedResult);
     }
@@ -67,7 +67,7 @@ public class CheckResultProviderTests
 
         BuildResultAnalysis buildAnalysis = MockBuildResultAnalysis(BuildStatus.Failed, [], testResults);
 
-        CheckResult result = _checkResultProvider.GetCheckResult(MockBuildReference(), ImmutableList.Create(buildAnalysis),
+        CheckResult result = _checkResultProvider.GetCheckResult(MockBuildReference(), [buildAnalysis],
             0, isKnownIssueResult);
         result.Should().Be(expectedResult);
     }
@@ -93,16 +93,16 @@ public class CheckResultProviderTests
     [TestCase(false)]
     public void GetOverallBuildStatusNoResults(bool isKnownIssues)
     {
-        CheckResult result = _checkResultProvider.GetCheckResult(MockBuildReference(), ImmutableList<BuildResultAnalysis>.Empty, 0, isKnownIssues);
+        CheckResult result = _checkResultProvider.GetCheckResult(MockBuildReference(), [], 0, isKnownIssues);
         result.Should().Be(CheckResult.InProgress);
     }
 
-    private NamedBuildReference MockBuildReference()
+    private static NamedBuildReference MockBuildReference()
     {
         return new NamedBuildReference("", "", "", "", 12345, "", 6789, "", "", "", "");
     }
 
-    private TestResult MockTestResult()
+    private static TestResult MockTestResult()
     {
         return new TestResult(
             new TestCaseResult("A", new DateTimeOffset(2021, 5, 28, 11, 0, 0, TimeSpan.Zero),
@@ -110,7 +110,7 @@ public class CheckResultProviderTests
             new FailureRate());
     }
 
-    private StepResult MockStepResult(List<KnownIssue> knownIssues = null)
+    private static StepResult MockStepResult(List<KnownIssue> knownIssues = null)
     {
         return new StepResult
         {
@@ -120,11 +120,11 @@ public class CheckResultProviderTests
                 new() {ErrorMessage = "StepErrorMessage"}
             ],
             FailureRate = new FailureRate { TotalRuns = 0 },
-            KnownIssues = knownIssues?.ToImmutableList() ?? ImmutableList<KnownIssue>.Empty
+            KnownIssues = knownIssues?.ToImmutableList() ?? []
         };
     }
 
-    public BuildResultAnalysis MockBuildResultAnalysis(BuildStatus buildStatus, List<StepResult> stepResults, List<TestResult> testResults)
+    public static BuildResultAnalysis MockBuildResultAnalysis(BuildStatus buildStatus, List<StepResult> stepResults, List<TestResult> testResults)
     {
         return new BuildResultAnalysis
         {
