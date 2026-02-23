@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="BuildInsights.BuildAnalysis.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Handlebars.Net" />
     <PackageReference Include="Humanizer.Core" />
     <PackageReference Include="Microsoft.ApplicationInsights" />
