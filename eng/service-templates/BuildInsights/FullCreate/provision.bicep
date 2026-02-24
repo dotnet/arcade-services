@@ -60,6 +60,12 @@ param scheduledJobIdentityName string
 @description('Network security group name')
 param networkSecurityGroupName string
 
+@description('Azure SQL Server name')
+param sqlServerName string
+
+@description('Azure SQL Database name')
+param sqlDatabaseName string
+
 @description('Service subnet name')
 param serviceSubnetName string
 
@@ -202,5 +208,16 @@ module ipAddressModule 'modules/public-ip-address.bicep' = if (enablePublicIpAdd
         location: location
         publicIpAddressName: publicIpAddressName
         publicIpAddressServiceTag: publicIpAddressServiceTag
+    }
+}
+
+module sqlDatabaseModule 'modules/sql-database.bicep' = {
+    name: 'sqlDatabaseModule'
+    params: {
+        location: location
+        sqlServerName: sqlServerName
+        sqlDatabaseName: sqlDatabaseName
+        appIdentityPrincipalId: managedIdentitiesModule.outputs.appIdentityPrincipalId
+        serviceSubnetId: virtualNetworkModule.outputs.productConstructionServiceSubnetId
     }
 }

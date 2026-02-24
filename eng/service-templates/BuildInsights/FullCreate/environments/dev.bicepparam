@@ -40,5 +40,9 @@ param publicIpAddressName = '${serviceNameKebabCase}-service-public-ip-${environ
 param publicIpAddressServiceTag = 'DotNet${serviceNamePascalCase}${environmentPascalCase}'
 param enablePublicIpAddress = false
 
+// SQL
+param sqlServerName = '${serviceNameKebabCase}-sql-${environmentSuffix}'
+param sqlDatabaseName = '${serviceNamePascalCase}'
+
 // Jobs
 param scheduledJobName = '${serviceNameKebabCase}-scheduled-job-${environmentSuffix}'
