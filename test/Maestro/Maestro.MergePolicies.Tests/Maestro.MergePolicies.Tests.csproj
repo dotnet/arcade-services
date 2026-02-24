@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Maestro\Maestro.MergePolicies\Maestro.MergePolicies.csproj" />
+    <ProjectReference Include="..\..\..\src\Maestro\Maestro.MergePolicies\Maestro.MergePolicies.csproj" />
   </ItemGroup>
 
   <ItemGroup>

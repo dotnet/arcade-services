@@ -6,7 +6,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\ProductConstructionService\ProductConstructionService.SubscriptionTriggerer\ProductConstructionService.SubscriptionTriggerer.csproj" />
+    <ProjectReference Include="..\..\..\src\ProductConstructionService\ProductConstructionService.FeedCleaner\ProductConstructionService.FeedCleaner.csproj" />
   </ItemGroup>
 
 </Project>

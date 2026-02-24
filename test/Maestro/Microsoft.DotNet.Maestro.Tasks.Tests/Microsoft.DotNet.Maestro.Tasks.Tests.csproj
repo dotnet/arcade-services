@@ -12,8 +12,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\ProductConstructionService\Microsoft.DotNet.ProductConstructionService.Client\Microsoft.DotNet.ProductConstructionService.Client.csproj" />
-    <ProjectReference Include="..\..\src\Maestro\Microsoft.DotNet.Maestro.Tasks\Microsoft.DotNet.Maestro.Tasks.csproj" />
+    <ProjectReference Include="..\..\..\src\ProductConstructionService\Microsoft.DotNet.ProductConstructionService.Client\Microsoft.DotNet.ProductConstructionService.Client.csproj" />
+    <ProjectReference Include="..\..\..\src\Maestro\Microsoft.DotNet.Maestro.Tasks\Microsoft.DotNet.Maestro.Tasks.csproj" />
   </ItemGroup>
 
 </Project>
