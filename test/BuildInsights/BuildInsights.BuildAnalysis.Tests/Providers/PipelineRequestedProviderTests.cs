@@ -126,17 +126,17 @@ public partial class PipelineRequestedProviderTests
     }
 
 
-    private NamedBuildReference MockBuildReference(int buildId, int definitionId)
+    private static NamedBuildReference MockBuildReference(int buildId, int definitionId)
     {
         return new NamedBuildReference("", "", "", "", buildId, "", definitionId, "", "", "", "");
     }
 
-    private NamedBuildReference MockBuildReference(int definitionId)
+    private static NamedBuildReference MockBuildReference(int definitionId)
     {
         return new NamedBuildReference("", "", "", "", 12345, "", definitionId, "", "", "", "");
     }
 
-    private string GetBuildAnalysisSettingsFile(List<int> pipelineIdsToAnalyze)
+    private static string GetBuildAnalysisSettingsFile(List<int> pipelineIdsToAnalyze)
     {
         var buildAnalysisRepositorySettings = new BuildAnalysisRepositorySettings
         {

@@ -30,7 +30,6 @@
     <Project Path="src/BuildInsights/BuildInsights.KnownIssuesProcessor/BuildInsights.KnownIssuesProcessor.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.QueueInsights/BuildInsights.QueueInsights.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.ServiceDefaults/BuildInsights.ServiceDefaults.csproj" />
-    <Project Path="src/BuildInsights/BuildInsights.Utilities.Parallel/BuildInsights.Utilities.Parallel.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.Utilities.AzureDevOps/BuildInsights.Utilities.AzureDevOps.csproj" />
   </Folder>
   <Folder Name="/src/Darc/">
@@ -70,12 +69,12 @@
     <Project Path="test/Microsoft.DotNet.Darc/Microsoft.DotNet.DarcLib.Tests/Microsoft.DotNet.DarcLib.Tests.csproj" />
   </Folder>
   <Folder Name="/test/BuildInsights/">
+    <Project Path="test/BuildInsights/BuildInsights.Api.Tests/BuildInsights.Api.Tests.csproj" />
     <Project Path="test/BuildInsights/BuildInsights.AzureStorage.Cache.Tests/BuildInsights.AzureStorage.Cache.Tests.csproj" />
     <Project Path="test/BuildInsights/BuildInsights.BuildAnalysis.Tests/BuildInsights.BuildAnalysis.Tests.csproj" />
     <Project Path="test/BuildInsights/BuildInsights.GitHub.Tests/BuildInsights.GitHub.Tests.csproj" />
     <Project Path="test/BuildInsights/BuildInsights.KnownIssues.Tests/BuildInsights.KnownIssues.Tests.csproj" />
     <Project Path="test/BuildInsights/BuildInsights.KnownIssuesMonitor.Tests/BuildInsights.KnownIssuesMonitor.Tests.csproj" />
-    <Project Path="test/BuildInsights/BuildInsights.Utilities.Parallel.Tests/BuildInsights.Utilities.Parallel.Tests.csproj" />
   </Folder>
   <Folder Name="/test/ProductConstructionService/">
     <Project Path="test/ProductConstructionService/ProductConstructionService.Api.Tests/ProductConstructionService.Api.Tests.csproj" />

@@ -5,6 +5,7 @@ using Azure.Core;
 using BuildInsights.Api.Configuration;
 using BuildInsights.Api.Configuration.Models;
 using BuildInsights.BuildAnalysis;
+using BuildInsights.GitHub;
 using BuildInsights.GitHubGraphQL;
 using BuildInsights.KnownIssues.Models;
 using BuildInsights.ServiceDefaults;
@@ -65,9 +66,11 @@ internal static class BuildInsightsStartup
     /// <summary>
     /// Registers all necessary services for the Product Construction Service
     /// </summary>
+    /// <param name="addKeyVault">Use KeyVault for secrets?</param>
     /// <param name="authRedis">Use authenticated connection for Redis?</param>
     internal static async Task ConfigureBuildInsights(
         this WebApplicationBuilder builder,
+        bool addKeyVault,
         bool authRedis)
     {
         bool isDevelopment = builder.Environment.IsDevelopment();
@@ -81,11 +84,15 @@ internal static class BuildInsightsStartup
 
         // Set up Key Vault access for some secrets
         TokenCredential azureCredential = AzureAuthentication.GetServiceCredential(isDevelopment, managedIdentityId);
-        Uri keyVaultUri = new($"https://{builder.Configuration.GetRequiredValue(ConfigurationKeys.KeyVaultName)}.vault.azure.net/");
-        builder.Configuration.AddAzureKeyVault(
-            keyVaultUri,
-            azureCredential,
-            new KeyVaultSecretsWithPrefix(ConfigurationKeys.KeyVaultSecretPrefix));
+
+        if (addKeyVault)
+        {
+            Uri keyVaultUri = new($"https://{builder.Configuration.GetRequiredValue(ConfigurationKeys.KeyVaultName)}.vault.azure.net/");
+            builder.Configuration.AddAzureKeyVault(
+                keyVaultUri,
+                azureCredential,
+                new KeyVaultSecretsWithPrefix(ConfigurationKeys.KeyVaultSecretPrefix));
+        }
 
         // Set up GitHub and Azure DevOps auth
         builder.Services.AddVssConnection();
@@ -93,6 +100,7 @@ internal static class BuildInsightsStartup
             gitHubAppSettings.AppId,
             builder.Configuration[ConfigurationKeys.GitHubAppPrivateKey]);
         builder.Services.AddGitHubTokenProvider();
+        builder.Services.AddGitHub();
         builder.Services.AddGitHubGraphQL();
         builder.Services.TryAddSingleton<IRemoteTokenProvider>(sp =>
         {

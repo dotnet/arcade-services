@@ -56,7 +56,7 @@ public class PipelineReferenceTests
         piePipelineReferenceB.Equals(piePipelineReferenceB).Should().BeTrue();
     }
 
-    public PipelineReference MockPipelineReference(string stageName, string phaseName, string jobName)
+    public static PipelineReference MockPipelineReference(string stageName, string phaseName, string jobName)
     {
         return new PipelineReference(
             new StageReference(stageName, 1),

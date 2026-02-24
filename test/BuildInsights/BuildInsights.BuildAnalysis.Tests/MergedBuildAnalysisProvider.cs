@@ -6,7 +6,6 @@ using AwesomeAssertions;
 using BuildInsights.AzureStorage.Cache;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.KnownIssues;
-using BuildInsights.KnownIssues.Models;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -30,10 +29,10 @@ namespace BuildInsights.BuildAnalysis.Tests
 
             public class Builder
             {
-                private readonly ImmutableList<BuildResultAnalysis> _previousAnalyses = ImmutableList<BuildResultAnalysis>.Empty;
+                private readonly ImmutableList<BuildResultAnalysis> _previousAnalyses = [];
                 private readonly BuildResultAnalysis _currentAnalysis;
-                private readonly ImmutableList<int> _relatedBuildIds = ImmutableList<int>.Empty;
-                private readonly ImmutableList<BuildReferenceIdentifier> _filteredBuilds = ImmutableList<BuildReferenceIdentifier>.Empty;
+                private readonly ImmutableList<int> _relatedBuildIds = [];
+                private readonly ImmutableList<BuildReferenceIdentifier> _filteredBuilds = [];
                 private readonly Mock<ICheckResultService> _mockCheckResult = new();
                 private readonly Mock<IBuildAnalysisRepositoryConfigurationService> _mockRepoConfiguration = new();
 
@@ -162,7 +161,7 @@ namespace BuildInsights.BuildAnalysis.Tests
 
                     var issueService = new Mock<IGitHubIssuesService>();
                     issueService.Setup(i => i.GetCriticalInfrastructureIssuesAsync())
-                        .ReturnsAsync(ImmutableList<KnownIssue>.Empty);
+                        .ReturnsAsync([]);
 
                     var pipelineRequestedProvider = new Mock<IPipelineRequestedService>();
                     pipelineRequestedProvider.Setup(p => p.IsBuildPipelineRequested(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(true);
@@ -210,7 +209,7 @@ namespace BuildInsights.BuildAnalysis.Tests
 
         public static string GetBuildNameFromId(int id) => "test pipeline name " + id;
 
-        public NamedBuildReference GetRefId(int id) => new(
+        public static NamedBuildReference GetRefId(int id) => new(
             GetBuildNameFromId(id),
             $"https://example.test/build/{id}",
             OrgId,
@@ -378,7 +377,7 @@ namespace BuildInsights.BuildAnalysis.Tests
 
             await using var test = TestData.Create()
                 .WithCurrentBuild(BuildId)
-                .WithFilteredBuilds(ImmutableList.Create(buildReferenceIdentifier))
+                .WithFilteredBuilds([buildReferenceIdentifier])
                 .Build();
 
             MergedBuildResultAnalysis analysis = await test.Provider.GetMergedAnalysisAsync(GetRefId(BuildId), MergeBuildAnalysisAction.Include, CancellationToken.None);

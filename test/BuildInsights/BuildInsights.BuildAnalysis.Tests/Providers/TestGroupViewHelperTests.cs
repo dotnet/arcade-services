@@ -74,12 +74,12 @@ public class TestGroupViewHelperTests
         result[2].DisplayTestsCount.Should().Be(0);
     }
 
-    private TestResultsGroupView MockTestResultsGroupView(string pipelineName, List<TestResultView> testResultViews)
+    private static TestResultsGroupView MockTestResultsGroupView(string pipelineName, List<TestResultView> testResultViews)
     {
         return new TestResultsGroupView("ANY_LINK", pipelineName, testResultViews, testResultViews.Count);
     }
 
-    private List<TestResultView> MockListTestResultView(int countTest)
+    private static List<TestResultView> MockListTestResultView(int countTest)
     {
         var testResultViews = new List<TestResultView>();
         for (int i = 0; i < countTest; i++)
