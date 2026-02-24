@@ -22,7 +22,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   }
   properties: {
     allowBlobPublicAccess: false
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: 'Disabled'
     allowSharedKeyAccess: false
     networkAcls: {
       defaultAction: 'Deny'
