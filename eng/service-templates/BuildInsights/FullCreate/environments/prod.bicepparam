@@ -25,7 +25,7 @@ param scheduledJobIdentityName = '${serviceNamePascalCase}ScheduledJob${environm
 
 // Observability
 param applicationInsightsName = '${serviceNameKebabCase}-ai${optionalEnvironmentSuffix}'
-param logAnalyticsName = '${serviceNameKebabCase}-workspace${optionalEnvironmentSuffix}'
+param logAnalyticsName = '${serviceNameKebabCase}-log${optionalEnvironmentSuffix}'
 
 // Data and secrets
 param keyVaultName = '${serviceNamePascalCase}${environmentPascalCase}'
