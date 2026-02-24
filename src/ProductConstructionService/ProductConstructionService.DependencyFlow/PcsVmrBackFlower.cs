@@ -95,7 +95,7 @@ internal class PcsVmrBackFlower : VmrBackFlower, IPcsVmrBackFlower
                 var commitMessage = new StringBuilder();
                 commitMessage.Append("Update dependencies from build ");
                 commitMessage.AppendLine(build.Id.ToString());
-                PullRequestBuilder.AppendCoherencyCommitMessage(string.Empty, result.DependencyUpdates, commitMessage);
+                commitMessage.AppendLine(BackflowConflictResolver.BuildDependencyUpdateCommitMessage(result.DependencyUpdates));
                 commitMessage.AppendLine(Constants.AUTOMATION_COMMIT_TAG);
 
                 await targetRepo.CommitAsync(commitMessage.ToString(), allowEmpty: false, cancellationToken: cancellationToken);

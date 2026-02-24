@@ -17,8 +17,7 @@ public class DependencyRegistrationTests
     {
         var builder = ApiTestConfiguration.CreateTestHostBuilder();
         await builder.ConfigureBuildInsights(
-            addKeyVault: false,
-            authRedis: false);
+            addKeyVault: false);
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(
             s =>
@@ -33,29 +32,25 @@ public class DependencyRegistrationTests
             [
                 // TODO
                 "BuildInsights.AzureStorage.Cache.BlobClientFactory",
-                "BuildInsights.BuildAnalysis.AzDoToGitHubRepositoryProvider",
                 "BuildInsights.BuildAnalysis.BuildAnalysisHistoryProvider",
                 "BuildInsights.BuildAnalysis.BuildAnalysisProvider",
                 "BuildInsights.BuildAnalysis.BuildAnalysisRepositoryConfigurationProvider",
                 "BuildInsights.BuildAnalysis.BuildProcessingStatusStatusProvider",
                 "BuildInsights.BuildAnalysis.CheckResultProvider",
-                "BuildInsights.BuildAnalysis.HelixDataProvider",
-                "BuildInsights.GitHub.GitHubChecksProvider",
-                "BuildInsights.GitHub.GithubRepositoryProvider",
-                "BuildInsights.KnownIssues.GitHubIssuesProvider",
-                "BuildInsights.KnownIssues.KnownIssuesHistoryProvider",
+                //"BuildInsights.KnownIssues.KnownIssuesHistoryProvider",
                 "BuildInsights.QueueInsights.MatrixOfTruthService",
                 "BuildInsights.QueueInsights.QueueInsightsService",
                 "BuildInsights.Utilities.AzureDevOps.ThrottlingHeaderLoggingHandler",
                 "BuildInsights.Utilities.AzureDevOps.VssConnectionProvider",
                 "Microsoft.DotNet.GitHub.Authentication.GitHubTokenProvider",
                 "Microsoft.DotNet.Services.Utility.RetryAfterHandler",
+                "ProductConstructionService.Common.Telemetry.TelemetryRecorder",
+
                 "Microsoft.Extensions.Azure.AzureClientsGlobalOptions",
-                "Microsoft.Extensions.Hosting.ConsoleLifetimeOptions",
                 "Microsoft.Extensions.ServiceDiscovery.Configuration.ConfigurationServiceEndPointResolverProvider",
                 "Microsoft.Extensions.ServiceDiscovery.Http.ServiceDiscoveryHttpMessageHandlerFactory",
                 "Microsoft.Extensions.ServiceDiscovery.ServiceEndPointWatcherFactory",
-                "ProductConstructionService.Common.Telemetry.TelemetryRecorder",
+                "Microsoft.Extensions.Hosting.ConsoleLifetimeOptions",
             ])
         .Should().BeTrue(message);
     }

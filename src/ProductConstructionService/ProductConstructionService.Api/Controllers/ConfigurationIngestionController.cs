@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Net;
+using Maestro.Common.Cache;
 using Maestro.DataProviders;
 using Maestro.DataProviders.ConfigurationIngestion;
 using Maestro.DataProviders.Exceptions;
@@ -14,7 +15,6 @@ using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Configuration;
 using ProductConstructionService.Common;
-using ProductConstructionService.Common.Cache;
 
 namespace ProductConstructionService.Api.Controllers;
 

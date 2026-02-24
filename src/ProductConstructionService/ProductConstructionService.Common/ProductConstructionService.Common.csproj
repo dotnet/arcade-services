@@ -15,6 +15,7 @@
     <PackageReference Include="Microsoft.AspNetCore.ApiVersioning" />
     <PackageReference Include="Microsoft.AspNetCore.ApiVersioning.Swashbuckle" />
     <PackageReference Include="Microsoft.DotNet.Kusto" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Configuration" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
@@ -25,9 +26,5 @@
     <PackageReference Include="NRedisStack" />
     <PackageReference Include="Swashbuckle.AspNetCore.Newtonsoft" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\Maestro\Maestro.Data\Maestro.Data.csproj" />
   </ItemGroup>
 </Project>

@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using AwesomeAssertions;
+using Maestro.Common.Telemetry;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
@@ -71,7 +72,6 @@ public class LoggingConfigurationTests
 
         await builder.ConfigurePcs(
             addKeyVault: false,
-            authRedis: false,
             addSwagger: false);
 
         builder.Services.AddSingleton(channel.Object);

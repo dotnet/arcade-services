@@ -1,0 +1,218 @@
+@page "/codeflows-beta"
+
+@using System.Linq.Expressions
+@using System.Text
+@using Microsoft.DotNet.ProductConstructionService.Client
+@using Microsoft.DotNet.ProductConstructionService.Client.Models
+@using Microsoft.FluentUI.AspNetCore.Components.Extensions
+@using ProductConstructionService.BarViz.Code.Helpers
+@using ProductConstructionService.BarViz.Components
+@using ProductConstructionService.BarViz.Model
+@inject NavigationManager NavManager
+@inject IDialogService DialogService
+
+<style>
+    .hover:not([row-type='header'],[row-type='sticky-header'],.loading-content-row):hover[b-upi3f9mbnn] {
+        cursor: default;
+    }
+
+    body[data-theme="light"] .disabled-subscription, body[data-theme="system-light"] .disabled-subscription {
+        background-color: #f1f1f1;
+    }
+
+    .disabled-subscription, .disabled-subscription .control, .disabled-subscription .fluent-typography {
+        color: var(--neutral-foreground-hint) !important;
+        font-style: italic;
+    }
+
+    .commitSha {
+        border: none;
+        color: #888;
+        font-family: monospace;
+        font-size: 0.8em;
+        top: -4px;
+        position: relative;
+        margin-left: 5px;
+        margin-right: 7px;
+    }
+
+    .commitSha a {
+        height: 23px;
+        padding: 2px 6px 0px 6px;
+    }
+
+</style>
+
+<PageTitle>Codeflows – Maestro++</PageTitle>
+
+<GridViewTemplate Title="Codeflows1234" ShowSkeleton="CodeFlows == null">
+    <!--<Header>
+        <FluentSelect TOption="DefaultChannel"
+                      Items="@DefaultChannels"
+                      OptionValue="@(channel => channel.Branch)"
+                      OptionSelected="@(c => c.Id == DefaultChannel?.Id)"
+                      SelectedOptionChanged="@(OnDefaultChannelSelected)"
+                      SelectedOption="@DefaultChannel"
+                      Immediate="true"
+                      Multiple="false"
+                      style="float: right">
+            <OptionTemplate>
+                <span title="Channel ID: @context.Channel.Id">@context.Branch / @context.Channel.Name</span>
+            </OptionTemplate>
+        </FluentSelect>
+    </Header> -->
+    <Content>
+        <FluentDataGrid Items="@CodeFlows"
+                        AutoFit="true"
+                        TGridItem=CodeflowEntry
+                        ResizableColumns="true"
+                        ShowHover="true"
+                        RowClass="@(sub => sub.Enabled ? null : "disabled-subscription")"
+                        Style="width: 100%">
+            <EmptyContent>
+                <FluentLabel>No subscriptions found</FluentLabel>
+            </EmptyContent>
+            <ChildContent>
+                <TemplateColumn Title="Repository" Sortable="true" SortBy="SortBy(sub => sub.MappingName)" Align="Align.Start">
+                    <FluentAnchor Href="@context.RepositoryUrl" Target="_blank" Appearance="Appearance.Hypertext">@context.MappingName</FluentAnchor>
+                </TemplateColumn>
+                <TemplateColumn Title="Backflow branch" Sortable="true" SortBy="SortBy(sub => sub.BackflowSubscription != null ? sub.BackflowSubscription.Subscription.TargetBranch : null)" Align="Align.Center">
+                    <FluentLabel>@context.BackflowSubscription?.Subscription.TargetBranch</FluentLabel>
+                </TemplateColumn>
+                <TemplateColumn Title="Forward flow channel" Sortable="true" SortBy="SortBy(sub => sub.ForwardFlowSubscription != null && sub.ForwardFlowSubscription.Subscription.Channel != null ? sub.ForwardFlowSubscription.Subscription.Channel.Name : null)" Align="Align.Center">
+                    <FluentLabel>@context.ForwardFlowSubscription?.Subscription.Channel?.Name</FluentLabel>
+                </TemplateColumn>
+                <TemplateColumn Title="Backflow"
+                                Sortable="true"
+                                SortBy="@SortBy(sub => sub.BackflowSubscription != null && sub.BackflowSubscription.Subscription.LastAppliedBuild != null ? sub.BackflowSubscription.Subscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
+                                Align="Align.Start">
+                    <FluentLabel Title="@(context.BackflowSubscription?.Subscription.LastAppliedBuild?.DateProduced.ToString("f"))">
+                        @if (context.BackflowSubscription?.Subscription.LastAppliedBuild != null)
+                        {
+                            @(GetBuildAgeDifference(context.BackflowSubscription))
+                        }
+                        else
+                        {
+                            <span>—</span>
+                        }
+
+                        @if (context.BackflowSubscription?.Subscription.LastAppliedBuild != null && context.BackflowSubscription.Subscription.LastAppliedBuild.Staleness > 0)
+                        {
+                            <span style="margin-left: 8px; color: #888; font-size: 0.85em;">@context.BackflowSubscription.Subscription.LastAppliedBuild.Staleness build(s) behind latest</span>
+                        }
+
+                        @if (context.BackflowSubscription?.ActivePullRequest != null)
+                        {
+                            <FluentAnchor Href="@context.BackflowSubscription.ActivePullRequest.Url" Target="_blank" Appearance="Appearance.Hypertext" style="margin-left: 8px;">Active PR (@GetPrAge(context.BackflowSubscription.ActivePullRequest))</FluentAnchor>
+                        }
+                    </FluentLabel>
+                </TemplateColumn>
+                <TemplateColumn Title="Forward flow"
+                                Sortable="true"
+                                SortBy="@SortBy(sub => sub.ForwardFlowSubscription != null && sub.ForwardFlowSubscription.Subscription.LastAppliedBuild != null ? sub.ForwardFlowSubscription.Subscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
+                                Align="Align.Start">
+                    <FluentLabel Title="@(context.ForwardFlowSubscription?.Subscription.LastAppliedBuild?.DateProduced.ToString("f"))">
+                        @if (context.ForwardFlowSubscription?.Subscription.LastAppliedBuild != null)
+                        {
+                            @(GetBuildAgeDifference(context.ForwardFlowSubscription))
+                        }
+                        else
+                        {
+                            <span>—</span>
+                        }
+
+                        @if (context.ForwardFlowSubscription?.Subscription.LastAppliedBuild != null && context.ForwardFlowSubscription.Subscription.LastAppliedBuild.Staleness > 0)
+                        {
+                            <span style="margin-left: 8px; color: #888; font-size: 0.85em;">@context.ForwardFlowSubscription.Subscription.LastAppliedBuild.Staleness build(s) behind latest</span>
+                        }
+
+                        @if (context.ForwardFlowSubscription?.ActivePullRequest != null)
+                        {
+                            <FluentAnchor Href="@context.ForwardFlowSubscription.ActivePullRequest.Url" Target="_blank" Appearance="Appearance.Hypertext" style="margin-left: 8px;">Active PR (@GetPrAge(context.ForwardFlowSubscription.ActivePullRequest))</FluentAnchor>
+                        }
+                    </FluentLabel>
+                </TemplateColumn>
+                <TemplateColumn Width="60px">
+                    <CodeflowContextMenu Codeflow="@ToCodeflowSubscription(context)" ShowDetails="@ShowDetails" />
+                </TemplateColumn>
+            </ChildContent>
+        </FluentDataGrid>
+    </Content>
+</GridViewTemplate>
+
+@code {
+    IQueryable<CodeflowEntry>? CodeFlows;
+
+    GridSort<CodeflowEntry> SortBy(Expression<Func<CodeflowEntry, string?>> sorter)
+        => GridSort<CodeflowEntry>.ByAscending(sorter);
+
+    protected override void OnInitialized()
+    {
+        var mockData = MockCodeflowData.GetMockCodeflowPage();
+        CodeFlows = mockData.Entries
+            .OrderBy(c => c.MappingName)
+            .AsQueryable();
+    }
+
+    async Task ShowDetails(Subscription subscription)
+    {
+        if (subscription == null) return;
+
+        DialogParameters parameters = new()
+        {
+            Title = $"Subscription {subscription.Id}",
+            Width = "800px",
+            TrapFocus = true,
+            Modal = true,
+            PreventScroll = true,
+            PrimaryAction = null,
+            SecondaryAction = "Close",
+        };
+
+        await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(subscription, parameters);
+    }
+
+    string GetLastAppliedBuildTimeAgo(Subscription? subscription)
+    {
+        return subscription?.LastAppliedBuild != null
+            ? (DateTime.UtcNow - subscription.LastAppliedBuild.DateProduced).ToTimeAgo()
+            : "—";
+    }
+
+    static CodeflowSubscription ToCodeflowSubscription(CodeflowEntry entry)
+    {
+        return new CodeflowSubscription(
+            RepositoryUrl: entry.RepositoryUrl,
+            RepositoryBranch: entry.BackflowSubscription?.Subscription.TargetBranch,
+            MappingName: entry.MappingName,
+            Enabled: entry.Enabled,
+            BackflowSubscription: entry.BackflowSubscription?.Subscription,
+            ForwardflowSubscription: entry.ForwardFlowSubscription?.Subscription,
+            BackflowPr: entry.BackflowSubscription?.ActivePullRequest?.Url,
+            ForwardflowPr: entry.ForwardFlowSubscription?.ActivePullRequest?.Url);
+    }
+
+    static string GetShortSha(string sha) => sha.Substring(0, 7);
+
+    string GetBuildAgeDifference(SubscriptionInformation? entry)
+    {
+        if (entry?.NewestApplicableBuild == null || entry.Subscription.LastAppliedBuild == null)
+        {
+            return string.Empty;
+        }
+
+        var diff = entry.NewestApplicableBuild.DateProduced - entry.Subscription.LastAppliedBuild.DateProduced;
+        if (diff.TotalMinutes < 1)
+        {
+            return string.Empty;
+        }
+
+        return diff.ToTimeAgo().Replace(" ago", " older than the newest VMR build");
+    }
+
+    static string GetPrAge(ActivePullRequest pr)
+    {
+        var age = (DateTime.UtcNow - pr.CreatedDate).ToTimeAgo();
+        return age.Replace(" ago", " old");
+    }
+}

@@ -1241,4 +1241,71 @@ internal class TwoWayCodeflowTests : CodeFlowTests
                 branchName,
                 forceUpdate: false));
     }
+
+    [Test]
+    public async Task BackflowOppositeDirectionFlowRevertsTest()
+    {
+        const string ffBranchName = nameof(BackflowOppositeDirectionFlowRevertsTest);
+        const string bfBranchName = nameof(BackflowOppositeDirectionFlowRevertsTest) + "bf";
+
+        var problematicFilePath = "badFile.txt";
+
+        await EnsureTestRepoIsInitialized();
+
+        // Add the file that will have the problem later
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / problematicFilePath, "1");
+        await GitOperations.CommitAll(ProductRepoPath, "adding the file");
+        var result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // do some flows now
+        result = await ChangeRepoFileAndFlowIt("1", ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        result = await ChangeVmrFileAndFlowIt("2", bfBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
+
+        // now change the problematic file, open the ff, but don't merge yet
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / problematicFilePath, "2");
+        await GitOperations.CommitAll(ProductRepoPath, "change to the file");
+        result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
+        result.ShouldHaveUpdates();
+        await GitOperations.CommitAll(VmrPath, "Commit flown changes to ff branch");
+
+        // now do a few backflows
+        result = await ChangeVmrFileAndFlowIt("3", bfBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
+
+        // this second backflow will be the opposite direction flow
+        result = await ChangeVmrFileAndFlowIt("4", bfBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
+
+        // merge the ff
+        await GitOperations.MergePrBranch(VmrPath, ffBranchName);
+
+        // revert the problematic file back to the original state
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / problematicFilePath, "1");
+        await GitOperations.CommitAll(ProductRepoPath, "revert the problematic file");
+
+        // add more "pink stuff" commits https://github.com/dotnet/arcade-services/issues/5767#issuecomment-3754523287
+        await File.WriteAllTextAsync(ProductRepoPath / "pink_file.txt", "pink stuff");
+        await File.WriteAllTextAsync(ProductRepoPath / _productRepoFileName, "a twist");
+        await GitOperations.CommitAll(ProductRepoPath, "Pink stuff changes");
+
+        // so now we need to call a backflow
+        result = await ChangeVmrFileAndFlowIt("5", bfBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
+
+        // file should still say 1
+        File.ReadAllText(ProductRepoPath / problematicFilePath).Should().Be("1");
+    }
 }

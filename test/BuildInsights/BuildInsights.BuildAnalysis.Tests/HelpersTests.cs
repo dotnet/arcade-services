@@ -44,7 +44,7 @@ public class HelpersTests
 
         public class Builder
         {
-            public static TestData<THelper> Build()
+            public TestData<THelper> Build()
             {
                 ServiceCollection collection = new ServiceCollection();
 

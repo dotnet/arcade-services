@@ -6,10 +6,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="WorkItems\**" />
-    <Content Remove="WorkItems\**" />
-    <EmbeddedResource Remove="WorkItems\**" />
-    <None Remove="WorkItems\**" />
+    <PackageReference Include="Aspire.StackExchange.Redis.OutputCaching" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
+    <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers" />
+    <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" />
+    <PackageReference Include="Microsoft.DotNet.Internal.Logging" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,15 +25,6 @@
     <ProjectReference Include="..\BuildInsights.Utilities.AzureDevOps\BuildInsights.Utilities.AzureDevOps.csproj" />
     <ProjectReference Include="..\..\ProductConstructionService\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />
     <ProjectReference Include="..\..\ProductConstructionService\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Aspire.StackExchange.Redis.OutputCaching" />
-    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
-    <PackageReference Include="Azure.Identity" />
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
-    <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers" />
-    <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" />
   </ItemGroup>
 
 </Project>

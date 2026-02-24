@@ -6,10 +6,11 @@
 
     <OutputType>Exe</OutputType>
     <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+
+    <ToolCommandName>darc</ToolCommandName>
     <Description>Darc CLI</Description>
     <PackageTags>Arcade Darc CLI Dependency Flow</PackageTags>
-    <PackAsTool>true</PackAsTool>
-    <ToolCommandName>darc</ToolCommandName>
   </PropertyGroup>
 
   <ItemGroup>

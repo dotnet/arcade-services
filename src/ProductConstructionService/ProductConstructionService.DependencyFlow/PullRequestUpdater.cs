@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
+using Maestro.Common.Cache;
+using Maestro.Common.Telemetry;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
@@ -14,7 +16,6 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.Common.Cache;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
@@ -155,7 +156,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     /// <param name="forceUpdate">If true, force update even for PRs with pending or successful checks.</param>
     public async Task ProcessPendingUpdatesAsync(SubscriptionUpdateWorkItem update, bool applyNewestOnly, bool forceUpdate, BuildDTO build)
     {
-        _logger.LogInformation("Processing pending updates for subscription {subscriptionId}", update.SubscriptionId);
+        _logger.LogInformation("Processing pending updates for subscription {subscriptionId} with build {buildId}", update.SubscriptionId, build.Id);
         bool isCodeFlow = update.SubscriptionType == SubscriptionType.DependenciesAndSources;
         InProgressPullRequest? pr = await _pullRequestState.TryGetStateAsync();
         PullRequest? prInfo;
@@ -1158,7 +1159,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             return;
         }
 
-        if (pr?.BlockedFromFutureUpdates == true)
+        if (pr?.BlockedFromFutureUpdates == true && !forceUpdate)
         {
             _logger.LogInformation("Failed to update pr {url} for {subscription} because it is blocked from future updates",
                 pr.Url,
@@ -1328,6 +1329,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
             pullRequest.SourceSha = update.SourceSha;
             pullRequest.LastUpdate = DateTime.UtcNow;
             pullRequest.NextBuildsToProcess.Remove(update.SubscriptionId);
+            pullRequest.BlockedFromFutureUpdates = false; // if a sub is blocked, and someone force triggers it, we can continue flowing afterwards
             await SetPullRequestCheckReminder(pullRequest, prInfo!, isCodeFlow: true);
             await _pullRequestUpdateReminders.UnsetReminderAsync(isCodeFlow: true);
         }

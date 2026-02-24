@@ -4,9 +4,9 @@
 using System.Text.Json.Nodes;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
+using Maestro.Common.Telemetry;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

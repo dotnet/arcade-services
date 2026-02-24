@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
+using Maestro.Common.Cache;
 using Maestro.MergePolicyEvaluation;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
@@ -466,7 +467,7 @@ public sealed class Remote : IRemote
         if (stripBaseDirectory)
         {
             files = [.. files.Select(f => new GitFile(
-                StringUtils.StripStart(f.FilePath, baseDirectory),
+                StringUtils.StripStart(f.FilePath, baseDirectory).TrimStart('/'),
                 f.Content,
                 f.ContentEncoding,
                 f.Mode,

@@ -78,4 +78,54 @@ internal class PendingCodeFlowUpdatesTests : PendingUpdatePullRequestUpdaterTest
             AndShouldHaveInProgressPullRequestState(newBuild);
         }
     }
+
+    [Test]
+    public async Task PendingUpdatesUpdatableBlockedPr()
+    {
+        GivenATestChannel();
+        GivenACodeFlowSubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = true,
+                UpdateFrequency = UpdateFrequency.EveryBuild
+            });
+        Build oldBuild = GivenANewBuild(true);
+        Build newBuild = GivenANewBuild(true);
+        newBuild.Commit = "sha12345";
+
+        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, blockedFromFutureUpdates: true))
+        {
+            await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true);
+
+            AndShouldHaveNoPendingUpdateState();
+            AndShouldHavePullRequestCheckReminder();
+        }
+    }
+
+    [Test]
+    public async Task ForcedPendingUpdatesUpdatableBlockedPr()
+    {
+        GivenATestChannel();
+        GivenACodeFlowSubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = true,
+                UpdateFrequency = UpdateFrequency.EveryBuild
+            });
+        Build oldBuild = GivenANewBuild(true);
+        Build newBuild = GivenANewBuild(true);
+        newBuild.Commit = "sha12345";
+
+        using (WithExistingCodeFlowPullRequest(oldBuild, canUpdate: true, blockedFromFutureUpdates: true, willFlowNewBuild: true))
+        {
+            ExpectPrMetadataToBeUpdated();
+
+            await WhenProcessPendingUpdatesAsyncIsCalled(newBuild, isCodeFlow: true, forceUpdate: true);
+
+            ThenCodeShouldHaveBeenFlownForward(newBuild);
+            AndShouldHaveNoPendingUpdateState();
+            AndShouldHavePullRequestCheckReminder();
+            AndShouldHaveInProgressPullRequestState(newBuild);
+        }
+    }
 }
