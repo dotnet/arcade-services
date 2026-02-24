@@ -5,6 +5,7 @@
     <Description>This package include tasks involving Maestro++ and the Build Asset Registry.</Description>
     <DevelopmentDependency>true</DevelopmentDependency>
     <PackageType>MSBuildSdk</PackageType>
+    <Nullable>disable</Nullable>
     <!-- Octokit used to be not strong named. It is now, we should remove this -->
     <SignAssembly>false</SignAssembly>
     <!-- Build Tasks should not include any dependencies -->

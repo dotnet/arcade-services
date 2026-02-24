@@ -8,6 +8,7 @@
     <Description>Darc Library</Description>
     <PackageTags>Arcade Darc Dependency Flow</PackageTags>
     <LangVersion>preview</LangVersion>
+    <Nullable>disable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
