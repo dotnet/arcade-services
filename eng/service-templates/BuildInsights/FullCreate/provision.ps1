@@ -15,7 +15,7 @@ $environmentConfig = switch ($environment) {
     'stage' {
         @{
             bicepParamFileName = 'stage.bicepparam';
-            subscriptionId     = '00000000-0000-0000-0000-000000000002';
+            subscriptionId     = 'e6b5f9f5-0ca4-4351-879b-014d78400ec2'; # .NET Product Construction Services - Staging
             resourceGroupName  = 'build-insights-stage-rg'
         }
     }
