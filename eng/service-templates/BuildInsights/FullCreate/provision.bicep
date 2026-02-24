@@ -166,12 +166,13 @@ module scheduledJob 'modules/scheduledContainerJob.bicep' = {
     }
 }
 
-module keyVaultsModule 'modules/key-vaults.bicep' = {
-    name: 'keyVaultsModule'
+module keyVaultsModule 'modules/key-vault.bicep' = {
+    name: 'keyVaultModule'
     params: {
         location: location
         keyVaultName: keyVaultName
         appIdentityPrincipalId: managedIdentitiesModule.outputs.appIdentityPrincipalId
+        serviceSubnetId: virtualNetworkModule.outputs.productConstructionServiceSubnetId
     }
 }
 
@@ -191,6 +192,7 @@ module storageAccountModule 'modules/storage-account.bicep' = {
         location: location
         storageAccountName: storageAccountName
         appIdentityPrincipalId: managedIdentitiesModule.outputs.appIdentityPrincipalId
+        serviceSubnetId: virtualNetworkModule.outputs.productConstructionServiceSubnetId
     }
 }
 

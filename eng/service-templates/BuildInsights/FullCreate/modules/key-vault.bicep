@@ -1,6 +1,7 @@
 param location string
 param keyVaultName string
 param appIdentityPrincipalId string
+param serviceSubnetId string
 
 module roles './roles.bicep' = {
   name: 'roles'
@@ -19,6 +20,16 @@ resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
     softDeleteRetentionInDays: 90
     accessPolicies: []
     enableRbacAuthorization: true
+    publicNetworkAccess: 'Disabled'
+    networkAcls: {
+      defaultAction: 'Deny'
+      bypass: 'AzureServices'
+      virtualNetworkRules: [
+        {
+          id: serviceSubnetId
+        }
+      ]
+    }
   }
 }
 

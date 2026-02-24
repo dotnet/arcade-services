@@ -25,6 +25,14 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-04-01' = {
               }
             }
           ]
+          serviceEndpoints: [
+            {
+              service: 'Microsoft.Storage'
+            }
+            {
+              service: 'Microsoft.KeyVault'
+            }
+          ]
           networkSecurityGroup: {
             id: networkSecurityGroupId
           }
@@ -38,3 +46,4 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-04-01' = {
 }
 
 output productConstructionServiceSubnetId string = virtualNetwork.properties.subnets[0].id
+output virtualNetworkId string = virtualNetwork.id

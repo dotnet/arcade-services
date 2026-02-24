@@ -1,6 +1,7 @@
 param location string
 param storageAccountName string
 param appIdentityPrincipalId string
+param serviceSubnetId string
 
 module roles './roles.bicep' = {
   name: 'roles'
@@ -19,6 +20,12 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
     allowSharedKeyAccess: false
     networkAcls: {
       defaultAction: 'Deny'
+      virtualNetworkRules: [
+        {
+          id: serviceSubnetId
+          action: 'Allow'
+        }
+      ]
     }
   }
 }
