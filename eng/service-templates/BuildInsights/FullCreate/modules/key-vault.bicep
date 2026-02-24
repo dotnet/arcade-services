@@ -3,9 +3,15 @@ param keyVaultName string
 param appIdentityPrincipalId string
 param serviceSubnetId string
 
-module roles './roles.bicep' = {
-  name: 'roles'
-}
+var kvSecretUserRole = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  '4633458b-17de-408a-b874-0445c86b69e6'
+)
+
+var kvCryptoUserRole = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  '12338af0-0e69-4776-bea7-57ae8d297424'
+)
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
   name: keyVaultName
@@ -38,7 +44,7 @@ resource secretAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: keyVault
   name: guid(subscription().id, resourceGroup().id, 'keyVault-secret-access')
   properties: {
-    roleDefinitionId: roles.outputs.kvSecretUserRole
+    roleDefinitionId: kvSecretUserRole
     principalType: 'ServicePrincipal'
     principalId: appIdentityPrincipalId
   }
@@ -49,7 +55,7 @@ resource cryptoAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: keyVault
   name: guid(subscription().id, resourceGroup().id, 'keyVault-crypto-access')
   properties: {
-    roleDefinitionId: roles.outputs.kvCryptoUserRole
+    roleDefinitionId: kvCryptoUserRole
     principalType: 'ServicePrincipal'
     principalId: appIdentityPrincipalId
   }

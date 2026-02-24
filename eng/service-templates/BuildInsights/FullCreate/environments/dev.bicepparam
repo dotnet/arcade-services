@@ -28,7 +28,7 @@ param logAnalyticsName = '${serviceNameKebabCase}-service-workspace-${environmen
 
 // Data and secrets
 param keyVaultName = '${serviceNamePascalCase}${environmentPascalCase}'
-param azureCacheRedisName = '${serviceNameKebabCase}-service-redis-${environmentSuffix}'
+param azureCacheRedisName = '${serviceNameKebabCase}-service-rds-${environmentSuffix}'
 param storageAccountName = '${toLower(replace(serviceNameKebabCase, '-', ''))}${environmentSuffix}'
 
 // Networking

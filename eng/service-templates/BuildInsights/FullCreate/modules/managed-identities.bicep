@@ -3,9 +3,10 @@ param deploymentIdentityName string
 param appIdentityName string
 param scheduledJobIdentityName string
 
-module roles './roles.bicep' = {
-  name: 'roles'
-}
+var contributorRole = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  'b24988ac-6180-42a0-ab88-20f7382dd24c'
+)
 
 resource deploymentIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: deploymentIdentityName
@@ -26,7 +27,7 @@ resource appIdentityContributorRole 'Microsoft.Authorization/roleAssignments@202
   scope: appIdentity
   name: guid(subscription().id, resourceGroup().id, 'appIdentity-contributor')
   properties: {
-    roleDefinitionId: roles.outputs.contributorRole
+    roleDefinitionId: contributorRole
     principalType: 'ServicePrincipal'
     principalId: deploymentIdentity.properties.principalId
   }

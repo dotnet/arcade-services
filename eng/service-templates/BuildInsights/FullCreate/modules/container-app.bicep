@@ -10,9 +10,10 @@ param containerEnvironmentId string
 param deploymentIdentityPrincipalId string
 param containerReplicas int
 
-module roles './roles.bicep' = {
-  name: 'roles'
-}
+var contributorRole = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  'b24988ac-6180-42a0-ab88-20f7382dd24c'
+)
 
 module shared './shared.bicep' = {
   name: 'shared'
@@ -148,7 +149,7 @@ resource deploymentSubscriptionTriggerContributor 'Microsoft.Authorization/roleA
   scope: containerApp
   name: guid(subscription().id, resourceGroup().id, '${serviceName}-contributor')
   properties: {
-    roleDefinitionId: roles.outputs.contributorRole
+    roleDefinitionId: contributorRole
     principalType: 'ServicePrincipal'
     principalId: deploymentIdentityPrincipalId
   }

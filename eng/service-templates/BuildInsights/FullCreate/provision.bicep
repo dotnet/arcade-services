@@ -233,7 +233,5 @@ module networkSecurityPerimeterModule 'modules/network-security-perimeter.bicep'
         keyVaultId: keyVaultsModule.outputs.keyVaultId
         storageAccountId: storageAccountModule.outputs.storageAccountId
         sqlServerId: sqlDatabaseModule.outputs.sqlServerId
-        redisCacheId: redisModule.outputs.redisCacheId
-        containerRegistryId: containerRegistryModule.outputs.containerRegistryId
     }
 }

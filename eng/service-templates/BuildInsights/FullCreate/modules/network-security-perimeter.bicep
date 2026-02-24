@@ -13,7 +13,7 @@ param profileName string = 'default'
     'Enforced'
     'Audit'
 ])
-param accessMode string = 'Learning'
+param accessMode string = 'Enforced'
 
 // Resource IDs to associate with the perimeter
 @description('Resource ID of the Key Vault')
@@ -25,32 +25,19 @@ param storageAccountId string
 @description('Resource ID of the SQL Server')
 param sqlServerId string
 
-@description('Resource ID of the Azure Cache for Redis')
-param redisCacheId string
-
-@description('Resource ID of the Container Registry')
-param containerRegistryId string
-
-// ---------------------------------------------------------------------------
 // Network Security Perimeter
-// ---------------------------------------------------------------------------
-
 resource perimeter 'Microsoft.Network/networkSecurityPerimeters@2023-08-01-preview' = {
     name: perimeterName
     location: location
 }
 
-// ---------------------------------------------------------------------------
 // Profile – all associated resources share this profile and its access rules
-// ---------------------------------------------------------------------------
-
 resource profile 'Microsoft.Network/networkSecurityPerimeters/profiles@2023-08-01-preview' = {
     name: profileName
     parent: perimeter
     location: location
 }
 
-// ---------------------------------------------------------------------------
 // Inbound access rules
 // ---------------------------------------------------------------------------
 
@@ -63,8 +50,9 @@ resource corpNetAccessRule 'Microsoft.Network/networkSecurityPerimeters/profiles
         direction: 'Inbound'
         serviceTags: [
             'CorpNetPublic' // Microsoft corporate VPN
-            'CorpNetSaw' // Microsoft Secure Admin Workstations
-            'CorpNet.DevBox' // Microsoft Developer Boxes
+            'CorpNetSAW' // Microsoft Secure Admin Workstations
+            'CorpNetSAVM' // Microsoft Secure Admin Virtual Machines
+            'CorpNet.DevBox' // Microsoft Dev Boxes
         ]
     }
 }
@@ -78,13 +66,12 @@ resource subscriptionAccessRule 'Microsoft.Network/networkSecurityPerimeters/pro
         direction: 'Inbound'
         subscriptions: [
             {
-                id: subscription().subscriptionId
+                id: '/subscriptions/${subscription().subscriptionId}'
             }
         ]
     }
 }
 
-// ---------------------------------------------------------------------------
 // Resource associations – attach each resource to the perimeter profile
 // ---------------------------------------------------------------------------
 
@@ -126,36 +113,6 @@ resource sqlServerAssociation 'Microsoft.Network/networkSecurityPerimeters/resou
         accessMode: accessMode
         privateLinkResource: {
             id: sqlServerId
-        }
-        profile: {
-            id: profile.id
-        }
-    }
-}
-
-resource redisCacheAssociation 'Microsoft.Network/networkSecurityPerimeters/resourceAssociations@2023-08-01-preview' = {
-    name: '${perimeterName}-redis'
-    parent: perimeter
-    location: location
-    properties: {
-        accessMode: accessMode
-        privateLinkResource: {
-            id: redisCacheId
-        }
-        profile: {
-            id: profile.id
-        }
-    }
-}
-
-resource containerRegistryAssociation 'Microsoft.Network/networkSecurityPerimeters/resourceAssociations@2023-08-01-preview' = {
-    name: '${perimeterName}-acr'
-    parent: perimeter
-    location: location
-    properties: {
-        accessMode: accessMode
-        privateLinkResource: {
-            id: containerRegistryId
         }
         profile: {
             id: profile.id

@@ -3,9 +3,15 @@ param storageAccountName string
 param appIdentityPrincipalId string
 param serviceSubnetId string
 
-module roles './roles.bicep' = {
-  name: 'roles'
-}
+var storageQueueContributorRole = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
+)
+
+var blobContributorRole = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
+)
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   name: storageAccountName
@@ -56,7 +62,7 @@ resource acaStorageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-
   scope: storageAccount
   name: guid(subscription().id, resourceGroup().id, 'aca-queue-access')
   properties: {
-    roleDefinitionId: roles.outputs.storageQueueContributorRole
+    roleDefinitionId: storageQueueContributorRole
     principalType: 'ServicePrincipal'
     principalId: appIdentityPrincipalId
   }
@@ -67,7 +73,7 @@ resource storageAccountContributor 'Microsoft.Authorization/roleAssignments@2022
   scope: dataProtectionContainer
   name: guid(subscription().id, resourceGroup().id, 'storage-blob-contributor')
   properties: {
-    roleDefinitionId: roles.outputs.blobContributorRole
+    roleDefinitionId: blobContributorRole
     principalType: 'ServicePrincipal'
     principalId: appIdentityPrincipalId
   }

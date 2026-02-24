@@ -32,6 +32,9 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-04-01' = {
             {
               service: 'Microsoft.KeyVault'
             }
+            {
+              service: 'Microsoft.Sql'
+            }
           ]
           networkSecurityGroup: {
             id: networkSecurityGroupId

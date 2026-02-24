@@ -6,9 +6,10 @@ param infrastructureResourceGroupName string
 param applicationInsightsName string
 param deploymentIdentityPrincipalId string
 
-module roles './roles.bicep' = {
-  name: 'roles'
-}
+var containerAppsManagedEnvironmentsContributor = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  '57cc5028-e6a7-4284-868d-0611c5923f8d'
+)
 
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2021-12-01-preview' = {
   name: logAnalyticsName
@@ -66,7 +67,7 @@ resource deploymentSubscriptionTriggerContributor 'Microsoft.Authorization/roleA
   scope: containerEnvironment
   name: guid(subscription().id, resourceGroup().id, 'containerEnvironment-contributor')
   properties: {
-    roleDefinitionId: roles.outputs.containerAppsManagedEnvironmentsContributor
+    roleDefinitionId: containerAppsManagedEnvironmentsContributor
     principalType: 'ServicePrincipal'
     principalId: deploymentIdentityPrincipalId
   }
