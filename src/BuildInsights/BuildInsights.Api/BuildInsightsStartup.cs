@@ -10,15 +10,18 @@ using BuildInsights.GitHubGraphQL;
 using BuildInsights.KnownIssues.Models;
 using BuildInsights.ServiceDefaults;
 using BuildInsights.Utilities.AzureDevOps;
+using HandlebarsDotNet;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Helix.Client;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using ProductConstructionService.Common;
 using ProductConstructionService.Common.Telemetry;
 using ProductConstructionService.WorkItems;
@@ -57,6 +60,7 @@ internal static class BuildInsightsStartup
         public const string GitHubIssues = "GitHubIssues";
         public const string RelatedBuilds = "RelatedBuilds";
         public const string BuildAnalysisFile = "BuildAnalysisFile";
+        public const string Helix = "Helix";
 
         public const string WorkItemQueueName = "WorkItemQueueName";
         public const string SpecialWorkItemQueueName = "SpecialWorkItemQueueName";
@@ -81,6 +85,7 @@ internal static class BuildInsightsStartup
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
         builder.Services.Configure<KnownIssuesProjectOptions>(ConfigurationKeys.KnownIssuesProject, (o, s) => s.Bind(o));
         builder.Services.Configure<GitHubAppSettings>(ConfigurationKeys.GitHubApp, (o, s) => s.Bind(o));
+        builder.Services.Configure<HelixSettings>(ConfigurationKeys.Helix, (o, s) => s.Bind(o));
 
         // Set up Key Vault access for some secrets
         TokenCredential azureCredential = AzureAuthentication.GetServiceCredential(isDevelopment, managedIdentityId);
@@ -107,6 +112,15 @@ internal static class BuildInsightsStartup
             var azdoTokenProvider = sp.GetRequiredService<IAzureDevOpsTokenProvider>();
             var gitHubTokenProvider = sp.GetRequiredService<IGitHubTokenProvider>();
             return new RemoteTokenProvider(azdoTokenProvider, new Microsoft.DotNet.DarcLib.GitHubTokenProvider(gitHubTokenProvider));
+        });
+
+        // Set up Helix API
+        builder.Services.AddScoped<IHelixApi>(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<HelixSettings>>();
+            return new HelixApi(new HelixApiOptions(
+                new Uri(options.Value.Endpoint),
+                new HelixApiTokenCredential(options.Value.Token)));
         });
 
         // Set up background queue processing
@@ -144,6 +158,7 @@ internal static class BuildInsightsStartup
         builder.AddServiceDefaults();
         builder.AddDataProtection(azureCredential);
         builder.AddTelemetry();
+        //builder.RegisterLogging(); // TODO
         builder.Services.AddOperationTracking(_ => { });
         builder.Services.AddHttpLogging(
             options =>

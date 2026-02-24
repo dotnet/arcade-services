@@ -5,7 +5,6 @@ using BuildInsights.Data;
 using BuildInsights.Data.Models;
 using BuildInsights.KnownIssues.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 #nullable enable
 namespace BuildInsights.KnownIssues;
@@ -23,14 +22,10 @@ public interface IKnownIssuesHistoryService
 public class KnownIssuesHistoryProvider : IKnownIssuesHistoryService
 {
     private readonly BuildInsightsContext _buildInsightsDb;
-    private readonly ILogger _logger;
 
-    public KnownIssuesHistoryProvider(
-        BuildInsightsContext buildInsightsDb,
-        ILogger<KnownIssuesHistoryProvider> logger)
+    public KnownIssuesHistoryProvider(BuildInsightsContext buildInsightsDb)
     {
         _buildInsightsDb = buildInsightsDb;
-        _logger = logger;
     }
 
     public async Task SaveKnownIssuesHistory(IEnumerable<KnownIssue> knownIssues, int buildId)
