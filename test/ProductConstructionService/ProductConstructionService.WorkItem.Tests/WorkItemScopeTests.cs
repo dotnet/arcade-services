@@ -3,13 +3,12 @@
 
 using System.Text.Json;
 using AwesomeAssertions;
+using Maestro.Common.Cache;
+using Maestro.Common.Telemetry;
 using Microsoft.ApplicationInsights;
-using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
-using ProductConstructionService.Common;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.WorkItem.Tests;
@@ -27,7 +26,7 @@ public class WorkItemScopeTests
         _services = new();
         _services.AddOptions();
         _services.AddLogging();
-        _services.AddSingleton(new TelemetryClient(new TelemetryConfiguration()));
+        _services.AddSingleton(new TelemetryClient(new()));
 
         Mock<IRedisCacheFactory> cacheFactory = new();
         cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());

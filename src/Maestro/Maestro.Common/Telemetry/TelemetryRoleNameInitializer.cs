@@ -4,7 +4,7 @@
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Channel;
 
-namespace ProductConstructionService.Api.Telemetry;
+namespace Maestro.Common.Telemetry;
 
 internal class TelemetryRoleNameInitializer : ITelemetryInitializer
 {

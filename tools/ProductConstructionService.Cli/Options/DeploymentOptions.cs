@@ -13,6 +13,7 @@ using ProductConstructionService.Common;
 using ProductConstructionService.Cli.Operations;
 using ProductConstructionService.WorkItems;
 using StackExchange.Redis;
+using Maestro.Common.Cache;
 
 namespace ProductConstructionService.Cli.Options;
 

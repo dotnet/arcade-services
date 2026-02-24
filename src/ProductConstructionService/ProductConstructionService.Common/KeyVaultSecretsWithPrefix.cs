@@ -3,10 +3,11 @@
 
 using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Azure.Security.KeyVault.Secrets;
+using Microsoft.Extensions.Configuration;
 
-namespace ProductConstructionService.Api.Configuration;
+namespace ProductConstructionService.Common;
 
-internal class KeyVaultSecretsWithPrefix(string prefix) : KeyVaultSecretManager
+public class KeyVaultSecretsWithPrefix(string prefix) : KeyVaultSecretManager
 {
     private readonly string _prefix = prefix;
 

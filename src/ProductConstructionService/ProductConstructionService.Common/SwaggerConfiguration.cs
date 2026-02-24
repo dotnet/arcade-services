@@ -5,12 +5,14 @@ using System.Reflection;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json.Linq;
-using ProductConstructionService.Api.Api;
 
-namespace ProductConstructionService.Api.Configuration;
+namespace ProductConstructionService.Common;
 
 public static class SwaggerConfiguration
 {
@@ -154,7 +156,7 @@ public static class SwaggerConfiguration
                 string xmlPath;
                 if (builder.Environment.IsDevelopment())
                 {
-                    xmlPath = Path.GetDirectoryName(typeof(PcsStartup).Assembly.Location)!;
+                    xmlPath = Path.GetDirectoryName(typeof(SwaggerConfiguration).Assembly.Location)!;
                 }
                 else
                 {

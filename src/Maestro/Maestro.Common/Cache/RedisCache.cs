@@ -6,7 +6,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 
-namespace ProductConstructionService.Common;
+namespace Maestro.Common.Cache;
 
 public interface IRedisCache
 {

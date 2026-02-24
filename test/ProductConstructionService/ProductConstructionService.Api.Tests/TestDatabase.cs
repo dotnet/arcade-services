@@ -3,6 +3,7 @@
 
 using Maestro.Data;
 using Microsoft.Data.SqlClient;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -54,7 +55,7 @@ public class TestDatabase : IDisposable
         {
             EnvironmentName = Environments.Development
         });
-        collection.AddBuildAssetRegistry(o =>
+        collection.AddDbContext<BuildAssetRegistryContext>(o =>
         {
             o.UseSqlServer(BuildAssetRegistryContextFactory.GetConnectionString(databaseName));
             o.EnableServiceProviderCaching(false);

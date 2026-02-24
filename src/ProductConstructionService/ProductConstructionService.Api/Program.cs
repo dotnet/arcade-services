@@ -17,7 +17,6 @@ bool useSwagger = isDevelopment;
 
 await builder.ConfigurePcs(
     addKeyVault: true,
-    authRedis: !isDevelopment,
     addSwagger: useSwagger);
 
 var app = builder.Build();
@@ -47,13 +46,10 @@ app.Use((context, next) =>
 
 app.UseHttpLogging();
 
-// Configure the HTTP request pipeline.
 if (isDevelopment)
 {
     app.UseDeveloperExceptionPage();
-    await app.Services.UseLocalWorkItemQueues([
-        app.Configuration.GetRequiredValue(WorkItemConfiguration.DefaultWorkItemQueueNameConfigurationKey),
-        app.Configuration.GetRequiredValue(WorkItemConfiguration.CodeFlowWorkItemQueueNameConfigurationKey)]);
+    await app.Services.UseLocalWorkItemQueues(["default-pcs-queue", "special-pcs-queue"]);
 
     if (useSwagger)
     {

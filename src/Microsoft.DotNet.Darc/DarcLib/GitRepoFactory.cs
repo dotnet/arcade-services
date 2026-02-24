@@ -4,6 +4,7 @@
 using System;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
+using Maestro.Common.Telemetry;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 

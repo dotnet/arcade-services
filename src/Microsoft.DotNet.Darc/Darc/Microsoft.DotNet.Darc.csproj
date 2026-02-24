@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Maestro\Maestro.Common\Maestro.Common.csproj" />
+    <ProjectReference Include="..\..\ProductConstructionService\Microsoft.DotNet.ProductConstructionService.Client\Microsoft.DotNet.ProductConstructionService.Client.csproj" />
     <ProjectReference Include="..\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
   </ItemGroup>
 

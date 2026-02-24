@@ -62,7 +62,7 @@ public class GitRepoCloner : IGitRepoCloner
             {
                 // The PAT is actually the only thing that matters here, the username
                 // will be ignored.
-                Username = RemoteTokenProvider.GitRemoteUser,
+                Username = Constants.GitHubBotUserName,
                 Password = _remoteTokenProvider.GetTokenForRepository(repoUri),
             };
 

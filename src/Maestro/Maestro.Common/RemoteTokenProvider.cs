@@ -1,13 +1,23 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
-using System.Threading.Tasks;
-using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
 
-#nullable enable
-namespace Microsoft.DotNet.DarcLib;
+namespace Maestro.Common;
+
+public interface IRemoteTokenProvider
+{
+    string? GetTokenForRepository(string repoUri);
+
+    Task<string?> GetTokenForRepositoryAsync(string repoUri);
+}
+
+public class ResolvedTokenProvider(string? token) : IRemoteTokenProvider
+{
+    public string? GetTokenForRepository(string repoUri) => token;
+
+    public Task<string?> GetTokenForRepositoryAsync(string repoUri) => Task.FromResult(token);
+}
 
 public class RemoteTokenProvider : IRemoteTokenProvider
 {
@@ -43,8 +53,6 @@ public class RemoteTokenProvider : IRemoteTokenProvider
         _azdoTokenProvider = new ResolvedTokenProvider(azdoToken);
         _gitHubTokenProvider = new ResolvedTokenProvider(gitHubToken);
     }
-
-    public static string GitRemoteUser => Constants.GitHubBotUserName;
 
     public async Task<string?> GetTokenForRepositoryAsync(string repoUri)
     {
