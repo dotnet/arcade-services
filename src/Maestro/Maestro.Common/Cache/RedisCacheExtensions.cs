@@ -4,10 +4,9 @@
 using Microsoft.Azure.StackExchangeRedis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using ProductConstructionService.Common.FeatureFlags;
 using StackExchange.Redis;
 
-namespace ProductConstructionService.Common.Cache;
+namespace Maestro.Common.Cache;
 
 public static class RedisCacheExtensions
 {
@@ -31,7 +30,6 @@ public static class RedisCacheExtensions
         builder.Services.AddSingleton(redisConfig);
         builder.Services.AddSingleton<IRedisCacheFactory, RedisCacheFactory>();
         builder.Services.AddSingleton<IRedisCacheClient, RedisCacheClient>();
-        builder.Services.AddScoped<IFeatureFlagService, FeatureFlagService>();
         builder.Services.AddSingleton<IDistributedLock, DistributedLock>();
     }
 }

@@ -3,7 +3,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace ProductConstructionService.Common.Cache;
+namespace Maestro.Common.Cache;
 
 public interface IRedisCacheClient
 {

@@ -43,7 +43,7 @@ public class MarkdownGeneratorTests
 
         private class Builder
         {
-            public static TestData Build()
+            public TestData Build()
             {
                 ServiceCollection collection = [];
                 collection.AddLogging(l => l.AddProvider(new NUnitLogger()));

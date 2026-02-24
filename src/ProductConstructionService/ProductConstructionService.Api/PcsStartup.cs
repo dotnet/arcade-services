@@ -8,6 +8,10 @@ using Azure.Core;
 using EntityFrameworkCore.Triggers;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
+using Maestro.Common.Cache;
+using Maestro.Common.FeatureFlags;
+using Maestro.Common.Telemetry;
+using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -33,8 +37,6 @@ using ProductConstructionService.Api.Controllers;
 using ProductConstructionService.Api.Pages.DependencyFlow;
 using ProductConstructionService.Api.VirtualMonoRepo;
 using ProductConstructionService.Common;
-using ProductConstructionService.Common.Cache;
-using ProductConstructionService.Common.Telemetry;
 using ProductConstructionService.DependencyFlow;
 using ProductConstructionService.ServiceDefaults;
 using ProductConstructionService.WorkItems;
@@ -92,6 +94,8 @@ internal static class PcsStartup
 
         // Read configuration
         string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
+        string databaseConnectionString = builder.Configuration.GetRequiredValue(ConfigurationKeys.DatabaseConnectionString);
+        builder.AddSqlDatabase<BuildAssetRegistryContext>(databaseConnectionString, managedIdentityId);
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
         builder.Services.Configure<EnvironmentNamespaceOptions>(
             builder.Configuration.GetSection(EnvironmentNamespaceOptions.ConfigurationKey));
@@ -99,7 +103,7 @@ internal static class PcsStartup
         TokenCredential azureCredential = AzureAuthentication.GetServiceCredential(isDevelopment, managedIdentityId);
 
         builder.AddDataProtection(azureCredential);
-        builder.AddTelemetry();
+        builder.Services.AddTelemetry();
         builder.Services.AddApplicationInsightsTelemetry();
         builder.Services.AddApplicationInsightsTelemetryProcessor<RemoveDefaultPropertiesTelemetryProcessor>();
 
@@ -118,7 +122,7 @@ internal static class PcsStartup
         {
             var azdoTokenProvider = sp.GetRequiredService<IAzureDevOpsTokenProvider>();
             var gitHubTokenProvider = sp.GetRequiredService<IGitHubTokenProvider>();
-            return new RemoteTokenProvider(azdoTokenProvider, new Microsoft.DotNet.DarcLib.GitHubTokenProvider(gitHubTokenProvider));
+            return new RemoteTokenProvider(azdoTokenProvider, new Maestro.Common.GitHubTokenProvider(gitHubTokenProvider));
         });
 
         if (isDevelopment)
@@ -128,9 +132,8 @@ internal static class PcsStartup
 
         var redisConnectionString = builder.Configuration[ConfigurationKeys.RedisConnectionString]!;
         await builder.AddRedisCache(redisConnectionString, managedIdentityId);
-        builder.AddBuildAssetRegistry();
+        builder.AddSqlDatabase<BuildAssetRegistryContext>(databaseConnectionString, managedIdentityId);
         builder.Services.AddConfigurationIngestion();
-        builder.AddMetricRecorder();
 
         builder.AddWorkItemQueues(azureCredential, waitForInitialization: true,
             new Dictionary<string, (int Count, string WorkItemType)>
@@ -156,6 +159,8 @@ internal static class PcsStartup
         builder.Services.Configure<ExponentialRetryOptions>(_ => { });
         builder.Services.AddMemoryCache();
         builder.Services.AddSingleton(builder.Configuration);
+        builder.Services.AddScoped<IFeatureFlagService, FeatureFlagService>();
+        builder.Services.AddSingleton<IMetricRecorder, MetricRecorder>();
 
         // We do not use AddMemoryCache here. We use our own cache because we wish to
         // use a sized cache and some components, such as EFCore, do not implement their caching

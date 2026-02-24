@@ -3,13 +3,13 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Net;
+using Maestro.Common.Cache;
 using Maestro.Data;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ProductConstructionService.Common;
-using ProductConstructionService.Common.Cache;
 using ProductConstructionService.DependencyFlow.Models;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;

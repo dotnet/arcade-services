@@ -2,8 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure;
-using ProductConstructionService.Common.Cache;
+using Maestro.Common.Cache;
 using ProductConstructionService.WorkItems;
+
+namespace ProductConstructionService.WorkItems;
 
 public interface IReminderManager<T> where T : WorkItem
 {

@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure.Core;
+using Azure.Identity;
 using BuildInsights.Api.Configuration;
 using BuildInsights.Api.Configuration.Models;
 using BuildInsights.BuildAnalysis;
@@ -14,9 +15,12 @@ using BuildInsights.Utilities.AzureDevOps;
 using HandlebarsDotNet;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
+using Maestro.Common.Cache;
+using Maestro.Common.Telemetry;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Helix.Client;
+using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
@@ -24,8 +28,6 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using ProductConstructionService.Common;
-using ProductConstructionService.Common.Cache;
-using ProductConstructionService.Common.Telemetry;
 using ProductConstructionService.WorkItems;
 
 internal static class BuildInsightsStartup
@@ -97,7 +99,9 @@ internal static class BuildInsightsStartup
         builder.Services.Configure<HelixSettings>(ConfigurationKeys.Helix, (o, s) => s.Bind(o));
 
         // Set up Key Vault access for some secrets
-        TokenCredential azureCredential = AzureAuthentication.GetServiceCredential(isDevelopment, managedIdentityId);
+        TokenCredential azureCredential = isDevelopment
+            ? new DefaultAzureCredential()
+            : new ManagedIdentityCredential(ManagedIdentityId.FromUserAssignedClientId(managedIdentityId));
 
         if (addKeyVault)
         {
@@ -120,13 +124,12 @@ internal static class BuildInsightsStartup
         {
             var azdoTokenProvider = sp.GetRequiredService<IAzureDevOpsTokenProvider>();
             var gitHubTokenProvider = sp.GetRequiredService<IGitHubTokenProvider>();
-            return new RemoteTokenProvider(azdoTokenProvider, new Microsoft.DotNet.DarcLib.GitHubTokenProvider(gitHubTokenProvider));
+            return new RemoteTokenProvider(azdoTokenProvider, new Maestro.Common.GitHubTokenProvider(gitHubTokenProvider));
         });
 
         // Set up SQL database
-        string databaseConnectionString = builder.Configuration.GetRequiredValue(ConfigurationKeys.DatabaseConnectionString)
-            .Replace(SqlConnectionStringUserIdPlaceholder, managedIdentityId);
-        builder.AddBuildInsightsDatabase(databaseConnectionString);
+        string databaseConnectionString = builder.Configuration.GetRequiredValue(ConfigurationKeys.DatabaseConnectionString);
+        builder.AddSqlDatabase<BuildInsightsContext>(databaseConnectionString, managedIdentityId);
 
         // Set up Kusto client provider
         builder.Services.AddKustoClientProvider("Kusto");
@@ -176,7 +179,7 @@ internal static class BuildInsightsStartup
         // Set up telemetry
         builder.AddServiceDefaults();
         builder.AddDataProtection(azureCredential);
-        builder.AddTelemetry();
+        builder.Services.AddTelemetry();
         builder.Services.AddApplicationInsightsTelemetry();
         builder.Services.AddApplicationInsightsTelemetryProcessor<RemoveDefaultPropertiesTelemetryProcessor>();
         //builder.RegisterLogging(); // TODO
@@ -295,30 +298,5 @@ internal static class BuildInsightsStartup
 
             return next();
         });
-    }
-}
-
-static file class BuildInsightsExtensions
-{
-    public static IHostApplicationBuilder AddBuildInsightsDatabase(
-        this IHostApplicationBuilder builder,
-        string databaseConnectionString)
-    {
-        builder.Services.AddDbContext<BuildInsightsContext>(options =>
-        {
-            // Do not log DB context initialization and command executed events
-            options.ConfigureWarnings(w =>
-            {
-                w.Ignore(CoreEventId.ContextInitialized);
-                w.Ignore(RelationalEventId.CommandExecuted);
-            });
-
-            options.UseSqlServer(databaseConnectionString, sqlOptions =>
-            {
-                sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);
-            });
-        });
-
-        return builder;
     }
 }

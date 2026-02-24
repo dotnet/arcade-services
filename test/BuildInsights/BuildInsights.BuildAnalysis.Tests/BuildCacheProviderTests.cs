@@ -30,7 +30,7 @@ public class BuildCacheProviderTests
             {
             }
 
-            public static TestData Build()
+            public TestData Build()
             {
                 var collection = new ServiceCollection();
 

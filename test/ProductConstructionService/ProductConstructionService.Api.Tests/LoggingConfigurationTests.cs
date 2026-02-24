@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using AwesomeAssertions;
+using Maestro.Common.Telemetry;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;

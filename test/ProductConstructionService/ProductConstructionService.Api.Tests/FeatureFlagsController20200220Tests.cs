@@ -2,11 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using AwesomeAssertions;
+using Maestro.Common.FeatureFlags;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
-using ProductConstructionService.Common.FeatureFlags;
 
 namespace ProductConstructionService.Api.Tests;
 

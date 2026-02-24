@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 using ProductConstructionService.Cli.Operations;
 using ProductConstructionService.WorkItems;
 using StackExchange.Redis;
-using ProductConstructionService.Common.Cache;
+using Maestro.Common.Cache;
 
 namespace ProductConstructionService.Cli.Options;
 

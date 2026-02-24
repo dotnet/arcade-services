@@ -4,11 +4,11 @@
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using ProductConstructionService.Common.Cache;
+using Maestro.Common.Cache;
+using Maestro.Common.Telemetry;
 
 namespace ProductConstructionService.WorkItems;
 

@@ -5,7 +5,7 @@ using System.Diagnostics;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
 
-namespace ProductConstructionService.Common.Telemetry;
+namespace Maestro.Common.Telemetry;
 
 public enum TrackedGitOperation
 {

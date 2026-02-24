@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
+using Maestro.Common.Cache;
+using Maestro.Common.Telemetry;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
@@ -14,7 +16,6 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.Common.Cache;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;

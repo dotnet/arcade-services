@@ -3,6 +3,7 @@
 
 using System.Net;
 using AwesomeAssertions;
+using Maestro.Common.Cache;
 using Maestro.Data;
 using Maestro.DataProviders;
 using Maestro.DataProviders.ConfigurationIngestion;
@@ -25,7 +26,6 @@ using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
 using ProductConstructionService.Api.Controllers;
 using ProductConstructionService.Api.v2020_02_20.Models;
 using ProductConstructionService.Common;
-using ProductConstructionService.Common.Cache;
 using ProductConstructionService.DependencyFlow.Tests.Mocks;
 
 namespace ProductConstructionService.Api.Tests;
