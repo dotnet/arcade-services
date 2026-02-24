@@ -5,8 +5,6 @@
     <UserSecretsId>ae822e9d-17dd-440e-b241-ffd12f1f666d</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>..\..\..</DockerfileContext>
-    <!-- We're referencing Maestro.Data, which isn't signed and doesn't have a strong name, so we can't be signed neither -->
-    <SignAssembly>False</SignAssembly>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 

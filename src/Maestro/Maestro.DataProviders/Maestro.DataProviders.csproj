@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <SignAssembly>false</SignAssembly>
     <IsPackable>true</IsPackable>
     <Nullable>disable</Nullable>
   </PropertyGroup>
