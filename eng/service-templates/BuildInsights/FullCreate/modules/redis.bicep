@@ -42,3 +42,5 @@ resource deploymentRedisDataContributorRoleAssignment 'Microsoft.Cache/redis/acc
     objectIdAlias: 'Deployment Managed Identity'
   }
 }
+
+output redisCacheId string = redisCache.id

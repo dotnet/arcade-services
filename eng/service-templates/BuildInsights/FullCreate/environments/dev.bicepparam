@@ -39,6 +39,7 @@ param infrastructureResourceGroupName = '${serviceNameKebabCase}-service-ip-${en
 param publicIpAddressName = '${serviceNameKebabCase}-service-public-ip-${environmentSuffix}'
 param publicIpAddressServiceTag = 'DotNet${serviceNamePascalCase}${environmentPascalCase}'
 param enablePublicIpAddress = false
+param networkSecurityPerimeterName = '${serviceNameKebabCase}-nsp-${environmentSuffix}'
 
 // SQL
 param sqlServerName = '${serviceNameKebabCase}-sql-${environmentSuffix}'

@@ -59,3 +59,4 @@ resource vnetRule 'Microsoft.Sql/servers/virtualNetworkRules@2023-08-01-preview'
 
 output sqlServerFqdn string = sqlServer.properties.fullyQualifiedDomainName
 output sqlDatabaseName string = sqlDatabase.name
+output sqlServerId string = sqlServer.id

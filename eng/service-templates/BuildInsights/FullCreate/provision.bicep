@@ -84,6 +84,9 @@ param publicIpAddressServiceTag string
 @description('Enable creation of public IP address resources')
 param enablePublicIpAddress bool = (environmentName == 'Production')
 
+@description('Network Security Perimeter name')
+param networkSecurityPerimeterName string
+
 module networkSecurityGroupModule 'modules/nsg.bicep' = {
     name: 'networkSecurityGroupModule'
     params: {
@@ -219,5 +222,18 @@ module sqlDatabaseModule 'modules/sql-database.bicep' = {
         sqlDatabaseName: sqlDatabaseName
         appIdentityPrincipalId: managedIdentitiesModule.outputs.appIdentityPrincipalId
         serviceSubnetId: virtualNetworkModule.outputs.productConstructionServiceSubnetId
+    }
+}
+
+module networkSecurityPerimeterModule 'modules/network-security-perimeter.bicep' = {
+    name: 'networkSecurityPerimeterModule'
+    params: {
+        location: location
+        perimeterName: networkSecurityPerimeterName
+        keyVaultId: keyVaultsModule.outputs.keyVaultId
+        storageAccountId: storageAccountModule.outputs.storageAccountId
+        sqlServerId: sqlDatabaseModule.outputs.sqlServerId
+        redisCacheId: redisModule.outputs.redisCacheId
+        containerRegistryId: containerRegistryModule.outputs.containerRegistryId
     }
 }

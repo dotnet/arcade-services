@@ -72,3 +72,5 @@ resource storageAccountContributor 'Microsoft.Authorization/roleAssignments@2022
     principalId: appIdentityPrincipalId
   }
 }
+
+output storageAccountId string = storageAccount.id

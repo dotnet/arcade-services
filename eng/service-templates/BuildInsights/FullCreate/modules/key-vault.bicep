@@ -90,3 +90,5 @@ resource dataProtectionKey 'Microsoft.KeyVault/vaults/keys@2023-07-01' = {
     }
   }
 }
+
+output keyVaultId string = keyVault.id

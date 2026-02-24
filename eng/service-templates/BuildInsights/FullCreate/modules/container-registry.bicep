@@ -65,3 +65,5 @@ resource deploymentAcrPush 'Microsoft.Authorization/roleAssignments@2022-04-01' 
     principalId: deploymentIdentityPrincipalId
   }
 }
+
+output containerRegistryId string = containerRegistry.id
