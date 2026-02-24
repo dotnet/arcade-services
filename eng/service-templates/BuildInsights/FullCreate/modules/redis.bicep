@@ -22,23 +22,23 @@ resource redisCache 'Microsoft.Cache/redis@2024-03-01' = {
 }
 
 // allow redis cache read / write access to the service's identity
-resource pcsRedisDataContributorRoleAssignment 'Microsoft.Cache/redis/accessPolicyAssignments@2024-03-01' = {
-  name: guid(subscription().id, resourceGroup().id, 'pcsDataContributor')
+resource serviceRedisDataContributorRoleAssignment 'Microsoft.Cache/redis/accessPolicyAssignments@2024-03-01' = {
+  name: guid(subscription().id, resourceGroup().id, 'serviceDataContributor')
   parent: redisCache
   properties: {
     accessPolicyName: 'Data Contributor'
     objectId: appIdentityPrincipalId
-    objectIdAlias: 'PCS Managed Identity'
+    objectIdAlias: 'Service Managed Identity'
   }
 }
 
-// allow redis cache read / write access to the service's identity
+// allow redis cache read / write access to the deployment's identity
 resource deploymentRedisDataContributorRoleAssignment 'Microsoft.Cache/redis/accessPolicyAssignments@2024-03-01' = {
   name: guid(subscription().id, resourceGroup().id, 'deploymentDataContributor')
   parent: redisCache
   properties: {
     accessPolicyName: 'Data Contributor'
     objectId: deploymentIdentityPrincipalId
-    objectIdAlias: 'PCS Managed Identity'
+    objectIdAlias: 'Deployment Managed Identity'
   }
 }

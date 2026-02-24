@@ -45,9 +45,9 @@ resource storageAccountQueue 'Microsoft.Storage/storageAccounts/queueServices/qu
 }
 
 // allow storage queue access to the identity used for the aca's
-resource pcsStorageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource acaStorageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: storageAccount
-  name: guid(subscription().id, resourceGroup().id, 'pcs-queue-access')
+  name: guid(subscription().id, resourceGroup().id, 'aca-queue-access')
   properties: {
     roleDefinitionId: roles.outputs.storageQueueContributorRole
     principalType: 'ServicePrincipal'
@@ -55,7 +55,7 @@ resource pcsStorageQueueAccess 'Microsoft.Authorization/roleAssignments@2022-04-
   }
 }
 
-// allow data protection container access to the identity used for the pcs
+// allow data protection container access to the identity used for the service
 resource storageAccountContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: dataProtectionContainer
   name: guid(subscription().id, resourceGroup().id, 'storage-blob-contributor')

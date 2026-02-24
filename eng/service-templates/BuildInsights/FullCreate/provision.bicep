@@ -42,10 +42,10 @@ param serviceName string
 @description('Storage account name')
 param storageAccountName string
 
-@description('Name of the MI used for the PCS container app')
+@description('Name of the MI used for the service container app')
 param appIdentityName string
 
-@description('Name of the identity used for the PCS deployment')
+@description('Name of the identity used for the service deployment')
 param deploymentIdentityName string
 
 @description('Virtual network name')
@@ -63,7 +63,7 @@ param networkSecurityGroupName string
 @description('Service subnet name')
 param serviceSubnetName string
 
-@description('Resource group where PCS IP resources will be created')
+@description('Resource group where service IP resources will be created')
 param infrastructureResourceGroupName string
 
 @description('Number of replicas for the container app')

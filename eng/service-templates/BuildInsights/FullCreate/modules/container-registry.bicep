@@ -36,7 +36,7 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2022-02-01-pr
 // allow acr pulls to the identity used for the application
 resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: containerRegistry
-  name: guid(subscription().id, resourceGroup().id, 'pcsAcrPull')
+  name: guid(subscription().id, resourceGroup().id, 'acaAcrPull')
   properties: {
     roleDefinitionId: roles.outputs.acrPullRole
     principalType: 'ServicePrincipal'
