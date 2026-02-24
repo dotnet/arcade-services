@@ -11,7 +11,7 @@ param environmentName = 'Development'
 param serviceName = '${serviceNameKebabCase}-${environmentSuffix}'
 
 // Container app runtime
-param containerEnvironmentName = '${serviceNameKebabCase}-service-env-${environmentSuffix}'
+param containerEnvironmentName = '${serviceNameKebabCase}-env-${environmentSuffix}'
 param containerCpuCoreCount = '1.0'
 param containerMemory = '2Gi'
 param containerReplicas = 3
@@ -23,20 +23,20 @@ param deploymentIdentityName = '${serviceNamePascalCase}ServiceDeployment${envir
 param scheduledJobIdentityName = '${serviceNamePascalCase}ScheduledJob${environmentPascalCase}'
 
 // Observability
-param applicationInsightsName = '${serviceNameKebabCase}-service-ai-${environmentSuffix}'
-param logAnalyticsName = '${serviceNameKebabCase}-service-workspace-${environmentSuffix}'
+param applicationInsightsName = '${serviceNameKebabCase}-ai-${environmentSuffix}'
+param logAnalyticsName = '${serviceNameKebabCase}-workspace-${environmentSuffix}'
 
 // Data and secrets
 param keyVaultName = '${serviceNamePascalCase}${environmentPascalCase}'
-param azureCacheRedisName = '${serviceNameKebabCase}-service-rds-${environmentSuffix}'
+param azureCacheRedisName = '${serviceNameKebabCase}-redis-${environmentSuffix}'
 param storageAccountName = '${toLower(replace(serviceNameKebabCase, '-', ''))}${environmentSuffix}'
 
 // Networking
-param virtualNetworkName = '${serviceNameKebabCase}-service-vnet-${environmentSuffix}'
-param serviceSubnetName = '${serviceNameKebabCase}-service-subnet'
-param networkSecurityGroupName = '${serviceNameKebabCase}-service-nsg-${environmentSuffix}'
-param infrastructureResourceGroupName = '${serviceNameKebabCase}-service-ip-${environmentSuffix}'
-param publicIpAddressName = '${serviceNameKebabCase}-service-public-ip-${environmentSuffix}'
+param virtualNetworkName = '${serviceNameKebabCase}-vnet-${environmentSuffix}'
+param serviceSubnetName = '${serviceNameKebabCase}-subnet'
+param networkSecurityGroupName = '${serviceNameKebabCase}-nsg-${environmentSuffix}'
+param infrastructureResourceGroupName = '${serviceNameKebabCase}-ip-${environmentSuffix}'
+param publicIpAddressName = '${serviceNameKebabCase}-public-ip-${environmentSuffix}'
 param publicIpAddressServiceTag = 'DotNet${serviceNamePascalCase}${environmentPascalCase}'
 param enablePublicIpAddress = false
 param networkSecurityPerimeterName = '${serviceNameKebabCase}-nsp-${environmentSuffix}'
