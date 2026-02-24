@@ -15,7 +15,10 @@ internal class ForwardFlowCommandLineOptions : CodeFlowCommandLineOptions<Forwar
 {
     // This argument would not be necessary as we have the --vmr option but just to keep the forward and backflow commands
     // follow the consistent format `darc vmr *flow [target]`, where the target can be either a repository or a VMR.
-    [Value(0, Required = false, HelpText = "Path to the VMR to flow the current commit to. Can be used instead of the --vmr option.")]
+    [Value(0,
+        Required = false,
+        MetaName = "VMR path",
+        HelpText = "Path to the VMR on disk to flow the current commit to. Can be used instead of the --vmr option.")]
     public string Vmr { get; set; }
 
     public override IEnumerable<string> Repositories => [ "to VMR:" + Environment.CurrentDirectory ];

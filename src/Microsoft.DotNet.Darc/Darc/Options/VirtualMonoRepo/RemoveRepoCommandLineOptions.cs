@@ -11,7 +11,7 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 [Verb("remove-repo", HelpText = "Removes repo(s) from the VMR.")]
 internal class RemoveRepoCommandLineOptions : VmrCommandLineOptions<RemoveRepoOperation>, IBaseVmrCommandLineOptions
 {
-    [Value(0, Required = true, HelpText = "Repository names to remove from the VMR.")]
+    [Value(0, MetaName = "Repository names", Required = true, HelpText = "Repository names to remove from the VMR.")]
     public IEnumerable<string> Repositories { get; set; }
 
     // Required by IBaseVmrCommandLineOptions but not used for this command

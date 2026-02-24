@@ -14,7 +14,7 @@ internal class VmrDiffOptions : VmrCommandLineOptions<VmrDiffOperation>
     [Option("output-path", HelpText = "Path where git patch(es) will be created (patches are split to be under 1GB)", Required = false)]
     public string? OutputPath { get; set; }
 
-    [Value(0, Required = false, HelpText =
+    [Value(0, MetaName = "Repo specs", Required = false, HelpText =
         "Optional repository specification for diff calculation. Usage patterns:\n" +
         "1. No argument: Auto-detects based on current directory\n" +
         "   - When called from a VMR dir, diffs against all repositories in source-manifest.json.\n" +

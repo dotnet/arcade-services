@@ -467,7 +467,7 @@ public sealed class Remote : IRemote
         if (stripBaseDirectory)
         {
             files = [.. files.Select(f => new GitFile(
-                StringUtils.StripStart(f.FilePath, baseDirectory),
+                StringUtils.StripStart(f.FilePath, baseDirectory).TrimStart('/'),
                 f.Content,
                 f.ContentEncoding,
                 f.Mode,

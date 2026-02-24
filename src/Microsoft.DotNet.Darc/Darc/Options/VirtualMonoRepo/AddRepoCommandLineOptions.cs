@@ -11,7 +11,7 @@ namespace Microsoft.DotNet.Darc.Options.VirtualMonoRepo;
 [Verb("add-repo", HelpText = "Adds new repo(s) to the VMR that haven't been synchronized yet.")]
 internal class AddRepoCommandLineOptions : VmrCommandLineOptions<AddRepoOperation>, IBaseVmrCommandLineOptions
 {
-    [Value(0, Required = true, HelpText =
+    [Value(0, MetaName = "Repository URIs", Required = true, HelpText =
         "Repository URIs in the form of URI:REVISION where URI is the git repository URL (e.g., https://github.com/dotnet/runtime) and REVISION is a commit SHA or other git reference (branch, tag).")]
     public IEnumerable<string> Repositories { get; set; }
 

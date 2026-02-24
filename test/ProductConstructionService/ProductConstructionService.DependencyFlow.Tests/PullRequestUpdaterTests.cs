@@ -429,7 +429,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         string? headBranchSha = null,
         bool willFlowNewBuild = false,
         bool mockMergePolicyEvaluator = true,
-        bool? sourceRepoNotified = null)
+        bool? sourceRepoNotified = null,
+        bool blockedFromFutureUpdates = false)
         => WithExistingCodeFlowPullRequest(
             forBuild,
             PrStatus.Open,
@@ -439,7 +440,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             headBranchSha,
             willFlowNewBuild: willFlowNewBuild,
             mockMergePolicyEvaluator: mockMergePolicyEvaluator,
-            sourceRepoNotified: sourceRepoNotified);
+            sourceRepoNotified: sourceRepoNotified,
+            blockedFromFutureUpdates: blockedFromFutureUpdates);
 
     protected IDisposable WithExistingCodeFlowPullRequest(
         Build forBuild,
@@ -450,7 +452,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
         string? headBranchSha = null,
         bool willFlowNewBuild = false,
         bool mockMergePolicyEvaluator = true,
-        bool? sourceRepoNotified = null)
+        bool? sourceRepoNotified = null,
+        bool blockedFromFutureUpdates = false)
     {
         var prUrl = Subscription.TargetDirectory != null
             ? VmrPullRequestUrl
@@ -467,7 +470,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 prUrl,
                 nextBuildToProcess,
                 headBranchSha: InProgressPrHeadBranchSha,
-                sourceRepoNotified: sourceRepoNotified);
+                sourceRepoNotified: sourceRepoNotified,
+                blockedFromFutureUpdates: blockedFromFutureUpdates);
             SetState(Subscription, pr);
             SetExpectedPullRequestState(Subscription, pr);
         });
@@ -680,7 +684,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
             Func<Asset, bool>? assetFilter = null,
             bool? sourceRepoNotified = null,
             UnixPath? relativeBasePath = null,
-            List<DependencyUpdateSummary>? dependencyUpdates = null)
+            List<DependencyUpdateSummary>? dependencyUpdates = null,
+            bool blockedFromFutureUpdates = false)
         => new()
         {
             UpdaterId = GetPullRequestUpdaterId().ToString(),
@@ -719,7 +724,8 @@ internal abstract class PullRequestUpdaterTests : SubscriptionOrPullRequestUpdat
                 {
                     [Subscription.Id] = nextBuildToProcess
                 } :
-                []
+                [],
+            BlockedFromFutureUpdates = blockedFromFutureUpdates
         };
 
     protected void ThenGetRequiredUpdatesForMultipleDirectoriesShouldHaveBeenCalled(Build withBuild, bool prExists, params UnixPath[] expectedDirectories)
