@@ -3,10 +3,47 @@
 
 using System.Diagnostics;
 using Microsoft.ApplicationInsights;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
 
 namespace ProductConstructionService.Common.Telemetry;
+
+public enum TrackedGitOperation
+{
+    Clone,
+    Fetch,
+    Push,
+}
+
+public enum CustomEventType
+{
+    PullRequestUpdateFailed
+}
+
+public interface ITelemetryRecorder
+{
+    /// <summary>
+    /// Records work item duration and result in the customEvents table, with the `workItem.{type}` name
+    /// </summary>
+    ITelemetryScope RecordWorkItemCompletion(string workItemName, long attemptNumber, string operationId);
+
+    /// <summary>
+    /// Records git operation duration and result.
+    /// </summary>
+    ITelemetryScope RecordGitOperation(TrackedGitOperation operation, string repoUri);
+
+    /// <summary>
+    /// Records a custom event with the given name and custom properties.
+    /// </summary>
+    void RecordCustomEvent(CustomEventType customEvent, Dictionary<string, string> customProperties);
+}
+
+public interface ITelemetryScope : IDisposable
+{
+    /// <summary>
+    /// Marks the operation running in the scope as successful, always call this method before disposing the scope
+    /// </summary>
+    void SetSuccess();
+}
 
 public class TelemetryRecorder(
         ILogger<TelemetryRecorder> logger,

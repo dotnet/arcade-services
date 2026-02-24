@@ -26,8 +26,4 @@
     <PackageReference Include="Swashbuckle.AspNetCore.Newtonsoft" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
   </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\Maestro\Maestro.Data\Maestro.Data.csproj" />
-  </ItemGroup>
 </Project>

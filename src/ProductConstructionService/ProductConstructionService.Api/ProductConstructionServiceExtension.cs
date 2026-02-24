@@ -2,23 +2,16 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Data;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
-using StackExchange.Redis;
-using Microsoft.Azure.StackExchangeRedis;
-using ProductConstructionService.Common.FeatureFlags;
-using ProductConstructionService.Common.Cache;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using ProductConstructionService.Common;
 
-namespace ProductConstructionService.Common;
+namespace ProductConstructionService.Api;
 
 public static class ProductConstructionServiceExtension
 {
-    private const string RedisConnectionString = "redis";
     public const string ManagedIdentityClientId = "ManagedIdentityClientId";
     private const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
     private const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
@@ -53,32 +46,6 @@ public static class ProductConstructionServiceExtension
 
         builder.Services.AddKustoClientProvider("Kusto");
         builder.Services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>();
-    }
-
-    public static async Task AddRedisCache(
-        this IHostApplicationBuilder builder,
-        bool useAuth)
-    {
-        var redisConfig = ConfigurationOptions.Parse(
-            builder.Configuration.GetSection("ConnectionStrings").GetRequiredValue(RedisConnectionString));
-        var managedIdentityId = builder.Configuration[ManagedIdentityClientId];
-
-        if (useAuth)
-        {
-            AzureCacheOptions azureOptions = new();
-            if (managedIdentityId != "system")
-            {
-                azureOptions.ClientId = managedIdentityId;
-            }
-
-            await redisConfig.ConfigureForAzureAsync(azureOptions);
-        }
-
-        builder.Services.AddSingleton(redisConfig);
-        builder.Services.AddSingleton<IRedisCacheFactory, RedisCacheFactory>();
-        builder.Services.AddSingleton<IRedisCacheClient, RedisCacheClient>();
-        builder.Services.AddScoped<IFeatureFlagService, FeatureFlagService>();
-        builder.Services.AddSingleton<IDistributedLock, DistributedLock>();
     }
 
     public static void AddMetricRecorder(this IHostApplicationBuilder builder)

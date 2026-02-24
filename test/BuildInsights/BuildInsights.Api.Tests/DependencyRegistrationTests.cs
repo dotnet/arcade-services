@@ -17,8 +17,7 @@ public class DependencyRegistrationTests
     {
         var builder = ApiTestConfiguration.CreateTestHostBuilder();
         await builder.ConfigureBuildInsights(
-            addKeyVault: false,
-            authRedis: false);
+            addKeyVault: false);
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(
             s =>
@@ -38,7 +37,7 @@ public class DependencyRegistrationTests
                 "BuildInsights.BuildAnalysis.BuildAnalysisRepositoryConfigurationProvider",
                 "BuildInsights.BuildAnalysis.BuildProcessingStatusStatusProvider",
                 "BuildInsights.BuildAnalysis.CheckResultProvider",
-                "BuildInsights.KnownIssues.KnownIssuesHistoryProvider",
+                //"BuildInsights.KnownIssues.KnownIssuesHistoryProvider",
                 "BuildInsights.QueueInsights.MatrixOfTruthService",
                 "BuildInsights.QueueInsights.QueueInsightsService",
                 "BuildInsights.Utilities.AzureDevOps.ThrottlingHeaderLoggingHandler",

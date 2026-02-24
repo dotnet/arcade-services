@@ -4,10 +4,10 @@
 using System.Globalization;
 using System.Net;
 using System.Text;
+using Azure.Core;
 using EntityFrameworkCore.Triggers;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
-using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
@@ -16,28 +16,28 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.Services.Utility;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
+using Octokit.Webhooks;
+using Octokit.Webhooks.AspNetCore;
 using ProductConstructionService.Api.Api;
 using ProductConstructionService.Api.Configuration;
+using ProductConstructionService.Api.Controllers;
 using ProductConstructionService.Api.Pages.DependencyFlow;
 using ProductConstructionService.Api.VirtualMonoRepo;
 using ProductConstructionService.Common;
-using ProductConstructionService.WorkItems;
+using ProductConstructionService.Common.Cache;
+using ProductConstructionService.Common.Telemetry;
 using ProductConstructionService.DependencyFlow;
 using ProductConstructionService.ServiceDefaults;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Octokit.Webhooks.AspNetCore;
-using Octokit.Webhooks;
-using ProductConstructionService.Api.Controllers;
-using Azure.Core;
-using Microsoft.DotNet.DarcLib.Helpers;
-using ProductConstructionService.Common.Telemetry;
+using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Api;
 
@@ -64,6 +64,7 @@ internal static class PcsStartup
         public const string EntraAuthenticationKey = "EntraAuthentication";
         public const string KeyVaultName = "KeyVaultName";
         public const string ManagedIdentityId = "ManagedIdentityClientId";
+        public const string RedisConnectionString = "ConnectionStrings:redis";
 
         public const string CodeFlowWorkItemQueueName = "CodeFlowWorkItemQueueName";
         public const string DefaultWorkItemQueueName = "DefaultWorkItemQueueName";
@@ -80,12 +81,11 @@ internal static class PcsStartup
     /// </summary>
     /// <param name="builder"></param>
     /// <param name="addKeyVault">Use KeyVault for secrets?</param>
-    /// <param name="authRedis">Use authenticated connection for Redis?</param>
     /// <param name="addSwagger">Add Swagger?</param>
+    /// 
     internal static async Task ConfigurePcs(
         this WebApplicationBuilder builder,
         bool addKeyVault,
-        bool authRedis,
         bool addSwagger)
     {
         bool isDevelopment = builder.Environment.IsDevelopment();
@@ -100,6 +100,8 @@ internal static class PcsStartup
 
         builder.AddDataProtection(azureCredential);
         builder.AddTelemetry();
+        builder.Services.AddApplicationInsightsTelemetry();
+        builder.Services.AddApplicationInsightsTelemetryProcessor<RemoveDefaultPropertiesTelemetryProcessor>();
 
         if (addKeyVault)
         {
@@ -124,7 +126,8 @@ internal static class PcsStartup
             builder.Services.UseMaestroAuthTestRepositories();
         }
 
-        await builder.AddRedisCache(authRedis);
+        var redisConnectionString = builder.Configuration[ConfigurationKeys.RedisConnectionString]!;
+        await builder.AddRedisCache(redisConnectionString, managedIdentityId);
         builder.AddBuildAssetRegistry();
         builder.Services.AddConfigurationIngestion();
         builder.AddMetricRecorder();
@@ -264,7 +267,7 @@ internal static class PcsStartup
             {
                 controllers.AllowAnonymous();
             }
-            
+
             e.MapGitHubWebhooks(
                 path: GitHubWebHooksPath,
                 secret: app.ApplicationServices.GetRequiredService<IConfiguration>()[ConfigurationKeys.GitHubAppWebhook]);

@@ -5,6 +5,7 @@ using Azure.Core;
 using BuildInsights.Api.Configuration;
 using BuildInsights.Api.Configuration.Models;
 using BuildInsights.BuildAnalysis;
+using BuildInsights.Data;
 using BuildInsights.GitHub;
 using BuildInsights.GitHubGraphQL;
 using BuildInsights.KnownIssues.Models;
@@ -14,21 +15,23 @@ using HandlebarsDotNet;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
 using Microsoft.AspNetCore.HttpLogging;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Helix.Client;
-using Microsoft.DotNet.Internal.Logging;
+using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.Services.Utility;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using ProductConstructionService.Common;
+using ProductConstructionService.Common.Cache;
 using ProductConstructionService.Common.Telemetry;
 using ProductConstructionService.WorkItems;
 
 internal static class BuildInsightsStartup
 {
     private const string DefaultWorkItemType = "Default";
+    private const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
 
     private static class ConfigurationKeys
     {
@@ -41,8 +44,9 @@ internal static class BuildInsightsStartup
         public const string AzDoServiceHookSecret = $"{KeyVaultSecretPrefix}azdo-service-hook-secret";
 
         // Configuration from appsettings.json
+        public const string DatabaseConnectionString = "ConnectionStrings:sql";
+        public const string RedisConnectionString = "ConnectionStrings:redis";
         public const string AzureDevOpsConfiguration = "AzureDevOps";
-        public const string DatabaseConnectionString = "BuildAssetRegistrySqlConnectionString";
         public const string DependencyFlowSLAs = "DependencyFlowSLAs";
         public const string EntraAuthentication = "EntraAuthentication";
         public const string KeyVaultName = "KeyVaultName";
@@ -71,16 +75,21 @@ internal static class BuildInsightsStartup
     /// Registers all necessary services for the Product Construction Service
     /// </summary>
     /// <param name="addKeyVault">Use KeyVault for secrets?</param>
-    /// <param name="authRedis">Use authenticated connection for Redis?</param>
     internal static async Task ConfigureBuildInsights(
         this WebApplicationBuilder builder,
-        bool addKeyVault,
-        bool authRedis)
+        bool addKeyVault)
     {
         bool isDevelopment = builder.Environment.IsDevelopment();
 
-        // Register configuration settings
         string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
+
+        // If we're using a user assigned managed identity, inject it into the Kusto configuration section
+        if (!string.IsNullOrEmpty(managedIdentityId))
+        {
+            string kustoManagedIdentityIdKey = $"{ConfigurationKeys.KnownIssuesKusto}:{nameof(KustoOptions.ManagedIdentityId)}";
+            builder.Configuration[kustoManagedIdentityIdKey] = managedIdentityId;
+        }
+
         var gitHubAppSettings = builder.Configuration.GetSection(ConfigurationKeys.GitHubApp).Get<GitHubAppSettings>()!;
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
         builder.Services.Configure<KnownIssuesProjectOptions>(ConfigurationKeys.KnownIssuesProject, (o, s) => s.Bind(o));
@@ -114,6 +123,14 @@ internal static class BuildInsightsStartup
             return new RemoteTokenProvider(azdoTokenProvider, new Microsoft.DotNet.DarcLib.GitHubTokenProvider(gitHubTokenProvider));
         });
 
+        // Set up SQL database
+        string databaseConnectionString = builder.Configuration.GetRequiredValue(ConfigurationKeys.DatabaseConnectionString)
+            .Replace(SqlConnectionStringUserIdPlaceholder, managedIdentityId);
+        builder.AddBuildInsightsDatabase(databaseConnectionString);
+
+        // Set up Kusto client provider
+        builder.Services.AddKustoClientProvider("Kusto");
+
         // Set up Helix API
         builder.Services.AddScoped<IHelixApi>(sp =>
         {
@@ -139,7 +156,9 @@ internal static class BuildInsightsStartup
         builder.Services.AddMemoryCache();
         builder.Services.AddSingleton(builder.Configuration);
 
-        await builder.AddRedisCache(authRedis);
+        // Set up Redis
+        var redisConnectionString = builder.Configuration[ConfigurationKeys.RedisConnectionString]!;
+        await builder.AddRedisCache(redisConnectionString, managedIdentityId);
 
         builder.Services.AddBuildAnalysis(
             builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesCreation),
@@ -158,8 +177,11 @@ internal static class BuildInsightsStartup
         builder.AddServiceDefaults();
         builder.AddDataProtection(azureCredential);
         builder.AddTelemetry();
+        builder.Services.AddApplicationInsightsTelemetry();
+        builder.Services.AddApplicationInsightsTelemetryProcessor<RemoveDefaultPropertiesTelemetryProcessor>();
         //builder.RegisterLogging(); // TODO
         builder.Services.AddOperationTracking(_ => { });
+        builder.Services.AddSingleton<IMetricRecorder, MetricRecorder>();
         builder.Services.AddHttpLogging(
             options =>
             {
@@ -274,9 +296,29 @@ internal static class BuildInsightsStartup
             return next();
         });
     }
+}
 
-    public static bool IsGet(this HttpContext context)
+static file class BuildInsightsExtensions
+{
+    public static IHostApplicationBuilder AddBuildInsightsDatabase(
+        this IHostApplicationBuilder builder,
+        string databaseConnectionString)
     {
-        return string.Equals(context.Request.Method, "get", StringComparison.OrdinalIgnoreCase);
+        builder.Services.AddDbContext<BuildInsightsContext>(options =>
+        {
+            // Do not log DB context initialization and command executed events
+            options.ConfigureWarnings(w =>
+            {
+                w.Ignore(CoreEventId.ContextInitialized);
+                w.Ignore(RelationalEventId.CommandExecuted);
+            });
+
+            options.UseSqlServer(databaseConnectionString, sqlOptions =>
+            {
+                sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);
+            });
+        });
+
+        return builder;
     }
 }
