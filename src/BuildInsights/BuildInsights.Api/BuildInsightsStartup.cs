@@ -119,12 +119,14 @@ internal static class BuildInsightsStartup
         builder.Services.AddGitHubTokenProvider();
         builder.Services.AddGitHub();
         builder.Services.AddGitHubGraphQL();
-        builder.Services.TryAddSingleton<IRemoteTokenProvider>(sp =>
+        builder.Services.TryAddTransient<IInstallationLookup, GitHubInstallationIdResolver>();
+        builder.Services.TryAddScoped<IRemoteTokenProvider>(sp =>
         {
             var azdoTokenProvider = sp.GetRequiredService<IAzureDevOpsTokenProvider>();
             var gitHubTokenProvider = sp.GetRequiredService<IGitHubTokenProvider>();
-            return new RemoteTokenProvider(azdoTokenProvider, new BuildInsights.Api.Configuration.GitHubTokenProvider(gitHubTokenProvider));
+            return new RemoteTokenProvider(azdoTokenProvider, new BuildInsights.Api.GitHub.GitHubTokenProvider(gitHubTokenProvider));
         });
+        builder.Services.AddScoped<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
 
         // Set up SQL database
         string databaseConnectionString = builder.Configuration.GetRequiredValue(ConfigurationKeys.DatabaseConnectionString);

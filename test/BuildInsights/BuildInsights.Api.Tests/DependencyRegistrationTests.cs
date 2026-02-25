@@ -30,11 +30,6 @@ public class DependencyRegistrationTests
             out string message,
             additionalExemptTypes:
             [
-                // TODO
-                "BuildInsights.KnownIssues.KnownIssuesHistoryProvider",
-                "BuildInsights.Utilities.AzureDevOps.VssConnectionProvider",
-                "Microsoft.DotNet.GitHub.Authentication.GitHubTokenProvider",
-
                 "Microsoft.Extensions.Azure.AzureClientsGlobalOptions",
                 "Microsoft.Extensions.ServiceDiscovery.Configuration.ConfigurationServiceEndPointResolverProvider",
                 "Microsoft.Extensions.ServiceDiscovery.Http.ServiceDiscoveryHttpMessageHandlerFactory",
