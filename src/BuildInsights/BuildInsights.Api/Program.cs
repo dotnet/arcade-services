@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using BuildInsights.Api.Components;
 using BuildInsights.Api.Configuration;
 using BuildInsights.ServiceDefaults;
 using ProductConstructionService.Common;
@@ -12,28 +11,26 @@ var builder = WebApplication.CreateBuilder(args);
 bool isDevelopment = builder.Environment.IsDevelopment();
 bool useSwagger = isDevelopment;
 
-// Add service defaults & Aspire client integrations.
 await builder.ConfigureBuildInsights(addKeyVault: true);
 builder.AddServiceDefaults();
 builder.AddRedisOutputCache("cache");
 
-// Add services to the container.
-builder.Services.AddRazorComponents()
+builder.Services
+    .AddRazorComponents()
     .AddInteractiveServerComponents();
+builder.Services.AddProblemDetails();
+builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
 if (isDevelopment)
 {
     app.UseDeveloperExceptionPage();
+    app.MapOpenApi();
 
-    var workQueueName = app.Configuration.GetRequiredValue("WorkItemQueueName");
-    await app.Services.UseLocalWorkItemQueues([workQueueName]);
-
-    if (useSwagger)
-    {
-        app.UseLocalSwagger();
-    }
+    var workQueueName = app.Configuration.GetRequiredValue(BuildInsightsStartup.ConfigurationKeys.WorkItemQueueName);
+    var specialWorkQueueName = app.Configuration.GetRequiredValue(BuildInsightsStartup.ConfigurationKeys.SpecialWorkItemQueueName);
+    await app.Services.UseLocalWorkItemQueues([workQueueName, specialWorkQueueName]);
 }
 else
 {
@@ -44,23 +41,16 @@ else
 
 app.UseHttpsRedirection();
 app.UseHttpLogging();
-
 app.UseAntiforgery();
-
 app.UseOutputCache();
-
-app.MapStaticAssets();
-
-app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
 
 app.MapDefaultEndpoints();
 
-var controllers = app.MapControllers();
-if (isDevelopment)
-{
-    controllers.AllowAnonymous();
-}
+//var controllers = app.MapControllers();
+//if (isDevelopment)
+//{
+//    controllers.AllowAnonymous();
+//}
 
 await app.SetWorkItemProcessorInitialState();
 
