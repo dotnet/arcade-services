@@ -183,6 +183,7 @@ internal static class BuildInsightsStartup
         builder.Services.AddTelemetry();
         builder.Services.AddApplicationInsightsTelemetry();
         builder.Services.AddApplicationInsightsTelemetryProcessor<RemoveDefaultPropertiesTelemetryProcessor>();
+        //builder.RegisterLogging(); // TODO
         builder.Services.AddOperationTracking(_ => { });
         builder.Services.AddSingleton<IMetricRecorder, MetricRecorder>();
         builder.Services.AddHttpLogging(
@@ -195,7 +196,23 @@ internal static class BuildInsightsStartup
                 options.CombineLogs = true;
             });
 
-        builder.Services.AddControllers();
+        builder.Services
+            .AddControllers();
+        //.AddNewtonsoftJson(
+        //    options =>
+        //    {
+        //        options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+        //        options.SerializerSettings.Converters.Add(new StringEnumConverter
+        //        {
+        //            NamingStrategy = new CamelCaseNamingStrategy()
+        //        });
+        //        options.SerializerSettings.Converters.Add(
+        //            new IsoDateTimeConverter
+        //            {
+        //                DateTimeFormat = "yyyy-MM-ddTHH:mm:ssZ",
+        //                DateTimeStyles = DateTimeStyles.AdjustToUniversal
+        //            });
+        //    });
 
         // TODO: Use OpenAPI instead of Swagger?
         //if (isDevelopment)

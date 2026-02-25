@@ -1,6 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using ProductConstructionService.Common;
+
 namespace ProductConstructionService.WorkItems;
 
 public class WorkItemProcessorState
@@ -52,7 +54,7 @@ public class WorkItemProcessorState
         do
         {
             status = await _stateCache.GetStateAsync();
-        } while (WaitIfTrue(_autoResetEvent, () => status != Working, pollingRateSeconds));
+        } while (_autoResetEvent.WaitIfTrue(() => status != Working, pollingRateSeconds));
     }
 
     public async Task SetStoppedIfStoppingAsync()
@@ -81,22 +83,5 @@ public class WorkItemProcessorState
     public async Task<string> GetStateAsync()
     {
         return await _stateCache.GetStateAsync() ?? Working;
-    }
-
-
-    /// <summary>
-    /// Waits till the AutoResetEvent is signaled, or the durationSeconds expires.
-    /// If durationSeconds = -1, we'll wait indefinitely
-    /// </summary>
-    /// <returns>True, if event was signaled, otherwise false</returns>
-    private static bool WaitIfTrue(AutoResetEvent resetEvent, Func<bool> condition, int durationSeconds)
-    {
-        if (condition())
-        {
-            // if we were signaled, exit the loop
-            return !resetEvent.WaitOne(durationSeconds == -1 ? durationSeconds : durationSeconds * 1000);
-        }
-
-        return false;
     }
 }
