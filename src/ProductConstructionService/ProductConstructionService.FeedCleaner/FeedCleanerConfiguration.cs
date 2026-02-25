@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Maestro.Common.AzureDevOpsTokens;
+using Maestro.Common.Telemetry;
 using Maestro.Data;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.DotNet.DarcLib;

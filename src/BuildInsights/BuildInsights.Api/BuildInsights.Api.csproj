@@ -23,7 +23,6 @@
     <ProjectReference Include="..\BuildInsights.KnownIssues\BuildInsights.KnownIssues.csproj" />
     <ProjectReference Include="..\BuildInsights.ServiceDefaults\BuildInsights.ServiceDefaults.csproj" />
     <ProjectReference Include="..\BuildInsights.Utilities.AzureDevOps\BuildInsights.Utilities.AzureDevOps.csproj" />
-    <ProjectReference Include="..\..\ProductConstructionService\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />
     <ProjectReference Include="..\..\ProductConstructionService\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj" />
   </ItemGroup>
 

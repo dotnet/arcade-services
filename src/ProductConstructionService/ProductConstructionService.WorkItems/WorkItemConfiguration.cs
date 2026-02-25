@@ -9,7 +9,6 @@ using Azure.Storage.Queues;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using ProductConstructionService.Common;
 
 namespace ProductConstructionService.WorkItems;
 
@@ -65,9 +64,9 @@ public static class WorkItemConfiguration
         {
             builder.Services.AddTransient(sp =>
                 new ArmClient(credential)
-                    .GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{builder.Configuration.GetRequiredValue(SubscriptionIdKey)}"))
-                    .GetResourceGroups().Get(builder.Configuration.GetRequiredValue(ResourceGroupNameKey)).Value
-                    .GetContainerApp(builder.Configuration.GetRequiredValue(ContainerAppNameKey)).Value
+                    .GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{builder.Configuration[SubscriptionIdKey]}"))
+                    .GetResourceGroups().Get(builder.Configuration[ResourceGroupNameKey]).Value
+                    .GetContainerApp(builder.Configuration[ContainerAppNameKey]).Value
             );
             builder.Services.AddTransient<IReplicaWorkItemProcessorStateCacheFactory, ReplicaWorkItemProcessorStateCache>();
         }

@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure.Monitor.OpenTelemetry.AspNetCore;
+using Maestro.Common.Telemetry;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,7 +12,6 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
-using ProductConstructionService.Common;
 
 namespace ProductConstructionService.ServiceDefaults;
 
@@ -50,7 +50,7 @@ public static class Extensions
             {
                 metrics.AddRuntimeInstrumentation()
                        .AddBuiltInMeters()
-                       .AddMeter(MetricRecorder.PcsMetricsNamespace);
+                       .AddMeter(MetricRecorder.MetricNamespace);
             })
             .WithTracing(tracing =>
             {
@@ -78,7 +78,7 @@ public static class Extensions
         {
             builder.Services.Configure<OpenTelemetryLoggerOptions>(logging => logging.AddOtlpExporter());
             builder.Services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddOtlpExporter());
-            builder.Services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddMeter(MetricRecorder.PcsMetricsNamespace));
+            builder.Services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddMeter(MetricRecorder.MetricNamespace));
             builder.Services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddOtlpExporter());
         }
 

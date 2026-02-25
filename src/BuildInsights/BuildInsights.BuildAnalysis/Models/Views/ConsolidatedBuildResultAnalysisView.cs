@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
-using JetBrains.Annotations;
 using BuildInsights.KnownIssues.Models;
 
 #nullable disable
@@ -31,7 +30,6 @@ public class BasicResultsView
     }
 }
 
-[UsedImplicitly(ImplicitUseTargetFlags.Members)]
 public class ConsolidatedBuildResultAnalysisView : BasicResultsView
 {
     /// <summary>
@@ -65,7 +63,7 @@ public class ConsolidatedBuildResultAnalysisView : BasicResultsView
     public MarkdownSummarizeInstructions SummarizeInstructions { get; set; }
     public int UniqueTestFailures { get; set; }
     public int TotalBuildFailuresUnique => BuildFailuresUnique.Count;
-    public ImmutableList<Link> CompletedPipelinesLinks { get; set;  }
+    public ImmutableList<Link> CompletedPipelinesLinks { get; set; }
     public ImmutableList<Link> SucceededPipelinesLinks { get; set; }
     public ImmutableList<Link> FailingPipelinesLinks { get; set; }
     public ImmutableList<Link> TestKnownIssueAnalysisUnavailablePipelines { get; set; } = [];
@@ -181,7 +179,7 @@ public class ConsolidatedBuildResultAnalysisView : BasicResultsView
         HasData = parameters.Analysis.CompletedPipelines?.Count != 0;
         RenderSummary = parameters.SummarizeInstructions?.GenerateSummaryVersion ?? false;
         SummarizeInstructions = parameters.SummarizeInstructions;
-        InfrastructureBuildBreaks = InfrastructureBuildBreaks.GroupBy(k => k, new KnownIssueViewComparer()).Select( g => new  KnownIssueView(g.Key, g.Count())).ToList();
+        InfrastructureBuildBreaks = InfrastructureBuildBreaks.GroupBy(k => k, new KnownIssueViewComparer()).Select(g => new KnownIssueView(g.Key, g.Count())).ToList();
         RepoBuildBreaks = RepoBuildBreaks.GroupBy(k => k, new KnownIssueViewComparer()).Select(g => new KnownIssueView(g.Key, g.Count())).ToList(); ;
         TestKnownIssues = TestKnownIssues.GroupBy(k => k, new KnownIssueViewComparer()).Select(g => new KnownIssueView(g.Key, g.Count())).ToList(); ;
         BuildAnalysisSummaries = BuildAnalysisSummaries.OrderBy(t => t.BuildStatus).ToList();

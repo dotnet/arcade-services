@@ -10,7 +10,6 @@ using ProductConstructionService.WorkItems;
 var builder = WebApplication.CreateBuilder(args);
 
 bool isDevelopment = builder.Environment.IsDevelopment();
-bool useSwagger = isDevelopment;
 
 // Add service defaults & Aspire client integrations.
 await builder.ConfigureBuildInsights(addKeyVault: true);
@@ -29,11 +28,6 @@ if (isDevelopment)
 
     var workQueueName = app.Configuration.GetRequiredValue("WorkItemQueueName");
     await app.Services.UseLocalWorkItemQueues([workQueueName]);
-
-    if (useSwagger)
-    {
-        app.UseLocalSwagger();
-    }
 }
 else
 {
