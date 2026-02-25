@@ -1,16 +1,22 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
 
-namespace ProductConstructionService.Common;
+namespace Maestro.Common.Cache;
+
+public interface IRedisCacheClient
+{
+    Task<bool> TrySetAsync<T>(string key, T value, TimeSpan? expiration = null) where T : class;
+    Task<T?> TryGetAsync<T>(string key) where T : class;
+    Task<bool> DeleteAsync(string key);
+}
 
 /// <summary>
 /// This class acts as a delegate for RedisCache and RedisCacheFactory.
 /// It is needed because DarcLib does not depend on ProductConstructionService and can only access caching through a delegate.
 /// </summary>
-internal class RedisCacheClient : IRedisCacheClient
+public class RedisCacheClient : IRedisCacheClient
 {
     private readonly IRedisCacheFactory _factory;
     private readonly ILogger<RedisCacheClient> _logger;

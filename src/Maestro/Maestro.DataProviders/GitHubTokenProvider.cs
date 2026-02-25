@@ -3,11 +3,12 @@
 
 using System.Threading.Tasks;
 using Maestro.Common;
+using Microsoft.DotNet.GitHub.Authentication;
 
 #nullable enable
-namespace Microsoft.DotNet.DarcLib;
+namespace Maestro.DataProviders;
 
-public class GitHubTokenProvider(GitHub.Authentication.IGitHubTokenProvider tokenProvider) : IRemoteTokenProvider
+public class GitHubTokenProvider(IGitHubTokenProvider tokenProvider) : IRemoteTokenProvider
 {
     public string? GetTokenForRepository(string repoUri)
     {

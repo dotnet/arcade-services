@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-#nullable enable
 namespace Maestro.Common;
 
 public enum GitRepoType
@@ -111,6 +110,16 @@ public static class GitRepoUrlUtils
             }
 
             return new(repoParts[1], repoParts[0]);
+        }
+
+        // Support owner/repo format (e.g. "dotnet/arcade-services")
+        if (repoType == GitRepoType.Local)
+        {
+            string[] repoParts = uri.Split(['/'], StringSplitOptions.RemoveEmptyEntries);
+            if (repoParts.Length == 2)
+            {
+                return new(repoParts[1], repoParts[0]);
+            }
         }
 
         throw new ArgumentException("Unsupported format of repository url " + uri);

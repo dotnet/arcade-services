@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
+using Maestro.Common.Telemetry;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Internal.Testing.Utility;

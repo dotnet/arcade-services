@@ -231,7 +231,7 @@ public partial class BuildController20190116Tests
             {
                 EnvironmentName = Environments.Development
             });
-            collection.AddBuildAssetRegistry(options =>
+            collection.AddDbContext<BuildAssetRegistryContext>(options =>
             {
                 options.UseSqlServer(connectionString);
                 options.EnableServiceProviderCaching(false);

@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using LibGit2Sharp;
 using Maestro.Common;
+using Maestro.Common.Telemetry;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.Services.Utility;

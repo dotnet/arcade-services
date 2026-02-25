@@ -3,11 +3,13 @@
 
 using System.Net;
 using AwesomeAssertions;
+using Maestro.Common.Cache;
 using Maestro.Data;
 using Maestro.DataProviders;
 using Maestro.DataProviders.ConfigurationIngestion;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Kusto;
@@ -223,11 +225,12 @@ public partial class ChannelsController20200220Tests
             {
                 EnvironmentName = Environments.Development
             });
-            collection.AddBuildAssetRegistry(options =>
+            collection.AddDbContext<BuildAssetRegistryContext>(options =>
             {
                 options.UseSqlServer(connectionString);
                 options.EnableServiceProviderCaching(false);
             });
+            collection.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>();
             collection.AddSingleton(Mock.Of<IRemoteFactory>());
             collection.AddSingleton(Mock.Of<IBasicBarClient>());
 

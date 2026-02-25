@@ -18,12 +18,12 @@
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.4.0" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.6.0" />
     <PackageVersion Include="Azure.ResourceManager.AppContainers" Version="1.5.0" />
-    <PackageVersion Include="Azure.Storage.Queues" Version="12.24.0" />
+    <PackageVersion Include="AwesomeAssertions" Version="9.4.0" />
+    <PackageVersion Include="Azure.Storage.Queues" Version="12.26.0-beta.1" />
     <PackageVersion Include="Blazored.SessionStorage" Version="2.4.0" />
     <PackageVersion Include="CommandLineParser" Version="2.9.1" />
     <PackageVersion Include="DistributedLock.Redis" Version="1.1.1" />
     <PackageVersion Include="EntityFrameworkCore.Triggers" Version="1.2.3" />
-    <PackageVersion Include="AwesomeAssertions" Version="9.4.0" />
     <PackageVersion Include="FluentValidation.AspNetCore" Version="11.3.1" />
     <PackageVersion Include="LibGit2Sharp" Version="0.31.0" />
     <PackageVersion Include="Microsoft.AspNetCore.ApiPagination" Version="$(MicrosoftAspNetCoreApiPaginationVersion)" />
@@ -92,7 +92,7 @@
     <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerGen" Version="9.0.6" />
     <PackageVersion Include="Swashbuckle.AspNetCore.Newtonsoft" Version="8.1.1" />
     <PackageVersion Include="System.Drawing.Common" Version="10.0.0" />
-    <PackageVersion Include="System.IO.Hashing" Version="10.0.0" />
+    <PackageVersion Include="System.IO.Hashing" Version="10.0.1" />
     <PackageVersion Include="TextCopy" Version="6.2.1" />
     <PackageVersion Include="Verify.NUnit" Version="25.0.2" />
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />

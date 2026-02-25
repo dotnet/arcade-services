@@ -3,6 +3,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Net;
+using Maestro.Common.Cache;
 using Maestro.Data;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
@@ -66,7 +67,7 @@ public class BackflowStatusController : ControllerBase
         };
 
         await _workItemProducerFactory
-            .CreateProducer<BackflowStatusCalculationWorkItem>(IsCodeFlowSubscription: true)
+            .CreateProducer<BackflowStatusCalculationWorkItem>(IsSpecialQueue: true)
             .ProduceWorkItemAsync(workItem);
 
         _logger.LogInformation(

@@ -18,7 +18,6 @@ public class DependencyRegistrationTests
         var builder = ApiTestConfiguration.CreateTestHostBuilder();
         await builder.ConfigurePcs(
             addKeyVault: false,
-            authRedis: false,
             addSwagger: true);
 
         builder.Services.AddTransient<NonBatchedPullRequestUpdater>();

@@ -21,6 +21,8 @@ using YamlDotNet.Serialization.NamingConventions;
 using Microsoft.DotNet.MaestroConfiguration.Client;
 using GitRepoFactory = Microsoft.DotNet.DarcLib.GitRepoFactory;
 using IGitRepoFactory = Microsoft.DotNet.DarcLib.IGitRepoFactory;
+using Maestro.Common;
+using Maestro.Common.Telemetry;
 
 namespace Microsoft.DotNet.Darc.Tests.Operations;
 

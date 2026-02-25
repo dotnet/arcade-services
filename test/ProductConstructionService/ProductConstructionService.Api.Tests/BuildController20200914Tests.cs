@@ -3,10 +3,10 @@
 
 using System.Net;
 using AwesomeAssertions;
-using ProductConstructionService.Api.v2020_02_20.Models;
 using Maestro.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.EntityFrameworkCore;
@@ -16,8 +16,8 @@ using Microsoft.Extensions.Hosting.Internal;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Moq;
-
 using ProductConstructionService.Api.Api.v2020_02_20.Controllers;
+using ProductConstructionService.Api.v2020_02_20.Models;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
 using Commit = ProductConstructionService.Api.v2020_02_20.Models.Commit;
@@ -104,11 +104,12 @@ public partial class BuildController20200914Tests
             {
                 EnvironmentName = Environments.Development
             });
-            collection.AddBuildAssetRegistry(options =>
+            collection.AddDbContext<BuildAssetRegistryContext>(options =>
             {
                 options.UseSqlServer(connectionString);
                 options.EnableServiceProviderCaching(false);
             });
+            collection.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>();
             collection.AddSingleton<ISystemClock, TestClock>();
             collection.AddSingleton(mockWorkItemProducerFactory.Object);
         }
