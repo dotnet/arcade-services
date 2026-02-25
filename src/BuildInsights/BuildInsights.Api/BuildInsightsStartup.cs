@@ -23,8 +23,6 @@ using Microsoft.DotNet.Helix.Client;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.Services.Utility;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using ProductConstructionService.Common;
@@ -33,9 +31,8 @@ using ProductConstructionService.WorkItems;
 internal static class BuildInsightsStartup
 {
     private const string DefaultWorkItemType = "Default";
-    private const string SqlConnectionStringUserIdPlaceholder = "USER_ID_PLACEHOLDER";
 
-    private static class ConfigurationKeys
+    internal static class ConfigurationKeys
     {
         // All secrets loaded from KeyVault will have this prefix
         public const string KeyVaultSecretPrefix = "KeyVaultSecrets:";

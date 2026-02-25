@@ -3,6 +3,7 @@
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
+using ProductConstructionService.Common;
 
 namespace BuildInsights.Api.Tests;
 
@@ -10,18 +11,20 @@ public static class ApiTestConfiguration
 {
     public static WebApplicationBuilder CreateTestHostBuilder()
     {
-        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", Environments.Staging);
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", Environments.Development);
         Environment.SetEnvironmentVariable("APPLICATIONINSIGHTS_CONNECTION_STRING", "InstrumentationKey=value1");
 
         var builder = WebApplication.CreateBuilder();
-        builder.Configuration["ManagedIdentityClientId"] = "test-managed-identity-client-id";
         builder.Configuration["ConnectionStrings:redis"] = "localhost:6379";
-        builder.Configuration["WorkItemQueueName"] = "test-queue";
-        builder.Configuration["SpecialWorkItemQueueName"] = "test-special-queue";
-        builder.Configuration["WorkItemConsumerCount"] = "1";
-        builder.Configuration["GitHubApp:AppId"] = "12345";
-        builder.Configuration["DataProtection:DataProtectionKeyUri"] = "https://keyvault.azure.com/secret/key";
-        builder.Configuration["DataProtection:KeyBlobUri"] = "https://blobs.azure.com/secret/key";
+
+        builder.Configuration[BuildInsightsStartup.ConfigurationKeys.DatabaseConnectionString] = "sql:3555";
+        builder.Configuration[BuildInsightsStartup.ConfigurationKeys.RedisConnectionString] = "localhost:6379";
+        builder.Configuration[DataProtection.DataProtectionKeyUri] = "https://keyvault.azure.com/secret/key";
+        builder.Configuration[DataProtection.DataProtectionKeyBlobUri] = "https://blobs.azure.com/secret/key";
+        builder.Configuration[BuildInsightsStartup.ConfigurationKeys.WorkItemQueueName] = "test-queue";
+        builder.Configuration[BuildInsightsStartup.ConfigurationKeys.SpecialWorkItemQueueName] = "test-special-queue";
+        builder.Configuration[BuildInsightsStartup.ConfigurationKeys.WorkItemConsumerCount] = "1";
+        builder.Configuration[$"{BuildInsightsStartup.ConfigurationKeys.GitHubApp}:AppId"] = "12345";
         return builder;
     }
 }

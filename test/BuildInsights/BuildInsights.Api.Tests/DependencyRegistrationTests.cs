@@ -32,19 +32,9 @@ public class DependencyRegistrationTests
             [
                 // TODO
                 "BuildInsights.AzureStorage.Cache.BlobClientFactory",
-                "BuildInsights.BuildAnalysis.BuildAnalysisHistoryProvider",
-                "BuildInsights.BuildAnalysis.BuildAnalysisProvider",
-                "BuildInsights.BuildAnalysis.BuildAnalysisRepositoryConfigurationProvider",
-                "BuildInsights.BuildAnalysis.BuildProcessingStatusStatusProvider",
-                "BuildInsights.BuildAnalysis.CheckResultProvider",
-                //"BuildInsights.KnownIssues.KnownIssuesHistoryProvider",
-                "BuildInsights.QueueInsights.MatrixOfTruthService",
-                "BuildInsights.QueueInsights.QueueInsightsService",
-                "BuildInsights.Utilities.AzureDevOps.ThrottlingHeaderLoggingHandler",
+                "BuildInsights.KnownIssues.KnownIssuesHistoryProvider",
                 "BuildInsights.Utilities.AzureDevOps.VssConnectionProvider",
                 "Microsoft.DotNet.GitHub.Authentication.GitHubTokenProvider",
-                "Microsoft.DotNet.Services.Utility.RetryAfterHandler",
-                "ProductConstructionService.Common.Telemetry.TelemetryRecorder",
 
                 "Microsoft.Extensions.Azure.AzureClientsGlobalOptions",
                 "Microsoft.Extensions.ServiceDiscovery.Configuration.ConfigurationServiceEndPointResolverProvider",
