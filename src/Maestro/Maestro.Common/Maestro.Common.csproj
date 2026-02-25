@@ -13,7 +13,6 @@
     <PackageReference Include="DistributedLock.Redis" />
     <PackageReference Include="Microsoft.Azure.StackExchangeRedis" />
     <PackageReference Include="Microsoft.DncEng.Configuration.Extensions" />
-    <PackageReference Include="Microsoft.DotNet.GitHub.Authentication" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" />
     <PackageReference Include="Microsoft.Extensions.Options" />

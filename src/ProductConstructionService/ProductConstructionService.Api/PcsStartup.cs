@@ -123,7 +123,7 @@ internal static class PcsStartup
         {
             var azdoTokenProvider = sp.GetRequiredService<IAzureDevOpsTokenProvider>();
             var gitHubTokenProvider = sp.GetRequiredService<IGitHubTokenProvider>();
-            return new RemoteTokenProvider(azdoTokenProvider, new Maestro.Common.GitHubTokenProvider(gitHubTokenProvider));
+            return new RemoteTokenProvider(azdoTokenProvider, new Maestro.DataProviders.GitHubTokenProvider(gitHubTokenProvider));
         });
 
         if (isDevelopment)
