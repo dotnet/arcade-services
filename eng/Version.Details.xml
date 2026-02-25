@@ -53,14 +53,6 @@
       <Uri>https://github.com/dotnet/dnceng-shared</Uri>
       <Sha>eebcd469208a67368a1bac0cf0301373583f41c7</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.Web.Authentication" Version="1.1.0-beta.25564.1">
-      <Uri>https://github.com/dotnet/dnceng-shared</Uri>
-      <Sha>47896184c2788d47367cfc6eb982ccd09b9e4734</Sha>
-    </Dependency>
-    <Dependency Name="Microsoft.DotNet.Helix.Client" Version="10.0.0-beta.26110.1">
-      <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>4bf37ce670528cf2aef4d9b1cd892554b1b02d9d</Sha>
-    </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
     <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.26119.2">
