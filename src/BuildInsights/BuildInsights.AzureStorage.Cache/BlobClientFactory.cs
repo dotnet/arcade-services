@@ -26,7 +26,7 @@ public class BlobClientFactory : IBlobClientFactory
 {
     private readonly TokenCredential _credential;
 
-    public BlobClientFactory(IOptions<CredentialResolverOptions> credentialOptions)
+    public BlobClientFactory(IOptions<BlobStorageSettings> credentialOptions)
     {
         _credential = CredentialResolver.CreateCredential(credentialOptions.Value);
     }

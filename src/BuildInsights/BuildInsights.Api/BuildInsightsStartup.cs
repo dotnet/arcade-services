@@ -5,6 +5,7 @@ using Azure.Core;
 using Azure.Identity;
 using BuildInsights.Api.Configuration;
 using BuildInsights.Api.Configuration.Models;
+using BuildInsights.AzureStorage.Cache;
 using BuildInsights.BuildAnalysis;
 using BuildInsights.Data;
 using BuildInsights.GitHub;
@@ -87,6 +88,7 @@ internal static class BuildInsightsStartup
         {
             string kustoManagedIdentityIdKey = $"{ConfigurationKeys.KnownIssuesKusto}:{nameof(KustoOptions.ManagedIdentityId)}";
             builder.Configuration[kustoManagedIdentityIdKey] = managedIdentityId;
+            builder.Configuration[$"{ConfigurationKeys.BlobStorage}:{nameof(BlobStorageSettings.ManagedIdentityId)}"] = managedIdentityId;
         }
 
         var gitHubAppSettings = builder.Configuration.GetSection(ConfigurationKeys.GitHubApp).Get<GitHubAppSettings>()!;

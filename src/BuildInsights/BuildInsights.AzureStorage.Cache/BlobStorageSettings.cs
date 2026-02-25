@@ -2,11 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
+using Maestro.Common.AppCredentials;
 
 #nullable disable
 namespace BuildInsights.AzureStorage.Cache;
 
-public class BlobStorageSettings
+public class BlobStorageSettings : CredentialResolverOptions
 {
     public string Endpoint { get; set; }
 

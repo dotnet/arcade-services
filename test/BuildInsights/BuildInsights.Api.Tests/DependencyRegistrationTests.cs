@@ -31,7 +31,6 @@ public class DependencyRegistrationTests
             additionalExemptTypes:
             [
                 // TODO
-                "BuildInsights.AzureStorage.Cache.BlobClientFactory",
                 "BuildInsights.KnownIssues.KnownIssuesHistoryProvider",
                 "BuildInsights.Utilities.AzureDevOps.VssConnectionProvider",
                 "Microsoft.DotNet.GitHub.Authentication.GitHubTokenProvider",
