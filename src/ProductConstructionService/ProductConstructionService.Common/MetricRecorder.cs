@@ -13,6 +13,7 @@ public interface IMetricRecorder
 
 public class MetricRecorder : IMetricRecorder
 {
+    public const string BIMetricsNamespace = "BuildInsights.Metrics";
     public const string PcsMetricsNamespace = "ProductConstructionService.Metrics";
     private const string WaitTimeMetricName = "pcs.queue.wait_time";
 
