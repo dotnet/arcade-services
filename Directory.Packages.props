@@ -73,8 +73,6 @@
     <PackageVersion Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.13.2" />
     <PackageVersion Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.13.2" />
     <PackageVersion Include="Microsoft.Identity.Web" Version="4.0.1" />
-    <PackageVersion Include="Microsoft.Internal.Helix.Machines.MatrixOfTruthOutputDeserialization" Version="20220725.5.0" />
-    <PackageVersion Include="Microsoft.TeamFoundation.DistributedTask.Common" Version="15.112.1" />
     <PackageVersion Include="Microsoft.TeamFoundationServer.Client" Version="20.264.0-preview" />
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
     <PackageVersion Include="Moq" Version="4.18.4" />
