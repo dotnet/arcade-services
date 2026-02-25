@@ -3,7 +3,6 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
     <IsPackable>true</IsPackable>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>pcs-cli</ToolCommandName>
@@ -29,8 +28,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-      <_Parameter1>ProductConstructionService.Cli.Tests</_Parameter1>
-    </AssemblyAttribute>
+    <InternalsVisibleTo Include="ProductConstructionService.Cli.Tests" />
   </ItemGroup>
 </Project>

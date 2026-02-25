@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
     <!-- Suppress NU1701 warnings for Microsoft.Build compatibility with .NET 8.0 -->
     <NoWarn>$(NoWarn);NU1701</NoWarn>
   </PropertyGroup>

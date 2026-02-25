@@ -5,6 +5,7 @@
     <Description>This package include tasks involving Maestro++ and the Build Asset Registry.</Description>
     <DevelopmentDependency>true</DevelopmentDependency>
     <PackageType>MSBuildSdk</PackageType>
+    <Nullable>disable</Nullable>
     <!-- Build Tasks should not include any dependencies -->
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
   </PropertyGroup>

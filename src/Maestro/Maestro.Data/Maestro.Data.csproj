@@ -5,6 +5,7 @@
     <!--Warning about lower case class names for migrations-->
     <NoWarn>CS8981</NoWarn>
     <IsPackable>true</IsPackable>
+    <Nullable>disable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>

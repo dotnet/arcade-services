@@ -23,6 +23,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Logging;
+using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -49,7 +50,7 @@ internal static class PcsStartup
     private const string DefaultWorkItemType = "Default";
     private const string CodeFlowWorkItemType = "CodeFlow";
 
-    private static class ConfigurationKeys
+    internal static class ConfigurationKeys
     {
         // All secrets loaded from KeyVault will have this prefix
         public const string KeyVaultSecretPrefix = "KeyVaultSecrets:";
@@ -67,6 +68,7 @@ internal static class PcsStartup
         public const string KeyVaultName = "KeyVaultName";
         public const string ManagedIdentityId = "ManagedIdentityClientId";
         public const string RedisConnectionString = "ConnectionStrings:redis";
+        public const string Kusto = "Kusto";
 
         public const string CodeFlowWorkItemQueueName = "CodeFlowWorkItemQueueName";
         public const string DefaultWorkItemQueueName = "DefaultWorkItemQueueName";
@@ -84,7 +86,6 @@ internal static class PcsStartup
     /// <param name="builder"></param>
     /// <param name="addKeyVault">Use KeyVault for secrets?</param>
     /// <param name="addSwagger">Add Swagger?</param>
-    /// 
     internal static async Task ConfigurePcs(
         this WebApplicationBuilder builder,
         bool addKeyVault,
@@ -95,7 +96,7 @@ internal static class PcsStartup
         // Read configuration
         string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
         string databaseConnectionString = builder.Configuration.GetRequiredValue(ConfigurationKeys.DatabaseConnectionString);
-        builder.AddSqlDatabase<BuildAssetRegistryContext>(databaseConnectionString, managedIdentityId);
+
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
         builder.Services.Configure<EnvironmentNamespaceOptions>(
             builder.Configuration.GetSection(EnvironmentNamespaceOptions.ConfigurationKey));
@@ -122,7 +123,7 @@ internal static class PcsStartup
         {
             var azdoTokenProvider = sp.GetRequiredService<IAzureDevOpsTokenProvider>();
             var gitHubTokenProvider = sp.GetRequiredService<IGitHubTokenProvider>();
-            return new RemoteTokenProvider(azdoTokenProvider, new Maestro.Common.GitHubTokenProvider(gitHubTokenProvider));
+            return new RemoteTokenProvider(azdoTokenProvider, new Maestro.DataProviders.GitHubTokenProvider(gitHubTokenProvider));
         });
 
         if (isDevelopment)
@@ -133,12 +134,22 @@ internal static class PcsStartup
         var redisConnectionString = builder.Configuration[ConfigurationKeys.RedisConnectionString]!;
         await builder.AddRedisCache(redisConnectionString, managedIdentityId);
         builder.AddSqlDatabase<BuildAssetRegistryContext>(databaseConnectionString, managedIdentityId);
+        builder.Services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>();
         builder.Services.AddConfigurationIngestion();
 
+        // If we're using a user assigned managed identity, inject it into the Kusto configuration section
+        if (!string.IsNullOrEmpty(managedIdentityId))
+        {
+            string kustoManagedIdentityIdKey = $"{ConfigurationKeys.Kusto}:{nameof(KustoOptions.ManagedIdentityId)}";
+            builder.Configuration[kustoManagedIdentityIdKey] = managedIdentityId;
+        }
+        builder.Services.AddKustoClientProvider(ConfigurationKeys.Kusto);
+
+        var regularQueueCount = int.Parse(builder.Configuration.GetRequiredValue(ConfigurationKeys.DefaultWorkItemConsumerCount));
         builder.AddWorkItemQueues(azureCredential, waitForInitialization: true,
             new Dictionary<string, (int Count, string WorkItemType)>
             {
-                { builder.Configuration.GetRequiredValue(ConfigurationKeys.DefaultWorkItemQueueName), (int.Parse(builder.Configuration.GetRequiredValue(ConfigurationKeys.DefaultWorkItemConsumerCount)), DefaultWorkItemType) },
+                { builder.Configuration.GetRequiredValue(ConfigurationKeys.DefaultWorkItemQueueName), (regularQueueCount, DefaultWorkItemType) },
                 { builder.Configuration.GetRequiredValue(ConfigurationKeys.CodeFlowWorkItemQueueName), (1, CodeFlowWorkItemType) }
             });
         builder.AddWorkItemProducerFactory(

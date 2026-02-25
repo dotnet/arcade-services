@@ -419,11 +419,12 @@ public partial class SubscriptionsController20200220Tests : IDisposable
         public static async Task<Func<IServiceProvider, Task>> DataContext(IServiceCollection collection)
         {
             var connectionString = await SharedData.Database.GetConnectionString();
-            collection.AddBuildAssetRegistry(options =>
+            collection.AddDbContext<BuildAssetRegistryContext>(options =>
             {
                 options.UseSqlServer(connectionString);
                 options.EnableServiceProviderCaching(false);
             });
+            collection.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>();
 
             return async provider =>
             {

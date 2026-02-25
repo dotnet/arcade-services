@@ -26,7 +26,7 @@ public class WorkItemScopeTests
         _services = new();
         _services.AddOptions();
         _services.AddLogging();
-        _services.AddSingleton(new TelemetryClient(new Microsoft.ApplicationInsights.Extensibility.TelemetryConfiguration()));
+        _services.AddSingleton(new TelemetryClient(new()));
 
         Mock<IRedisCacheFactory> cacheFactory = new();
         cacheFactory.Setup(f => f.Create(It.IsAny<string>())).Returns(new FakeRedisCache());

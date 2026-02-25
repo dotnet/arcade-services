@@ -4,6 +4,7 @@
 
 using Maestro.Data;
 using Maestro.Data.Models;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -37,7 +38,7 @@ internal abstract class SubscriptionOrPullRequestUpdaterTests : UpdaterTests
         base.RegisterServices(services);
         services.AddSingleton(UpdateResolver.Object);
         services.AddSingleton(HostingEnvironment.Object);
-        services.AddBuildAssetRegistry(options =>
+        services.AddDbContext<BuildAssetRegistryContext>(options =>
         {
             options.UseInMemoryDatabase("BuildAssetRegistry");
             options.EnableServiceProviderCaching(false);
