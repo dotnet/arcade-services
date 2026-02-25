@@ -47,7 +47,7 @@ public class MarkdownGenerator : IMarkdownGenerator
     {
         if (parameters == null)
         {
-            return _templates["NoResults"](null);
+            return _templates["NoResults"](null!);
         }
 
         return GenerateMarkdown(new ConsolidatedBuildResultAnalysisView(parameters));

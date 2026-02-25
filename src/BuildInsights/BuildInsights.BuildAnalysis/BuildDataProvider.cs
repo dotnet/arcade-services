@@ -18,6 +18,7 @@ using Microsoft.TeamFoundation.Core.WebApi;
 using Microsoft.TeamFoundation.TestManagement.WebApi;
 using Microsoft.VisualStudio.Services.WebApi;
 
+#nullable disable
 namespace BuildInsights.BuildAnalysis;
 
 public interface IBuildDataService
@@ -514,7 +515,7 @@ public sealed class BuildDataProvider : IBuildDataService
             cancellationToken: cancellationToken
         );
 
-        return timeline?.Records.Select(MapModel).ToImmutableList() ?? ImmutableList<Models.TimelineRecord>.Empty;
+        return timeline?.Records.Select(MapModel).ToImmutableList() ?? [];
     }
 
 

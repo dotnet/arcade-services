@@ -89,9 +89,8 @@ public class KnownIssueMonitor : IKnownIssueMonitor
             _knownIssuesProjectOptions.Value.ProjectNumber);
         IEnumerable<GitHubIssue> issuesBoardProject = boardProject.Where(i => !i.Content.Closed).Select(MapModel);
 
-        return issuesBoardProject.Where(issue =>
-                issue.Labels.Any(label => _knownIssuesLabels.Any(k => k.Equals(label, StringComparison.OrdinalIgnoreCase))))
-            .ToImmutableList();
+        return [.. issuesBoardProject.Where(issue =>
+                issue.Labels.Any(label => _knownIssuesLabels.Any(k => k.Equals(label, StringComparison.OrdinalIgnoreCase))))];
     }
 
     public string WriteReport(ImmutableList<KnownIssueMatch> knownIssueMatches, ImmutableList<TestKnownIssueMatch> testKnownIssueMatches)

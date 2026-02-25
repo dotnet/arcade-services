@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Internal.Helix.Machines.MatrixOfTruthOutputDeserialization.V1.Models;
 
+#nullable disable
 namespace BuildInsights.QueueInsights;
 
 /// <summary>

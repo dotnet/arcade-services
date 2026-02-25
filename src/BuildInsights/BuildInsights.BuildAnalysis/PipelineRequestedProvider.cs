@@ -62,7 +62,7 @@ public class PipelineRequestedProvider : IPipelineRequestedService
         _logger.LogInformation("Build {buildId} in repository {repository} for branch: {targetBranch} doesn't have filtered settings",
             build.BuildId, build.RepositoryId, build.TargetBranch);
 
-        return new BuildsByPipelineConfiguration(relatedBuilds, ImmutableList<BuildReferenceIdentifier>.Empty);
+        return new BuildsByPipelineConfiguration(relatedBuilds, []);
     }
 
     private async Task<BuildAnalysisRepositorySettings> GetBuildAnalysisRepositorySettings(string repositoryId, string targetBranch)
@@ -71,7 +71,7 @@ public class PipelineRequestedProvider : IPipelineRequestedService
         try
         {
             BuildAnalysisRepositorySettings buildAnalysisSettings = !string.IsNullOrEmpty(buildAnalysisFile)
-                ? JsonSerializer.Deserialize<BuildAnalysisRepositorySettings>(buildAnalysisFile)
+                ? JsonSerializer.Deserialize<BuildAnalysisRepositorySettings>(buildAnalysisFile)!
                 : new BuildAnalysisRepositorySettings();
 
             return buildAnalysisSettings;

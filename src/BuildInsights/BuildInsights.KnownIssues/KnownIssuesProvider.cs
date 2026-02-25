@@ -52,7 +52,7 @@ public class KnownIssuesProvider : IKnownIssuesService
         _logger.LogInformation("Fetch already saved matched for build {0}", buildId);
         // Read matches already sent
         List<KnownIssueMatch> savedMatches = await GetSavedMatches(buildId, TimeFilterDays);
-        List<KnownIssueMatch> newMatches = knownIssueMatches.Except(savedMatches).ToList();
+        List<KnownIssueMatch> newMatches = [.. knownIssueMatches.Except(savedMatches)];
 
         // Send new matches
         IKustoIngestClient client = _kustoIngestClient.GetClient();
@@ -70,7 +70,7 @@ public class KnownIssuesProvider : IKnownIssuesService
         _logger.LogInformation("Fetch already saved matched for build {0}", buildId);
         // Read matches already sent
         ImmutableList<TestKnownIssueMatch> savedMatches = await GetSavedTestsKnownIssuesMatches(buildId, TimeFilterDays);
-        List<TestKnownIssueMatch> newMatches = knownIssueMatches.Except(savedMatches).ToList();
+        List<TestKnownIssueMatch> newMatches = [.. knownIssueMatches.Except(savedMatches)];
 
         // Send new matches
         IKustoIngestClient client = _kustoIngestClient.GetClient();
@@ -157,7 +157,7 @@ public class KnownIssuesProvider : IKnownIssuesService
 
         IDataReader reader = await _kustoClientProvider.ExecuteKustoQueryAsync(query);
 
-        return GetKnownIssueFromDataReader(reader).ToImmutableList();
+        return [.. GetKnownIssueFromDataReader(reader)];
     }
 
     private async Task<ImmutableList<TestKnownIssueMatch>> GetSavedTestsKnownIssuesMatches(int buildId, int lastNDays)
@@ -242,7 +242,7 @@ public class KnownIssuesProvider : IKnownIssuesService
             };
             knownIssueMatches.Add(knownIssueMatch);
         }
-        return knownIssueMatches.ToImmutableList();
+        return [.. knownIssueMatches];
     }
 
     public async Task SaveKnownIssuesHistory(IEnumerable<KnownIssue> knownIssues, int buildId)

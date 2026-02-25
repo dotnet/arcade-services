@@ -3,6 +3,7 @@
 
 using System;
 
+#nullable disable
 namespace BuildInsights.AzureStorage.Cache;
 
 public class BlobStorageSettings

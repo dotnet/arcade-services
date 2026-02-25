@@ -10,7 +10,7 @@ namespace BuildInsights.BuildAnalysis;
 
 public interface IBuildAnalysisRepositoryConfigurationService
 {
-    Task<BuildAnalysisRepositoryConfiguration> GetRepositoryConfiguration(
+    Task<BuildAnalysisRepositoryConfiguration?> GetRepositoryConfiguration(
         string repository,
         string branch,
         CancellationToken cancellationToken);
@@ -30,7 +30,7 @@ public class BuildAnalysisRepositoryConfigurationProvider : IBuildAnalysisReposi
         _logger = logger;
     }
 
-    public async Task<BuildAnalysisRepositoryConfiguration> GetRepositoryConfiguration(string repository, string branch, CancellationToken cancellationToken)
+    public async Task<BuildAnalysisRepositoryConfiguration?> GetRepositoryConfiguration(string repository, string branch, CancellationToken cancellationToken)
     {
         string normalizedRepository = NormalizeString(repository);
         string normalizedBranch = NormalizeString(branch);

@@ -10,7 +10,7 @@ namespace BuildInsights.BuildAnalysis;
 
 public interface IBuildCacheService
 {
-    Task<BuildResultAnalysis> TryGetBuildAsync(BuildReferenceIdentifier build, CancellationToken cancellationToken);
+    Task<BuildResultAnalysis?> TryGetBuildAsync(BuildReferenceIdentifier build, CancellationToken cancellationToken);
     Task PutBuildAsync(BuildReferenceIdentifier build, BuildResultAnalysis analysis, CancellationToken cancellationToken);
 }
 
@@ -28,9 +28,9 @@ public class BuildCacheProvider : IBuildCacheService
         _storage = storage;
     }
 
-    public async Task<BuildResultAnalysis> TryGetBuildAsync(BuildReferenceIdentifier build, CancellationToken cancellationToken)
+    public async Task<BuildResultAnalysis?> TryGetBuildAsync(BuildReferenceIdentifier build, CancellationToken cancellationToken)
     {
-        await using Stream stream = await _storage.TryGetAsync(build.BuildId.ToString(), cancellationToken);
+        await using Stream? stream = await _storage.TryGetAsync(build.BuildId.ToString(), cancellationToken);
         if (stream == null)
             return null;
         return await JsonSerializer.DeserializeAsync<BuildResultAnalysis>(stream, _options, cancellationToken);

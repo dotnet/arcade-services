@@ -58,7 +58,7 @@ public class TestResultProvider : ITestResultService
         {
             var knownIssueTests = new List<KnownIssue>();
             if (_helixDataService.IsHelixWorkItem(testResult.TestCaseResult.Comment) &&
-                helixLogKnownIssuesAnalysis.KnownIssuesByHelixLog.TryGetValue(testResult.TestCaseResult.Comment, out List<KnownIssue> knownIssuesInLog))
+                helixLogKnownIssuesAnalysis.KnownIssuesByHelixLog.TryGetValue(testResult.TestCaseResult.Comment, out List<KnownIssue>? knownIssuesInLog))
             {
                 knownIssueTests.AddRange(knownIssuesInLog);
             }

@@ -11,25 +11,19 @@ public class TestResult : IResult
 {
     public bool IsRetry { get; set; }
 
-    public List<FailingConfiguration> FailingConfigurations { get; set; }
+    public List<FailingConfiguration> FailingConfigurations { get; set; } = [];
 
-    public HelixWorkItem HelixWorkItem { get; set; }
+    public HelixWorkItem? HelixWorkItem { get; set; }
     public bool IsKnownIssueFailure { get; set; }
 
     [JsonIgnore]
-    public bool IsNewTest
-    {
-        get
-        {
-            return FailureRate.TotalRuns == 0;
-        }
-    }
+    public bool IsNewTest => FailureRate?.TotalRuns == 0;
 
     /// <summary>
     /// Creation date of the test
     /// </summary>
     public DateTimeOffset CreationDate { get; set; }
-    public FailureRate FailureRate { get; set; }
+    public FailureRate? FailureRate { get; set; }
     public IImmutableList<KnownIssue> KnownIssues { get; set; } = ImmutableList<KnownIssue>.Empty;
 
     /// <summary>
@@ -40,10 +34,8 @@ public class TestResult : IResult
     public string AzDoUrl { get; }
     public string Url { get; }
 
-    public TestResult() { }
-
     [JsonConstructor]
-    public TestResult(TestCaseResult testCaseResult, string azDoUrl, FailureRate failureRate = null)
+    public TestResult(TestCaseResult testCaseResult, string azDoUrl, FailureRate? failureRate = null)
     {
         AzDoUrl = azDoUrl;
         TestCaseResult = testCaseResult;

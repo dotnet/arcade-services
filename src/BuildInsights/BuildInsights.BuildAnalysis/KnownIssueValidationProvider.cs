@@ -49,7 +49,7 @@ public class KnownIssueValidationProvider : IKnownIssueValidationService
     public async Task ValidateKnownIssue(KnownIssueValidationRequest knownIssueValidationMessage, CancellationToken cancellationToken)
     {
         Issue issue = await _gitHubIssuesService.GetIssueAsync(knownIssueValidationMessage.RepositoryWithOwner, knownIssueValidationMessage.IssueId);
-        if (!TryGetKnownIssue(issue, knownIssueValidationMessage.RepositoryWithOwner, out KnownIssue knownIssue, out string exceptionMessage))
+        if (!TryGetKnownIssue(issue, knownIssueValidationMessage.RepositoryWithOwner, out KnownIssue? knownIssue, out string exceptionMessage))
         {
             await UpdateIssueWithValidationResult(KnownIssueValidationResult.UnableToCreateKnownIssue(exceptionMessage), knownIssueValidationMessage);
         }
@@ -60,7 +60,7 @@ public class KnownIssueValidationProvider : IKnownIssueValidationService
             return;
         }
 
-        BuildFromGitHubIssue buildFromGitHubIssue = await GetBuildFromBody(knownIssue.GitHubIssue.Body);
+        BuildFromGitHubIssue? buildFromGitHubIssue = await GetBuildFromBody(knownIssue.GitHubIssue.Body);
         if (buildFromGitHubIssue == null)
         {
             _logger.LogInformation("Validation of known issue was not done on GitHub Issue ({repository}#{issueId}) because it lacks a valid build.", knownIssueValidationMessage.RepositoryWithOwner, knownIssueValidationMessage.IssueId);
@@ -105,7 +105,7 @@ public class KnownIssueValidationProvider : IKnownIssueValidationService
             knownIssueValidationMessage.IssueId, knownIssue.BuildError, cancellationToken);
     }
 
-    public async Task<BuildFromGitHubIssue> GetBuildFromBody(string issueBody)
+    public async Task<BuildFromGitHubIssue?> GetBuildFromBody(string issueBody)
     {
         string validationBody = GetKnownIssueValidation(issueBody);
         string body = string.IsNullOrEmpty(validationBody) ? GetBodyWithoutKnownIssueReport(issueBody) : validationBody;
@@ -123,7 +123,7 @@ public class KnownIssueValidationProvider : IKnownIssueValidationService
         return new BuildFromGitHubIssue(organizationId, projectId, int.Parse(buildId));
     }
 
-    private async Task UpdateIssueWithValidationResult(KnownIssueValidationResult knownIssueValidationResult, KnownIssueValidationRequest knownIssueValidationMessage, string buildUrl = "", List<string> errorValidated = null)
+    private async Task UpdateIssueWithValidationResult(KnownIssueValidationResult knownIssueValidationResult, KnownIssueValidationRequest knownIssueValidationMessage, string buildUrl = "", List<string>? errorValidated = null)
     {
         Issue issue = await _gitHubIssuesService.GetIssueAsync(knownIssueValidationMessage.RepositoryWithOwner, knownIssueValidationMessage.IssueId);
 
@@ -134,7 +134,7 @@ public class KnownIssueValidationProvider : IKnownIssueValidationService
             knownIssueValidationMessage.IssueId, body);
     }
 
-    private static string WriteValidationSection(KnownIssueValidationResult result, string buildUrl = "", List<string> errorValidated = null)
+    private static string WriteValidationSection(KnownIssueValidationResult result, string buildUrl = "", List<string>? errorValidated = null)
     {
         var validation = new StringBuilder();
         validation.AppendLine(KnownIssueHelper.StartKnownIssueValidationIdentifier);
@@ -223,16 +223,16 @@ public class KnownIssueValidationProvider : IKnownIssueValidationService
             build.DefinitionName,
             build.Repository.Name,
             build.CommitHash,
-            build.TargetBranch?.BranchName);
+            build.TargetBranch?.BranchName ?? string.Empty);
 
-        BuildResultAnalysis buildResultAnalysis = await _buildAnalysisService.GetBuildResultAnalysisAsync(buildReference, cancellationToken, true);
-        List<KnownIssue> knownIssues = buildResultAnalysis.BuildStepsResult.SelectMany(t => t.KnownIssues).ToList();
-        knownIssues.AddRange(buildResultAnalysis.TestKnownIssuesAnalysis.TestResultWithKnownIssues.SelectMany(t => t.KnownIssues).ToList());
+        BuildResultAnalysis? buildResultAnalysis = await _buildAnalysisService.GetBuildResultAnalysisAsync(buildReference, cancellationToken, true);
+        List<KnownIssue> knownIssues = buildResultAnalysis?.BuildStepsResult.SelectMany(t => t.KnownIssues).ToList() ?? [];
+        knownIssues.AddRange(buildResultAnalysis?.TestKnownIssuesAnalysis.TestResultWithKnownIssues.SelectMany(t => t.KnownIssues).ToList() ?? []);
 
         return knownIssues;
     }
 
-    private static bool TryGetKnownIssue(Issue issue, string repositoryWithOwner, out KnownIssue knownIssue, out string exceptionMessage)
+    private static bool TryGetKnownIssue(Issue issue, string repositoryWithOwner, out KnownIssue? knownIssue, out string exceptionMessage)
     {
         exceptionMessage = string.Empty;
         try

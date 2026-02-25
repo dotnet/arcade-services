@@ -165,7 +165,7 @@ namespace BuildInsights.GitHub.Tests
             Mock<IGitHubApplicationClientFactory> mockGitHubApplicationClientFactory = GetMockGitHubApplicationClientFactory(checkRuns);
 
             GitHubChecksProvider gitHubCheckService = SetUp(gitHubApplicationClientFactoryMockOverride: mockGitHubApplicationClientFactory);
-            var result = await gitHubCheckService.GetCheckRunAsyncForApp("anyOwner/anyName", "123456789", appId, "");
+            var result = await gitHubCheckService.GetCheckRunForAppAsync("anyOwner/anyName", "123456789", appId, "");
 
             if (shouldMatch)
             {
@@ -190,7 +190,7 @@ namespace BuildInsights.GitHub.Tests
             Mock<IGitHubApplicationClientFactory> mockGitHubApplicationClientFactory = GetMockGitHubApplicationClientFactory(checkRuns);
 
             GitHubChecksProvider gitHubCheckService = SetUp(gitHubApplicationClientFactoryMockOverride: mockGitHubApplicationClientFactory);
-            var result = await gitHubCheckService.GetCheckRunAsyncForApp("anyOwner/anyName", "123456789", 1, checkRunAppNameFiltered);
+            var result = await gitHubCheckService.GetCheckRunForAppAsync("anyOwner/anyName", "123456789", 1, checkRunAppNameFiltered);
 
             if (shouldMatch)
             {

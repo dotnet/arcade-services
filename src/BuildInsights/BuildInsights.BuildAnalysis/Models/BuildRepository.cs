@@ -8,13 +8,13 @@ public class BuildRepository
     public string Name { get; }
     public BuildRepositoryType Type { get; }
 
-    public BuildRepository(string name = null, string type = null)
+    public BuildRepository(string name, string? type = null)
     {
         Name = name;
         Type = MapRepositoryType(type);
     }
 
-    public BuildRepositoryType MapRepositoryType(string repositoryType)
+    public static BuildRepositoryType MapRepositoryType(string? repositoryType)
     {
         return repositoryType switch
         {

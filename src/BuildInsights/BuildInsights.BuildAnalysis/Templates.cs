@@ -7,7 +7,7 @@ namespace BuildInsights.BuildAnalysis;
 
 public static class Templates
 {
-    private static string BasePath { get; } = Path.GetDirectoryName(typeof(Templates).Assembly.Location);
+    private static string BasePath { get; } = Path.GetDirectoryName(typeof(Templates).Assembly.Location)!;
 
     private static void LoadPartials(IHandlebars hb)
     {

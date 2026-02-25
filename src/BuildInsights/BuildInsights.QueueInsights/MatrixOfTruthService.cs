@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using BuildInsights.AzureStorage.Cache;
 using BuildInsights.QueueInsights.Models;
 using Microsoft.Extensions.Options;
 using Microsoft.Internal.Helix.Machines.MatrixOfTruthOutputDeserialization.V1.Models;
@@ -27,6 +28,6 @@ public class MatrixOfTruthService : IMatrixOfTruthService
     {
         var blobContainerClient = _blobClientFactory.CreateBlobContainerClient(_settings.CurrentValue.Endpoint, _settings.CurrentValue.ContainerName);
         var client = new MatrixOfTruthOutputV1Downloader(blobContainerClient);
-        return await client.DownloadPipelineOutput();
+        return await client.DownloadPipelineOutput() ?? [];
     }
 }

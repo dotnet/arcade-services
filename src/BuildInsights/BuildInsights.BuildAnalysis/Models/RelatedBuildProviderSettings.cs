@@ -5,5 +5,5 @@ namespace BuildInsights.BuildAnalysis.Models;
 
 public class RelatedBuildProviderSettings
 {
-    public Dictionary<string, string> AllowedTargetProjects { get; set; }
+    public Dictionary<string, string> AllowedTargetProjects { get; set; } = [];
 }

@@ -3,6 +3,7 @@
 
 using ProductConstructionService.WorkItems;
 
+#nullable disable
 namespace BuildInsights.BuildAnalysis.WorkItems.Models;
 
 public class KnownIssueValidationRequest : WorkItem

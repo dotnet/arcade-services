@@ -26,7 +26,7 @@ public class MarkdownEncoder : ITextEncoder
     {
         if (text == null) return;
 
-        EncodeImpl(text.ToString(), target);
+        EncodeImpl(text.ToString()!, target);
     }
 
     private static void EncodeImpl<T>(T text, TextWriter target) where T : IEnumerable<char>

@@ -7,6 +7,7 @@ using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.GitHub.Models;
 using BuildInsights.GitHub;
 
+#nullable disable
 namespace BuildInsights.BuildAnalysis;
 
 public interface IRelatedBuildService

@@ -11,11 +11,11 @@ public abstract class BaseLinkHelper : InlineHelper
     {
         if (arguments.Length > 1 && arguments[1] != null)
         {
-            string urlString = arguments[1].ToString();
+            string urlString = arguments[1].ToString()!;
 
             RenderString(output, urlString, arguments[0]?.ToString());
         }
     }
 
-    protected abstract void RenderString(EncodedTextWriter output, string url, string text);
+    protected abstract void RenderString(EncodedTextWriter output, string url, string? text);
 }

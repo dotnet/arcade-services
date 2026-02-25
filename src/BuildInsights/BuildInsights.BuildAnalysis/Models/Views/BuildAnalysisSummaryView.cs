@@ -18,15 +18,15 @@ public class BuildAnalysisStatusView
 public class BuildAnalysisSummaryView
 {
     public int UniqueBuildFailuresCount { get; }
-    public string UniqueBuildFailureUrl { get; }
+    public string? UniqueBuildFailureUrl { get; }
     public bool HasUniqueBuildFailures => UniqueBuildFailuresCount > 0;
 
     public int BuildRepositoryKnownFailuresCount { get; }
-    public string RepositoryKnownFailureUrl { get; }
+    public string? RepositoryKnownFailureUrl { get; }
     public bool HasBuildRepositoryKnownFailures => BuildRepositoryKnownFailuresCount > 0;
 
     public int BuildInfrastructureKnownFailureCount { get; }
-    public string InfrastructureKnownFailureUrl { get; }
+    public string? InfrastructureKnownFailureUrl { get; }
     public bool HasBuildInfrastructureKnownFailures => BuildInfrastructureKnownFailureCount > 0;
 
     public int UniqueTestIssuesCount { get; }
@@ -90,7 +90,7 @@ public class BuildAnalysisSummaryView
         };
     }
 
-    private string GetTestResultsTabUri(string buildUrl)
+    private static string GetTestResultsTabUri(string buildUrl)
     {
         return $"{buildUrl}&view=ms.vss-test-web.build-test-results-tab";
     }

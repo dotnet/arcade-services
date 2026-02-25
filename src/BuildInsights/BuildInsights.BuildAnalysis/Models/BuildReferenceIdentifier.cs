@@ -77,7 +77,7 @@ public class BuildReferenceIdentifier
     /// </summary>
     public bool IsCompleted { get; }
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         if (obj == null) return false;
         if (obj.GetType() != typeof(BuildReferenceIdentifier)) return false;

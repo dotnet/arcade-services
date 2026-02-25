@@ -10,7 +10,7 @@ namespace BuildInsights.AzureStorage.Cache;
 
 internal abstract class BaseContextualStorage : IContextualStorage
 {
-    protected string PathContext { get; private set; }
+    protected string PathContext { get; private set; } = null!;
 
     public void SetContext(string path)
     {
@@ -36,14 +36,13 @@ internal abstract class BaseContextualStorage : IContextualStorage
 
     protected abstract Task PutAsync(string root, string name, Stream data, CancellationToken cancellationToken);
 
-    public Task<Stream> TryGetAsync(string name, CancellationToken cancellationToken)
+    public Task<Stream?> TryGetAsync(string name, CancellationToken cancellationToken)
     {
         CheckInitialized();
         return TryGetAsync(PathContext, name, cancellationToken);
     }
 
-    protected abstract  Task<Stream> TryGetAsync(string root, string name, CancellationToken cancellationToken);
-
+    protected abstract  Task<Stream?> TryGetAsync(string root, string name, CancellationToken cancellationToken);
 
     private void CheckInitialized()
     {

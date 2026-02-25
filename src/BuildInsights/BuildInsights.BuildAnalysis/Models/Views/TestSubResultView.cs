@@ -19,7 +19,7 @@ public class TestSubResultView
     }
 
     //The SubResult name tends to be made up of the name of the test + data driven info
-    private string CreateTestSubResultName(string testName, string subResultDisplayName)
+    private static string CreateTestSubResultName(string testName, string subResultDisplayName)
     {
         if (testName.IsNullOrEmpty())
         {

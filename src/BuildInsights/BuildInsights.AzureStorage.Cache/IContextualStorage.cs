@@ -10,6 +10,6 @@ namespace BuildInsights.AzureStorage.Cache;
 public interface IContextualStorage
 {
     Task PutAsync(string name, Stream data, CancellationToken cancellationToken);
-    Task<Stream> TryGetAsync(string name, CancellationToken cancellationToken);
+    Task<Stream?> TryGetAsync(string name, CancellationToken cancellationToken);
     void SetContext(string path);
 }

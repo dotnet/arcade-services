@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using JetBrains.Annotations;
 using BuildInsights.KnownIssues.Models;
 
+#nullable disable
 namespace BuildInsights.BuildAnalysis.Models.Views;
 
 public class BasicResultsView
@@ -13,7 +14,7 @@ public class BasicResultsView
     public ImmutableList<Link> PendingBuildNames { get; }
     public ImmutableList<Link> FilteredPipelinesBuildNames { get; }
     public UserSentimentParameters SentimentParameters { get; set; }
-    public ImmutableList<KnownIssueView> CriticalIssues { get; set; } = ImmutableList<KnownIssueView>.Empty;
+    public ImmutableList<KnownIssueView> CriticalIssues { get; set; } = [];
 
     public BasicResultsView(ImmutableList<Link> pendingBuildNames, ImmutableList<Link> filteredPipelinesBuildNames, UserSentimentParameters sentimentParameters, ImmutableList<KnownIssue> criticalIssues)
     {
@@ -25,7 +26,7 @@ public class BasicResultsView
     }
 
     public BasicResultsView(UserSentimentParameters sentimentParameters)
-        : this(ImmutableList<Link>.Empty, ImmutableList<Link>.Empty, sentimentParameters, ImmutableList<KnownIssue>.Empty)
+        : this([], [], sentimentParameters, [])
     {
     }
 }
@@ -67,7 +68,7 @@ public class ConsolidatedBuildResultAnalysisView : BasicResultsView
     public ImmutableList<Link> CompletedPipelinesLinks { get; set;  }
     public ImmutableList<Link> SucceededPipelinesLinks { get; set; }
     public ImmutableList<Link> FailingPipelinesLinks { get; set; }
-    public ImmutableList<Link> TestKnownIssueAnalysisUnavailablePipelines { get; set; } = ImmutableList<Link>.Empty;
+    public ImmutableList<Link> TestKnownIssueAnalysisUnavailablePipelines { get; set; } = [];
     public bool RenderSummary { get; set; }
 
     /// <summary>
@@ -75,7 +76,7 @@ public class ConsolidatedBuildResultAnalysisView : BasicResultsView
     /// </summary>
     public List<AttemptView> LatestAttempt { get; set; } = [];
 
-    public ConsolidatedBuildResultAnalysisView() : base(ImmutableList<Link>.Empty, ImmutableList<Link>.Empty, null, ImmutableList<KnownIssue>.Empty)
+    public ConsolidatedBuildResultAnalysisView() : base([], [], null, [])
     { }
 
     public ConsolidatedBuildResultAnalysisView(MarkdownParameters parameters)
@@ -151,7 +152,7 @@ public class ConsolidatedBuildResultAnalysisView : BasicResultsView
                     CheckSig = CheckSig,
                     LinkToBuild = pipeline.LinkToBuild,
                     AttemptId = pipeline.LatestAttempt.AttemptId,
-                    BuildStepsResult = pipeline.LatestAttempt.BuildStepsResult?.Select(step => new StepResultView(step, pipeline.PipelineName, pipeline.LinkToBuild, parameters)).ToList(),
+                    BuildStepsResult = pipeline.LatestAttempt.BuildStepsResult?.Select(step => new StepResultView(step, pipeline.PipelineName, pipeline.LinkToBuild, parameters)).ToList() ?? [],
                     TestResults = pipeline.LatestAttempt.TestResults?.Select(t => new TestResultView(t, pipeline.BuildId, pipeline.LinkToBuild, parameters)).ToList()
                 });
             }
@@ -177,7 +178,7 @@ public class ConsolidatedBuildResultAnalysisView : BasicResultsView
         SentimentParameters.KnownIssues = InfrastructureBuildBreaks.Count + RepoBuildBreaks.Count;
         TargetBranch = parameters.Analysis.CompletedPipelines?.FirstOrDefault()?.TargetBranch?.BranchName ?? "unknown";
         IsRerun = LatestAttempt.Count > 0;
-        HasData = parameters.Analysis.CompletedPipelines.Count != 0;
+        HasData = parameters.Analysis.CompletedPipelines?.Count != 0;
         RenderSummary = parameters.SummarizeInstructions?.GenerateSummaryVersion ?? false;
         SummarizeInstructions = parameters.SummarizeInstructions;
         InfrastructureBuildBreaks = InfrastructureBuildBreaks.GroupBy(k => k, new KnownIssueViewComparer()).Select( g => new  KnownIssueView(g.Key, g.Count())).ToList();

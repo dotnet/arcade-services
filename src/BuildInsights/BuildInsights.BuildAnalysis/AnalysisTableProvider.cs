@@ -11,7 +11,7 @@ namespace BuildInsights.BuildAnalysis;
 
 public interface IBuildAnalysisHistoryService
 {
-    Task<BuildAnalysisEvent> GetLastBuildAnalysisRecord(int buildId, string definitionName);
+    Task<BuildAnalysisEvent?> GetLastBuildAnalysisRecord(int buildId, string definitionName);
     Task SaveBuildAnalysisRecords(ImmutableList<BuildResultAnalysis> completedPipelines, string repositoryId, string project, DateTimeOffset analysisTimestamp);
     Task SaveBuildAnalysisRepositoryNotSupported(string pipeline, int buildId, string repositoryId, string project, DateTimeOffset analysisTimestamp);
     Task<List<BuildAnalysisEvent>> GetBuildsWithRepositoryNotSupported(DateTimeOffset since, CancellationToken cancellationToken);
@@ -26,7 +26,7 @@ public class BuildAnalysisHistoryProvider : IBuildAnalysisHistoryService
         _context = context;
     }
 
-    public async Task<BuildAnalysisEvent> GetLastBuildAnalysisRecord(int buildId, string definitionName)
+    public async Task<BuildAnalysisEvent?> GetLastBuildAnalysisRecord(int buildId, string definitionName)
     {
         return await _context.BuildAnalysisEvents
             .Where(e => e.PipelineName == definitionName && e.BuildId == buildId)

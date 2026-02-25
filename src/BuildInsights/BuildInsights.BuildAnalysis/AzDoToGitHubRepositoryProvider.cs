@@ -119,7 +119,7 @@ repoIdentity, commit);
         return false;
     }
 
-    private string GetGithubRepoName(string repoName)
+    private static string GetGithubRepoName(string repoName)
     {
         int index = repoName.IndexOf('-');
         string repositoryName = index > -1 ? repoName[..index] + "/" + repoName[(index + 1)..] : repoName;
@@ -128,8 +128,8 @@ repoIdentity, commit);
     }
 }
 
-public record AzDoToGitHubRepositoryResult(bool IsValidRepositoryAvailable, string GitHubRepository = null)
+public record AzDoToGitHubRepositoryResult(bool IsValidRepositoryAvailable, string? GitHubRepository = null)
 {
-    public string GitHubRepository = GitHubRepository;
+    public string? GitHubRepository = GitHubRepository;
     public bool IsValidRepositoryAvailable = IsValidRepositoryAvailable;
 }

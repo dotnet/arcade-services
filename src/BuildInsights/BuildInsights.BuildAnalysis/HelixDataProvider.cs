@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using System.Data;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.Json;
 using BuildInsights.BuildAnalysis.Models;
@@ -15,7 +16,7 @@ namespace BuildInsights.BuildAnalysis;
 public interface IHelixDataService
 {
     bool IsHelixWorkItem(string comment);
-    Task<HelixWorkItem> TryGetHelixWorkItem(string workItemInfo, CancellationToken cancellationToken);
+    Task<HelixWorkItem?> TryGetHelixWorkItem(string workItemInfo, CancellationToken cancellationToken);
     Task<Dictionary<string, List<HelixWorkItem>>> TryGetHelixWorkItems(IEnumerable<string> workItemInfo, CancellationToken cancellationToken);
 }
 
@@ -40,16 +41,16 @@ public class HelixDataProvider : IHelixDataService
 
     public bool IsHelixWorkItem(string comment)
     {
-        return TryGetHelixWorkItemFromComment(comment, out HelixWorkItem _);
+        return TryGetHelixWorkItemFromComment(comment, out _);
     }
 
-    public async Task<HelixWorkItem> TryGetHelixWorkItem(string workItemInfo, CancellationToken cancellationToken)
+    public async Task<HelixWorkItem?> TryGetHelixWorkItem(string workItemInfo, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(workItemInfo)) return null;
 
         try
         {
-            if (!TryGetHelixWorkItemFromComment(workItemInfo, out HelixWorkItem helixWorkItem))
+            if (!TryGetHelixWorkItemFromComment(workItemInfo, out HelixWorkItem? helixWorkItem))
             {
                 return null;
             }
@@ -77,7 +78,7 @@ public class HelixDataProvider : IHelixDataService
         var relationCommentWorkItemKey = new Dictionary<string, string>();
         foreach (string workItemInfo in workItemsInfo)
         {
-            if (TryGetHelixWorkItemFromComment(workItemInfo, out HelixWorkItem workItem))
+            if (TryGetHelixWorkItemFromComment(workItemInfo, out HelixWorkItem? workItem))
             {
                 helixWorkItem[GetKeyForHelixWorkItem(workItem)] = [workItem];
                 relationCommentWorkItemKey[workItemInfo] = GetKeyForHelixWorkItem(workItem);
@@ -120,7 +121,7 @@ public class HelixDataProvider : IHelixDataService
             ?? await HelixApiWorkItemInformation(workItemName, helixJobName, cancellationToken);
     }
 
-    private async Task<WorkItemInformation> KustoWorkItemInformation(string workItemName, string helixJobName)
+    private async Task<WorkItemInformation?> KustoWorkItemInformation(string workItemName, string helixJobName)
     {
         var query = new KustoQuery(
             """
@@ -198,7 +199,7 @@ public class HelixDataProvider : IHelixDataService
         return query;
     }
 
-    private Task<List<HelixWorkItem>> HelixApiWorkItemInformation(
+    private static Task<List<HelixWorkItem>> HelixApiWorkItemInformation(
         IEnumerable<HelixWorkItem> helixWorkItems,
         CancellationToken cancellationToken)
     {
@@ -255,7 +256,7 @@ public class HelixDataProvider : IHelixDataService
     //    return helixWorkItems;
     //}
 
-    private static bool TryGetHelixWorkItemFromComment(string comment, out HelixWorkItem helixWorkItem)
+    private static bool TryGetHelixWorkItemFromComment(string comment, [NotNullWhen(true)] out HelixWorkItem? helixWorkItem)
     {
         helixWorkItem = null;
         if (string.IsNullOrEmpty(comment)) return false;
@@ -291,7 +292,7 @@ public class HelixDataProvider : IHelixDataService
 
         foreach (KeyValuePair<string, string> commentWorkItemKey in relationCommentWorkItemKey)
         {
-            if (helixWorkItems.TryGetValue(commentWorkItemKey.Value, out List<HelixWorkItem> workItemResult))
+            if (helixWorkItems.TryGetValue(commentWorkItemKey.Value, out List<HelixWorkItem>? workItemResult))
             {
                 List<HelixWorkItem> helixWorkItemsWithConsoleLog = workItemResult
                     .Where(w => !string.IsNullOrEmpty(w.ConsoleLogUrl))
@@ -312,8 +313,8 @@ public class WorkItemInformation
 {
     public string ConsoleLogUrl { get; }
     public int? ExitCode { get; }
-    public string Status { get; }
-    public WorkItemInformation(string consoleLogUrl, int? exitCode, string status = null)
+    public string? Status { get; }
+    public WorkItemInformation(string consoleLogUrl, int? exitCode, string? status = null)
     {
         ConsoleLogUrl = consoleLogUrl;
         ExitCode = exitCode;

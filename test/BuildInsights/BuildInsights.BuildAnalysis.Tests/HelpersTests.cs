@@ -106,21 +106,6 @@ public class HelpersTests
         output.Should().Be(expectedOutput);
     }
 
-    private static StepResultView BuildStep()
-    {
-        return new StepResultView(
-            stepName: "StepNameTest",
-            pipelineBuildName: null,
-            linkToBuild: null,
-            linkToStep: null,
-            errors: new ImmutableArray<Error>(),
-            failureRate: null,
-            stepHierarchy: ImmutableList<string>.Empty,
-            knownIssues: ImmutableList<KnownIssue>.Empty,
-            parameters: new MarkdownParameters(new MergedBuildResultAnalysis(), "TEST-SNAPSHOT", "TEST-PULL-REQUEST", new Repository("TEST=REPOSITORY", true))
-        );
-    }
-
     [Test]
     [TestCase(false, true, "TrueOr")]
     [TestCase(true, false, "TrueOr")]

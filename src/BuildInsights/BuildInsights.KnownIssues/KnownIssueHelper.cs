@@ -46,7 +46,7 @@ public class KnownIssueHelper
             string jsonString = match.Groups[2].Value;
             try
             {
-                KnownIssueJson json = JsonSerializer.Deserialize<KnownIssueJson>(jsonString, serializerOptions);
+                var json = JsonSerializer.Deserialize<KnownIssueJson>(jsonString, serializerOptions);
                 if (json?.ErrorMessage != null || json?.ErrorPattern != null)
                     knownIssueJson = json;
             }
@@ -77,7 +77,7 @@ public class KnownIssueHelper
         return new KnownIssue(gitHubIssue, knownIssueJson.ErrorMessage, issueType, new(knownIssueJson.ExcludeConsoleLog, knownIssueJson.BuildRetry, regexMatching: false));
     }
 
-    public static string GetReportIssueUrl(Dictionary<string, string> parameters, IssueParameters issueParameters, string host, string repository, string pullRequest)
+    public static string GetReportIssueUrl(Dictionary<string, string> parameters, IssueParameters? issueParameters, string host, string repository, string? pullRequest)
     {
         if (!string.IsNullOrEmpty(issueParameters?.GithubTemplateName))
         {

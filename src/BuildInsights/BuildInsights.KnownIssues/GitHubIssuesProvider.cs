@@ -44,7 +44,7 @@ public class GitHubIssuesProvider : IGitHubIssuesService
         _logger = logger;
     }
 
-    public async Task<ImmutableList<KnownIssue>> GetIssues(string repository, KnownIssueType type, IEnumerable<string> labels = null)
+    public async Task<ImmutableList<KnownIssue>> GetIssues(string repository, KnownIssueType type, IEnumerable<string>? labels = null)
     {
         try
         {
@@ -74,7 +74,7 @@ public class GitHubIssuesProvider : IGitHubIssuesService
                 }
             }
 
-            return knownIssues.ToImmutableList();
+            return [.. knownIssues];
         }
         catch (Exception ex) when (ex is ArgumentException)
         {
@@ -102,7 +102,7 @@ public class GitHubIssuesProvider : IGitHubIssuesService
             criticalInfraIssues.AddRange(await GetIssues(repository, KnownIssueType.Critical, _criticalIssuesLabels));
         }
 
-        return criticalInfraIssues.ToImmutableList();
+        return [.. criticalInfraIssues];
     }
 
     public async Task<List<KnownIssue>> GetRepositoryKnownIssues(string buildRepo)

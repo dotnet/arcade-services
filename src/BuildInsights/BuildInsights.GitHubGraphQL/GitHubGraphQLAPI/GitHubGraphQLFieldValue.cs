@@ -3,6 +3,7 @@
 
 using Newtonsoft.Json;
 
+#nullable disable
 namespace BuildInsights.GitHubGraphQL.GitHubGraphQLAPI;
 
 public class GitHubGraphQLFieldValue

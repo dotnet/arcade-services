@@ -19,11 +19,7 @@ public class KnownIssue
     public Func<string, int, bool> IsMatchByErrorPosition;
     public KnownIssueBuildErrorsType BuildErrorsType { get; }
 
-    private readonly List<Regex> _matchingRegexes = new();
-
-    public KnownIssue()
-    {
-    }
+    private readonly List<Regex> _matchingRegexes = [];
 
     public KnownIssue(GitHubIssue githubIssue, List<string> buildErrors, KnownIssueType issueType, KnownIssueOptions options)
     {

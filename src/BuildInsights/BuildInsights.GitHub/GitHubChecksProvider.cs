@@ -24,7 +24,7 @@ public interface IGitHubChecksService
     Task<bool> IsRepositorySupported(string repository);
     Task<IEnumerable<CheckRun>> GetBuildCheckRunsAsync(string repository, string sha);
     Task<IEnumerable<CheckRun>> GetAllCheckRunsAsync(string repository, string sha);
-    Task<CheckRun> GetCheckRunAsyncForApp(string repository, string sha, int appId, string chenRunName);
+    Task<CheckRun?> GetCheckRunForAppAsync(string repository, string sha, int appId, string chenRunName);
     Task UpdateCheckRunConclusion(CheckRun checkRun, string repository, string updatedBody, Octokit.CheckConclusion result);
     Task<bool> RepositoryHasIssues(string repository);
     Task<GitHubIssue> GetIssueAsync(string repository, long issueId);
@@ -170,7 +170,7 @@ public class GitHubChecksProvider : IGitHubChecksService
         return allCheckRuns.CheckRuns.Select(x => new CheckRun(x));
     }
 
-    public async Task<CheckRun> GetCheckRunAsyncForApp(string repository, string sha, int appId, string chenRunName)
+    public async Task<CheckRun?> GetCheckRunForAppAsync(string repository, string sha, int appId, string chenRunName)
     {
         _logger.LogInformation("Fetching build check run set for commit: {repository}/{commitHash}", repository, sha);
         (string name, string owner) = GitRepoUrlUtils.GetRepoNameAndOwner(repository);

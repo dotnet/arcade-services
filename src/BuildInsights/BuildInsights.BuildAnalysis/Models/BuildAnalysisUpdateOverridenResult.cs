@@ -15,7 +15,7 @@ public class BuildAnalysisUpdateOverridenResult
     public string CheckResultBody { get; set; }
 
 
-    public BuildAnalysisUpdateOverridenResult(string reason, string previousResult, string newResult, string checkResultBody)
+    public BuildAnalysisUpdateOverridenResult(string reason, string previousResult, string newResult, string? checkResultBody)
     {
         Reason = reason;
         PreviousResult = previousResult;
@@ -23,7 +23,7 @@ public class BuildAnalysisUpdateOverridenResult
         CheckResultBody = GetCheckResultWithOutPreviousOverrideInformation(checkResultBody);
     }
 
-    private static string GetCheckResultWithOutPreviousOverrideInformation(string checkResultBody)
+    private static string GetCheckResultWithOutPreviousOverrideInformation(string? checkResultBody)
     {
         if (string.IsNullOrEmpty(checkResultBody))
         {

@@ -3,6 +3,7 @@
 
 using System.Text.Json.Serialization;
 
+#nullable disable
 namespace BuildInsights.BuildAnalysis.Models;
 
 public class StartedBuildMessage

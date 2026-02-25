@@ -8,6 +8,6 @@ namespace BuildInsights.BuildAnalysis.Models;
 
 public interface IResult
 {
-    public FailureRate FailureRate { get; }
+    public FailureRate? FailureRate { get; }
     public IImmutableList<KnownIssue> KnownIssues { get; }
 }

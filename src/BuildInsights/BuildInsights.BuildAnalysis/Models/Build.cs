@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 
+#nullable disable
 namespace BuildInsights.BuildAnalysis.Models;
 
 public class BuildLinks
@@ -76,12 +77,12 @@ public class Build
         PullRequestUrl = pullRequestUrl;
         TargetBranch = targetBranch;
         Repository = new BuildRepository(repository, repositoryType);
-        links ??= ImmutableDictionary<string, string>.Empty;
+        links ??= [];
         Links = new BuildLinks(
             links.GetValueOrDefault("web", null),
             links.GetValueOrDefault("sourceVersionDisplayUri", null)
         );
-        ValidationResults = validationResults ?? ImmutableList<BuildValidationResult>.Empty;
+        ValidationResults = validationResults ?? [];
         FinishTime = finishTime;
         IsComplete = isComplete;
         Reason = reason;

@@ -8,8 +8,8 @@ namespace BuildInsights.BuildAnalysis.Models;
 public class MarkdownParameters
 {
     public MergedBuildResultAnalysis Analysis { get; }
-    public KnownIssueUrlOptions KnownIssueUrlOptions { get; }
-    public MarkdownSummarizeInstructions SummarizeInstructions { get; }
+    public KnownIssueUrlOptions? KnownIssueUrlOptions { get; }
+    public MarkdownSummarizeInstructions? SummarizeInstructions { get; }
     public Repository Repository { get; }
     public string SnapshotId { get; }
     public string PullRequest { get; set; }
@@ -19,13 +19,10 @@ public class MarkdownParameters
         string snapshotId,
         string pullRequest,
         Repository repository,
-        KnownIssueUrlOptions knownIssueUrlOptions = null,
-        MarkdownSummarizeInstructions summarizeInstructions = null)
+        KnownIssueUrlOptions? knownIssueUrlOptions = null,
+        MarkdownSummarizeInstructions? summarizeInstructions = null)
     {
-        if (analysis == null)
-        {
-            throw new ArgumentNullException(nameof(analysis));
-        }
+        ArgumentNullException.ThrowIfNull(analysis);
 
         if (repository == null || string.IsNullOrEmpty(repository.Id))
         {

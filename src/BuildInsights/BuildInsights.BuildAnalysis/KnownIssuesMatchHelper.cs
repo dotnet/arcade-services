@@ -19,8 +19,8 @@ public class KnownIssuesMatchHelper
                 {
                     BuildId = build.Id,
                     BuildRepository = build.Repository.Name,
-                    IssueId = issue.GitHubIssue.Id,
-                    IssueRepository = issue.GitHubIssue.RepositoryWithOwner,
+                    IssueId = issue.GitHubIssue?.Id ?? 0,
+                    IssueRepository = issue.GitHubIssue?.RepositoryWithOwner ?? string.Empty,
                     IssueType = issue.IssueType.ToString(),
                     IssueLabels = string.Join(",", issue.GitHubIssue?.Labels ?? []),
                     JobId = step.JobId,

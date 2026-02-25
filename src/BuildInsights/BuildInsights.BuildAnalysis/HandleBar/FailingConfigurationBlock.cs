@@ -14,7 +14,7 @@ public class FailingConfigurationBlock : InlineHelper
     public override void Invoke(in EncodedTextWriter output, in HelperOptions options, in Context context, in Arguments arguments)
     {
         Dictionary<string, object> contextDict = (Dictionary<string, object>)context.Value;
-        List<FailingConfiguration> configs = contextDict["FailingConfigurations"] as List<FailingConfiguration>;
+        List<FailingConfiguration>? configs = contextDict["FailingConfigurations"] as List<FailingConfiguration>;
         if (configs != null)
         {
             int configCount = configs.Count;

@@ -103,7 +103,7 @@ public class BuildRetryProvider : IBuildRetryService
             return true;
         }
 
-        if (IsRetryByErrors(buildConfiguration.RetryByErrors, records, out  string regexMatch))
+        if (IsRetryByErrors(buildConfiguration.RetryByErrors, records, out string? regexMatch))
         {
             _logger.LogInformation("buildId: {buildId} in {orgId} is suitable for retry after matching the 'RetryByErrors' rule with regex match: {regexMatch}",
                 buildId, orgId, regexMatch);
@@ -118,7 +118,7 @@ public class BuildRetryProvider : IBuildRetryService
         return IsRetryByErrorsInPipeline(buildConfiguration.RetryByErrorsInPipeline, records, buildId);
     }
 
-    private  bool IsRetryByErrors(IReadOnlyCollection<Errors> errors, IReadOnlyList<TimelineRecord> timelineRecords, out string regexMatch)
+    private static bool IsRetryByErrors(IReadOnlyCollection<Errors> errors, IReadOnlyList<TimelineRecord> timelineRecords, out string? regexMatch)
     {
         regexMatch = null;
         if (errors == null) return false;
@@ -131,7 +131,7 @@ public class BuildRetryProvider : IBuildRetryService
         return regexMatch != null;
     }
 
-    private bool IsRetryByError(string errorRegex, IReadOnlyList<TimelineRecord> timelineRecords, out string regexMatch)
+    private static bool IsRetryByError(string errorRegex, IReadOnlyList<TimelineRecord> timelineRecords, out string? regexMatch)
     {
         regexMatch = null;
         if (errorRegex == null) return false;
@@ -147,19 +147,19 @@ public class BuildRetryProvider : IBuildRetryService
     {
         if (pipelineToRetry == null) return false;
 
-        if (IsMatchingRecordFailing(pipelineToRetry.RetryJobs?.Select(j => j.JobName).ToList(), RecordType.Job, timelineRecords, out string matchJob))
+        if (IsMatchingRecordFailing(pipelineToRetry.RetryJobs?.Select(j => j.JobName).ToList(), RecordType.Job, timelineRecords, out string? matchJob))
         {
             _logger.LogInformation("{buildId} is suitable to retry after a matching the 'RetryByJob' rule with Job: {matchJob}", buildId, matchJob);
             return true;
         }
 
-        if (IsMatchingRecordFailing(pipelineToRetry.RetryPhases?.Select(p => p.PhaseName).ToList(), RecordType.Phase, timelineRecords, out string matchPhase))
+        if (IsMatchingRecordFailing(pipelineToRetry.RetryPhases?.Select(p => p.PhaseName).ToList(), RecordType.Phase, timelineRecords, out string? matchPhase))
         {
             _logger.LogInformation("{buildId} is suitable to retry after a matching the 'RetryByPhase' rule with Phase: {matchPhase}", buildId, matchPhase);
             return true;
         }
 
-        if (IsMatchingRecordFailing(pipelineToRetry.RetryStages?.Select(p => p.StageName).ToList(), RecordType.Stage, timelineRecords, out string matchStage))
+        if (IsMatchingRecordFailing(pipelineToRetry.RetryStages?.Select(p => p.StageName).ToList(), RecordType.Stage, timelineRecords, out string? matchStage))
         {
             _logger.LogInformation("{buildId} is suitable to retry after a matching the 'RetryByStage' rule with Stage: {matchStage}", buildId, matchStage);
             return true;
@@ -168,7 +168,7 @@ public class BuildRetryProvider : IBuildRetryService
         foreach (JobsInStage jobInStage in pipelineToRetry.RetryJobsInStage)
         {
             List<TimelineRecord> matchingStage = GetFilteredTimelineRecords(ImmutableList.Create(jobInStage.StageName), RecordType.Stage, timelineRecords);
-            if (IsMatchingRecordFailing(jobInStage.JobsNames, RecordType.Job, GetChildRecords(matchingStage, timelineRecords), out string matchStageJob))
+            if (IsMatchingRecordFailing(jobInStage.JobsNames, RecordType.Job, GetChildRecords(matchingStage, timelineRecords), out string? matchStageJob))
             {
                 _logger.LogInformation("{buildId} is suitable to retry after a matching the 'RetryJobsInStage' rule with Stage: {StageName} and Job: {matchStageJob}",
                     buildId, jobInStage.StageName, matchStageJob);
@@ -183,7 +183,7 @@ public class BuildRetryProvider : IBuildRetryService
     {
         if (retryByErrorsInPipeline == null) return false;
 
-        string retryErrorMatch;
+        string? retryErrorMatch;
 
         foreach (ErrorInPipelineByJobs errorInPipelineByJob in retryByErrorsInPipeline.ErrorInPipelineByJobs)
         {
@@ -225,7 +225,7 @@ public class BuildRetryProvider : IBuildRetryService
         return false;
     }
 
-    private bool IsMatchingRecordFailing(IReadOnlyCollection<string> pipelineRetryNames, RecordType type, IReadOnlyList<TimelineRecord> timelineRecords, out string pipelineMatch)
+    private static bool IsMatchingRecordFailing(IReadOnlyCollection<string>? pipelineRetryNames, RecordType type, IReadOnlyList<TimelineRecord> timelineRecords, out string? pipelineMatch)
     {
         if (pipelineRetryNames == null)
         {
@@ -241,7 +241,7 @@ public class BuildRetryProvider : IBuildRetryService
         return pipelineMatch != null;
     }
 
-    private List<TimelineRecord> GetFilteredTimelineRecords(IReadOnlyCollection<string> matchingRecords, RecordType type, IReadOnlyList<TimelineRecord> timelineRecords)
+    private static List<TimelineRecord> GetFilteredTimelineRecords(IReadOnlyCollection<string> matchingRecords, RecordType type, IReadOnlyList<TimelineRecord> timelineRecords)
     {
         if (matchingRecords == null) return [];
 
@@ -251,7 +251,7 @@ public class BuildRetryProvider : IBuildRetryService
             .ToList();
     }
 
-    private IReadOnlyList<TimelineRecord> GetChildRecords(List<TimelineRecord> parentRecords, IReadOnlyList<TimelineRecord> timelineRecords)
+    private static IReadOnlyList<TimelineRecord> GetChildRecords(List<TimelineRecord> parentRecords, IReadOnlyList<TimelineRecord> timelineRecords)
     {
         var childRecords = new List<TimelineRecord>();
         foreach (TimelineRecord parentRecord in parentRecords ?? [])
@@ -259,12 +259,16 @@ public class BuildRetryProvider : IBuildRetryService
             DepthFirstTraversal(timelineRecords, parentRecord.Id, childRecords.Add);
         }
 
-        return childRecords.Where(t => t != null).ToList();
+        return [..childRecords.Where(t => t != null)];
     }
 
     private static void DepthFirstTraversal(IReadOnlyList<TimelineRecord> timelineRecords, Guid parent, Action<TimelineRecord> visit)
     {
-        visit(timelineRecords.FirstOrDefault(t => t.Id == parent));
+        var record = timelineRecords.FirstOrDefault(t => t.Id == parent);
+        if (record is not null)
+        {
+            visit(record);
+        }
 
         foreach (Guid childGuid in timelineRecords.Where(t => t.ParentId == parent).Select(t => t.Id))
         {

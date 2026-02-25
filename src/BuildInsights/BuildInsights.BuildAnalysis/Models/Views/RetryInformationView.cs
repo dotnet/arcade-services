@@ -12,7 +12,7 @@ public class RetryInformationView
         int buildId,
         string buildNumber,
         string linkToBuild,
-        GitHubIssue gitHubIssue)
+        GitHubIssue? gitHubIssue)
     {
         PipelineName = pipelineName;
         BuildId = buildId;
@@ -31,5 +31,5 @@ public class RetryInformationView
     public string BuildNumber { get;  } //In the form 20210226.40
     public string LinkToBuild { get;  }
     public int GithubIssueId { get; }
-    public string GitHubIssueRepository { get;  }
+    public string? GitHubIssueRepository { get;  }
 }

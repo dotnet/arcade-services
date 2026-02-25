@@ -10,8 +10,6 @@ public class CheckRun
 {
     private const int AzurePipelinesAppID = 9426;
 
-    public CheckRun() { }
-
     public CheckRun(Octokit.CheckRun octoKitCheckRun)
     {
         Status = octoKitCheckRun.Status.Value switch
@@ -80,7 +78,7 @@ public class CheckRun
     /// <summary>
     /// The name of the Azure DevOps Pipeline the run was ran on
     /// </summary>
-    public string AzureDevOpsPipelineName { get; }
+    public string? AzureDevOpsPipelineName { get; }
 
     /// <summary>
     /// The Id of the Azure DevOps Build
@@ -90,12 +88,12 @@ public class CheckRun
     /// <summary>
     /// The Id of the Azure DevOps Project the pipeline belongs to
     /// </summary>
-    public string AzureDevOpsProjectId { get; }
+    public string? AzureDevOpsProjectId { get; }
 
     /// <summary>
     /// The Url of the Azure DevOps Build 
     /// </summary>
-    public string AzureDevOpsBuildUrl { get; }
+    public string? AzureDevOpsBuildUrl { get; }
 
     /// <summary>
     /// The Id of the GitHub CheckRun
@@ -116,24 +114,24 @@ public class CheckRun
     /// <summary>
     /// Output text of the check run
     /// </summary>
-    public string Body { get; }
+    public string? Body { get; }
 
     /// <summary>
     /// Summary output text of the check run
     /// </summary>
-    public string Summary { get; }
+    public string? Summary { get; }
 
     /// <summary>
     /// Output text of the check run
     /// </summary>
-    public string Title { get; }
+    public string? Title { get; }
 
     /// <summary>
     /// The organization Id of the Azure DevOps Project the pipeline belongs to
     /// </summary>
-    public string Organization { get; }
+    public string? Organization { get; }
 
-    private (int pipelineId, int buildId, string projectId) ParseExternalId(string externalId)
+    private static (int pipelineId, int buildId, string projectId) ParseExternalId(string externalId)
     {
         string[] parsedExternalId = externalId.Split("|");
 
@@ -218,7 +216,7 @@ public class CheckRunEqualityComparer : IEqualityComparer<CheckRun>
         else if (x.AppId == y.AppId &&
             x.AzureDevOpsBuildId == y.AzureDevOpsBuildId &&
             x.AzureDevOpsPipelineId == y.AzureDevOpsPipelineId &&
-            x.AzureDevOpsProjectId.Equals(y.AzureDevOpsProjectId))
+            string.Equals(x.AzureDevOpsProjectId,y.AzureDevOpsProjectId))
         {
             return true;
         }

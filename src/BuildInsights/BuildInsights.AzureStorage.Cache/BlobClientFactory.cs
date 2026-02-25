@@ -16,7 +16,7 @@ public interface IBlobClientFactory
 
     BlobClient CreateBlobClient(string endpoint, string blobContainerName, string blobName);
 
-    BlobLeaseClient CreateBlobLeaseClient(BlobClient blobClient, string leaseId = null);
+    BlobLeaseClient CreateBlobLeaseClient(BlobClient blobClient, string? leaseId = null);
 
     BlobContainerClient CreateBlobContainerClient(string endpoint, string blobContainerName);
 
@@ -46,7 +46,7 @@ public class BlobClientFactory : IBlobClientFactory
         return new BlobContainerClient(new Uri($"{endpoint}/{blobContainerName}"), _credential);
     }
 
-    public BlobLeaseClient CreateBlobLeaseClient(BlobClient blobClient, string leaseId = null)
+    public BlobLeaseClient CreateBlobLeaseClient(BlobClient blobClient, string? leaseId = null)
     {
         return blobClient.GetBlobLeaseClient(leaseId);
     }

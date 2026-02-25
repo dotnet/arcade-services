@@ -6,6 +6,7 @@ using BuildInsights.GitHub.Models;
 using BuildInsights.KnownIssues;
 using BuildInsights.KnownIssues.Models;
 
+#nullable disable
 namespace BuildInsights.BuildAnalysis.Models.Views;
 
 public class TestResultView : IResult
@@ -28,13 +29,7 @@ public class TestResultView : IResult
     public string ReportKnownIssueInfraTestUrl { get; set; }
     public string ReportKnownIssueRepositoryTestUrl { get; set; }
 
-    public bool IsNewTest
-    {
-        get
-        {
-            return FailureRate.TotalRuns == 0;
-        }
-    }
+    public bool IsNewTest => FailureRate?.TotalRuns == 0;
     public DateTimeOffset CreationDate { get; set; } //Creation date of the test
     public string ExceptionMessage { get; set; }
     public string CallStack { get; set; }
@@ -44,7 +39,9 @@ public class TestResultView : IResult
 
     private readonly string _azDOUrl;
 
-    public TestResultView() { }
+    public TestResultView()
+    {
+    }
 
     public TestResultView(TestResult testResult, int buildId, string buildUrl, MarkdownParameters markdownParameters)
     {
@@ -66,7 +63,8 @@ public class TestResultView : IResult
         FailureRate = testResult.FailureRate;
         TestSubResults = testResult.TestCaseResult.SubResults?
             .Where(s => s.Outcome == TestOutcomeValue.Failed)
-            .Select(s => new TestSubResultView(s.Name, s.ErrorMessage, s.StackTrace)).ToList();
+            .Select(s => new TestSubResultView(s.Name, s.ErrorMessage, s.StackTrace)).ToList()
+            ?? [];
         KnownIssues = testResult.KnownIssues;
         ConsoleLogLink = testResult.HelixWorkItem?.ConsoleLogUrl;
 

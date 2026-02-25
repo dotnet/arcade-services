@@ -11,6 +11,7 @@ using BuildInsights.GitHub.Models;
 using BuildInsights.KnownIssues;
 using BuildInsights.KnownIssues.Models;
 
+#nullable disable
 namespace BuildInsights.BuildAnalysis;
 
 public interface IMergedBuildAnalysisService
@@ -77,7 +78,8 @@ public class MergedBuildAnalysisProvider : IMergedBuildAnalysisService
             }
             else
             {
-                buildStatus = await JsonSerializer.DeserializeAsync<AggregateRelatedBuild>(relatedBuildStream, _options, cancellationToken);
+                buildStatus = await JsonSerializer.DeserializeAsync<AggregateRelatedBuild>(relatedBuildStream, _options, cancellationToken)
+                    ?? throw new InvalidDataException("Failed to deserialize related-builds.json");
             }
         }
 

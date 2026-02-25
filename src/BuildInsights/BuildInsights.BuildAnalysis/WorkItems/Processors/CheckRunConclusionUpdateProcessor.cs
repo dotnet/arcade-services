@@ -41,7 +41,7 @@ public class CheckRunConclusionUpdateProcessor : WorkItemProcessor<CheckRunConcl
         CheckRunConclusionUpdateEvent workItem,
         CancellationToken cancellationToken)
     {
-        GitHub.Models.CheckRun buildAnalysisCheckRun = await _gitHubChecksService.GetCheckRunAsyncForApp(
+        GitHub.Models.CheckRun? buildAnalysisCheckRun = await _gitHubChecksService.GetCheckRunForAppAsync(
             workItem.Repository,
             workItem.HeadSha,
             _gitHubTokenProviderOptions.GitHubAppId,

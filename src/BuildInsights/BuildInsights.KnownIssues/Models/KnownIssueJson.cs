@@ -8,10 +8,10 @@ namespace BuildInsights.KnownIssues.Models;
 public class KnownIssueJson
 {
     [JsonConverter(typeof(ErrorOrArrayOfErrorsConverter))]
-    public List<string> ErrorMessage { get; set; }
+    public List<string> ErrorMessage { get; set; } = [];
 
     [JsonConverter(typeof(ErrorOrArrayOfErrorsConverter))]
-    public List<string> ErrorPattern { get; set; }
+    public List<string> ErrorPattern { get; set; } = [];
 
     public bool BuildRetry { get; set; }
 

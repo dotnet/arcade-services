@@ -4,6 +4,7 @@
 using Octokit;
 using ProductConstructionService.WorkItems;
 
+#nullable disable
 namespace BuildInsights.BuildAnalysis.WorkItems.Models;
 
 public class CheckRunConclusionUpdateEvent : WorkItem

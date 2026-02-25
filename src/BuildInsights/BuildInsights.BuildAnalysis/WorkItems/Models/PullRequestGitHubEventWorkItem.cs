@@ -4,6 +4,7 @@
 using Newtonsoft.Json.Linq;
 using ProductConstructionService.WorkItems;
 
+#nullable disable
 namespace BuildInsights.BuildAnalysis.WorkItems.Models;
 
 public class PullRequestGitHubEventWorkItem : WorkItem

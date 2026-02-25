@@ -92,7 +92,7 @@ public class KnownIssuesAnalysisRequestProcessor : WorkItemProcessor<KnownIssueA
                     dateTimeOFilter, cancellationToken);
             IReadOnlyList<int> analyzedBuildIds = [..analysisList
                 .Where(knownIssueAnalysis =>
-                     knownIssueAnalysis.ErrorMessage.Equals(KnownIssueHelper.GetKnownIssueErrorMessageStringConversion(issueJson.ErrorMessage)) ||
+                     knownIssueAnalysis.ErrorMessage.Equals(KnownIssueHelper.GetKnownIssueErrorMessageStringConversion(issueJson.ErrorMessage ?? [])) ||
                      knownIssueAnalysis.ErrorMessage.Equals(KnownIssueHelper.GetKnownIssueErrorMessageStringConversion(issueJson.ErrorPattern)))
                 .Select(a => a.BuildId)];
 

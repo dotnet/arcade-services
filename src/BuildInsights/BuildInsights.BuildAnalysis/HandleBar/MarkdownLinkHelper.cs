@@ -10,7 +10,7 @@ public class MarkdownLinkHelper : BaseLinkHelper
 {
     public override PathInfo Name => "LinkTo";
 
-    protected override void RenderString(EncodedTextWriter output, string url, string text)
+    protected override void RenderString(EncodedTextWriter output, string url, string? text)
     {
         output.WriteSafeString("[");
         output.Write(text);

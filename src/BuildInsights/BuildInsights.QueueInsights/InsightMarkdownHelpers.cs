@@ -9,7 +9,7 @@ namespace BuildInsights.QueueInsights;
 internal class InsightMarkdownHelpers
 {
     private static string BasePath { get; } =
-        Path.GetDirectoryName(typeof(InsightMarkdownHelpers).Assembly.Location);
+        Path.GetDirectoryName(typeof(InsightMarkdownHelpers).Assembly.Location)!;
 
     private static void LoadPartials(IHandlebars hb)
     {
@@ -26,7 +26,7 @@ internal class InsightMarkdownHelpers
     {
         LoadPartials(hb);
         return Directory.GetFiles(Path.Combine(BasePath, "Templates"), "*.hbs", SearchOption.TopDirectoryOnly)
-            .ToDictionary(Path.GetFileNameWithoutExtension, file => hb.Compile(File.ReadAllText(file)));
+            .ToDictionary(p => Path.GetFileNameWithoutExtension(p)!, file => hb.Compile(File.ReadAllText(file)));
     }
 
     public static void RegisterHelpers(IHandlebars hb)
@@ -41,7 +41,7 @@ internal class InsightMarkdownHelpers
 
     private static void QueueLinkHelper(EncodedTextWriter output, Context context, Arguments arguments)
     {
-        string queueName = arguments[0].ToString();
+        string queueName = arguments[0].ToString()!;
         output.WriteSafeString("[");
         output.Write(arguments[0]);
         output.WriteSafeString("](");
@@ -62,7 +62,7 @@ internal class InsightMarkdownHelpers
                 return;
             }
 
-            static string FormatPart(int quantity, string name)
+            static string? FormatPart(int quantity, string name)
             {
                 return quantity > 0 ? $"{quantity} {name}{(quantity > 1 ? "s" : "")}" : null;
             }
@@ -77,7 +77,7 @@ internal class InsightMarkdownHelpers
                 }.Where(x => x != null)));
         }
 
-        public bool TryCreateFormatter(Type type, out IFormatter formatter)
+        public bool TryCreateFormatter(Type type, out IFormatter? formatter)
         {
             if (type != typeof(TimeSpan))
             {

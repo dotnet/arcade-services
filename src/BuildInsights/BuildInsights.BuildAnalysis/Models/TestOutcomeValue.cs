@@ -10,7 +10,7 @@ public class TestOutcomeValueConverter : JsonConverter<TestOutcomeValue>
 {
     public override TestOutcomeValue Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        return TestOutcomeValue.Parse(reader.GetString());
+        return TestOutcomeValue.Parse(reader.GetString()!);
     }
 
     public override void Write(Utf8JsonWriter writer, TestOutcomeValue value, JsonSerializerOptions options)
@@ -38,9 +38,9 @@ public class TestOutcomeValue : IEquatable<TestOutcomeValue>, IEquatable<string>
         return new TestOutcomeValue(value);
     }
 
-    public bool Equals(TestOutcomeValue other)
+    public bool Equals(TestOutcomeValue? other)
     {
-        if (ReferenceEquals(null, other))
+        if (other is null)
         {
             return false;
         }
@@ -53,12 +53,12 @@ public class TestOutcomeValue : IEquatable<TestOutcomeValue>, IEquatable<string>
         return string.Equals(Value, other.Value, StringComparison.OrdinalIgnoreCase);
     }
 
-    public bool Equals(string other)
+    public bool Equals(string? other)
     {
         return string.Equals(Value, other, StringComparison.OrdinalIgnoreCase);
     }
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         if (ReferenceEquals(null, obj))
         {

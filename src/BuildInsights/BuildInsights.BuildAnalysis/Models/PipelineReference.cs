@@ -41,9 +41,9 @@ public class PipelineReference : IEquatable<PipelineReference>
         return hash.ToHashCode();
     }
 
-    public bool Equals(PipelineReference other)
+    public bool Equals(PipelineReference? other)
     {
-        if (ReferenceEquals(null, other))
+        if (other is null)
         {
             return false;
         }
@@ -60,9 +60,9 @@ public class PipelineReference : IEquatable<PipelineReference>
                MatchByPipelineConstruction(other, this);
     }
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
-        if (ReferenceEquals(null, obj))
+        if (obj is null)
         {
             return false;
         }
@@ -80,7 +80,7 @@ public class PipelineReference : IEquatable<PipelineReference>
         return false;
     }
 
-    public bool MatchByPipelineConstruction(PipelineReference pipeline, PipelineReference pipelineToCompare)
+    public static bool MatchByPipelineConstruction(PipelineReference pipeline, PipelineReference pipelineToCompare)
     {
         string stageName = pipeline.StageReference.StageName;
         string phaseName = pipeline.PhaseReference.PhaseName;

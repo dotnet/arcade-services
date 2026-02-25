@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 
+#nullable disable
 namespace BuildInsights.BuildAnalysis.Models;
 
 public class TestCaseResult
@@ -59,7 +60,7 @@ public class TestCaseResult
         Comment = comment;
         DurationInMilliseconds = durationInMilliseconds;
         ResultGroupType = resultGroupType;
-        SubResults = subResults ?? ImmutableList<TestCaseResult>.Empty;
+        SubResults = subResults ?? [];
         FailCount = failCount;
         TotalCount = totalCount;
     }
@@ -109,13 +110,13 @@ public class TimelineRecord
         Id = id;
         ParentId = parentId;
         Result = result;
-        Issues = issues ?? ImmutableList<TimelineIssue>.Empty;
+        Issues = issues ?? [];
         RecordType = recordType;
         Attempt = attempt;
         Name = name;
         Identifier = identifier;
         LogUrl = logUrl;
-        PreviousAttempts = previousAttempts ?? ImmutableList<TimelineAttempt>.Empty;
+        PreviousAttempts = previousAttempts ?? [];
         Order = order;
         StartTime = startDate;
     }
@@ -160,6 +161,6 @@ public class TimelineIssue
     {
         Message = message;
         Type = type;
-        Data = data ?? ImmutableDictionary<string, string>.Empty;
+        Data = data ?? [];
     }
 }

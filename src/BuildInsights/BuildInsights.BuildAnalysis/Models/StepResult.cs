@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using BuildInsights.KnownIssues.Models;
 
+#nullable disable
 namespace BuildInsights.BuildAnalysis.Models;
 
 public class StepResult : IResult

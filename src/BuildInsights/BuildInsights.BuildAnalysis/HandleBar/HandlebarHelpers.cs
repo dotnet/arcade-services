@@ -112,7 +112,7 @@ public class HandlebarHelpers
             if (parameters.Length != 2)
                 throw new HandlebarsException("{{# (eq ) }} helper must have two arguments");
 
-            return parameters[0].ToString().Equals(parameters[1].ToString());
+            return parameters[0].ToString()!.Equals(parameters[1].ToString());
         });
     }
 
@@ -141,8 +141,8 @@ public class HandlebarHelpers
                 int countNotShowedResults = collection.Count - ResultsLimit;
                 if (arguments.Length > 2 && countNotShowedResults > 0)
                 {
-                    string markdownFormat = arguments[1] as string;
-                    string message = arguments[2] as string;
+                    string? markdownFormat = arguments[1] as string;
+                    string? message = arguments[2] as string;
 
                     writer.WriteSafeString($"{markdownFormat} {countNotShowedResults} {message} \n");
                 }

@@ -8,7 +8,7 @@ namespace BuildInsights.BuildAnalysis.Models;
 /// </summary>
 public class TestCaseResultNameComparer : IEqualityComparer<TestCaseResult>
 {
-    public bool Equals(TestCaseResult x, TestCaseResult y)
+    public bool Equals(TestCaseResult? x, TestCaseResult? y)
     {
         return x?.Name.Equals(y?.Name) ?? false;
     }

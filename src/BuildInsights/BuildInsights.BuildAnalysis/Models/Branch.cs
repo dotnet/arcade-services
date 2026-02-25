@@ -11,7 +11,7 @@ public class BranchConverter : JsonConverter<Branch>
 {
     public override Branch Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        return Branch.Parse(reader.GetString());
+        return Branch.Parse(reader.GetString()!);
     }
 
     public override void Write(Utf8JsonWriter writer, Branch value, JsonSerializerOptions options)
@@ -60,7 +60,7 @@ public class GitRef : IEquatable<GitRef>
         return other.Path == Path;
     }
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         if (obj is null)
         {

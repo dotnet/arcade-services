@@ -29,7 +29,7 @@ internal static class DataReaderHelpers
         return value.Value;
     }
 
-    public static T GetReaderValue<T>(IDataRecord reader, int ordinal, Func<int, T> get) where T : class
+    public static T? GetReaderValue<T>(IDataRecord reader, int ordinal, Func<int, T> get) where T : class
     {
         // Kusto IsDBNull doesn't work
         if (reader.IsDBNull(ordinal) || reader.GetValue(ordinal) == DBNull.Value || reader.GetValue(ordinal) == null)

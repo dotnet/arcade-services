@@ -22,7 +22,7 @@ public class PreviousBuildAnalysisProvider : IPreviousBuildAnalysisService
         _cache = cache;
     }
 
-    public Task<BuildResultAnalysis> GetBuildResultAnalysisAsync(BuildReferenceIdentifier buildReference, CancellationToken cancellationToken, bool isValidationAnalysis = false)
+    public Task<BuildResultAnalysis?> GetBuildResultAnalysisAsync(BuildReferenceIdentifier buildReference, CancellationToken cancellationToken, bool isValidationAnalysis = false)
     {
         return _cache.TryGetBuildAsync(buildReference, cancellationToken);
     }

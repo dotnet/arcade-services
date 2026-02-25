@@ -17,7 +17,7 @@ public class ErrorOrArrayOfErrorsConverter : JsonConverter<List<string>>
     {
         if (reader.TokenType == JsonTokenType.String)
         {
-            string value = reader.GetString();
+            string? value = reader.GetString();
             return string.IsNullOrEmpty(value) ? [] : [value];
         }
 
@@ -25,7 +25,7 @@ public class ErrorOrArrayOfErrorsConverter : JsonConverter<List<string>>
         reader.Read();
         while (reader.TokenType != JsonTokenType.EndArray)
         {
-            string value = reader.GetString();
+            string? value = reader.GetString();
 
             if (!string.IsNullOrEmpty(value))
             {

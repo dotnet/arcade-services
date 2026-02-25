@@ -15,7 +15,7 @@ namespace BuildInsights.BuildAnalysis;
 
 public interface IBuildAnalysisService
 {
-    public Task<BuildResultAnalysis> GetBuildResultAnalysisAsync(BuildReferenceIdentifier buildReference, CancellationToken cancellationToken, bool isValidationAnalysis = false);
+    public Task<BuildResultAnalysis?> GetBuildResultAnalysisAsync(BuildReferenceIdentifier buildReference, CancellationToken cancellationToken, bool isValidationAnalysis = false);
 }
 
 public class BuildAnalysisProvider : IBuildAnalysisService
@@ -23,7 +23,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
     private readonly IBuildDataService _buildDataService;
     private readonly ILogger<BuildAnalysisProvider> _logger;
     private readonly TelemetryClient _telemetryClient;
-    private readonly IBuildCacheService _cache;
+    private readonly IBuildCacheService? _cache;
     private readonly IBuildRetryService _buildRetryService;
     private readonly IGitHubIssuesService _gitHubIssuesService;
     private readonly IKnownIssuesService _knownIssuesService;
@@ -47,7 +47,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
         ITestResultService testResultService,
         IAzDoToGitHubRepositoryService azDoToGitHubRepositoryProvider,
         IKnownIssuesMatchService knownIssuesMatchService,
-        IBuildCacheService cache = null)
+        IBuildCacheService? cache = null)
     {
         _buildDataService = buildDataService;
         _buildRetryService = buildRetryService;
@@ -64,7 +64,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
         _azDoToGitHubRepositoryProvider = azDoToGitHubRepositoryProvider;
     }
 
-    public async Task<BuildResultAnalysis> GetBuildResultAnalysisAsync(
+    public async Task<BuildResultAnalysis?> GetBuildResultAnalysisAsync(
         BuildReferenceIdentifier buildReference,
         CancellationToken cancellationToken,
         bool isValidationAnalysis = false)
@@ -119,7 +119,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
         }
 
         var succeededWithIssuesPipelineReference = new List<PipelineReference>();
-        List<KnownIssue> knownIssues = (await GetKnownIssues(build)).ToList();
+        List<KnownIssue> knownIssues = [.. (await GetKnownIssues(build))];
         if (buildTimelineRecords?.Count > 0)
         {
             Dictionary<Guid, TimelineRecord> recordDictionary = buildTimelineRecords.ToDictionary(r => r.Id);
@@ -133,8 +133,10 @@ public class BuildAnalysisProvider : IBuildAnalysisService
             IEnumerable<Guid> taskSucceededWithIssues = buildTimelineRecords
                 .Where(t => t.Result == TaskResult.SucceededWithIssues && t.RecordType == RecordType.Job)
                 .Select(t => t.Id);
-            succeededWithIssuesPipelineReference = taskSucceededWithIssues
-                .Select(taskId => BuildPipelineReference(taskId, recordDictionary)).Where(p => p != null).ToList();
+            succeededWithIssuesPipelineReference = [.. taskSucceededWithIssues
+                .Select(taskId => BuildPipelineReference(taskId, recordDictionary))
+                .Where(p => p != null)
+                .Cast<PipelineReference>()];
         }
 
         // Get all failing TestCaseResults and their associated TestRuns
@@ -143,13 +145,13 @@ public class BuildAnalysisProvider : IBuildAnalysisService
         if (isValidationAnalysis)
         {
             IReadOnlyList<TestRunDetails> allFailuresTestCaseResults = await _buildDataService.GetAllFailingTestsForBuildAsync(build, cancellationToken);
-            testResultsCausingBuildToFail = allFailuresTestCaseResults.ToList();
+            testResultsCausingBuildToFail = [.. allFailuresTestCaseResults];
         }
         else
         {
             List<TestRunDetails> failingTestCaseResults = await _buildDataService.GetFailingTestsForBuildAsync(build, cancellationToken);
             //Filter results that where executed on phases that finished successfully
-            testResultsCausingBuildToFail = failingTestCaseResults.Where(t => succeededWithIssuesPipelineReference.All(p => !p.Equals(t.PipelineReference))).ToList();
+            testResultsCausingBuildToFail = [.. failingTestCaseResults.Where(t => succeededWithIssuesPipelineReference.All(p => !p.Equals(t.PipelineReference)))];
         }
 
         TestKnownIssuesAnalysis testKnownIssuesAnalysis = await _testResultService.GetTestFailingWithKnownIssuesAnalysis(testResultsCausingBuildToFail, knownIssues.ToList(), buildReference.Org);
@@ -172,14 +174,14 @@ public class BuildAnalysisProvider : IBuildAnalysisService
 
                 _logger.LogInformation($"BuildId {build.Id} in org {buildReference.Org} in project {buildReference.Project}. Fetching timeline records from previous attempt");
                 IReadOnlyList<TimelineRecord> timelineRecordsPreviousAttempt =
-                    await GetRecordsFromLatestPreviousAttempt(buildTimelineRecords, buildReference, cancellationToken);
+                    await GetRecordsFromLatestPreviousAttempt(buildTimelineRecords!, buildReference, cancellationToken);
                 _logger.LogInformation($"BuildId {build.Id} in org {buildReference.Org} in project {buildReference.Project} / has a count of {timelineRecordsPreviousAttempt.Count} records on previous attempt");
 
                 if (timelineRecordsPreviousAttempt.Count > 0)
                 {
                     Dictionary<Guid, TimelineRecord> recordDictionary = timelineRecordsPreviousAttempt.ToDictionary(r => r.Id);
                     ImmutableList<TimelineRecord> timelineRecordsPreviousAttemptOrdered = RecordNode.GetTimelineRecordsOrdererByTreeStructure(timelineRecordsPreviousAttempt);
-                    List<TimelineRecord> failedTaskInPreviousAttempt = timelineRecordsPreviousAttemptOrdered.Where(x => x.Result == TaskResult.Failed && x.RecordType == RecordType.Task).ToList();
+                    List<TimelineRecord> failedTaskInPreviousAttempt = [.. timelineRecordsPreviousAttemptOrdered.Where(x => x.Result == TaskResult.Failed && x.RecordType == RecordType.Task)];
 
                     _logger.LogInformation($"BuildId {build.Id} in org {buildReference.Org} in project {buildReference.Project} / has {failedTaskInPreviousAttempt.Count} failed records on previous attempt");
 
@@ -196,7 +198,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
         }
 
         // Update or remove build messages
-        CleanBuildMessages(buildAnalysis.BuildStepsResult, testResultsCausingBuildToFail, buildTimelineRecords?.ToDictionary(r => r.Id));
+        CleanBuildMessages(buildAnalysis.BuildStepsResult, testResultsCausingBuildToFail, buildTimelineRecords?.ToDictionary(r => r.Id) ?? []);
 
         //Verified the status of the build to be sure that hasn't be retry manually
         if (build.Result == BuildResult.Failed)
@@ -268,7 +270,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
 
             if (result.IsValidRepositoryAvailable)
             {
-                knownIssues.AddRange(await _gitHubIssuesService.GetRepositoryKnownIssues(result.GitHubRepository));
+                knownIssues.AddRange(await _gitHubIssuesService.GetRepositoryKnownIssues(result.GitHubRepository!));
             }
         }
         else
@@ -276,8 +278,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
             knownIssues.AddRange(await _gitHubIssuesService.GetRepositoryKnownIssues(build.Repository.Name));
         }
 
-        knownIssues = knownIssues.Where(issue => issue.BuildError is { Count: > 0 })
-            .DistinctBy(k => k.GitHubIssue, new GitHubIssueComparer()).ToList();
+        knownIssues = [.. knownIssues.Where(issue => issue.BuildError is { Count: > 0 }).DistinctBy(k => k.GitHubIssue, new GitHubIssueComparer())];
 
         _logger.LogInformation($"Analyzing {knownIssues.Count} known issues in build: {build.Id}");
         return knownIssues;
@@ -291,7 +292,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
             return new BuildAutomaticRetry(true);
         }
 
-        KnownIssue knownIssueWithBuildRetry = buildAnalysis.BuildStepsResult.SelectMany(b => b.KnownIssues).FirstOrDefault(k => k.Options.RetryBuild);
+        KnownIssue? knownIssueWithBuildRetry = buildAnalysis.BuildStepsResult.SelectMany(b => b.KnownIssues).FirstOrDefault(k => k.Options.RetryBuild);
         if (knownIssueWithBuildRetry != null && await _buildRetryService.RetryIfKnownIssueSuitable(buildReference.Org, buildReference.Project, buildReference.BuildId, cancellationToken))
         {
             _logger.LogInformation(
@@ -311,7 +312,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
     {
         string uri = CreateLinkToStep(buildReference, record) + $"&t={record.Id}";
 
-        if (issue.Data.TryGetValue("logFileLineNumber", out string lineNumber))
+        if (issue.Data.TryGetValue("logFileLineNumber", out string? lineNumber))
         {
             uri += $"&l={lineNumber}";
         }
@@ -319,11 +320,11 @@ public class BuildAnalysisProvider : IBuildAnalysisService
         return uri;
     }
 
-    private static PipelineReference BuildPipelineReference(Guid jobId, Dictionary<Guid, TimelineRecord> recordDictionary)
+    private static PipelineReference? BuildPipelineReference(Guid jobId, Dictionary<Guid, TimelineRecord> recordDictionary)
     {
-        JobReference jobReference = null;
-        PhaseReference phaseReference = null;
-        StageReference stageReference = null;
+        JobReference? jobReference = null;
+        PhaseReference? phaseReference = null;
+        StageReference? stageReference = null;
 
         Guid idToSearchFor = jobId;
         while (true)
@@ -410,11 +411,11 @@ public class BuildAnalysisProvider : IBuildAnalysisService
             )
             .Select(run => (run.Name, run.Results.First(t => t.Name.Equals(automatedTestName))));
 
-        return runNamesAndTestCase.Select(t => new FailingConfiguration
+        return [.. runNamesAndTestCase.Select(t => new FailingConfiguration
         {
             Configuration = new Configuration(GetTestConfigurationName(t.name), buildReferenceIdentifier.Org,
                 buildReferenceIdentifier.Project, t.testCaseResult)
-        }).ToList();
+        })];
     }
 
     private static string GetTestConfigurationName(string configuration)
@@ -559,12 +560,11 @@ public class BuildAnalysisProvider : IBuildAnalysisService
             .Where(a => a != null)
             .Max(a => a.Attempt);
 
-        List<Guid> timelineIdsPreviousAttempts = latestTimelineRecords
+        List<Guid> timelineIdsPreviousAttempts = [.. latestTimelineRecords
             .SelectMany(r => r.PreviousAttempts)
             .Where(a => a?.Attempt == latestPreviousAttempt)
             .Select(a => a.TimelineId)
-            .Distinct()
-            .ToList();
+            .Distinct()];
 
         _logger.LogInformation($"BuildId {buildReference.BuildId} in org {buildReference.Org} in org {buildReference.Org}in project {buildReference.Project} from attempt: {latestPreviousAttempt} with timelineIds: {string.Join(", ", timelineIdsPreviousAttempts)}");
         var previousTimelineTask = timelineIdsPreviousAttempts.Select(timelineId =>
@@ -594,7 +594,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
     private static void CleanBuildMessages(
         List<StepResult> stepResults,
         List<TestRunDetails> testRunDetails,
-        Dictionary<Guid, TimelineRecord> recordDictionary = null)
+        Dictionary<Guid, TimelineRecord>? recordDictionary = null)
     {
         string suffixMatch = "exited with code '1'.";
 
@@ -617,7 +617,7 @@ public class BuildAnalysisProvider : IBuildAnalysisService
         {
             foreach (StepResult stepResult in stepResults)
             {
-                PipelineReference buildPipelineReference = BuildPipelineReference(Guid.Parse(stepResult.JobId), recordDictionary);
+                PipelineReference? buildPipelineReference = BuildPipelineReference(Guid.Parse(stepResult.JobId), recordDictionary);
                 if (buildPipelineReference != null && testRunDetails.Any(t => buildPipelineReference.Equals(t.PipelineReference)))
                 {
                     stepResult.Errors.RemoveAll(issue => IsTestError(issue.ErrorMessage));

@@ -20,7 +20,7 @@ public sealed class CustomDateTimeFormatter : IFormatter, IFormatterProvider
         writer.WriteSafeString(dateTime.ToString(_format));
     }
 
-    public bool TryCreateFormatter(Type type, out IFormatter formatter)
+    public bool TryCreateFormatter(Type type, out IFormatter? formatter)
     {
         if (type != typeof(DateTimeOffset))
         {

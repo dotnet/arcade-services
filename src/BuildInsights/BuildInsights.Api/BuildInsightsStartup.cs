@@ -124,7 +124,7 @@ internal static class BuildInsightsStartup
         {
             var azdoTokenProvider = sp.GetRequiredService<IAzureDevOpsTokenProvider>();
             var gitHubTokenProvider = sp.GetRequiredService<IGitHubTokenProvider>();
-            return new RemoteTokenProvider(azdoTokenProvider, new Maestro.Common.GitHubTokenProvider(gitHubTokenProvider));
+            return new RemoteTokenProvider(azdoTokenProvider, new BuildInsights.Api.Configuration.GitHubTokenProvider(gitHubTokenProvider));
         });
 
         // Set up SQL database

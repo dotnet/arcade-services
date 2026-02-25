@@ -38,7 +38,7 @@ public class KnownIssueView
 
 public class KnownIssueViewComparer : IEqualityComparer<KnownIssueView>
 {
-    public bool Equals(KnownIssueView x, KnownIssueView y)
+    public bool Equals(KnownIssueView? x, KnownIssueView? y)
     {
         if (x == null && y == null)
         {
@@ -57,7 +57,7 @@ public class KnownIssueViewComparer : IEqualityComparer<KnownIssueView>
 
     public int GetHashCode(KnownIssueView obj)
     {
-        HashCode hash = new HashCode();
+        var hash = new HashCode();
         hash.Add(obj.Link);
         hash.Add(obj.IssueRepository);
         hash.Add(obj.IssueId);

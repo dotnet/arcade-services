@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using BuildInsights.GitHub.Models;
 using BuildInsights.KnownIssues.Models;
 
+#nullable disable
 namespace BuildInsights.BuildAnalysis.Models;
 
 public class MergedBuildResultAnalysis
@@ -17,7 +18,9 @@ public class MergedBuildResultAnalysis
 
     public ImmutableList<KnownIssue> CriticalIssues { get; set; }
 
-    public MergedBuildResultAnalysis() { }
+    public MergedBuildResultAnalysis()
+    {
+    }
 
     public MergedBuildResultAnalysis(
         string commitHash,

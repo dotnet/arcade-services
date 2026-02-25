@@ -42,7 +42,7 @@ internal class BlobContextualStorage : BaseContextualStorage, IDistributedLockSe
     /// <param name="cancellationToken">CancellationToken</param>
     public async Task<IDistributedLock> AcquireAsync(string lockName, TimeSpan maxLeaseWaitTime, CancellationToken cancellationToken)
     {
-        if (_distributedLockDictionary.TryGetValue(lockName, out IDistributedLock azureBlobLease))
+        if (_distributedLockDictionary.TryGetValue(lockName, out IDistributedLock? azureBlobLease))
         {
             // We can make the async local a dictionary if we really need to take multiple, different leases per thread
             throw new InvalidOperationException("A lease is already taken by this context.");
@@ -176,7 +176,7 @@ internal class BlobContextualStorage : BaseContextualStorage, IDistributedLockSe
         await blobClient.UploadAsync(data, true, cancellationToken);
     }
 
-    protected override async Task<Stream> TryGetAsync(string root, string name, CancellationToken cancellationToken)
+    protected override async Task<Stream?> TryGetAsync(string root, string name, CancellationToken cancellationToken)
     {
         BlobClient blobClient = GetBlobClient(root, name);
         try
@@ -209,8 +209,7 @@ internal class BlobContextualStorage : BaseContextualStorage, IDistributedLockSe
     {
         foreach (var lockObj in _distributedLockDictionary)
         {
-            IDistributedLock distributedLock;
-            if (_distributedLockDictionary.TryRemove(lockObj.Key, out distributedLock))
+            if (_distributedLockDictionary.TryRemove(lockObj.Key, out IDistributedLock? distributedLock))
             {
                 _logger.LogError("'{lockName}' was not properly disposed.", lockObj.Key);
                 await distributedLock.DisposeAsync();
@@ -258,9 +257,11 @@ internal class BlobContextualStorage : BaseContextualStorage, IDistributedLockSe
 
         public async ValueTask DisposeAsync()
         {
-            var parent = Interlocked.Exchange(ref _parent, null);
+            var parent = Interlocked.Exchange(ref _parent!, null);
             if (parent != null)
+            {
                 await parent.ReleaseAsync(this);
+            }
         }
     }
 }
