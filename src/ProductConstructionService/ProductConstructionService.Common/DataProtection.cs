@@ -12,8 +12,8 @@ namespace ProductConstructionService.Common;
 
 public static class DataProtection
 {
-    private const string DataProtectionKeyBlobUri = "DataProtection:KeyBlobUri";
-    private const string DataProtectionKeyUri = "DataProtection:DataProtectionKeyUri";
+    public const string DataProtectionKeyBlobUri = "DataProtection:KeyBlobUri";
+    public const string DataProtectionKeyUri = "DataProtection:DataProtectionKeyUri";
 
     private static readonly TimeSpan DataProtectionKeyLifetime = new(days: 240, hours: 0, minutes: 0, seconds: 0);
 
