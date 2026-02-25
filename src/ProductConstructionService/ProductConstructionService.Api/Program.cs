@@ -49,7 +49,11 @@ app.UseHttpLogging();
 if (isDevelopment)
 {
     app.UseDeveloperExceptionPage();
-    await app.Services.UseLocalWorkItemQueues(["default-pcs-queue", "special-pcs-queue"]);
+    await app.Services.UseLocalWorkItemQueues(
+        [
+            app.Configuration.GetRequiredValue(PcsStartup.ConfigurationKeys.DefaultWorkItemQueueName),
+            app.Configuration.GetRequiredValue(PcsStartup.ConfigurationKeys.CodeFlowWorkItemQueueName),
+        ]);
 
     if (useSwagger)
     {
