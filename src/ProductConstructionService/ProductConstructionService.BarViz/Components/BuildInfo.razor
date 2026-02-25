@@ -28,7 +28,7 @@ else
                     <FluentIcon Value="@(new Icons.Filled.Size20.Info())" Color="Color.Info" />
                     <FluentLabel Typo="Typography.Body">
                         You are viewing an old build
-                        <a href="@GetLatestSuccessfulBuildUri()" class="commit-link">
+                        <a href="@GetLatestBarBuildUri()" class="commit-link">
                             (Go to the most recent build)
                         </a>
                     </FluentLabel>
@@ -108,13 +108,14 @@ else
                 <FluentLabel Typo="Typography.Body" class="section-label">PIPELINE STATUS</FluentLabel>
                 <FluentDivider Style="margin: 8px 0;" />
                 
-                @if (_latestCompletedBuild?.Id == _build.AzureDevOpsBuildId)
+                @if (_latestCompletedBuild?.Id > 0
+                    && _latestCompletedBuild?.Id == _build.AzureDevOpsBuildId)
                 {
                     <div class="status-item">
                         <FluentIcon Value="@(new Icons.Regular.Size28.Checkmark())" Color="Color.Success" />
                         <FluentLabel Typo="Typography.Body">This is the most recently completed build on the pipeline
                             <a href="@GetBuildUri(_latestCompletedBuild!.Id)" target="_blank" class="commit-link">
-                                (View on Azure Devops)
+                                (View on Azure DevOps)
                                 <FluentIcon Value="@(new Icons.Regular.Size16.WindowNew())" Color="Color.Accent" />
                             </a>
                         </FluentLabel>
@@ -126,7 +127,7 @@ else
                         <FluentIcon Value="@(new Icons.Regular.Size28.Checkmark())" Color="Color.Success" />
                         <FluentLabel Typo="Typography.Body">The most recent build succeeded
                             <a href="@GetBuildUri(_latestCompletedBuild!.Id)" target="_blank" class="commit-link">
-                                (View on Azure Devops)
+                                (View on Azure DevOps)
                                 <FluentIcon Value="@(new Icons.Regular.Size16.WindowNew())" Color="Color.Accent" />
                                 </a>
                         </FluentLabel>
@@ -138,7 +139,7 @@ else
                         <FluentIcon Value="@(new Icons.Regular.Size28.Warning())" Color="Color.Warning" />
                         <FluentLabel Typo="Typography.Body">The most recent build on the pipeline failed
                             <a href="@GetBuildUri(_latestCompletedBuild!.Id)" target="_blank" class="commit-link">
-                                (View on Azure Devops)
+                                (View on Azure DevOps)
                                 <FluentIcon Value="@(new Icons.Regular.Size16.WindowNew())" Color="Color.Accent" />
                             </a>
                         </FluentLabel>
@@ -323,7 +324,11 @@ else
 
     private string GetTrimmedBranchName()
     {
-        var branchName = _build!.AzureDevOpsBranch;
+        var branchName = _build!.GetBranch();
+        if (string.IsNullOrEmpty(branchName))
+        {
+            return string.Empty;
+        }
         if (branchName.StartsWith("refs/heads/"))
         {
             return branchName.Substring("refs/heads/".Length);
@@ -349,16 +354,23 @@ else
 
     private string GetCommitUri() => $"{_build!.GetRepoUrl()}/commit/{_commit!.Sha}";
 
-    private string GetLatestSuccessfulBuildUri()
+    private string GetLatestBarBuildUri()
     {
         return $"/channel/{ChannelId}/{RepoUrlConverter.RepoUrlToSlug(Repository!)}/build/latest";
     }
 
     private async Task GetLatestBarBuild()
     {
-        _latestBarBuild = await PcsApi.Builds.GetLatestAsync(
-            repository: _build!.GetRepoUrl(),
-            channelId: ChannelId);
+        if (BuildId == "latest")
+        {
+            _latestBarBuild = _build;
+        }
+        else
+        {
+            _latestBarBuild = await PcsApi.Builds.GetLatestAsync(
+                repository: _build!.GetRepoUrl(),
+                channelId: ChannelId);
+        }
     }
 
     private async Task GetLatestCompletedBuild()
