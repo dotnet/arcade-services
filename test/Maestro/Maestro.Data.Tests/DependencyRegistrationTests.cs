@@ -23,7 +23,7 @@ public class DependencyRegistrationTests
                 s.AddSingleton(Mock.Of<IHostEnvironment>(m => m.EnvironmentName == Environments.Development));
                 s.AddDbContext<BuildAssetRegistryContext>(options =>
                 {
-                    options.UseSqlServer("BuildAssetRegistry");
+                    options.UseInMemoryDatabase("BuildAssetRegistry");
                     options.EnableServiceProviderCaching(false);
                 });
                 s.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>();

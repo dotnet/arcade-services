@@ -96,7 +96,7 @@ internal static class PcsStartup
         // Read configuration
         string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
         string databaseConnectionString = builder.Configuration.GetRequiredValue(ConfigurationKeys.DatabaseConnectionString);
-        builder.AddSqlDatabase<BuildAssetRegistryContext>(databaseConnectionString, managedIdentityId);
+
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
         builder.Services.Configure<EnvironmentNamespaceOptions>(
             builder.Configuration.GetSection(EnvironmentNamespaceOptions.ConfigurationKey));

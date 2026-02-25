@@ -36,7 +36,7 @@ public partial class BuildUrlUtils
 
     public static string GetBuildJobUrl(string organization, string project, int buildId, Guid? jobId)
     {
-        return $"https://dev.azure.com//{organization}/{project}/_build/results?buildId={buildId}&view=logs&j={jobId:D}";
+        return $"{GetBuildUrl(organization, project, buildId)}&view=logs&j={jobId:D}";
     }
 
     [GeneratedRegex("(dev.azure.com/[a-z]+-?[a-z]+)")]
