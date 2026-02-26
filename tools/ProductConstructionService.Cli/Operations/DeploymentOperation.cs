@@ -382,8 +382,8 @@ internal class DeploymentOperation : IOperation
     private static string ConvertStringToCompressedBase64EncodedQuery(string query)
     {
         var bytes = System.Text.Encoding.UTF8.GetBytes(query);
-        MemoryStream memoryStream = new();
-        GZipStream compressedStream = new(memoryStream, CompressionMode.Compress);
+        using MemoryStream memoryStream = new();
+        using GZipStream compressedStream = new(memoryStream, CompressionMode.Compress);
 
         compressedStream.Write(bytes, 0, bytes.Length);
         compressedStream.Close();
