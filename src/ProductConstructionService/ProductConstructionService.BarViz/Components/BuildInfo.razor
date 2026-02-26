@@ -113,7 +113,7 @@ else
                 {
                     <div class="status-item">
                         <FluentIcon Value="@(new Icons.Regular.Size28.Checkmark())" Color="Color.Success" />
-                        <FluentLabel Typo="Typography.Body">This is the most recently completed build on the pipeline
+                        <FluentLabel Typo="Typography.Body">This is the most recently completed build from its branch
                             <a href="@GetBuildUri(_latestCompletedBuild!.Id)" target="_blank" class="commit-link">
                                 (View on Azure DevOps)
                                 <FluentIcon Value="@(new Icons.Regular.Size16.WindowNew())" Color="Color.Accent" />
@@ -121,7 +121,7 @@ else
                         </FluentLabel>
                     </div>
                 }
-                else if (_latestCompletedBuild?.Result == "succeeded")
+                else if (_latestCompletedBuild?.Result == "succeeded" || _latestCompletedBuild?.Result == "partiallySucceeded")
                 {
                     <div class="status-item">
                         <FluentIcon Value="@(new Icons.Regular.Size28.Checkmark())" Color="Color.Success" />
@@ -133,11 +133,11 @@ else
                         </FluentLabel>
                     </div>
                 }
-                else if (_latestCompletedBuild?.Result == "failed" || _latestCompletedBuild?.Result == "partiallySucceeded")
+                else if (_latestCompletedBuild?.Result == "failed")
                 {
                     <div class="status-item">
                         <FluentIcon Value="@(new Icons.Regular.Size28.Warning())" Color="Color.Warning" />
-                        <FluentLabel Typo="Typography.Body">The most recent build on the pipeline failed
+                        <FluentLabel Typo="Typography.Body">The most recent build from this branch failed
                             <a href="@GetBuildUri(_latestCompletedBuild!.Id)" target="_blank" class="commit-link">
                                 (View on Azure DevOps)
                                 <FluentIcon Value="@(new Icons.Regular.Size16.WindowNew())" Color="Color.Accent" />
@@ -150,12 +150,14 @@ else
                 {
                     <div class="status-item">
                         <FluentIcon Value="@(new Icons.Regular.Size20.ArrowSync())" Color="Color.Info" />
-                        <FluentAnchor 
-                            Href="@GetBuildUri(_ongoingBuild.Id)" 
-                            Target="_blank" 
-                            Appearance="Appearance.Accent">
-                            Latest Ongoing Build
-                        </FluentAnchor>
+
+                        <FluentLabel Typo="Typography.Body">
+                            There is an ongoing build from this branch
+                            <a href="@GetBuildUri(_latestCompletedBuild!.Id)" target="_blank" class="commit-link">
+                                (View latest ongoing build)
+                                <FluentIcon Value="@(new Icons.Regular.Size16.WindowNew())" Color="Color.Accent" />
+                            </a>
+                        </FluentLabel>
                     </div>
                 }
             </div>
