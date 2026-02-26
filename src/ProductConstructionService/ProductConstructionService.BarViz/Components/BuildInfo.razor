@@ -345,7 +345,8 @@ else
     protected override async Task OnParametersSetAsync()
     {
         _build = Build;
-        
+
+        Task[] tasks =
         {
             RunAndNotify(GetCommitInfo()),
             RunAndNotify(GetLatestBarBuild()),
