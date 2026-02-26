@@ -186,4 +186,5 @@ public class PullRequest
     public PrStatus Status { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
     public string HeadBranchSha { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
 }

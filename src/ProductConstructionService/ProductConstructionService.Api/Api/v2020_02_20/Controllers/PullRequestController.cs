@@ -239,7 +239,8 @@ public partial class PullRequestController : ControllerBase
                 csu.SubscriptionId,
                 csu.BuildId))],
             pr.HeadBranch,
-            pr.NextBuildsToProcess);
+            pr.NextBuildsToProcess,
+            pr.CreationDate);
     }
 
     private record TrackedPullRequest(
@@ -253,7 +254,8 @@ public partial class PullRequestController : ControllerBase
         DateTime? NextCheck,
         List<PullRequestUpdate> Updates,
         string HeadBranch,
-        Dictionary<Guid, int> NextBuildsToApply);
+        Dictionary<Guid, int> NextBuildsToApply,
+        DateTime CreationDate);
 
     private record PullRequestUpdate(
         string SourceRepository,
