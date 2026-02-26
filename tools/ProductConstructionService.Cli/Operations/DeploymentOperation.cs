@@ -11,7 +11,6 @@ using Azure.ResourceManager.Resources;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Cli.Options;
-using ProductConstructionService.Common;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Cli.Operations;
