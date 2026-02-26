@@ -329,7 +329,7 @@ public class GitHubWebhooksController : ControllerBase
     private bool IsBuildAnalysisEvent()
     {
         string applicationId = GetApplicationId();
-        return applicationId.Equals(_appSettings.Get(GitHubAppName).AppId); // TODO
+        return applicationId.Equals(_appSettings.CurrentValue.AppId);
     }
 
     [GitHubWebHook]
