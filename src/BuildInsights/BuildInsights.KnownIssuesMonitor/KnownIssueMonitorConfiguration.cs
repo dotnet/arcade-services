@@ -30,6 +30,8 @@ public static class KnownIssueMonitorConfiguration
         var knownIssuesAnalysisLimitsConfig = builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesAnalysisLimits);
         var knownIssuesKustoConfig = builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesKusto);
         var gitHubIssuesConfig = builder.Configuration.GetSection(ConfigurationKeys.GitHubIssues);
+
+        builder.Services.Configure<KnownIssuesProjectOptions>(ConfigurationKeys.KnownIssuesProject, (o, s) => s.Bind(o));
         builder.Services.Configure<InternalProjectSettings>(ConfigurationKeys.InternalProject, (o, s) => s.Bind(o));
 
         await builder.ConfigureBuildInsightsDependencies(addKeyVault: true);
