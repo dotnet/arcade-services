@@ -5,14 +5,12 @@ using System.Reflection;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json.Linq;
+using ProductConstructionService.Api.Api;
 
-namespace ProductConstructionService.Common;
+namespace ProductConstructionService.Api.Configuration;
 
 public static class SwaggerConfiguration
 {
@@ -48,7 +46,7 @@ public static class SwaggerConfiguration
                 options.CustomSchemaIds(type =>
                 {
                     var prefix = string.Empty;
-                    if (type.Namespace != null 
+                    if (type.Namespace != null
                         && (type.Namespace.StartsWith("Microsoft.DotNet.MaestroConfiguration.Client")
                             || type.Namespace.StartsWith("Microsoft.DotNet.ProductConstructionService.Client")))
                     {

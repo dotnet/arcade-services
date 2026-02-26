@@ -3,7 +3,8 @@
 
 using Microsoft.Extensions.Configuration;
 
-namespace ProductConstructionService.Common;
+namespace Maestro.Common;
+
 public static class ConfigurationExtension
 {
     public static string GetRequiredValue(this IConfiguration config, string key) =>

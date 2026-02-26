@@ -7,7 +7,7 @@ namespace Maestro.Common;
 
 public partial class BuildUrlUtils
 {
-    public static string ParseOrganizationFromBuildUrl(string url)
+    public static string ParseOrganizationFromBuildUrl(string? url)
     {
         if (string.IsNullOrEmpty(url))
         {

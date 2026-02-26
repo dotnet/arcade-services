@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace ProductConstructionService.Common;
+
 public static class AddJobLoggingExtension
 {
     private const string ApplicationInsightsConnectionString = "APPLICATIONINSIGHTS_CONNECTION_STRING";
@@ -18,7 +19,6 @@ public static class AddJobLoggingExtension
     /// Extension method used to register logging for ConsoleApplications running in Container Jobs
     /// </summary>
     /// <param name="telemetryChannel">Telemetry channel where logs will be buffered. Needs to be flushed at the end of the app</param>
-    /// <returns></returns>
     public static IHostApplicationBuilder RegisterLogging(
         this IHostApplicationBuilder builder,
         ITelemetryChannel telemetryChannel)
