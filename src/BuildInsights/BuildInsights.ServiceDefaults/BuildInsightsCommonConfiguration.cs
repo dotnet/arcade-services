@@ -150,7 +150,6 @@ public static class BuildInsightsCommonConfiguration
         builder.AddDataProtection(azureCredential);
         builder.Services.AddTelemetry();
         builder.Services.AddOperationTracking(_ => { });
-        builder.Services.AddSingleton<IMetricRecorder, MetricRecorder>();
         builder.Services.AddHttpLogging(
             options =>
             {

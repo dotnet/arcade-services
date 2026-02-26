@@ -21,7 +21,6 @@
     <Project Path="src/BuildInsights/BuildInsights.AppHost/BuildInsights.AppHost.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.AzureStorage.Cache/BuildInsights.AzureStorage.Cache.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.BuildAnalysis/BuildInsights.BuildAnalysis.csproj" />
-    <Project Path="src/BuildInsights/BuildInsights.BuildResultProcessor/BuildInsights.BuildResultProcessor.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.Data/BuildInsights.Data.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.GitHub/BuildInsights.GitHub.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.GitHubGraphQL/BuildInsights.GitHubGraphQL.csproj" />
