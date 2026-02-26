@@ -12,7 +12,6 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.MaestroConfiguration.Client;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
-using Microsoft.DotNet.ProductConstructionService.Client.Models;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;

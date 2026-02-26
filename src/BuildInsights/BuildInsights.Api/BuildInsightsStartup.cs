@@ -51,6 +51,7 @@ internal static class BuildInsightsStartup
         await builder.ConfigureService(addKeyVault);
         builder.AddRedisOutputCache("redis");
 
+        builder.Services.AddControllers();
         builder.Services
             .AddRazorComponents()
             .AddInteractiveServerComponents();
