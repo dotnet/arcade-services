@@ -1,8 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-#nullable enable
-
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,7 +11,9 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.MaestroConfiguration.Client.Models;
 using Microsoft.Extensions.Logging.Abstractions;
+using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
+using Maestro.Common.Telemetry;
 using Moq;
 using NUnit.Framework;
 using YamlDotNet.Serialization;
@@ -21,9 +21,8 @@ using YamlDotNet.Serialization.NamingConventions;
 using Microsoft.DotNet.MaestroConfiguration.Client;
 using GitRepoFactory = Microsoft.DotNet.DarcLib.GitRepoFactory;
 using IGitRepoFactory = Microsoft.DotNet.DarcLib.IGitRepoFactory;
-using Maestro.Common;
-using Maestro.Common.Telemetry;
 
+#nullable enable
 namespace Microsoft.DotNet.Darc.Tests.Operations;
 
 /// <summary>

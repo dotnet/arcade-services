@@ -40,14 +40,19 @@
     <Project Path="src/ProductConstructionService/ProductConstructionService.SubscriptionTriggerer/ProductConstructionService.SubscriptionTriggerer.csproj" />
     <Project Path="src/ProductConstructionService/ProductConstructionService.WorkItems/ProductConstructionService.WorkItems.csproj" />
   </Folder>
-  <Folder Name="/test/">
-    <Project Path="test/Darc/Microsoft.DotNet.Darc.Tests/Microsoft.DotNet.Darc.Tests.csproj" />
-    <Project Path="test/Darc/Microsoft.DotNet.DarcLib.Codeflow.Tests/Microsoft.DotNet.DarcLib.Codeflow.Tests.csproj" />
-    <Project Path="test/Darc/Microsoft.DotNet.DarcLib.Tests/Microsoft.DotNet.DarcLib.Tests.csproj" />
+  <Folder Name="/test/" />
+  <Folder Name="/test/Maestro/">
     <Project Path="test/Maestro/Maestro.Data.Tests/Maestro.Data.Tests.csproj" />
     <Project Path="test/Maestro/Maestro.DataProviders.Tests/Maestro.DataProviders.Tests.csproj" />
     <Project Path="test/Maestro/Maestro.MergePolicies.Tests/Maestro.MergePolicies.Tests.csproj" />
     <Project Path="test/Maestro/Microsoft.DotNet.Maestro.Tasks.Tests/Microsoft.DotNet.Maestro.Tasks.Tests.csproj" />
+  </Folder>
+  <Folder Name="/test/Darc/">
+    <Project Path="test/Darc/Microsoft.DotNet.Darc.Tests/Microsoft.DotNet.Darc.Tests.csproj" />
+    <Project Path="test/Darc/Microsoft.DotNet.DarcLib.Codeflow.Tests/Microsoft.DotNet.DarcLib.Codeflow.Tests.csproj" />
+    <Project Path="test/Darc/Microsoft.DotNet.DarcLib.Tests/Microsoft.DotNet.DarcLib.Tests.csproj" />
+  </Folder>
+  <Folder Name="/test/ProductConstructionService/">
     <Project Path="test/ProductConstructionService/ProductConstructionService.Api.Tests/ProductConstructionService.Api.Tests.csproj" />
     <Project Path="test/ProductConstructionService/ProductConstructionService.BarViz.Tests/ProductConstructionService.BarViz.Tests.csproj" />
     <Project Path="test/ProductConstructionService/ProductConstructionService.Cli.Tests/ProductConstructionService.Cli.Tests.csproj" />

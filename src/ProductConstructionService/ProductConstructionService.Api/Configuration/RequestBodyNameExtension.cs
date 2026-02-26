@@ -5,7 +5,7 @@ using Microsoft.OpenApi;
 using Microsoft.OpenApi.Interfaces;
 using Microsoft.OpenApi.Writers;
 
-namespace ProductConstructionService.Common;
+namespace ProductConstructionService.Api.Configuration;
 
 internal class RequestBodyNameExtension : IOpenApiExtension
 {
