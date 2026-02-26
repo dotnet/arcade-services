@@ -30,6 +30,7 @@
     <Project Path="src/BuildInsights/BuildInsights.ServiceDefaults/BuildInsights.ServiceDefaults.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.Utilities.AzureDevOps/BuildInsights.Utilities.AzureDevOps.csproj" />
   </Folder>
+  <Folder Name="/src/Common/" />
   <Folder Name="/src/Darc/">
     <Project Path="src/Microsoft.DotNet.Darc/Darc/Microsoft.DotNet.Darc.csproj" />
     <Project Path="src/Microsoft.DotNet.Darc/DarcLib/Microsoft.DotNet.DarcLib.csproj" />

@@ -34,6 +34,7 @@ namespace BuildInsights.ServiceDefaults;
 public static class BuildInsightsCommonConfiguration
 {
     private const string DefaultWorkItemType = "Default";
+    private const string SpecialWorkItemType = "Special";
 
     public static class ConfigurationKeys
     {
@@ -45,14 +46,17 @@ public static class BuildInsightsCommonConfiguration
         public const string GitHubWebHookSecret = $"{KeyVaultSecretPrefix}github-app-webhook-secret";
 
         // Configuration from appsettings.json
-        public const string DatabaseConnectionString = "ConnectionStrings:sql";
-        public const string RedisConnectionString = "ConnectionStrings:redis";
+        public const string ConnectionStrings = "ConnectionStrings";
+        public const string DatabaseConnectionString = $"{ConnectionStrings}:sql";
+        public const string RedisConnectionName = "redis";
+        public const string RedisConnectionString = $"{ConnectionStrings}:{RedisConnectionName}";
         public const string AzureDevOpsConfiguration = "AzureDevOps";
         public const string KeyVaultName = "KeyVaultName";
         public const string ManagedIdentityId = "ManagedIdentityClientId";
         public const string GitHubApp = "GitHubApp";
         public const string BlobStorage = "BlobStorage";
         public const string Helix = "Helix";
+        public const string Kusto = "Kusto";
 
         public const string WorkItemQueueName = "WorkItemQueueName";
         public const string SpecialWorkItemQueueName = "SpecialWorkItemQueueName";
@@ -65,10 +69,11 @@ public static class BuildInsightsCommonConfiguration
 
         string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
 
-        // If we're using a user assigned managed identity, inject it into the Kusto configuration section
+        // If we're using a user assigned managed identity, inject it into other configuration sections that might use it
         if (!string.IsNullOrEmpty(managedIdentityId))
         {
             builder.Configuration[$"{ConfigurationKeys.BlobStorage}:{nameof(BlobStorageSettings.ManagedIdentityId)}"] = managedIdentityId;
+            builder.Configuration[$"{ConfigurationKeys.Kusto}:{nameof(BlobStorageSettings.ManagedIdentityId)}"] = managedIdentityId;
         }
 
         var gitHubAppSettings = builder.Configuration.GetSection(ConfigurationKeys.GitHubApp).Get<GitHubAppSettings>()!;
@@ -114,7 +119,7 @@ public static class BuildInsightsCommonConfiguration
         builder.AddSqlDatabase<BuildInsightsContext>(databaseConnectionString, managedIdentityId);
 
         // Set up Kusto client provider
-        builder.Services.AddKustoClientProvider("Kusto");
+        builder.Services.AddKustoClientProvider(ConfigurationKeys.Kusto);
         builder.Services.AddTransient<IKustoIngestClientFactory, KustoIngestClientFactory>();
 
         // Set up Helix API
@@ -132,6 +137,7 @@ public static class BuildInsightsCommonConfiguration
         builder.AddWorkItemQueues(azureCredential, waitForInitialization: false, new()
         {
             { workItemQueueName, (int.Parse(builder.Configuration.GetRequiredValue(ConfigurationKeys.WorkItemConsumerCount)), DefaultWorkItemType) },
+            { specialWorkItemQueueName, (1, SpecialWorkItemType) }
         });
         builder.AddWorkItemProducerFactory(azureCredential, workItemQueueName, specialWorkItemQueueName);
 
@@ -145,6 +151,7 @@ public static class BuildInsightsCommonConfiguration
         // Set up Redis
         var redisConnectionString = builder.Configuration[ConfigurationKeys.RedisConnectionString]!;
         await builder.AddRedisCache(redisConnectionString, managedIdentityId);
+        builder.AddRedisOutputCache(ConfigurationKeys.RedisConnectionName);
 
         // Set up telemetry
         builder.AddDataProtection(azureCredential);

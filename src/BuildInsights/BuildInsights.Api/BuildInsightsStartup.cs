@@ -7,7 +7,6 @@ using BuildInsights.KnownIssues.Models;
 using BuildInsights.ServiceDefaults;
 using HandlebarsDotNet;
 using Maestro.Common.Telemetry;
-using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 internal static class BuildInsightsStartup
@@ -40,20 +39,10 @@ internal static class BuildInsightsStartup
     {
         bool isDevelopment = builder.Environment.IsDevelopment();
 
-        string? managedIdentityId = builder.Configuration[BuildInsightsCommonConfiguration.ConfigurationKeys.ManagedIdentityId];
-
-        // If we're using a user assigned managed identity, inject it into the Kusto configuration section
-        if (!string.IsNullOrEmpty(managedIdentityId))
-        {
-            string kustoManagedIdentityIdKey = $"{ConfigurationKeys.KnownIssuesKusto}:{nameof(KustoOptions.ManagedIdentityId)}";
-            builder.Configuration[kustoManagedIdentityIdKey] = managedIdentityId;
-        }
-
         builder.Services.Configure<KnownIssuesProjectOptions>(ConfigurationKeys.KnownIssuesProject, (o, s) => s.Bind(o));
         builder.Services.Configure<AzDoServiceHookSettings>(ConfigurationKeys.AzDoServiceHook, (o, s) => s.Bind(o));
 
         await builder.ConfigureBuildInsightsDependencies(addKeyVault);
-        builder.AddRedisOutputCache("redis");
 
         builder.Services.AddControllers();
         builder.Services
