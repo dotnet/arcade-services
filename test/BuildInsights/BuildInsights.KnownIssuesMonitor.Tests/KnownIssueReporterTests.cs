@@ -6,6 +6,7 @@ using AwesomeAssertions;
 using BuildInsights.GitHubGraphQL;
 using BuildInsights.GitHubGraphQL.GitHubGraphQLAPI;
 using BuildInsights.KnownIssues.Models;
+using BuildInsights.KnownIssuesMonitor;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.DotNet.Internal.Logging;
@@ -102,11 +103,11 @@ namespace BuildInsights.KnownIssues.Tests
             }
 
             public static Func<IServiceProvider, Mock<IKnownIssuesService>> KnownIssueDataStore(
-                IServiceCollection services, ImmutableList<KnownIssueMatch> knownIssueMatches = null,
-                ImmutableList<TestKnownIssueMatch> testKnownIssueMatches = null)
+                IServiceCollection services, ImmutableList<KnownIssueMatch>? knownIssueMatches = null,
+                ImmutableList<TestKnownIssueMatch>? testKnownIssueMatches = null)
             {
-                knownIssueMatches ??= ImmutableList<KnownIssueMatch>.Empty;
-                testKnownIssueMatches ??= ImmutableList<TestKnownIssueMatch>.Empty;
+                knownIssueMatches ??= [];
+                testKnownIssueMatches ??= [];
 
                 var knownIssuesDataStoreMock = new Mock<IKnownIssuesService>();
                 knownIssuesDataStoreMock
@@ -129,7 +130,7 @@ namespace BuildInsights.KnownIssues.Tests
 
             public static Func<IServiceProvider, GitHubIssuesServiceResult> UpdateIssueBody(IServiceCollection services)
             {
-                Mock<IGitHubIssuesService> mock = new Mock<IGitHubIssuesService>();
+                var mock = new Mock<IGitHubIssuesService>();
                 var reports = new List<string>();
                 mock.Setup(
                         m => m.UpdateIssueBodyAsync(
@@ -222,7 +223,7 @@ namespace BuildInsights.KnownIssues.Tests
             ];
 
             await using TestData testData = await TestData.Default
-                .WithKnownIssueMatches(knownIssueMatches.ToImmutableList())
+                .WithKnownIssueMatches([.. knownIssueMatches])
                 .BuildAsync();
             await testData.Processor.RunAsync();
 
@@ -250,7 +251,7 @@ namespace BuildInsights.KnownIssues.Tests
             ];
 
             await using TestData testData = await TestData.Default
-                .WithTestKnownIssueMatches(knownIssueMatches.ToImmutableList())
+                .WithTestKnownIssueMatches([.. knownIssueMatches])
                 .BuildAsync();
             await testData.Processor.RunAsync();
 
@@ -280,8 +281,8 @@ namespace BuildInsights.KnownIssues.Tests
             ];
 
             await using TestData testData = await TestData.Default
-                .WithTestKnownIssueMatches(testKnownIssueMatches.ToImmutableList())
-                .WithKnownIssueMatches(knownIssueMatches.ToImmutableList())
+                .WithTestKnownIssueMatches([.. testKnownIssueMatches])
+                .WithKnownIssueMatches([.. knownIssueMatches])
                 .BuildAsync();
             await testData.Processor.RunAsync();
 
@@ -304,7 +305,7 @@ namespace BuildInsights.KnownIssues.Tests
             ];
 
             await using TestData testData = await TestData.Default
-                .WithKnownIssueMatches(knownIssueMatches.ToImmutableList())
+                .WithKnownIssueMatches([.. knownIssueMatches])
                 .BuildAsync();
             await testData.Processor.RunAsync();
 
@@ -328,7 +329,7 @@ namespace BuildInsights.KnownIssues.Tests
             ];
 
             await using TestData testData = await TestData.Default
-                .WithTestKnownIssueMatches(testKnownIssueMatches.ToImmutableList())
+                .WithTestKnownIssueMatches([.. testKnownIssueMatches])
                 .BuildAsync();
             await testData.Processor.RunAsync();
 
@@ -370,7 +371,7 @@ namespace BuildInsights.KnownIssues.Tests
             }
 
             await using TestData testData = await TestData.Default
-                .WithKnownIssueMatches(knownIssueMatches.ToImmutableList())
+                .WithKnownIssueMatches([.. knownIssueMatches])
                 .BuildAsync();
             await testData.Processor.RunAsync();
 
@@ -389,7 +390,7 @@ namespace BuildInsights.KnownIssues.Tests
             mockMatch.BuildRepository = "testRepository";
 
             await using TestData testData = await TestData.Default
-                .WithKnownIssueMatches(ImmutableList.Create(mockMatch))
+                .WithKnownIssueMatches([mockMatch])
                 .BuildAsync();
             await testData.Processor.RunAsync();
 
@@ -413,7 +414,7 @@ namespace BuildInsights.KnownIssues.Tests
             };
         }
 
-        private static TestKnownIssueMatch MockTestKnownIssueMatch(int buildId, DateTime reported, string testName = null)
+        private static TestKnownIssueMatch MockTestKnownIssueMatch(int buildId, DateTime reported, string? testName = null)
         {
             return new TestKnownIssueMatch
             {

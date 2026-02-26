@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 using Microsoft.Extensions.Internal;
 using BuildInsights.KnownIssues.Models;
 
-namespace BuildInsights.KnownIssues;
+namespace BuildInsights.KnownIssuesMonitor;
 
 public class KnownIssuesReportHelper
 {

@@ -2,9 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 #nullable disable
-namespace BuildInsights.BuildAnalysis.Models;
+using BuildInsights;
 
-public class InternalProject
+namespace BuildInsights.KnownIssues.Models;
+
+public class InternalProjectSettings
 {
     public string Id { get; set; }
     public string Path { get; set; }

@@ -31,7 +31,7 @@ using ProductConstructionService.WorkItems;
 
 namespace BuildInsights.ServiceDefaults;
 
-public static class BuildInsightsConfiguration
+public static class BuildInsightsCommonConfiguration
 {
     private const string DefaultWorkItemType = "Default";
 
@@ -43,7 +43,6 @@ public static class BuildInsightsConfiguration
         // Secrets coming from the KeyVault
         public const string GitHubAppPrivateKey = $"{KeyVaultSecretPrefix}github-app-private-key";
         public const string GitHubWebHookSecret = $"{KeyVaultSecretPrefix}github-app-webhook-secret";
-        public const string AzDoServiceHookSecret = $"{KeyVaultSecretPrefix}azdo-service-hook-secret";
 
         // Configuration from appsettings.json
         public const string DatabaseConnectionString = "ConnectionStrings:sql";
@@ -60,7 +59,7 @@ public static class BuildInsightsConfiguration
         public const string WorkItemConsumerCount = "WorkItemConsumerCount";
     }
 
-    public static async Task ConfigureService(this IHostApplicationBuilder builder, bool addKeyVault)
+    public static async Task ConfigureBuildInsightsDependencies(this IHostApplicationBuilder builder, bool addKeyVault)
     {
         bool isDevelopment = builder.Environment.IsDevelopment();
 
@@ -116,6 +115,7 @@ public static class BuildInsightsConfiguration
 
         // Set up Kusto client provider
         builder.Services.AddKustoClientProvider("Kusto");
+        builder.Services.AddTransient<IKustoIngestClientFactory, KustoIngestClientFactory>();
 
         // Set up Helix API
         builder.Services.AddScoped<IHelixApi>(sp =>

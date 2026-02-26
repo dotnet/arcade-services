@@ -20,8 +20,8 @@ if (isDevelopment)
     app.UseDeveloperExceptionPage();
     app.MapOpenApi();
 
-    var workQueueName = app.Configuration.GetRequiredValue(BuildInsightsConfiguration.ConfigurationKeys.WorkItemQueueName);
-    var specialWorkQueueName = app.Configuration.GetRequiredValue(BuildInsightsConfiguration.ConfigurationKeys.SpecialWorkItemQueueName);
+    var workQueueName = app.Configuration.GetRequiredValue(BuildInsightsCommonConfiguration.ConfigurationKeys.WorkItemQueueName);
+    var specialWorkQueueName = app.Configuration.GetRequiredValue(BuildInsightsCommonConfiguration.ConfigurationKeys.SpecialWorkItemQueueName);
     await app.Services.UseLocalWorkItemQueues([workQueueName, specialWorkQueueName]);
 }
 else

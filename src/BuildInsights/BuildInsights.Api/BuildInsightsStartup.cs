@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using BuildInsights.Api.Configuration;
 using BuildInsights.BuildAnalysis;
 using BuildInsights.KnownIssues.Models;
 using BuildInsights.ServiceDefaults;
@@ -24,6 +25,7 @@ internal static class BuildInsightsStartup
         public const string GitHubIssues = "GitHubIssues";
         public const string RelatedBuilds = "RelatedBuilds";
         public const string BuildAnalysisFile = "BuildAnalysisFile";
+        public const string AzDoServiceHook = "AzDoServiceHook";
         public const string InternalProject = "InternalProject";
     }
 
@@ -37,7 +39,7 @@ internal static class BuildInsightsStartup
     {
         bool isDevelopment = builder.Environment.IsDevelopment();
 
-        string? managedIdentityId = builder.Configuration[BuildInsightsConfiguration.ConfigurationKeys.ManagedIdentityId];
+        string? managedIdentityId = builder.Configuration[BuildInsightsCommonConfiguration.ConfigurationKeys.ManagedIdentityId];
 
         // If we're using a user assigned managed identity, inject it into the Kusto configuration section
         if (!string.IsNullOrEmpty(managedIdentityId))
@@ -47,8 +49,9 @@ internal static class BuildInsightsStartup
         }
 
         builder.Services.Configure<KnownIssuesProjectOptions>(ConfigurationKeys.KnownIssuesProject, (o, s) => s.Bind(o));
+        builder.Services.Configure<AzDoServiceHookSettings>(ConfigurationKeys.AzDoServiceHook, (o, s) => s.Bind(o));
 
-        await builder.ConfigureService(addKeyVault);
+        await builder.ConfigureBuildInsightsDependencies(addKeyVault);
         builder.AddRedisOutputCache("redis");
 
         builder.Services.AddControllers();
@@ -62,7 +65,7 @@ internal static class BuildInsightsStartup
             builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesCreation),
             builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesAnalysisLimits),
             builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesKusto),
-            builder.Configuration.GetSection(BuildInsightsConfiguration.ConfigurationKeys.BlobStorage),
+            builder.Configuration.GetSection(BuildInsightsCommonConfiguration.ConfigurationKeys.BlobStorage),
             builder.Configuration.GetSection(ConfigurationKeys.QueueInsightsBeta),
             builder.Configuration.GetSection(ConfigurationKeys.MatrixOfTruth),
             builder.Configuration.GetSection(ConfigurationKeys.InternalProject),

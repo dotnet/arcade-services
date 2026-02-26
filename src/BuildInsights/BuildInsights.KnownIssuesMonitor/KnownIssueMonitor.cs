@@ -6,25 +6,20 @@ using System.Text;
 using BuildInsights.GitHub.Models;
 using BuildInsights.GitHubGraphQL;
 using BuildInsights.GitHubGraphQL.GitHubGraphQLAPI;
+using BuildInsights.KnownIssues;
 using BuildInsights.KnownIssues.Models;
 using Maestro.Common;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace BuildInsights.KnownIssues;
+namespace BuildInsights.KnownIssuesMonitor;
 
-public interface IKnownIssueMonitor
+public class KnownIssueMonitor
 {
-    Task RunAsync();
-}
-
-public class KnownIssueMonitor : IKnownIssueMonitor
-{
-    private const string InternalProject = "internal";
-
     private readonly IGitHubGraphQLClient _graphQlClient;
     private readonly IGitHubIssuesService _issuesService;
     private readonly IOptions<KnownIssuesProjectOptions> _knownIssuesProjectOptions;
+    private readonly IOptions<InternalProjectSettings> _internalProjectSettings;
     private readonly IKnownIssuesService _knownIssuesService;
     private readonly IEnumerable<string> _knownIssuesLabels;
     private readonly KnownIssuesReportHelper _knownIssueReportHelper;
@@ -39,12 +34,14 @@ public class KnownIssueMonitor : IKnownIssueMonitor
         IOptions<KnownIssuesProjectOptions> knownIssuesProjectOptions,
         IOptions<GitHubIssuesSettings> gitHubIssuesSettings,
         IOptions<SsaCriteriaSettings> ssaCriteriaSettings,
+        IOptions<InternalProjectSettings> internalProjectSettings,
         ILogger<KnownIssueMonitor> logger)
     {
         _graphQlClient = graphQlClient;
         _issuesService = issuesService;
         _knownIssuesService = knownIssuesService;
         _knownIssuesProjectOptions = knownIssuesProjectOptions;
+        _internalProjectSettings = internalProjectSettings;
         _knownIssuesLabels = gitHubIssuesSettings.Value.KnownIssuesLabels;
         _ssaCriteriaSettings = ssaCriteriaSettings.Value;
         _knownIssueReportHelper = knownIssuesReportHelper;
@@ -170,12 +167,13 @@ public class KnownIssueMonitor : IKnownIssueMonitor
         return string.IsNullOrEmpty(logURL) ? string.Empty : $"[Log]({logURL})";
     }
 
-    private static string GetPullRequestLink(string repository, string pullRequestNumber, string project, string organization)
+    private string GetPullRequestLink(string repository, string pullRequestNumber, string project, string organization)
     {
-        if (project == InternalProject)
+        if (project == _internalProjectSettings.Value.Path || project == _internalProjectSettings.Value.Id)
         {
-            if (string.IsNullOrEmpty(organization) || string.IsNullOrEmpty(project) ||
-                string.IsNullOrEmpty(pullRequestNumber) || string.IsNullOrEmpty(repository))
+            if (string.IsNullOrEmpty(organization)
+                || string.IsNullOrEmpty(pullRequestNumber)
+                || string.IsNullOrEmpty(repository))
             {
                 return string.Empty;
             }

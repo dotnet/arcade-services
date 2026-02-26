@@ -54,7 +54,7 @@ public class BuildAnalyzer : IBuildAnalyzer
     private readonly IDistributedLockService _distributedLockService;
     private readonly ISystemClock _clock;
     private readonly KnownIssueUrlOptions _knownIssueUrlOptions;
-    private readonly InternalProject _internalProject;
+    private readonly InternalProjectSettings _internalProject;
     private readonly OperationManager _operations;
     private readonly IBuildAnalysisHistoryService _analysisHistory;
     private readonly IBuildProcessingStatusService _processingStatusService;
@@ -76,7 +76,7 @@ public class BuildAnalyzer : IBuildAnalyzer
         ISystemClock clock,
         OperationManager operations,
         IOptions<KnownIssueUrlOptions> knownIssueUrlOptions,
-        IOptions<InternalProject> internalProject,
+        IOptions<InternalProjectSettings> internalProject,
         IBuildAnalysisHistoryService analysisHistory,
         IBuildProcessingStatusService processingStatusService,
         ILogger<BuildAnalyzer> logger,

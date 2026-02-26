@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BuildInsights.Api\BuildInsights.Api.csproj" />
+    <ProjectReference Include="..\BuildInsights.KnownIssuesMonitor\BuildInsights.KnownIssuesMonitor.csproj" />
   </ItemGroup>
 
 </Project>

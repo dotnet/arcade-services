@@ -2,9 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 #nullable disable
-namespace BuildInsights.ServiceDefaults.Configuration.Models;
+using BuildInsights;
 
-public class ServiceHookSettings
+namespace BuildInsights.Api.Configuration;
+
+public class AzDoServiceHookSettings
 {
     public string SecretHttpHeaderName { get; set; }
     public string SecretHttpHeaderValue { get; set; }

@@ -6,6 +6,7 @@ using BuildInsights.BuildAnalysis.HandleBar;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.GitHub;
 using BuildInsights.KnownIssues;
+using BuildInsights.KnownIssues.Models;
 using BuildInsights.QueueInsights;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.Configuration;
@@ -59,7 +60,7 @@ public static class BuildAnalysisConfiguration
         services.TryAddScoped<IPreviousBuildAnalysisService, PreviousBuildAnalysisProvider>();
         services.TryAddScoped<ITestResultService, TestResultProvider>();
 
-        services.Configure<InternalProject>(internalProjectConfig);
+        services.Configure<InternalProjectSettings>(internalProjectConfig);
         services.Configure<BuildConfigurationFileSettings>(buildConfigurationFileConfig);
         services.Configure<RelatedBuildProviderSettings>(relatedBuildsConfig);
         services.Configure<BuildAnalysisFileSettings>(buildAnalysisFileConfig);

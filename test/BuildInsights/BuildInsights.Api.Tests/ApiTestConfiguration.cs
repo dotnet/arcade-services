@@ -16,14 +16,14 @@ public static class ApiTestConfiguration
         Environment.SetEnvironmentVariable("APPLICATIONINSIGHTS_CONNECTION_STRING", "InstrumentationKey=value1");
 
         var builder = WebApplication.CreateBuilder();
-        builder.Configuration[BuildInsightsConfiguration.ConfigurationKeys.DatabaseConnectionString] = "sql:3555";
-        builder.Configuration[BuildInsightsConfiguration.ConfigurationKeys.RedisConnectionString] = "localhost:6379";
+        builder.Configuration[BuildInsightsCommonConfiguration.ConfigurationKeys.DatabaseConnectionString] = "sql:3555";
+        builder.Configuration[BuildInsightsCommonConfiguration.ConfigurationKeys.RedisConnectionString] = "localhost:6379";
         builder.Configuration[DataProtection.DataProtectionKeyUri] = "https://keyvault.azure.com/secret/key";
         builder.Configuration[DataProtection.DataProtectionKeyBlobUri] = "https://blobs.azure.com/secret/key";
-        builder.Configuration[BuildInsightsConfiguration.ConfigurationKeys.WorkItemQueueName] = "test-queue";
-        builder.Configuration[BuildInsightsConfiguration.ConfigurationKeys.SpecialWorkItemQueueName] = "test-special-queue";
-        builder.Configuration[BuildInsightsConfiguration.ConfigurationKeys.WorkItemConsumerCount] = "1";
-        builder.Configuration[$"{BuildInsightsConfiguration.ConfigurationKeys.GitHubApp}:AppId"] = "12345";
+        builder.Configuration[BuildInsightsCommonConfiguration.ConfigurationKeys.WorkItemQueueName] = "test-queue";
+        builder.Configuration[BuildInsightsCommonConfiguration.ConfigurationKeys.SpecialWorkItemQueueName] = "test-special-queue";
+        builder.Configuration[BuildInsightsCommonConfiguration.ConfigurationKeys.WorkItemConsumerCount] = "1";
+        builder.Configuration[$"{BuildInsightsCommonConfiguration.ConfigurationKeys.GitHubApp}:AppId"] = "12345";
         return builder;
     }
 }
