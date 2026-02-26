@@ -3,23 +3,14 @@
 
 using BuildInsights.Api.Configuration;
 using BuildInsights.ServiceDefaults;
-using ProductConstructionService.Common;
+using Maestro.Common;
 using ProductConstructionService.WorkItems;
 
 var builder = WebApplication.CreateBuilder(args);
 
 bool isDevelopment = builder.Environment.IsDevelopment();
-bool useSwagger = isDevelopment;
 
 await builder.ConfigureBuildInsights(addKeyVault: true);
-builder.AddServiceDefaults();
-builder.AddRedisOutputCache("cache");
-
-builder.Services
-    .AddRazorComponents()
-    .AddInteractiveServerComponents();
-builder.Services.AddProblemDetails();
-builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
@@ -46,11 +37,11 @@ app.UseOutputCache();
 
 app.MapDefaultEndpoints();
 
-//var controllers = app.MapControllers();
-//if (isDevelopment)
-//{
-//    controllers.AllowAnonymous();
-//}
+var controllers = app.MapControllers();
+if (isDevelopment)
+{
+    controllers.AllowAnonymous();
+}
 
 await app.SetWorkItemProcessorInitialState();
 

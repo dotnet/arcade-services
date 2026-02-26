@@ -2,13 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Diagnostics.Metrics;
-using Azure.Storage.Queues.Models;
 
-namespace ProductConstructionService.Common;
+namespace Maestro.Common.Telemetry;
 
 public interface IMetricRecorder
 {
-    void QueueMessageReceived(QueueMessage message, int delayInSeconds);
+    void QueueMessageReceived(int queueWaitTimeInSeconds);
 }
 
 public class MetricRecorder : IMetricRecorder
@@ -25,9 +24,8 @@ public class MetricRecorder : IMetricRecorder
         _queueWaitTimeCounter = meter.CreateCounter<int>(WaitTimeMetricName);
     }
 
-    public void QueueMessageReceived(QueueMessage message, int delayInSeconds)
+    public void QueueMessageReceived(int queueWaitTimeInSeconds)
     {
-        TimeSpan timeInQueue = DateTimeOffset.UtcNow - message.InsertedOn!.Value;
-        _queueWaitTimeCounter.Add((int)timeInQueue.TotalSeconds - delayInSeconds);
+        _queueWaitTimeCounter.Add(queueWaitTimeInSeconds);
     }
 }

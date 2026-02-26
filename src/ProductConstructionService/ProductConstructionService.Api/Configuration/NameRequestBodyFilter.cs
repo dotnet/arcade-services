@@ -4,7 +4,7 @@
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace ProductConstructionService.Common;
+namespace ProductConstructionService.Api.Configuration;
 
 internal class NameRequestBodyFilter : IRequestBodyFilter
 {

@@ -20,8 +20,4 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\ProductConstructionService\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />
-  </ItemGroup>
-
 </Project>

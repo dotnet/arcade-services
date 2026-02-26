@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
-using JetBrains.Annotations;
 using BuildInsights.KnownIssues.Models;
 
 #nullable disable
@@ -31,7 +30,6 @@ public class BasicResultsView
     }
 }
 
-[UsedImplicitly(ImplicitUseTargetFlags.Members)]
 public class ConsolidatedBuildResultAnalysisView : BasicResultsView
 {
     /// <summary>

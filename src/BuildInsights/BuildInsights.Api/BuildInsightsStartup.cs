@@ -111,6 +111,15 @@ internal static class BuildInsightsStartup
                 new KeyVaultSecretsWithPrefix(ConfigurationKeys.KeyVaultSecretPrefix));
         }
 
+        builder.AddServiceDefaults();
+        builder.AddRedisOutputCache("redis");
+
+        builder.Services
+            .AddRazorComponents()
+            .AddInteractiveServerComponents();
+        builder.Services.AddProblemDetails();
+        builder.Services.AddOpenApi();
+
         // Set up GitHub and Azure DevOps auth
         builder.Services.AddVssConnection();
         builder.AddGitHubClientFactory(
