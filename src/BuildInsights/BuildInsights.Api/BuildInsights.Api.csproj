@@ -13,6 +13,7 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers" />
     <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" />
+    <PackageReference Include="Microsoft.DotNet.GitHub.Authentication" />
     <PackageReference Include="Microsoft.DotNet.Internal.Logging" />
   </ItemGroup>
 

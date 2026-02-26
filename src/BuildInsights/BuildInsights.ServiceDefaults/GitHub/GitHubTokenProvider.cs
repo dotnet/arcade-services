@@ -4,7 +4,7 @@
 using Maestro.Common;
 using Microsoft.DotNet.GitHub.Authentication;
 
-namespace BuildInsights.Api.GitHub;
+namespace BuildInsights.ServiceDefaults.GitHub;
 
 public class GitHubTokenProvider(IGitHubTokenProvider tokenProvider) : IRemoteTokenProvider
 {

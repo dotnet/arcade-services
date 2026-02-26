@@ -3,6 +3,8 @@
 
 using Microsoft.DotNet.GitHub.Authentication;
 
+namespace BuildInsights.ServiceDefaults.GitHub;
+
 internal class GitHubInstallationIdResolver : IInstallationLookup
 {
     // TODO

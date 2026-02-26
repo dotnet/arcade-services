@@ -16,8 +16,7 @@ public class DependencyRegistrationTests
     public async Task AreDependenciesRegistered()
     {
         var builder = ApiTestConfiguration.CreateTestHostBuilder();
-        await builder.ConfigureBuildInsights(
-            addKeyVault: false);
+        await builder.ConfigureBuildInsights(addKeyVault: false);
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(
             s =>

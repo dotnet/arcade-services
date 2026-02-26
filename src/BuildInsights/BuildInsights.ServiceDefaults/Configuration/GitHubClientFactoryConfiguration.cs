@@ -3,13 +3,15 @@
 
 using System.Reflection;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
-namespace BuildInsights.Api.Configuration;
+namespace BuildInsights.ServiceDefaults.Configuration;
 
 internal static class GitHubClientFactoryConfiguration
 {
     public static void AddGitHubClientFactory(
-        this WebApplicationBuilder builder,
+        this IHostApplicationBuilder builder,
         int? appId,
         string? appSecret)
     {

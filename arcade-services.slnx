@@ -27,7 +27,6 @@
     <Project Path="src/BuildInsights/BuildInsights.GitHubGraphQL/BuildInsights.GitHubGraphQL.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.KnownIssues/BuildInsights.KnownIssues.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.KnownIssuesMonitor/BuildInsights.KnownIssuesMonitor.csproj" />
-    <Project Path="src/BuildInsights/BuildInsights.KnownIssuesProcessor/BuildInsights.KnownIssuesProcessor.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.QueueInsights/BuildInsights.QueueInsights.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.ServiceDefaults/BuildInsights.ServiceDefaults.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.Utilities.AzureDevOps/BuildInsights.Utilities.AzureDevOps.csproj" />

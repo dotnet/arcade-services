@@ -1,9 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using BuildInsights.Api.Configuration.Models;
 using BuildInsights.Api.Controllers.Models;
 using BuildInsights.BuildAnalysis.WorkItems.Models;
+using BuildInsights.ServiceDefaults.Configuration.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using ProductConstructionService.WorkItems;

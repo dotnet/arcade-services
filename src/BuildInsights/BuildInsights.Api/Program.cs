@@ -2,8 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using BuildInsights.Api.Components;
-using BuildInsights.Api.Configuration;
 using BuildInsights.ServiceDefaults;
+using BuildInsights.ServiceDefaults.Configuration;
 using Maestro.Common;
 using ProductConstructionService.WorkItems;
 
@@ -20,8 +20,8 @@ if (isDevelopment)
     app.UseDeveloperExceptionPage();
     app.MapOpenApi();
 
-    var workQueueName = app.Configuration.GetRequiredValue(BuildInsightsStartup.ConfigurationKeys.WorkItemQueueName);
-    var specialWorkQueueName = app.Configuration.GetRequiredValue(BuildInsightsStartup.ConfigurationKeys.SpecialWorkItemQueueName);
+    var workQueueName = app.Configuration.GetRequiredValue(BuildInsightsConfiguration.ConfigurationKeys.WorkItemQueueName);
+    var specialWorkQueueName = app.Configuration.GetRequiredValue(BuildInsightsConfiguration.ConfigurationKeys.SpecialWorkItemQueueName);
     await app.Services.UseLocalWorkItemQueues([workQueueName, specialWorkQueueName]);
 }
 else
@@ -33,18 +33,20 @@ else
 
 app.UseHttpsRedirection();
 app.UseHttpLogging();
+app.UseCookiePolicy();
+app.UseAuthentication();
+app.UseRouting();
+app.UseAuthorization();
 app.UseAntiforgery();
+app.ConfigureSecurityHeaders();
 app.UseOutputCache();
+
+app.ConfigureApi("/api", isDevelopment);
+
 app.MapDefaultEndpoints();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
-
-var controllers = app.MapControllers();
-if (isDevelopment)
-{
-    controllers.AllowAnonymous();
-}
 
 await app.SetWorkItemProcessorInitialState();
 

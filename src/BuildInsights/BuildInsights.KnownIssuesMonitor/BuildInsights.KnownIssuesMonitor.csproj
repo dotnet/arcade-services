@@ -17,8 +17,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\BuildInsights.GitHub\BuildInsights.GitHub.csproj" />
     <ProjectReference Include="..\BuildInsights.GitHubGraphQL\BuildInsights.GitHubGraphQL.csproj" />
     <ProjectReference Include="..\BuildInsights.KnownIssues\BuildInsights.KnownIssues.csproj" />
+    <ProjectReference Include="..\BuildInsights.ServiceDefaults\BuildInsights.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>
