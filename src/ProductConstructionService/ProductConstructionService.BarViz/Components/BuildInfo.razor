@@ -345,12 +345,21 @@ else
     protected override async Task OnParametersSetAsync()
     {
         _build = Build;
-        Task getCommit = GetCommitInfo();
-        Task getLatestBuild =  GetLatestBarBuild();
-        Task getLatestAzdoBuild = GetLatestCompletedBuild();
-        Task getOngoingBuild = GetOngoingBuild();
+        
+        {
+            RunAndNotify(GetCommitInfo()),
+            RunAndNotify(GetLatestBarBuild()),
+            RunAndNotify(GetLatestCompletedBuild()),
+            RunAndNotify(GetOngoingBuild())
+        };
 
-        await Task.WhenAll(getCommit, getLatestAzdoBuild, getLatestBuild, getOngoingBuild);
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task RunAndNotify(Task task)
+    {
+        await task;
+        await InvokeAsync(StateHasChanged);
     }
 
     private string GetShortCommitMessage() => string.Join(' ', _commit!.Message.Split([' ', '\n']).Take(7));
