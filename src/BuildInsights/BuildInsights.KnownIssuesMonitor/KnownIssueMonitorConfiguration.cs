@@ -4,7 +4,6 @@
 using BuildInsights.KnownIssues;
 using BuildInsights.KnownIssues.Models;
 using BuildInsights.ServiceDefaults;
-using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -34,7 +33,6 @@ public static class KnownIssueMonitorConfiguration
         builder.Services.Configure<InternalProjectSettings>(ConfigurationKeys.InternalProject, (o, s) => s.Bind(o));
 
         await builder.ConfigureBuildInsightsDependencies(addKeyVault: true);
-        builder.Services.AddDefaultJsonConfiguration();
         builder.Services.AddKnownIssues(
             knownIssuesCreationConfig,
             knownIssuesAnalysisLimitsConfig,

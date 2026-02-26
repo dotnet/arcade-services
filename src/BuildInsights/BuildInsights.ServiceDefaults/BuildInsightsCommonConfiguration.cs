@@ -149,8 +149,6 @@ public static class BuildInsightsCommonConfiguration
         // Set up telemetry
         builder.AddDataProtection(azureCredential);
         builder.Services.AddTelemetry();
-        builder.Services.AddApplicationInsightsTelemetry();
-        builder.Services.AddApplicationInsightsTelemetryProcessor<RemoveDefaultPropertiesTelemetryProcessor>();
         builder.Services.AddOperationTracking(_ => { });
         builder.Services.AddSingleton<IMetricRecorder, MetricRecorder>();
         builder.Services.AddHttpLogging(

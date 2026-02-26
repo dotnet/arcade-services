@@ -6,6 +6,7 @@ using BuildInsights.BuildAnalysis;
 using BuildInsights.KnownIssues.Models;
 using BuildInsights.ServiceDefaults;
 using HandlebarsDotNet;
+using Maestro.Common.Telemetry;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -60,6 +61,8 @@ internal static class BuildInsightsStartup
             .AddInteractiveServerComponents();
         builder.Services.AddProblemDetails();
         builder.Services.AddOpenApi();
+        builder.Services.AddApplicationInsightsTelemetry();
+        builder.Services.AddApplicationInsightsTelemetryProcessor<RemoveDefaultPropertiesTelemetryProcessor>();
 
         builder.Services.AddBuildAnalysis(
             builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesCreation),
