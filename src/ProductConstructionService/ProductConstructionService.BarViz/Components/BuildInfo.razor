@@ -5,7 +5,7 @@
 @inject IClipboard Clipboard
 @inject IProductConstructionServiceApi PcsApi
 
-@if (_build == null || _commit == null || _loading)
+@if (_build == null)
 {
     <PageLoadingStatus StatusText="Loading build info ..." />
 }
@@ -88,12 +88,23 @@ else
                 <div class="info-row">
                     <FluentIcon Value="@(new Icons.Regular.Size20.CodeText())" Color="Color.Neutral" />
                     <FluentLabel Typo="Typography.Body" class="info-label">Source Commit:</FluentLabel>
-                    <a href="@GetCommitUri()" target="_blank" title="View source commit" class="commit-link">@GetShortCommitMessage()</a>
-                    <FluentButton 
-                        IconStart="@(new Icons.Regular.Size16.Copy())" 
-                        Appearance="Appearance.Stealth" 
-                        OnClick="@(() => SetBarClipboard(_commit.Sha))" 
-                        Title="Copy commit SHA" />
+                    @if (_commit == null)
+                    {
+                        <a href="@GetCommitUri()" target="_blank" title="View source commit" class="commit-link">@_build.Commit</a>
+                        <FluentButton IconStart="@(new Icons.Regular.Size16.Copy())"
+                                      Appearance="Appearance.Stealth"
+                                      OnClick="@(() => SetBarClipboard(_build.Commit))"
+                                      Title="Copy commit SHA" />
+                        <FluentProgressRing style="width: 12px; height: 12px;" />
+                    }
+                    else
+                    {
+                        <a href="@GetCommitUri()" target="_blank" title="View source commit" class="commit-link">@GetShortCommitMessage()</a>
+                        <FluentButton IconStart="@(new Icons.Regular.Size16.Copy())"
+                                      Appearance="Appearance.Stealth"
+                                      OnClick="@(() => SetBarClipboard(_build.Commit))"
+                                      Title="Copy commit SHA" />
+                    }
                 </div>
 
                 <div class="info-row">
@@ -107,59 +118,82 @@ else
             <div class="build-section">
                 <FluentLabel Typo="Typography.Body" class="section-label">PIPELINE STATUS</FluentLabel>
                 <FluentDivider Style="margin: 8px 0;" />
-                
-                @if (_latestCompletedBuild?.Id > 0
-                    && _latestCompletedBuild?.Id == _build.AzureDevOpsBuildId)
-                {
-                    <div class="status-item">
-                        <FluentIcon Value="@(new Icons.Regular.Size28.Checkmark())" Color="Color.Success" />
-                        <FluentLabel Typo="Typography.Body">This is the most recently completed build from its branch
-                            <a href="@GetBuildUri(_latestCompletedBuild!.Id)" target="_blank" class="commit-link">
-                                (View on Azure DevOps)
-                                <FluentIcon Value="@(new Icons.Regular.Size16.WindowNew())" Color="Color.Accent" />
-                            </a>
-                        </FluentLabel>
-                    </div>
-                }
-                else if (_latestCompletedBuild?.Result == "succeeded" || _latestCompletedBuild?.Result == "partiallySucceeded")
-                {
-                    <div class="status-item">
-                        <FluentIcon Value="@(new Icons.Regular.Size28.Checkmark())" Color="Color.Success" />
-                        <FluentLabel Typo="Typography.Body">The most recent build succeeded
-                            <a href="@GetBuildUri(_latestCompletedBuild!.Id)" target="_blank" class="commit-link">
-                                (View on Azure DevOps)
-                                <FluentIcon Value="@(new Icons.Regular.Size16.WindowNew())" Color="Color.Accent" />
+
+                <div class="status-item">
+                    @if(!_loadedLatestBuild)
+                    {
+                        <FluentProgressRing style="width: 20px; height: 20px;" />
+                    }
+                    else if (_latestCompletedBuild?.Id > 0
+                        && _latestCompletedBuild?.Id == _build.AzureDevOpsBuildId)
+                    {
+                            <FluentIcon Value="@(new Icons.Regular.Size28.Checkmark())" Color="Color.Success" />
+                            <FluentLabel Typo="Typography.Body">
+                                This is the most recent build from branch <code>@GetTrimmedBranchName()</code>
+                                <a href="@GetBuildUri(_latestCompletedBuild!.Id)" target="_blank" class="commit-link">
+                                    (View on Azure DevOps)
+                                    <FluentIcon Value="@(new Icons.Regular.Size16.WindowNew())" Color="Color.Accent" />
                                 </a>
-                        </FluentLabel>
-                    </div>
-                }
-                else if (_latestCompletedBuild?.Result == "failed")
-                {
-                    <div class="status-item">
-                        <FluentIcon Value="@(new Icons.Regular.Size28.Warning())" Color="Color.Warning" />
-                        <FluentLabel Typo="Typography.Body">The most recent build from this branch failed
-                            <a href="@GetBuildUri(_latestCompletedBuild!.Id)" target="_blank" class="commit-link">
-                                (View on Azure DevOps)
-                                <FluentIcon Value="@(new Icons.Regular.Size16.WindowNew())" Color="Color.Accent" />
-                            </a>
-                        </FluentLabel>
-                    </div>
-                }
+                            </FluentLabel>
+                    }
+                    else if (_latestCompletedBuild?.Result == "succeeded" || _latestCompletedBuild?.Result == "partiallySucceeded")
+                    {
+                            <FluentIcon Value="@(new Icons.Regular.Size28.Checkmark())" Color="Color.Success" />
+                            <FluentLabel Typo="Typography.Body">The most recent build succeeded
+                                <a href="@GetBuildUri(_latestCompletedBuild!.Id)" target="_blank" class="commit-link">
+                                    (View on Azure DevOps)
+                                    <FluentIcon Value="@(new Icons.Regular.Size16.WindowNew())" Color="Color.Accent" />
+                                    </a>
+                            </FluentLabel>
+                    }
+                    else if (_latestCompletedBuild?.Result == "failed")
+                    {
+                            <FluentIcon Value="@(new Icons.Regular.Size28.Warning())" Color="Color.Warning" />
+                            <FluentLabel Typo="Typography.Body">
+                                The most recent build from branch <code>@GetTrimmedBranchName()</code> failed
+                                <a href="@GetBuildUri(_latestCompletedBuild!.Id)" target="_blank" class="commit-link">
+                                    (View on Azure DevOps)
+                                    <FluentIcon Value="@(new Icons.Regular.Size16.WindowNew())" Color="Color.Accent" />
+                                </a>
+                            </FluentLabel>
+                    }
+                    else if (_latestCompletedBuild?.Result == "canceled")
+                    {
+                            <FluentIcon Value="@(new Icons.Regular.Size28.Warning())" Color="Color.Warning" />
+                            <FluentLabel Typo="Typography.Body">
+                                The most recent build from branch <code>@GetTrimmedBranchName()</code> was canceled
+                                <a href="@GetBuildUri(_latestCompletedBuild!.Id)" target="_blank" class="commit-link">
+                                    (View on Azure DevOps)
+                                    <FluentIcon Value="@(new Icons.Regular.Size16.WindowNew())" Color="Color.Accent" />
+                                </a>
+                            </FluentLabel>
+                    }
+                </div>
 
-                @if (_ongoingBuild != null)
-                {
-                    <div class="status-item">
+                <div class="status-item">
+                    @if (!_loadedOngoingBuild)
+                    {
+                        <FluentProgressRing style="width: 20px; height: 20px;" />
+                    }
+                    else if (_ongoingBuild != null)
+                    {
+                            <FluentIcon Value="@(new Icons.Regular.Size20.ArrowSync())" Color="Color.Info" />
+                            <FluentLabel Typo="Typography.Body">
+                                There is an ongoing build from branch <code>@GetTrimmedBranchName()</code>
+                                <a href="@GetBuildUri(_latestCompletedBuild!.Id)" target="_blank" class="commit-link">
+                                    (View latest ongoing build)
+                                    <FluentIcon Value="@(new Icons.Regular.Size16.WindowNew())" Color="Color.Accent" />
+                                </a>
+                            </FluentLabel>
+                    }
+                    else
+                    {
                         <FluentIcon Value="@(new Icons.Regular.Size20.ArrowSync())" Color="Color.Info" />
-
                         <FluentLabel Typo="Typography.Body">
-                            There is an ongoing build from this branch
-                            <a href="@GetBuildUri(_latestCompletedBuild!.Id)" target="_blank" class="commit-link">
-                                (View latest ongoing build)
-                                <FluentIcon Value="@(new Icons.Regular.Size16.WindowNew())" Color="Color.Accent" />
-                            </a>
+                            There is no ongoing build from branch <code>@GetTrimmedBranchName()</code>
                         </FluentLabel>
-                    </div>
-                }
+                    }
+                </div>
             </div>
         </div>
     </div>
@@ -294,35 +328,37 @@ else
     [Parameter]
     public string? BuildId { get; set; }
     [Parameter]
+    public Build? Build { get; set; }
+    [Parameter]
     public int ChannelId { get; set; }
     [Parameter]
     public string? Repository { get; set; }
 
     private Build? _build;
     private Commit? _commit;
-    private bool _loading = true;
     private AzDoBuild? _latestCompletedBuild = null;
     private AzDoBuild? _ongoingBuild = null;
     private Build? _latestBarBuild = null;
+    private bool _loadedOngoingBuild = false;
+    private bool _loadedLatestBuild = false;
 
     protected override async Task OnParametersSetAsync()
     {
-        _loading = true;
+        _build = Build;
+        Task getCommit = GetCommitInfo();
+        Task getLatestBuild =  GetLatestBarBuild();
+        Task getLatestAzdoBuild = GetLatestCompletedBuild();
+        Task getOngoingBuild = GetOngoingBuild();
 
-        _build = BuildId! == "latest" ?
-            await PcsApi.Builds.GetLatestAsync(channelId: ChannelId, repository: Repository) :
-            await PcsApi.Builds.GetBuildAsync(int.Parse(BuildId!));
-
-        _commit = await PcsApi.Builds.GetCommitAsync(_build!.Id);
-
-        await GetLatestBarBuild();
-        _loading = false;
-
-        await GetLatestCompletedBuild();
-        await GetOngoingBuild();
+        await Task.WhenAll(getCommit, getLatestAzdoBuild, getLatestBuild, getOngoingBuild);
     }
 
     private string GetShortCommitMessage() => string.Join(' ', _commit!.Message.Split([' ', '\n']).Take(7));
+
+    private async Task GetCommitInfo()
+    {
+        _commit = await PcsApi.Builds.GetCommitAsync(_build!.Id);
+    }
 
     private string GetTrimmedBranchName()
     {
@@ -354,7 +390,7 @@ else
         return string.Empty;
     }
 
-    private string GetCommitUri() => $"{_build!.GetRepoUrl()}/commit/{_commit!.Sha}";
+    private string GetCommitUri() => $"{_build!.GetRepoUrl()}/commit/{_build!.Commit}";
 
     private string GetLatestBarBuildUri()
     {
@@ -385,6 +421,7 @@ else
             _build!.AzureDevOpsProject,
             "completed"
         )).FirstOrDefault();
+        _loadedLatestBuild = true;
     }
 
     private async Task GetOngoingBuild()
@@ -397,5 +434,6 @@ else
             _build!.AzureDevOpsProject,
             "inProgress"
         )).FirstOrDefault();
+        _loadedOngoingBuild = true;
     }
 }
