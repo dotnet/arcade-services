@@ -97,6 +97,7 @@ internal abstract class UpdaterTests : TestsWithServices
                 pr.LastCheck = (ExpectedPRCacheState[pair.Key] as InProgressPullRequest)!.LastCheck;
                 pr.LastUpdate = (ExpectedPRCacheState[pair.Key] as InProgressPullRequest)!.LastUpdate;
                 pr.NextCheck = (ExpectedPRCacheState[pair.Key] as InProgressPullRequest)!.NextCheck;
+                pr.CreationDate = (ExpectedPRCacheState[pair.Key] as InProgressPullRequest)!.CreationDate;
             }
         }
         Cache.Data.Where(pair => pair.Value is InProgressPullRequest).Should().BeEquivalentTo(ExpectedPRCacheState);
