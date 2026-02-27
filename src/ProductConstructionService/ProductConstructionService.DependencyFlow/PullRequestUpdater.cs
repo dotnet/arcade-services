@@ -277,10 +277,14 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         return status != PullRequestStatus.Invalid;
     }
 
-    private async Task UpdatePullRequestCreationDateAsync(InProgressPullRequest pr,  DateTime creationDate)
+    private async Task UpdatePullRequestCreationDateAsync(InProgressPullRequest pr, DateTime creationDate)
     {
-        pr.CreationDate = creationDate; //todo this is a temporary solution to update existing PRs, remove it
-        await _pullRequestState.SetAsync(pr);
+        //todo this is a temporary solution to update existing PRs, it can be removed after all existing PRs get a creation date
+        if (pr.CreationDate == creationDate)
+        {
+            pr.CreationDate = creationDate;
+            await _pullRequestState.SetAsync(pr);
+        }
     }
 
     protected virtual Task TagSourceRepositoryGitHubContactsIfPossibleAsync(InProgressPullRequest pr)
