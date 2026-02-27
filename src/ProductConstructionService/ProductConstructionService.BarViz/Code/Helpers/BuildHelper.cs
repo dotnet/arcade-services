@@ -48,24 +48,30 @@ public static class BuildHelper
 
     public static string? GetLinkToBuildDetails(this Build build, int channelId)
     {
-        string? repoSlug = RepoUrlConverter.RepoUrlToSlug(build.GetRepoUrl());
-        if (repoSlug != null)
-        {
-            return $"/channel/{channelId}/{repoSlug}/build/{build.Id}";
-        }
-        return null;
+        return GetLinkToBuildDetails(build.GetRepoUrl(), channelId, build.Id);
+    }
+
+    public static string? GetLinkToBuildDetails(string repoUrl, int channelId, int buildId)
+    {
+        string? repoSlug = RepoUrlConverter.RepoUrlToSlug(repoUrl);
+        return repoSlug != null ? $"/channel/{channelId}/{repoSlug}/build/{buildId}" : null;
     }
 
     public static string? GetCommitLink(this Build build)
     {
-        string repoUrl = build.GetRepoUrl().TrimEnd('/');
-        if (repoUrl.Contains("github.com", StringComparison.OrdinalIgnoreCase))
+        return GetCommitUri(build.GetRepoUrl(), build.Commit);
+    }
+
+    public static string? GetCommitUri(string repoUrl, string commitSha)
+    {
+        string trimmedUrl = repoUrl.TrimEnd('/');
+        if (trimmedUrl.Contains("github.com", StringComparison.OrdinalIgnoreCase))
         {
-            return $"{repoUrl}/commit/{build.Commit}";
+            return $"{trimmedUrl}/commit/{commitSha}";
         }
-        else if (repoUrl.Contains("dev.azure.com", StringComparison.OrdinalIgnoreCase))
+        else if (trimmedUrl.Contains("dev.azure.com", StringComparison.OrdinalIgnoreCase))
         {
-            return $"{repoUrl}?_a=history&version=GC{build.Commit}";
+            return $"{trimmedUrl}?_a=history&version=GC{commitSha}";
         }
         return null;
     }
