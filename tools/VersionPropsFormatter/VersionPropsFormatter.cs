@@ -4,6 +4,7 @@
 using System.Text;
 using System.Xml;
 using Maestro.Common;
+using Maestro.Common.Telemetry;
 using Microsoft.Build.Construction;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;

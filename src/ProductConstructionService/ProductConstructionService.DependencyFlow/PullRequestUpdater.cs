@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections.Immutable;
+using Maestro.Common.Cache;
+using Maestro.Common.Telemetry;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
@@ -14,7 +16,6 @@ using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
 using ProductConstructionService.DependencyFlow.WorkItems;
 using ProductConstructionService.WorkItems;
@@ -179,9 +180,11 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 return;
             }
 
-            var pullRequest = await GetPullRequestStatusAsync(pr, isCodeFlow, tryingToUpdate: true);
-            prInfo = pullRequest.PrInfo;
-            switch (pullRequest.Status)
+            (var status, prInfo) = await GetPullRequestStatusAsync(pr, isCodeFlow, tryingToUpdate: true);
+
+            await UpdatePullRequestCreationDateAsync(pr, prInfo.CreationDate.UtcDateTime);
+
+            switch (status)
             {
                 case PullRequestStatus.Completed:
                 case PullRequestStatus.Invalid:
@@ -201,7 +204,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                     await ScheduleUpdateForLater(pr, update, isCodeFlow);
                     return;
                 default:
-                    throw new NotImplementedException($"Unknown PR status {pullRequest.Status}");
+                    throw new NotImplementedException($"Unknown PR status {status}");
             }
         }
 
@@ -266,11 +269,22 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         return await CheckInProgressPullRequestAsync(inProgressPr, pullRequestCheck.IsCodeFlow);
     }
 
-    protected virtual async Task<bool> CheckInProgressPullRequestAsync(InProgressPullRequest pullRequestCheck, bool isCodeFlow)
+    protected virtual async Task<bool> CheckInProgressPullRequestAsync(InProgressPullRequest pr, bool isCodeFlow)
     {
-        _logger.LogInformation("Checking in-progress pull request {url}", pullRequestCheck.Url);
-        var pr = await GetPullRequestStatusAsync(pullRequestCheck, isCodeFlow, tryingToUpdate: false);
-        return pr.Status != PullRequestStatus.Invalid;
+        _logger.LogInformation("Checking in-progress pull request {url}", pr.Url);
+        (var status, var prInfo) = await GetPullRequestStatusAsync(pr, isCodeFlow, tryingToUpdate: false);
+        await UpdatePullRequestCreationDateAsync(pr, prInfo.CreationDate.UtcDateTime);
+        return status != PullRequestStatus.Invalid;
+    }
+
+    private async Task UpdatePullRequestCreationDateAsync(InProgressPullRequest pr, DateTime creationDate)
+    {
+        //todo this is a temporary solution to update existing PRs, it can be removed after all existing PRs get a creation date
+        if (pr.CreationDate == creationDate)
+        {
+            pr.CreationDate = creationDate;
+            await _pullRequestState.SetAsync(pr);
+        }
     }
 
     protected virtual Task TagSourceRepositoryGitHubContactsIfPossibleAsync(InProgressPullRequest pr)
@@ -616,6 +630,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 CoherencyCheckSuccessful = false,
                 CoherencyErrors = aggregatedCoherencyErrors.Count > 0 ? aggregatedCoherencyErrors : null,
                 CodeFlowDirection = CodeFlowDirection.None,
+                CreationDate = DateTime.UtcNow,
             };
 
             await SetPullRequestCheckReminder(inProgressPr, pr, isCodeFlow);
@@ -670,6 +685,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 CoherencyCheckSuccessful = repoDependencyUpdates.CoherencyCheckSuccessful,
                 CoherencyErrors = aggregatedCoherencyErrors.Count > 0 ? aggregatedCoherencyErrors : null,
                 CodeFlowDirection = CodeFlowDirection.None,
+                CreationDate = DateTime.UtcNow,
             };
 
             if (!string.IsNullOrEmpty(pr?.Url))
@@ -1388,6 +1404,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 CodeFlowDirection = subscription.IsForwardFlow()
                     ? CodeFlowDirection.ForwardFlow
                     : CodeFlowDirection.BackFlow,
+                CreationDate = DateTime.UtcNow,
             };
 
             await AddDependencyFlowEventsAsync(

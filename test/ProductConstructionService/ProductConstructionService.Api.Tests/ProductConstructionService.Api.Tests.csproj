@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\ProductConstructionService\ProductConstructionService.Api\ProductConstructionService.Api.csproj" />
+    <ProjectReference Include="..\..\..\src\ProductConstructionService\ProductConstructionService.DependencyFlow\ProductConstructionService.DependencyFlow.csproj" />
+    <ProjectReference Include="..\..\..\src\ProductConstructionService\ProductConstructionService.WorkItems\ProductConstructionService.WorkItems.csproj" />
+    <ProjectReference Include="..\ProductConstructionService.DependencyFlow.Tests\ProductConstructionService.DependencyFlow.Tests.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.DotNet.Internal.DependencyInjection.Testing" />
+    <PackageReference Include="Microsoft.DotNet.Internal.Testing.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.DotNet.Internal.Testing.DependencyInjectionCodeGen" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <PackageReference Include="Microsoft.DotNet.Internal.Testing.Utility" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+  </ItemGroup>
+
+</Project>

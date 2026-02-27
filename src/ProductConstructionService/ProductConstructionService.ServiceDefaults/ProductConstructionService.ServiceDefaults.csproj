@@ -1,9 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Library</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
     <IsAspireSharedProject>true</IsAspireSharedProject>
   </PropertyGroup>
 
@@ -23,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />
+    <ProjectReference Include="..\..\Maestro\Maestro.Common\Maestro.Common.csproj" />
   </ItemGroup>
 
 </Project>

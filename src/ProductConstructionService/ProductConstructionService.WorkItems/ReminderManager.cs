@@ -2,7 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure;
-using ProductConstructionService.Common;
+using Maestro.Common.Cache;
+using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.WorkItems;
 

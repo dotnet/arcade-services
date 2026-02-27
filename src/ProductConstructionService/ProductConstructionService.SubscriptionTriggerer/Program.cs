@@ -1,11 +1,12 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
+
+using Maestro.Common;
 using Maestro.Data.Models;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using ProductConstructionService.Common;
 using ProductConstructionService.SubscriptionTriggerer;
 using ProductConstructionService.WorkItems;
 
@@ -38,9 +39,10 @@ try
     if (builder.Environment.IsDevelopment())
     {
         var config = applicationScope.ServiceProvider.GetRequiredService<IConfiguration>();
-        await applicationScope.ServiceProvider.UseLocalWorkItemQueues([
-            config.GetRequiredValue(WorkItemConfiguration.DefaultWorkItemQueueNameConfigurationKey),
-            config.GetRequiredValue(WorkItemConfiguration.CodeFlowWorkItemQueueNameConfigurationKey)
+        await applicationScope.ServiceProvider.UseLocalWorkItemQueues(
+        [
+            builder.Configuration.GetRequiredValue("DefaultWorkItemQueueName"),
+            builder.Configuration.GetRequiredValue("CodeflowWorkItemQueueName"),
         ]);
     }
 

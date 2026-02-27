@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Net;
+using Maestro.Common.Cache;
 using Maestro.DataProviders;
 using Maestro.DataProviders.ConfigurationIngestion;
 using Maestro.DataProviders.Exceptions;

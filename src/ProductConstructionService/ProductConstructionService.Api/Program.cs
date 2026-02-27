@@ -1,12 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Maestro.Common;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.StaticFiles;
 using ProductConstructionService.Api;
 using ProductConstructionService.Api.Configuration;
-using ProductConstructionService.Common;
 using ProductConstructionService.ServiceDefaults;
 using ProductConstructionService.WorkItems;
 
@@ -17,7 +17,6 @@ bool useSwagger = isDevelopment;
 
 await builder.ConfigurePcs(
     addKeyVault: true,
-    authRedis: !isDevelopment,
     addSwagger: useSwagger);
 
 var app = builder.Build();
@@ -47,13 +46,14 @@ app.Use((context, next) =>
 
 app.UseHttpLogging();
 
-// Configure the HTTP request pipeline.
 if (isDevelopment)
 {
     app.UseDeveloperExceptionPage();
-    await app.Services.UseLocalWorkItemQueues([
-        app.Configuration.GetRequiredValue(WorkItemConfiguration.DefaultWorkItemQueueNameConfigurationKey),
-        app.Configuration.GetRequiredValue(WorkItemConfiguration.CodeFlowWorkItemQueueNameConfigurationKey)]);
+    await app.Services.UseLocalWorkItemQueues(
+        [
+            app.Configuration.GetRequiredValue(PcsStartup.ConfigurationKeys.DefaultWorkItemQueueName),
+            app.Configuration.GetRequiredValue(PcsStartup.ConfigurationKeys.CodeFlowWorkItemQueueName),
+        ]);
 
     if (useSwagger)
     {

@@ -3,18 +3,19 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <RollForward>Major</RollForward>
-
+    <Nullable>disable</Nullable>
     <OutputType>Exe</OutputType>
-    <SignAssembly>false</SignAssembly>
     <IsPackable>true</IsPackable>
-    <Description>Darc CLI</Description>
-    <PackageTags>Arcade Darc CLI Dependency Flow</PackageTags>
     <PackAsTool>true</PackAsTool>
+
     <ToolCommandName>darc</ToolCommandName>
+    <Description>Darc CLI</Description>
+    <PackageTags>Arcade Maestro Darc CLI Dependency Flow</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Maestro\Maestro.Common\Maestro.Common.csproj" />
+    <ProjectReference Include="..\..\ProductConstructionService\Microsoft.DotNet.ProductConstructionService.Client\Microsoft.DotNet.ProductConstructionService.Client.csproj" />
     <ProjectReference Include="..\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
   </ItemGroup>
 
@@ -25,5 +26,11 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Console" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <InternalsVisibleTo Include="Microsoft.DotNet.Darc.Tests" />
+    <InternalsVisibleTo Include="Microsoft.DotNet.DarcLib.Codeflow.Tests" />
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
   </ItemGroup>
 </Project>

@@ -46,7 +46,7 @@ public static class SwaggerConfiguration
                 options.CustomSchemaIds(type =>
                 {
                     var prefix = string.Empty;
-                    if (type.Namespace != null 
+                    if (type.Namespace != null
                         && (type.Namespace.StartsWith("Microsoft.DotNet.MaestroConfiguration.Client")
                             || type.Namespace.StartsWith("Microsoft.DotNet.ProductConstructionService.Client")))
                     {
@@ -154,7 +154,7 @@ public static class SwaggerConfiguration
                 string xmlPath;
                 if (builder.Environment.IsDevelopment())
                 {
-                    xmlPath = Path.GetDirectoryName(typeof(PcsStartup).Assembly.Location)!;
+                    xmlPath = Path.GetDirectoryName(typeof(SwaggerConfiguration).Assembly.Location)!;
                 }
                 else
                 {

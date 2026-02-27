@@ -2,9 +2,6 @@
 
   <PropertyGroup>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <!-- We're referencing Maestro.Data, which isn't signed and doesn't have a strong name, so we can't be signed neither -->
-    <SignAssembly>False</SignAssembly>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,11 +14,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\..\Maestro\Maestro.Data\Maestro.Data.csproj" />
-    <ProjectReference Include="..\..\Maestro\Maestro.DataProviders\Maestro.DataProviders.csproj" />
-    <ProjectReference Include="..\..\Maestro\Maestro.MergePolicies\Maestro.MergePolicies.csproj" />
-    <ProjectReference Include="..\..\Microsoft.DotNet.Darc\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
-    <ProjectReference Include="..\ProductConstructionService.Common\ProductConstructionService.Common.csproj" />
+    <ProjectReference Include="..\..\Maestro\Maestro.Common\Maestro.Common.csproj" />
   </ItemGroup>
 
 </Project>

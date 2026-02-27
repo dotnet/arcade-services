@@ -1,7 +1,9 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.IO.Compression;
 using System.Text.Json;
+using System.Web;
 using Azure;
 using Azure.ResourceManager.AppContainers;
 using Azure.ResourceManager.AppContainers.Models;
@@ -9,7 +11,6 @@ using Azure.ResourceManager.Resources;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Cli.Options;
-using ProductConstructionService.Common;
 using ProductConstructionService.WorkItems;
 
 namespace ProductConstructionService.Cli.Operations;
@@ -234,7 +235,7 @@ internal class DeploymentOperation : IOperation
             var revision = (await _containerApp.GetContainerAppRevisionAsync(revisionName)).Value;
             status = revision.Data.RunningState ?? RevisionRunningState.Unknown;
         }
-        while (await Utility.SleepIfTrue(
+        while (await SleepIfTrue(
             () => status != _runningAtMaxScaleState && status != RevisionRunningState.Failed,
             SleepTimeSeconds));
 
@@ -289,7 +290,7 @@ internal class DeploymentOperation : IOperation
             | project TimeGenerated, Log_s
             """;
 
-        var encodedQuery = Utility.ConvertStringToCompressedBase64EncodedQuery(query);
+        var encodedQuery = ConvertStringToCompressedBase64EncodedQuery(query);
 
         return "https://ms.portal.azure.com#@72f988bf-86f1-41af-91ab-2d7cd011db47/blade/Microsoft_OperationsManagementSuite_Workspace/Logs.ReactView/" +
            $"resourceId/%2Fsubscriptions%2F{_options.SubscriptionId}%2FresourceGroups%2F{_options.ResourceGroupName}%2Fproviders%2FMicrosoft.OperationalInsights%2Fworkspaces%2F" +
@@ -365,5 +366,30 @@ internal class DeploymentOperation : IOperation
         var tasks = replicaStateCaches.Select(replicaStateCache => replicaStateCache.SetStateAsync(WorkItemProcessorState.Working)).ToArray();
 
         await Task.WhenAll(tasks);
+    }
+
+    private static async Task<bool> SleepIfTrue(Func<bool> condition, int durationSeconds)
+    {
+        if (condition())
+        {
+            await Task.Delay(TimeSpan.FromSeconds(durationSeconds));
+            return true;
+        }
+
+        return false;
+    }
+
+    private static string ConvertStringToCompressedBase64EncodedQuery(string query)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(query);
+        using MemoryStream memoryStream = new();
+        using GZipStream compressedStream = new(memoryStream, CompressionMode.Compress);
+
+        compressedStream.Write(bytes, 0, bytes.Length);
+        compressedStream.Close();
+        memoryStream.Seek(0, SeekOrigin.Begin);
+        var data = memoryStream.ToArray();
+        var base64query = Convert.ToBase64String(data);
+        return HttpUtility.UrlEncode(base64query);
     }
 }
