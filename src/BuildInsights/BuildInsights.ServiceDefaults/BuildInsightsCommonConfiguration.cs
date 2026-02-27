@@ -54,6 +54,7 @@ public static class BuildInsightsCommonConfiguration
         public const string KeyVaultName = "KeyVaultName";
         public const string ManagedIdentityId = "ManagedIdentityClientId";
         public const string GitHubApp = "GitHubApp";
+        public const string GitHubGraphQLOptions = "GitHubGraphQLOptions";
         public const string BlobStorage = "BlobStorage";
         public const string Helix = "Helix";
         public const string Kusto = "Kusto";
@@ -104,7 +105,7 @@ public static class BuildInsightsCommonConfiguration
             builder.Configuration[ConfigurationKeys.GitHubAppPrivateKey]);
         builder.Services.AddGitHubTokenProvider();
         builder.Services.AddGitHub();
-        builder.Services.AddGitHubGraphQL();
+        builder.Services.AddGitHubGraphQL(builder.Configuration.GetSection(ConfigurationKeys.GitHubGraphQLOptions));
         builder.Services.TryAddTransient<IInstallationLookup, GitHubInstallationIdResolver>();
         builder.Services.TryAddScoped<IRemoteTokenProvider>(sp =>
         {

@@ -16,11 +16,11 @@ public interface IGitHubInstallationIdResolver
 
 public class GitHubInstallationIdResolver : IGitHubInstallationIdResolver
 {
-    private readonly IGitHubTokenProvider _gitHubTokenProvider;
+    private readonly IGitHubAppTokenProvider _gitHubTokenProvider;
     private readonly ILogger<GitHubInstallationIdResolver> _logger;
 
     public GitHubInstallationIdResolver(
-        IGitHubTokenProvider gitHubTokenProvider,
+        IGitHubAppTokenProvider gitHubTokenProvider,
         ILogger<GitHubInstallationIdResolver> logger)
     {
         _gitHubTokenProvider = gitHubTokenProvider;
@@ -32,7 +32,7 @@ public class GitHubInstallationIdResolver : IGitHubInstallationIdResolver
         _logger.LogInformation("Getting installation ID for {repoUri}", repoUri);
 
         var (owner, repo) = GitHubClient.ParseRepoUri(repoUri);
-        var token = _gitHubTokenProvider.GetTokenForApp();
+        var token = _gitHubTokenProvider.GetAppToken();
         var client = new Octokit.GitHubClient(new ProductHeaderValue(nameof(ProductConstructionService)))
         {
             Credentials = new Credentials(token, AuthenticationType.Bearer)

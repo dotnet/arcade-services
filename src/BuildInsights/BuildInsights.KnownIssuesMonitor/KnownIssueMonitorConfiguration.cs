@@ -22,6 +22,7 @@ public static class KnownIssueMonitorConfiguration
         public const string KnownIssuesKusto = "KnownIssuesKusto";
         public const string GitHubIssues = "GitHubIssues";
         public const string InternalProject = "InternalProject";
+        public const string SsaCriteriaSettings = "SsaCriteriaSettings";
     }
 
     public static async Task<IServiceCollection> ConfigureKnownIssueMonitor(this IHostApplicationBuilder builder)
@@ -33,6 +34,7 @@ public static class KnownIssueMonitorConfiguration
 
         builder.Services.Configure<KnownIssuesProjectOptions>(ConfigurationKeys.KnownIssuesProject, (o, s) => s.Bind(o));
         builder.Services.Configure<InternalProjectSettings>(ConfigurationKeys.InternalProject, (o, s) => s.Bind(o));
+        builder.Services.Configure<SsaCriteriaSettings>(ConfigurationKeys.SsaCriteriaSettings, (o, s) => s.Bind(o));
 
         await builder.ConfigureBuildInsightsDependencies(addKeyVault: true);
         builder.Services.AddKnownIssues(
@@ -42,6 +44,7 @@ public static class KnownIssueMonitorConfiguration
             gitHubIssuesConfig);
 
         builder.Services.TryAddTransient<KnownIssuesReportHelper>();
+        builder.Services.TryAddTransient<KnownIssueMonitor>();
 
         return builder.Services;
     }

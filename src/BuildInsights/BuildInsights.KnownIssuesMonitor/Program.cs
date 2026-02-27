@@ -16,4 +16,4 @@ var serviceProvider = builder.Services
     .CreateScope()
     .ServiceProvider;
 
-await ActivatorUtilities.CreateInstance<KnownIssueMonitor>(serviceProvider).RunAsync();
+await serviceProvider.GetRequiredService<KnownIssueMonitor>().RunAsync();

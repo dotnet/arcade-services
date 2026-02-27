@@ -10,7 +10,6 @@ using BuildInsights.AzureStorage.Cache;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.Data.Models;
 using BuildInsights.GitHub;
-using BuildInsights.GitHub.Models;
 using BuildInsights.KnownIssues;
 using BuildInsights.KnownIssues.Models;
 using BuildInsights.QueueInsights;

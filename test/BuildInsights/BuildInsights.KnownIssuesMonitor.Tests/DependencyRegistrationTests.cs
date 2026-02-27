@@ -3,6 +3,7 @@
 
 using AwesomeAssertions;
 using BuildInsights.ServiceDefaults;
+using Microsoft.ApplicationInsights.Channel;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,7 +33,9 @@ public class DependencyRegistrationTests
         builder.Configuration[BuildInsightsCommonConfiguration.ConfigurationKeys.WorkItemConsumerCount] = "1";
         builder.Configuration[$"{BuildInsightsCommonConfiguration.ConfigurationKeys.GitHubApp}:AppId"] = "12345";
 
-        await builder.ConfigureKnownIssueMonitor();
+        await builder
+            .RegisterLogging(new InMemoryChannel())
+            .ConfigureKnownIssueMonitor();
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(
             s =>
