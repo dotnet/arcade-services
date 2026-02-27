@@ -46,9 +46,6 @@
     [Parameter]
     public int ChannelId { get; set; }
 
-    [Parameter]
-    public EventCallback<bool> OnHasSourceManifest { get; set; }
-
     private List<SourceManifestEntry>? _sourceManifest = null;
     private string _repoFilter = string.Empty;
     private IQueryable<SourceManifestEntry>? _filteredSourceManifest = null;
@@ -71,8 +68,6 @@
             _sourceManifest = null;
             _filteredSourceManifest = null;
         }
-
-        await OnHasSourceManifest.InvokeAsync(_sourceManifest != null && _sourceManifest.Count > 0);
     }
 
     private void UpdateFilteredSourceManifest()
