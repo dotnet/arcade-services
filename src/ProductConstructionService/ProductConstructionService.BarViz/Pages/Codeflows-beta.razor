@@ -188,8 +188,8 @@
             Enabled: entry.Enabled,
             BackflowSubscription: entry.BackflowSubscription?.Subscription,
             ForwardflowSubscription: entry.ForwardFlowSubscription?.Subscription,
-            BackflowPr: entry.BackflowSubscription?.ActivePullRequest?.Url,
-            ForwardflowPr: entry.ForwardFlowSubscription?.ActivePullRequest?.Url);
+            BackflowPr: entry.BackflowSubscription?.ActivePullRequest,
+            ForwardflowPr: entry.ForwardFlowSubscription?.ActivePullRequest);
     }
 
     static string GetShortSha(string sha) => sha.Substring(0, 7);

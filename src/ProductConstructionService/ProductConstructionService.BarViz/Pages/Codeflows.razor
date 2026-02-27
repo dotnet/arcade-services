@@ -102,7 +102,7 @@
 
                         @if (context.BackflowPr != null)
                         {
-                            <FluentAnchor Href="@context.BackflowPr" Target="_blank" Appearance="Appearance.Hypertext">Active PR</FluentAnchor>
+                            <FluentAnchor Href="@context.BackflowPr.Url" Target="_blank" Appearance="Appearance.Hypertext">Active PR (@GetPrAge(context.BackflowPr))</FluentAnchor>
                         }
                     </FluentLabel>
                 </TemplateColumn>
@@ -125,7 +125,7 @@
 
                         @if (context.ForwardflowPr != null)
                         {
-                            <FluentAnchor Href="@context.ForwardflowPr" Target="_blank" Appearance="Appearance.Hypertext">Active PR</FluentAnchor>
+                            <FluentAnchor Href="@context.ForwardflowPr.Url" Target="_blank" Appearance="Appearance.Hypertext">Active PR (@GetPrAge(context.ForwardflowPr))</FluentAnchor>
                         }
                     </FluentLabel>
                 </TemplateColumn>
@@ -144,7 +144,7 @@
     string? VmrBranch = null;
     DefaultChannel? DefaultChannel = null;
     List<DefaultChannel> DefaultChannels = [];
-    Dictionary<Guid, string> PullRequests = [];
+    Dictionary<Guid, (string Url, DateTimeOffset CreationDate)> PullRequests = [];
     List<Subscription>? Subscriptions = null;
     IQueryable<CodeflowSubscription>? CodeFlows;
 
@@ -165,7 +165,7 @@
             {
                 if (Subscriptions.Any(s => s.Id == update.SubscriptionId))
                 {
-                    PullRequests[update.SubscriptionId] = pr.Url;
+                    PullRequests[update.SubscriptionId] = (pr.Url, pr.CreationDate);
                 }
             }
         }
@@ -206,8 +206,12 @@
         {
             var backflowSubscription = subscriptions!.FirstOrDefault(s => s.SourceDirectory == mapping);
             var forwardflowSubscription = subscriptions!.FirstOrDefault(s => s.TargetDirectory == mapping);
-            PullRequests.TryGetValue(backflowSubscription?.Id ?? default, out var backflowPr);
-            PullRequests.TryGetValue(forwardflowSubscription?.Id ?? default, out var forwardflowPr);
+            var backflowPr = PullRequests.TryGetValue(backflowSubscription?.Id ?? default, out var backflowPrData)
+                ? new ActivePullRequest(backflowPrData.CreationDate.UtcDateTime, backflowPrData.Url)
+                : null;
+            var forwardflowPr = PullRequests.TryGetValue(forwardflowSubscription?.Id ?? default, out var forwardflowPrData)
+                ? new ActivePullRequest(forwardflowPrData.CreationDate.UtcDateTime, forwardflowPrData.Url)
+                : null;
             codeflows.Add(new CodeflowSubscription(
                 RepositoryUrl: backflowSubscription?.TargetRepository ?? forwardflowSubscription?.SourceRepository!,
                 RepositoryBranch: backflowSubscription?.TargetBranch,
@@ -302,4 +306,10 @@
     }
 
     static string GetShortSha(string sha) => sha.Substring(0, 7);
+
+    static string GetPrAge(ActivePullRequest pr)
+    {
+        var age = (DateTime.UtcNow - pr.CreatedDate).ToTimeAgo();
+        return age.Replace(" ago", " old");
+    }
 }
