@@ -1491,7 +1491,7 @@ public class GitHubClient : RemoteRepoBase, IRemoteGitRepo
             Status = status,
             UpdatedAt = pr.UpdatedAt,
             HeadBranchSha = pr.Head.Sha,
-            CreatedAt = pr.CreatedAt,
+            CreationDate = pr.CreatedAt,
         };
     }
 

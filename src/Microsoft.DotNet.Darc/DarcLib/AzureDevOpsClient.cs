@@ -2004,7 +2004,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         },
         UpdatedAt = DateTimeOffset.UtcNow,
         HeadBranchSha = pr.LastMergeSourceCommit.CommitId,
-        CreatedAt = pr.CreationDate,
+        CreationDate = pr.CreationDate,
     };
 
     public async Task<List<string>> ListFilesAtCommitAsync(string repoUri, string commit, string path)

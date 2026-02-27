@@ -182,7 +182,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             (var status, prInfo) = await GetPullRequestStatusAsync(pr, isCodeFlow, tryingToUpdate: true);
 
-            await UpdatePullRequestCreationDateAsync(pr, prInfo.CreatedAt.UtcDateTime);
+            await UpdatePullRequestCreationDateAsync(pr, prInfo.CreationDate.UtcDateTime);
 
             switch (status)
             {
@@ -273,7 +273,7 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
     {
         _logger.LogInformation("Checking in-progress pull request {url}", pr.Url);
         (var status, var prInfo) = await GetPullRequestStatusAsync(pr, isCodeFlow, tryingToUpdate: false);
-        await UpdatePullRequestCreationDateAsync(pr, prInfo.CreatedAt.UtcDateTime);
+        await UpdatePullRequestCreationDateAsync(pr, prInfo.CreationDate.UtcDateTime);
         return status != PullRequestStatus.Invalid;
     }
 
