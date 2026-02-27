@@ -180,7 +180,7 @@ else
                             <FluentIcon Value="@(new Icons.Regular.Size20.ArrowSync())" Color="Color.Info" />
                             <FluentLabel Typo="Typography.Body">
                                 There is an ongoing build from branch <code>@GetTrimmedBranchName()</code>
-                                <a href="@GetBuildUri(_latestCompletedBuild!.Id)" target="_blank" class="commit-link">
+                                <a href="@GetBuildUri(_ongoingBuild.Id)" target="_blank" class="commit-link">
                                     (View latest ongoing build)
                                     <FluentIcon Value="@(new Icons.Regular.Size16.WindowNew())" Color="Color.Accent" />
                                 </a>
