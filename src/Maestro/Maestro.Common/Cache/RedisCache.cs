@@ -15,6 +15,7 @@ public interface IRedisCache
     Task SetAsync(string value, TimeSpan? expiration = null);
     Task<bool> TryDeleteAsync();
     Task<string?> TryGetAsync();
+    Task<Dictionary<string, string?>> GetBatchAsync(IEnumerable<string> keys);
     IAsyncEnumerable<string> GetKeysAsync(string pattern);
 }
 
@@ -59,6 +60,20 @@ public class RedisCache : IRedisCache
         return await Cache.StringGetAsync(key);
     }
 
+    public async Task<Dictionary<string, string?>> GetBatchAsync(IEnumerable<string> keys)
+    {
+        var redisKeys = keys.Select(k => (RedisKey)k).ToArray();
+        var values = await Cache.StringGetAsync(redisKeys);
+
+        var result = new Dictionary<string, string?>();
+        for (int i = 0; i < redisKeys.Length; i++)
+        {
+            result[redisKeys[i].ToString()] = values[i].HasValue ? values[i].ToString() : null;
+        }
+
+        return result;
+    }
+
     public async IAsyncEnumerable<string> GetKeysAsync(string pattern)
     {
         // We most likely only have one endpoint so no need to parallelize this part
@@ -78,6 +93,7 @@ public interface IRedisCache<T> where T : class
     Task SetAsync(T value, TimeSpan? expiration = null);
     Task<T?> TryDeleteAsync();
     Task<T?> TryGetStateAsync();
+    Task<Dictionary<string, T?>> TryGetStateBatchAsync(IEnumerable<string> keys);
     IAsyncEnumerable<string> GetKeysAsync(string pattern);
 }
 
@@ -149,5 +165,36 @@ public class RedisCache<T> : IRedisCache<T> where T : class
                 await TryDeleteAsync());
             return null;
         }
+    }
+
+    public async Task<Dictionary<string, T?>> TryGetStateBatchAsync(IEnumerable<string> keys)
+    {
+        var states = await _cache.GetBatchAsync(keys);
+        var result = new Dictionary<string, T?>();
+
+        foreach (var kvp in states)
+        {
+            if (kvp.Value == null)
+            {
+                result[kvp.Key] = null;
+                continue;
+            }
+
+            try
+            {
+                var deserialized = JsonSerializer.Deserialize<T>(kvp.Value, JsonSerializerOptions);
+                result[kvp.Key] = deserialized;
+            }
+            catch (SerializationException e)
+            {
+                _logger.LogError(e, "Failed to deserialize state {type} for key {key}. Original value: {value}",
+                    typeof(T).Name,
+                    kvp.Key,
+                    kvp.Value);
+                result[kvp.Key] = null;
+            }
+        }
+
+        return result;
     }
 }
