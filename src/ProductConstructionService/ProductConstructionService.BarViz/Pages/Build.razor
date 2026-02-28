@@ -81,14 +81,17 @@ else
             _build = await PcsApi.Builds.GetBuildAsync(int.Parse(BuildId!));
         }
 
-        try
+        if (_build != null)
         {
-            var manifest = await PcsApi.Builds.GetSourceManifestAsync(_build!.Id);
-            _hasSourceManifest = manifest != null && manifest.Count > 0;
-        }
-        catch
-        {
-            _hasSourceManifest = false;
+            try
+            {
+                var manifest = await PcsApi.Builds.GetSourceManifestAsync(_build.Id);
+                _hasSourceManifest = manifest != null && manifest.Count > 0;
+            }
+            catch
+            {
+                _hasSourceManifest = false;
+            }
         }
     }
 }
