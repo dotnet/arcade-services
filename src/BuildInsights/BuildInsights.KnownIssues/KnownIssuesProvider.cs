@@ -23,6 +23,9 @@ public interface IKnownIssuesService
 
 public class KnownIssuesProvider : IKnownIssuesService
 {
+    private const string KnownIssuesTableName = "KnownIssues";
+    private const string TestKnownIssuesTableName = "TestKnownIssues";
+
     private readonly IKustoClientProvider _kustoClientProvider;
     private readonly IKustoIngestClientFactory _kustoIngestClient;
     private readonly IOptions<KustoOptions> _kustoOptions;
@@ -59,7 +62,7 @@ public class KnownIssuesProvider : IKnownIssuesService
         await KustoHelpers.WriteDataToKustoInMemoryAsync(
             client,
             _kustoOptions.Value.Database,
-            "KnownIssues",
+            KnownIssuesTableName,
             _logger,
             newMatches,
             MapKnownIssueMatch);
@@ -77,7 +80,7 @@ public class KnownIssuesProvider : IKnownIssuesService
         await KustoHelpers.WriteDataToKustoInMemoryAsync(
             client,
             _kustoOptions.Value.Database,
-            "TestKnownIssues",
+            TestKnownIssuesTableName,
             _logger,
             newMatches,
             MapKnownIssueMatch);
@@ -126,8 +129,8 @@ public class KnownIssuesProvider : IKnownIssuesService
     public async Task<List<KnownIssueMatch>> GetSavedMatches(int buildId, int lastNDays)
     {
         var query = new KustoQuery(
-            """
-            KnownIssues
+            $"""
+            {KnownIssuesTableName}
             | where BuildId == _buildId and StepStartTime > _datefilter
             | project BuildId, BuildRepository, StepStartTime, IssueId, IssueRepository, IssueType, JobId, StepName, LogURL, PullRequest, Project, Organization
             """);
@@ -142,8 +145,8 @@ public class KnownIssuesProvider : IKnownIssuesService
     public async Task<ImmutableList<KnownIssueMatch>> GetKnownIssuesMatchesForIssue(int issueId, string issueRepository)
     {
         var query = new KustoQuery(
-            """
-            KnownIssues
+            $"""
+            {KnownIssuesTableName}
             | extend StepStartTime = iff(isempty(StepStartTime), ingestion_time(), StepStartTime)
             | where StepStartTime > _dateFilter
             | where IssueId == _issueId
@@ -163,8 +166,8 @@ public class KnownIssuesProvider : IKnownIssuesService
     private async Task<ImmutableList<TestKnownIssueMatch>> GetSavedTestsKnownIssuesMatches(int buildId, int lastNDays)
     {
         var query = new KustoQuery(
-            """
-            TestKnownIssues
+            $"""
+            {TestKnownIssuesTableName}
             | where BuildId == _buildId and CompletedDate > _datefilter
             | project BuildId, BuildRepository, CompletedDate, IssueId, IssueRepository, IssueType, TestResultName, TestRunId, Url, PullRequest, Project, Organization
             """);
@@ -179,8 +182,8 @@ public class KnownIssuesProvider : IKnownIssuesService
     public async Task<ImmutableList<TestKnownIssueMatch>> GetTestKnownIssuesMatchesForIssue(int issueId, string repository)
     {
         var query = new KustoQuery(
-            """
-            TestKnownIssues
+            $"""
+            {TestKnownIssuesTableName}
             | extend CompletedDate = iff(isempty(CompletedDate), ingestion_time(), CompletedDate)
             | where IssueId == _issueId and IssueRepository == _issueRepository and CompletedDate > _dateFilter
             | summarize arg_max(CompletedDate, *) by BuildId, IssueRepository, IssueId
