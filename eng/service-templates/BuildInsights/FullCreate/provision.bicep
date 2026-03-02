@@ -48,6 +48,12 @@ param appIdentityName string
 @description('Name of the identity used for the service deployment')
 param deploymentIdentityName string
 
+@description('Whether to create a new deployment identity or use an existing one')
+param deploymentIdentityCreate bool
+
+@description('Resource group of the existing deployment identity (used when deploymentIdentityCreate is false)')
+param deploymentIdentityResourceGroupName string = resourceGroup().name
+
 @description('Virtual network name')
 param virtualNetworkName string
 
@@ -123,6 +129,8 @@ module managedIdentitiesModule 'modules/managed-identities.bicep' = {
     params: {
         location: location
         deploymentIdentityName: deploymentIdentityName
+        deploymentIdentityCreate: deploymentIdentityCreate
+        deploymentIdentityResourceGroupName: deploymentIdentityResourceGroupName
         appIdentityName: appIdentityName
         scheduledJobIdentityName: scheduledJobIdentityName
     }

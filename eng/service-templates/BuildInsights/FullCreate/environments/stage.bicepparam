@@ -19,8 +19,10 @@ param containerRegistryName = '${toLower(replace(serviceNameKebabCase, '-', ''))
 
 // Identities
 param appIdentityName = '${serviceNamePascalCase}Service${environmentPascalCase}'
-param deploymentIdentityName = '${serviceNamePascalCase}ServiceDeployment${environmentPascalCase}'
 param scheduledJobIdentityName = '${serviceNamePascalCase}ScheduledJob${environmentPascalCase}'
+param deploymentIdentityCreate = false
+param deploymentIdentityName = 'ProductConstructionServiceDeploymentInt'
+param deploymentIdentityResourceGroupName = 'product-construction-service'
 
 // Observability
 param applicationInsightsName = '${serviceNameKebabCase}-ai-${environmentSuffix}'
