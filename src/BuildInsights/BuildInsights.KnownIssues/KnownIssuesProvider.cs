@@ -200,6 +200,11 @@ public class KnownIssuesProvider : IKnownIssuesService
 
     public static List<KnownIssueMatch> GetKnownIssueFromDataReader(IDataReader reader)
     {
+        if (reader == null)
+        {
+            return [];
+        }
+
         var knownIssueMatches = new List<KnownIssueMatch>();
         while (reader.Read())
         {
@@ -225,6 +230,11 @@ public class KnownIssuesProvider : IKnownIssuesService
 
     private static ImmutableList<TestKnownIssueMatch> GetTestsKnownIssuesFromDataReader(IDataReader reader)
     {
+        if (reader == null)
+        {
+            return [];
+        }
+
         var knownIssueMatches = new List<TestKnownIssueMatch>();
         while (reader.Read())
         {
