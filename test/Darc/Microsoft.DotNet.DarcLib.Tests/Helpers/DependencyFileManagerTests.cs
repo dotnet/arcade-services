@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AwesomeAssertions;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.DotNet.DarcLib.VirtualMonoRepo;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -479,16 +480,16 @@ public class DependencyFileManagerTests
             -->
             <Project>
               <PropertyGroup>
-                <!-- dotnet/arcade dependencies -->
+                <!-- dotnet-arcade dependencies -->
                 <FooPackageVersion>1.0.1</FooPackageVersion>
-                <!-- dotnet/bar dependencies -->
+                <!-- dotnet-bar dependencies -->
                 <BarPackageVersion>1.0.0</BarPackageVersion>
               </PropertyGroup>
               <!--Property group for alternate package version names-->
               <PropertyGroup>
-                <!-- dotnet/arcade dependencies -->
+                <!-- dotnet-arcade dependencies -->
                 <FooVersion>$(FooPackageVersion)</FooVersion>
-                <!-- dotnet/bar dependencies -->
+                <!-- dotnet-bar dependencies -->
                 <BarVersion>$(BarPackageVersion)</BarVersion>
               </PropertyGroup>
             </Project>
@@ -527,12 +528,12 @@ public class DependencyFileManagerTests
             -->
             <Project>
               <PropertyGroup>
-                <!-- dotnet/arcade dependencies -->
+                <!-- dotnet-arcade dependencies -->
                 <FooPackageVersion>1.0.1</FooPackageVersion>
               </PropertyGroup>
               <!--Property group for alternate package version names-->
               <PropertyGroup>
-                <!-- dotnet/arcade dependencies -->
+                <!-- dotnet-arcade dependencies -->
                 <FooVersion>$(FooPackageVersion)</FooVersion>
               </PropertyGroup>
             </Project>
@@ -694,4 +695,38 @@ public class DependencyFileManagerTests
     }
 
     private static string NormalizeLineEndings(string input) => input.Replace("\r\n", "\n").TrimEnd();
+
+    [Test]
+    public void GenerateVersionDetailsPropsMergesGitHubAndAzDoMirrors()
+    {
+        // Arrange: dependencies from both a GitHub and its AzDO mirror URI (dotnet/dotnet <-> dotnet-dotnet)
+        var versionDetails = new VersionDetails(
+        [
+            new DependencyDetail { Name = "PackageA", Version = "1.0.0", RepoUri = "https://github.com/dotnet/dotnet", Commit = "abc" },
+            new DependencyDetail { Name = "PackageB", Version = "2.0.0", RepoUri = "https://dev.azure.com/dnceng/internal/_git/dotnet-dotnet", Commit = "def" },
+            new DependencyDetail { Name = "PackageC", Version = "3.0.0", RepoUri = "https://github.com/dotnet/arcade", Commit = "ghi" },
+        ], null);
+
+        // Act
+        var doc = DependencyFileManager.GenerateVersionDetailsProps(versionDetails);
+        var xml = doc.OuterXml;
+
+        // Assert: GitHub and AzDO mirror URIs are grouped under the same "dotnet-dotnet" section
+        xml.Should().Contain("dotnet-dotnet dependencies");
+        xml.Should().NotContain("dotnet/dotnet dependencies");
+        xml.Should().NotContain("_git/dotnet-dotnet dependencies");
+
+        // The dotnet-arcade section should also use the org-repo format
+        xml.Should().Contain("dotnet-arcade dependencies");
+        xml.Should().NotContain("dotnet/arcade dependencies");
+
+        // Both packages from the merged section should be present
+        xml.Should().Contain("PackageAPackageVersion");
+        xml.Should().Contain("PackageBPackageVersion");
+        xml.Should().Contain("PackageCPackageVersion");
+
+        // Sections should appear in alphabetical order: dotnet-arcade < dotnet-dotnet
+        xml.IndexOf("dotnet-arcade dependencies", StringComparison.Ordinal)
+            .Should().BeLessThan(xml.IndexOf("dotnet-dotnet dependencies", StringComparison.Ordinal));
+    }
 }
