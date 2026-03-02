@@ -1883,35 +1883,20 @@ public class DependencyFileManager : IDependencyFileManager
 
     /// <summary>
     /// Returns a normalized repo name used as section heading and grouping key in Version.Details.props.
-    /// Both AzDO and GitHub URIs for the same mirror repo are normalized to the same name using the AzDO
-    /// repo name convention (e.g. "dotnet-runtime"). GitHub "org/repo" is converted to "org-repo".
+    /// Both AzDO and GitHub URIs for the same mirror repo are normalized to the same name using the
+    /// "org-repo" convention. For example, both "https://github.com/dotnet/runtime" and
+    /// "https://dev.azure.com/dnceng/internal/_git/dotnet-runtime" normalize to "dotnet-runtime".
     /// </summary>
     private static string GetNormalizedRepoName(string repoUri)
     {
-        var repoType = GitRepoUrlUtils.ParseTypeFromUri(repoUri);
-
-        if (repoType == GitRepoType.AzureDevOps)
+        try
         {
-            // Extract repo name directly from the AzDO URI (the segment after _git/)
-            var lastSlash = repoUri.LastIndexOf('/');
-            if (lastSlash >= 0)
-            {
-                return repoUri.Substring(lastSlash + 1);
-            }
+            var (repoName, org) = GitRepoUrlUtils.GetRepoNameAndOwner(repoUri);
+            return $"{org}-{repoName}";
         }
-
-        if (repoType == GitRepoType.GitHub)
+        catch (ArgumentException)
         {
-            // Convert GitHub org/repo to org-repo to match AzDO convention and enable grouping with mirrors
-            try
-            {
-                var (repoName, org) = GitRepoUrlUtils.GetRepoNameAndOwner(repoUri);
-                return $"{org}-{repoName}";
-            }
-            catch (ArgumentException)
-            {
-                // Fall through to fallback
-            }
+            // Fall through to fallback
         }
 
         // Fallback: use last two path segments
