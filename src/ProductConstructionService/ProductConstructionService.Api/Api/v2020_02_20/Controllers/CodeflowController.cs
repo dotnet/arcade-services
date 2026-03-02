@@ -131,7 +131,7 @@ public class CodeflowController : ControllerBase
         List<Maestro.Data.Models.Subscription> backflowSubscriptions,
         Dictionary<Guid, InProgressPullRequest> allPrs)
     {
-        var stalenessMap = await CalculateBuildStalenessAsync(
+        var stalenessMap = await CalculateBuildStalenessPerSubscription(
             [.. forwardFlowSubscriptions, .. backflowSubscriptions]);
 
         var codeflowStatuses = new List<CodeflowStatus>();
@@ -160,44 +160,32 @@ public class CodeflowController : ControllerBase
         return codeflowStatuses;
     }
 
-    private async Task<Dictionary<Guid, int>> CalculateBuildStalenessAsync(
+    private async Task<Dictionary<Guid, int>> CalculateBuildStalenessPerSubscription(
         List<Maestro.Data.Models.Subscription> subscriptions)
     {
-        var subscriptionsWithBuilds = subscriptions
+        var subscriptionIds = subscriptions
             .Where(s => s.LastAppliedBuildId != null)
+            .Select(s => s.Id)
             .ToList();
 
-        if (subscriptionsWithBuilds.Count == 0)
+        if (subscriptionIds.Count == 0)
         {
-            return new Dictionary<Guid, int>();
+            return [];
         }
 
-        var groupedBySourceAndChannel = subscriptionsWithBuilds
-            .GroupBy(s => new { SourceRepo = s.SourceRepository, ChannelId = s.ChannelId })
-            .ToList();
-
-        var stalenessMap = new Dictionary<Guid, int>();
-
-        foreach (var group in groupedBySourceAndChannel)
-        {
-            var sourceRepo = group.Key.SourceRepo;
-            var channelId = group.Key.ChannelId;
-            var subscriptionsInGroup = group.ToList();
-
-            var allBuilds = await _context.Builds
-                .Where(b => b.GitHubRepository == sourceRepo || b.AzureDevOpsRepository == sourceRepo)
-                .Where(b => b.BuildChannels.Any(bc => bc.ChannelId == channelId))
-                .OrderBy(b => b.DateProduced)
-                .Select(b => new { b.Id, b.DateProduced })
-                .ToListAsync();
-
-            foreach (var subscription in subscriptionsInGroup)
+        var stalenessMap = await _context.Subscriptions
+            .Where(s => subscriptionIds.Contains(s.Id))
+            .Select(s => new
             {
-                var lastAppliedBuildDate = subscription.LastAppliedBuild.DateProduced;
-                var newerBuildsCount = allBuilds.Count(b => b.DateProduced > lastAppliedBuildDate);
-                stalenessMap[subscription.Id] = newerBuildsCount;
-            }
-        }
+                s.Id,
+                Staleness = _context.BuildChannels
+                    .Where(bc => bc.ChannelId == s.ChannelId)
+                    .Where(bc => bc.Build.GitHubRepository == s.SourceRepository
+                              || bc.Build.AzureDevOpsRepository == s.SourceRepository)
+                    .Where(bc => bc.Build.DateProduced > s.LastAppliedBuild.DateProduced)
+                    .Count()
+            })
+            .ToDictionaryAsync(x => x.Id, x => x.Staleness);
 
         return stalenessMap;
     }
