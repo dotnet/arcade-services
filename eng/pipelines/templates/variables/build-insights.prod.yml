@@ -1,3 +1,4 @@
+variables:
 - name: buildInsightsImageName
   value: build-insights-api
 - name: buildInsightsPushImage
