@@ -29,7 +29,7 @@ public class GitHubInstallationIdResolver : IGitHubInstallationIdResolver
 
     public async Task<long?> GetInstallationIdForRepository(string repoUri)
     {
-        _logger.LogInformation("Getting installation ID for {repoUri}", repoUri);
+        _logger.LogDebug("Getting installation ID for {repoUri}", repoUri);
 
         var (owner, repo) = GitHubClient.ParseRepoUri(repoUri);
         var token = _gitHubTokenProvider.GetAppToken();
@@ -44,16 +44,16 @@ public class GitHubInstallationIdResolver : IGitHubInstallationIdResolver
 
             if (installation == null)
             {
-                _logger.LogInformation("Failed to get installation id for {owner}/{repo}", owner, repo);
+                _logger.LogWarning("Failed to get installation id for {owner}/{repo}", owner, repo);
                 return null;
             }
 
-            _logger.LogInformation("Installation id for {owner}/{repo} is {installationId}", owner, repo, installation.Id);
+            _logger.LogDebug("Installation id for {owner}/{repo} is {installationId}", owner, repo, installation.Id);
             return installation.Id;
         }
         catch (ApiException e)
         {
-            _logger.LogInformation("Failed to get installation id for {owner}/{repo} - {statusCode}.", owner, repo, e.StatusCode);
+            _logger.LogError(e, "Failed to get installation id for {owner}/{repo} - {statusCode}.", owner, repo, e.StatusCode);
             return null;
         }
     }
