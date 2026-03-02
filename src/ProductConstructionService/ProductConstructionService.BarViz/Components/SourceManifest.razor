@@ -1,5 +1,6 @@
 @using Microsoft.DotNet.ProductConstructionService.Client;
 @using Microsoft.DotNet.ProductConstructionService.Client.Models;
+@using ProductConstructionService.BarViz.Code.Helpers;
 @using TextCopy;
 @inject IClipboard Clipboard
 @inject IProductConstructionServiceApi PcsApi
@@ -12,10 +13,12 @@
         <FluentTextField @bind-Value="_repoFilter" @oninput="OnRepoFilterChanged" placeholder="Filter repositories..." style="width: 300px;" />
         <FluentDataGrid Items="@_filteredSourceManifest" Style="width: 100%;">
             <PropertyColumn Property="@(p => p.Path)" Title="Path" Sortable="true" />
-            <PropertyColumn Property="@(p => p.RemoteUri)" Title="Repository" Sortable="true" />
+            <TemplateColumn Title="Repository" Sortable="true" SortBy="@(GridSort<SourceManifestEntry>.ByAscending(p => p.RemoteUri))">
+                <FluentAnchor Href="@context.RemoteUri" Target="_blank" Appearance="Appearance.Hypertext">@context.RemoteUri</FluentAnchor>
+            </TemplateColumn>
             <TemplateColumn Title="Commit SHA" Sortable="true" SortBy="@(GridSort<SourceManifestEntry>.ByAscending(p => p.CommitSha))">
                 <FluentStack VerticalAlignment="VerticalAlignment.Center">
-                    <span style="font-family: monospace;">@(context.CommitSha.Substring(0, Math.Min(8, context.CommitSha.Length)))</span>
+                    <FluentAnchor Href="@BuildHelper.GetCommitUri(context.RemoteUri, context.CommitSha)" Target="_blank" Appearance="Appearance.Hypertext" style="font-family: monospace;">@(context.CommitSha.Substring(0, Math.Min(8, context.CommitSha.Length)))</FluentAnchor>
                     <FluentButton IconStart="@(new Icons.Regular.Size16.Copy())" Appearance="Appearance.Stealth" OnClick="@(() => SetBarClipboard(context.CommitSha))" Title="Copy commit SHA" />
                 </FluentStack>
             </TemplateColumn>
@@ -23,7 +26,7 @@
                 @if (context.BarId.HasValue)
                 {
                     <FluentStack VerticalAlignment="VerticalAlignment.Center">
-                        <span>@context.BarId.Value</span>
+                        <FluentAnchor Href="@GetBarBuildLink(context)" Appearance="Appearance.Hypertext">@context.BarId.Value</FluentAnchor>
                         <FluentButton IconStart="@(new Icons.Regular.Size16.Copy())" Appearance="Appearance.Stealth" OnClick="@(() => SetBarClipboard(context.BarId.Value.ToString()))" Title="Copy BAR ID" />
                     </FluentStack>
                 }
@@ -39,6 +42,9 @@
 @code {
     [Parameter]
     public int BuildId { get; set; }
+
+    [Parameter]
+    public int ChannelId { get; set; }
 
     private List<SourceManifestEntry>? _sourceManifest = null;
     private string _repoFilter = string.Empty;
@@ -88,5 +94,12 @@
     private async Task SetBarClipboard(string text)
     {
         await Clipboard.SetTextAsync(text);
+    }
+
+    private string? GetBarBuildLink(SourceManifestEntry entry)
+    {
+        return entry.BarId.HasValue
+            ? BuildHelper.GetLinkToBuildDetails(entry.RemoteUri, ChannelId, entry.BarId.Value)
+            : null;
     }
 }

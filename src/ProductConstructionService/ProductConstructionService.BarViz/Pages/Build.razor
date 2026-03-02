@@ -22,17 +22,22 @@ else
         <ErrorBoundary>
             <BuildInfo BuildId="@BuildId" Build="@_build" Repository="@Repo" ChannelId="ChannelId" />
         </ErrorBoundary>
-        
-        <ErrorBoundary>
-            <Dependencies BuildId="@_build.Id" ChannelId="@ChannelId" />
-        </ErrorBoundary>
+
+        @if (_hasSourceManifest)
+        {
+            <ErrorBoundary>
+                <SourceManifest BuildId="@_build.Id" ChannelId="@ChannelId" />
+            </ErrorBoundary>
+        }
+        else
+        {
+            <ErrorBoundary>
+                <Dependencies BuildId="@_build.Id" ChannelId="@ChannelId" />
+            </ErrorBoundary>
+        }
 
         <ErrorBoundary>
             <SubscriptionGrid Repository="@Repo" ChannelId="@ChannelId" />
-        </ErrorBoundary>
-
-        <ErrorBoundary>
-            <SourceManifest BuildId="@_build.Id" />
         </ErrorBoundary>
 
         <Assets BuildId="@_build.Id" />
@@ -57,9 +62,12 @@ else
 
     private Microsoft.DotNet.ProductConstructionService.Client.Models.Build? _build;
 
+    private bool _hasSourceManifest;
+
     protected override async Task OnParametersSetAsync()
     {
         _build = null;
+        _hasSourceManifest = false;
 
         Repo = RepoUrlConverter.SlugToRepoUrl(RepoSlug);
         Channel = (await PcsApi.Channels.GetChannelAsync(ChannelId)).Name;
@@ -71,6 +79,19 @@ else
         else
         {
             _build = await PcsApi.Builds.GetBuildAsync(int.Parse(BuildId!));
+        }
+
+        if (_build != null)
+        {
+            try
+            {
+                var manifest = await PcsApi.Builds.GetSourceManifestAsync(_build.Id);
+                _hasSourceManifest = manifest != null && manifest.Count > 0;
+            }
+            catch
+            {
+                _hasSourceManifest = false;
+            }
         }
     }
 }
