@@ -1,0 +1,6 @@
+- name: buildInsightsImageName
+  value: build-insights-api
+- name: buildInsightsPushImage
+  value: false
+- name: buildInsightsDockerRegistryUrl
+  value: buildinsightsstage.azurecr.io

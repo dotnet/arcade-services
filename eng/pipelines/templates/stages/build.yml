@@ -71,12 +71,17 @@ stages:
           demands: ImageOverride -equals build.ubuntu.2204.amd64
           os: linux
         steps:
+
         - checkout: self
+
         - template: /eng/pipelines/templates/steps/docker-build.yml@self
           parameters:
             devBranchSuffix: $(devBranchSuffix)
             dockerImageName: $(dockerRegistryUrl)/$(containerName)
+            buildInsightsDockerImageName: $(buildInsightsDockerRegistryUrl)/$(buildInsightsImageName)
+
         - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
+
           - task: AzureCLI@2
             inputs:
               azureSubscription: $(pcsDeploymentServiceConnection)
@@ -85,6 +90,17 @@ stages:
               inlineScript: |
                 az acr login --name $(containerRegistryName)
                 docker push "$(dockerRegistryUrl)/$(containerName):$(DockerTag.newDockerImageTag)"
-            displayName: Push docker image
+            displayName: Push PCS docker image
+
+          - ${{ if eq(variables['buildInsightsPushImage'], 'true') }}:
+            - task: AzureCLI@2
+              inputs:
+                azureSubscription: $(pcsDeploymentServiceConnection)
+                scriptType: pscore
+                scriptLocation: inlineScript
+                inlineScript: |
+                  az acr login --name $(containerRegistryName)
+                  docker push "$(buildInsightsDockerRegistryUrl)/$(buildInsightsImageName):$(DockerTag.newDockerImageTag)"
+              displayName: Push BuildInsights docker image
 
 - template: /eng/pipelines/templates/stages/deploy.yaml@self
