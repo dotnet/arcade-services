@@ -1,11 +1,13 @@
 ﻿@using Microsoft.DotNet.ProductConstructionService.Client;
 @using Microsoft.DotNet.ProductConstructionService.Client.Models;
 @using System.ComponentModel.DataAnnotations
+@using ProductConstructionService.BarViz.Code.Helpers
 @inject IProductConstructionServiceApi PcsApi
+@inject IDialogService DialogService
 
-<GridViewTemplate Title="Subscriptions" ShowSkeleton="_subscriptionsData == null">
+<GridViewTemplate Title="Subscriptions flowing this build" ShowSkeleton="_subscriptionsData == null">
     <Content>
-        <FluentDataGrid Id="subscriptionsGrid" Items="@_subscriptionsData" GridTemplateColumns="3fr 1fr 1fr" TGridItem=Subscription Style="width: 100%">
+        <FluentDataGrid Id="subscriptionsGrid" Items="@_subscriptionsData" GridTemplateColumns="3fr 1fr 1fr 1fr 40px" TGridItem=Subscription Style="width: 100%">
             <TemplateColumn Sortable="true" Align="Align.Start" Title="Source Repository">
                 @if (!context.Enabled)
                 {
@@ -15,6 +17,19 @@
             </TemplateColumn>
             <PropertyColumn Title="Source Channel" Property="@(s => s!.Channel.Name)" Align="Align.Center" />
             <PropertyColumn Title="Target Branch" Property="@(s => s!.TargetBranch)" Align="Align.Center" />
+            <TemplateColumn Title="Last Applied Build" Align="Align.Center">
+                @if (context.LastAppliedBuild != null)
+                {
+                    <FluentAnchor Href="@GetBuildLink(context)" Appearance="Appearance.Hypertext">@context.LastAppliedBuild.Id</FluentAnchor>
+                }
+                else
+                {
+                    <span>—</span>
+                }
+            </TemplateColumn>
+            <TemplateColumn>
+                <SubscriptionContextMenu Subscription="@context" Refresh="@OnParametersSetAsync" ShowDetails="@ShowDetails" />
+            </TemplateColumn>
         </FluentDataGrid>
     </Content>
 </GridViewTemplate>
@@ -35,5 +50,26 @@
 
         _subscriptionsData = (await PcsApi.Subscriptions.ListSubscriptionsAsync(channelId: ChannelId, targetRepository: Repository))!.AsQueryable();
         StateHasChanged();
+    }
+
+    private string? GetBuildLink(Subscription subscription)
+    {
+        return subscription.LastAppliedBuild != null
+            ? BuildHelper.GetLinkToBuildDetails(subscription.SourceRepository, subscription.Channel.Id, subscription.LastAppliedBuild.Id)
+            : null;
+    }
+
+    private async Task ShowDetails(Subscription subscription)
+    {
+        DialogParameters parameters = new()
+        {
+            Title = $"Subscription {subscription.Id}",
+            Width = "800px",
+            TrapFocus = true,
+            Modal = true,
+            PreventScroll = true,
+        };
+
+        await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(subscription, parameters);
     }
 }

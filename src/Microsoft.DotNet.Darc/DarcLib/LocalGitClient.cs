@@ -121,7 +121,7 @@ public class LocalGitClient : ILocalGitClient
                 _fileSystem.DeleteDirectory(repoPath / relativePath, true);
             }
         }
-        else if (result.StandardError.Contains("is unmerged"))
+        else if (result.StandardError.Contains("is unmerged") || result.StandardError.Contains("needs merge"))
         {
             var unstagedNonConflictingFiles = await GetUnstagedFilesAsync(repoPath, relativePath);
             args = ["checkout", .. unstagedNonConflictingFiles];
