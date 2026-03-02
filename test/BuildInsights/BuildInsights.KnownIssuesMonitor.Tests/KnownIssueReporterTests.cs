@@ -40,6 +40,11 @@ public partial class KnownIssueMonitorTests
                 o.Organization = "TEST-ORGANIZATION";
                 o.ProjectNumber = 1;
             });
+            services.Configure<InternalProjectSettings>(o =>
+            {
+                o.Id = "33F33C0B-9844-45E5-A2C7-A5B49AC5BE7F";
+                o.Path = "internal";
+            });
             services.Configure<GitHubIssuesSettings>(o =>
             {
                 o.KnownIssuesLabels = new List<string>() { "KNOWN-TEST-ERROR-ABC" };
