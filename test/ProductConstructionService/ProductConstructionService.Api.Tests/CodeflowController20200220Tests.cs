@@ -340,7 +340,7 @@ public partial class CodeflowController20200220Tests
     }
 
     [Test]
-    public async Task GetCodeflowStatuses_IgnoresDisabledSubscriptions()
+    public async Task GetCodeflowStatuses_IgnoresSourceDisabledSubscriptions()
     {
         using TestData data = await TestData.Default.BuildAsync();
 
