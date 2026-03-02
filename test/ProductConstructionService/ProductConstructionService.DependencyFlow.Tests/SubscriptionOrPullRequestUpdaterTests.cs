@@ -4,13 +4,11 @@
 
 using Maestro.Data;
 using Maestro.Data.Models;
-using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Moq;
 using NUnit.Framework;
-using ProductConstructionService.Common;
 using ProductConstructionService.DependencyFlow.Model;
 
 namespace ProductConstructionService.DependencyFlow.Tests;

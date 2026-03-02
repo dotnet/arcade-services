@@ -6,10 +6,10 @@ using Azure.Core;
 using Azure.ResourceManager;
 using Azure.ResourceManager.AppContainers;
 using Azure.Storage.Queues;
+using Maestro.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using ProductConstructionService.Common;
 
 namespace ProductConstructionService.WorkItems;
 

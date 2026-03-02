@@ -26,7 +26,14 @@ builder.AddProject<Projects.BuildInsights_Api>("buildInsightsApi")
     .WithReference(queues)
     .WithReference(redisCache)
     .WaitFor(redisCache)
-    .WaitFor(blobs)
     .WaitFor(queues);
+
+builder.AddProject<Projects.BuildInsights_KnownIssuesMonitor>("knownIssuesMonitor")
+    .WithReference(blobs)
+    .WithReference(queues)
+    .WithReference(redisCache)
+    .WaitFor(redisCache)
+    .WaitFor(queues)
+    .WithExplicitStart();
 
 builder.Build().Run();

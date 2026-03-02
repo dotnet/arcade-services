@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
@@ -199,12 +200,35 @@ public class HelixDataProvider : IHelixDataService
         return query;
     }
 
-    private static Task<List<HelixWorkItem>> HelixApiWorkItemInformation(
+    private async Task<List<HelixWorkItem>> HelixApiWorkItemInformation(
         IEnumerable<HelixWorkItem> helixWorkItems,
         CancellationToken cancellationToken)
     {
-        // TODO: Use a new API call to get the loguri/exitcode metadata for multiple workitems at once
-        return Task.FromResult<List<HelixWorkItem>>([]);
+        // TODO: Use a new API call to get the loguri/exitcode metadata for multiple workitems at once (instead of one by one)
+        var tasks = helixWorkItems
+            .Select(w => _helixApi.WorkItem.DetailsAsync(w.HelixWorkItemName, w.HelixJobId, cancellationToken));
+        var results = new ConcurrentBag<HelixWorkItem>();
+        await Parallel.ForEachAsync(tasks, async (task, ct) =>
+        {
+            try
+            {
+                var workItemDetails = await task;
+                results.Add(new()
+                {
+                    HelixJobId = workItemDetails.Job,
+                    HelixWorkItemName = workItemDetails.Name,
+                    ConsoleLogUrl = workItemDetails.ConsoleOutputUri,
+                    ExitCode = workItemDetails.ExitCode,
+                    Status = workItemDetails.State,
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to get details for a helix work item using the Helix API.");
+            }
+        });
+
+        return [..results];
     }
 
     //private async Task<List<HelixWorkItem>> SqlWorkItemInformation(List<HelixWorkItem> helixWorkItems,

@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\BuildInsights\BuildInsights.Api\BuildInsights.Api.csproj" />
+    <ProjectReference Include="..\..\..\src\BuildInsights\BuildInsights.ServiceDefaults\BuildInsights.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>

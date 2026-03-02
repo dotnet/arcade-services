@@ -10,9 +10,6 @@
     <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" />
     <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" />
     <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Keys" />
-    <PackageReference Include="Microsoft.AspNetCore.ApiPagination" />
-    <PackageReference Include="Microsoft.AspNetCore.ApiVersioning" />
-    <PackageReference Include="Microsoft.AspNetCore.ApiVersioning.Swashbuckle" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Configuration" />
@@ -20,7 +17,5 @@
     <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="Microsoft.Extensions.Logging.ApplicationInsights" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" />
-    <PackageReference Include="Swashbuckle.AspNetCore.Newtonsoft" />
-    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" />
   </ItemGroup>
 </Project>

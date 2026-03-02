@@ -32,13 +32,13 @@ public class BuildAnalysisProvider : IBuildAnalysisService
     private readonly IAzDoToGitHubRepositoryService _azDoToGitHubRepositoryProvider;
     private readonly IKnownIssuesMatchService _knownIssuesMatchService;
     private readonly KnownIssuesAnalysisLimits _analysisLimits;
-    private readonly InternalProject _internalProject;
+    private readonly InternalProjectSettings _internalProject;
 
     public BuildAnalysisProvider(
         IBuildDataService buildDataService,
         IBuildRetryService buildRetryService,
         IOptions<KnownIssuesAnalysisLimits> analysisLimits,
-        IOptions<InternalProject> internalProject,
+        IOptions<InternalProjectSettings> internalProject,
         ILogger<BuildAnalysisProvider> logger,
         TelemetryClient telemetryClient,
         IGitHubIssuesService gitHubIssues,

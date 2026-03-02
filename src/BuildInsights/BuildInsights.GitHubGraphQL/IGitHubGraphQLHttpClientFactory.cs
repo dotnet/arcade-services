@@ -5,5 +5,5 @@ namespace BuildInsights.GitHubGraphQL;
 
 public interface IGitHubGraphQLHttpClientFactory
 {
-    HttpClient GetClient();
+    Task<HttpClient> GetClient();
 }

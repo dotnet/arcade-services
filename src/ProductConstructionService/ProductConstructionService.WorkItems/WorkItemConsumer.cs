@@ -10,7 +10,6 @@ using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using ProductConstructionService.Common;
 
 namespace ProductConstructionService.WorkItems;
 
@@ -124,7 +123,11 @@ internal class WorkItemConsumer(
                     telemetryScope,
                     // We record the delay between the message being queued and the processing start time
                     // We must only measure that once we actually start processing the work item which might mean waiting for lock
-                    () => _metricRecorder.QueueMessageReceived(message, delay ?? 0),
+                    () =>
+                    {
+                        TimeSpan timeInQueue = DateTimeOffset.UtcNow - message.InsertedOn!.Value;
+                        _metricRecorder.QueueMessageReceived((int)timeInQueue.TotalSeconds - (delay ?? 0));
+                    },
                     cancellationToken);
                 await queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
             }

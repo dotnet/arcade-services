@@ -1,7 +1,6 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using BuildInsights.Api.Configuration.Models;
 using BuildInsights.BuildAnalysis;
 using BuildInsights.BuildAnalysis.WorkItems.Models;
 using BuildInsights.GitHub;
@@ -9,6 +8,7 @@ using BuildInsights.GitHub.Models;
 using BuildInsights.GitHubGraphQL;
 using BuildInsights.GitHubGraphQL.GitHubGraphQLAPI;
 using BuildInsights.KnownIssues.Models;
+using BuildInsights.ServiceDefaults.Configuration.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebHooks;
 using Microsoft.DotNet.Internal.Logging;
@@ -329,7 +329,7 @@ public class GitHubWebhooksController : ControllerBase
     private bool IsBuildAnalysisEvent()
     {
         string applicationId = GetApplicationId();
-        return applicationId.Equals(_appSettings.Get(GitHubAppName).AppId); // TODO
+        return applicationId.Equals(_appSettings.CurrentValue.AppId);
     }
 
     [GitHubWebHook]

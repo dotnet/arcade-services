@@ -14,13 +14,13 @@
 }
 else
 {
-    <FluentStack VerticalGap="20" Orientation="Orientation.Vertical">
+    <FluentStack VerticalGap="20" Orientation="Orientation.Vertical" Style="width: 100%;">
         <FluentLabel Typo="Typography.H2">
             @Channel
         </FluentLabel>
 
         <ErrorBoundary>
-            <BuildInfo BuildId="@BuildId" Repository="@Repo" ChannelId="ChannelId" />
+            <BuildInfo BuildId="@BuildId" Build="@_build" Repository="@Repo" ChannelId="ChannelId" />
         </ErrorBoundary>
         
         <ErrorBoundary>

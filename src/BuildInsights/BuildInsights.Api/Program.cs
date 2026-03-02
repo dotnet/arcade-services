@@ -1,25 +1,17 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using BuildInsights.Api.Configuration;
+using BuildInsights.Api.Components;
 using BuildInsights.ServiceDefaults;
-using ProductConstructionService.Common;
+using BuildInsights.ServiceDefaults.Configuration;
+using Maestro.Common;
 using ProductConstructionService.WorkItems;
 
 var builder = WebApplication.CreateBuilder(args);
 
 bool isDevelopment = builder.Environment.IsDevelopment();
-bool useSwagger = isDevelopment;
 
 await builder.ConfigureBuildInsights(addKeyVault: true);
-builder.AddServiceDefaults();
-builder.AddRedisOutputCache("cache");
-
-builder.Services
-    .AddRazorComponents()
-    .AddInteractiveServerComponents();
-builder.Services.AddProblemDetails();
-builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
@@ -28,8 +20,8 @@ if (isDevelopment)
     app.UseDeveloperExceptionPage();
     app.MapOpenApi();
 
-    var workQueueName = app.Configuration.GetRequiredValue(BuildInsightsStartup.ConfigurationKeys.WorkItemQueueName);
-    var specialWorkQueueName = app.Configuration.GetRequiredValue(BuildInsightsStartup.ConfigurationKeys.SpecialWorkItemQueueName);
+    var workQueueName = app.Configuration.GetRequiredValue(BuildInsightsCommonConfiguration.ConfigurationKeys.WorkItemQueueName);
+    var specialWorkQueueName = app.Configuration.GetRequiredValue(BuildInsightsCommonConfiguration.ConfigurationKeys.SpecialWorkItemQueueName);
     await app.Services.UseLocalWorkItemQueues([workQueueName, specialWorkQueueName]);
 }
 else
@@ -41,16 +33,20 @@ else
 
 app.UseHttpsRedirection();
 app.UseHttpLogging();
+app.UseCookiePolicy();
+app.UseAuthentication();
+app.UseRouting();
+app.UseAuthorization();
 app.UseAntiforgery();
+app.ConfigureSecurityHeaders();
 app.UseOutputCache();
 
-app.MapDefaultEndpoints();
+app.ConfigureApi("/api", isDevelopment);
 
-//var controllers = app.MapControllers();
-//if (isDevelopment)
-//{
-//    controllers.AllowAnonymous();
-//}
+app.MapDefaultEndpoints();
+app.MapStaticAssets();
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
 
 await app.SetWorkItemProcessorInitialState();
 

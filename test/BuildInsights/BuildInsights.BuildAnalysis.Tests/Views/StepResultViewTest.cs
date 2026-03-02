@@ -5,7 +5,6 @@ using System.Collections.Immutable;
 using AwesomeAssertions;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.BuildAnalysis.Models.Views;
-using BuildInsights.GitHub.Models;
 using BuildInsights.KnownIssues.Models;
 using NUnit.Framework;
 

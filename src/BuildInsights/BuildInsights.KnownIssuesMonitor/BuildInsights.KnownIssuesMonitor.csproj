@@ -7,18 +7,21 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include=".config\settings*.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.DotNet.GitHub.Authentication" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\BuildInsights.GitHub\BuildInsights.GitHub.csproj" />
     <ProjectReference Include="..\BuildInsights.GitHubGraphQL\BuildInsights.GitHubGraphQL.csproj" />
     <ProjectReference Include="..\BuildInsights.KnownIssues\BuildInsights.KnownIssues.csproj" />
+    <ProjectReference Include="..\BuildInsights.ServiceDefaults\BuildInsights.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
