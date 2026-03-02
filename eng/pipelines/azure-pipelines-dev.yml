@@ -1,6 +1,7 @@
 variables:
 - template: /eng/pipelines/templates/variables/shared-variables.yml@self
 - template: /eng/pipelines/templates/variables/int.yml@self
+- template: /eng/pipelines/templates/variables/build-insights.stage.yml@self
 - name: devBranchSuffix
   value: '-dev'
 

@@ -1,0 +1,15 @@
+{
+    "profiles": {
+        "BI (local)": {
+            "commandName": "Project",
+            "dotnetRunMessages": true,
+            "launchBrowser": true,
+            "applicationUrl": "https://localhost:18848",
+            "environmentVariables": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "DOTNET_DASHBOARD_OTLP_ENDPOINT_URL": "https://localhost:19265",
+                "DOTNET_RESOURCE_SERVICE_ENDPOINT_URL": "https://localhost:20130"
+            }
+        }
+    }
+}

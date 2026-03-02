@@ -4,6 +4,8 @@ parameters:
   default: ''
 - name: dockerImageName
   type: string
+- name: buildInsightsDockerImageName
+  type: string
 
 steps:
 - bash: |
@@ -40,4 +42,14 @@ steps:
       --build-arg PACKAGE_VERSION=$(GetPackageVersion.PackageVersion) \
       2>&1 \
       | tee $(Build.SourcesDirectory)/artifacts/log/docker-build.log
-  displayName: Build docker image
+  displayName: Build PCS docker image
+
+- bash: |
+    set -euo pipefail
+    docker build . \
+      -f $(Build.SourcesDirectory)/src/BuildInsights/BuildInsights.Api/Dockerfile \
+      -t "${{ parameters.buildInsightsDockerImageName }}:$(DockerTag.newDockerImageTag)" \
+      --build-arg PACKAGE_VERSION=$(GetPackageVersion.PackageVersion) \
+      2>&1 \
+      | tee $(Build.SourcesDirectory)/artifacts/log/docker-build-buildinsights.log
+  displayName: Build BuildInsights docker image
