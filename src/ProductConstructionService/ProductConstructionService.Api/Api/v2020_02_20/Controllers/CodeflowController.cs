@@ -138,13 +138,13 @@ public class CodeflowController : ControllerBase
 
         foreach (var mapping in mappings)
         {
-            var forwardflowSubscription = forwardFlowSubscriptions.FirstOrDefault(s => s.TargetDirectory == mapping);
+            var forwardFlowSubscription = forwardFlowSubscriptions.FirstOrDefault(s => s.TargetDirectory == mapping);
             var backflowSubscription = backflowSubscriptions.FirstOrDefault(s => s.SourceDirectory == mapping);
 
-            var forwardFlowStatus = CreateSubscriptionStatus(forwardflowSubscription, allPrs, stalenessMap);
+            var forwardFlowStatus = CreateSubscriptionStatus(forwardFlowSubscription, allPrs, stalenessMap);
             var backflowStatus = CreateSubscriptionStatus(backflowSubscription, allPrs, stalenessMap);
 
-            var repositoryUrlForMapping = forwardflowSubscription?.SourceRepository ?? backflowSubscription?.TargetRepository;
+            var repositoryUrlForMapping = forwardFlowSubscription?.SourceRepository ?? backflowSubscription?.TargetRepository;
             var repositoryBranchForMapping = backflowSubscription?.TargetBranch;
 
             codeflowStatuses.Add(new CodeflowStatus
