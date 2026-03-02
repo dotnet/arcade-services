@@ -48,5 +48,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client.Models
 
         [JsonProperty("nextBuildsToApply")]
         public Dictionary<Guid, int> NextBuildsToApply { get; set; }
+
+        [JsonProperty("creationDate")]
+        public DateTimeOffset CreationDate { get; set; }
     }
 }

@@ -67,6 +67,11 @@
                 <TemplateColumn Title="Target branch" Sortable="true" SortBy="SortBy(pr => pr.TargetBranch)" Align="Align.Center">
                     <FluentLabel>@(context.TargetBranch ?? "N/A")</FluentLabel>
                 </TemplateColumn>
+                <TemplateColumn Title="Created" Sortable="true" SortBy="@SortBy(pr => pr.CreationDate.ToString("o"))" Align="Align.Center">
+                    <FluentLabel Title="@(context.CreationDate == default ? "N/A" : context.CreationDate.ToString("f"))">
+                        @(context.CreationDate == default ? "N/A" : (DateTime.UtcNow - context.CreationDate).ToTimeAgo())
+                    </FluentLabel>
+                </TemplateColumn>
                 <TemplateColumn Title="Last Update" Sortable="true" SortBy="@SortBy(pr => pr.LastUpdate.ToString("o"))" Align="Align.Center">
                     <FluentLabel Title="@(context.LastUpdate == default ? "N/A" : context.LastUpdate.ToString("f"))">
                         @(context.LastUpdate == default ? "N/A" : (DateTime.UtcNow - context.LastUpdate).ToTimeAgo())

@@ -12,7 +12,7 @@ public record CodeflowSubscription(
     bool Enabled,
     Subscription? BackflowSubscription,
     Subscription? ForwardflowSubscription,
-    string? BackflowPr,
-    string? ForwardflowPr);
+    ActivePullRequest? BackflowPr,
+    ActivePullRequest? ForwardflowPr);
 
 
