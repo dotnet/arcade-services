@@ -95,21 +95,13 @@ internal static class BuildInsightsStartup
         */
     }
 
-    public static void ConfigureApi(this IApplicationBuilder app, string apiPath, bool isDevelopment)
+    public static void ConfigureApi(this IEndpointRouteBuilder app, string apiPath, bool allowAnonymous)
     {
-        app.MapWhen(
-            ctx => ctx.Request.Path.StartsWithSegments(apiPath),
-            a => a.UseEndpoints(e =>
-            {
-                var controllers = e.MapControllers();
-                // TODO - Turn on auth
-                // controllers.RequireAuthorization(AuthenticationConfiguration.ApiAuthorizationPolicyName);
-
-                if (isDevelopment)
-                {
-                    controllers.AllowAnonymous();
-                }
-            }));
+        var controllers = app.MapGroup(apiPath).MapControllers();
+        if (allowAnonymous)
+        {
+            controllers.AllowAnonymous();
+        }
     }
 
     public static void ConfigureSecurityHeaders(this WebApplication app)

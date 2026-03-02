@@ -40,9 +40,7 @@ app.UseAuthorization();
 app.UseAntiforgery();
 app.ConfigureSecurityHeaders();
 app.UseOutputCache();
-
 app.ConfigureApi("/api", isDevelopment);
-
 app.MapDefaultEndpoints();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
