@@ -61,6 +61,10 @@
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>4bf37ce670528cf2aef4d9b1cd892554b1b02d9d</Sha>
     </Dependency>
+    <Dependency Name="Microsoft.Internal.Helix.Machines.MatrixOfTruthOutputDeserialization" Version="20220725.5.0">
+      <Uri>https://dev.azure.com/dnceng/internal/_git/dotnet-helix-machines</Uri>
+      <Sha>4bf37ce670528cf2aef4d9b1cd892554b1b02d9d</Sha>
+    </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
     <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.26119.2">
