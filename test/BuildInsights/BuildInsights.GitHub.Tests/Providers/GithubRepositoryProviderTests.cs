@@ -92,7 +92,7 @@ public partial class GithubRepositoryProviderTests
         result.Should().Be(expectedContent);
     }
 
-    private RepositoryContent MockRepositoryContent(string content)
+    private static RepositoryContent MockRepositoryContent(string content)
     {
         return new RepositoryContent("", "", "", 1, ContentType.File, "", "", "", "", "",
             Convert.ToBase64String(Encoding.UTF8.GetBytes(content)), "", "");
