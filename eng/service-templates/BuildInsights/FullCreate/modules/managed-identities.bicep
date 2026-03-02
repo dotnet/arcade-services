@@ -41,13 +41,13 @@ resource appIdentityContributorRole 'Microsoft.Authorization/roleAssignments@202
   properties: {
     roleDefinitionId: contributorRole
     principalType: 'ServicePrincipal'
-    principalId: deploymentIdentityCreate ? deploymentIdentityNew.properties.principalId : deploymentIdentityExisting.properties.principalId
+    principalId: deploymentIdentityCreate ? deploymentIdentityNew!.properties.principalId : deploymentIdentityExisting!.properties.principalId
   }
 }
 
 output appIdentityPrincipalId string = appIdentity.properties.principalId
 output appIdentityId string = appIdentity.id
-output deploymentIdentityPrincipalId string = deploymentIdentityCreate ? deploymentIdentityNew.properties.principalId : deploymentIdentityExisting.properties.principalId
-output deploymentIdentityId string = deploymentIdentityCreate ? deploymentIdentityNew.id : deploymentIdentityExisting.id
+output deploymentIdentityPrincipalId string = deploymentIdentityCreate ? deploymentIdentityNew!.properties.principalId : deploymentIdentityExisting!.properties.principalId
+output deploymentIdentityId string = deploymentIdentityCreate ? deploymentIdentityNew!.id : deploymentIdentityExisting!.id
 output scheduledJobIdentityPrincipalId string = scheduledJobIdentity.properties.principalId
 output scheduledJobIdentityId string = scheduledJobIdentity.id
