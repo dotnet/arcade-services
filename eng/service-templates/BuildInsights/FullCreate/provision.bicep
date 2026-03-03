@@ -286,3 +286,12 @@ module networkSecurityPerimeterModule 'modules/network-security-perimeter.bicep'
     sqlServerId: sqlDatabaseModule.outputs.sqlServerId
   }
 }
+
+// Outputs used by the post-deployment SQL access provisioning script
+output sqlServerName string = sqlServerName
+output sqlServerFqdn string = sqlDatabaseModule.outputs.sqlServerFqdn
+output sqlDatabaseName string = sqlDatabaseModule.outputs.sqlDatabaseName
+output appIdentityName string = appIdentityName
+output appIdentityPrincipalId string = managedIdentitiesModule.outputs.appIdentityPrincipalId
+output appIdentityClientId string = managedIdentitiesModule.outputs.appIdentityClientId
+output deploymentIdentityName string = deploymentIdentityName
