@@ -220,7 +220,7 @@ module scheduledJob 'modules/container-scheduled-job.bicep' = {
     cronSchedule: '0 2 * * *'
     containerRegistryName: containerRegistryName
     containerAppsEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
-    command: 'cd /app/FeedCleaner && dotnet ProductConstructionService.FeedCleaner.dll'
+    command: 'cd /app/BuildInsights.KnownIssuesMonitor && dotnet BuildInsights.KnownIssuesMonitor.dll'
     deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     sharedEnvVars: sharedEnvVars
   }

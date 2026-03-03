@@ -24,7 +24,7 @@ module shared './shared.bicep' = {
 var jobSpecificEnv = [
   {
     name: 'APP_ROLE'
-    value: 'ScheduledJob'
+    value: jobName
   }
   {
     name: 'DOTNET_ENVIRONMENT'
