@@ -1,5 +1,4 @@
 param environmentName string
-param applicationInsightsConnectionString string
 param jobName string
 param location string
 param userAssignedIdentityId string
@@ -9,8 +8,8 @@ param containerAppsEnvironmentId string
 param command string
 param deploymentIdentityPrincipalId string
 
-@description('Shared resource connection string environment variables (SQL, Redis, Storage, ManagedIdentity)')
-param resourceConnectionStringEnvVars array
+@description('Shared environment variables (logging, App Insights, resource connection strings, managed identity)')
+param sharedEnvVars array
 
 var contributorRole = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions',
@@ -31,30 +30,10 @@ var jobSpecificEnv = [
     name: 'DOTNET_ENVIRONMENT'
     value: environmentName
   }
-  {
-    name: 'Logging__Console__FormatterName'
-    value: 'simple'
-  }
-  {
-    name: 'Logging__Console__FormatterOptions__SingleLine'
-    value: 'true'
-  }
-  {
-    name: 'Logging__Console__FormatterOptions__IncludeScopes'
-    value: 'true'
-  }
-  {
-    name: 'ASPNETCORE_LOGGING__CONSOLE__DISABLECOLORS'
-    value: 'true'
-  }
-  {
-    name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-    value: applicationInsightsConnectionString
-  }
 ]
 
-// combined environment variables: job-specific + shared resource connection strings
-var env = concat(jobSpecificEnv, resourceConnectionStringEnvVars)
+// combined environment variables: job-specific + shared
+var env = concat(jobSpecificEnv, sharedEnvVars)
 
 resource containerJob 'Microsoft.App/jobs@2024-03-01' = {
   name: jobName

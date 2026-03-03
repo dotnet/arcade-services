@@ -4,14 +4,13 @@ param containerCpuCoreCount string
 param containerMemory string
 param environmentName string
 param serviceName string
-param applicationInsightsConnectionString string
 param appIdentityId string
 param containerEnvironmentId string
 param deploymentIdentityPrincipalId string
 param containerReplicas int
 
-@description('Shared resource connection string environment variables (SQL, Redis, Storage, ManagedIdentity)')
-param resourceConnectionStringEnvVars array
+@description('Shared environment variables (logging, App Insights, resource connection strings, managed identity)')
+param sharedEnvVars array
 
 var contributorRole = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions',
@@ -32,30 +31,10 @@ var containerAppSpecificEnv = [
     name: 'ASPNETCORE_ENVIRONMENT'
     value: environmentName
   }
-  {
-    name: 'Logging__Console__FormatterName'
-    value: 'simple'
-  }
-  {
-    name: 'Logging__Console__FormatterOptions__SingleLine'
-    value: 'true'
-  }
-  {
-    name: 'Logging__Console__FormatterOptions__IncludeScopes'
-    value: 'true'
-  }
-  {
-    name: 'ASPNETCORE_LOGGING__CONSOLE__DISABLECOLORS'
-    value: 'true'
-  }
-  {
-    name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-    value: applicationInsightsConnectionString
-  }
 ]
 
-// combined environment variables: app-specific + shared resource connection strings
-var containerAppEnv = concat(containerAppSpecificEnv, resourceConnectionStringEnvVars)
+// combined environment variables: app-specific + shared
+var containerAppEnv = concat(containerAppSpecificEnv, sharedEnvVars)
 
 // container app hosting the Product Construction Service
 resource containerApp 'Microsoft.App/containerApps@2023-04-01-preview' = {

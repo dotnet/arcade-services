@@ -15,9 +15,9 @@ param containerMemory string
 
 @description('aspnetcore environment')
 @allowed([
-    'Development'
-    'Staging'
-    'Production'
+  'Development'
+  'Staging'
+  'Production'
 ])
 param environmentName string
 
@@ -90,181 +90,199 @@ param enablePublicIpAddress bool = (environmentName == 'Production')
 @description('Network Security Perimeter name')
 param networkSecurityPerimeterName string
 
-// Shared resource connection string environment variables for all container apps and jobs
-var resourceConnectionStringEnvVars = [
-    {
-        name: 'ConnectionStrings__sql'
-        value: 'Server=tcp:${sqlDatabaseModule.outputs.sqlServerFqdn},1433;Initial Catalog=${sqlDatabaseModule.outputs.sqlDatabaseName};Authentication=Active Directory Managed Identity;User Id=${managedIdentitiesModule.outputs.appIdentityClientId};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30'
-    }
-    {
-        name: 'ConnectionStrings__redis'
-        value: '${redisModule.outputs.redisCacheHostName}:6380,ssl=True,abortConnect=False'
-    }
-    {
-        name: 'ConnectionStrings__blobs'
-        value: storageAccountModule.outputs.storageAccountBlobEndpoint
-    }
-    {
-        name: 'ConnectionStrings__queues'
-        value: storageAccountModule.outputs.storageAccountQueueEndpoint
-    }
-    {
-        name: 'ManagedIdentityClientId'
-        value: managedIdentitiesModule.outputs.appIdentityClientId
-    }
-    {
-        name: 'KeyVaultName'
-        value: keyVaultName
-    }
+// Shared environment variables for all container apps and jobs
+var sharedEnvVars = [
+  {
+    name: 'Logging__Console__FormatterName'
+    value: 'simple'
+  }
+  {
+    name: 'Logging__Console__FormatterOptions__SingleLine'
+    value: 'true'
+  }
+  {
+    name: 'Logging__Console__FormatterOptions__IncludeScopes'
+    value: 'true'
+  }
+  {
+    name: 'ASPNETCORE_LOGGING__CONSOLE__DISABLECOLORS'
+    value: 'true'
+  }
+  {
+    name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+    value: containerEnvironmentModule.outputs.applicationInsightsConnectionString
+  }
+  {
+    name: 'ConnectionStrings__sql'
+    value: 'Server=tcp:${sqlDatabaseModule.outputs.sqlServerFqdn},1433;Initial Catalog=${sqlDatabaseModule.outputs.sqlDatabaseName};Authentication=Active Directory Managed Identity;User Id=${managedIdentitiesModule.outputs.appIdentityClientId};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30'
+  }
+  {
+    name: 'ConnectionStrings__redis'
+    value: '${redisModule.outputs.redisCacheHostName}:6380,ssl=True,abortConnect=False'
+  }
+  {
+    name: 'ConnectionStrings__blobs'
+    value: storageAccountModule.outputs.storageAccountBlobEndpoint
+  }
+  {
+    name: 'ConnectionStrings__queues'
+    value: storageAccountModule.outputs.storageAccountQueueEndpoint
+  }
+  {
+    name: 'ManagedIdentityClientId'
+    value: managedIdentitiesModule.outputs.appIdentityClientId
+  }
+  {
+    name: 'KeyVaultName'
+    value: keyVaultName
+  }
 ]
 
 module networkSecurityGroupModule 'modules/nsg.bicep' = {
-    name: 'networkSecurityGroupModule'
-    params: {
-        networkSecurityGroupName: networkSecurityGroupName
-        location: location
-    }
+  name: 'networkSecurityGroupModule'
+  params: {
+    networkSecurityGroupName: networkSecurityGroupName
+    location: location
+  }
 }
 
 module virtualNetworkModule 'modules/virtual-network.bicep' = {
-    name: 'virtualNetworkModule'
-    params: {
-        location: location
-        virtualNetworkName: virtualNetworkName
-        networkSecurityGroupId: networkSecurityGroupModule.outputs.networkSecurityGroupId
-        serviceSubnetName: serviceSubnetName
-    }
+  name: 'virtualNetworkModule'
+  params: {
+    location: location
+    virtualNetworkName: virtualNetworkName
+    networkSecurityGroupId: networkSecurityGroupModule.outputs.networkSecurityGroupId
+    serviceSubnetName: serviceSubnetName
+  }
 }
 
 module containerEnvironmentModule 'modules/container-environment.bicep' = {
-    name: 'containerEnvironmentModule'
-    params: {
-        location: location
-        logAnalyticsName: logAnalyticsName
-        containerEnvironmentName: containerEnvironmentName
-        productConstructionServiceSubnetId: virtualNetworkModule.outputs.productConstructionServiceSubnetId
-        infrastructureResourceGroupName: infrastructureResourceGroupName
-        applicationInsightsName: applicationInsightsName
-        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
-    }
+  name: 'containerEnvironmentModule'
+  params: {
+    location: location
+    logAnalyticsName: logAnalyticsName
+    containerEnvironmentName: containerEnvironmentName
+    productConstructionServiceSubnetId: virtualNetworkModule.outputs.productConstructionServiceSubnetId
+    infrastructureResourceGroupName: infrastructureResourceGroupName
+    applicationInsightsName: applicationInsightsName
+    deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
+  }
 }
 
 module managedIdentitiesModule 'modules/managed-identities.bicep' = {
-    name: 'managedIdentitiesModule'
-    params: {
-        location: location
-        deploymentIdentityName: deploymentIdentityName
-        deploymentIdentityCreate: deploymentIdentityCreate
-        deploymentIdentityResourceGroupName: deploymentIdentityResourceGroupName
-        appIdentityName: appIdentityName
-    }
+  name: 'managedIdentitiesModule'
+  params: {
+    location: location
+    deploymentIdentityName: deploymentIdentityName
+    deploymentIdentityCreate: deploymentIdentityCreate
+    deploymentIdentityResourceGroupName: deploymentIdentityResourceGroupName
+    appIdentityName: appIdentityName
+  }
 }
 
 module containerRegistryModule 'modules/container-registry.bicep' = {
-    name: 'containerRegistryModule'
-    params: {
-        location: location
-        containerRegistryName: containerRegistryName
-        appIdentityPrincipalId: managedIdentitiesModule.outputs.appIdentityPrincipalId
-        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
-    }
+  name: 'containerRegistryModule'
+  params: {
+    location: location
+    containerRegistryName: containerRegistryName
+    appIdentityPrincipalId: managedIdentitiesModule.outputs.appIdentityPrincipalId
+    deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
+  }
 }
 
 module containerAppModule 'modules/container-app.bicep' = {
-    name: 'containerAppModule'
-    params: {
-        location: location
-        containerEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
-        containerRegistryName: containerRegistryName
-        containerCpuCoreCount: containerCpuCoreCount
-        containerMemory: containerMemory
-        serviceName: serviceName
-        applicationInsightsConnectionString: containerEnvironmentModule.outputs.applicationInsightsConnectionString
-        environmentName: environmentName
-        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
-        appIdentityId: managedIdentitiesModule.outputs.appIdentityId
-        containerReplicas: containerReplicas
-        resourceConnectionStringEnvVars: resourceConnectionStringEnvVars
-    }
-    dependsOn: [
-        containerRegistryModule
-    ]
+  name: 'containerAppModule'
+  params: {
+    location: location
+    containerEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
+    containerRegistryName: containerRegistryName
+    containerCpuCoreCount: containerCpuCoreCount
+    containerMemory: containerMemory
+    serviceName: serviceName
+    environmentName: environmentName
+    deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
+    appIdentityId: managedIdentitiesModule.outputs.appIdentityId
+    containerReplicas: containerReplicas
+    sharedEnvVars: sharedEnvVars
+  }
+  dependsOn: [
+    containerRegistryModule
+  ]
 }
 
 module scheduledJob 'modules/container-scheduled-job.bicep' = {
-    name: 'scheduledJob'
-    params: {
-        jobName: scheduledJobName
-        location: location
-        environmentName: environmentName
-        applicationInsightsConnectionString: containerEnvironmentModule.outputs.applicationInsightsConnectionString
-        userAssignedIdentityId: managedIdentitiesModule.outputs.appIdentityId
-        cronSchedule: '0 2 * * *'
-        containerRegistryName: containerRegistryName
-        containerAppsEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
-        command: 'cd /app/FeedCleaner && dotnet ProductConstructionService.FeedCleaner.dll'
-        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
-        resourceConnectionStringEnvVars: resourceConnectionStringEnvVars
-    }
+  name: 'scheduledJob'
+  params: {
+    jobName: scheduledJobName
+    location: location
+    environmentName: environmentName
+    userAssignedIdentityId: managedIdentitiesModule.outputs.appIdentityId
+    cronSchedule: '0 2 * * *'
+    containerRegistryName: containerRegistryName
+    containerAppsEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
+    command: 'cd /app/FeedCleaner && dotnet ProductConstructionService.FeedCleaner.dll'
+    deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
+    sharedEnvVars: sharedEnvVars
+  }
 }
 
 module keyVaultsModule 'modules/key-vault.bicep' = {
-    name: 'keyVaultModule'
-    params: {
-        location: location
-        keyVaultName: keyVaultName
-        appIdentityPrincipalId: managedIdentitiesModule.outputs.appIdentityPrincipalId
-        serviceSubnetId: virtualNetworkModule.outputs.productConstructionServiceSubnetId
-    }
+  name: 'keyVaultModule'
+  params: {
+    location: location
+    keyVaultName: keyVaultName
+    appIdentityPrincipalId: managedIdentitiesModule.outputs.appIdentityPrincipalId
+    serviceSubnetId: virtualNetworkModule.outputs.productConstructionServiceSubnetId
+  }
 }
 
 module redisModule 'modules/redis.bicep' = {
-    name: 'redisModule'
-    params: {
-        location: location
-        azureCacheRedisName: azureCacheRedisName
-        appIdentityPrincipalId: managedIdentitiesModule.outputs.appIdentityPrincipalId
-        deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
-    }
+  name: 'redisModule'
+  params: {
+    location: location
+    azureCacheRedisName: azureCacheRedisName
+    appIdentityPrincipalId: managedIdentitiesModule.outputs.appIdentityPrincipalId
+    deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
+  }
 }
 
 module storageAccountModule 'modules/storage-account.bicep' = {
-    name: 'storageAccountModule'
-    params: {
-        location: location
-        storageAccountName: storageAccountName
-        appIdentityPrincipalId: managedIdentitiesModule.outputs.appIdentityPrincipalId
-        serviceSubnetId: virtualNetworkModule.outputs.productConstructionServiceSubnetId
-    }
+  name: 'storageAccountModule'
+  params: {
+    location: location
+    storageAccountName: storageAccountName
+    appIdentityPrincipalId: managedIdentitiesModule.outputs.appIdentityPrincipalId
+    serviceSubnetId: virtualNetworkModule.outputs.productConstructionServiceSubnetId
+  }
 }
 
 module ipAddressModule 'modules/public-ip-address.bicep' = if (enablePublicIpAddress) {
-    name: 'ipAddressModule'
-    params: {
-        location: location
-        publicIpAddressName: publicIpAddressName
-        publicIpAddressServiceTag: publicIpAddressServiceTag
-    }
+  name: 'ipAddressModule'
+  params: {
+    location: location
+    publicIpAddressName: publicIpAddressName
+    publicIpAddressServiceTag: publicIpAddressServiceTag
+  }
 }
 
 module sqlDatabaseModule 'modules/sql-database.bicep' = {
-    name: 'sqlDatabaseModule'
-    params: {
-        location: location
-        sqlServerName: sqlServerName
-        sqlDatabaseName: sqlDatabaseName
-        appIdentityPrincipalId: managedIdentitiesModule.outputs.appIdentityPrincipalId
-        serviceSubnetId: virtualNetworkModule.outputs.productConstructionServiceSubnetId
-    }
+  name: 'sqlDatabaseModule'
+  params: {
+    location: location
+    sqlServerName: sqlServerName
+    sqlDatabaseName: sqlDatabaseName
+    appIdentityPrincipalId: managedIdentitiesModule.outputs.appIdentityPrincipalId
+    serviceSubnetId: virtualNetworkModule.outputs.productConstructionServiceSubnetId
+  }
 }
 
 module networkSecurityPerimeterModule 'modules/network-security-perimeter.bicep' = {
-    name: 'networkSecurityPerimeterModule'
-    params: {
-        location: location
-        perimeterName: networkSecurityPerimeterName
-        keyVaultId: keyVaultsModule.outputs.keyVaultId
-        storageAccountId: storageAccountModule.outputs.storageAccountId
-        sqlServerId: sqlDatabaseModule.outputs.sqlServerId
-    }
+  name: 'networkSecurityPerimeterModule'
+  params: {
+    location: location
+    perimeterName: networkSecurityPerimeterName
+    keyVaultId: keyVaultsModule.outputs.keyVaultId
+    storageAccountId: storageAccountModule.outputs.storageAccountId
+    sqlServerId: sqlDatabaseModule.outputs.sqlServerId
+  }
 }
