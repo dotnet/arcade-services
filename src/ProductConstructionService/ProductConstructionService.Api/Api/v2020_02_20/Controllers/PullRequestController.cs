@@ -204,7 +204,7 @@ public partial class PullRequestController : ControllerBase
         return url;
     }
 
-    private static TrackedPullRequest ToTrackedPullRequest(
+    internal static TrackedPullRequest ToTrackedPullRequest(
         InProgressPullRequest pr,
         string subscriptionId,
         Maestro.Data.Models.Subscription? subscription)
@@ -243,7 +243,7 @@ public partial class PullRequestController : ControllerBase
             pr.CreationDate);
     }
 
-    private record TrackedPullRequest(
+    public record TrackedPullRequest(
         string Id,
         string Url,
         Channel? Channel,
@@ -257,7 +257,7 @@ public partial class PullRequestController : ControllerBase
         Dictionary<Guid, int> NextBuildsToApply,
         DateTime CreationDate);
 
-    private record PullRequestUpdate(
+    public record PullRequestUpdate(
         string SourceRepository,
         Guid SubscriptionId,
         int BuildId);

@@ -129,7 +129,7 @@ public class CodeflowController : ControllerBase
         List<string> mappings,
         List<Maestro.Data.Models.Subscription> forwardFlowSubscriptions,
         List<Maestro.Data.Models.Subscription> backflowSubscriptions,
-        Dictionary<Guid, InProgressPullRequest> allPrs)
+        Dictionary<Guid, InProgressPullRequest> prsBySubscriptionId)
     {
         var stalenessMap = await CalculateBuildStalenessPerSubscription(
             [.. forwardFlowSubscriptions, .. backflowSubscriptions]);
@@ -141,8 +141,8 @@ public class CodeflowController : ControllerBase
             var forwardFlowSubscription = forwardFlowSubscriptions.FirstOrDefault(s => s.TargetDirectory == mapping);
             var backflowSubscription = backflowSubscriptions.FirstOrDefault(s => s.SourceDirectory == mapping);
 
-            var forwardFlowStatus = CreateSubscriptionStatus(forwardFlowSubscription, allPrs, stalenessMap);
-            var backflowStatus = CreateSubscriptionStatus(backflowSubscription, allPrs, stalenessMap);
+            var forwardFlowStatus = CreateSubscriptionStatus(forwardFlowSubscription, prsBySubscriptionId, stalenessMap);
+            var backflowStatus = CreateSubscriptionStatus(backflowSubscription, prsBySubscriptionId, stalenessMap);
 
             var repositoryUrlForMapping = forwardFlowSubscription?.SourceRepository ?? backflowSubscription?.TargetRepository;
             var repositoryBranchForMapping = backflowSubscription?.TargetBranch;
@@ -194,7 +194,7 @@ public class CodeflowController : ControllerBase
 
     private static CodeflowSubscriptionStatus? CreateSubscriptionStatus(
         Maestro.Data.Models.Subscription? subscription,
-        Dictionary<Guid, InProgressPullRequest> allPrs,
+        Dictionary<Guid, InProgressPullRequest> prsBySubscriptionIds,
         Dictionary<Guid, int> stalenessMap)
     {
         if (subscription == null)
@@ -202,14 +202,18 @@ public class CodeflowController : ControllerBase
             return null;
         }
 
-        var staleness = stalenessMap.GetValueOrDefault(subscription.Id, 0);
-        allPrs.TryGetValue(subscription.Id, out var pr);
+        int? staleness = stalenessMap.TryGetValue(subscription.Id, out var value) ? value : null;
+        prsBySubscriptionIds.TryGetValue(subscription.Id, out var pr);
+
+        var trackedPullRequest = pr != null
+            ? PullRequestController.ToTrackedPullRequest(pr, subscription.Id.ToString(), subscription)
+            : null;
 
         return new CodeflowSubscriptionStatus
         {
             Subscription = new Subscription(subscription),
-            InProgressPullRequestUrl = pr?.Url,
-            Staleness = staleness
+            ActivePullRequest = trackedPullRequest,
+            NewerBuildsAvailable = staleness
         };
     }
 

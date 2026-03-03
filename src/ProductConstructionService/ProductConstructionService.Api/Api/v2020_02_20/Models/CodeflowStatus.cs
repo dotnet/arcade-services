@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Newtonsoft.Json;
+using static ProductConstructionService.Api.Api.v2020_02_20.Controllers.PullRequestController;
 
 #nullable disable
 namespace ProductConstructionService.Api.v2020_02_20.Models;
@@ -29,9 +30,9 @@ public class CodeflowSubscriptionStatus
     [JsonProperty("subscription")]
     public Subscription Subscription { get; set; }
 
-    [JsonProperty("inProgressPullRequestUrl")]
-    public string InProgressPullRequestUrl { get; set; }
+    [JsonProperty("activePullRequest")]
+    public TrackedPullRequest ActivePullRequest { get; set; }
 
-    [JsonProperty("staleness")]
-    public int Staleness { get; set; }
+    [JsonProperty("newerBuildsAvailable")]
+    public int? NewerBuildsAvailable { get; set; }
 }
