@@ -44,3 +44,4 @@ resource deploymentRedisDataContributorRoleAssignment 'Microsoft.Cache/redis/acc
 }
 
 output redisCacheId string = redisCache.id
+output redisCacheHostName string = redisCache.properties.hostName

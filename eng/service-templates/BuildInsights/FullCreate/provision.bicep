@@ -60,9 +60,6 @@ param virtualNetworkName string
 @description('Feed Cleaner Job name')
 param scheduledJobName string
 
-@description('Feed Cleaner Identity name')
-param scheduledJobIdentityName string
-
 @description('Network security group name')
 param networkSecurityGroupName string
 
@@ -92,6 +89,34 @@ param enablePublicIpAddress bool = (environmentName == 'Production')
 
 @description('Network Security Perimeter name')
 param networkSecurityPerimeterName string
+
+// Shared resource connection string environment variables for all container apps and jobs
+var resourceConnectionStringEnvVars = [
+    {
+        name: 'ConnectionStrings__sql'
+        value: 'Server=tcp:${sqlDatabaseModule.outputs.sqlServerFqdn},1433;Initial Catalog=${sqlDatabaseModule.outputs.sqlDatabaseName};Authentication=Active Directory Managed Identity;User Id=${managedIdentitiesModule.outputs.appIdentityClientId};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30'
+    }
+    {
+        name: 'ConnectionStrings__redis'
+        value: '${redisModule.outputs.redisCacheHostName}:6380,ssl=True,abortConnect=False'
+    }
+    {
+        name: 'ConnectionStrings__blobs'
+        value: storageAccountModule.outputs.storageAccountBlobEndpoint
+    }
+    {
+        name: 'ConnectionStrings__queues'
+        value: storageAccountModule.outputs.storageAccountQueueEndpoint
+    }
+    {
+        name: 'ManagedIdentityClientId'
+        value: managedIdentitiesModule.outputs.appIdentityClientId
+    }
+    {
+        name: 'KeyVaultName'
+        value: keyVaultName
+    }
+]
 
 module networkSecurityGroupModule 'modules/nsg.bicep' = {
     name: 'networkSecurityGroupModule'
@@ -132,7 +157,6 @@ module managedIdentitiesModule 'modules/managed-identities.bicep' = {
         deploymentIdentityCreate: deploymentIdentityCreate
         deploymentIdentityResourceGroupName: deploymentIdentityResourceGroupName
         appIdentityName: appIdentityName
-        scheduledJobIdentityName: scheduledJobIdentityName
     }
 }
 
@@ -142,7 +166,6 @@ module containerRegistryModule 'modules/container-registry.bicep' = {
         location: location
         containerRegistryName: containerRegistryName
         appIdentityPrincipalId: managedIdentitiesModule.outputs.appIdentityPrincipalId
-        scheduledJobIdentityPrincipalId: managedIdentitiesModule.outputs.scheduledJobIdentityPrincipalId
         deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
     }
 }
@@ -161,25 +184,27 @@ module containerAppModule 'modules/container-app.bicep' = {
         deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
         appIdentityId: managedIdentitiesModule.outputs.appIdentityId
         containerReplicas: containerReplicas
+        resourceConnectionStringEnvVars: resourceConnectionStringEnvVars
     }
     dependsOn: [
         containerRegistryModule
     ]
 }
 
-module scheduledJob 'modules/scheduledContainerJob.bicep' = {
+module scheduledJob 'modules/container-scheduled-job.bicep' = {
     name: 'scheduledJob'
     params: {
         jobName: scheduledJobName
         location: location
         environmentName: environmentName
         applicationInsightsConnectionString: containerEnvironmentModule.outputs.applicationInsightsConnectionString
-        userAssignedIdentityId: managedIdentitiesModule.outputs.scheduledJobIdentityId
+        userAssignedIdentityId: managedIdentitiesModule.outputs.appIdentityId
         cronSchedule: '0 2 * * *'
         containerRegistryName: containerRegistryName
         containerAppsEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
         command: 'cd /app/FeedCleaner && dotnet ProductConstructionService.FeedCleaner.dll'
         deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
+        resourceConnectionStringEnvVars: resourceConnectionStringEnvVars
     }
 }
 

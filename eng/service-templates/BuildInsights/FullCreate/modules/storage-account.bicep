@@ -80,3 +80,5 @@ resource storageAccountContributor 'Microsoft.Authorization/roleAssignments@2022
 }
 
 output storageAccountId string = storageAccount.id
+output storageAccountBlobEndpoint string = storageAccount.properties.primaryEndpoints.blob
+output storageAccountQueueEndpoint string = storageAccount.properties.primaryEndpoints.queue

@@ -19,7 +19,6 @@ param containerRegistryName = '${toLower(replace(serviceNameKebabCase, '-', ''))
 
 // Identities
 param appIdentityName = '${serviceNamePascalCase}Service${environmentPascalCase}'
-param scheduledJobIdentityName = '${serviceNamePascalCase}ScheduledJob${environmentPascalCase}'
 param deploymentIdentityCreate = true
 param deploymentIdentityName = '${serviceNamePascalCase}ServiceDeployment${environmentPascalCase}'
 

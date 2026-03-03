@@ -9,6 +9,9 @@ param containerAppsEnvironmentId string
 param command string
 param deploymentIdentityPrincipalId string
 
+@description('Shared resource connection string environment variables (SQL, Redis, Storage, ManagedIdentity)')
+param resourceConnectionStringEnvVars array
+
 var contributorRole = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions',
   'b24988ac-6180-42a0-ab88-20f7382dd24c'
@@ -18,7 +21,12 @@ module shared './shared.bicep' = {
   name: 'shared'
 }
 
-var env = [
+// environment variables specific to this scheduled job
+var jobSpecificEnv = [
+  {
+    name: 'APP_ROLE'
+    value: 'ScheduledJob'
+  }
   {
     name: 'DOTNET_ENVIRONMENT'
     value: environmentName
@@ -44,6 +52,9 @@ var env = [
     value: applicationInsightsConnectionString
   }
 ]
+
+// combined environment variables: job-specific + shared resource connection strings
+var env = concat(jobSpecificEnv, resourceConnectionStringEnvVars)
 
 resource containerJob 'Microsoft.App/jobs@2024-03-01' = {
   name: jobName

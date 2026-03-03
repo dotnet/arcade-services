@@ -10,6 +10,9 @@ param containerEnvironmentId string
 param deploymentIdentityPrincipalId string
 param containerReplicas int
 
+@description('Shared resource connection string environment variables (SQL, Redis, Storage, ManagedIdentity)')
+param resourceConnectionStringEnvVars array
+
 var contributorRole = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions',
   'b24988ac-6180-42a0-ab88-20f7382dd24c'
@@ -19,8 +22,12 @@ module shared './shared.bicep' = {
   name: 'shared'
 }
 
-// common environment variables used by the app
-var containerAppEnv = [
+// environment variables specific to the container app
+var containerAppSpecificEnv = [
+  {
+    name: 'APP_ROLE'
+    value: 'Application'
+  }
   {
     name: 'ASPNETCORE_ENVIRONMENT'
     value: environmentName
@@ -45,19 +52,10 @@ var containerAppEnv = [
     name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
     value: applicationInsightsConnectionString
   }
-  {
-    name: 'VmrPath'
-    value: '/mnt/datadir/vmr'
-  }
-  {
-    name: 'TmpPath'
-    value: '/mnt/datadir/tmp'
-  }
-  {
-    name: 'AZURE_TOKEN_CREDENTIALS'
-    value: 'prod'
-  }
 ]
+
+// combined environment variables: app-specific + shared resource connection strings
+var containerAppEnv = concat(containerAppSpecificEnv, resourceConnectionStringEnvVars)
 
 // container app hosting the Product Construction Service
 resource containerApp 'Microsoft.App/containerApps@2023-04-01-preview' = {

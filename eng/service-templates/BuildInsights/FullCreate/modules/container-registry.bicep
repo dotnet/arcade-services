@@ -1,7 +1,6 @@
 param location string
 param containerRegistryName string
 param appIdentityPrincipalId string
-param scheduledJobIdentityPrincipalId string
 param deploymentIdentityPrincipalId string
 
 var acrPullRole = subscriptionResourceId(
@@ -39,7 +38,7 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2022-02-01-pr
   }
 }
 
-// allow acr pulls to the identity used for the application
+// allow acr pulls to the identity used for the application and scheduled jobs
 resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: containerRegistry
   name: guid(subscription().id, resourceGroup().id, 'acaAcrPull')
@@ -47,17 +46,6 @@ resource aksAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
     roleDefinitionId: acrPullRole
     principalType: 'ServicePrincipal'
     principalId: appIdentityPrincipalId
-  }
-}
-
-// allow acr pulls to the identity used for the scheduled job
-resource scheduledJobIdentityAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: containerRegistry
-  name: guid(subscription().id, resourceGroup().id, 'scheduledJobAcrPull')
-  properties: {
-    roleDefinitionId: acrPullRole
-    principalType: 'ServicePrincipal'
-    principalId: scheduledJobIdentityPrincipalId
   }
 }
 

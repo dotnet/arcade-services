@@ -3,7 +3,6 @@ param deploymentIdentityName string
 param deploymentIdentityCreate bool
 param deploymentIdentityResourceGroupName string
 param appIdentityName string
-param scheduledJobIdentityName string
 
 var contributorRole = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions',
@@ -30,11 +29,6 @@ resource appIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-3
   location: location
 }
 
-resource scheduledJobIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: scheduledJobIdentityName
-  location: location
-}
-
 resource appIdentityContributorRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: appIdentity
   name: guid(subscription().id, resourceGroup().id, 'appIdentity-contributor')
@@ -49,5 +43,4 @@ output appIdentityPrincipalId string = appIdentity.properties.principalId
 output appIdentityId string = appIdentity.id
 output deploymentIdentityPrincipalId string = deploymentIdentityCreate ? deploymentIdentityNew!.properties.principalId : deploymentIdentityExisting!.properties.principalId
 output deploymentIdentityId string = deploymentIdentityCreate ? deploymentIdentityNew!.id : deploymentIdentityExisting!.id
-output scheduledJobIdentityPrincipalId string = scheduledJobIdentity.properties.principalId
-output scheduledJobIdentityId string = scheduledJobIdentity.id
+output appIdentityClientId string = appIdentity.properties.clientId
