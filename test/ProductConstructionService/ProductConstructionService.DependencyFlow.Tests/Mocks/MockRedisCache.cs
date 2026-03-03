@@ -51,17 +51,7 @@ internal class MockRedisCache : IRedisCache
     }
 
     public async Task<Dictionary<string, string?>> GetBatchAsync(IEnumerable<string> keys)
-    {
-        var result = new Dictionary<string, string?>();
-        foreach (var key in keys)
-        {
-            if (_data.TryGetValue(key, out object? value) && value is string typedValue)
-            {
-                result[key] = typedValue;
-            }
-        }
-        return result;
-    }
+        => throw new NotImplementedException();
 }
 
 internal class MockRedisCache<T>
@@ -111,15 +101,5 @@ internal class MockRedisCache<T>
     }
 
     public async Task<Dictionary<string, T?>> TryGetStateBatchAsync(IEnumerable<string> keys)
-    {
-        var result = new Dictionary<string, T?>();
-        foreach (var key in keys)
-        {
-            if (_data.TryGetValue(key, out object? value) && value is T typedValue)
-            {
-                result[key] = typedValue;
-            }
-        }
-        return result;
-    }
+        => throw new NotImplementedException();
 }
