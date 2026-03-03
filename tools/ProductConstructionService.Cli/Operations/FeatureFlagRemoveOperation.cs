@@ -4,6 +4,7 @@
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Cli.Options;
+using Tools.Cli.Core;
 
 namespace ProductConstructionService.Cli.Operations;
 

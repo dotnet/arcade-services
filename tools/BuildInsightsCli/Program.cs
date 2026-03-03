@@ -1,9 +1,9 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using BuildInsightsCli.Operations;
 using CommandLine;
 using Microsoft.Extensions.DependencyInjection;
-using ProductConstructionService.Cli.Options;
 using Tools.Cli.Core;
 using Tools.Cli.Common.Options;
 
@@ -29,14 +29,5 @@ return Parser.Default.ParseArguments(args, GetOptions())
 Type[] GetOptions() =>
     [
         typeof(DeploymentOptions),
-        typeof(GetPcsStatusOptions),
-        typeof(StartPcsOptions),
-        typeof(StopPcsOptions),
-        typeof(FeatureFlagSetOptions),
-        typeof(FeatureFlagGetOptions),
-        typeof(FeatureFlagRemoveOptions),
-        typeof(FeatureFlagListOptions),
-        typeof(FeatureFlagAvailableOptions),
-        typeof(ExportConfigurationOptions),
-        typeof(DeleteNamespaceOptions),
+        typeof(TestOptions)
     ];

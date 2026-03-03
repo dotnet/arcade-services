@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>bi-cli</ToolCommandName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommandLineParser" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tools.Cli.Core\Tools.Cli.Core.csproj" />
+    <ProjectReference Include="..\Tools.Cli.Common\Tools.Cli.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="BuildInsightsCli.Tests" />
+  </ItemGroup>
+</Project>
