@@ -384,7 +384,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
         return ToDarcLibPullRequest(createdPr);
     }
 
-    private async Task SetPullRequestAutoCompleteAsync(GitPullRequest createdPr, GitHttpClient client, string projectName, string repoName)
+    private static async Task SetPullRequestAutoCompleteAsync(GitPullRequest createdPr, GitHttpClient client, string projectName, string repoName)
     {
         var autoCompleteIdentity = createdPr.CreatedBy;
 
@@ -395,6 +395,7 @@ public class AzureDevOpsClient : RemoteRepoBase, IRemoteGitRepo, IAzureDevOpsCli
             CompletionOptions = new GitPullRequestCompletionOptions
             {
                 DeleteSourceBranch = true,
+                MergeStrategy = GitPullRequestMergeStrategy.Squash,
             }
         };
 

@@ -117,6 +117,12 @@ internal class SubscriptionsStatusOperation : Operation
             }
 
             Console.Write($"{actionStatusMessage} {subscriptionsToEnableDisable.Count} subscriptions...{(noConfirm ? Environment.NewLine : "")}");
+            var parameters = _options.ToConfigurationRepositoryOperationParameters();
+            if (subscriptionsToEnableDisable.Count > 1 && string.IsNullOrEmpty(parameters.ConfigurationBranch))
+            {
+                parameters.ConfigurationBranch = _options.GenerateBatchBranchName();
+            }
+
             foreach (var subscription in subscriptionsToEnableDisable)
             {
                 // If noConfirm was passed, print out the subscriptions as we go
@@ -132,7 +138,7 @@ internal class SubscriptionsStatusOperation : Operation
                 };
 
                 await _configurationRepositoryManager.UpdateSubscriptionAsync(
-                    _options.ToConfigurationRepositoryOperationParameters(),
+                    parameters,
                     updatedyaml);
             }
             Console.WriteLine("done");

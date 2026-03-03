@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using AwesomeAssertions;
 using Microsoft.DotNet.Darc.Operations;
@@ -176,6 +177,57 @@ public class DeleteSubscriptionsOperationConfigRepoTests : ConfigurationManageme
         var unrelatedFile2Subscriptions = await DeserializeSubscriptionsAsync(unrelatedFile2FullPath);
         unrelatedFile2Subscriptions.Should().HaveCount(1);
         unrelatedFile2Subscriptions[0].SourceRepository.Should().Be(unrelatedSubscription2.SourceRepository);
+    }
+
+    [Test]
+    public async Task DeleteSubscriptionOperation_WithConfigRepo_DeletesMultipleSubscriptionsOnSingleBranch()
+    {
+        // Arrange
+        var subscription1Id = Guid.NewGuid();
+        var subscription2Id = Guid.NewGuid();
+        var sharedTargetRepo = "https://github.com/dotnet/dotnet";
+        var subscription1 = CreateTestSubscription(subscription1Id, targetRepo: sharedTargetRepo, sourceRepo: "https://github.com/dotnet/runtime");
+        var subscription2 = CreateTestSubscription(subscription2Id, targetRepo: sharedTargetRepo, sourceRepo: "https://github.com/dotnet/aspnetcore");
+
+        // Create separate config files for each subscription
+        var configFilePath1 = new UnixPath(ConfigFilePathResolver.SubscriptionFolderPath) / "dotnet-dotnet-runtime.yml";
+        var configFilePath2 = new UnixPath(ConfigFilePathResolver.SubscriptionFolderPath) / "dotnet-dotnet-aspnetcore.yml";
+        await CreateFileInConfigRepoAsync(configFilePath1.ToString(), CreateSubscriptionYamlContent(subscription1));
+        await CreateFileInConfigRepoAsync(configFilePath2.ToString(), CreateSubscriptionYamlContent(subscription2));
+
+        // Set up BAR client to return both subscriptions when filtering
+        BarClientMock
+            .Setup(x => x.GetSubscriptionsAsync(null, null, null, null, null, null))
+            .ReturnsAsync([subscription1, subscription2]);
+        BarClientMock
+            .Setup(x => x.GetDefaultChannelsAsync(null, null, null))
+            .ReturnsAsync([]);
+
+        // Get branches before operation
+        var branchesBefore = await GetBranchesAsync();
+
+        // Use filter options (--target-repo) instead of --id to trigger bulk deletion
+        var options = CreateDeleteSubscriptionsOptions(
+            targetRepo: sharedTargetRepo);
+        var operation = CreateOperation(options);
+
+        // Act
+        int result = await operation.ExecuteAsync();
+
+        // Assert
+        result.Should().Be(Constants.SuccessCode);
+
+        // The key assertion: all deletions should be on a SINGLE new branch
+        var branchesAfter = await GetBranchesAsync();
+        var newBranches = branchesAfter.Except(branchesBefore).ToList();
+        newBranches.Should().HaveCount(1, "all subscription deletions should be batched into a single branch");
+
+        // Verify both subscription files were deleted on that branch
+        await CheckoutBranch(newBranches[0]);
+        var fullPath1 = Path.Combine(ConfigurationRepoPath, configFilePath1.ToString());
+        var fullPath2 = Path.Combine(ConfigurationRepoPath, configFilePath2.ToString());
+        File.Exists(fullPath1).Should().BeFalse("first subscription file should be deleted");
+        File.Exists(fullPath2).Should().BeFalse("second subscription file should be deleted");
     }
 
     #region Helper methods
