@@ -58,13 +58,17 @@ public class CodeflowController : ControllerBase
 
         var subscriptions = forwardFlowSubscriptions.Concat(backflowSubscriptions).ToList();
         var mappings = ExtractMappings(subscriptions);
-        var inProgressCodeflowPrs = await GetInProgressPullRequestsAsync(subscriptions);
+
+        var activePrsPerSubscriptionId = await GetInProgressPullRequestsAsync(subscriptions);
+
+        var newerBuildsPerSubscriptionId = await CalculateBuildStalenessPerSubscription(subscriptions);
 
         var codeflowStatuses = await BuildCodeflowStatusesAsync(
             mappings,
             forwardFlowSubscriptions,
             backflowSubscriptions,
-            inProgressCodeflowPrs);
+            activePrsPerSubscriptionId,
+            newerBuildsPerSubscriptionId);
 
         return Ok(codeflowStatuses);
     }
@@ -129,10 +133,9 @@ public class CodeflowController : ControllerBase
         List<string> mappings,
         List<Maestro.Data.Models.Subscription> forwardFlowSubscriptions,
         List<Maestro.Data.Models.Subscription> backflowSubscriptions,
-        Dictionary<Guid, InProgressPullRequest> prsBySubscriptionId)
+        Dictionary<Guid, InProgressPullRequest> activePrsPerSubscriptionId,
+        Dictionary<Guid, int> newerBuildsPerSubscriptionId)
     {
-        var stalenessMap = await CalculateBuildStalenessPerSubscription(
-            [.. forwardFlowSubscriptions, .. backflowSubscriptions]);
 
         var codeflowStatuses = new List<CodeflowStatus>();
 
@@ -141,8 +144,8 @@ public class CodeflowController : ControllerBase
             var forwardFlowSubscription = forwardFlowSubscriptions.FirstOrDefault(s => s.TargetDirectory == mapping);
             var backflowSubscription = backflowSubscriptions.FirstOrDefault(s => s.SourceDirectory == mapping);
 
-            var forwardFlowStatus = CreateSubscriptionStatus(forwardFlowSubscription, prsBySubscriptionId, stalenessMap);
-            var backflowStatus = CreateSubscriptionStatus(backflowSubscription, prsBySubscriptionId, stalenessMap);
+            var forwardFlowStatus = CreateSubscriptionStatus(forwardFlowSubscription, activePrsPerSubscriptionId, newerBuildsPerSubscriptionId);
+            var backflowStatus = CreateSubscriptionStatus(backflowSubscription, activePrsPerSubscriptionId, newerBuildsPerSubscriptionId);
 
             var repositoryUrlForMapping = forwardFlowSubscription?.SourceRepository ?? backflowSubscription?.TargetRepository;
             var repositoryBranchForMapping = backflowSubscription?.TargetBranch;
@@ -173,7 +176,7 @@ public class CodeflowController : ControllerBase
             return [];
         }
 
-        var stalenessMap = await _context.Subscriptions
+        var newerBuildsPerSubscriptionId = await _context.Subscriptions
             .Where(s => subscriptionIds.Contains(s.Id))
             .Select(s => new
             {
@@ -187,14 +190,14 @@ public class CodeflowController : ControllerBase
             })
             .ToDictionaryAsync(x => x.Id, x => x.Staleness);
 
-        return stalenessMap;
+        return newerBuildsPerSubscriptionId;
     }
 
     #region Helpers
 
     private static CodeflowSubscriptionStatus? CreateSubscriptionStatus(
         Maestro.Data.Models.Subscription? subscription,
-        Dictionary<Guid, InProgressPullRequest> prsBySubscriptionIds,
+        Dictionary<Guid, InProgressPullRequest> activePrsBySubscriptionIds,
         Dictionary<Guid, int> stalenessMap)
     {
         if (subscription == null)
@@ -203,7 +206,7 @@ public class CodeflowController : ControllerBase
         }
 
         int? staleness = stalenessMap.TryGetValue(subscription.Id, out var value) ? value : null;
-        prsBySubscriptionIds.TryGetValue(subscription.Id, out var pr);
+        activePrsBySubscriptionIds.TryGetValue(subscription.Id, out var pr);
 
         var trackedPullRequest = pr != null
             ? PullRequestController.ToTrackedPullRequest(pr, subscription.Id.ToString(), subscription)
