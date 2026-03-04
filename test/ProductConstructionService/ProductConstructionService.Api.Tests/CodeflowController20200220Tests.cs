@@ -23,6 +23,21 @@ namespace ProductConstructionService.Api.Tests;
 [TestFixture, NonParallelizable]
 public partial class CodeflowController20200220Tests
 {
+    private static TestDatabase _database = null!;
+
+    [OneTimeSetUp]
+    public static void ClassSetUp()
+    {
+        _database = new TestDatabase("TestDB_CodeflowCtrl_");
+    }
+
+    [OneTimeTearDown]
+    public static void ClassTearDown()
+    {
+        _database.Dispose();
+        _database = null!;
+    }
+
     [Test]
     public async Task GetCodeflowStatuses_ReturnsEmptyList_WhenNoSubscriptions()
     {
@@ -443,7 +458,7 @@ public partial class CodeflowController20200220Tests
     {
         public static async Task Default(IServiceCollection collection)
         {
-            var connectionString = await SharedData.Database.GetConnectionString();
+            var connectionString = await _database.GetConnectionString();
 
             collection.AddLogging(l => l.AddProvider(new NUnitLogger()));
             collection.AddSingleton<IHostEnvironment>(new HostingEnvironment
