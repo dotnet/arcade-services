@@ -36,7 +36,7 @@ public class CodeflowController : ControllerBase
     /// </summary>
     /// <param name="repositoryUrl">The VMR repository URL</param>
     /// <param name="branch">The VMR branch name</param>
-    [HttpGet("status")]
+    [HttpGet]
     [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<CodeflowStatus>), Description = "The list of codeflow statuses")]
     [ValidateModelState]
     public async Task<IActionResult> GetCodeflowStatuses(
@@ -57,14 +57,12 @@ public class CodeflowController : ControllerBase
         var backflowSubscriptions = await GetBackflowSubscriptionsAsync(repositoryUrl, branch);
 
         var subscriptions = forwardFlowSubscriptions.Concat(backflowSubscriptions).ToList();
-        var mappings = ExtractMappings(subscriptions);
 
-        var activePrsPerSubscriptionId = await GetInProgressPullRequestsAsync(subscriptions);
+        Dictionary<Guid, InProgressPullRequest> activePrsPerSubscriptionId = await GetInProgressPullRequestsAsync(subscriptions);
 
-        var newerBuildsPerSubscriptionId = await CalculateBuildStalenessPerSubscription(subscriptions);
+        Dictionary<Guid, int> newerBuildsPerSubscriptionId = await CalculateBuildStalenessPerSubscription(subscriptions);
 
-        var codeflowStatuses = await BuildCodeflowStatusesAsync(
-            mappings,
+        var codeflowStatuses = BuildCodeflowStatuses(
             forwardFlowSubscriptions,
             backflowSubscriptions,
             activePrsPerSubscriptionId,
@@ -129,40 +127,6 @@ public class CodeflowController : ControllerBase
         return result;
     }
 
-    private async Task<List<CodeflowStatus>> BuildCodeflowStatusesAsync(
-        List<string> mappings,
-        List<Maestro.Data.Models.Subscription> forwardFlowSubscriptions,
-        List<Maestro.Data.Models.Subscription> backflowSubscriptions,
-        Dictionary<Guid, InProgressPullRequest> activePrsPerSubscriptionId,
-        Dictionary<Guid, int> newerBuildsPerSubscriptionId)
-    {
-
-        var codeflowStatuses = new List<CodeflowStatus>();
-
-        foreach (var mapping in mappings)
-        {
-            var forwardFlowSubscription = forwardFlowSubscriptions.FirstOrDefault(s => s.TargetDirectory == mapping);
-            var backflowSubscription = backflowSubscriptions.FirstOrDefault(s => s.SourceDirectory == mapping);
-
-            var forwardFlowStatus = CreateSubscriptionStatus(forwardFlowSubscription, activePrsPerSubscriptionId, newerBuildsPerSubscriptionId);
-            var backflowStatus = CreateSubscriptionStatus(backflowSubscription, activePrsPerSubscriptionId, newerBuildsPerSubscriptionId);
-
-            var repositoryUrlForMapping = forwardFlowSubscription?.SourceRepository ?? backflowSubscription?.TargetRepository;
-            var repositoryBranchForMapping = backflowSubscription?.TargetBranch;
-
-            codeflowStatuses.Add(new CodeflowStatus
-            {
-                MappingName = mapping,
-                RepositoryUrl = repositoryUrlForMapping,
-                RepositoryBranch = repositoryBranchForMapping,
-                ForwardFlow = forwardFlowStatus,
-                Backflow = backflowStatus
-            });
-        }
-
-        return codeflowStatuses;
-    }
-
     private async Task<Dictionary<Guid, int>> CalculateBuildStalenessPerSubscription(
         List<Maestro.Data.Models.Subscription> subscriptions)
     {
@@ -195,6 +159,43 @@ public class CodeflowController : ControllerBase
 
     #region Helpers
 
+    private static List<CodeflowStatus> BuildCodeflowStatuses(
+        List<Maestro.Data.Models.Subscription> forwardFlowSubscriptions,
+        List<Maestro.Data.Models.Subscription> backflowSubscriptions,
+        Dictionary<Guid, InProgressPullRequest> activePrsPerSubscriptionId,
+        Dictionary<Guid, int> newerBuildsPerSubscriptionId)
+    {
+        List<string> mappings = [.. forwardFlowSubscriptions.Concat(backflowSubscriptions)
+            .Select(s => !string.IsNullOrEmpty(s.TargetDirectory) ? s.TargetDirectory : s.SourceDirectory)
+            .Where(m => !string.IsNullOrEmpty(m))
+            .Distinct()];
+
+        List<CodeflowStatus> statuses = [];
+
+        foreach (var mapping in mappings)
+        {
+            var forwardFlowSubscription = forwardFlowSubscriptions.FirstOrDefault(s => s.TargetDirectory == mapping);
+            var backflowSubscription = backflowSubscriptions.FirstOrDefault(s => s.SourceDirectory == mapping);
+
+            var forwardFlowStatus = CreateSubscriptionStatus(forwardFlowSubscription, activePrsPerSubscriptionId, newerBuildsPerSubscriptionId);
+            var backflowStatus = CreateSubscriptionStatus(backflowSubscription, activePrsPerSubscriptionId, newerBuildsPerSubscriptionId);
+
+            var repoUrl = forwardFlowSubscription?.SourceRepository ?? backflowSubscription?.TargetRepository;
+            var repoBranch = backflowSubscription?.TargetBranch;
+
+            statuses.Add(new CodeflowStatus
+            {
+                MappingName = mapping,
+                RepositoryUrl = repoUrl,
+                RepositoryBranch = repoBranch,
+                ForwardFlow = forwardFlowStatus,
+                Backflow = backflowStatus
+            });
+        }
+
+        return statuses;
+    }
+
     private static CodeflowSubscriptionStatus? CreateSubscriptionStatus(
         Maestro.Data.Models.Subscription? subscription,
         Dictionary<Guid, InProgressPullRequest> activePrsBySubscriptionIds,
@@ -219,12 +220,6 @@ public class CodeflowController : ControllerBase
             NewerBuildsAvailable = staleness
         };
     }
-
-    private static List<string> ExtractMappings(List<Maestro.Data.Models.Subscription> subscriptions)
-        => [.. subscriptions
-            .Select(s => !string.IsNullOrEmpty(s.TargetDirectory) ? s.TargetDirectory : s.SourceDirectory)
-            .Where(m => !string.IsNullOrEmpty(m))
-            .Distinct()];
 
     #endregion Helpers
 }
