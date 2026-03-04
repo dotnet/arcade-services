@@ -29,8 +29,10 @@ COPY ["src/BuildInsights/BuildInsights.KnownIssues/BuildInsights.KnownIssues.csp
 COPY ["src/BuildInsights/BuildInsights.QueueInsights/BuildInsights.QueueInsights.csproj", "./BuildInsights.QueueInsights/"]
 COPY ["src/BuildInsights/BuildInsights.ServiceDefaults/BuildInsights.ServiceDefaults.csproj", "./BuildInsights.ServiceDefaults/"]
 COPY ["src/BuildInsights/BuildInsights.Utilities.AzureDevOps/BuildInsights.Utilities.AzureDevOps.csproj", "./BuildInsights.Utilities.AzureDevOps/"]
+COPY ["src/BuildInsights/BuildInsights.DummyApp/BuildInsights.DummyApp.csproj", "./BuildInsights.DummyApp/"]
 
 RUN dotnet restore "./BuildInsights.Api/BuildInsights.Api.csproj"
+RUN dotnet restore "./BuildInsights.DummyApp/BuildInsights.DummyApp.csproj"
 
 # Copy full source for Maestro dependency
 WORKDIR /src/Maestro
@@ -49,12 +51,17 @@ WORKDIR /src/BuildInsights/BuildInsights.Api
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
 RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/BuildInsights /p:UseAppHost=false /p:Version=${PACKAGE_VERSION}
 
+WORKDIR /src/BuildInsights/BuildInsights.DummyApp
+RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build-dummy-app --no-restore
+RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/DummyApp /p:UseAppHost=false /p:Version=${PACKAGE_VERSION}
+
 # Copy everything to the final image
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine3.22
 RUN apk add --no-cache icu-libs
 
 WORKDIR /app
 COPY --from=build /app/publish/BuildInsights ./BuildInsights
+COPY --from=build /app/publish/DummyApp ./DummyApp
 
 EXPOSE 8080
 EXPOSE 8081
