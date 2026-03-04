@@ -104,8 +104,8 @@ public partial class CodeflowController20200220Tests
         status.RepositoryUrl.Should().Be(sourceRepo);
         status.ForwardFlow.Should().NotBeNull();
         status.ForwardFlow!.Subscription.Id.Should().Be(subscription.Id);
-        status.ForwardFlow.Staleness.Should().Be(2);
-        status.ForwardFlow.InProgressPullRequestUrl.Should().BeNull();
+        status.ForwardFlow.NewerBuildsAvailable.Should().Be(2);
+        status.ForwardFlow.ActivePullRequest.Should().BeNull();
         status.Backflow.Should().BeNull();
     }
 
@@ -150,8 +150,8 @@ public partial class CodeflowController20200220Tests
         status.RepositoryBranch.Should().Be(targetBranch);
         status.Backflow.Should().NotBeNull();
         status.Backflow!.Subscription.Id.Should().Be(subscription.Id);
-        status.Backflow.Staleness.Should().Be(1);
-        status.Backflow.InProgressPullRequestUrl.Should().BeNull();
+        status.Backflow.NewerBuildsAvailable.Should().Be(1);
+        status.Backflow.ActivePullRequest.Should().BeNull();
         status.ForwardFlow.Should().BeNull();
     }
 
@@ -221,6 +221,8 @@ public partial class CodeflowController20200220Tests
         var targetDirectory = "src/runtime";
         var prUrl = "https://api.github.com/repos/dotnet/dotnet/pulls/12345";
 
+        var prWebsiteUrl = "https://github.com/dotnet/dotnet/pull/12345";
+
         var channel = await CreateChannel(data, $"test-channel-{Guid.NewGuid()}");
         var subscription = await CreateForwardFlowSubscription(
             data,
@@ -244,7 +246,7 @@ public partial class CodeflowController20200220Tests
         statuses.Should().HaveCount(1);
         var status = statuses[0];
         status.ForwardFlow.Should().NotBeNull();
-        status.ForwardFlow!.InProgressPullRequestUrl.Should().Be(prUrl);
+        status.ForwardFlow!.ActivePullRequest.Url.Should().Be(prWebsiteUrl);
     }
 
     [Test]
@@ -282,7 +284,7 @@ public partial class CodeflowController20200220Tests
         var statuses = (List<CodeflowStatus>)okResult.Value!;
 
         statuses.Should().HaveCount(1);
-        statuses[0].ForwardFlow!.Staleness.Should().Be(3);
+        statuses[0].ForwardFlow!.NewerBuildsAvailable.Should().Be(3);
     }
 
     [Test]
@@ -396,7 +398,7 @@ public partial class CodeflowController20200220Tests
         var statuses = (List<CodeflowStatus>)okResult.Value!;
 
         statuses.Should().HaveCount(1);
-        statuses[0].ForwardFlow!.Staleness.Should().Be(0);
+        statuses[0].ForwardFlow!.NewerBuildsAvailable.Should().Be(null);
     }
 
     [Test]
@@ -654,7 +656,8 @@ public partial class CodeflowController20200220Tests
             Url = prUrl,
             HeadBranch = "darc-test-branch",
             SourceSha = "test-sha",
-            UpdaterId = "test-updater"
+            UpdaterId = "test-updater",
+            ContainedSubscriptions = [],
         };
         CacheData[key] = pr;
     }
