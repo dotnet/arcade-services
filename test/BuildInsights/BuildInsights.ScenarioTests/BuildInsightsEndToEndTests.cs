@@ -38,17 +38,19 @@ public class BuildInsightsEndToEndTests
 
         DateTimeOffset _start = DateTimeOffset.UtcNow;
 
-        TestContext.WriteLine("Initialize storage object");
         var storage = TestParameters.ServiceProvider.GetRequiredService<IContextualStorage>();
         storage.SetContext($"{GitHubTestOrg}/{repoName}/{testGitHubInformation.Commit.Sha}");
-        TestContext.WriteLine($"Initialized storage object for commit.Sha: {testGitHubInformation.Commit.Sha}");
 
         await WaitForCompletedBuilds(GitHubTestOrg, repoName, testGitHubInformation, storage);
         await VerifyFailedTestsAndChecks(repoName, testGitHubInformation, _start);
         await PostBaGreenCommentAndWaitForCheckSuccess(repoName, testGitHubInformation);
     }
 
-    private static async Task WaitForCompletedBuilds(string originalOwner, string repoName, TestGitHubInformation testGitHubInformation, IContextualStorage storage)
+    private static async Task WaitForCompletedBuilds(
+        string originalOwner,
+        string repoName,
+        TestGitHubInformation testGitHubInformation,
+        IContextualStorage storage)
     {
         var options = new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
 
@@ -65,7 +67,7 @@ public class BuildInsightsEndToEndTests
             {
                 var buildResultAnalysisCheck = checks.CheckRuns.First(c =>
                     c.App.Id == GitHubTestHelper.StagingBuildAnalysisAppId &&
-                    c.Name == "Build Analysis");
+                    c.Name == "Build Analysis"); // TODO: Name
 
                 TestContext.WriteLine($"Found check run {buildResultAnalysisCheck.Id}");
 

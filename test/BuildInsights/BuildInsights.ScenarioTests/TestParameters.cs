@@ -79,6 +79,7 @@ public class TestParameters
         services.AddScoped<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
         services.AddBlobStorageCaching(configurationManager.GetRequiredSection("BlobStorage"));
         services.AddLogging();
+        services.AddSingleton<ExponentialRetry>();
         services.AddSingleton<ILogger, NUnitLogger>();
         services.AddVssConnection();
         ServiceProvider = services.BuildServiceProvider();

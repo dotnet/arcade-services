@@ -37,11 +37,11 @@ public class GitHubTestHelper
 
             return new TestGitHubInformation(owner, repoName, response.Number, testBranch.Ref, commit);
         }
-        finally
+        catch
         {
             await CleanUpBranch(owner, repoName, testBranch);
+            throw;
         }
-
     }
 
     private static async Task CleanUpBranch(string owner, string repoName, Reference testBranch)
