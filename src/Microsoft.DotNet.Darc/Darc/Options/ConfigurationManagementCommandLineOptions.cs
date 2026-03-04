@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System;
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.DarcLib.ConfigurationRepository;
@@ -64,4 +65,11 @@ internal abstract class ConfigurationManagementCommandLineOptions<T> : CommandLi
             ConfigurationFilePath = ConfigurationFilePath,
         }; 
     }
+
+    /// <summary>
+    /// Generates a unique configuration branch name based on the base branch.
+    /// Used when multiple operations need to share a single branch.
+    /// </summary>
+    public string GenerateBatchBranchName()
+        => $"darc/{ConfigurationBaseBranch}-{Guid.NewGuid().ToString("N")[..8]}";
 }
