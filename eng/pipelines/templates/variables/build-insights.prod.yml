@@ -3,5 +3,9 @@ variables:
   value: build-insights-api
 - name: buildInsightsPushImage
   value: false
+- name: buildInsightsContainerRegistryName
+  value: buildinsightsprod
 - name: buildInsightsDockerRegistryUrl
   value: buildinsightsprod.azurecr.io
+- name: buildInsightsDeploymentServiceConnection
+  value: ProductConstructionServiceDeploymentProd

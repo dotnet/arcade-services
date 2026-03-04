@@ -100,11 +100,11 @@ stages:
           - ${{ if eq(variables['buildInsightsPushImage'], 'true') }}:
             - task: AzureCLI@2
               inputs:
-                azureSubscription: $(pcsDeploymentServiceConnection)
+                azureSubscription: $(buildInsightsDeploymentServiceConnection)
                 scriptType: pscore
                 scriptLocation: inlineScript
                 inlineScript: |
-                  az acr login --name $(containerRegistryName)
+                  az acr login --name $(buildInsightsContainerRegistryName)
                   docker push "$(buildInsightsDockerRegistryUrl)/$(buildInsightsImageName):$(DockerTag.newDockerImageTag)"
               displayName: Push BuildInsights docker image
 

@@ -2,6 +2,10 @@ variables:
 - name: buildInsightsImageName
   value: build-insights-api
 - name: buildInsightsPushImage
-  value: false
+  value: true
+- name: buildInsightsContainerRegistryName
+  value: buildinsightsstage
 - name: buildInsightsDockerRegistryUrl
   value: buildinsightsstage.azurecr.io
+- name: buildInsightsDeploymentServiceConnection
+  value: ProductConstructionServiceDeploymentInt
