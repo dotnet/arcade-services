@@ -97,15 +97,15 @@ stages:
                 docker push "$(dockerRegistryUrl)/$(containerName):$(DockerTag.newDockerImageTag)"
             displayName: Push PCS docker image
 
-          - ${{ if eq(variables['buildInsightsPushImage'], 'true') }}:
-            - task: AzureCLI@2
-              inputs:
-                azureSubscription: $(buildInsightsDeploymentServiceConnection)
-                scriptType: pscore
-                scriptLocation: inlineScript
-                inlineScript: |
-                  az acr login --name $(buildInsightsContainerRegistryName)
-                  docker push "$(buildInsightsDockerRegistryUrl)/$(buildInsightsImageName):$(DockerTag.newDockerImageTag)"
-              displayName: Push BuildInsights docker image
+          - task: AzureCLI@2
+            condition: and(succeeded(), eq(variables['buildInsightsPushImage'], 'true'))
+            inputs:
+              azureSubscription: $(buildInsightsDeploymentServiceConnection)
+              scriptType: pscore
+              scriptLocation: inlineScript
+              inlineScript: |
+                az acr login --name $(buildInsightsContainerRegistryName)
+                docker push "$(buildInsightsDockerRegistryUrl)/$(buildInsightsImageName):$(DockerTag.newDockerImageTag)"
+            displayName: Push BuildInsights docker image
 
 - template: /eng/pipelines/templates/stages/deploy.yaml@self
