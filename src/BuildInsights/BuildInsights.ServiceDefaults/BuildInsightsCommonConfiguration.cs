@@ -66,6 +66,9 @@ public static class BuildInsightsCommonConfiguration
 
     public static async Task ConfigureBuildInsightsDependencies(this IHostApplicationBuilder builder, bool addKeyVault)
     {
+        // Load shared appsettings files before project-specific configuration
+        builder.AddSharedConfiguration();
+
         bool isDevelopment = builder.Environment.IsDevelopment();
 
         string? managedIdentityId = builder.Configuration[ConfigurationKeys.ManagedIdentityId];
