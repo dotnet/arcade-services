@@ -2,11 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Reflection;
+using BuildInsights.AzureStorage.Cache;
+using BuildInsights.ServiceDefaults;
+using BuildInsights.Utilities.AzureDevOps;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
-using Maestro.Common.Telemetry;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Configuration;
@@ -16,6 +18,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NUnit.Framework;
 using Octokit.Internal;
+using static BuildInsights.ServiceDefaults.BuildInsightsCommonConfiguration;
 
 namespace BuildInsights.ScenarioTests;
 
@@ -29,14 +32,13 @@ public class TestParameters
     private static readonly string? _azDoToken;
     private static readonly AzureDevOpsTokenProvider _azDoTokenProvider;
 
-    public static Octokit.GitHubClient GitHubApi { get => field!; private set; }
-    public static AzureDevOpsClient AzDoClient { get => field!; private set; }
+    public static string EnvironmentName { get; }
     public static string GitHubToken { get; }
-    public static string AzDoToken => _azDoTokenProvider.GetTokenForAccount("default");
     public static bool IsCI { get; }
     public static ExponentialRetry ExponentialRetry => ServiceProvider.GetRequiredService<ExponentialRetry>();
     public static ISystemClock SystemClock => ServiceProvider.GetRequiredService<ISystemClock>();
-    public static IServiceProvider ServiceProvider { get => field!; private set; }
+    public static IServiceProvider ServiceProvider { get => field; private set; }
+    public static Octokit.GitHubClient GitHubApi { get => field; private set; }
 
     static TestParameters()
     {
@@ -44,7 +46,8 @@ public class TestParameters
             .AddUserSecrets<TestParameters>()
             .Build();
 
-        IsCI = Environment.GetEnvironmentVariable("DARC_IS_CI")?.ToLower() == "true";
+        EnvironmentName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Development";
+        IsCI = Environment.GetEnvironmentVariable("IS_CI")?.ToLower() == "true";
         GitHubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN")
             ?? userSecrets["GITHUB_TOKEN"]
             ?? TryGetGitHubTokenFromCliAsync().GetAwaiter().GetResult()
@@ -60,19 +63,28 @@ public class TestParameters
             }
         });
 
+        var assembly = Assembly.GetExecutingAssembly();
+
+        var configurationManager = new ConfigurationManager();
+        configurationManager.AddSharedConfiguration(assembly.Location, EnvironmentName);
+
         IServiceCollection services = new ServiceCollection();
+
+        // Set up GitHub and Azure DevOps auth
+        services.AddVssConnection();
+        services.AddGitHubTokenProvider();
+        services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
+        services.AddScoped<IRemoteTokenProvider>(static _ => new RemoteTokenProvider(_azDoTokenProvider, new ResolvedTokenProvider(GitHubToken)));
+        services.AddScoped<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
+        services.AddBlobStorageCaching(configurationManager.GetRequiredSection("BlobStorage"));
         services.AddLogging();
         services.AddSingleton<ILogger, NUnitLogger>();
-        services.AddSingleton<IFileSystem, FileSystem>();
-        services.AddSingleton<IProcessManager>(sp => ActivatorUtilities.CreateInstance<ProcessManager>(sp, "git"));
-        services.AddSingleton<IRemoteTokenProvider>(_ => new RemoteTokenProvider(AzDoToken, GitHubToken));
-        services.AddSingleton<IAzureDevOpsTokenProvider>(_azDoTokenProvider);
-        services.AddSingleton<ITelemetryRecorder, NoTelemetryRecorder>();
-        services.AddSingleton<IGitRepoFactory>(sp => ActivatorUtilities.CreateInstance<GitRepoFactory>(sp, Path.GetTempPath()));
-        services.AddSingleton<IRemoteFactory, NoRemoteFactory>();
-        services.AddSingleton<ILocalGitRepoFactory, LocalGitRepoFactory>();
-        services.AddSingleton<ILocalGitClient, LocalGitClient>();
+        services.AddVssConnection();
         ServiceProvider = services.BuildServiceProvider();
+        GitHubApi =
+            new Octokit.GitHubClient(
+                new Octokit.ProductHeaderValue(assembly.FullName, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),
+                new InMemoryCredentialStore(new Octokit.Credentials(GitHubToken)));
     }
 
     [OneTimeSetUp]
@@ -83,12 +95,6 @@ public class TestParameters
             new Octokit.GitHubClient(
                 new Octokit.ProductHeaderValue(assembly.GetName().Name, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),
                 new InMemoryCredentialStore(new Octokit.Credentials(GitHubToken)));
-        AzDoClient =
-            new AzureDevOpsClient(
-                _azDoTokenProvider,
-                new ProcessManager(new NUnitLogger(), "git"),
-                new NUnitLogger(),
-                Directory.CreateTempSubdirectory().FullName);
     }
 
     private static async Task<string?> TryGetGitHubTokenFromCliAsync()
@@ -115,10 +121,4 @@ public class TestParameters
             return null;
         }
     }
-}
-
-file class NoRemoteFactory : IRemoteFactory
-{
-    public Task<IDependencyFileManager> CreateDependencyFileManagerAsync(string repoUrl) => throw new NotImplementedException();
-    public Task<IRemote> CreateRemoteAsync(string repoUrl) => throw new NotImplementedException();
 }
