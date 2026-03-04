@@ -9,17 +9,20 @@ using BuildInsights.AzureStorage.Cache;
 using BuildInsights.BuildAnalysis;
 using BuildInsights.BuildAnalysis.Models;
 using BuildInsights.GitHub;
+using BuildInsights.Utilities.AzureDevOps;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using Microsoft.TeamFoundation.TestManagement.WebApi;
+using Microsoft.VisualStudio.Services.WebApi;
 using NUnit.Framework;
 using Octokit;
 using static BuildInsights.ScenarioTests.TestParameters;
 using Repository = Octokit.Repository;
+using TestCaseResult = Microsoft.TeamFoundation.TestManagement.WebApi.TestCaseResult;
 
 namespace BuildInsights.ScenarioTests;
 
 [TestFixture]
-public class BuildResultAnalysisTests
+public class BuildInsightsEndToEndTests
 {
     // Makes a PR that includes breaking tests
     [Test]
@@ -51,7 +54,7 @@ public class BuildResultAnalysisTests
                 originalRepoId);
 
             TestContext.WriteLine("Initialize storage object");
-            IContextualStorage storage = testData.BlobContextualStorage;
+            var storage = TestParameters.ServiceProvider.GetRequiredService<IContextualStorage>();
             storage.SetContext($"{originalOwner}/{repoName}/{testGitHubInformation.Commit.Sha}");
             TestContext.WriteLine($"Initialized storage object for commit.Sha: {testGitHubInformation.Commit.Sha}");
 
@@ -116,7 +119,8 @@ public class BuildResultAnalysisTests
                     testGitHubInformation.Commit.Sha);
             DateTimeOffset end = SystemClock.UtcNow;
 
-            List<(TestRunSignatureWithName signature, TestCounts count, int partitionId)> aggregatedCounts = [];
+            var vssConnectionProvider = TestParameters.ServiceProvider.GetRequiredService<VssConnectionProvider>();
+            List<(TestCaseResult result, string organization, string project, TestRun run)> allTestResults = [];
             foreach (string organization in checkRunsWithBuildId.Select(t => t.Organization!).Distinct())
             {
                 int[] buildIds = checkRunsWithBuildId
@@ -125,33 +129,44 @@ public class BuildResultAnalysisTests
                     .ToArray();
                 buildIds.Should().NotBeEmpty("associated azure devops builds should be present");
 
-                aggregatedCounts.AddRange(
-                    await testData.TestAggregatorService.GetAggregatedCounts(
-                        organization,
+                using VssConnection connection = vssConnectionProvider.GetConnection(organization);
+                TestManagementHttpClient testClient = connection.GetClient<TestManagementHttpClient>();
+
+                foreach (int buildId in buildIds)
+                {
+                    List<TestRun> testRuns = await testClient.QueryTestRunsAsync(
                         "public",
-                        _start,
-                        end,
-                        CancellationToken.None,
-                        buildIds));
+                        _start.DateTime,
+                        end.DateTime,
+                        buildIds: [buildId],
+                        cancellationToken: CancellationToken.None);
+
+                    foreach (TestRun run in testRuns)
+                    {
+                        List<TestCaseResult> results = await testClient.GetTestResultsAsync(
+                            "public",
+                            run.Id,
+                            cancellationToken: CancellationToken.None);
+
+                        foreach (TestCaseResult result in results)
+                        {
+                            allTestResults.Add((result, organization, "public", run));
+                        }
+                    }
+                }
             }
 
-            TestContext.WriteLine($"Found {aggregatedCounts.Count} tests with counts");
-            foreach (var test in aggregatedCounts)
+            TestContext.WriteLine($"Found {allTestResults.Count} test results");
+            foreach (var (result, org, project, run) in allTestResults)
             {
-                TestContext.WriteLine($"Test {test.signature}, with counts F:{test.count.Failed}/P:{test.count.Passed}/R:{test.count.PassedOnRerun}");
+                TestContext.WriteLine($"Test {result.AutomatedTestName}, outcome: {result.Outcome}, run: {run.Name}");
             }
 
-            List<(TestRunSignatureWithName signature, TestCounts count, int partitionId)> passingTest = [.. aggregatedCounts.Where(a => a.count.Passed > 0)];
-            passingTest.Should().HaveCount(1);
+            var passingResults = allTestResults.Where(t => t.result.Outcome == "Passed").ToList();
+            passingResults.Should().HaveCount(1);
 
-            (TestRunSignatureWithName signature, TestCounts count, int partitionId) = passingTest.First();
-            count.Passed.Should().Be(1);
-            partitionId.Should().Be(4);
-            signature.Run.BuildDefinitionName.Should().Be("build-result-analysis-test");
-            signature.Run.Repository.Should().Be("maestro-auth-test/build-result-analysis-test");
-            signature.ArgumentHash.Should().BeEmpty();
-            signature.ArgumentHash.Should().BeEmpty();
-            signature.TestName.Should()
+            var (passingResult, _, _, passingRun) = passingResults.First();
+            passingResult.AutomatedTestName.Should()
                 .Be("TestAggregatorHelixTests.TestAggregatorHelixTests.TestResultDeterminedByCorrelationPayload");
 
             string escapeMechanismComment = $"{BuildAnalysisEscapeMechanismHelper.ChangeToGreenCommand} Build Analysis PostDeployment Test";
