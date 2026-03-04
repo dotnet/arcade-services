@@ -64,6 +64,11 @@ stages:
             path: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Cli\$(_BuildConfig)\net10.0
             artifact: ProductConstructionService.Cli
             displayName: Publish PCS CLI
+          - output: pipelineArtifact
+            path: $(Build.SourcesDirectory)\artifacts\bin\BuildInsightsCli\$(_BuildConfig)\net10.0
+            artifact: BuildInsightsCli
+            displayName: Publish BuildInsights CLI
+
       - job: BuildAndPublishDocker
         displayName: Build/publish docker image
         pool:
