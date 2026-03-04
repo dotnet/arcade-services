@@ -46,4 +46,4 @@ param sqlServerName = '${serviceNameKebabCase}-sql-${environmentSuffix}'
 param sqlDatabaseName = '${serviceNamePascalCase}'
 
 // Jobs
-param scheduledJobName = '${serviceNameKebabCase}-scheduled-job-${environmentSuffix}'
+param scheduledJobName = '${serviceNameKebabCase}-job-${environmentSuffix}'
