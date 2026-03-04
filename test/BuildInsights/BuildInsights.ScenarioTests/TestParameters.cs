@@ -46,7 +46,8 @@ public class TestParameters
             .AddUserSecrets<TestParameters>()
             .Build();
 
-        EnvironmentName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Development";
+        EnvironmentName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+            ?? "Development";
         IsCI = Environment.GetEnvironmentVariable("IS_CI")?.ToLower() == "true";
         GitHubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN")
             ?? userSecrets["GITHUB_TOKEN"]
@@ -66,7 +67,7 @@ public class TestParameters
         var assembly = Assembly.GetExecutingAssembly();
 
         var configurationManager = new ConfigurationManager();
-        configurationManager.AddSharedConfiguration(assembly.Location, EnvironmentName);
+        configurationManager.AddSharedConfiguration(Path.GetDirectoryName(assembly.Location)!, EnvironmentName);
 
         IServiceCollection services = new ServiceCollection();
 
@@ -83,7 +84,7 @@ public class TestParameters
         ServiceProvider = services.BuildServiceProvider();
         GitHubApi =
             new Octokit.GitHubClient(
-                new Octokit.ProductHeaderValue(assembly.FullName, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),
+                new Octokit.ProductHeaderValue(assembly.GetName().Name, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),
                 new InMemoryCredentialStore(new Octokit.Credentials(GitHubToken)));
     }
 
