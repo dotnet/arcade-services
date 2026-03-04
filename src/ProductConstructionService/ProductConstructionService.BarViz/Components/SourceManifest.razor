@@ -26,7 +26,7 @@
                 @if (context.BarId.HasValue)
                 {
                     <FluentStack VerticalAlignment="VerticalAlignment.Center">
-                        <FluentAnchor Href="@GetBarBuildLink(context)" Appearance="Appearance.Hypertext">@context.BarId.Value</FluentAnchor>
+                        <span>@context.BarId.Value</span>
                         <FluentButton IconStart="@(new Icons.Regular.Size16.Copy())" Appearance="Appearance.Stealth" OnClick="@(() => SetBarClipboard(context.BarId.Value.ToString()))" Title="Copy BAR ID" />
                     </FluentStack>
                 }
@@ -42,9 +42,6 @@
 @code {
     [Parameter]
     public int BuildId { get; set; }
-
-    [Parameter]
-    public int ChannelId { get; set; }
 
     private List<SourceManifestEntry>? _sourceManifest = null;
     private string _repoFilter = string.Empty;
@@ -96,10 +93,4 @@
         await Clipboard.SetTextAsync(text);
     }
 
-    private string? GetBarBuildLink(SourceManifestEntry entry)
-    {
-        return entry.BarId.HasValue
-            ? BuildHelper.GetLinkToBuildDetails(entry.RemoteUri, ChannelId, entry.BarId.Value)
-            : null;
-    }
 }
