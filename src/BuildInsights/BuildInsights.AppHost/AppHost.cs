@@ -50,7 +50,9 @@ builder.AddProject<Projects.BuildInsights_KnownIssuesMonitor>("knownIssuesMonito
     .WaitFor(queues)
     .WithExplicitStart();
 
-builder.AddProject<Projects.BuildInsights_DummyApp>("DummyApp")
+builder.AddProject<Projects.BuildInsights_DummyApp>("dummyApp")
+    .WithUrlForEndpoint("https", url => url.Url += "/status")
+    .WithUrlForEndpoint("http", url => url.Url += "/status")
     .WithExternalHttpEndpoints()
     .WithReference(database)
     .WithReference(blobs)
