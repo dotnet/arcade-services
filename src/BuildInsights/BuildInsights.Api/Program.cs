@@ -46,6 +46,12 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
+if (isDevelopment)
+{
+    // auto execute migrations in development phase
+    await app.InitializeDatabaseMigrations();
+}
+
 await app.SetWorkItemProcessorInitialState();
 
 app.Run();

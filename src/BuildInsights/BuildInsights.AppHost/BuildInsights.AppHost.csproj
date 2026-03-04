@@ -13,9 +13,11 @@
     <PackageReference Include="Aspire.Hosting.Azure.Storage" />
     <PackageReference Include="Aspire.Azure.Storage.Queues" />
     <PackageReference Include="Aspire.Hosting.Redis" />
+    <PackageReference Include="Aspire.Hosting.SqlServer" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\BuildInsights.DummyApp\BuildInsights.DummyApp.csproj" />
     <ProjectReference Include="..\BuildInsights.Api\BuildInsights.Api.csproj" />
     <ProjectReference Include="..\BuildInsights.KnownIssuesMonitor\BuildInsights.KnownIssuesMonitor.csproj" />
   </ItemGroup>

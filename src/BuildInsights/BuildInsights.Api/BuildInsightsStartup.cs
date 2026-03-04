@@ -3,11 +3,12 @@
 
 using BuildInsights.Api.Configuration;
 using BuildInsights.BuildAnalysis;
+using BuildInsights.Data;
+using BuildInsights.Data.Seed;
 using BuildInsights.KnownIssues.Models;
 using BuildInsights.ServiceDefaults;
-using HandlebarsDotNet;
 using Maestro.Common.Telemetry;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.EntityFrameworkCore;
 
 internal static class BuildInsightsStartup
 {
@@ -69,6 +70,7 @@ internal static class BuildInsightsStartup
         if (isDevelopment)
         {
             builder.Services.AddCors();
+            builder.Services.AddTransient<IDatabaseSeed, DatabaseSeed>();
         }
 
         /*
@@ -121,5 +123,22 @@ internal static class BuildInsightsStartup
 
             return next();
         });
+    }
+
+    public static async Task InitializeDatabaseMigrations(this IHost appHost)
+    {
+        // Apply data migrations automatically in development environment
+        using var scope = appHost.Services.CreateScope();
+
+        // Check if there are pending migrations
+        var db = scope.ServiceProvider.GetRequiredService<BuildInsightsContext>();
+        var pendingMigrations = await db.Database.GetPendingMigrationsAsync();
+        if (pendingMigrations.Any())
+        {
+            await db.Database.MigrateAsync();
+
+            var databaseSeed = scope.ServiceProvider.GetRequiredService<IDatabaseSeed>();
+            await databaseSeed.SeedDataAsync(db);
+        }
     }
 }
