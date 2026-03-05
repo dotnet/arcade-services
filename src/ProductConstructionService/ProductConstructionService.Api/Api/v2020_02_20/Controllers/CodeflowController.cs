@@ -60,13 +60,13 @@ public class CodeflowController : ControllerBase
 
         Dictionary<Guid, InProgressPullRequest> activePrsPerSubscriptionId = await GetInProgressPullRequestsAsync(subscriptions);
 
-        Dictionary<Guid, int> newerBuildsPerSubscriptionId = await CalculateBuildStalenessPerSubscription(subscriptions);
+        Dictionary<Guid, BuildStaleness> buildStalenessPerSubscriptionId = await CalculateBuildStalenessPerSubscription(subscriptions);
 
         var codeflowStatuses = BuildCodeflowStatuses(
             forwardFlowSubscriptions,
             backflowSubscriptions,
             activePrsPerSubscriptionId,
-            newerBuildsPerSubscriptionId);
+            buildStalenessPerSubscriptionId);
 
         return Ok(codeflowStatuses);
     }
@@ -127,35 +127,57 @@ public class CodeflowController : ControllerBase
         return result;
     }
 
-    private async Task<Dictionary<Guid, int>> CalculateBuildStalenessPerSubscription(
+
+    private async Task<Dictionary<Guid, BuildStaleness>> CalculateBuildStalenessPerSubscription(
         List<Maestro.Data.Models.Subscription> subscriptions)
     {
-        var subscriptionIds = subscriptions
-            .Where(s => s.LastAppliedBuildId != null)
-            .Select(s => s.Id)
+        var relevantSubscriptions = subscriptions
+            .Where(s => s.LastAppliedBuildId != null && s.LastAppliedBuild != null)
             .ToList();
 
-        if (subscriptionIds.Count == 0)
+        if (relevantSubscriptions.Count == 0)
         {
             return [];
         }
 
-        var newerBuildsPerSubscriptionId = await _context.Subscriptions
-            .Where(s => subscriptionIds.Contains(s.Id))
-            .Select(s => new
-            {
-                s.Id,
-                Staleness = _context.BuildChannels
-                    .Where(bc => bc.ChannelId == s.ChannelId)
-                    .Where(bc => bc.Build.GitHubRepository == s.SourceRepository
-                              || bc.Build.AzureDevOpsRepository == s.SourceRepository)
-                    .Where(bc => bc.Build.DateProduced > s.LastAppliedBuild.DateProduced)
-                    .Count()
-            })
-            .ToDictionaryAsync(x => x.Id, x => x.Staleness);
+        // Group subscriptions by (ChannelId, SourceRepository, LastAppliedBuildId) so subscriptions
+        // with the same parameters share a single SQL query. Each query uses BuildId > cutoff to
+        // leverage the BuildChannels PK for range seeks, then SQL aggregates COUNT/MAX in-place.
+        var subscriptionGroups = relevantSubscriptions
+            .GroupBy(s => (s.ChannelId, s.SourceRepository, s.LastAppliedBuildId!.Value, s.LastAppliedBuild!.DateProduced));
 
-        return newerBuildsPerSubscriptionId;
+        var result = new Dictionary<Guid, BuildStaleness>();
+        foreach (var group in subscriptionGroups)
+        {
+            var (channelId, sourceRepo, buildIdCutoff, dateProducedCutoff) = group.Key;
+
+            var staleness = await _context.BuildChannels
+                .Where(bc => bc.ChannelId == channelId && bc.BuildId > buildIdCutoff)
+                .Join(_context.Builds,
+                    bc => bc.BuildId,
+                    b => b.Id,
+                    (bc, b) => new { b.GitHubRepository, b.AzureDevOpsRepository, b.DateProduced })
+                .Where(x =>
+                    x.DateProduced > dateProducedCutoff
+                    && (x.GitHubRepository == sourceRepo || x.AzureDevOpsRepository == sourceRepo))
+                .GroupBy(_ => 1)
+                .Select(g => new { Count = g.Count(), Newest = g.Max(x => x.DateProduced) })
+                .FirstOrDefaultAsync();
+
+            var buildStaleness = staleness != null
+                ? new BuildStaleness(staleness.Count, staleness.Newest)
+                : new BuildStaleness(0, null);
+
+            foreach (var subscription in group)
+            {
+                result[subscription.Id] = buildStaleness;
+            }
+        }
+
+        return result;
     }
+
+    private record BuildStaleness(int NewerBuildsCount, DateTimeOffset? NewestBuildDate);
 
     #region Helpers
 
@@ -163,7 +185,7 @@ public class CodeflowController : ControllerBase
         List<Maestro.Data.Models.Subscription> forwardFlowSubscriptions,
         List<Maestro.Data.Models.Subscription> backflowSubscriptions,
         Dictionary<Guid, InProgressPullRequest> activePrsPerSubscriptionId,
-        Dictionary<Guid, int> newerBuildsPerSubscriptionId)
+        Dictionary<Guid, BuildStaleness> buildStalenessPerSubscriptionId)
     {
         List<string> mappings = [.. forwardFlowSubscriptions.Concat(backflowSubscriptions)
             .Select(s => !string.IsNullOrEmpty(s.TargetDirectory) ? s.TargetDirectory : s.SourceDirectory)
@@ -177,8 +199,8 @@ public class CodeflowController : ControllerBase
             var forwardFlowSubscription = forwardFlowSubscriptions.FirstOrDefault(s => s.TargetDirectory == mapping);
             var backflowSubscription = backflowSubscriptions.FirstOrDefault(s => s.SourceDirectory == mapping);
 
-            var forwardFlowStatus = CreateSubscriptionStatus(forwardFlowSubscription, activePrsPerSubscriptionId, newerBuildsPerSubscriptionId);
-            var backflowStatus = CreateSubscriptionStatus(backflowSubscription, activePrsPerSubscriptionId, newerBuildsPerSubscriptionId);
+            var forwardFlowStatus = CreateSubscriptionStatus(forwardFlowSubscription, activePrsPerSubscriptionId, buildStalenessPerSubscriptionId);
+            var backflowStatus = CreateSubscriptionStatus(backflowSubscription, activePrsPerSubscriptionId, buildStalenessPerSubscriptionId);
 
             var repoUrl = forwardFlowSubscription?.SourceRepository ?? backflowSubscription?.TargetRepository;
             var repoBranch = backflowSubscription?.TargetBranch;
@@ -199,14 +221,14 @@ public class CodeflowController : ControllerBase
     private static CodeflowSubscriptionStatus? CreateSubscriptionStatus(
         Maestro.Data.Models.Subscription? subscription,
         Dictionary<Guid, InProgressPullRequest> activePrsBySubscriptionIds,
-        Dictionary<Guid, int> stalenessMap)
+        Dictionary<Guid, BuildStaleness> buildStalenessMap)
     {
         if (subscription == null)
         {
             return null;
         }
 
-        int? staleness = stalenessMap.TryGetValue(subscription.Id, out var value) ? value : null;
+        buildStalenessMap.TryGetValue(subscription.Id, out var staleness);
         activePrsBySubscriptionIds.TryGetValue(subscription.Id, out var pr);
 
         var trackedPullRequest = pr != null
@@ -217,7 +239,8 @@ public class CodeflowController : ControllerBase
         {
             Subscription = new Subscription(subscription),
             ActivePullRequest = trackedPullRequest,
-            NewerBuildsAvailable = staleness
+            NewerBuildsAvailable = staleness?.NewerBuildsCount,
+            NewestBuildDate = staleness?.NewestBuildDate
         };
     }
 
