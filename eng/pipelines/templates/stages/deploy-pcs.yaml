@@ -1,5 +1,5 @@
 stages:
-- stage: Approve PCS Deployment
+- stage: ApproveDeploymentPcs
   dependsOn:
   - Build
   jobs:
@@ -11,11 +11,11 @@ stages:
       environment: Staging
     pool: server
 
-- stage: Migrations
+- stage: MigrationsPcs
   displayName: Apply Database Migrations
   dependsOn:
   - Build
-  - Approval
+  - ApproveDeploymentPcs
   jobs:
   - job: UpdateDatabase
     displayName: Update BuildAssetRegistry database
@@ -52,12 +52,12 @@ stages:
       env:
         BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: ${{ variables.BarConnectionString }}
 
-- stage: Deploy
-  displayName: Deploy
+- stage: DeployPcs
+  displayName: Deploy PCS
   dependsOn:
   - Build
-  - Approval
-  - Migrations
+  - ApproveDeploymentPcs
+  - MigrationsPcs
 
   variables:
   - name: currentDate
@@ -95,7 +95,7 @@ stages:
       value: "product-construction-service-redis-int.redis.cache.windows.net:6380,ssl=true"
 
   jobs:
-  - job: DeployPCS
+  - job: DeployPcsJob
     displayName: Deploy PCS
     pool:
       name: NetCore1ESPool-Internal
@@ -163,7 +163,7 @@ stages:
 - stage: E2ETests
   displayName: Run E2E Tests
   dependsOn:
-  - Deploy
+  - DeployPcs
 
   jobs:
   - template: ../jobs/e2e-pcs-tests.yml
