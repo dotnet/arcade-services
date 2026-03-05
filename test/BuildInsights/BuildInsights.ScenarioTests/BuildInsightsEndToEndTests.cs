@@ -21,6 +21,7 @@ using TestCaseResult = Microsoft.TeamFoundation.TestManagement.WebApi.TestCaseRe
 namespace BuildInsights.ScenarioTests;
 
 [TestFixture]
+[Category("PostDeployment")]
 public class BuildInsightsEndToEndTests
 {
     [Test]
