@@ -113,19 +113,19 @@ var sharedEnvVars = [
     value: containerEnvironmentModule.outputs.applicationInsightsConnectionString
   }
   {
-    name: 'ConnectionStrings__sql'
+    name: 'ConnectionStrings__bi-mssql'
     value: 'Server=tcp:${sqlDatabaseModule.outputs.sqlServerFqdn},1433;Initial Catalog=${sqlDatabaseModule.outputs.sqlDatabaseName};Authentication=Active Directory Managed Identity;User Id=${managedIdentitiesModule.outputs.appIdentityClientId};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30'
   }
   {
-    name: 'ConnectionStrings__redis'
+    name: 'ConnectionStrings__bi-redis'
     value: '${redisModule.outputs.redisCacheHostName}:6380,ssl=True,abortConnect=False'
   }
   {
-    name: 'ConnectionStrings__blobs'
+    name: 'ConnectionStrings__bi-blobs'
     value: storageAccountModule.outputs.storageAccountBlobEndpoint
   }
   {
-    name: 'ConnectionStrings__queues'
+    name: 'ConnectionStrings__bi-queues'
     value: storageAccountModule.outputs.storageAccountQueueEndpoint
   }
   {

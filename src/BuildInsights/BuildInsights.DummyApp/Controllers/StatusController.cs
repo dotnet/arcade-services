@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using Azure.Security.KeyVault.Secrets;
 using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
@@ -27,6 +28,8 @@ public class StatusController(
         await CheckRedisAsync(stream);
         await WriteAndFlushAsync(stream, "<br/>");
         await CheckBlobStorageAsync(stream);
+        await WriteAndFlushAsync(stream, "<br/>");
+        await CheckKeyVaultAsync(stream);
 
         await WriteAndFlushAsync(stream, "<br/>=== Done ===<br/>");
         await WriteAndFlushAsync(stream, "</body></html>");
@@ -79,7 +82,8 @@ public class StatusController(
         {
             logger.LogInformation("Checking Redis connectivity");
 
-            var redisConnection = serviceProvider.GetRequiredService<IConnectionMultiplexer>();
+            var options = serviceProvider.GetRequiredService<ConfigurationOptions>();
+            await using var redisConnection = await ConnectionMultiplexer.ConnectAsync(options);
             const string testKey = "dummy-app:health-check";
             const string testValue = "ok";
 
@@ -114,12 +118,11 @@ public class StatusController(
             logger.LogInformation("Checking Blob Storage connectivity");
 
             var blobServiceClient = serviceProvider.GetRequiredService<BlobServiceClient>();
-            const string containerName = "health-check";
+            const string containerName = "dataprotection";
             const string blobName = "dummy-app-probe.txt";
             const string blobContent = "health-check-ok";
 
             var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
-            await containerClient.CreateIfNotExistsAsync();
 
             var blobClient = containerClient.GetBlobClient(blobName);
             using (var stream2 = new MemoryStream(Encoding.UTF8.GetBytes(blobContent)))
@@ -137,7 +140,7 @@ public class StatusController(
 
             await WriteAndFlushAsync(stream,
                 $"  Connected OK ({sw.ElapsedMilliseconds} ms)<br/>" +
-                $"  Created container '{containerName}'<br/>" +
+                $"  Container name '{containerName}'<br/>" +
                 $"  Uploaded blob '{blobName}' with content '{blobContent}'<br/>" +
                 $"  Downloaded and read back: '{readBack}'<br/>" +
                 $"  Blob deleted<br/>");
@@ -146,6 +149,37 @@ public class StatusController(
         {
             sw.Stop();
             logger.LogError(ex, "Blob Storage check failed");
+            await WriteFailureAsync(stream, sw.ElapsedMilliseconds, ex.Message);
+        }
+    }
+
+    private async Task CheckKeyVaultAsync(Stream stream)
+    {
+        await WriteAndFlushAsync(stream, "[Key Vault]<br/>");
+        var sw = Stopwatch.StartNew();
+        try
+        {
+            logger.LogInformation("Checking Key Vault connectivity");
+
+            var secretClient = serviceProvider.GetRequiredService<SecretClient>();
+            int secretCount = 0;
+            await foreach (var _ in secretClient.GetPropertiesOfSecretsAsync())
+            {
+                secretCount++;
+            }
+
+            sw.Stop();
+
+            logger.LogInformation("Key Vault check completed, found {SecretCount} secrets", secretCount);
+
+            await WriteAndFlushAsync(stream,
+                $"  Connected OK ({sw.ElapsedMilliseconds} ms)<br/>" +
+                $"  Secrets in vault: {secretCount}<br/>");
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            logger.LogError(ex, "Key Vault check failed");
             await WriteFailureAsync(stream, sw.ElapsedMilliseconds, ex.Message);
         }
     }

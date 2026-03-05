@@ -8,12 +8,22 @@ COPY ["Directory.Packages.props", "Directory.Build.props", "Directory.Build.targ
 COPY ["eng/Versions.props", "./eng/"]
 COPY ["eng/Version.Details.props", "./eng/"]
 
+# Maestro dependency
+WORKDIR /src/Maestro
+COPY ["src/Maestro/Maestro.Common/Maestro.Common.csproj", "./Maestro.Common/"]
+
 WORKDIR /src/BuildInsights
 COPY ["src/BuildInsights/BuildInsights.DummyApp/BuildInsights.DummyApp.csproj", "./BuildInsights.DummyApp/"]
 
 RUN dotnet restore "./BuildInsights.DummyApp/BuildInsights.DummyApp.csproj"
 
-COPY ["src/BuildInsights/BuildInsights.DummyApp", "./BuildInsights.DummyApp"]
+# Copy full source for Maestro dependency
+WORKDIR /src/Maestro
+COPY ["src/Maestro/Maestro.Common", "./Maestro.Common"]
+
+# Copy full source for BuildInsights
+WORKDIR /src/BuildInsights
+COPY ["src/BuildInsights", "."]
 
 WORKDIR /src/BuildInsights/BuildInsights.DummyApp
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build-dummy-app --no-restore

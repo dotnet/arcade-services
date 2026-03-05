@@ -24,10 +24,10 @@ storage.AddBlobContainer(
     "previousbuildresultscache");
 
 var blobs = storage
-    .AddBlobs("blobs");
+    .AddBlobs("bi-blobs");
 
 var queues = storage
-    .AddQueues("queues");
+    .AddQueues("bi-queues");
 
 builder.AddProject<Projects.BuildInsights_Api>("buildInsightsApi")
     .WithExternalHttpEndpoints()

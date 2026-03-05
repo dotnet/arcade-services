@@ -1,5 +1,5 @@
 stages:
-- stage: Approval
+- stage: Approve PCS Deployment
   dependsOn:
   - Build
   jobs:

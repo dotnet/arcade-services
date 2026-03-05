@@ -1,0 +1,100 @@
+stages:
+- stage: ApprovalBuildInsights
+  displayName: Approve Build Insights Deployment
+  dependsOn:
+  - Build
+  jobs:
+  - deployment: approval
+    displayName: Build Insights - deployment approval (conditional)
+    ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+      environment: Production
+    ${{ else }}:
+      environment: Staging
+    pool: server
+
+- stage: MigrationsBuildInsights
+  displayName: Apply Database Migrations
+  dependsOn:
+  - Build
+  - ApprovalBuildInsights
+  jobs:
+  - job: UpdateDatabase
+    displayName: Update Build Insights database
+    pool:
+      name: NetCore1ESPool-Internal
+      demands: ImageOverride -equals 1es-windows-2022
+    variables:
+    - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+      - name: ContainerAppsJob
+        value: build-insights-maintenance-job
+    - ${{ else }}:
+      - name: ContainerAppsJob
+        value: build-insights-maintenance-job-stage
+    steps:
+    - task: AzureCLI@2
+      displayName: Entity Framework update
+      inputs:
+        azureSubscription: ${{ variables.pcsDeploymentServiceConnection }}
+        scriptType: ps
+        scriptLocation: inlineScript
+        inlineScript: |
+            az account show
+
+- stage: Deploy
+  displayName: Deploy
+  dependsOn:
+  - Build
+  - ApprovalBuildInsights
+  - MigrationsBuildInsights
+
+  variables:
+  - name: currentDate
+    value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
+  - name: subscriptionId
+    value: e6b5f9f5-0ca4-4351-879b-014d78400ec2
+  - name: containerappName
+    value: product-construction-int
+  - name: containerjobNames
+    value: sub-triggerer-twicedaily-int,sub-triggerer-daily-int,sub-triggerer-weekly-int,sub-triggerer-everytwoweeks-int,sub-triggerer-everymonth-int,feed-cleaner-int
+  - name: containerappWorkspaceName
+    value: product-construction-service-workspace-int
+  - name: authServiceConnection
+    value: "Darc: Maestro Staging"
+  - name: redisConnectionString
+    value: "product-construction-service-redis-int.redis.cache.windows.net:6380,ssl=true"
+
+  jobs:
+  - job: DeployBuildInsights
+    displayName: Deploy Build Insights
+    pool:
+      name: NetCore1ESPool-Internal
+      demands: ImageOverride -equals 1es-windows-2022
+    variables:
+      newDockerImageTag: $[stageDependencies.Build.BuildAndPublishDocker.outputs['DockerTag.newDockerImageTag']]
+
+    steps:
+    - download: current
+      displayName: Download BuildInsightsCli
+      artifact: BuildInsightsCli
+
+    - task: UseDotNet@2
+      displayName: Install .NET
+      inputs:
+        useGlobalJson: true
+
+    - powershell: |
+        $az = Get-Command az.cmd
+        Write-Host "##vso[task.setvariable variable=azCliPath]$($az.Source)"
+      displayName: Locate Azure CLI
+
+    # We'll need to give this service connection permission to get an auth token for PCS
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: $(pcsDeploymentServiceConnection)
+        scriptType: pscore
+        scriptLocation: inlineScript
+        inlineScript: >
+          $(Pipeline.Workspace)/BuildInsightsCli/BuildInsightsCli.exe
+          test
+      displayName: Deploy container app
+

@@ -109,4 +109,8 @@ stages:
                 docker push "$(buildInsightsDockerRegistryUrl)/dummy-app:$(DockerTag.newDockerImageTag)"
             displayName: Push BuildInsights docker image
 
-- template: /eng/pipelines/templates/stages/deploy.yaml@self
+- template: /eng/pipelines/templates/stages/deploy-pcs.yaml@self
+
+# Do this for the non production pipeline yet
+- ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+  - template: /eng/pipelines/templates/stages/deploy-build-insights.yaml@self
