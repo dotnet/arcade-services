@@ -115,9 +115,17 @@ public record TestGitHubInformation(
             };
             await GitHubApi.PullRequest.Update(Owner, RepoName, PullRequestId, prUpdate);
         }
-        catch (NotFoundException)
+        catch
         {
-            TestContext.WriteLine("Ignore. We assume the PR was manually cleaned up and don't want to fail the test because of that.");
+        }
+
+        try
+        {
+            TestContext.WriteLine($"Delete branch {BranchReference} in {Owner}/{RepoName}");
+            await GitHubApi.Git.Reference.Delete(Owner, RepoName, BranchReference);
+        }
+        catch
+        {
         }
     }
 }
