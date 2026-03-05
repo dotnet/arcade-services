@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics;
 using System.Net;
 using Maestro.Common.Cache;
 using Maestro.Data;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using ProductConstructionService.Api.v2020_02_20.Models;
 using ProductConstructionService.DependencyFlow.Model;
 
@@ -22,13 +24,16 @@ public class CodeflowController : ControllerBase
 {
     private readonly BuildAssetRegistryContext _context;
     private readonly IRedisCacheFactory _cacheFactory;
+    private readonly ILogger<CodeflowController> _logger;
 
     public CodeflowController(
         BuildAssetRegistryContext context,
-        IRedisCacheFactory cacheFactory)
+        IRedisCacheFactory cacheFactory,
+        ILogger<CodeflowController> logger)
     {
         _context = context;
         _cacheFactory = cacheFactory;
+        _logger = logger;
     }
 
     /// <summary>
@@ -53,20 +58,41 @@ public class CodeflowController : ControllerBase
             return BadRequest("Branch is required");
         }
 
+        var totalStopwatch = Stopwatch.StartNew();
+        var stepStopwatch = Stopwatch.StartNew();
+
         var forwardFlowSubscriptions = await GetForwardFlowSubscriptionsAsync(repositoryUrl, branch);
+        _logger.LogInformation("GetForwardFlowSubscriptionsAsync completed in {ElapsedMs}ms (repo: {RepositoryUrl}, branch: {Branch})",
+            stepStopwatch.ElapsedMilliseconds, repositoryUrl, branch);
+
+        stepStopwatch.Restart();
         var backflowSubscriptions = await GetBackflowSubscriptionsAsync(repositoryUrl, branch);
+        _logger.LogInformation("GetBackflowSubscriptionsAsync completed in {ElapsedMs}ms (repo: {RepositoryUrl}, branch: {Branch})",
+            stepStopwatch.ElapsedMilliseconds, repositoryUrl, branch);
 
         var subscriptions = forwardFlowSubscriptions.Concat(backflowSubscriptions).ToList();
 
+        stepStopwatch.Restart();
         Dictionary<Guid, InProgressPullRequest> activePrsPerSubscriptionId = await GetInProgressPullRequestsAsync(subscriptions);
+        _logger.LogInformation("GetInProgressPullRequestsAsync completed in {ElapsedMs}ms for {SubscriptionCount} subscriptions",
+            stepStopwatch.ElapsedMilliseconds, subscriptions.Count);
 
+        stepStopwatch.Restart();
         Dictionary<Guid, int> newerBuildsPerSubscriptionId = await CalculateBuildStalenessPerSubscription(subscriptions);
+        _logger.LogInformation("CalculateBuildStalenessPerSubscription completed in {ElapsedMs}ms for {SubscriptionCount} subscriptions",
+            stepStopwatch.ElapsedMilliseconds, subscriptions.Count);
 
+        stepStopwatch.Restart();
         var codeflowStatuses = BuildCodeflowStatuses(
             forwardFlowSubscriptions,
             backflowSubscriptions,
             activePrsPerSubscriptionId,
             newerBuildsPerSubscriptionId);
+        _logger.LogInformation("BuildCodeflowStatuses completed in {ElapsedMs}ms for {StatusCount} statuses",
+            stepStopwatch.ElapsedMilliseconds, codeflowStatuses.Count);
+
+        _logger.LogInformation("GetCodeflowStatuses total completed in {TotalElapsedMs}ms (repo: {RepositoryUrl}, branch: {Branch})",
+            totalStopwatch.ElapsedMilliseconds, repositoryUrl, branch);
 
         return Ok(codeflowStatuses);
     }
