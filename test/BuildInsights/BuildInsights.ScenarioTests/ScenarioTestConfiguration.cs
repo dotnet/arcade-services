@@ -29,6 +29,7 @@ namespace BuildInsights.ScenarioTests;
 public class ScenarioTestConfiguration
 {
     public static readonly string GitHubTestOrg = "maestro-auth-test";
+    public static readonly string GitHubTestRepo = "build-result-analysis-test";
 
     private static readonly string? _azDoToken;
     private static readonly AzureDevOpsTokenProvider _azDoTokenProvider;
@@ -73,6 +74,7 @@ public class ScenarioTestConfiguration
 
         IServiceCollection services = new ServiceCollection();
 
+        services.AddSingleton<IConfiguration>(configurationManager);
         services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
         services.Configure<GitHubAppSettings>(ConfigurationKeys.GitHubApp, (o, s) => s.Bind(o));
 

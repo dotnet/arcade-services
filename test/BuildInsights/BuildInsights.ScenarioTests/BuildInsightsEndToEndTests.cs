@@ -26,20 +26,19 @@ public class BuildInsightsEndToEndTests
     [Test]
     public async Task ValidatePRWithBreakingTests()
     {
-        const string repoName = "build-result-analysis-test";
         string testBranchName = $"scenario-tests/{DateTimeOffset.UtcNow:yyyyMMddHHmmss}";
 
         await using TestGitHubInformation testGitHubInformation = await GitHubTestHelper.CreateTestPr(
             GitHubTestOrg,
-            repoName,
+            GitHubTestRepo,
             testBranchName,
-            "Scenario Test Build Analysis PR",
+            $"[Scenario Tests] {nameof(BuildInsightsEndToEndTests)}.{nameof(ValidatePRWithBreakingTests)}",
             $"{GitHubTestOrg}:{testBranchName}");
 
         DateTimeOffset _start = DateTimeOffset.UtcNow;
 
         var storage = ScenarioTestConfiguration.ServiceProvider.GetRequiredService<IContextualStorage>();
-        storage.SetContext($"{GitHubTestOrg}/{repoName}/{testGitHubInformation.Commit.Sha}");
+        storage.SetContext($"{GitHubTestOrg}/{GitHubTestRepo}/{testGitHubInformation.Commit.Sha}");
 
         await WaitForCompletedBuilds(testGitHubInformation);
         await VerifyFailedTestsAndChecks(testGitHubInformation, _start);
