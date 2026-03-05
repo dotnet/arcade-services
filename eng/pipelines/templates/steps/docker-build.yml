@@ -52,4 +52,10 @@ steps:
       --build-arg PACKAGE_VERSION=$(GetPackageVersion.PackageVersion) \
       2>&1 \
       | tee $(Build.SourcesDirectory)/artifacts/log/docker-build-buildinsights.log
+    docker build . \
+      -f $(Build.SourcesDirectory)/src/BuildInsights/BuildInsights.DummyApp/Dockerfile \
+      -t "dummy-app:$(DockerTag.newDockerImageTag)" \
+      --build-arg PACKAGE_VERSION=$(GetPackageVersion.PackageVersion) \
+      2>&1 \
+      | tee $(Build.SourcesDirectory)/artifacts/log/docker-build-dummy-app.log
   displayName: Build BuildInsights docker image

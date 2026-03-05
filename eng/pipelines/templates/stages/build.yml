@@ -106,6 +106,7 @@ stages:
               inlineScript: |
                 az acr login --name $(buildInsightsContainerRegistryName)
                 docker push "$(buildInsightsDockerRegistryUrl)/$(buildInsightsImageName):$(DockerTag.newDockerImageTag)"
+                docker push "$(buildInsightsDockerRegistryUrl)/dummy-app:$(DockerTag.newDockerImageTag)"
             displayName: Push BuildInsights docker image
 
 - template: /eng/pipelines/templates/stages/deploy.yaml@self
