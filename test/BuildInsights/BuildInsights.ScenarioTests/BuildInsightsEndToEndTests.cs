@@ -15,7 +15,7 @@ using Microsoft.TeamFoundation.TestManagement.WebApi;
 using Microsoft.VisualStudio.Services.WebApi;
 using NUnit.Framework;
 using Octokit;
-using static BuildInsights.ScenarioTests.TestParameters;
+using static BuildInsights.ScenarioTests.ScenarioTestConfiguration;
 using TestCaseResult = Microsoft.TeamFoundation.TestManagement.WebApi.TestCaseResult;
 
 namespace BuildInsights.ScenarioTests;
@@ -38,19 +38,15 @@ public class BuildInsightsEndToEndTests
 
         DateTimeOffset _start = DateTimeOffset.UtcNow;
 
-        var storage = TestParameters.ServiceProvider.GetRequiredService<IContextualStorage>();
+        var storage = ScenarioTestConfiguration.ServiceProvider.GetRequiredService<IContextualStorage>();
         storage.SetContext($"{GitHubTestOrg}/{repoName}/{testGitHubInformation.Commit.Sha}");
 
-        await WaitForCompletedBuilds(GitHubTestOrg, repoName, testGitHubInformation, storage);
-        await VerifyFailedTestsAndChecks(repoName, testGitHubInformation, _start);
-        await PostBaGreenCommentAndWaitForCheckSuccess(repoName, testGitHubInformation);
+        await WaitForCompletedBuilds(testGitHubInformation);
+        await VerifyFailedTestsAndChecks(testGitHubInformation, _start);
+        await PostBaGreenCommentAndWaitForCheckSuccess(testGitHubInformation);
     }
 
-    private static async Task WaitForCompletedBuilds(
-        string originalOwner,
-        string repoName,
-        TestGitHubInformation testGitHubInformation,
-        IContextualStorage storage)
+    private static async Task WaitForCompletedBuilds(TestGitHubInformation testGitHubInformation)
     {
         var options = new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
 
@@ -59,15 +55,14 @@ public class BuildInsightsEndToEndTests
             // TODO: Throw after some limit
 
             CheckRunsResponse checks = await GitHubApi.Check.Run.GetAllForReference(
-                originalOwner,
-                repoName,
+                testGitHubInformation.Owner,
+                testGitHubInformation.RepoName,
                 testGitHubInformation.Commit.Sha);
 
             if (checks.TotalCount > 0 && checks.CheckRuns.All(x => x.Status == CheckStatus.Completed))
             {
-                var buildResultAnalysisCheck = checks.CheckRuns.First(c =>
-                    c.App.Id == GitHubTestHelper.StagingBuildAnalysisAppId &&
-                    c.Name == "Build Analysis"); // TODO: Name
+                var buildResultAnalysisCheck = checks.CheckRuns
+                    .First(c => c.App.Id == GitHubAppSettings.AppId && c.Name == GitHubAppSettings.AppName);
 
                 TestContext.WriteLine($"Found check run {buildResultAnalysisCheck.Id}");
 
@@ -76,7 +71,7 @@ public class BuildInsightsEndToEndTests
                 string snapshotId = m.Groups[1].Value;
                 TestContext.WriteLine($"SnapshotId: {snapshotId}");
 
-                Stream? stream = await storage.TryGetAsync(
+                Stream? stream = await ScenarioTestConfiguration.ServiceProvider.GetRequiredService<IContextualStorage>().TryGetAsync(
                     $"analysis-blob-{snapshotId}.json",
                     CancellationToken.None);
                 stream.Should().NotBeNull("because the snapshot '{0}' was retrieved.", snapshotId);
@@ -110,16 +105,16 @@ public class BuildInsightsEndToEndTests
         }
     }
 
-    private static async Task VerifyFailedTestsAndChecks(string repoName, TestGitHubInformation testGitHubInformation, DateTimeOffset _start)
+    private static async Task VerifyFailedTestsAndChecks(TestGitHubInformation testGitHubInformation, DateTimeOffset _start)
     {
-        var gitHubChecksService = TestParameters.ServiceProvider.GetRequiredService<IGitHubChecksService>();
+        var gitHubChecksService = ScenarioTestConfiguration.ServiceProvider.GetRequiredService<IGitHubChecksService>();
         IEnumerable<GitHub.Models.CheckRun> checkRunsWithBuildId =
             await gitHubChecksService.GetBuildCheckRunsAsync(
-                $"{GitHubTestOrg}/{repoName}",
+                $"{GitHubTestOrg}/{testGitHubInformation.RepoName}",
                 testGitHubInformation.Commit.Sha);
         DateTimeOffset end = SystemClock.UtcNow;
 
-        var vssConnectionProvider = TestParameters.ServiceProvider.GetRequiredService<VssConnectionProvider>();
+        var vssConnectionProvider = ScenarioTestConfiguration.ServiceProvider.GetRequiredService<VssConnectionProvider>();
         List<(TestCaseResult result, string organization, string project, TestRun run)> allTestResults = [];
         foreach (string organization in checkRunsWithBuildId.Select(t => t.Organization!).Distinct())
         {
@@ -170,10 +165,10 @@ public class BuildInsightsEndToEndTests
             .Be("TestAggregatorHelixTests.TestAggregatorHelixTests.TestResultDeterminedByCorrelationPayload");
     }
 
-    private static async Task PostBaGreenCommentAndWaitForCheckSuccess(string repoName, TestGitHubInformation testGitHubInformation)
+    private static async Task PostBaGreenCommentAndWaitForCheckSuccess(TestGitHubInformation testGitHubInformation)
     {
         string escapeMechanismComment = $"{BuildAnalysisEscapeMechanismHelper.ChangeToGreenCommand} Build Analysis PostDeployment Test";
-        await GitHubApi.Issue.Comment.Create(GitHubTestOrg, repoName, testGitHubInformation.PullRequestId, escapeMechanismComment);
+        await GitHubApi.Issue.Comment.Create(GitHubTestOrg, testGitHubInformation.RepoName, testGitHubInformation.PullRequestId, escapeMechanismComment);
 
         DateTimeOffset limitTimeToWaitForUpdate = SystemClock.UtcNow.AddMinutes(15);
         while (true)
@@ -182,15 +177,14 @@ public class BuildInsightsEndToEndTests
             {
                 Assert.Fail(
                     $"The check run was not updated to succeeded after sending {BuildAnalysisEscapeMechanismHelper.ChangeToGreenCommand} " +
-                    $"command for pull request  {GitHubTestOrg}/{repoName}/{testGitHubInformation.PullRequestId}.");
+                    $"command for pull request  {GitHubTestOrg}/{testGitHubInformation.RepoName}/{testGitHubInformation.PullRequestId}.");
             }
 
-            CheckRunsResponse checks = await GitHubApi.Check.Run.GetAllForReference(GitHubTestOrg, repoName, testGitHubInformation.Commit.Sha);
+            CheckRunsResponse checks = await GitHubApi.Check.Run.GetAllForReference(GitHubTestOrg, testGitHubInformation.RepoName, testGitHubInformation.Commit.Sha);
             if (checks.TotalCount > 0 && checks.CheckRuns.All(x => x.Status == CheckStatus.Completed))
             {
-                var buildResultAnalysisCheck = checks.CheckRuns.FirstOrDefault(c =>
-                    c.App.Id == GitHubTestHelper.StagingBuildAnalysisAppId &&
-                    c.Name == "Build Analysis");
+                var buildResultAnalysisCheck = checks.CheckRuns
+                    .First(c => c.App.Id == GitHubAppSettings.AppId && c.Name == GitHubAppSettings.AppName);
 
                 if (buildResultAnalysisCheck?.Conclusion == CheckConclusion.Success)
                 {

@@ -1,17 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.DotNet.GitHub.Authentication;
 using NUnit.Framework;
 using Octokit;
 using Octokit.Helpers;
-using static BuildInsights.ScenarioTests.TestParameters;
+using static BuildInsights.ScenarioTests.ScenarioTestConfiguration;
 
 namespace BuildInsights.ScenarioTests;
 
 public class GitHubTestHelper
 {
-    public const int StagingBuildAnalysisAppId = 216601;
-
     public static async Task<TestGitHubInformation> CreateTestPr(
         string owner,
         string repoName,
@@ -121,4 +120,11 @@ public record TestGitHubInformation(
             TestContext.WriteLine("Ignore. We assume the PR was manually cleaned up and don't want to fail the test because of that.");
         }
     }
+}
+
+public class TestGitHubClientFactory : IGitHubApplicationClientFactory
+{
+    public IGitHubClient CreateGitHubAppClient() => GitHubApi;
+    public IGitHubClient CreateGitHubAppClient(string name) => CreateGitHubAppClient();
+    public Task<IGitHubClient> CreateGitHubClientAsync(string owner, string repo) => Task.FromResult(CreateGitHubAppClient());
 }

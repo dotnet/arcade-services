@@ -3,7 +3,9 @@
 
 using System.Reflection;
 using BuildInsights.AzureStorage.Cache;
+using BuildInsights.GitHub;
 using BuildInsights.ServiceDefaults;
+using BuildInsights.ServiceDefaults.Configuration.Models;
 using BuildInsights.Utilities.AzureDevOps;
 using Maestro.Common;
 using Maestro.Common.AzureDevOpsTokens;
@@ -16,6 +18,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using NUnit.Framework;
 using Octokit.Internal;
 using static BuildInsights.ServiceDefaults.BuildInsightsCommonConfiguration;
@@ -23,11 +26,9 @@ using static BuildInsights.ServiceDefaults.BuildInsightsCommonConfiguration;
 namespace BuildInsights.ScenarioTests;
 
 [SetUpFixture]
-public class TestParameters
+public class ScenarioTestConfiguration
 {
     public static readonly string GitHubTestOrg = "maestro-auth-test";
-    public static readonly string AzureDevOpsAccount = "dnceng";
-    public static readonly string AzureDevOpsProject = "internal";
 
     private static readonly string? _azDoToken;
     private static readonly AzureDevOpsTokenProvider _azDoTokenProvider;
@@ -39,11 +40,12 @@ public class TestParameters
     public static ISystemClock SystemClock => ServiceProvider.GetRequiredService<ISystemClock>();
     public static IServiceProvider ServiceProvider { get => field; private set; }
     public static Octokit.GitHubClient GitHubApi { get => field; private set; }
+    public static GitHubAppSettings GitHubAppSettings => ServiceProvider.GetRequiredService<IOptions<GitHubAppSettings>>().Value;
 
-    static TestParameters()
+    static ScenarioTestConfiguration()
     {
         IConfiguration userSecrets = new ConfigurationBuilder()
-            .AddUserSecrets<TestParameters>()
+            .AddUserSecrets<ScenarioTestConfiguration>()
             .Build();
 
         EnvironmentName = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
@@ -71,32 +73,24 @@ public class TestParameters
 
         IServiceCollection services = new ServiceCollection();
 
-        // Set up GitHub and Azure DevOps auth
-        services.AddVssConnection();
-        services.AddGitHubTokenProvider();
         services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
+        services.Configure<GitHubAppSettings>(ConfigurationKeys.GitHubApp, (o, s) => s.Bind(o));
+
+        services.AddVssConnection();
+        services.AddSingleton<IGitHubApplicationClientFactory, TestGitHubClientFactory>();
+        services.AddGitHubTokenProvider();
+        services.AddGitHub();
         services.AddScoped<IRemoteTokenProvider>(static _ => new RemoteTokenProvider(_azDoTokenProvider, new ResolvedTokenProvider(GitHubToken)));
         services.AddScoped<IAzureDevOpsTokenProvider, AzureDevOpsTokenProvider>();
-        services.AddBlobStorageCaching(configurationManager.GetRequiredSection("BlobStorage"));
+        services.AddBlobStorageCaching(configurationManager.GetRequiredSection(ConfigurationKeys.BlobStorage));
         services.AddLogging();
         services.AddSingleton<ExponentialRetry>();
         services.AddSingleton<ILogger, NUnitLogger>();
         services.AddVssConnection();
-        ServiceProvider = services.BuildServiceProvider();
-        GitHubApi =
-            new Octokit.GitHubClient(
-                new Octokit.ProductHeaderValue(assembly.GetName().Name, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),
-                new InMemoryCredentialStore(new Octokit.Credentials(GitHubToken)));
-    }
-
-    [OneTimeSetUp]
-    public async Task Initialize()
-    {
-        Assembly assembly = typeof(TestParameters).Assembly;
-        GitHubApi =
-            new Octokit.GitHubClient(
-                new Octokit.ProductHeaderValue(assembly.GetName().Name, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),
-                new InMemoryCredentialStore(new Octokit.Credentials(GitHubToken)));
+        ServiceProvider = services.BuildServiceProvider().CreateScope().ServiceProvider;
+        GitHubApi = new Octokit.GitHubClient(
+            new Octokit.ProductHeaderValue(assembly.GetName().Name, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),
+            new InMemoryCredentialStore(new Octokit.Credentials(GitHubToken)));
     }
 
     private static async Task<string?> TryGetGitHubTokenFromCliAsync()
