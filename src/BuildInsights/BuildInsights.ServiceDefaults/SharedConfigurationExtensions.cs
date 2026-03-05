@@ -23,19 +23,30 @@ public static class SharedConfigurationExtensions
     /// For published apps, the shared files should be copied to the output via MSBuild
     /// (see SharedConfiguration.targets) and are resolved from the content root directly.
     /// </remarks>
-    public static TBuilder AddSharedConfiguration<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
+    public static TBuilder AddSharedConfiguration<TBuilder>(this TBuilder builder)
+        where TBuilder : IHostApplicationBuilder
     {
-        string contentRoot = builder.Environment.ContentRootPath;
-        string environmentName = builder.Environment.EnvironmentName;
-
-        string sharedConfigDirectory = ResolveSharedConfigDirectory(contentRoot);
+        string sharedConfigDirectory = ResolveSharedConfigDirectory(builder.Environment.ContentRootPath);
 
         if (!Directory.Exists(sharedConfigDirectory))
         {
             return builder;
         }
 
-        var sharedFileProvider = new PhysicalFileProvider(sharedConfigDirectory);
+        AddSharedConfiguration(
+            builder.Configuration,
+            sharedConfigDirectory,
+            builder.Environment.EnvironmentName);
+
+        return builder;
+    }
+
+    public static void AddSharedConfiguration(
+        this IConfigurationManager configuration,
+        string configDirectory,
+        string environmentName)
+    {
+        var sharedFileProvider = new PhysicalFileProvider(configDirectory);
 
         // Create the shared configuration sources to insert
         var sharedSources = new List<JsonConfigurationSource>
@@ -60,10 +71,8 @@ public static class SharedConfigurationExtensions
         // so that project-specific appsettings files (added by the default builder) take precedence
         for (int i = 0; i < sharedSources.Count; i++)
         {
-            ((IConfigurationBuilder)builder.Configuration).Sources.Insert(i, sharedSources[i]);
+            configuration.Sources.Insert(i, sharedSources[i]);
         }
-
-        return builder;
     }
 
     /// <summary>

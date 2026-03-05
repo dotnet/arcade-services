@@ -55,17 +55,17 @@ internal static class BuildInsightsStartup
         builder.Services.AddApplicationInsightsTelemetryProcessor<RemoveDefaultPropertiesTelemetryProcessor>();
 
         builder.Services.AddBuildAnalysis(
-            builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesCreation),
-            builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesAnalysisLimits),
-            builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesKusto),
-            builder.Configuration.GetSection(BuildInsightsCommonConfiguration.ConfigurationKeys.BlobStorage),
-            builder.Configuration.GetSection(ConfigurationKeys.QueueInsightsBeta),
-            builder.Configuration.GetSection(ConfigurationKeys.MatrixOfTruth),
-            builder.Configuration.GetSection(ConfigurationKeys.InternalProject),
-            builder.Configuration.GetSection(ConfigurationKeys.BuildConfigurationFile),
-            builder.Configuration.GetSection(ConfigurationKeys.GitHubIssues),
-            builder.Configuration.GetSection(ConfigurationKeys.RelatedBuilds),
-            builder.Configuration.GetSection(ConfigurationKeys.BuildAnalysisFile));
+            builder.Configuration.GetRequiredSection(ConfigurationKeys.KnownIssuesCreation),
+            builder.Configuration.GetRequiredSection(ConfigurationKeys.KnownIssuesAnalysisLimits),
+            builder.Configuration.GetRequiredSection(ConfigurationKeys.KnownIssuesKusto),
+            builder.Configuration.GetRequiredSection(BuildInsightsCommonConfiguration.ConfigurationKeys.BlobStorage),
+            builder.Configuration.GetRequiredSection(ConfigurationKeys.QueueInsightsBeta),
+            builder.Configuration.GetRequiredSection(ConfigurationKeys.MatrixOfTruth),
+            builder.Configuration.GetRequiredSection(ConfigurationKeys.InternalProject),
+            builder.Configuration.GetRequiredSection(ConfigurationKeys.BuildConfigurationFile),
+            builder.Configuration.GetRequiredSection(ConfigurationKeys.GitHubIssues),
+            builder.Configuration.GetRequiredSection(ConfigurationKeys.RelatedBuilds),
+            builder.Configuration.GetRequiredSection(ConfigurationKeys.BuildAnalysisFile));
 
         if (isDevelopment)
         {

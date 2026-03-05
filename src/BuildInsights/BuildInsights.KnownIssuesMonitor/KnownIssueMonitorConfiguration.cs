@@ -27,10 +27,10 @@ public static class KnownIssueMonitorConfiguration
 
     public static async Task<IServiceCollection> ConfigureKnownIssueMonitor(this IHostApplicationBuilder builder)
     {
-        var knownIssuesCreationConfig = builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesCreation);
-        var knownIssuesAnalysisLimitsConfig = builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesAnalysisLimits);
-        var knownIssuesKustoConfig = builder.Configuration.GetSection(ConfigurationKeys.KnownIssuesKusto);
-        var gitHubIssuesConfig = builder.Configuration.GetSection(ConfigurationKeys.GitHubIssues);
+        var knownIssuesCreationConfig = builder.Configuration.GetRequiredSection(ConfigurationKeys.KnownIssuesCreation);
+        var knownIssuesAnalysisLimitsConfig = builder.Configuration.GetRequiredSection(ConfigurationKeys.KnownIssuesAnalysisLimits);
+        var knownIssuesKustoConfig = builder.Configuration.GetRequiredSection(ConfigurationKeys.KnownIssuesKusto);
+        var gitHubIssuesConfig = builder.Configuration.GetRequiredSection(ConfigurationKeys.GitHubIssues);
 
         builder.Services.Configure<KnownIssuesProjectOptions>(ConfigurationKeys.KnownIssuesProject, (o, s) => s.Bind(o));
         builder.Services.Configure<InternalProjectSettings>(ConfigurationKeys.InternalProject, (o, s) => s.Bind(o));
