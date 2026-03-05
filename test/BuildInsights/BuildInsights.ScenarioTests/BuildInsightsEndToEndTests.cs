@@ -26,6 +26,9 @@ public class BuildInsightsEndToEndTests
     [Test]
     public async Task ValidatePRWithBreakingTests()
     {
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(20));
+        CancellationToken cancellationToken = cts.Token;
+
         string testBranchName = $"scenario-tests/{DateTimeOffset.UtcNow:yyyyMMddHHmmss}";
 
         await using TestGitHubInformation testGitHubInformation = await GitHubTestHelper.CreateTestPr(
@@ -40,18 +43,22 @@ public class BuildInsightsEndToEndTests
         var storage = ScenarioTestConfiguration.ServiceProvider.GetRequiredService<IContextualStorage>();
         storage.SetContext($"{GitHubTestOrg}/{GitHubTestRepo}/{testGitHubInformation.Commit.Sha}");
 
-        await WaitForCompletedBuilds(testGitHubInformation);
-        await VerifyFailedTestsAndChecks(testGitHubInformation, _start);
-        await PostBaGreenCommentAndWaitForCheckSuccess(testGitHubInformation);
+        await WaitForCompletedBuilds(testGitHubInformation, cancellationToken);
+        await VerifyFailedTestsAndChecks(testGitHubInformation, _start, cancellationToken);
+        await PostBaGreenCommentAndWaitForCheckSuccess(testGitHubInformation, cancellationToken);
     }
 
-    private static async Task WaitForCompletedBuilds(TestGitHubInformation testGitHubInformation)
+    private static async Task WaitForCompletedBuilds(
+        TestGitHubInformation testGitHubInformation,
+        CancellationToken cancellationToken)
     {
         var options = new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
+        var storageCache = ScenarioTestConfiguration.ServiceProvider.GetRequiredService<IContextualStorage>();
+        Regex r = new("<!-- SnapshotId: (.*?) -->");
 
         while (true)
         {
-            // TODO: Throw after some limit
+            cancellationToken.ThrowIfCancellationRequested();
 
             CheckRunsResponse checks = await GitHubApi.Check.Run.GetAllForReference(
                 testGitHubInformation.Owner,
@@ -60,25 +67,30 @@ public class BuildInsightsEndToEndTests
 
             if (checks.TotalCount > 0 && checks.CheckRuns.All(x => x.Status == CheckStatus.Completed))
             {
-                var buildResultAnalysisCheck = checks.CheckRuns
-                    .First(c => c.App.Id == GitHubAppSettings.AppId && c.Name == GitHubAppSettings.AppName);
+                CheckRun? buildResultAnalysisCheck = checks.CheckRuns
+                    .FirstOrDefault(c => c.App.Id == GitHubAppSettings.AppId
+                                      && c.Name == GitHubAppSettings.AppName);
+
+                if (buildResultAnalysisCheck is null)
+                {
+                    TestContext.WriteLine("Build result analysis check not found, waiting...");
+                    await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+                    continue;
+                }
 
                 TestContext.WriteLine($"Found check run {buildResultAnalysisCheck.Id}");
 
-                Regex r = new("<!-- SnapshotId: (.*?) -->");
                 Match m = r.Match(buildResultAnalysisCheck.Output.Text);
                 string snapshotId = m.Groups[1].Value;
                 TestContext.WriteLine($"SnapshotId: {snapshotId}");
 
-                Stream? stream = await ScenarioTestConfiguration.ServiceProvider.GetRequiredService<IContextualStorage>().TryGetAsync(
-                    $"analysis-blob-{snapshotId}.json",
-                    CancellationToken.None);
+                Stream? stream = await storageCache.TryGetAsync($"analysis-blob-{snapshotId}.json", cancellationToken);
                 stream.Should().NotBeNull("because the snapshot '{0}' was retrieved.", snapshotId);
 
                 var data = await JsonSerializer.DeserializeAsync<MergedBuildResultAnalysis>(
                     stream,
                     options,
-                    CancellationToken.None);
+                    cancellationToken);
                 data.Should().NotBeNull();
 
                 // This is because there's a race condition when the checks are of completed status, but we're still waiting for the second
@@ -86,7 +98,7 @@ public class BuildInsightsEndToEndTests
                 if (data.CompletedPipelines.Count < 2)
                 {
                     TestContext.WriteLine("Waiting for the other build!");
-                    await Task.Delay(TimeSpan.FromSeconds(60));
+                    await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
                     continue;
                 }
 
@@ -100,11 +112,14 @@ public class BuildInsightsEndToEndTests
                 break;
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(60));
+            await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
         }
     }
 
-    private static async Task VerifyFailedTestsAndChecks(TestGitHubInformation testGitHubInformation, DateTimeOffset _start)
+    private static async Task VerifyFailedTestsAndChecks(
+        TestGitHubInformation testGitHubInformation,
+        DateTimeOffset _start,
+        CancellationToken cancellationToken)
     {
         var gitHubChecksService = ScenarioTestConfiguration.ServiceProvider.GetRequiredService<IGitHubChecksService>();
         IEnumerable<GitHub.Models.CheckRun> checkRunsWithBuildId =
@@ -133,14 +148,14 @@ public class BuildInsightsEndToEndTests
                     _start.DateTime,
                     end.DateTime,
                     buildIds: [buildId],
-                    cancellationToken: CancellationToken.None);
+                    cancellationToken: cancellationToken);
 
                 foreach (TestRun run in testRuns)
                 {
                     List<TestCaseResult> results = await testClient.GetTestResultsAsync(
                         "public",
                         run.Id,
-                        cancellationToken: CancellationToken.None);
+                        cancellationToken: cancellationToken);
 
                     foreach (TestCaseResult result in results)
                     {
@@ -164,26 +179,27 @@ public class BuildInsightsEndToEndTests
             .Be("TestAggregatorHelixTests.TestAggregatorHelixTests.TestResultDeterminedByCorrelationPayload");
     }
 
-    private static async Task PostBaGreenCommentAndWaitForCheckSuccess(TestGitHubInformation testGitHubInformation)
+    private static async Task PostBaGreenCommentAndWaitForCheckSuccess(
+        TestGitHubInformation testGitHubInformation,
+        CancellationToken cancellationToken)
     {
         string escapeMechanismComment = $"{BuildAnalysisEscapeMechanismHelper.ChangeToGreenCommand} Build Analysis PostDeployment Test";
-        await GitHubApi.Issue.Comment.Create(GitHubTestOrg, testGitHubInformation.RepoName, testGitHubInformation.PullRequestId, escapeMechanismComment);
+        await GitHubApi.Issue.Comment.Create(
+            testGitHubInformation.Owner,
+            testGitHubInformation.RepoName,
+            testGitHubInformation.PullRequestId,
+            escapeMechanismComment);
 
-        DateTimeOffset limitTimeToWaitForUpdate = SystemClock.UtcNow.AddMinutes(15);
         while (true)
         {
-            if (SystemClock.UtcNow > limitTimeToWaitForUpdate)
-            {
-                Assert.Fail(
-                    $"The check run was not updated to succeeded after sending {BuildAnalysisEscapeMechanismHelper.ChangeToGreenCommand} " +
-                    $"command for pull request  {GitHubTestOrg}/{testGitHubInformation.RepoName}/{testGitHubInformation.PullRequestId}.");
-            }
+            cancellationToken.ThrowIfCancellationRequested();
 
             CheckRunsResponse checks = await GitHubApi.Check.Run.GetAllForReference(GitHubTestOrg, testGitHubInformation.RepoName, testGitHubInformation.Commit.Sha);
             if (checks.TotalCount > 0 && checks.CheckRuns.All(x => x.Status == CheckStatus.Completed))
             {
                 var buildResultAnalysisCheck = checks.CheckRuns
-                    .First(c => c.App.Id == GitHubAppSettings.AppId && c.Name == GitHubAppSettings.AppName);
+                    .FirstOrDefault(c => c.App.Id == GitHubAppSettings.AppId
+                                      && c.Name == GitHubAppSettings.AppName);
 
                 if (buildResultAnalysisCheck?.Conclusion == CheckConclusion.Success)
                 {
@@ -191,7 +207,7 @@ public class BuildInsightsEndToEndTests
                 }
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(60));
+            await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
         }
     }
 
