@@ -729,4 +729,91 @@ public class DependencyFileManagerTests
         xml.IndexOf("dotnet-arcade dependencies", StringComparison.Ordinal)
             .Should().BeLessThan(xml.IndexOf("dotnet-dotnet dependencies", StringComparison.Ordinal));
     }
+
+    [Test]
+    public void GenerateVersionDetailsPropsSectionHeadingWhenAzDoRepoUriIsGitHubUrl()
+    {
+        // When a build's AzDO repository field contains a GitHub URL (no separate internal mirror),
+        // the dep.RepoUri will be a GitHub URL and must still produce an org-repo section heading
+        var versionDetails = new VersionDetails(
+        [
+            new DependencyDetail { Name = "PackageA", Version = "1.0.0", RepoUri = "https://github.com/dotnet/dotnet", Commit = "abc" },
+            new DependencyDetail { Name = "PackageB", Version = "2.0.0", RepoUri = "https://github.com/dotnet/dotnet", Commit = "def" },
+        ], null);
+
+        var doc = DependencyFileManager.GenerateVersionDetailsProps(versionDetails);
+        var xml = doc.OuterXml;
+
+        xml.Should().Contain("dotnet-dotnet dependencies");
+        xml.Should().NotContain("dotnet/dotnet dependencies");
+        xml.Should().Contain("PackageAPackageVersion");
+        xml.Should().Contain("PackageBPackageVersion");
+        // The heading appears once per PropertyGroup (main + alternate) = 2 total
+        // If they were not merged into a single section it would appear 4 times
+        xml.Split(["dotnet-dotnet dependencies"], StringSplitOptions.None).Length.Should().Be(3);
+    }
+
+    [Test]
+    public void GenerateVersionDetailsPropsSectionHeadingWhenBothUrisAreAzDo()
+    {
+        // When both the AzDO and GitHub URI fields of a build are AzDO URIs,
+        // multiple deps with AzDO RepoUris for the same repo must merge into one section
+        var versionDetails = new VersionDetails(
+        [
+            new DependencyDetail { Name = "PackageA", Version = "1.0.0", RepoUri = "https://dev.azure.com/dnceng/internal/_git/dotnet-runtime", Commit = "abc" },
+            new DependencyDetail { Name = "PackageB", Version = "2.0.0", RepoUri = "https://dev.azure.com/dnceng/internal/_git/dotnet-runtime", Commit = "def" },
+        ], null);
+
+        var doc = DependencyFileManager.GenerateVersionDetailsProps(versionDetails);
+        var xml = doc.OuterXml;
+
+        xml.Should().Contain("dotnet-runtime dependencies");
+        xml.Should().NotContain("_git/dotnet-runtime dependencies");
+        xml.Should().Contain("PackageAPackageVersion");
+        xml.Should().Contain("PackageBPackageVersion");
+        // The heading appears once per PropertyGroup (main + alternate) = 2 total
+        // If they were not merged into a single section it would appear 4 times
+        xml.Split(["dotnet-runtime dependencies"], StringSplitOptions.None).Length.Should().Be(3);
+    }
+
+    [Test]
+    public void GenerateVersionDetailsPropsSectionHeadingWhenBothUrisAreGitHub()
+    {
+        // When both the AzDO and GitHub URI fields of a build are GitHub URIs,
+        // multiple deps with GitHub RepoUris for the same repo must merge into one section
+        var versionDetails = new VersionDetails(
+        [
+            new DependencyDetail { Name = "PackageA", Version = "1.0.0", RepoUri = "https://github.com/dotnet/runtime", Commit = "abc" },
+            new DependencyDetail { Name = "PackageB", Version = "2.0.0", RepoUri = "https://github.com/dotnet/runtime", Commit = "def" },
+        ], null);
+
+        var doc = DependencyFileManager.GenerateVersionDetailsProps(versionDetails);
+        var xml = doc.OuterXml;
+
+        xml.Should().Contain("dotnet-runtime dependencies");
+        xml.Should().NotContain("dotnet/runtime dependencies");
+        xml.Should().Contain("PackageAPackageVersion");
+        xml.Should().Contain("PackageBPackageVersion");
+        // The heading appears once per PropertyGroup (main + alternate) = 2 total
+        // If they were not merged into a single section it would appear 4 times
+        xml.Split(["dotnet-runtime dependencies"], StringSplitOptions.None).Length.Should().Be(3);
+    }
+
+    [Test]
+    public void GenerateVersionDetailsPropsSectionHeadingStripesTrustedSuffixFromAzDoUri()
+    {
+        // AzDO repos with the -Trusted suffix (e.g. NuGet-NuGet.Client-Trusted) should
+        // have the suffix stripped so the heading matches the equivalent non-Trusted repo
+        var versionDetails = new VersionDetails(
+        [
+            new DependencyDetail { Name = "PackageA", Version = "1.0.0", RepoUri = "https://dev.azure.com/dnceng/internal/_git/NuGet-NuGet.Client-Trusted", Commit = "abc" },
+        ], null);
+
+        var doc = DependencyFileManager.GenerateVersionDetailsProps(versionDetails);
+        var xml = doc.OuterXml;
+
+        xml.Should().Contain("NuGet-NuGet.Client dependencies");
+        xml.Should().NotContain("NuGet-NuGet.Client-Trusted dependencies");
+        xml.Should().Contain("PackageAPackageVersion");
+    }
 }
