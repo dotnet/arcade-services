@@ -1,6 +1,6 @@
 stages:
-- stage: ApprovalBuildInsights
-  displayName: Approve Build Insights Deployment
+- stage: ApproveDeploymentBi
+  displayName: Approve BI
   dependsOn:
   - Build
   jobs:
@@ -12,11 +12,11 @@ stages:
       environment: Staging
     pool: server
 
-- stage: MigrationsBuildInsights
-  displayName: Apply Database Migrations
+- stage: MigrationsBi
+  displayName: Migrate BI
   dependsOn:
   - Build
-  - ApprovalBuildInsights
+  - ApproveDeploymentBi
   jobs:
   - job: UpdateDatabase
     displayName: Update Build Insights database
@@ -41,11 +41,11 @@ stages:
             az account show
 
 - stage: Deploy
-  displayName: Deploy
+  displayName: Deploy BI
   dependsOn:
   - Build
-  - ApprovalBuildInsights
-  - MigrationsBuildInsights
+  - ApproveDeploymentBi
+  - MigrationsBi
 
   variables:
   - name: currentDate

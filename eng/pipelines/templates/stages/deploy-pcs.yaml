@@ -1,5 +1,6 @@
 stages:
 - stage: ApproveDeploymentPcs
+  displayName: Approve PCS
   dependsOn:
   - Build
   jobs:
@@ -12,7 +13,7 @@ stages:
     pool: server
 
 - stage: MigrationsPcs
-  displayName: Apply Database Migrations
+  displayName: Migrate PCS
   dependsOn:
   - Build
   - ApproveDeploymentPcs
@@ -96,7 +97,7 @@ stages:
 
   jobs:
   - job: DeployPcsJob
-    displayName: Deploy PCS
+    displayName: Deploy PCS new revision
     pool:
       name: NetCore1ESPool-Internal
       demands: ImageOverride -equals 1es-windows-2022
