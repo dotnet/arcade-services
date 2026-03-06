@@ -25,12 +25,20 @@ stages:
       demands: ImageOverride -equals 1es-windows-2022
     variables:
     - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-      - name: ContainerAppsJob
-        value: build-insights-maintenance-job
+      - name: buildInsightsSqlServerName
+        value: build-insights-sql
+      - name: buildInsightsDatabaseName
+        value: BuildInsights
     - ${{ else }}:
-      - name: ContainerAppsJob
-        value: build-insights-maintenance-job-stage
+      - name: buildInsightsSqlServerName
+        value: build-insights-sql-int
+      - name: buildInsightsDatabaseName
+        value: BuildInsights
     steps:
+    - download: current
+      displayName: Download BuildInsightsCli
+      artifact: BuildInsightsCli
+
     - task: AzureCLI@2
       displayName: Entity Framework update
       inputs:
@@ -38,7 +46,9 @@ stages:
         scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
-            az account show
+            Write-Host "Running EF Core migrations for SQL Server: $(buildInsightsSqlServerName), Database: $(buildInsightsDatabaseName)"
+            $connectionString = "Server=tcp:$(buildInsightsSqlServerName),1433;Database=$(buildInsightsDatabaseName);Encrypt=True;TrustServerCertificate=False;Connection Timeout=30"
+            $(Pipeline.Workspace)/BuildInsightsCli/BuildInsightsCli.exe migrate --connection-string $connectionString
 
 - stage: Deploy
   displayName: Deploy BI

@@ -210,7 +210,7 @@ module containerAppModule 'modules/container-app.bicep' = {
   ]
 }
 
-module scheduledJob 'modules/container-scheduled-job.bicep' = {
+module scheduledJob 'modules/container-job.bicep' = {
   name: 'scheduledJob'
   params: {
     jobName: scheduledJobName

@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('prod', 'stage', 'dev')]
+    [ValidateSet('prod', 'int', 'dev')]
     [string]$environment
 )
 

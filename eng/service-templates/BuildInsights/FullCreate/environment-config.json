@@ -4,10 +4,10 @@
     "resourceGroupName": "build-insights-dev-rg",
     "bicepParamFileName": "dev.bicepparam"
   },
-  "stage": {
+  "int": {
     "subscriptionId": "e6b5f9f5-0ca4-4351-879b-014d78400ec2",
-    "resourceGroupName": "build-insights-stage-rg",
-    "bicepParamFileName": "stage.bicepparam"
+    "resourceGroupName": "build-insights-int-rg",
+    "bicepParamFileName": "int.bicepparam"
   },
   "prod": {
     "subscriptionId": "00000000-0000-0000-0000-000000000001",

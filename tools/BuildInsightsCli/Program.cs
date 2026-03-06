@@ -29,5 +29,6 @@ return Parser.Default.ParseArguments(args, GetOptions())
 Type[] GetOptions() =>
     [
         typeof(DeploymentOptions),
+        typeof(MigrateOptions),
         typeof(TestOptions)
     ];

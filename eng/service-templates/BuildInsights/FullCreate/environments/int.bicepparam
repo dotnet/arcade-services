@@ -2,8 +2,8 @@ using '../provision.bicep'
 
 var serviceNameKebabCase = 'build-insights'
 var serviceNamePascalCase = 'BuildInsights'
-var environmentSuffix = 'stage'
-var environmentPascalCase = 'Stage'
+var environmentSuffix = 'int'
+var environmentPascalCase = 'Int'
 
 // Core deployment
 param location = 'westus2'

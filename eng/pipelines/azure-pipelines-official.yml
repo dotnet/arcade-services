@@ -7,7 +7,7 @@ variables:
   - template: /eng/pipelines/templates/variables/build-insights.prod.yml@self
 - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
   - template: /eng/pipelines/templates/variables/int.yml@self
-  - template: /eng/pipelines/templates/variables/build-insights.stage.yml@self
+  - template: /eng/pipelines/templates/variables/build-insights.int.yml@self
 
 trigger:
   batch: true
