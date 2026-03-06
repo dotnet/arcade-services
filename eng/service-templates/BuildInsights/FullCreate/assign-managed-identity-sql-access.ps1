@@ -14,7 +14,7 @@
     A temporary firewall rule is added for the caller's public IP and removed afterwards.
 
 .PARAMETER Environment
-    The target environment: dev, stage, or prod.
+    The target environment: dev, int, or prod.
 
 .PARAMETER DeploymentName
     The name of the Azure resource group deployment to read outputs from. Default is 'deploy'.
@@ -28,7 +28,7 @@
 
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet('prod', 'stage', 'dev')]
+    [ValidateSet('prod', 'int', 'dev')]
     [string]$Environment,
 
     [Parameter(Mandatory = $false)]
