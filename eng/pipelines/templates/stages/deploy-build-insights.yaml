@@ -39,18 +39,23 @@ stages:
       displayName: Download BuildInsightsCli
       artifact: BuildInsightsCli
 
+    - powershell: |
+        $az = Get-Command az.cmd
+        Write-Host "##vso[task.setvariable variable=azCliPath]$($az.Source)"
+      displayName: Locate Azure CLI
+
     - task: AzureCLI@2
       displayName: Entity Framework update
       inputs:
-        azureSubscription: ${{ variables.pcsDeploymentServiceConnection }}
-        scriptType: ps
+        azureSubscription: $(pcsDeploymentServiceConnection)
+        scriptType: pscore
         scriptLocation: inlineScript
         inlineScript: |
             Write-Host "Running EF Core migrations for SQL Server: $(buildInsightsSqlServerName), Database: $(buildInsightsDatabaseName)"
             $connectionString = "Server=tcp:$(buildInsightsSqlServerName),1433;Database=$(buildInsightsDatabaseName);Encrypt=True;TrustServerCertificate=False;Connection Timeout=30"
             $(Pipeline.Workspace)/BuildInsightsCli/BuildInsightsCli.exe migrate --connection-string $connectionString
 
-- stage: Deploy
+- stage: DeployBi
   displayName: Deploy BI
   dependsOn:
   - Build
