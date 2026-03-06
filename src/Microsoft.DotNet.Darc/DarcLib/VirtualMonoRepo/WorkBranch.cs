@@ -104,6 +104,8 @@ public class WorkBranch(
         _logger.LogInformation("Rebasing {branchName} onto {mainBranch}...", WorkBranchName, OriginalBranchName);
 
         cancellationToken.ThrowIfCancellationRequested();
+
+        await _repo.ResetWorkingTree();
         await _repo.CheckoutAsync(OriginalBranchName);
 
         try
