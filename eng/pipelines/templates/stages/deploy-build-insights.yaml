@@ -52,7 +52,7 @@ stages:
         scriptLocation: inlineScript
         inlineScript: |
             Write-Host "Running EF Core migrations for SQL Server: $(buildInsightsSqlServerName), Database: $(buildInsightsDatabaseName)"
-            $connectionString = "Server=tcp:$(buildInsightsSqlServerName),1433;Database=$(buildInsightsDatabaseName);Encrypt=True;TrustServerCertificate=False;Connection Timeout=30"
+            $connectionString = "Server=tcp:$(buildInsightsSqlServerName).database.windows.net,1433;Database=$(buildInsightsDatabaseName);Encrypt=True;TrustServerCertificate=False;Connection Timeout=30"
             $(Pipeline.Workspace)/BuildInsightsCli/BuildInsightsCli.exe migrate --connection-string $connectionString
 
 - stage: DeployBi
