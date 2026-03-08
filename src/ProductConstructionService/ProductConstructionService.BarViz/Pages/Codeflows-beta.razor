@@ -9,6 +9,7 @@
 @using ProductConstructionService.BarViz.Components
 @using ProductConstructionService.BarViz.Model
 @inject NavigationManager NavManager
+@inject IProductConstructionServiceApi PcsApi
 @inject IDialogService DialogService
 
 <style>
@@ -41,18 +42,47 @@
         padding: 2px 6px 0px 6px;
     }
 
+    .status-dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        vertical-align: middle;
+        margin-right: 4px;
+    }
+
+    .status-green {
+        background-color: #2da44e;
+    }
+
+    .status-yellow {
+        background-color: #d4a017;
+    }
+
+    .status-red {
+        background-color: #cf222e;
+    }
+
+    .group-first > td {
+        border-bottom: none;
+    }
+
+    .group-second > td {
+        border-top: none;
+    }
+
 </style>
 
 <PageTitle>Codeflows – Maestro++</PageTitle>
 
-<GridViewTemplate Title="Codeflows1234" ShowSkeleton="CodeFlows == null">
-    <!--<Header>
+<GridViewTemplate Title="Codeflows" ShowSkeleton="CodeFlowRows == null">
+    <Header>
         <FluentSelect TOption="DefaultChannel"
                       Items="@DefaultChannels"
                       OptionValue="@(channel => channel.Branch)"
-                      OptionSelected="@(c => c.Id == DefaultChannel?.Id)"
+                      OptionSelected="@(c => c.Id == _defaultChannel?.Id)"
                       SelectedOptionChanged="@(OnDefaultChannelSelected)"
-                      SelectedOption="@DefaultChannel"
+                      SelectedOption="@_defaultChannel"
                       Immediate="true"
                       Multiple="false"
                       style="float: right">
@@ -60,77 +90,69 @@
                 <span title="Channel ID: @context.Channel.Id">@context.Branch / @context.Channel.Name</span>
             </OptionTemplate>
         </FluentSelect>
-    </Header> -->
+    </Header>
     <Content>
-        <FluentDataGrid Items="@CodeFlows"
+        <FluentDataGrid Items="@CodeFlowRows"
                         AutoFit="true"
-                        TGridItem=CodeflowEntry
+                        TGridItem=CodeflowRow
                         ResizableColumns="true"
                         ShowHover="true"
-                        RowClass="@(sub => sub.Enabled ? null : "disabled-subscription")"
+                        RowClass="@(row => GetRowClass(row))"
                         Style="width: 100%">
             <EmptyContent>
                 <FluentLabel>No subscriptions found</FluentLabel>
             </EmptyContent>
             <ChildContent>
-                <TemplateColumn Title="Repository" Sortable="true" SortBy="SortBy(sub => sub.MappingName)" Align="Align.Start">
-                    <FluentAnchor Href="@context.RepositoryUrl" Target="_blank" Appearance="Appearance.Hypertext">@context.MappingName</FluentAnchor>
+                <TemplateColumn Title="Repository" Sortable="true" SortBy="RowSortBy(r => r.MappingName)" Align="Align.Start">
+                    @if (context.IsFirstRow)
+                    {
+                        <FluentAnchor Href="@context.RepositoryUrl" Target="_blank" Appearance="Appearance.Hypertext">@context.MappingName</FluentAnchor>
+                    }
                 </TemplateColumn>
-                <TemplateColumn Title="Backflow branch" Sortable="true" SortBy="SortBy(sub => sub.BackflowSubscription != null ? sub.BackflowSubscription.Subscription.TargetBranch : null)" Align="Align.Center">
-                    <FluentLabel>@context.BackflowSubscription?.Subscription.TargetBranch</FluentLabel>
+                <TemplateColumn Title="Direction" Sortable="true" SortBy="RowSortBy(r => r.Direction)" Align="Align.Start">
+                    <FluentLabel>@context.Direction</FluentLabel>
                 </TemplateColumn>
-                <TemplateColumn Title="Forward flow channel" Sortable="true" SortBy="SortBy(sub => sub.ForwardFlowSubscription != null && sub.ForwardFlowSubscription.Subscription.Channel != null ? sub.ForwardFlowSubscription.Subscription.Channel.Name : null)" Align="Align.Center">
-                    <FluentLabel>@context.ForwardFlowSubscription?.Subscription.Channel?.Name</FluentLabel>
+                <TemplateColumn Title="Branch / Channel" Sortable="true" SortBy="RowSortBy(r => r.BranchOrChannel)" Align="Align.Start">
+                    <FluentLabel>@context.BranchOrChannel</FluentLabel>
                 </TemplateColumn>
-                <TemplateColumn Title="Backflow"
+                <TemplateColumn Title="Last flowed build"
                                 Sortable="true"
-                                SortBy="@SortBy(sub => sub.BackflowSubscription != null && sub.BackflowSubscription.Subscription.LastAppliedBuild != null ? sub.BackflowSubscription.Subscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
+                                SortBy="@RowSortBy(r => r.FlowStatus != null && r.FlowStatus.Subscription != null && r.FlowStatus.Subscription.LastAppliedBuild != null ? r.FlowStatus.Subscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
                                 Align="Align.Start">
-                    <FluentLabel Title="@(context.BackflowSubscription?.Subscription.LastAppliedBuild?.DateProduced.ToString("f"))">
-                        @if (context.BackflowSubscription?.Subscription.LastAppliedBuild != null)
+                    <FluentLabel Title="@(context.FlowStatus?.Subscription?.LastAppliedBuild?.DateProduced.ToString("f"))">
+                        <span class="status-dot @GetBuildStatusClass(context.FlowStatus)"></span>
+                        @if (context.FlowStatus?.Subscription?.LastAppliedBuild != null)
                         {
-                            @(GetBuildAgeDifference(context.BackflowSubscription))
+                            @(GetLastAppliedBuildTimeAgo(context.FlowStatus.Subscription))
+                            @if (context.FlowStatus.Subscription.LastAppliedBuild.Staleness is > 0)
+                            {
+                                <span style="color: #888; font-size: 0.85em; margin-left: 4px;">
+                                    (@context.FlowStatus.Subscription.LastAppliedBuild.Staleness build(s) @GetBuildTimeStaleness(context.FlowStatus) behind)
+                                </span>
+                            }
+                            else if (context.FlowStatus.NewestBuildDate == null)
+                            {
+                                <span style="color: #888; margin-left: 4px;">—</span>
+                            }
                         }
                         else
                         {
                             <span>—</span>
                         }
-
-                        @if (context.BackflowSubscription?.Subscription.LastAppliedBuild != null && context.BackflowSubscription.Subscription.LastAppliedBuild.Staleness > 0)
-                        {
-                            <span style="margin-left: 8px; color: #888; font-size: 0.85em;">@context.BackflowSubscription.Subscription.LastAppliedBuild.Staleness build(s) behind latest</span>
-                        }
-
-                        @if (context.BackflowSubscription?.ActivePullRequest != null)
-                        {
-                            <FluentAnchor Href="@context.BackflowSubscription.ActivePullRequest.Url" Target="_blank" Appearance="Appearance.Hypertext" style="margin-left: 8px;">Active PR (@GetPrAge(context.BackflowSubscription.ActivePullRequest))</FluentAnchor>
-                        }
                     </FluentLabel>
                 </TemplateColumn>
-                <TemplateColumn Title="Forward flow"
-                                Sortable="true"
-                                SortBy="@SortBy(sub => sub.ForwardFlowSubscription != null && sub.ForwardFlowSubscription.Subscription.LastAppliedBuild != null ? sub.ForwardFlowSubscription.Subscription.LastAppliedBuild.DateProduced.ToString("o") : "1900")"
-                                Align="Align.Start">
-                    <FluentLabel Title="@(context.ForwardFlowSubscription?.Subscription.LastAppliedBuild?.DateProduced.ToString("f"))">
-                        @if (context.ForwardFlowSubscription?.Subscription.LastAppliedBuild != null)
-                        {
-                            @(GetBuildAgeDifference(context.ForwardFlowSubscription))
-                        }
-                        else
-                        {
-                            <span>—</span>
-                        }
-
-                        @if (context.ForwardFlowSubscription?.Subscription.LastAppliedBuild != null && context.ForwardFlowSubscription.Subscription.LastAppliedBuild.Staleness > 0)
-                        {
-                            <span style="margin-left: 8px; color: #888; font-size: 0.85em;">@context.ForwardFlowSubscription.Subscription.LastAppliedBuild.Staleness build(s) behind latest</span>
-                        }
-
-                        @if (context.ForwardFlowSubscription?.ActivePullRequest != null)
-                        {
-                            <FluentAnchor Href="@context.ForwardFlowSubscription.ActivePullRequest.Url" Target="_blank" Appearance="Appearance.Hypertext" style="margin-left: 8px;">Active PR (@GetPrAge(context.ForwardFlowSubscription.ActivePullRequest))</FluentAnchor>
-                        }
-                    </FluentLabel>
+                <TemplateColumn Title="Codeflow PR" Sortable="true" SortBy="@RowSortBy(r => r.FlowStatus != null && r.FlowStatus.ActivePullRequest != null ? r.FlowStatus.ActivePullRequest.CreationDate.ToString("o") : "1900")" Align="Align.Start">
+                    @if (context.FlowStatus?.ActivePullRequest != null)
+                    {
+                        <FluentLabel>
+                            <span class="status-dot @GetPrStatusClass(context.FlowStatus.ActivePullRequest)"></span>
+                            <FluentAnchor Href="@context.FlowStatus.ActivePullRequest.Url" Target="_blank" Appearance="Appearance.Hypertext">Active PR (@GetPrAge(context.FlowStatus.ActivePullRequest))</FluentAnchor>
+                        </FluentLabel>
+                    }
+                    else
+                    {
+                        <span>—</span>
+                    }
                 </TemplateColumn>
                 <TemplateColumn Width="60px">
                     <CodeflowContextMenu Codeflow="@ToCodeflowSubscription(context)" ShowDetails="@ShowDetails" />
@@ -140,18 +162,105 @@
     </Content>
 </GridViewTemplate>
 
+
 @code {
-    IQueryable<CodeflowEntry>? CodeFlows;
+[SupplyParameterFromQuery(Name = "branch")]
+private string? branchQuery { get; set; }
 
-    GridSort<CodeflowEntry> SortBy(Expression<Func<CodeflowEntry, string?>> sorter)
-        => GridSort<CodeflowEntry>.ByAscending(sorter);
+IQueryable<CodeflowRow>? CodeFlowRows;
 
-    protected override void OnInitialized()
+private DefaultChannel? _defaultChannel = null;
+
+private string _branch = "main";
+
+private List<DefaultChannel> DefaultChannels = [];
+
+GridSort<CodeflowRow> RowSortBy(Expression<Func<CodeflowRow, string?>> sorter)
+    => GridSort<CodeflowRow>.ByAscending(sorter);
+
+private const string DefaultVmrUrl = "https://github.com/dotnet/dotnet";
+
+protected override async Task OnInitializedAsync()
     {
-        var mockData = MockCodeflowData.GetMockCodeflowPage();
-        CodeFlows = mockData.Entries
-            .OrderBy(c => c.MappingName)
+        CodeFlowRows = null;
+        _branch = branchQuery ?? "main";
+
+        var optimisticStatusTask = TryLoadCodeflowStatusesAsync(_branch, DefaultVmrUrl);
+        var defaultChannelsTask = GetDefaultChannelsAsync();
+
+        await Task.WhenAll(optimisticStatusTask, defaultChannelsTask);
+
+        var optimisticStatuses = optimisticStatusTask.Result;
+        DefaultChannels = defaultChannelsTask.Result;
+
+        if (!string.IsNullOrEmpty(branchQuery))
+        {
+            _defaultChannel = DefaultChannels.FirstOrDefault(c => c.Branch == branchQuery);
+        }
+
+        if (_defaultChannel == null)
+        {
+            _defaultChannel = DefaultChannels.FirstOrDefault(c => c.Branch == "main");
+        }
+
+        if (optimisticStatuses != null)
+        {
+            CodeFlowRows = ToRows(optimisticStatuses)
+                .AsQueryable();
+        }
+        else
+        {
+            _branch = _defaultChannel?.Branch ?? "main";
+            await LoadCodeflowStatusesAsync();
+        }
+    }
+
+    async Task<IList<CodeflowStatus>?> TryLoadCodeflowStatusesAsync(string branch, string repositoryUrl)
+    {
+        try
+        {
+            return await PcsApi.Codeflow.GetCodeflowStatusesAsync(
+                branch: branch,
+                repositoryUrl: repositoryUrl);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    async Task LoadCodeflowStatusesAsync()
+    {
+        if (_defaultChannel == null)
+        {
+            CodeFlowRows = Array.Empty<CodeflowRow>().AsQueryable();
+            return;
+        }
+
+        var statuses = await PcsApi.Codeflow.GetCodeflowStatusesAsync(
+            branch: _branch,
+            repositoryUrl: _defaultChannel.Repository);
+
+        CodeFlowRows = ToRows(statuses)
             .AsQueryable();
+    }
+
+    async Task OnDefaultChannelSelected(DefaultChannel channel)
+    {
+        _defaultChannel = channel;
+        _branch = channel.Branch;
+        UpdateQueryParams();
+        await LoadCodeflowStatusesAsync();
+    }
+
+    private void UpdateQueryParams()
+    {
+        var newUri = NavManager.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["branch"] = _branch
+        });
+
+        NavManager.NavigateTo(newUri);
     }
 
     async Task ShowDetails(Subscription subscription)
@@ -172,6 +281,44 @@
         await DialogService.ShowDialogAsync<SubscriptionDetailDialog>(subscription, parameters);
     }
 
+    async Task<List<DefaultChannel>> GetDefaultChannelsAsync()
+    {
+        string[] possibleVmrs =
+        [
+            "https://github.com/dotnet/dotnet",
+            "https://github.com/maestro-auth-test/dotnet",
+            "https://github.com/maestro-auth-test/dnceng-vmr",
+    ];
+
+        foreach (var vmrUri in possibleVmrs)
+        {
+            var defaultChannels = await PcsApi.DefaultChannels.ListAsync(repository: vmrUri);
+
+            if (defaultChannels.Count > 0)
+            {
+                return defaultChannels
+                    .OrderByDescending(c => c.Branch == "main")
+                    .ThenByDescending(c => c.Branch)
+                    .ToList();
+            }
+        }
+
+        return
+        [
+            new DefaultChannel(0, string.Empty, true)
+            {
+                Branch = "No VMR",
+                Channel = new Microsoft.DotNet.ProductConstructionService.Client.Models.Channel(0, "codeflows found", string.Empty),
+            }
+        ];
+    }
+
+    static string? GetRowClass(CodeflowRow row)
+    {
+        var groupClass = row.IsFirstRow ? "group-first" : "group-second";
+        return row.Enabled ? groupClass : $"{groupClass} disabled-subscription";
+    }
+
     string GetLastAppliedBuildTimeAgo(Subscription? subscription)
     {
         return subscription?.LastAppliedBuild != null
@@ -179,40 +326,163 @@
             : "—";
     }
 
-    static CodeflowSubscription ToCodeflowSubscription(CodeflowEntry entry)
+    static List<CodeflowRow> ToRows(IList<CodeflowStatus> statuses)
     {
+        var rows = new List<CodeflowRow>();
+
+        foreach (var status in statuses.OrderBy(s => s.MappingName))
+        {
+            bool enabled = (status.Backflow?.Subscription?.Enabled ?? false)
+                || (status.ForwardFlow?.Subscription?.Enabled ?? false);
+                
+            rows.Add(new CodeflowRow(
+                MappingName: status.MappingName,
+                RepositoryUrl: status.RepositoryUrl,
+                RepositoryBranch: status.RepositoryBranch,
+                Direction: "Forward flow",
+                BranchOrChannel: status.ForwardFlow?.Subscription?.Channel?.Name,
+                FlowStatus: status.ForwardFlow,
+                Enabled: enabled,
+                IsFirstRow: true));
+
+            rows.Add(new CodeflowRow(
+                MappingName: status.MappingName,
+                RepositoryUrl: status.RepositoryUrl,
+                RepositoryBranch: status.RepositoryBranch,
+                Direction: "Backflow",
+                BranchOrChannel: status.Backflow?.Subscription?.TargetBranch,
+                FlowStatus: status.Backflow,
+                Enabled: enabled,
+                IsFirstRow: false));
+        }
+
+        return rows;
+    }
+
+    static CodeflowSubscription ToCodeflowSubscription(CodeflowRow row)
+    {
+        var pr = row.FlowStatus?.ActivePullRequest != null
+            ? new ActivePullRequest(row.FlowStatus.ActivePullRequest.CreationDate.UtcDateTime, row.FlowStatus.ActivePullRequest.Url)
+            : null;
+
+        bool isBackflow = row.Direction == "Backflow";
+
         return new CodeflowSubscription(
-            RepositoryUrl: entry.RepositoryUrl,
-            RepositoryBranch: entry.BackflowSubscription?.Subscription.TargetBranch,
-            MappingName: entry.MappingName,
-            Enabled: entry.Enabled,
-            BackflowSubscription: entry.BackflowSubscription?.Subscription,
-            ForwardflowSubscription: entry.ForwardFlowSubscription?.Subscription,
-            BackflowPr: entry.BackflowSubscription?.ActivePullRequest,
-            ForwardflowPr: entry.ForwardFlowSubscription?.ActivePullRequest);
+            RepositoryUrl: row.RepositoryUrl,
+            RepositoryBranch: row.RepositoryBranch,
+            MappingName: row.MappingName,
+            Enabled: row.Enabled,
+            BackflowSubscription: isBackflow ? row.FlowStatus?.Subscription : null,
+            ForwardflowSubscription: isBackflow ? null : row.FlowStatus?.Subscription,
+            BackflowPr: isBackflow ? pr : null,
+            ForwardflowPr: isBackflow ? null : pr);
     }
 
-    static string GetShortSha(string sha) => sha.Substring(0, 7);
-
-    string GetBuildAgeDifference(SubscriptionInformation? entry)
+    static string GetPrAge(TrackedPullRequest pr)
     {
-        if (entry?.NewestApplicableBuildDate == null || entry.Subscription.LastAppliedBuild == null)
+        if (pr == null || pr.CreationDate == DateTimeOffset.UnixEpoch)
         {
-            return string.Empty;
+            return "PR age N/A";
         }
 
-        var diff = entry.NewestApplicableBuildDate.Value - entry.Subscription.LastAppliedBuild.DateProduced;
-        if (diff.TotalMinutes < 1)
-        {
-            return string.Empty;
-        }
-
-        return diff.ToTimeAgo().Replace(" ago", " older than the newest VMR build");
-    }
-
-    static string GetPrAge(ActivePullRequest pr)
-    {
-        var age = (DateTime.UtcNow - pr.CreatedDate).ToTimeAgo();
+        var age = (DateTime.UtcNow - pr.CreationDate).ToTimeAgo();
         return age.Replace(" ago", " old");
     }
+
+    static string GetBuildTimeStaleness(CodeflowSubscriptionStatus status)
+    {
+        if (status?.Subscription?.LastAppliedBuild?.DateProduced == null
+            || status?.Subscription?.LastAppliedBuild?.DateProduced < DateTimeOffset.UnixEpoch
+            || status?.NewestBuildDate == null
+            || status.NewestBuildDate < DateTimeOffset.UnixEpoch)
+        {
+            return "";
+        }
+
+        DateTimeOffset newest = (DateTimeOffset)status.NewestBuildDate;
+        DateTimeOffset lastApplied = (DateTimeOffset)status.Subscription.LastAppliedBuild.DateProduced;
+
+        var age = (newest - status.Subscription.LastAppliedBuild.DateProduced).ToTimeAgo();
+
+        return "and " + age.Replace(" ago", "");
+    }
+
+    /// <summary>
+    /// Returns a CSS class for the build status traffic light.
+    /// Green: up to date or ≤5 builds behind and ≤3 days behind.
+    /// Yellow: ≤15 builds behind and ≤7 days behind.
+    /// Red: more than 15 builds behind or more than 7 days behind.
+    /// </summary>
+    static string GetBuildStatusClass(CodeflowSubscriptionStatus? status)
+    {
+        if (status?.Subscription?.LastAppliedBuild == null)
+        {
+            return "";
+        }
+
+        int staleness = status.Subscription.LastAppliedBuild.Staleness;
+        double daysBehind = GetDaysBehindNewest(status);
+
+        if (staleness <= 5 && daysBehind <= 3)
+        {
+            return "status-green";
+        }
+
+        if (staleness <= 15 && daysBehind <= 7)
+        {
+            return "status-yellow";
+        }
+
+        return "status-red";
+    }
+
+    /// <summary>
+    /// Returns a CSS class for the PR age traffic light.
+    /// Green: less than 3 days old.
+    /// Yellow: less than 7 days old.
+    /// Red: 7 days or older.
+    /// </summary>
+    static string GetPrStatusClass(TrackedPullRequest? pr)
+    {
+        if (pr == null || pr.CreationDate == DateTimeOffset.UnixEpoch)
+        {
+            return "";
+        }
+
+        double ageDays = (DateTime.UtcNow - pr.CreationDate).TotalDays;
+
+        if (ageDays < 3)
+        {
+            return "status-green";
+        }
+
+        if (ageDays < 7)
+        {
+            return "status-yellow";
+        }
+
+        return "status-red";
+    }
+
+    static double GetDaysBehindNewest(CodeflowSubscriptionStatus status)
+    {
+        if (status.NewestBuildDate == null
+            || status.NewestBuildDate < DateTimeOffset.UnixEpoch
+            || status.Subscription?.LastAppliedBuild?.DateProduced == null)
+        {
+            return 0;
+        }
+
+        return ((DateTimeOffset)status.NewestBuildDate - status.Subscription.LastAppliedBuild.DateProduced).TotalDays;
+    }
+
+    record CodeflowRow(
+        string MappingName,
+        string RepositoryUrl,
+        string? RepositoryBranch,
+        string Direction,
+        string? BranchOrChannel,
+        CodeflowSubscriptionStatus? FlowStatus,
+        bool Enabled,
+        bool IsFirstRow);
 }
