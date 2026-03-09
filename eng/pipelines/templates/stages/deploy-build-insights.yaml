@@ -1,3 +1,8 @@
+parameters:
+- name: skipMigrations
+  type: boolean
+  default: false
+
 stages:
 - stage: ApproveDeploymentBi
   displayName: Approve BI
@@ -12,50 +17,52 @@ stages:
       environment: Staging
     pool: server
 
-- stage: MigrationsBi
-  displayName: Migrate BI
-  dependsOn:
-  - Build
-  - ApproveDeploymentBi
-  jobs:
-  - job: UpdateDatabase
-    displayName: Update Build Insights database
-    pool:
-      name: NetCore1ESPool-Internal
-      demands: ImageOverride -equals 1es-windows-2022
-    variables:
-    - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-      - name: buildInsightsSqlServerName
-        value: build-insights-sql
-      - name: buildInsightsDatabaseName
-        value: BuildInsights
-    - ${{ else }}:
-      - name: buildInsightsSqlServerName
-        value: build-insights-sql-int
-      - name: buildInsightsDatabaseName
-        value: BuildInsights
-    steps:
-    - download: current
-      displayName: Download BuildInsightsCli
-      artifact: BuildInsightsCli
+- ${{ if ne(parameters.skipMigrations, true) }}:
+  - stage: MigrationsBi
+    displayName: Migrate BI
+    dependsOn:
+    - Build
+    - ApproveDeploymentBi
+    jobs:
+    - job: UpdateDatabase
+      displayName: Update Build Insights database
+      pool:
+        name: NetCore1ESPool-Internal
+        demands: ImageOverride -equals 1es-windows-2022
+      variables:
+      - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+        - name: buildInsightsSqlServerName
+          value: build-insights-sql
+        - name: buildInsightsDatabaseName
+          value: BuildInsights
+      - ${{ else }}:
+        - name: buildInsightsSqlServerName
+          value: build-insights-sql-int
+        - name: buildInsightsDatabaseName
+          value: BuildInsights
+      steps:
+      - download: current
+        displayName: Download BuildInsightsCli
+        artifact: BuildInsightsCli
 
-    - task: AzureCLI@2
-      displayName: Entity Framework update
-      inputs:
-        azureSubscription: $(pcsDeploymentServiceConnection)
-        scriptType: pscore
-        scriptLocation: inlineScript
-        inlineScript: |
-            Write-Host "Running EF Core migrations for SQL Server: $(buildInsightsSqlServerName), Database: $(buildInsightsDatabaseName)"
-            $connectionString = "Server=tcp:$(buildInsightsSqlServerName).database.windows.net,1433;Database=$(buildInsightsDatabaseName);Encrypt=True;TrustServerCertificate=False;Connection Timeout=30"
-            $(Pipeline.Workspace)/BuildInsightsCli/BuildInsightsCli.exe migrate --connection-string $connectionString
+      - task: AzureCLI@2
+        displayName: Entity Framework update
+        inputs:
+          azureSubscription: $(pcsDeploymentServiceConnection)
+          scriptType: pscore
+          scriptLocation: inlineScript
+          inlineScript: |
+              Write-Host "Running EF Core migrations for SQL Server: $(buildInsightsSqlServerName), Database: $(buildInsightsDatabaseName)"
+              $connectionString = "Server=tcp:$(buildInsightsSqlServerName).database.windows.net,1433;Database=$(buildInsightsDatabaseName);Encrypt=True;TrustServerCertificate=False;Connection Timeout=30"
+              $(Pipeline.Workspace)/BuildInsightsCli/BuildInsightsCli.exe migrate --connection-string $connectionString
 
 - stage: DeployBi
   displayName: Deploy BI
   dependsOn:
   - Build
   - ApproveDeploymentBi
-  - MigrationsBi
+  - ${{ if ne(parameters.skipMigrations, true) }}:
+    - MigrationsBi
   variables:
   - name: currentDate
     value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]

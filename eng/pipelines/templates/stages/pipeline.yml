@@ -8,6 +8,12 @@ parameters:
 - name: deployBI
   type: boolean
   default: true
+- name: skipMigrationsPCS
+  type: boolean
+  default: false
+- name: skipMigrationsBI
+  type: boolean
+  default: false
 
 stages:
 - stage: Build
@@ -117,7 +123,11 @@ stages:
 
 - ${{ if eq(parameters.deployPCS, true) }}:
   - template: /eng/pipelines/templates/stages/deploy-pcs.yaml@self
+    parameters:
+      skipMigrations: ${{ parameters.skipMigrationsPCS }}
 
 # Do this for the non production pipeline yet
 - ${{ if and(eq(parameters.deployBI, true), ne(variables['Build.SourceBranch'], 'refs/heads/production')) }}:
   - template: /eng/pipelines/templates/stages/deploy-build-insights.yaml@self
+    parameters:
+      skipMigrations: ${{ parameters.skipMigrationsBI }}

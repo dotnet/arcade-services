@@ -1,12 +1,20 @@
 parameters:
 - name: deployPCS
-  displayName: 'Deploy: Product Construction Service'
+  displayName: Deploy Product Construction Service
   type: boolean
   default: false
 - name: deployBI
-  displayName: 'Deploy: Build Insights'
+  displayName: Deploy Build Insights
   type: boolean
   default: false
+- name: skipMigrationsPCS
+  displayName: Skip PCS DB migrations
+  type: boolean
+  default: true
+- name: skipMigrationsBI
+  displayName: Skip BI DB migrations
+  type: boolean
+  default: true
 
 variables:
 - template: /eng/pipelines/templates/variables/shared-variables.yml@self
@@ -37,3 +45,5 @@ extends:
         isProdPipeline: false
         deployPCS: ${{ parameters.deployPCS }}
         deployBI: ${{ parameters.deployBI }}
+        skipMigrationsPCS: ${{ parameters.skipMigrationsPCS }}
+        skipMigrationsBI: ${{ parameters.skipMigrationsBI }}
