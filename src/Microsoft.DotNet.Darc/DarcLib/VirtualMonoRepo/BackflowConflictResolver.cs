@@ -275,6 +275,8 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         CancellationToken cancellationToken)
     {
         var headBranchDependencies = await GetRepoDependencies(targetRepo, commit: null /* working tree */);
+        var headBranchDependencyDict = headBranchDependencies.Dependencies.ToDictionary(d => d.Name, d => d, comparer: StringComparer.OrdinalIgnoreCase);
+
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
 
@@ -290,6 +292,32 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             // we're applying the changes to a product repo, so no mapping
             mappingToApplyChanges: null);
 
+        var buildUpdates = await ApplyBuildDependencyUpdatesAsync(
+            codeflowOptions,
+            targetRepo,
+            cancellationToken);
+
+        if (!await targetRepo.HasWorkingTreeChangesAsync() && !await targetRepo.HasStagedChangesAsync())
+        {
+            _logger.LogInformation("No changes to dependencies in this backflow update");
+            return [];
+        }
+
+        return MergeVersionDetailsChangesWithBuildUpdates(
+            versionDetailsChanges,
+            buildUpdates,
+            headBranchDependencyDict);
+    }
+
+    /// <summary>
+    /// Computes build dependency updates, applies them to version files, stages the changes,
+    /// and updates eng/common files if the Arcade SDK is being updated.
+    /// </summary>
+    private async Task<List<DependencyDetail>> ApplyBuildDependencyUpdatesAsync(
+        CodeflowOptions codeflowOptions,
+        ILocalGitRepo targetRepo,
+        CancellationToken cancellationToken)
+    {
         var excludedAssetsMatcher = new NameBasedAssetMatcher(codeflowOptions.ExcludedAssets);
         List<AssetData> buildAssets = codeflowOptions.Build.Assets
             .Where(a => !excludedAssetsMatcher.IsExcluded(a.Name))
@@ -338,6 +366,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         // This actually does not commit but stages only
         var filesToCommit = updatedFiles.GetFilesToCommit();
         await _libGit2Client.CommitFilesAsync(filesToCommit, targetRepo.Path, branch: null, commitMessage: null);
+        await targetRepo.StageAsync([..filesToCommit.Select(f => f.FilePath)], cancellationToken);
 
         // Update eng/common files
         if (arcadeItem != null)
@@ -367,17 +396,21 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             }
         }
 
-        if (!await targetRepo.HasWorkingTreeChangesAsync() && !await targetRepo.HasStagedChangesAsync())
-        {
-            _logger.LogInformation("No changes to dependencies in this backflow update");
-            return [];
-        }
+        return buildUpdates;
+    }
 
-        await targetRepo.StageAsync([..filesToCommit.Select(f => f.FilePath)], cancellationToken);
-
+    /// <summary>
+    /// Merges the version details file changes (additions, removals, updates) with the build dependency updates
+    /// to produce the final list of dependency updates.
+    /// </summary>
+    private static List<DependencyUpdate> MergeVersionDetailsChangesWithBuildUpdates(
+        VersionFileChanges<DependencyUpdate> versionDetailsChanges,
+        List<DependencyDetail> buildUpdates,
+        Dictionary<string, DependencyDetail> headBranchDependencyDict)
+    {
         Dictionary<string, DependencyDetail> allUpdates = buildUpdates.ToDictionary(u => u.Name, comparer: StringComparer.OrdinalIgnoreCase);
 
-        // if a repo was added during the merge and then updated, it's not an update, but an addition
+        // if a dependency was added during the merge and then updated by the build, it's not an update, but an addition
         foreach ((var key, var addition) in versionDetailsChanges.Additions)
         {
             if (allUpdates.TryGetValue(key, out var updatedDependencyDetail))
@@ -386,12 +419,22 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 depDetail.Version = updatedDependencyDetail.Version;
                 depDetail.Commit = updatedDependencyDetail.Commit;
                 depDetail.Pinned = updatedDependencyDetail.Pinned;
-                
+
                 allUpdates.Remove(key);
             }
         }
 
-        // Add updates tha are not a part of the build updates
+        // if a dependency was updated in the source repo, but never existed in the target repo, it's an addition, not an update
+        foreach ((var key, var update) in versionDetailsChanges.Updates.ToList())
+        {
+            if (!headBranchDependencyDict.ContainsKey(key))
+            {
+                versionDetailsChanges.Additions[key] = new DependencyUpdate { From = null, To = update.To };
+                versionDetailsChanges.Updates.Remove(key);
+            }
+        }
+
+        // Add updates that are not a part of the build updates
         foreach ((var _, var update) in versionDetailsChanges.Updates)
         {
             var updateDetail = (DependencyDetail)update.Value!;
@@ -400,8 +443,6 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 allUpdates[updateDetail.Name] = updateDetail;
             }
         }
-
-        var headBranchDependencyDict = headBranchDependencies.Dependencies.ToDictionary(d => d.Name, d => d, comparer: StringComparer.OrdinalIgnoreCase);
 
         List<DependencyUpdate> dependencyUpdates = [
             ..versionDetailsChanges.Additions
@@ -419,8 +460,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             ..allUpdates
                 .Select(update => new DependencyUpdate()
                 {
-                    From = headBranchDependencyDict.TryGetValue(update.Key, out DependencyDetail? value)
-                        ? value : (DependencyDetail)versionDetailsChanges.Additions[update.Key].Value!,
+                    From = headBranchDependencyDict[update.Key],
                     To = update.Value,
                 })
                 .Where(update =>

@@ -49,6 +49,9 @@ internal class MockRedisCache : IRedisCache
     {
         return AsyncEnumerable.ToAsyncEnumerable(_data.Keys);
     }
+
+    public async Task<Dictionary<string, string?>> GetBatchAsync(IEnumerable<string> keys)
+        => throw new NotImplementedException();
 }
 
 internal class MockRedisCache<T>
@@ -96,4 +99,7 @@ internal class MockRedisCache<T>
     {
         return AsyncEnumerable.ToAsyncEnumerable(_data.Keys);
     }
+
+    public async Task<Dictionary<string, T?>> TryGetStateBatchAsync(IEnumerable<string> keys)
+        => throw new NotImplementedException();
 }

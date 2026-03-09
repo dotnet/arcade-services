@@ -19,4 +19,5 @@ internal class FakeRedisCache : IRedisCache
     public Task<string?> GetAsync() => Task.FromResult(_value);
     public Task<string?> GetAsync(string key) => throw new NotImplementedException();
     public IAsyncEnumerable<string> GetKeysAsync(string pattern) => throw new NotImplementedException();
+    Task<Dictionary<string, string?>> IRedisCache.GetBatchAsync(IEnumerable<string> keys) => throw new NotImplementedException();
 }

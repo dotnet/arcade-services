@@ -21,11 +21,11 @@ This file should be imported by eng/Versions.props
     <MicrosoftDotNetServicesUtilityPackageVersion>1.1.0-beta.26113.1</MicrosoftDotNetServicesUtilityPackageVersion>
     <MicrosoftDotNetWebAuthenticationPackageVersion>1.1.0-beta.25564.1</MicrosoftDotNetWebAuthenticationPackageVersion>
     <!-- dotnet/arcade dependencies -->
-    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26119.2</MicrosoftDotNetArcadeSdkPackageVersion>
-    <MicrosoftDotNetBuildTasksFeedPackageVersion>10.0.0-beta.26119.2</MicrosoftDotNetBuildTasksFeedPackageVersion>
+    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26123.2</MicrosoftDotNetArcadeSdkPackageVersion>
+    <MicrosoftDotNetBuildTasksFeedPackageVersion>10.0.0-beta.26123.2</MicrosoftDotNetBuildTasksFeedPackageVersion>
     <MicrosoftDotNetHelixClientPackageVersion>10.0.0-beta.26110.1</MicrosoftDotNetHelixClientPackageVersion>
-    <MicrosoftDotNetSignToolPackageVersion>10.0.0-beta.26119.2</MicrosoftDotNetSignToolPackageVersion>
-    <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>10.0.0-beta.26119.2</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
+    <MicrosoftDotNetSignToolPackageVersion>10.0.0-beta.26123.2</MicrosoftDotNetSignToolPackageVersion>
+    <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>10.0.0-beta.26123.2</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
     <MicrosoftDotNetVersionToolsPackageVersion>8.0.0-beta.25555.2</MicrosoftDotNetVersionToolsPackageVersion>
     <!-- _git/dotnet-helix-machines dependencies -->
     <MicrosoftInternalHelixMachinesMatrixOfTruthOutputDeserializationPackageVersion>20220725.5.0</MicrosoftInternalHelixMachinesMatrixOfTruthOutputDeserializationPackageVersion>
