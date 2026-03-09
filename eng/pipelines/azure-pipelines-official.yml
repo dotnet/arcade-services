@@ -31,6 +31,6 @@ extends:
       image: 1es-windows-2022
       os: windows
     stages:
-    - template: /eng/pipelines/templates/stages/build.yml@self
+    - template: /eng/pipelines/templates/stages/pipeline.yml@self
       parameters:
         isProdPipeline: true

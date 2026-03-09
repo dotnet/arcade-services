@@ -1,3 +1,13 @@
+parameters:
+- name: deployPCS
+  displayName: 'Deploy: Product Construction Service'
+  type: boolean
+  default: false
+- name: deployBI
+  displayName: 'Deploy: Build Insights'
+  type: boolean
+  default: false
+
 variables:
 - template: /eng/pipelines/templates/variables/shared-variables.yml@self
 - template: /eng/pipelines/templates/variables/int.yml@self
@@ -22,6 +32,8 @@ extends:
       image: 1es-windows-2022
       os: windows
     stages:
-    - template: /eng/pipelines/templates/stages/build.yml@self
+    - template: /eng/pipelines/templates/stages/pipeline.yml@self
       parameters:
         isProdPipeline: false
+        deployPCS: ${{ parameters.deployPCS }}
+        deployBI: ${{ parameters.deployBI }}
