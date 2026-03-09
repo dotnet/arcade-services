@@ -39,11 +39,6 @@ stages:
       displayName: Download BuildInsightsCli
       artifact: BuildInsightsCli
 
-    - powershell: |
-        $az = Get-Command az.cmd
-        Write-Host "##vso[task.setvariable variable=azCliPath]$($az.Source)"
-      displayName: Locate Azure CLI
-
     - task: AzureCLI@2
       displayName: Entity Framework update
       inputs:
@@ -61,7 +56,6 @@ stages:
   - Build
   - ApproveDeploymentBi
   - MigrationsBi
-
   variables:
   - name: currentDate
     value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
@@ -105,11 +99,6 @@ stages:
     - download: current
       displayName: Download BuildInsightsCli
       artifact: BuildInsightsCli
-
-    - task: UseDotNet@2
-      displayName: Install .NET
-      inputs:
-        useGlobalJson: true
 
     - powershell: |
         $az = Get-Command az.cmd
