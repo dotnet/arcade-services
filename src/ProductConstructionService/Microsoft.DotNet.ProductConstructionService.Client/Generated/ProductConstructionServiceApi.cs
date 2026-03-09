@@ -31,6 +31,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
         IBuilds Builds { get; }
         IBuildTime BuildTime { get; }
         IChannels Channels { get; }
+        ICodeflow Codeflow { get; }
         IConfigurationIngestion Ingestion { get; }
         IDefaultChannels DefaultChannels { get; }
         IFeatureFlags FeatureFlags { get; }
@@ -127,6 +128,8 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
 
         public IChannels Channels { get; }
 
+        public ICodeflow Codeflow { get; }
+
         public IDefaultChannels DefaultChannels { get; }
 
         public IFeatureFlags FeatureFlags { get; }
@@ -160,6 +163,7 @@ namespace Microsoft.DotNet.ProductConstructionService.Client
             Builds = new Builds(this);
             BuildTime = new BuildTime(this);
             Channels = new Channels(this);
+            Codeflow = new Codeflow(this);
             DefaultChannels = new DefaultChannels(this);
             FeatureFlags = new FeatureFlags(this);
             Goal = new Goal(this);

@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
+using Maestro.Common;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging;
@@ -1845,21 +1846,16 @@ public class DependencyFileManager : IDependencyFileManager
         XmlElement alternatePropertyGroup = output.CreateElement("PropertyGroup");
         projectElement.AppendChild(alternatePropertyGroup);
 
-        var versionDetailsLookup = versionDetails.Dependencies.ToLookup(dep => dep.RepoUri, dep => dep);
+        var versionDetailsLookup = versionDetails.Dependencies.ToLookup(dep => GetNormalizedRepoName(dep.RepoUri), dep => dep);
 
-        foreach (var repoDependencies in versionDetailsLookup)
+        foreach (var repoDependencies in versionDetailsLookup.OrderBy(g => g.Key))
         {
             if (repoDependencies.All(d => d.SkipProperty))
             {
                 continue;
             }
 
-            var repoUriParts = repoDependencies.Key.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            var repoName = repoUriParts.Last();
-            if (repoUriParts.Length > 1)
-            {
-                repoName = $"{repoUriParts[repoUriParts.Length - 2]}/{repoName}";
-            }
+            var repoName = repoDependencies.Key;
 
             propertyGroup.AppendChild(output.CreateComment($" {repoName} dependencies "));
             alternatePropertyGroup.AppendChild(output.CreateComment($" {repoName} dependencies "));
@@ -1883,6 +1879,33 @@ public class DependencyFileManager : IDependencyFileManager
         }
 
         return output;
+    }
+
+    /// <summary>
+    /// Returns a normalized repo name used as section heading and grouping key in Version.Details.props.
+    /// Both AzDO and GitHub URIs for the same mirror repo are normalized to the same name using the
+    /// "org-repo" convention. For example, both "https://github.com/dotnet/runtime" and
+    /// "https://dev.azure.com/dnceng/internal/_git/dotnet-runtime" normalize to "dotnet-runtime".
+    /// </summary>
+    private static string GetNormalizedRepoName(string repoUri)
+    {
+        try
+        {
+            var (repoName, org) = GitRepoUrlUtils.GetRepoNameAndOwner(repoUri);
+            return $"{org}-{repoName}";
+        }
+        catch (ArgumentException)
+        {
+            // Fall through to fallback
+        }
+
+        // Fallback: use last two path segments
+        var parts = repoUri.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length > 1)
+        {
+            return $"{parts[parts.Length - 2]}/{parts[parts.Length - 1]}";
+        }
+        return parts.Length > 0 ? parts[parts.Length - 1] : repoUri;
     }
 
     public static XmlNode GetVersionPropsNode(XmlDocument versionProps, string nodeName) =>
