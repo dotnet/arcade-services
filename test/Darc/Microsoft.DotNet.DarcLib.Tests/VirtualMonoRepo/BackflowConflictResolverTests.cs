@@ -301,6 +301,76 @@ public class BackflowConflictResolverTests
     }
 
     [Test]
+    public async Task UpdateToNonExistentDependencyBecomesAdditionTest()
+    {
+        var lastBackflow = new Backflow(LastVmrSha, LastRepoSha);
+        var lastFlow = new ForwardFlow(LastRepoSha, LastVmrSha);
+        var lastFlows = new LastFlows(lastFlow, lastBackflow, lastFlow, null);
+        var currentFlow = new Backflow(CurrentVmrSha, CurrentRepoSha);
+
+        var updatedDependency = CreateDependency("Package.Only.In.Source", "2.0.0", CurrentVmrSha);
+        // Target repo has no dependencies at all
+        _versionDetails[$"repo/{TargetBranch}"] = new VersionDetails(
+            [],
+            new SourceDependency(VmrUri, MappingName, LastVmrSha, 123456));
+
+        _versionDetails["repo/"] = new VersionDetails(
+            [],
+            _versionDetails[$"repo/{TargetBranch}"].Source);
+
+        // Build has no assets (the update came from version details merge, not from a build)
+        var build = CreateNewBuild(CurrentVmrSha, []);
+
+        // The source repo had one dependency update, but the target repo never had this dependency
+        var updateFromSource = new DependencyUpdate
+        {
+            From = CreateDependency("Package.Only.In.Source", "1.0.0", LastVmrSha),
+            To = updatedDependency,
+        };
+
+        _versionDetailsFileMergerMock.Setup(x => x.MergeVersionDetails(
+                It.IsAny<ILocalGitRepo>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<ILocalGitRepo>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string?>()))
+            .Callback(() =>
+            {
+                // Simulate that MergeVersionDetails applied the update to the working tree
+                _versionDetails[$"repo/{TargetBranch}"] = new VersionDetails(
+                    [updatedDependency],
+                    _versionDetails[$"repo/{TargetBranch}"].Source);
+            })
+            .ReturnsAsync(new VersionFileChanges<DependencyUpdate>(
+                [],
+                new Dictionary<string, DependencyUpdate>(),
+                new Dictionary<string, DependencyUpdate>()
+                {
+                    { updatedDependency.Name, updateFromSource }
+                }));
+
+        await TestConflictResolver(
+            build,
+            lastFlows,
+            currentFlow,
+            expectedDependencies:
+            [
+                ("Package.Only.In.Source", "2.0.0"),
+            ],
+            expectedUpdates:
+            [
+                // Should be an addition (From is null), not an update
+                new("Package.Only.In.Source", null, "2.0.0"),
+            ],
+            headBranchExisted: false,
+            excludedAssets: []);
+    }
+
+    [Test]
     public void TestCodeflowDependencyUpdateCommitMessage()
     {
         DependencyUpdate dep1 = new()
