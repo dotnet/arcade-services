@@ -217,7 +217,7 @@ module scheduledJob 'modules/container-job.bicep' = {
     location: location
     environmentName: environmentName
     userAssignedIdentityId: managedIdentitiesModule.outputs.appIdentityId
-    cronSchedule: '0 2 * * *'
+    cronSchedule: '0 * * * *'
     containerRegistryName: containerRegistryName
     containerAppsEnvironmentId: containerEnvironmentModule.outputs.containerEnvironmentId
     command: 'cd /app/BuildInsights.KnownIssuesMonitor && dotnet BuildInsights.KnownIssuesMonitor.dll'

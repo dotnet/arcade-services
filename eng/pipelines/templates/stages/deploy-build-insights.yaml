@@ -67,6 +67,7 @@ stages:
   - name: currentDate
     value: $[format('{0:yyyy}-{0:MM}-{0:dd}', pipeline.startTime)]
   - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+    # TODO: these should point to PROD resources
     - name: biSubscriptionId
       value: e6b5f9f5-0ca4-4351-879b-014d78400ec2
     - name: biResourceGroupName
@@ -74,7 +75,7 @@ stages:
     - name: biContainerAppName
       value: build-insights-int
     - name: biContainerJobNames
-      value: build-insights-job-int
+      value: known-issues-monitor-job-int
     - name: biContainerAppWorkspaceName
       value: build-insights-log-int
     - name: biRedisConnectionString
@@ -87,7 +88,7 @@ stages:
     - name: biContainerAppName
       value: build-insights-int
     - name: biContainerJobNames
-      value: build-insights-job-int
+      value: known-issues-monitor-job-int
     - name: biContainerAppWorkspaceName
       value: build-insights-log-int
     - name: biRedisConnectionString

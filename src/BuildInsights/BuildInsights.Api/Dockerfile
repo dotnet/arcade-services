@@ -26,11 +26,13 @@ COPY ["src/BuildInsights/BuildInsights.Data/BuildInsights.Data.csproj", "./Build
 COPY ["src/BuildInsights/BuildInsights.GitHub/BuildInsights.GitHub.csproj", "./BuildInsights.GitHub/"]
 COPY ["src/BuildInsights/BuildInsights.GitHubGraphQL/BuildInsights.GitHubGraphQL.csproj", "./BuildInsights.GitHubGraphQL/"]
 COPY ["src/BuildInsights/BuildInsights.KnownIssues/BuildInsights.KnownIssues.csproj", "./BuildInsights.KnownIssues/"]
+COPY ["src/BuildInsights/BuildInsights.KnownIssuesMonitor/BuildInsights.KnownIssuesMonitor.csproj", "./BuildInsights.KnownIssuesMonitor/"]
 COPY ["src/BuildInsights/BuildInsights.QueueInsights/BuildInsights.QueueInsights.csproj", "./BuildInsights.QueueInsights/"]
 COPY ["src/BuildInsights/BuildInsights.ServiceDefaults/BuildInsights.ServiceDefaults.csproj", "./BuildInsights.ServiceDefaults/"]
 COPY ["src/BuildInsights/BuildInsights.Utilities.AzureDevOps/BuildInsights.Utilities.AzureDevOps.csproj", "./BuildInsights.Utilities.AzureDevOps/"]
 
 RUN dotnet restore "./BuildInsights.Api/BuildInsights.Api.csproj"
+RUN dotnet restore "./BuildInsights.KnownIssuesMonitor/BuildInsights.KnownIssuesMonitor.csproj"
 
 # Copy full source for Maestro dependency
 WORKDIR /src/Maestro
@@ -49,12 +51,17 @@ WORKDIR /src/BuildInsights/BuildInsights.Api
 RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
 RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/BuildInsights /p:UseAppHost=false /p:Version=${PACKAGE_VERSION}
 
+WORKDIR /src/BuildInsights/BuildInsights.KnownIssuesMonitor
+RUN dotnet build -c $BUILD_CONFIGURATION -o /app/build --no-restore
+RUN dotnet publish -c $BUILD_CONFIGURATION -o /app/publish/BuildInsights.KnownIssuesMonitor /p:UseAppHost=false /p:Version=${PACKAGE_VERSION}
+
 # Copy everything to the final image
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine3.22
 RUN apk add --no-cache icu-libs
 
 WORKDIR /app
 COPY --from=build /app/publish/BuildInsights ./BuildInsights
+COPY --from=build /app/publish/BuildInsights.KnownIssuesMonitor ./BuildInsights.KnownIssuesMonitor
 
 EXPOSE 8080
 EXPOSE 8081
