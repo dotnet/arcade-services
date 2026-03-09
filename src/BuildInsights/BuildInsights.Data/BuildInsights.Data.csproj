@@ -14,4 +14,8 @@
     <PackageReference Include="Microsoft.Data.SqlClient" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Migrations\" />
+  </ItemGroup>
+
 </Project>

@@ -40,14 +40,17 @@ namespace BuildInsights.Data.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("PipelineName")
+                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("Project")
+                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("Repository")
+                        .IsRequired()
                         .HasMaxLength(512)
                         .HasColumnType("nvarchar(512)");
 
@@ -65,10 +68,12 @@ namespace BuildInsights.Data.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Branch")
+                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("Repository")
+                        .IsRequired()
                         .HasMaxLength(512)
                         .HasColumnType("nvarchar(512)");
 
@@ -92,10 +97,12 @@ namespace BuildInsights.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Repository")
+                        .IsRequired()
                         .HasMaxLength(512)
                         .HasColumnType("nvarchar(512)");
 
                     b.Property<string>("Status")
+                        .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
@@ -119,9 +126,11 @@ namespace BuildInsights.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("ErrorMessage")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("IssueId")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset?>("Timestamp")
@@ -143,6 +152,7 @@ namespace BuildInsights.Data.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("ErrorMessage")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTimeOffset?>("Timestamp")
