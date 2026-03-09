@@ -148,7 +148,6 @@ public class CodeflowController : ControllerBase
             .ToList();
 
         var channelIds = groups.Select(g => g.Key.ChannelId).Distinct().ToList();
-        var sourceRepos = groups.Select(g => g.Key.SourceRepository).Distinct().ToList();
         var earliestCutoff = subscriptionsWithBuilds.Min(s => s.LastAppliedBuild.DateProduced);
 
         var newerBuildsQuery = _context.BuildChannels
@@ -173,9 +172,10 @@ public class CodeflowController : ControllerBase
                 b.ChannelId == subscription.ChannelId
                 && b.DateProduced > lastAppliedDate
                 && (b.GitHubRepository == subscription.SourceRepository
-                    || b.AzureDevOpsRepository == subscription.SourceRepository));
+                    || b.AzureDevOpsRepository == subscription.SourceRepository))
+                .ToList();
 
-            var count = matchingBuilds.Count();
+            var count = matchingBuilds.Count;
             int? newestBuildId = null;
             DateTimeOffset? newestDate = null;
 
