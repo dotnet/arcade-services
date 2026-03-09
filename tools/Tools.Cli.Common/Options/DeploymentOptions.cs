@@ -62,13 +62,13 @@ public class DeploymentOptions : Tools.Cli.Core.Options
         services.AddSingleton(credential);
         services.AddTransient<ArmClient>(_ => new(credential));
         services.AddTransient<ResourceGroupResource>(sp =>
-        {
-            return new ArmClient(credential)
-                .GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{SubscriptionId}"))
-                .GetResourceGroups().Get(ResourceGroupName);
-        });
+            sp.GetRequiredService<ArmClient>()
+            .GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{SubscriptionId}"))
+            .GetResourceGroups().Get(ResourceGroupName)
+        );
         services.AddTransient(sp =>
-            sp.GetRequiredService<ResourceGroupResource>().GetContainerApp(ContainerAppName).Value);
+            sp.GetRequiredService<ResourceGroupResource>().GetContainerApp(ContainerAppName).Value
+        );
         services.AddTransient<IReplicaWorkItemProcessorStateCacheFactory, ReplicaWorkItemProcessorStateCache>();
 
         var redisConfig = ConfigurationOptions.Parse(RedisConnectionString);

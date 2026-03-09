@@ -132,7 +132,7 @@ stages:
           --containerJobNames $(biContainerJobNames)
           --workspaceName $(biContainerAppWorkspaceName)
           --newImageTag $(newDockerImageTag)
-          --imageName dummy-app
+          --imageName build-insights-api
           --attempt $(System.JobAttempt)
           --azCliPath "$(azCliPath)"
           --redisConnectionString $(biRedisConnectionString)
