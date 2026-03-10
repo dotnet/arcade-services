@@ -133,6 +133,7 @@ public class ForwardFlowConflictResolverTests
             versionDetailsFileMergerMock.Object,
             versionDetailsParserMock.Object,
             new Mock<IFileSystem>().Object,
+            new Mock<ICommentCollector>().Object,
             NullLogger<ForwardFlowConflictResolver>.Instance);
 
         await resolver.MergeDependenciesAsync(
