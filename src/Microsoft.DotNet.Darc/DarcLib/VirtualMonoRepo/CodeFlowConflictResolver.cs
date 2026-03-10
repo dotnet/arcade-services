@@ -476,7 +476,6 @@ public abstract class CodeFlowConflictResolver
                     revertedFile);
                 _fileSystem.WriteToFile(targetRepo.Path / revertedFile, contentBefore);
                 await targetRepo.StageAsync([revertedFile], cancellationToken);
-                _commentCollector.AddComment($"Detected incorrect content in the target repo for {revertedFile} that could not be auto-resolved. Please review and correct this file manually.", CommentType.Caution);
             }
         }
     }
