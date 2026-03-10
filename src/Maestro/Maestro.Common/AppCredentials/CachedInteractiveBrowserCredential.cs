@@ -52,6 +52,54 @@ public class CachedInteractiveBrowserCredential: TokenCredential
     {
         CacheAuthenticationRecord(requestContext, cancellationToken);
 
+        try
+        {
+            return GetTokenCore(requestContext, cancellationToken);
+        }
+        catch (Exception e) when (IsMsalCachePersistenceException(e))
+        {
+            RecreateCredentialsWithoutPersistence();
+            try
+            {
+                return GetTokenCore(requestContext, cancellationToken);
+            }
+            catch (AuthenticationFailedException retryEx)
+            {
+                // After persistence fallback, if interactive auth still fails, signal credential unavailability
+                // so ChainedTokenCredential can try the next credential (e.g. AzureCliCredential)
+                throw new CredentialUnavailableException(
+                    "Interactive authentication failed after token cache persistence fallback. "
+                    + "Ensure a browser or device code flow is available, or use 'az login' as a fallback.", retryEx);
+            }
+        }
+    }
+
+    public override async ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
+    {
+        CacheAuthenticationRecord(requestContext, cancellationToken);
+
+        try
+        {
+            return await GetTokenCoreAsync(requestContext, cancellationToken);
+        }
+        catch (Exception e) when (IsMsalCachePersistenceException(e))
+        {
+            RecreateCredentialsWithoutPersistence();
+            try
+            {
+                return await GetTokenCoreAsync(requestContext, cancellationToken);
+            }
+            catch (AuthenticationFailedException retryEx)
+            {
+                throw new CredentialUnavailableException(
+                    "Interactive authentication failed after token cache persistence fallback. "
+                    + "Ensure a browser or device code flow is available, or use 'az login' as a fallback.", retryEx);
+            }
+        }
+    }
+
+    private AccessToken GetTokenCore(TokenRequestContext requestContext, CancellationToken cancellationToken)
+    {
         if (Volatile.Read(ref _isDeviceCodeFallback) == 1)
         {
             return _deviceCodeCredential.GetToken(requestContext, cancellationToken);
@@ -68,10 +116,8 @@ public class CachedInteractiveBrowserCredential: TokenCredential
         }
     }
 
-    public override async ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
+    private async ValueTask<AccessToken> GetTokenCoreAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
     {
-        CacheAuthenticationRecord(requestContext, cancellationToken);
-
         if (Volatile.Read(ref _isDeviceCodeFallback) == 1)
         {
             return await _deviceCodeCredential.GetTokenAsync(requestContext, cancellationToken);
@@ -109,9 +155,6 @@ public class CachedInteractiveBrowserCredential: TokenCredential
             Directory.CreateDirectory(authRecordDir);
         }
 
-        static bool IsMsalCachePersistenceException(Exception e) =>
-            e is MsalCachePersistenceException || (e.InnerException is not null && IsMsalCachePersistenceException(e.InnerException));
-
         AuthenticationRecord authRecord;
         try
         {
@@ -121,16 +164,7 @@ public class CachedInteractiveBrowserCredential: TokenCredential
         catch (Exception e) when (IsMsalCachePersistenceException(e))
         {
             // If we cannot persist the token cache, fall back to interactive authentication without persistence
-            _browserCredential = new InteractiveBrowserCredential(new InteractiveBrowserCredentialOptions()
-            {
-                TenantId = _options.TenantId,
-                ClientId = _options.ClientId,
-            });
-            _deviceCodeCredential = new DeviceCodeCredential(new()
-            {
-                TenantId = _options.TenantId,
-                ClientId = _options.ClientId,
-            });
+            RecreateCredentialsWithoutPersistence();
             authRecord = Authenticate(requestContext, cancellationToken);
         }
 
@@ -153,4 +187,21 @@ public class CachedInteractiveBrowserCredential: TokenCredential
             return _deviceCodeCredential.Authenticate(requestContext, cancellationToken);
         }
     }
+
+    private void RecreateCredentialsWithoutPersistence()
+    {
+        _browserCredential = new InteractiveBrowserCredential(new InteractiveBrowserCredentialOptions()
+        {
+            TenantId = _options.TenantId,
+            ClientId = _options.ClientId,
+        });
+        _deviceCodeCredential = new DeviceCodeCredential(new()
+        {
+            TenantId = _options.TenantId,
+            ClientId = _options.ClientId,
+        });
+    }
+
+    private static bool IsMsalCachePersistenceException(Exception e) =>
+        e is MsalCachePersistenceException || (e.InnerException is not null && IsMsalCachePersistenceException(e.InnerException));
 }

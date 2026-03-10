@@ -50,7 +50,8 @@ public class AppCredential : TokenCredential
     public static AppCredential CreateUserCredential(string appId, TokenRequestContext requestContext)
     {
         var authRecordPath = Path.Combine(AUTH_CACHE, $"{AUTH_RECORD_PREFIX}-{appId}");
-        var credential = GetInteractiveCredential(appId, authRecordPath);
+        var interactiveCredential = GetInteractiveCredential(appId, authRecordPath);
+        var credential = new ChainedTokenCredential(interactiveCredential, new AzureCliCredential());
 
         return new AppCredential(credential, requestContext);
     }
