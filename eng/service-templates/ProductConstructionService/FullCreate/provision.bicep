@@ -99,6 +99,27 @@ param publicIpAddressName string
 @description('Public IP address service tag')
 param publicIpAddressServiceTag string
 
+@description('Application Gateway name')
+param appGwName string
+
+@description('Application Gateway managed identity name')
+param appGwIdentityName string
+
+@description('SSL certificate name in Key Vault')
+param certificateName string
+
+@description('Certificate Secret identifier, without the last part (the version)')
+param certificateSecretIdShort string
+
+@description('Application Gateway subnet name')
+param appGwVirtualNetworkSubnetName string = 'AppGateway'
+
+@description('Application Gateway host name')
+param hostName string
+
+@description('Application Gateway capacity (instance count)')
+param appGwCapacity int = 2
+
 // azure system role for setting up acr pull access
 var acrPullRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
 // azure system role for granting push access
@@ -117,6 +138,8 @@ var kvCryptoUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefin
 var readerRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')
 // Container Apps ManagedEnvironments Contributor Role
 var containerAppsManagedEnvironmentsContributor = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '57cc5028-e6a7-4284-868d-0611c5923f8d')
+// Key Vault Certificate User role
+var kvCertificateUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'db79e9a7-68ee-4b58-9aeb-b90e7c24fcba')
 
 module networkSecurityGroupModule 'nsg.bicep' = {
     name: 'networkSecurityGroupModule'
@@ -366,4 +389,43 @@ module ipAddressModule 'public-ip-address.bicep' = {
         publicIpAddressName: publicIpAddressName
         publicIpAddressServiceTag: publicIpAddressServiceTag
     }
+}
+
+module applicationGatewayModule 'application-gateway.bicep' = {
+    name: 'applicationGatewayModule'
+    params: {
+        appGwName: appGwName
+        location: location
+        kvName: keyVaultName
+        appGwIdentityName: appGwIdentityName
+        certificateName: certificateName
+        certificateSecretIdShort: certificateSecretIdShort
+        virtualNetworkName: virtualNetworkName
+        appGwVirtualNetworkSubnetName: appGwVirtualNetworkSubnetName
+        nsgName: networkSecurityGroupName
+        publicIpAddressName: publicIpAddressName
+        frontendIpName: 'frontendIp'
+        httpPortName: 'httpPort'
+        httpsPortName: 'httpsPort'
+        pcsPool: 'pcs'
+        containerAppName: productConstructionServiceName
+        backendHttpSettingName: 'backendHttpSetting'
+        backendHttpsSettingName: 'backendHttpsSetting'
+        pcs80listener: 'pcs-listener-80'
+        pcs443listener: 'pcs-listener-443'
+        pcsRedirection: 'pcs-redirection'
+        pcs80rule: 'pcs-rule-80'
+        pcs443rule: 'pcs-rule-443'
+        containerEnvironmentName: containerEnvironmentName
+        hostName: hostName
+        appGwCapacity: appGwCapacity
+    }
+    dependsOn: [
+        containerAppModule
+        keyVaultsModule
+        virtualNetworkModule
+        networkSecurityGroupModule
+        ipAddressModule
+        containerEnvironmentModule
+    ]
 }

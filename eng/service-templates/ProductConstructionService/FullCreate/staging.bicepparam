@@ -61,3 +61,14 @@ param infrastructureResourceGroupName = 'product-construction-service-ip-int'
 param publicIpAddressName = 'product-construction-service-public-ip-int'
 
 param publicIpAddressServiceTag = 'DotNetProductConstructionServicesStaging'
+
+param appGwName = 'product-construction-service-agw-int'
+
+param appGwIdentityName = 'AppGwIdentityInt'
+
+param certificateName = 'maestro-int-ag'
+
+// Certificate Secret identifier, without the last part (the version)
+param certificateSecretIdShort = 'https://productconstructionint.vault.azure.net/secrets/maestro-int-ag'
+
+param hostName = 'maestro.int-dot.net'

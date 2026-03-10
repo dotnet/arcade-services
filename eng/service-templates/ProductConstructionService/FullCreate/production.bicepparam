@@ -59,3 +59,14 @@ param infrastructureResourceGroupName = 'product-construction-service-ip-prod'
 param publicIpAddressName = 'product-construction-service-public-ip-prod'
 
 param publicIpAddressServiceTag = 'DotNetProductConstructionServicesProd'
+
+param appGwName = 'product-construction-service-agw-prod'
+
+param appGwIdentityName = 'AppGwIdentityProd'
+
+param certificateName = 'maestro-prod-ag'
+
+// Certificate Secret identifier, without the last part (the version)
+param certificateSecretIdShort = 'https://productconstructionprod.vault.azure.net/secrets/maestro-prod-ag-westus2-cloudapp-azure-com'
+
+param hostName = 'maestro.dot.net'
