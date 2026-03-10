@@ -88,9 +88,6 @@ param publicIpAddressName string
 @description('Public IP address service tag')
 param publicIpAddressServiceTag string
 
-@description('Enable creation of public IP address resources')
-param enablePublicIpAddress bool = (environmentName == 'Production')
-
 @description('Application Gateway name')
 param appGwName string
 
@@ -282,7 +279,7 @@ module storageAccountModule 'modules/storage-account.bicep' = {
   }
 }
 
-module ipAddressModule 'modules/public-ip-address.bicep' = if (enablePublicIpAddress) {
+module ipAddressModule 'modules/public-ip-address.bicep' = {
   name: 'ipAddressModule'
   params: {
     location: location
@@ -302,7 +299,7 @@ module sqlDatabaseModule 'modules/sql-database.bicep' = {
   }
 }
 
-module applicationGatewayModule 'modules/application-gateway.bicep' = if (enablePublicIpAddress) {
+module applicationGatewayModule 'modules/application-gateway.bicep' = {
   name: 'applicationGatewayModule'
   params: {
     appGwName: appGwName

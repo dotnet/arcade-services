@@ -40,7 +40,6 @@ param networkSecurityGroupName = '${serviceNameKebabCase}-nsg-${environmentSuffi
 param infrastructureResourceGroupName = '${serviceNameKebabCase}-${environmentSuffix}-ip'
 param publicIpAddressName = '${serviceNameKebabCase}-public-ip-${environmentSuffix}'
 param publicIpAddressServiceTag = 'DotNet${serviceNamePascalCase}${environmentPascalCase}'
-param enablePublicIpAddress = false
 param networkSecurityPerimeterName = '${serviceNameKebabCase}-nsp-${environmentSuffix}'
 
 // Application Gateway
