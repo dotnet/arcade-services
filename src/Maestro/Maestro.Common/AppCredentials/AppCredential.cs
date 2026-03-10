@@ -51,6 +51,10 @@ public class AppCredential : TokenCredential
     {
         var authRecordPath = Path.Combine(AUTH_CACHE, $"{AUTH_RECORD_PREFIX}-{appId}");
         var interactiveCredential = GetInteractiveCredential(appId, authRecordPath);
+        // Interactive credential is primary; AzureCliCredential is a last-resort fallback for
+        // environments where interactive auth is completely unavailable (e.g. WSL without keyring
+        // AND no browser). The interactive credential uses cached auth records for silent token
+        // renewal, so it won't re-prompt when a valid cache exists.
         var credential = new ChainedTokenCredential(interactiveCredential, new AzureCliCredential());
 
         return new AppCredential(credential, requestContext);

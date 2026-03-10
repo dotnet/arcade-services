@@ -64,9 +64,12 @@ public class CachedInteractiveBrowserCredential: TokenCredential
                 return GetTokenCore(requestContext, cancellationToken);
             }
             catch (AuthenticationFailedException retryEx)
+                when (!cancellationToken.IsCancellationRequested && !ContainsCancellationException(retryEx))
             {
-                // After persistence fallback, if interactive auth still fails, signal credential unavailability
-                // so ChainedTokenCredential can try the next credential (e.g. AzureCliCredential)
+                // After persistence fallback, if interactive auth still fails due to environment issues
+                // (e.g. no browser), signal credential unavailability so ChainedTokenCredential can
+                // try the next credential (e.g. AzureCliCredential). User-initiated cancellations
+                // propagate directly so the caller sees the real failure.
                 throw new CredentialUnavailableException(
                     "Interactive authentication failed after token cache persistence fallback. "
                     + "Ensure a browser or device code flow is available, or use 'az login' as a fallback.", retryEx);
@@ -90,6 +93,7 @@ public class CachedInteractiveBrowserCredential: TokenCredential
                 return await GetTokenCoreAsync(requestContext, cancellationToken);
             }
             catch (AuthenticationFailedException retryEx)
+                when (!cancellationToken.IsCancellationRequested && !ContainsCancellationException(retryEx))
             {
                 throw new CredentialUnavailableException(
                     "Interactive authentication failed after token cache persistence fallback. "
@@ -194,6 +198,7 @@ public class CachedInteractiveBrowserCredential: TokenCredential
         {
             TenantId = _options.TenantId,
             ClientId = _options.ClientId,
+            AuthenticationRecord = _options.AuthenticationRecord,
         });
         _deviceCodeCredential = new DeviceCodeCredential(new()
         {
@@ -204,4 +209,7 @@ public class CachedInteractiveBrowserCredential: TokenCredential
 
     private static bool IsMsalCachePersistenceException(Exception e) =>
         e is MsalCachePersistenceException || (e.InnerException is not null && IsMsalCachePersistenceException(e.InnerException));
+
+    private static bool ContainsCancellationException(Exception e) =>
+        e is OperationCanceledException || (e.InnerException is not null && ContainsCancellationException(e.InnerException));
 }
