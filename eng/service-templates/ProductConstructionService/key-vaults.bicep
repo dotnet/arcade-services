@@ -6,10 +6,15 @@ param kvSecretUserRole string
 param kvCryptoUserRole string
 param pcsIdentityPrincipalId string
 
+@description('Key Vault create mode. Use recover to restore a soft-deleted vault.')
+@allowed(['default', 'recover'])
+param createMode string = 'default'
+
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
   name: keyVaultName
   location: location
   properties: {
+      createMode: createMode
       sku: {
           name: 'standard'
           family: 'A'
@@ -27,6 +32,7 @@ resource devKeyVault 'Microsoft.KeyVault/vaults@2022-07-01' = if (aspnetcoreEnvi
   name: devKeyVaultName
   location: location
   properties: {
+      createMode: createMode
       sku: {
           name: 'standard'
           family: 'A'

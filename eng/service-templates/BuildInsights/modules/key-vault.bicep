@@ -3,6 +3,10 @@ param keyVaultName string
 param appIdentityPrincipalId string
 param serviceSubnetId string
 
+@description('Key Vault create mode. Use recover to restore a soft-deleted vault.')
+@allowed(['default', 'recover'])
+param createMode string = 'default'
+
 var kvSecretUserRole = subscriptionResourceId(
   'Microsoft.Authorization/roleDefinitions',
   '4633458b-17de-408a-b874-0445c86b69e6'
@@ -17,6 +21,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
   name: keyVaultName
   location: location
   properties: {
+    createMode: createMode
     sku: {
       name: 'standard'
       family: 'A'

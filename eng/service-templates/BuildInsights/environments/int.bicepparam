@@ -29,6 +29,7 @@ param logAnalyticsName = '${serviceNameKebabCase}-log-${environmentSuffix}'
 
 // Data and secrets
 param keyVaultName = '${serviceNamePascalCase}${environmentPascalCase}'
+param keyVaultCreateMode = 'recover'
 param azureCacheRedisName = '${serviceNameKebabCase}-redis-${environmentSuffix}'
 param storageAccountName = '${toLower(replace(serviceNameKebabCase, '-', ''))}${environmentSuffix}'
 

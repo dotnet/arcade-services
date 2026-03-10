@@ -27,6 +27,10 @@ param applicationInsightsName string
 @description('Key Vault name')
 param keyVaultName string
 
+@description('Key Vault create mode. Use recover to restore a soft-deleted vault.')
+@allowed(['default', 'recover'])
+param keyVaultCreateMode string = 'default'
+
 @description('Dev Key Vault name')
 param devKeyVaultName string = ''
 
@@ -355,6 +359,7 @@ module keyVaultsModule 'key-vaults.bicep' = {
         kvSecretUserRole: kvSecretUserRole
         kvCryptoUserRole: kvCryptoUserRole
         pcsIdentityPrincipalId: managedIdentitiesModule.outputs.pcsIdentityPrincipalId
+        createMode: keyVaultCreateMode
     }
 }
 

@@ -27,6 +27,10 @@ param applicationInsightsName string
 @description('Key Vault name')
 param keyVaultName string
 
+@description('Key Vault create mode. Use recover to restore a soft-deleted vault.')
+@allowed(['default', 'recover'])
+param keyVaultCreateMode string = 'default'
+
 @description('Azure Cache for Redis name')
 param azureCacheRedisName string
 
@@ -254,6 +258,7 @@ module keyVaultsModule 'modules/key-vault.bicep' = {
     keyVaultName: keyVaultName
     appIdentityPrincipalId: managedIdentitiesModule.outputs.appIdentityPrincipalId
     serviceSubnetId: virtualNetworkModule.outputs.productConstructionServiceSubnetId
+    createMode: keyVaultCreateMode
   }
 }
 
