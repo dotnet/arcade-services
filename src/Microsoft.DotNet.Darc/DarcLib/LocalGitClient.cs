@@ -124,9 +124,12 @@ public class LocalGitClient : ILocalGitClient
         else if (result.StandardError.Contains("is unmerged") || result.StandardError.Contains("needs merge"))
         {
             var unstagedNonConflictingFiles = await GetUnstagedFilesAsync(repoPath, relativePath);
-            args = ["checkout", .. unstagedNonConflictingFiles];
-            result = await _processManager.ExecuteGit(repoPath, args);
-            result.ThrowIfFailed("failed to clean unmerged non conflicting files from the working tree");
+            if (unstagedNonConflictingFiles.Count > 0)
+            {
+                args = ["checkout", .. unstagedNonConflictingFiles];
+                result = await _processManager.ExecuteGit(repoPath, args);
+                result.ThrowIfFailed("failed to clean unmerged non conflicting files from the working tree"); 
+            }
         }
 
         // Also remove untracked files (in case files were removed in index)
