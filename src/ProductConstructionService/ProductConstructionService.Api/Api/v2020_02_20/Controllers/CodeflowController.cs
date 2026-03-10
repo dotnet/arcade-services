@@ -175,18 +175,17 @@ public class CodeflowController : ControllerBase
                     || b.AzureDevOpsRepository == subscription.SourceRepository))
                 .ToList();
 
-            var count = matchingBuilds.Count;
             int? newestBuildId = null;
             DateTimeOffset? newestDate = null;
 
-            if (count > 0)
+            if (matchingBuilds.Count > 0)
             {
-                var newestBuild = matchingBuilds.OrderByDescending(b => b.DateProduced).First();
+                var newestBuild = matchingBuilds.MaxBy(b => b.DateProduced) ?? matchingBuilds.First(); 
                 newestBuildId = newestBuild.BuildId;
                 newestDate = newestBuild.DateProduced;
             }
 
-            result[subscription.Id] = new NewestBuildInfo(count, newestBuildId, newestDate);
+            result[subscription.Id] = new NewestBuildInfo(matchingBuilds.Count, newestBuildId, newestDate);
         }
 
         return result;
