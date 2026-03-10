@@ -47,8 +47,8 @@ public static class BuildInsightsCommonConfiguration
 
         // Configuration from appsettings.json
         public const string ConnectionStrings = "ConnectionStrings";
-        public const string DatabaseConnectionString = $"{ConnectionStrings}:sql";
-        public const string RedisConnectionName = "redis";
+        public const string DatabaseConnectionString = $"{ConnectionStrings}:bi-sql";
+        public const string RedisConnectionName = "bi-redis";
         public const string RedisConnectionString = $"{ConnectionStrings}:{RedisConnectionName}";
         public const string AzureDevOpsConfiguration = "AzureDevOps";
         public const string KeyVaultName = "KeyVaultName";

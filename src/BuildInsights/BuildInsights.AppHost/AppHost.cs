@@ -13,8 +13,7 @@ var sqlServer = builder.AddSqlServer("bi-mssql", password)
 
 var database = sqlServer.AddDatabase("BuildInsights");
 
-var redisCache = builder
-    .AddRedis("bi-redis", port: 55690);
+var redisCache = builder.AddRedis("bi-redis", port: 55690);
 
 var storage = builder.AddAzureStorage("bi-storage")
     .RunAsEmulator();
@@ -23,11 +22,9 @@ storage.AddBlobContainer(
     "previousbuildresultscache",
     "previousbuildresultscache");
 
-var blobs = storage
-    .AddBlobs("bi-blobs");
+var blobs = storage.AddBlobs("bi-blobs");
 
-var queues = storage
-    .AddQueues("bi-queues");
+var queues = storage.AddQueues("bi-queues");
 
 builder.AddProject<Projects.BuildInsights_Api>("buildInsightsApi")
     .WithExternalHttpEndpoints()
@@ -49,17 +46,5 @@ builder.AddProject<Projects.BuildInsights_KnownIssuesMonitor>("knownIssuesMonito
     .WaitFor(redisCache)
     .WaitFor(queues)
     .WithExplicitStart();
-
-builder.AddProject<Projects.BuildInsights_DummyApp>("dummyApp")
-    .WithUrlForEndpoint("https", url => url.Url += "/status")
-    .WithUrlForEndpoint("http", url => url.Url += "/status")
-    .WithExternalHttpEndpoints()
-    .WithReference(database)
-    .WithReference(blobs)
-    .WithReference(queues)
-    .WithReference(redisCache)
-    .WaitFor(database)
-    .WaitFor(redisCache)
-    .WaitFor(queues);
 
 builder.Build().Run();
