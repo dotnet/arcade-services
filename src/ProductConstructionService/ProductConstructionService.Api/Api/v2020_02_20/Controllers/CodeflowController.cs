@@ -168,11 +168,12 @@ public class CodeflowController : ControllerBase
         foreach (var subscription in subscriptionsWithBuilds)
         {
             var lastAppliedDate = subscription.LastAppliedBuild.DateProduced;
-            var matchingBuilds = newerBuilds.Where(b =>
-                b.ChannelId == subscription.ChannelId
-                && b.DateProduced > lastAppliedDate
-                && (b.GitHubRepository == subscription.SourceRepository
-                    || b.AzureDevOpsRepository == subscription.SourceRepository))
+            var matchingBuilds = newerBuilds
+                .Where(b =>
+                    b.ChannelId == subscription.ChannelId
+                    && b.DateProduced > lastAppliedDate
+                    && (b.GitHubRepository == subscription.SourceRepository
+                        || b.AzureDevOpsRepository == subscription.SourceRepository))
                 .ToList();
 
             int? newestBuildId = null;
