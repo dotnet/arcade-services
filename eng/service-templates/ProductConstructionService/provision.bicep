@@ -138,8 +138,6 @@ var kvCryptoUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefin
 var readerRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')
 // Container Apps ManagedEnvironments Contributor Role
 var containerAppsManagedEnvironmentsContributor = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '57cc5028-e6a7-4284-868d-0611c5923f8d')
-// Key Vault Certificate User role
-var kvCertificateUserRole = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'db79e9a7-68ee-4b58-9aeb-b90e7c24fcba')
 
 module networkSecurityGroupModule 'nsg.bicep' = {
     name: 'networkSecurityGroupModule'
