@@ -18,17 +18,20 @@ public abstract class CodeFlowConflictResolver
     private readonly IVmrInfo _vmrInfo;
     private readonly IVmrPatchHandler _patchHandler;
     private readonly IFileSystem _fileSystem;
+    private readonly ICommentCollector _commentCollector;
     private readonly ILogger _logger;
 
     protected CodeFlowConflictResolver(
         IVmrInfo vmrInfo,
         IVmrPatchHandler patchHandler,
         IFileSystem fileSystem,
+        ICommentCollector commentCollector,
         ILogger logger)
     {
         _vmrInfo = vmrInfo;
         _patchHandler = patchHandler;
         _fileSystem = fileSystem;
+        _commentCollector = commentCollector;
         _logger = logger;
     }
 
@@ -454,8 +457,12 @@ public abstract class CodeFlowConflictResolver
 
             string contentBefore = await _fileSystem.ReadAllTextAsync(targetRepo.Path / revertedFile);
 
-            (await targetRepo.ExecuteGitCommand(["checkout", codeflowOptions.TargetBranch, revertedFile], cancellationToken))
-                .ThrowIfFailed($"Failed to check out {revertedFile} from branch {codeflowOptions.TargetBranch}");
+            var result = await targetRepo.ExecuteGitCommand(["checkout", codeflowOptions.TargetBranch, revertedFile], cancellationToken);
+            if (!result.Succeeded)
+            {
+                _commentCollector.AddComment($"Detected incorrect content in the target repo for {revertedFile} that could not be auto-resolved. Please review and correct this file manually.", CommentType.Caution);
+                return;
+            }
 
             if (!await TryResolvingConflictWithCrossingFlow(
                 codeflowOptions,
@@ -469,6 +476,7 @@ public abstract class CodeFlowConflictResolver
                     revertedFile);
                 _fileSystem.WriteToFile(targetRepo.Path / revertedFile, contentBefore);
                 await targetRepo.StageAsync([revertedFile], cancellationToken);
+                _commentCollector.AddComment($"Detected incorrect content in the target repo for {revertedFile} that could not be auto-resolved. Please review and correct this file manually.", CommentType.Caution);
             }
         }
     }
