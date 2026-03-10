@@ -87,6 +87,27 @@ param publicIpAddressServiceTag string
 @description('Enable creation of public IP address resources')
 param enablePublicIpAddress bool = (environmentName == 'Production')
 
+@description('Application Gateway name')
+param appGwName string
+
+@description('Application Gateway managed identity name')
+param appGwIdentityName string
+
+@description('SSL certificate name in Key Vault')
+param certificateName string
+
+@description('Certificate Secret identifier, without the last part (the version)')
+param certificateSecretIdShort string
+
+@description('Application Gateway subnet name')
+param appGwVirtualNetworkSubnetName string = 'AppGateway'
+
+@description('Application Gateway host name')
+param hostName string
+
+@description('Application Gateway capacity (instance count)')
+param appGwCapacity int = 2
+
 @description('Network Security Perimeter name')
 param networkSecurityPerimeterName string
 
@@ -274,6 +295,45 @@ module sqlDatabaseModule 'modules/sql-database.bicep' = {
     appIdentityPrincipalId: managedIdentitiesModule.outputs.appIdentityPrincipalId
     serviceSubnetId: virtualNetworkModule.outputs.productConstructionServiceSubnetId
   }
+}
+
+module applicationGatewayModule 'modules/application-gateway.bicep' = if (enablePublicIpAddress) {
+  name: 'applicationGatewayModule'
+  params: {
+    appGwName: appGwName
+    location: location
+    kvName: keyVaultName
+    appGwIdentityName: appGwIdentityName
+    certificateName: certificateName
+    certificateSecretIdShort: certificateSecretIdShort
+    virtualNetworkName: virtualNetworkName
+    appGwVirtualNetworkSubnetName: appGwVirtualNetworkSubnetName
+    nsgName: networkSecurityGroupName
+    publicIpAddressName: publicIpAddressName
+    frontendIpName: 'frontendIp'
+    httpPortName: 'httpPort'
+    httpsPortName: 'httpsPort'
+    backendPool: 'bi-pool'
+    containerAppName: serviceName
+    backendHttpSettingName: 'backendHttpSetting'
+    backendHttpsSettingName: 'backendHttpsSetting'
+    http80listener: 'bi-listener-80'
+    http443listener: 'bi-listener-443'
+    httpRedirection: 'bi-redirection'
+    http80rule: 'bi-rule-80'
+    http443rule: 'bi-rule-443'
+    containerEnvironmentName: containerEnvironmentName
+    hostName: hostName
+    appGwCapacity: appGwCapacity
+  }
+  dependsOn: [
+    containerAppModule
+    keyVaultsModule
+    virtualNetworkModule
+    networkSecurityGroupModule
+    ipAddressModule
+    containerEnvironmentModule
+  ]
 }
 
 module networkSecurityPerimeterModule 'modules/network-security-perimeter.bicep' = {

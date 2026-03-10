@@ -43,6 +43,13 @@ param publicIpAddressServiceTag = 'DotNet${serviceNamePascalCase}${environmentPa
 param enablePublicIpAddress = true
 param networkSecurityPerimeterName = '${serviceNameKebabCase}-nsp-${environmentSuffix}'
 
+// Application Gateway
+param appGwName = '${serviceNameKebabCase}-agw-${environmentSuffix}'
+param appGwIdentityName = '${serviceNamePascalCase}AppGw${environmentPascalCase}'
+param certificateName = '${serviceNameKebabCase}-${environmentSuffix}'
+param certificateSecretIdShort = 'https://${serviceNamePascalCase}${environmentPascalCase}.vault.azure.net/secrets/${serviceNameKebabCase}-${environmentSuffix}'
+param hostName = 'build-insights.dot.net'
+
 // SQL
 param sqlServerName = '${serviceNameKebabCase}-sql${optionalEnvironmentSuffix}'
 param sqlDatabaseName = '${serviceNamePascalCase}'
