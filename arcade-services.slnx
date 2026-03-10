@@ -17,6 +17,10 @@
   </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/BuildInsights/">
+    <File Path="src/BuildInsights/appsettings.Shared.Development.json" />
+    <File Path="src/BuildInsights/appsettings.Shared.Int.json" />
+    <File Path="src/BuildInsights/appsettings.Shared.json" />
+    <File Path="src/BuildInsights/appsettings.Shared.Production.json" />
     <Project Path="src/BuildInsights/BuildInsights.Api/BuildInsights.Api.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.AppHost/BuildInsights.AppHost.csproj" />
     <Project Path="src/BuildInsights/BuildInsights.AzureStorage.Cache/BuildInsights.AzureStorage.Cache.csproj" />
