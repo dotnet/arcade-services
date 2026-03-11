@@ -7,7 +7,7 @@ var environmentPascalCase = 'Int'
 
 // Core deployment
 param location = 'westus2'
-param environmentName = 'Staging'
+param environmentName = 'Int'
 param serviceName = '${serviceNameKebabCase}-${environmentSuffix}'
 
 // Container app runtime

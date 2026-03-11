@@ -16,7 +16,7 @@ param containerMemory string
 @description('aspnetcore environment')
 @allowed([
   'Development'
-  'Staging'
+  'Int'
   'Production'
 ])
 param environmentName string
