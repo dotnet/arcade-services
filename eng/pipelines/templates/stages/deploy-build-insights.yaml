@@ -14,7 +14,7 @@ stages:
     ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
       environment: Production
     ${{ else }}:
-      environment: Int
+      environment: Staging
     pool: server
 
 - ${{ if ne(parameters.skipMigrations, true) }}:
