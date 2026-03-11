@@ -4,7 +4,6 @@
 using HandlebarsDotNet;
 using HandlebarsDotNet.Helpers;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace BuildInsights.BuildAnalysis.HandleBar;
 

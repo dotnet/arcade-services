@@ -1,12 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections.Immutable;
 using AwesomeAssertions;
 using BuildInsights.BuildAnalysis.HandleBar;
 using BuildInsights.BuildAnalysis.Models;
-using BuildInsights.BuildAnalysis.Models.Views;
-using BuildInsights.KnownIssues.Models;
 using HandlebarsDotNet;
 using HandlebarsDotNet.Helpers;
 using Microsoft.Extensions.DependencyInjection;

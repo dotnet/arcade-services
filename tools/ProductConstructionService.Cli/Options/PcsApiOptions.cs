@@ -5,7 +5,6 @@ using CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.DotNet.ProductConstructionService.Client;
 using ProductConstructionService.Cli.Operations;
-using Tools.Cli.Core;
 
 namespace ProductConstructionService.Cli.Options;
 
