@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine3.22 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine3.23 AS build
 ARG BUILD_CONFIGURATION=Release
 ARG PACKAGE_VERSION="0.0.99-dev"
 
