@@ -104,6 +104,8 @@ public record TestGitHubInformation(
     string BranchReference,
     Commit Commit) : IAsyncDisposable
 {
+    public string Repository { get; } = $"{Owner}/{RepoName}";
+
     public async ValueTask DisposeAsync()
     {
         try

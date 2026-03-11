@@ -24,6 +24,10 @@ namespace BuildInsights.ScenarioTests;
 [Category("PostDeployment")]
 public class BuildInsightsEndToEndTests
 {
+    private const string TestName = "TestAggregatorHelixTests.TestAggregatorHelixTests.TestResultDeterminedByCorrelationPayload";
+    private const string KnownIssueTitle = "Test Known Issue";
+    private readonly string _testPrTitle = $"[Scenario Tests] {nameof(BuildInsightsEndToEndTests)}.{nameof(ValidatePRWithBreakingTests)}";
+
     [Test]
     public async Task ValidatePRWithBreakingTests()
     {
@@ -36,13 +40,13 @@ public class BuildInsightsEndToEndTests
             GitHubTestOrg,
             GitHubTestRepo,
             testBranchName,
-            $"[Scenario Tests] {nameof(BuildInsightsEndToEndTests)}.{nameof(ValidatePRWithBreakingTests)}",
+            _testPrTitle,
             $"{GitHubTestOrg}:{testBranchName}");
 
         DateTimeOffset _start = DateTimeOffset.UtcNow;
 
         var storage = ScenarioTestConfiguration.ServiceProvider.GetRequiredService<IContextualStorage>();
-        storage.SetContext($"{GitHubTestOrg}/{GitHubTestRepo}/{testGitHubInformation.Commit.Sha}");
+        storage.SetContext($"{testGitHubInformation.Repository}/{testGitHubInformation.Commit.Sha}");
 
         await WaitForCompletedBuilds(testGitHubInformation, cancellationToken);
         await VerifyFailedTestsAndChecks(testGitHubInformation, _start, cancellationToken);
@@ -66,54 +70,56 @@ public class BuildInsightsEndToEndTests
                 testGitHubInformation.RepoName,
                 testGitHubInformation.Commit.Sha);
 
-            if (checks.TotalCount > 0 && checks.CheckRuns.All(x => x.Status == CheckStatus.Completed))
+            if (checks.TotalCount <= 0 || !checks.CheckRuns.All(x => x.Status == CheckStatus.Completed))
             {
-                CheckRun? buildResultAnalysisCheck = checks.CheckRuns
-                    .FirstOrDefault(c => c.App.Id == GitHubAppSettings.AppId
-                                      && c.Name == GitHubAppSettings.AppName);
-
-                if (buildResultAnalysisCheck is null)
-                {
-                    TestContext.WriteLine("Build result analysis check not found, waiting...");
-                    await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
-                    continue;
-                }
-
-                TestContext.WriteLine($"Found check run {buildResultAnalysisCheck.Id}");
-
-                Match m = r.Match(buildResultAnalysisCheck.Output.Text);
-                string snapshotId = m.Groups[1].Value;
-                TestContext.WriteLine($"SnapshotId: {snapshotId}");
-
-                Stream? stream = await storageCache.TryGetAsync($"analysis-blob-{snapshotId}.json", cancellationToken);
-                stream.Should().NotBeNull("because the snapshot '{0}' was retrieved.", snapshotId);
-
-                var data = await JsonSerializer.DeserializeAsync<MergedBuildResultAnalysis>(
-                    stream,
-                    options,
-                    cancellationToken);
-                data.Should().NotBeNull();
-
-                // This is because there's a race condition when the checks are of completed status, but we're still waiting for the second
-                //   pipeline's results to be analyzed and consolidated with the previously completed pipeline results on the check.
-                if (data.CompletedPipelines.Count < 2)
-                {
-                    TestContext.WriteLine("Waiting for the other build!");
-                    await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
-                    continue;
-                }
-
-                foreach (var pipeline in data.CompletedPipelines)
-                {
-                    TestContext.WriteLine($"Found associated, completed pipeline: {pipeline.PipelineName}, #{pipeline.BuildId}");
-                }
-
-                buildResultAnalysisCheck.Conclusion?.Value.Should().Be(CheckConclusion.Failure);
-                ValidateSnapshotData(data);
-                break;
+                await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+                continue;
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+            CheckRun? buildInsightsCheck = checks.CheckRuns.FirstOrDefault(c => c.App.Id == GitHubAppSettings.AppId
+                                                                             && c.Name == GitHubAppSettings.AppName);
+
+            if (buildInsightsCheck is null)
+            {
+                TestContext.WriteLine("Build insights check not found, waiting...");
+                await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+                continue;
+            }
+
+            TestContext.WriteLine($"Found check run {buildInsightsCheck.Id}");
+
+            Match m = r.Match(buildInsightsCheck.Output.Text);
+            string snapshotId = m.Groups[1].Value;
+            TestContext.WriteLine($"SnapshotId: {snapshotId}");
+
+            Stream? stream = await storageCache.TryGetAsync($"analysis-blob-{snapshotId}.json", cancellationToken);
+            stream.Should().NotBeNull("because the snapshot '{0}' was retrieved.", snapshotId);
+
+            var data = await JsonSerializer.DeserializeAsync<MergedBuildResultAnalysis>(stream, options, cancellationToken);
+            data.Should().NotBeNull();
+
+            // This is because there's a race condition when the checks are of completed status, but we're still waiting for the second
+            //   pipeline's results to be analyzed and consolidated with the previously completed pipeline results on the check.
+            if (data.CompletedPipelines.Count < 2)
+            {
+                TestContext.WriteLine("Waiting for the other build!");
+                await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+                continue;
+            }
+
+            foreach (var pipeline in data.CompletedPipelines)
+            {
+                TestContext.WriteLine($"Found associated, completed pipeline: {pipeline.PipelineName}, #{pipeline.BuildId}");
+            }
+
+            buildInsightsCheck.Conclusion!.Value.Should().Be(CheckConclusion.Failure);
+            buildInsightsCheck.Conclusion.Should().Be(GitHub.Models.CheckConclusion.Failure, "there are test failures");
+            buildInsightsCheck.Output.Text.Should().Contain("Test Failures (2 tests failed)")
+                .And.Contain("build-insights-test-1")
+                .And.Contain("Known test errors")
+                .And.Contain(KnownIssueTitle);
+            ValidateSnapshotData(data);
+            break;
         }
     }
 
@@ -123,10 +129,10 @@ public class BuildInsightsEndToEndTests
         CancellationToken cancellationToken)
     {
         var gitHubChecksService = ScenarioTestConfiguration.ServiceProvider.GetRequiredService<IGitHubChecksService>();
-        IEnumerable<GitHub.Models.CheckRun> checkRunsWithBuildId =
-            await gitHubChecksService.GetBuildCheckRunsAsync(
-                $"{GitHubTestOrg}/{testGitHubInformation.RepoName}",
-                testGitHubInformation.Commit.Sha);
+        IEnumerable<GitHub.Models.CheckRun> checkRunsWithBuildId = await gitHubChecksService.GetBuildCheckRunsAsync(
+            testGitHubInformation.Repository,
+            testGitHubInformation.Commit.Sha);
+
         DateTimeOffset end = SystemClock.UtcNow;
 
         var vssConnectionProvider = ScenarioTestConfiguration.ServiceProvider.GetRequiredService<VssConnectionProvider>();
@@ -176,15 +182,14 @@ public class BuildInsightsEndToEndTests
         passingResults.Should().HaveCount(1);
 
         var (passingResult, _, _, passingRun) = passingResults.First();
-        passingResult.AutomatedTestName.Should()
-            .Be("TestAggregatorHelixTests.TestAggregatorHelixTests.TestResultDeterminedByCorrelationPayload");
+        passingResult.AutomatedTestName.Should().Be(TestName);
     }
 
     private static async Task PostBaGreenCommentAndWaitForCheckSuccess(
         TestGitHubInformation testGitHubInformation,
         CancellationToken cancellationToken)
     {
-        string escapeMechanismComment = $"{BuildAnalysisEscapeMechanismHelper.ChangeToGreenCommand} Build Analysis PostDeployment Test";
+        string escapeMechanismComment = $"{BuildAnalysisEscapeMechanismHelper.ChangeToGreenCommand} {GitHubAppSettings.AppName} PostDeployment Test";
         await GitHubApi.Issue.Comment.Create(
             testGitHubInformation.Owner,
             testGitHubInformation.RepoName,
@@ -216,18 +221,15 @@ public class BuildInsightsEndToEndTests
     {
         data.CompletedPipelines.Should().HaveCount(2);
 
-        List<BuildResultAnalysis> pipeline1 = [.. data.CompletedPipelines.Where(p => p.PipelineName == "build-result-analysis-test")];
-        pipeline1.Should().HaveCount(1);
-        pipeline1[0].HasBuildFailures.Should().BeTrue();
-        pipeline1[0].HasTestFailures.Should().BeTrue();
-        pipeline1[0].TestResults.Where(r => r.TestCaseResult.Name == "BuildResultAnalysisTest.Tests.TestAlwaysFailing")
-            .Should().HaveCount(1);
+        BuildResultAnalysis? pipeline = data.CompletedPipelines.FirstOrDefault(p => p.PipelineName == "build-insights-test-1");
+        pipeline.Should().NotBeNull();
+        pipeline.HasBuildFailures.Should().BeTrue();
+        pipeline.HasTestFailures.Should().BeTrue();
+        pipeline.TestResults.Should().Contain(r => r.TestCaseResult.Name == TestName);
 
-        List<BuildResultAnalysis> pipeline2 = [.. data.CompletedPipelines.Where(p => p.PipelineName == "maestro-auth-test.build-result-analysis-test")];
-        pipeline2.Count.Should().Be(1);
-        pipeline2[0].HasBuildFailures.Should().BeTrue();
-        pipeline2[0].HasTestFailures.Should().BeTrue();
-        pipeline2[0].TestResults.Where(r => r.TestCaseResult.Name == "SecondaryTests.Tests.FailingTest")
-            .Should().HaveCount(1);
+        pipeline = data.CompletedPipelines.FirstOrDefault(p => p.PipelineName == "build-insights-test-2");
+        pipeline.Should().NotBeNull();
+        pipeline.HasBuildFailures.Should().BeFalse();
+        pipeline.HasTestFailures.Should().BeFalse();
     }
 }
