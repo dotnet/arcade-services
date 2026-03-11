@@ -30,7 +30,7 @@ public static class SharedConfigurationExtensions
 
         if (!Directory.Exists(sharedConfigDirectory))
         {
-            return builder;
+            throw new Exception($"Failed to find shared configuration directory: {sharedConfigDirectory}");
         }
 
         AddSharedConfiguration(
@@ -55,14 +55,14 @@ public static class SharedConfigurationExtensions
             {
                 FileProvider = sharedFileProvider,
                 Path = $"{SharedSettingsPrefix}.json",
-                Optional = true,
+                Optional = false,
                 ReloadOnChange = true,
             },
             new()
             {
                 FileProvider = sharedFileProvider,
                 Path = $"{SharedSettingsPrefix}.{environmentName}.json",
-                Optional = true,
+                Optional = false,
                 ReloadOnChange = true,
             },
         };

@@ -80,7 +80,8 @@ public static class BuildInsightsCommonConfiguration
             builder.Configuration[$"{ConfigurationKeys.Kusto}:{nameof(BlobStorageSettings.ManagedIdentityId)}"] = managedIdentityId;
         }
 
-        var gitHubAppSettings = builder.Configuration.GetSection(ConfigurationKeys.GitHubApp).Get<GitHubAppSettings>()!;
+        var gitHubAppSettings = builder.Configuration.GetSection(ConfigurationKeys.GitHubApp).Get<GitHubAppSettings>()
+            ?? throw new Exception("GitHubAppSettings configuration section is missing");
         builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
         builder.Services.Configure<GitHubAppSettings>(ConfigurationKeys.GitHubApp, (o, s) => s.Bind(o));
         builder.Services.Configure<HelixSettings>(ConfigurationKeys.Helix, (o, s) => s.Bind(o));
