@@ -27,7 +27,10 @@ public class BuildInsightsContextFactory : IDesignTimeDbContextFactory<BuildInsi
 
     public static string GetLocalConnectionString(string databaseName)
     {
-        var connectionString = $@"Data Source=localhost\SQLEXPRESS;Initial Catalog={databaseName};Integrated Security=true;Encrypt=false"; // CodeQL [SM03452] This 'connection string' is only for the local SQLExpress instance and has no credentials, Encrypt=false for .NET 8+ compatibility
+        // Top connection string is for running in SQLExpress locally, bottom connection string is for running in a local container
+        // When running migrations, you'd have to ensure the container is running (by running the Aspire project)
+        // var connectionString = $@"Data Source=localhost\SQLEXPRESS;Initial Catalog={databaseName};Integrated Security=true;Encrypt=false"; // CodeQL [SM03452] This 'connection string' is only for the local SQLExpress instance and has no credentials, Encrypt=false for .NET 8+ compatibility
+        var connectionString = $@"Server=127.0.0.1,11434;User ID=sa;Password=DevPass1@;TrustServerCertificate=true;Initial Catalog={databaseName}"; // CodeQL [SM03452] This 'connection string' is only for the local SQLExpress instance and has no credentials, Encrypt=false for .NET 8+ compatibility
         var envVarConnectionString = Environment.GetEnvironmentVariable("BUILD_INSIGHTS_DB_CONNECTION_STRING");
         return string.IsNullOrEmpty(envVarConnectionString) ? connectionString : envVarConnectionString;
     }

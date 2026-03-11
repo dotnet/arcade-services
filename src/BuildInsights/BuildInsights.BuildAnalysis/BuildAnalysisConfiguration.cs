@@ -21,7 +21,7 @@ public static class BuildAnalysisConfiguration
         this IServiceCollection services,
         IConfigurationSection knownIssuesCreationConfig,
         IConfigurationSection knownIssuesAnalysisLimitsConfig,
-        IConfigurationSection knownIssuesKustoConfig,
+        IConfigurationSection kustoConfig,
         IConfigurationSection blobStorageConfig,
         IConfigurationSection queueInsightsBetaConfig,
         IConfigurationSection matrixOfTruthConfig,
@@ -34,9 +34,9 @@ public static class BuildAnalysisConfiguration
         services.TryAddSingleton<IMarkdownGenerator, MarkdownGenerator>();
         services.AddHandleBarHelpers();
         services.AddBlobStorageCaching(blobStorageConfig);
-        services.AddKnownIssues(knownIssuesCreationConfig, knownIssuesAnalysisLimitsConfig, knownIssuesKustoConfig, gitHubIssuesConfig);
+        services.AddKnownIssues(knownIssuesCreationConfig, knownIssuesAnalysisLimitsConfig, kustoConfig, gitHubIssuesConfig);
         services.AddQueueInsights(queueInsightsBetaConfig, matrixOfTruthConfig);
-        services.AddKustoClientProvider(knownIssuesKustoConfig.Key); // Same as known issues kusto config
+        services.AddKustoClientProvider(kustoConfig.Key);
 
         services.TryAddScoped<IGitHubChecksService, GitHubChecksProvider>();
         services.TryAddScoped<IRelatedBuildService, RelatedBuildProvider>();

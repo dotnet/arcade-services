@@ -19,7 +19,7 @@ public static class KnownIssueMonitorConfiguration
         public const string KnownIssuesProject = "KnownIssuesProject";
         public const string KnownIssuesCreation = "KnownIssuesCreation";
         public const string KnownIssuesAnalysisLimits = "KnownIssuesAnalysisLimits";
-        public const string KnownIssuesKusto = "KnownIssuesKusto";
+        public const string Kusto = "Kusto";
         public const string GitHubIssues = "GitHubIssues";
         public const string InternalProject = "InternalProject";
         public const string SsaCriteriaSettings = "SsaCriteriaSettings";
@@ -29,7 +29,7 @@ public static class KnownIssueMonitorConfiguration
     {
         var knownIssuesCreationConfig = builder.Configuration.GetRequiredSection(ConfigurationKeys.KnownIssuesCreation);
         var knownIssuesAnalysisLimitsConfig = builder.Configuration.GetRequiredSection(ConfigurationKeys.KnownIssuesAnalysisLimits);
-        var knownIssuesKustoConfig = builder.Configuration.GetRequiredSection(ConfigurationKeys.KnownIssuesKusto);
+        var kustoConfig = builder.Configuration.GetRequiredSection(ConfigurationKeys.Kusto);
         var gitHubIssuesConfig = builder.Configuration.GetRequiredSection(ConfigurationKeys.GitHubIssues);
 
         builder.Services.Configure<KnownIssuesProjectOptions>(ConfigurationKeys.KnownIssuesProject, (o, s) => s.Bind(o));
@@ -40,7 +40,7 @@ public static class KnownIssueMonitorConfiguration
         builder.Services.AddKnownIssues(
             knownIssuesCreationConfig,
             knownIssuesAnalysisLimitsConfig,
-            knownIssuesKustoConfig,
+            kustoConfig,
             gitHubIssuesConfig);
 
         builder.Services.TryAddTransient<KnownIssuesReportHelper>();

@@ -48,6 +48,7 @@ public static class BuildInsightsCommonConfiguration
         // Configuration from appsettings.json
         public const string ConnectionStrings = "ConnectionStrings";
         public const string DatabaseConnectionString = $"{ConnectionStrings}:bi-mssql";
+        public const string QueuesConnectionName = "bi-queues";
         public const string RedisConnectionName = "bi-redis";
         public const string RedisConnectionString = $"{ConnectionStrings}:{RedisConnectionName}";
         public const string AzureDevOpsConfiguration = "AzureDevOps";
@@ -144,7 +145,7 @@ public static class BuildInsightsCommonConfiguration
             { workItemQueueName, (int.Parse(builder.Configuration.GetRequiredValue(ConfigurationKeys.WorkItemConsumerCount)), DefaultWorkItemType) },
             { specialWorkItemQueueName, (1, SpecialWorkItemType) }
         });
-        builder.AddWorkItemProducerFactory(azureCredential, workItemQueueName, specialWorkItemQueueName);
+        builder.AddWorkItemProducerFactory(ConfigurationKeys.QueuesConnectionName, azureCredential, workItemQueueName, specialWorkItemQueueName);
 
         // Set up DI
         builder.Services.AddSingleton<Microsoft.Extensions.Internal.ISystemClock, Microsoft.Extensions.Internal.SystemClock>();

@@ -5,13 +5,13 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var password = builder.AddParameter("sql-pass", "DevPass1@", secret: true);
 
-var sqlServer = builder.AddSqlServer("bi-mssql", password)
+var sqlServer = builder.AddSqlServer("mssql", password)
     .WithHostPort(11434)
     .WithContainerRuntimeArgs("--publish", "11433:1433")
     .WithDataVolume("build-insights-mssql-data")
     .WithLifetime(ContainerLifetime.Persistent);
 
-var database = sqlServer.AddDatabase("BuildInsights");
+var database = sqlServer.AddDatabase("bi-mssql", "BuildInsights");
 
 var redisCache = builder.AddRedis("bi-redis", port: 55690);
 

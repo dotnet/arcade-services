@@ -19,7 +19,7 @@ internal static class BuildInsightsStartup
         public const string KnownIssuesProject = "KnownIssuesProject";
         public const string KnownIssuesCreation = "KnownIssuesCreation";
         public const string KnownIssuesAnalysisLimits = "KnownIssuesAnalysisLimits";
-        public const string KnownIssuesKusto = "KnownIssuesKusto";
+        public const string Kusto = "Kusto";
         public const string QueueInsightsBeta = "QueueInsightsBeta";
         public const string MatrixOfTruth = "MatrixOfTruth";
         public const string BuildConfigurationFile = "BuildConfigurationFile";
@@ -57,7 +57,7 @@ internal static class BuildInsightsStartup
         builder.Services.AddBuildAnalysis(
             builder.Configuration.GetRequiredSection(ConfigurationKeys.KnownIssuesCreation),
             builder.Configuration.GetRequiredSection(ConfigurationKeys.KnownIssuesAnalysisLimits),
-            builder.Configuration.GetRequiredSection(ConfigurationKeys.KnownIssuesKusto),
+            builder.Configuration.GetRequiredSection(ConfigurationKeys.Kusto),
             builder.Configuration.GetRequiredSection(BuildInsightsCommonConfiguration.ConfigurationKeys.BlobStorage),
             builder.Configuration.GetRequiredSection(ConfigurationKeys.QueueInsightsBeta),
             builder.Configuration.GetRequiredSection(ConfigurationKeys.MatrixOfTruth),
