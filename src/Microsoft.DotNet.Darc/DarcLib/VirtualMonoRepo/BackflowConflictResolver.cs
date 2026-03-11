@@ -65,7 +65,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         IFileSystem fileSystem,
         ICommentCollector commentCollector,
         ILogger<BackflowConflictResolver> logger)
-        : base(vmrInfo, patchHandler, fileSystem, logger)
+        : base(vmrInfo, patchHandler, fileSystem, commentCollector, logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;

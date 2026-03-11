@@ -196,12 +196,12 @@
 
     string GetBuildAgeDifference(SubscriptionInformation? entry)
     {
-        if (entry?.NewestApplicableBuild == null || entry.Subscription.LastAppliedBuild == null)
+        if (entry?.NewestApplicableBuildDate == null || entry.Subscription.LastAppliedBuild == null)
         {
             return string.Empty;
         }
 
-        var diff = entry.NewestApplicableBuild.DateProduced - entry.Subscription.LastAppliedBuild.DateProduced;
+        var diff = entry.NewestApplicableBuildDate.Value - entry.Subscription.LastAppliedBuild.DateProduced;
         if (diff.TotalMinutes < 1)
         {
             return string.Empty;

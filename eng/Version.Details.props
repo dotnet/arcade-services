@@ -21,19 +21,19 @@ This file should be imported by eng/Versions.props
     <MicrosoftDotNetServicesUtilityPackageVersion>1.1.0-beta.26113.1</MicrosoftDotNetServicesUtilityPackageVersion>
     <MicrosoftDotNetWebAuthenticationPackageVersion>1.1.0-beta.25564.1</MicrosoftDotNetWebAuthenticationPackageVersion>
     <!-- dotnet/arcade dependencies -->
-    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26123.2</MicrosoftDotNetArcadeSdkPackageVersion>
-    <MicrosoftDotNetBuildTasksFeedPackageVersion>10.0.0-beta.26123.2</MicrosoftDotNetBuildTasksFeedPackageVersion>
+    <MicrosoftDotNetArcadeSdkPackageVersion>10.0.0-beta.26153.3</MicrosoftDotNetArcadeSdkPackageVersion>
+    <MicrosoftDotNetBuildTasksFeedPackageVersion>10.0.0-beta.26153.3</MicrosoftDotNetBuildTasksFeedPackageVersion>
     <MicrosoftDotNetHelixClientPackageVersion>10.0.0-beta.26110.1</MicrosoftDotNetHelixClientPackageVersion>
-    <MicrosoftDotNetSignToolPackageVersion>10.0.0-beta.26123.2</MicrosoftDotNetSignToolPackageVersion>
-    <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>10.0.0-beta.26123.2</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
+    <MicrosoftDotNetSignToolPackageVersion>10.0.0-beta.26153.3</MicrosoftDotNetSignToolPackageVersion>
+    <MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>10.0.0-beta.26153.3</MicrosoftDotNetSwaggerGeneratorMSBuildPackageVersion>
     <MicrosoftDotNetVersionToolsPackageVersion>8.0.0-beta.25555.2</MicrosoftDotNetVersionToolsPackageVersion>
     <!-- _git/dotnet-helix-machines dependencies -->
     <MicrosoftInternalHelixMachinesMatrixOfTruthOutputDeserializationPackageVersion>20220725.5.0</MicrosoftInternalHelixMachinesMatrixOfTruthOutputDeserializationPackageVersion>
     <!-- dotnet/dnceng dependencies -->
-    <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.26117.1</MicrosoftDncEngConfigurationBootstrapPackageVersion>
-    <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.26117.1</MicrosoftDncEngSecretManagerPackageVersion>
+    <MicrosoftDncEngConfigurationBootstrapPackageVersion>1.1.0-beta.26155.1</MicrosoftDncEngConfigurationBootstrapPackageVersion>
+    <MicrosoftDncEngSecretManagerPackageVersion>1.1.0-beta.26155.1</MicrosoftDncEngSecretManagerPackageVersion>
     <!-- _git/maestro-configuration dependencies -->
-    <MicrosoftDotNetMaestroConfigurationClientPackageVersion>1.1.0-beta.26125.1</MicrosoftDotNetMaestroConfigurationClientPackageVersion>
+    <MicrosoftDotNetMaestroConfigurationClientPackageVersion>1.1.0-beta.26159.1</MicrosoftDotNetMaestroConfigurationClientPackageVersion>
   </PropertyGroup>
   <!--Property group for alternate package version names-->
   <PropertyGroup>

@@ -17,7 +17,8 @@ public record CodeflowEntry(
 
 public record SubscriptionInformation(
     Subscription Subscription,
-    Build NewestApplicableBuild,
+    int? NewestApplicableBuildId,
+    DateTimeOffset? NewestApplicableBuildDate,
     ActivePullRequest? ActivePullRequest);
 
 public record ActivePullRequest(
