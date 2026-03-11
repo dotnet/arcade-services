@@ -4,6 +4,7 @@
 using AwesomeAssertions;
 using Maestro.Data.Models;
 using Maestro.MergePolicies;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.DotNet.DarcLib.Models.VirtualMonoRepo;
@@ -343,6 +344,71 @@ internal class UpdateAssetsForCodeFlowTests : UpdateAssetsPullRequestUpdaterTest
                         BuildId = build2.Id,
                         SourceRepo = build1.GetRepository(),
                         CommitSha = build2.Commit,
+                    }
+                ],
+                RequiredUpdates = [],
+                CodeFlowDirection = CodeFlowDirection.ForwardFlow,
+            };
+
+            AndShouldHavePullRequestCheckReminder();
+            AndShouldHaveInProgressPullRequestState(build2, expectedState: expectedState);
+        }
+    }
+
+    /// Regression test: when GetLastCodeflownBuild throws (e.g. BarId null in manifest),
+    /// the subscription state must still be cleaned up so the subscription doesn't get stuck.
+    [Test]
+    public async Task UpdateWithMergedPrCleansUpStateWhenGetLastCodeflownBuildThrows()
+    {
+        GivenATestChannel();
+        GivenACodeFlowSubscription(
+            new SubscriptionPolicy
+            {
+                Batchable = false,
+                UpdateFrequency = UpdateFrequency.EveryBuild,
+            });
+        Build build = GivenANewBuild(true);
+        Build build2 = GivenANewBuild(true);
+
+        using (WithExistingCodeFlowPullRequest(build, PrStatus.Merged, null))
+        {
+            // Original PR is merged, we should try to delete the branch
+            DarcRemotes[VmrUri]
+                .Setup(x => x.DeletePullRequestBranchAsync(VmrPullRequestUrl))
+                .Returns(Task.CompletedTask)
+                .Verifiable();
+
+            // Simulate GetLastCodeflownBuild failure on the first call (merged PR processing),
+            // but return null on second call (new build forward flow needs it)
+            DarcRemotes[VmrUri]
+                .SetupSequence(x => x.GetSourceManifestAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .ThrowsAsync(new DarcException("Simulated failure: BarId not found in source manifest"))
+                .ReturnsAsync((SourceManifest?)null);
+
+            // URI of the new PR that should get created (after the merged one is cleaned up)
+            VmrPullRequestUrl = $"{VmrUri}/pulls/2";
+            CreatePullRequestShouldReturnAValidValue();
+
+            // Despite the exception in GetLastCodeflownBuild, the update should proceed:
+            // - State for the merged PR should be cleared
+            // - A new PR should be created for build2
+            await WhenUpdateAssetsAsyncIsCalled(build2);
+
+            var expectedState = new InProgressPullRequest()
+            {
+                UpdaterId = GetPullRequestUpdaterId(Subscription).Id,
+                Url = VmrPullRequestUrl,
+                HeadBranch = InProgressPrHeadBranch,
+                HeadBranchSha = InProgressPrHeadBranchSha,
+                SourceSha = build2.Commit,
+                ContainedSubscriptions =
+                [
+                    new()
+                    {
+                        SubscriptionId = Subscription.Id,
+                        BuildId = build2.Id,
+                        SourceRepo = build.GetRepository(),
+                        CommitSha = build2.Commit
                     }
                 ],
                 RequiredUpdates = [],

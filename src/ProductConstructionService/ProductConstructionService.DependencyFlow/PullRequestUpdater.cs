@@ -332,7 +332,20 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                 {
                     // Policies evaluated successfully and the PR was merged just now
                     case MergePolicyCheckResult.Merged:
-                        await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
+                        try
+                        {
+                            await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            throw;
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to update subscription records after PR {url} was auto-merged. " +
+                                "Proceeding with state cleanup to avoid getting stuck.", pr.Url);
+                        }
+
                         await AddDependencyFlowEventsAsync(
                             pr.ContainedSubscriptions,
                             DependencyFlowEventType.Completed,
@@ -368,10 +381,24 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             case PrStatus.Merged:
             case PrStatus.Closed:
-                // If the PR has been merged, update the subscription information
+                // If the PR has been merged, update the subscription information.
+                // Errors are caught to ensure ClearAllStateAsync always runs — otherwise
+                // a failure here would leave the PR tracked in Redis indefinitely.
                 if (prInfo.Status == PrStatus.Merged)
                 {
-                    await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
+                    try
+                    {
+                        await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to update subscription records after PR {url} was merged. " +
+                            "Proceeding with state cleanup to avoid getting stuck.", pr.Url);
+                    }
                 }
 
                 DependencyFlowEventReason reason = prInfo.Status == PrStatus.Merged
@@ -512,7 +539,8 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
         return remote.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, evaluations);
     }
 
-    private async Task UpdateSubscriptionsForMergedPRAsync(IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates)
+    private async Task UpdateSubscriptionsForMergedPRAsync(
+        IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates)
     {
         _logger.LogInformation("Updating subscriptions for merged PR");
         foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
