@@ -9,21 +9,8 @@ public static class MockCodeflowData
 {
     public static CodeflowPageData GetMockCodeflowPage()
     {
-        var vmrBuild = new Build(
-            id: 12345,
-            dateProduced: new DateTimeOffset(2026, 2, 18, 10, 30, 0, TimeSpan.Zero),
-            staleness: 0,
-            released: false,
-            stable: true,
-            commit: "abc123def456789",
-            channels: [],
-            assets: [],
-            dependencies: [],
-            incoherencies: [])
-        {
-            GitHubRepository = "https://github.com/dotnet/dotnet",
-            GitHubBranch = "main",
-        };
+        var vmrBuildId = 12345;
+        var vmrBuildDate = new DateTimeOffset(2026, 2, 18, 10, 30, 0, TimeSpan.Zero);
 
         var runtimeSubscriptionFf = CreateSubscription(
             sourceRepository: "https://github.com/dotnet/runtime",
@@ -80,9 +67,9 @@ public static class MockCodeflowData
             lastAppliedBuildDaysAgo: 5,
             staleness: 5);
 
-        var newestRuntimeBuild = CreateNewestBuild("https://github.com/dotnet/runtime", daysAgo: 0);
-        var newestSdkBuild = CreateNewestBuild("https://github.com/dotnet/sdk", daysAgo: 0);
-        var newestAspnetBuild = CreateNewestBuild("https://github.com/dotnet/aspnetcore", daysAgo: 0);
+        var newestRuntimeBuild = CreateNewestBuild(daysAgo: 0);
+        var newestSdkBuild = CreateNewestBuild(daysAgo: 0);
+        var newestAspnetBuild = CreateNewestBuild(daysAgo: 0);
 
         var entries = new List<CodeflowEntry>
         {
@@ -92,13 +79,15 @@ public static class MockCodeflowData
                 Enabled: true,
                 ForwardFlowSubscription: new SubscriptionInformation(
                     runtimeSubscriptionFf,
-                    NewestApplicableBuild: newestRuntimeBuild,
+                    NewestApplicableBuildId: newestRuntimeBuild.Id,
+                    NewestApplicableBuildDate: newestRuntimeBuild.DateProduced,
                     ActivePullRequest: new ActivePullRequest(
                         CreatedDate: new DateTime(2026, 2, 18, 14, 0, 0),
                         Url: "https://github.com/dotnet/runtime/pull/112345")),
                 BackflowSubscription: new SubscriptionInformation(
                     runtimeSubscriptionBf,
-                    NewestApplicableBuild: vmrBuild,
+                    NewestApplicableBuildId: vmrBuildId,
+                    NewestApplicableBuildDate: vmrBuildDate,
                     ActivePullRequest: null)),
 
             new(
@@ -107,11 +96,13 @@ public static class MockCodeflowData
                 Enabled: true,
                 ForwardFlowSubscription: new SubscriptionInformation(
                     sdkSubscriptionFf,
-                    NewestApplicableBuild: newestSdkBuild,
+                    NewestApplicableBuildId: newestSdkBuild.Id,
+                    NewestApplicableBuildDate: newestSdkBuild.DateProduced,
                     ActivePullRequest: null),
                 BackflowSubscription: new SubscriptionInformation(
                     sdkSubscriptionBf,
-                    NewestApplicableBuild: vmrBuild,
+                    NewestApplicableBuildId: vmrBuildId,
+                    NewestApplicableBuildDate: vmrBuildDate,
                     ActivePullRequest: new ActivePullRequest(
                         CreatedDate: new DateTime(2026, 2, 17, 9, 15, 0),
                         Url: "https://github.com/dotnet/dotnet/pull/54321"))),
@@ -122,7 +113,8 @@ public static class MockCodeflowData
                 Enabled: false,
                 ForwardFlowSubscription: new SubscriptionInformation(
                     aspnetSubscriptionFf,
-                    NewestApplicableBuild: newestAspnetBuild,
+                    NewestApplicableBuildId: newestAspnetBuild.Id,
+                    NewestApplicableBuildDate: newestAspnetBuild.DateProduced,
                     ActivePullRequest: null),
                 BackflowSubscription: null),
         };
@@ -174,22 +166,8 @@ public static class MockCodeflowData
         return subscription;
     }
 
-    private static Build CreateNewestBuild(string repository, int daysAgo)
+    private static (int Id, DateTimeOffset DateProduced) CreateNewestBuild(int daysAgo)
     {
-        return new Build(
-            id: Random.Shared.Next(10000, 99999),
-            dateProduced: DateTimeOffset.UtcNow.AddDays(-daysAgo),
-            staleness: 0,
-            released: false,
-            stable: true,
-            commit: Guid.NewGuid().ToString("N")[..16],
-            channels: [],
-            assets: [],
-            dependencies: [],
-            incoherencies: [])
-        {
-            GitHubRepository = repository,
-            GitHubBranch = "main",
-        };
+        return (Random.Shared.Next(10000, 99999), DateTimeOffset.UtcNow.AddDays(-daysAgo));
     }
 }

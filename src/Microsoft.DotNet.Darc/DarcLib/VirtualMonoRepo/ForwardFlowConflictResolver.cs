@@ -87,8 +87,9 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         IVersionDetailsFileMerger versionDetailsFileMerger,
         IVersionDetailsParser versionDetailsParser,
         IFileSystem fileSystem,
+        ICommentCollector commentCollector,
         ILogger<ForwardFlowConflictResolver> logger)
-        : base(vmrInfo, patchHandler, fileSystem, logger)
+        : base(vmrInfo, patchHandler, fileSystem, commentCollector, logger)
     {
         _vmrInfo = vmrInfo;
         _sourceManifest = sourceManifest;
