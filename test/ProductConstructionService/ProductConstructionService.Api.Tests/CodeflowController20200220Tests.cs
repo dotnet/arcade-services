@@ -119,7 +119,9 @@ public partial class CodeflowController20200220Tests
         status.RepositoryUrl.Should().Be(sourceRepo);
         status.ForwardFlow.Should().NotBeNull();
         status.ForwardFlow!.Subscription.Id.Should().Be(subscription.Id);
-        status.ForwardFlow.NewerBuildsAvailable.Should().Be(2);
+        status.ForwardFlow.Subscription.LastAppliedBuild!.Staleness.Should().Be(2);
+        status.ForwardFlow.NewestBuildId.Should().Be(latestBuild.Id);
+        status.ForwardFlow.NewestBuildDate.Should().BeCloseTo(latestBuild.DateProduced, TimeSpan.FromSeconds(1));
         status.ForwardFlow.ActivePullRequest.Should().BeNull();
         status.Backflow.Should().BeNull();
     }
@@ -165,7 +167,9 @@ public partial class CodeflowController20200220Tests
         status.RepositoryBranch.Should().Be(targetBranch);
         status.Backflow.Should().NotBeNull();
         status.Backflow!.Subscription.Id.Should().Be(subscription.Id);
-        status.Backflow.NewerBuildsAvailable.Should().Be(1);
+        status.Backflow.Subscription.LastAppliedBuild!.Staleness.Should().Be(1);
+        status.Backflow.NewestBuildId.Should().Be(newerBuild.Id);
+        status.Backflow.NewestBuildDate.Should().BeCloseTo(newerBuild.DateProduced, TimeSpan.FromSeconds(1));
         status.Backflow.ActivePullRequest.Should().BeNull();
         status.ForwardFlow.Should().BeNull();
     }
@@ -299,7 +303,9 @@ public partial class CodeflowController20200220Tests
         var statuses = (List<CodeflowStatus>)okResult.Value!;
 
         statuses.Should().HaveCount(1);
-        statuses[0].ForwardFlow!.NewerBuildsAvailable.Should().Be(3);
+        statuses[0].ForwardFlow!.Subscription.LastAppliedBuild!.Staleness.Should().Be(3);
+        statuses[0].ForwardFlow.NewestBuildId.Should().Be(build5.Id);
+        statuses[0].ForwardFlow.NewestBuildDate.Should().BeCloseTo(build5.DateProduced, TimeSpan.FromSeconds(1));
     }
 
     [Test]
@@ -413,7 +419,9 @@ public partial class CodeflowController20200220Tests
         var statuses = (List<CodeflowStatus>)okResult.Value!;
 
         statuses.Should().HaveCount(1);
-        statuses[0].ForwardFlow!.NewerBuildsAvailable.Should().Be(null);
+        statuses[0].ForwardFlow!.Subscription.LastAppliedBuild.Should().BeNull();
+        statuses[0].ForwardFlow.NewestBuildId.Should().BeNull();
+        statuses[0].ForwardFlow.NewestBuildDate.Should().BeNull();
     }
 
     [Test]

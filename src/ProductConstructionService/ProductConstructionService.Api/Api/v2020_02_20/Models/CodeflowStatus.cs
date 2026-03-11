@@ -33,6 +33,9 @@ public class CodeflowSubscriptionStatus
     [JsonProperty("activePullRequest")]
     public TrackedPullRequest ActivePullRequest { get; set; }
 
-    [JsonProperty("newerBuildsAvailable")]
-    public int? NewerBuildsAvailable { get; set; }
+    [JsonProperty("newestBuildId")]
+    public int? NewestBuildId { get; set; }
+
+    [JsonProperty("newestBuildDate")]
+    public DateTimeOffset? NewestBuildDate { get; set; }
 }
