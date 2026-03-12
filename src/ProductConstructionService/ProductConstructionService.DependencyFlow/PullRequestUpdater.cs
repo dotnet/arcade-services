@@ -335,6 +335,13 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                         try
                         {
                             await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
+
+                            await AddDependencyFlowEventsAsync(
+                                pr.ContainedSubscriptions,
+                                DependencyFlowEventType.Completed,
+                                DependencyFlowEventReason.AutomaticallyMerged,
+                                mergePolicyResult,
+                                pr.Url);
                         }
                         catch (OperationCanceledException)
                         {
@@ -342,16 +349,9 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogError(ex, "Failed to update subscription records after PR {url} was auto-merged. " +
+                            _logger.LogError(ex, "Failed to process merged PR {url}. " +
                                 "Proceeding with state cleanup to avoid getting stuck.", pr.Url);
                         }
-
-                        await AddDependencyFlowEventsAsync(
-                            pr.ContainedSubscriptions,
-                            DependencyFlowEventType.Completed,
-                            DependencyFlowEventReason.AutomaticallyMerged,
-                            mergePolicyResult,
-                            pr.Url);
 
                         // If the PR we just merged was in conflict with an update we previously tried to apply, we shouldn't delete the reminder for the update
                         await ClearAllStateAsync(isCodeFlow, clearPendingUpdates: true);
@@ -381,36 +381,35 @@ internal abstract class PullRequestUpdater : IPullRequestUpdater
 
             case PrStatus.Merged:
             case PrStatus.Closed:
-                // If the PR has been merged, update the subscription information.
                 // Errors are caught to ensure ClearAllStateAsync always runs — otherwise
                 // a failure here would leave the PR tracked in Redis indefinitely.
-                if (prInfo.Status == PrStatus.Merged)
+                try
                 {
-                    try
+                    if (prInfo.Status == PrStatus.Merged)
                     {
                         await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
                     }
-                    catch (OperationCanceledException)
-                    {
-                        throw;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Failed to update subscription records after PR {url} was merged. " +
-                            "Proceeding with state cleanup to avoid getting stuck.", pr.Url);
-                    }
+
+                    DependencyFlowEventReason reason = prInfo.Status == PrStatus.Merged
+                        ? DependencyFlowEventReason.ManuallyMerged
+                        : DependencyFlowEventReason.ManuallyClosed;
+
+                    await AddDependencyFlowEventsAsync(
+                        pr.ContainedSubscriptions,
+                        DependencyFlowEventType.Completed,
+                        reason,
+                        pr.MergePolicyResult,
+                        pr.Url);
                 }
-
-                DependencyFlowEventReason reason = prInfo.Status == PrStatus.Merged
-                    ? DependencyFlowEventReason.ManuallyMerged
-                    : DependencyFlowEventReason.ManuallyClosed;
-
-                await AddDependencyFlowEventsAsync(
-                    pr.ContainedSubscriptions,
-                    DependencyFlowEventType.Completed,
-                    reason,
-                    pr.MergePolicyResult,
-                    pr.Url);
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to process merged/closed PR {url}. " +
+                        "Proceeding with state cleanup to avoid getting stuck.", pr.Url);
+                }
 
                 _logger.LogInformation("PR {url} has been manually {action}. Stopping tracking it", pr.Url, prInfo.Status.ToString().ToLowerInvariant());
 
