@@ -134,22 +134,14 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 vmrComparisonSha = Constants.EmptyGitObject;
             }
 
-            var hasMergedToolsetUpdates = await MergeToolsetUpdates(
+            var (dependencyUpdates, hadToolsetUpdates) = await BackflowVersionFilesAsync(
                 codeflowOptions,
                 targetRepo,
-                codeflowOptions.TargetBranch,
-                repoComparisonSha,
-                vmrComparisonSha);
-
-            var updates = await MergeAndUpdateDependencyUpdates(
-                codeflowOptions,
-                targetRepo,
-                codeflowOptions.TargetBranch,
                 repoComparisonSha,
                 vmrComparisonSha,
                 cancellationToken);
 
-            return new VersionFileUpdateResult(conflictedFiles, updates.dependencyUpdates, hasMergedToolsetUpdates || updates.hadToolsetUpdates);
+            return new VersionFileUpdateResult(conflictedFiles, dependencyUpdates, hadToolsetUpdates);
         }
         catch (Exception e)
         {
@@ -218,18 +210,60 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         return false;
     }
 
-    private async Task<bool> MergeToolsetUpdates(
+    /// <summary>
+    /// Merges version files, applies build updates, and computes the final dependency update list.
+    /// </summary>
+    private async Task<(List<DependencyUpdate> dependencyUpdates, bool hadToolsetUpdates)> BackflowVersionFilesAsync(
+        CodeflowOptions codeflowOptions,
+        ILocalGitRepo targetRepo,
+        string repoComparisonSha,
+        string vmrComparisonSha,
+        CancellationToken cancellationToken)
+    {
+        // Snapshot dependencies before merges or updates modify the working tree
+        var headBranchDependencies = await GetRepoDependencies(targetRepo, commit: null /* working tree */);
+        var headBranchDependencyDict = headBranchDependencies.Dependencies.ToDictionary(d => d.Name, d => d, comparer: StringComparer.OrdinalIgnoreCase);
+
+        var (hasToolsetMerges, versionDetailsChanges) = await MergeVersionFiles(
+            codeflowOptions,
+            targetRepo,
+            codeflowOptions.TargetBranch,
+            repoComparisonSha,
+            vmrComparisonSha);
+
+        var (buildDependencyUpdates, hadToolsetUpdates) = await ApplyBuildUpdatesAsync(
+            codeflowOptions,
+            targetRepo,
+            cancellationToken);
+
+        if (!await targetRepo.HasWorkingTreeChangesAsync() && !await targetRepo.HasStagedChangesAsync())
+        {
+            _logger.LogInformation("No changes to dependencies in this backflow update");
+            return ([], false);
+        }
+
+        var dependencyUpdates = MergeVersionDetailsChangesWithBuildUpdates(
+            versionDetailsChanges,
+            buildDependencyUpdates,
+            headBranchDependencyDict);
+
+        return (dependencyUpdates, hasToolsetMerges || hadToolsetUpdates);
+    }
+
+    /// <summary>
+    /// Performs three-way merges of all version files: toolset files (global.json, dotnet-tools.json) and Version.Details.xml.
+    /// </summary>
+    private async Task<(bool hasToolsetUpdates, VersionFileChanges<DependencyUpdate> versionDetailsChanges)> MergeVersionFiles(
         CodeflowOptions codeflowOptions,
         ILocalGitRepo targetRepo,
         string targetBranch,
         string repoComparisonSha,
         string vmrComparisonSha)
     {
-        bool hasUpdates = false;
+        bool hasToolsetUpdates = false;
         var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
 
-        // handle global.json
-        hasUpdates |= await _jsonFileMerger.MergeJsonsAsync(
+        hasToolsetUpdates |= await _jsonFileMerger.MergeJsonsAsync(
             targetRepo,
             VersionFiles.GlobalJson,
             repoComparisonSha,
@@ -239,7 +273,6 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             vmrComparisonSha,
             codeflowOptions.CurrentFlow.VmrSha);
 
-        // and handle dotnet-tools.json if it exists
         bool dotnetToolsConfigExists =
             (await targetRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, repoComparisonSha) != null) ||
             (await vmr.GetFileFromGitAsync(VmrInfo.GetRelativeRepoSourcesPath(codeflowOptions.Mapping.Name) / VersionFiles.DotnetToolsConfigJson, codeflowOptions.CurrentFlow.VmrSha) != null ||
@@ -248,7 +281,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
 
         if (dotnetToolsConfigExists)
         {
-            hasUpdates |= await _jsonFileMerger.MergeJsonsAsync(
+            hasToolsetUpdates |= await _jsonFileMerger.MergeJsonsAsync(
                     targetRepo,
                     VersionFiles.DotnetToolsConfigJson,
                     repoComparisonSha,
@@ -259,26 +292,6 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                     codeflowOptions.CurrentFlow.VmrSha,
                     allowMissingFiles: true);
         }
-        return hasUpdates;
-    }
-
-    /// <summary>
-    /// Updates version details, eng/common and other version files (global.json, ...) based on a build that is being flown.
-    /// </summary>
-    /// <returns>List of dependency changes</returns>
-    private async Task<(List<DependencyUpdate> dependencyUpdates, bool hadToolsetUpdates)> MergeAndUpdateDependencyUpdates(
-        CodeflowOptions codeflowOptions,
-        ILocalGitRepo targetRepo,
-        string targetBranch,
-        string repoComparisonSha,
-        string vmrComparisonSha,
-        CancellationToken cancellationToken)
-    {
-        var headBranchDependencies = await GetRepoDependencies(targetRepo, commit: null /* working tree */);
-        var headBranchDependencyDict = headBranchDependencies.Dependencies.ToDictionary(d => d.Name, d => d, comparer: StringComparer.OrdinalIgnoreCase);
-
-        var vmr = _localGitRepoFactory.Create(_vmrInfo.VmrPath);
-
 
         var versionDetailsChanges = await _versionDetailsFileMerger.MergeVersionDetails(
             targetRepo,
@@ -292,23 +305,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             // we're applying the changes to a product repo, so no mapping
             mappingToApplyChanges: null);
 
-        var buildUpdates = await ApplyBuildUpdatesAsync(
-            codeflowOptions,
-            targetRepo,
-            cancellationToken);
-
-        if (!await targetRepo.HasWorkingTreeChangesAsync() && !await targetRepo.HasStagedChangesAsync())
-        {
-            _logger.LogInformation("No changes to dependencies in this backflow update");
-            return (new List<DependencyUpdate>(), false);
-        }
-
-        return (
-            MergeVersionDetailsChangesWithBuildUpdates(
-                versionDetailsChanges,
-                buildUpdates.dependencyUpdates,
-                headBranchDependencyDict),
-            buildUpdates.hadToolsetUpdates);
+        return (hasToolsetUpdates, versionDetailsChanges);
     }
 
     /// <summary>
