@@ -134,14 +134,14 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 vmrComparisonSha = Constants.EmptyGitObject;
             }
 
-            var hasToolsetUpdates = await BackflowToolsets(
+            var hasMergedToolsetUpdates = await MergeToolsetUpdates(
                 codeflowOptions,
                 targetRepo,
                 codeflowOptions.TargetBranch,
                 repoComparisonSha,
                 vmrComparisonSha);
 
-            var updates = await BackflowDependencies(
+            var updates = await MergeAndUpdateDependencyUpdates(
                 codeflowOptions,
                 targetRepo,
                 codeflowOptions.TargetBranch,
@@ -149,7 +149,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 vmrComparisonSha,
                 cancellationToken);
 
-            return new VersionFileUpdateResult(conflictedFiles, updates, hasToolsetUpdates);
+            return new VersionFileUpdateResult(conflictedFiles, updates.dependencyUpdates, hasMergedToolsetUpdates || updates.hadToolsetUpdates);
         }
         catch (Exception e)
         {
@@ -218,7 +218,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         return false;
     }
 
-    private async Task<bool> BackflowToolsets(
+    private async Task<bool> MergeToolsetUpdates(
         CodeflowOptions codeflowOptions,
         ILocalGitRepo targetRepo,
         string targetBranch,
@@ -266,7 +266,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
     /// Updates version details, eng/common and other version files (global.json, ...) based on a build that is being flown.
     /// </summary>
     /// <returns>List of dependency changes</returns>
-    private async Task<List<DependencyUpdate>> BackflowDependencies(
+    private async Task<(List<DependencyUpdate> dependencyUpdates, bool hadToolsetUpdates)> MergeAndUpdateDependencyUpdates(
         CodeflowOptions codeflowOptions,
         ILocalGitRepo targetRepo,
         string targetBranch,
@@ -292,7 +292,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             // we're applying the changes to a product repo, so no mapping
             mappingToApplyChanges: null);
 
-        var buildUpdates = await ApplyBuildDependencyUpdatesAsync(
+        var buildUpdates = await ApplyBuildUpdatesAsync(
             codeflowOptions,
             targetRepo,
             cancellationToken);
@@ -300,20 +300,22 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         if (!await targetRepo.HasWorkingTreeChangesAsync() && !await targetRepo.HasStagedChangesAsync())
         {
             _logger.LogInformation("No changes to dependencies in this backflow update");
-            return [];
+            return (new List<DependencyUpdate>(), false);
         }
 
-        return MergeVersionDetailsChangesWithBuildUpdates(
-            versionDetailsChanges,
-            buildUpdates,
-            headBranchDependencyDict);
+        return (
+            MergeVersionDetailsChangesWithBuildUpdates(
+                versionDetailsChanges,
+                buildUpdates.dependencyUpdates,
+                headBranchDependencyDict),
+            buildUpdates.hadToolsetUpdates);
     }
 
     /// <summary>
     /// Computes build dependency updates, applies them to version files, stages the changes,
     /// and updates eng/common files if the Arcade SDK is being updated.
     /// </summary>
-    private async Task<List<DependencyDetail>> ApplyBuildDependencyUpdatesAsync(
+    private async Task<(List<DependencyDetail> dependencyUpdates, bool hadToolsetUpdates)> ApplyBuildUpdatesAsync(
         CodeflowOptions codeflowOptions,
         ILocalGitRepo targetRepo,
         CancellationToken cancellationToken)
@@ -354,6 +356,9 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
                 codeflowOptions.Build.GetRepository(),
                 codeflowOptions.Build.Commit);
         }
+
+        var globalJsonBefore = await targetRepo.GetFileFromGitAsync(VersionFiles.GlobalJson, null);
+        var dotnetToolsBefore = await targetRepo.GetFileFromGitAsync(VersionFiles.DotnetToolsConfigJson, null);
 
         GitFileContentContainer updatedFiles = await _dependencyFileManager.UpdateDependencyFiles(
             buildUpdates,
@@ -396,7 +401,7 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
             }
         }
 
-        return buildUpdates;
+        return (buildUpdates, !(NormalizedEquals(globalJsonBefore, updatedFiles.GlobalJson.Content) && NormalizedEquals(dotnetToolsBefore, updatedFiles.DotNetToolsJson?.Content)));
     }
 
     /// <summary>
@@ -559,4 +564,11 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
         .. base.GetPatchExclusions(mapping),
         .. VmrBackFlower.GetPatchExclusions(_sourceManifest, mapping)
     ];
+
+    private static bool NormalizedEquals(string? a, string? b) => string.Equals(
+        a == null ? null : NormalizeLineEndings(a),
+        b == null ? null : NormalizeLineEndings(b),
+        StringComparison.Ordinal);
+
+    private static string NormalizeLineEndings(string content) => content.Replace("\r\n", "\n").Replace("\r", "\n");
 }
