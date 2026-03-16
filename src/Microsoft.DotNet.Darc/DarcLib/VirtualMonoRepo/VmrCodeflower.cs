@@ -430,7 +430,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                             : new ForwardFlow(previouslyAppliedBuild.Commit, previousFlow!.VmrSha),
                         KeepConflicts = false,
                         ForceUpdate = true,
-                        UseRecreationFallback = false
+                        UseRecreationFallback = false,
                     },
                     previousFlows,
                     repo,
