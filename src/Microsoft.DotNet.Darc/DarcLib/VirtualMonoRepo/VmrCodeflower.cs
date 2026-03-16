@@ -33,7 +33,8 @@ public record CodeflowOptions(
     IReadOnlyCollection<string>? ExcludedAssets,
     bool KeepConflicts,
     bool ForceUpdate,
-    bool UnsafeFlow);
+    bool UnsafeFlow,
+    bool UseRecreationFallback);
 
 /// <summary>
 /// This class is responsible for taking changes done to a repo in the VMR and backflowing them into the repo.
@@ -429,6 +430,7 @@ public abstract class VmrCodeFlower : IVmrCodeFlower
                             : new ForwardFlow(previouslyAppliedBuild.Commit, previousFlow!.VmrSha),
                         KeepConflicts = false,
                         ForceUpdate = true,
+                        UseRecreationFallback = false
                     },
                     previousFlows,
                     repo,
