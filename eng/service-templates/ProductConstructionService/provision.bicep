@@ -95,7 +95,7 @@ param networkSecurityGroupName string
 param infrastructureResourceGroupName string
 
 @description('Number of replicas for the container app')
-param replicaNumber int
+param replicaCount int
 
 @description('Public IP address name')
 param publicIpAddressName string
@@ -216,7 +216,7 @@ module containerAppModule 'container-app.bicep' = {
         contributorRoleId: contributorRole
         deploymentIdentityPrincipalId: managedIdentitiesModule.outputs.deploymentIdentityPrincipalId
         pcsIdentityId: managedIdentitiesModule.outputs.pcsIdentityId
-        replicaNumber: replicaNumber
+        replicaCount: replicaCount
     }
     dependsOn: [
         containerRegistryModule

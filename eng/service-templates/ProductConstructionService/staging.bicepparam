@@ -8,7 +8,7 @@ param containerCpuCoreCount = '1.0'
 
 param containerMemory = '2Gi'
 
-param replicaNumber = 2
+param replicaCount = 2
 
 param aspnetcoreEnvironment = 'Staging'
 
