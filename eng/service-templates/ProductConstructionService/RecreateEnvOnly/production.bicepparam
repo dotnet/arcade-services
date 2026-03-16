@@ -10,7 +10,7 @@ param containerCpuCoreCount = '4.0'
 
 param containerMemory = '8Gi'
 
-param replicaNumber = 10
+param replicaNumber = 2
 
 param aspnetcoreEnvironment = 'Production'
 
@@ -43,10 +43,6 @@ param subscriptionTriggererDailyJobName = 'sub-triggerer-daily-prod'
 param subscriptionTriggererEveryTwoWeeksJobName = 'sub-triggerer-everytwoweeks-prod'
 
 param subscriptionTriggererEveryMonthJobName = 'sub-triggerer-everymonth-prod'
-
-param longestBuildPathUpdaterIdentityName = 'LongestBuildPathUpdaterProd'
-
-param longestBuildPathUpdaterJobName = 'longest-path-updater-job-prod'
 
 param feedCleanerJobName = 'feed-cleaner-prod'
 
