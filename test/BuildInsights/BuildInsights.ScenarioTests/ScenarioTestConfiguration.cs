@@ -38,7 +38,6 @@ public class ScenarioTestConfiguration
     public static string GitHubToken { get; }
     public static bool IsCI { get; }
     public static ExponentialRetry ExponentialRetry => ServiceProvider.GetRequiredService<ExponentialRetry>();
-    public static ISystemClock SystemClock => ServiceProvider.GetRequiredService<ISystemClock>();
     public static IServiceProvider ServiceProvider { get => field; private set; }
     public static Octokit.GitHubClient GitHubApi { get => field; private set; }
     public static GitHubAppSettings GitHubAppSettings => ServiceProvider.GetRequiredService<IOptions<GitHubAppSettings>>().Value;

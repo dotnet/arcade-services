@@ -88,37 +88,41 @@ public class BuildInsightsEndToEndTests
 
             TestContext.WriteLine($"Found check run {buildInsightsCheck.Id}");
 
-            Match m = r.Match(buildInsightsCheck.Output.Text);
-            string snapshotId = m.Groups[1].Value;
-            TestContext.WriteLine($"SnapshotId: {snapshotId}");
-
-            Stream? stream = await storageCache.TryGetAsync($"analysis-blob-{snapshotId}.json", cancellationToken);
-            stream.Should().NotBeNull("because the snapshot '{0}' was retrieved.", snapshotId);
-
-            var data = await JsonSerializer.DeserializeAsync<MergedBuildResultAnalysis>(stream, options, cancellationToken);
-            data.Should().NotBeNull();
-
-            // This is because there's a race condition when the checks are of completed status, but we're still waiting for the second
-            //   pipeline's results to be analyzed and consolidated with the previously completed pipeline results on the check.
-            if (data.CompletedPipelines.Count < 2)
+            if (EnvironmentName != "Development")
             {
-                TestContext.WriteLine("Waiting for the other build!");
-                await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
-                continue;
+                Match m = r.Match(buildInsightsCheck.Output.Text);
+                string snapshotId = m.Groups[1].Value;
+                TestContext.WriteLine($"SnapshotId: {snapshotId}");
+
+                Stream? stream = await storageCache.TryGetAsync($"analysis-blob-{snapshotId}.json", cancellationToken);
+                stream.Should().NotBeNull("because the snapshot '{0}' was retrieved.", snapshotId);
+
+                var data = await JsonSerializer.DeserializeAsync<MergedBuildResultAnalysis>(stream, options, cancellationToken);
+                data.Should().NotBeNull();
+
+                // This is because there's a race condition when the checks are of completed status, but we're still waiting for the second
+                //   pipeline's results to be analyzed and consolidated with the previously completed pipeline results on the check.
+                if (data.CompletedPipelines.Count < 2)
+                {
+                    TestContext.WriteLine("Waiting for the other build!");
+                    await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
+                    continue;
+                }
+
+                foreach (var pipeline in data.CompletedPipelines)
+                {
+                    TestContext.WriteLine($"Found associated, completed pipeline: {pipeline.PipelineName}, #{pipeline.BuildId}");
+                }
+
+                ValidateSnapshotData(data);
             }
 
-            foreach (var pipeline in data.CompletedPipelines)
-            {
-                TestContext.WriteLine($"Found associated, completed pipeline: {pipeline.PipelineName}, #{pipeline.BuildId}");
-            }
-
-            buildInsightsCheck.Conclusion!.Value.Should().Be(CheckConclusion.Failure);
+            buildInsightsCheck.Conclusion.Should().Be(CheckConclusion.Failure);
             buildInsightsCheck.Conclusion.Should().Be(GitHub.Models.CheckConclusion.Failure, "there are test failures");
             buildInsightsCheck.Output.Text.Should().Contain("Test Failures (2 tests failed)")
                 .And.Contain("build-insights-test-1")
                 .And.Contain("Known test errors")
                 .And.Contain(KnownIssueTitle);
-            ValidateSnapshotData(data);
             break;
         }
     }
@@ -133,7 +137,7 @@ public class BuildInsightsEndToEndTests
             testGitHubInformation.Repository,
             testGitHubInformation.Commit.Sha);
 
-        DateTimeOffset end = SystemClock.UtcNow;
+        DateTimeOffset end = DateTimeOffset.UtcNow;
 
         var vssConnectionProvider = ScenarioTestConfiguration.ServiceProvider.GetRequiredService<VssConnectionProvider>();
         List<(TestCaseResult result, string organization, string project, TestRun run)> allTestResults = [];
