@@ -157,7 +157,6 @@ public static class BuildInsightsCommonConfiguration
         // Set up Redis
         var redisConnectionString = builder.Configuration[ConfigurationKeys.RedisConnectionString]!;
         await builder.AddRedisCache(redisConnectionString, managedIdentityId);
-        builder.AddRedisOutputCache(ConfigurationKeys.RedisConnectionName);
 
         // Set up telemetry
         builder.AddDataProtection(azureCredential);
