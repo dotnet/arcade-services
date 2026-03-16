@@ -52,8 +52,13 @@ resource storageAccountQueueService 'Microsoft.Storage/storageAccounts/queueServ
   parent: storageAccount
 }
 
-resource storageAccountQueue 'Microsoft.Storage/storageAccounts/queueServices/queues@2022-09-01' = {
-  name: 'app-workitems'
+resource storageAccountQueue1 'Microsoft.Storage/storageAccounts/queueServices/queues@2022-09-01' = {
+  name: 'build-insights-workitems'
+  parent: storageAccountQueueService
+}
+
+resource storageAccountQueue2 'Microsoft.Storage/storageAccounts/queueServices/queues@2022-09-01' = {
+  name: 'build-insights-special-workitems'
   parent: storageAccountQueueService
 }
 
