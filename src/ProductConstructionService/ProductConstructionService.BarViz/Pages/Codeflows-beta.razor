@@ -127,7 +127,7 @@
                             @if (context.FlowStatus.Subscription.LastAppliedBuild.Staleness is > 0)
                             {
                                 <span style="color: #888; font-size: 0.85em; margin-left: 4px;">
-                                    (@context.FlowStatus.Subscription.LastAppliedBuild.Staleness build(s) @GetBuildTimeStaleness(context.FlowStatus) behind)
+                                    (@context.FlowStatus.Subscription.LastAppliedBuild.Staleness build(s) @GetBuildTimeStaleness(context.FlowStatus) behind newest build)
                                 </span>
                             }
                             else if (context.FlowStatus.NewestBuildDate == null)
