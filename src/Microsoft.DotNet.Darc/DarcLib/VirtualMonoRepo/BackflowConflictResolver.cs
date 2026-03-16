@@ -563,9 +563,9 @@ public class BackflowConflictResolver : CodeFlowConflictResolver, IBackflowConfl
     ];
 
     private static bool NormalizedEquals(string? a, string? b) => string.Equals(
-        a == null ? null : NormalizeLineEndings(a),
-        b == null ? null : NormalizeLineEndings(b),
+        NormalizeLineEndings(a),
+        NormalizeLineEndings(b),
         StringComparison.Ordinal);
 
-    private static string NormalizeLineEndings(string content) => content.Replace("\r\n", "\n").Replace("\r", "\n");
+    private static string? NormalizeLineEndings(string? content) => content?.Replace("\r\n", "\n").Replace("\r", "\n");
 }
