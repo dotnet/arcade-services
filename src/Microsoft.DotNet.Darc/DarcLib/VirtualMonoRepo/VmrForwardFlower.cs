@@ -59,7 +59,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
     private readonly IVmrCloneManager _vmrCloneManager;
     private readonly ILocalGitClient _localGitClient;
     private readonly ILocalGitRepoFactory _localGitRepoFactory;
-    private readonly IVersionDetailsParser _versionDetailsParser;
     private readonly ICodeflowChangeAnalyzer _codeflowChangeAnalyzer;
     private readonly IForwardFlowConflictResolver _conflictResolver;
     private readonly IWorkBranchFactory _workBranchFactory;
@@ -93,7 +92,6 @@ public class VmrForwardFlower : VmrCodeFlower, IVmrForwardFlower
         _vmrCloneManager = vmrCloneManager;
         _localGitClient = localGitClient;
         _localGitRepoFactory = localGitRepoFactory;
-        _versionDetailsParser = versionDetailsParser;
         _codeflowChangeAnalyzer = codeflowChangeAnalyzer;
         _conflictResolver = conflictResolver;
         _workBranchFactory = workBranchFactory;
