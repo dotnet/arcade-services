@@ -6,6 +6,19 @@ resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-11-0
   location: location
   properties: {
     securityRules: [
+      {
+        name: 'AllowTagCustom443Inbound'
+        properties: {
+          priority: 100
+          protocol: '*'
+          sourcePortRange: '*'
+          sourceAddressPrefix: 'ServiceTag'
+          destinationPortRange: '443'
+          destinationAddressPrefix: '*'
+          access: 'Allow'
+          direction: 'Inbound'
+        }
+      }
       // These are required by a corp policy
       {
         name: 'NRMS-Rule-101'
@@ -174,6 +187,19 @@ resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-11-0
           sourcePortRange: '*'
           destinationPortRange: '65200-65535'
           sourceAddressPrefix: 'GatewayManager'
+          destinationAddressPrefix: '*'
+          access: 'Allow'
+          direction: 'Inbound'
+        }
+      }
+      {
+        name: 'AllowAnyCustom443Inbound'
+        properties: {
+          priority: 129
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          sourceAddressPrefix: 'Any'
+          destinationPortRange: '443'
           destinationAddressPrefix: '*'
           access: 'Allow'
           direction: 'Inbound'
