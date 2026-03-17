@@ -14,6 +14,10 @@ internal static class BuildInsightsStartup
 {
     internal static class ConfigurationKeys
     {
+        // Secrets coming from the KeyVault
+        public const string AzureDevOpsServiceHookSecret =
+            $"{BuildInsightsCommonConfiguration.ConfigurationKeys.KeyVaultSecretPrefix}azdo-service-hook-secret";
+
         // Configuration from appsettings.json
         public const string EntraAuthentication = "EntraAuthentication";
         public const string KnownIssuesProject = "KnownIssuesProject";
@@ -41,7 +45,11 @@ internal static class BuildInsightsStartup
         bool isDevelopment = builder.Environment.IsDevelopment();
 
         builder.Services.Configure<KnownIssuesProjectOptions>(ConfigurationKeys.KnownIssuesProject, (o, s) => s.Bind(o));
-        builder.Services.Configure<AzDoServiceHookSettings>(ConfigurationKeys.AzDoServiceHook, (o, s) => s.Bind(o));
+        builder.Services.Configure<AzDoServiceHookSettings>(ConfigurationKeys.AzDoServiceHook, (o, s) =>
+        {
+            s.Bind(o);
+            o.SecretHttpHeaderValue = builder.Configuration[ConfigurationKeys.AzureDevOpsServiceHookSecret];
+        });
 
         await builder.ConfigureBuildInsightsDependencies(addKeyVault);
 

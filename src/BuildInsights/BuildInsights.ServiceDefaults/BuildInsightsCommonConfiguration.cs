@@ -44,6 +44,7 @@ public static class BuildInsightsCommonConfiguration
         // Secrets coming from the KeyVault
         public const string GitHubAppPrivateKey = $"{KeyVaultSecretPrefix}github-app-private-key";
         public const string GitHubWebHookSecret = $"{KeyVaultSecretPrefix}github-app-webhook-secret";
+        public const string HelixToken = $"{KeyVaultSecretPrefix}helix-api-token";
 
         // Configuration from appsettings.json
         public const string ConnectionStrings = "ConnectionStrings";
@@ -81,12 +82,6 @@ public static class BuildInsightsCommonConfiguration
             builder.Configuration[$"{ConfigurationKeys.Kusto}:{nameof(BlobStorageSettings.ManagedIdentityId)}"] = managedIdentityId;
         }
 
-        var gitHubAppSettings = builder.Configuration.GetSection(ConfigurationKeys.GitHubApp).Get<GitHubAppSettings>()
-            ?? throw new Exception("GitHubAppSettings configuration section is missing");
-        builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
-        builder.Services.Configure<GitHubAppSettings>(ConfigurationKeys.GitHubApp, (o, s) => s.Bind(o));
-        builder.Services.Configure<HelixSettings>(ConfigurationKeys.Helix, (o, s) => s.Bind(o));
-
         // Set up Key Vault access for some secrets
         TokenCredential azureCredential = isDevelopment
             ? new DefaultAzureCredential()
@@ -100,6 +95,17 @@ public static class BuildInsightsCommonConfiguration
                 azureCredential,
                 new KeyVaultSecretsWithPrefix(ConfigurationKeys.KeyVaultSecretPrefix));
         }
+
+        var gitHubAppSettings = builder.Configuration.GetSection(ConfigurationKeys.GitHubApp).Get<GitHubAppSettings>()
+            ?? throw new Exception("GitHubAppSettings configuration section is missing");
+        builder.Services.Configure<AzureDevOpsTokenProviderOptions>(ConfigurationKeys.AzureDevOpsConfiguration, (o, s) => s.Bind(o));
+        builder.Services.Configure<GitHubAppSettings>(ConfigurationKeys.GitHubApp, (o, s) => s.Bind(o));
+        builder.Services.Configure<HelixSettings>(ConfigurationKeys.Helix, (o, s) =>
+        {
+            s.Bind(o);
+            o.Token = builder.Configuration[ConfigurationKeys.HelixToken]
+                ?? throw new Exception("Helix API token is missing from configuration");
+        });
 
         builder.AddServiceDefaults();
 

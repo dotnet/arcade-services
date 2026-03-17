@@ -27,6 +27,11 @@ public class AzDoServiceHookController : ControllerBase
     [HttpPost(CompletedBuildMessage.MessageEventType)]
     public async Task<IActionResult> BuildCompleted([FromBody] CompletedBuildMessage message)
     {
+        if (!ValidateSecretHeader())
+        {
+            return Unauthorized();
+        }
+
         if (!ValidateMessage(message, CompletedBuildMessage.MessageEventType))
         {
             return BadRequest();
@@ -45,6 +50,11 @@ public class AzDoServiceHookController : ControllerBase
     [HttpPost(KnownIssueReprocessingMessage.MessageEventType)]
     public async Task<IActionResult> KnownIssueReprocessing([FromBody] KnownIssueReprocessingMessage message)
     {
+        if (!ValidateSecretHeader())
+        {
+            return Unauthorized();
+        }
+
         if (!ValidateMessage(message, KnownIssueReprocessingMessage.MessageEventType))
         {
             return BadRequest();
@@ -66,7 +76,7 @@ public class AzDoServiceHookController : ControllerBase
     {
         if (!ValidateSecretHeader())
         {
-            return BadRequest();
+            return Unauthorized();
         }
 
         BuildAnalysisRequestWorkItem request;
@@ -102,7 +112,7 @@ public class AzDoServiceHookController : ControllerBase
         return string.Equals(headerValue, _serviceHookSettings.SecretHttpHeaderValue, StringComparison.OrdinalIgnoreCase);
     }
 
-    private bool ValidateMessage(AzureDevOpsEventBase message, string expectedEventType)
+    private static bool ValidateMessage(AzureDevOpsEventBase message, string expectedEventType)
     {
         if (message == null)
         {
@@ -110,12 +120,6 @@ public class AzDoServiceHookController : ControllerBase
         }
 
         if (!string.Equals(message.EventType, expectedEventType, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        var headerValue = Request.Headers[_serviceHookSettings.SecretHttpHeaderName].FirstOrDefault();
-        if (!string.Equals(headerValue, _serviceHookSettings.SecretHttpHeaderValue, StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
