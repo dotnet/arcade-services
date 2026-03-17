@@ -1008,4 +1008,20 @@ internal class BackflowTests : CodeFlowTests
         (await File.ReadAllTextAsync(ProductRepoPath / Conflict_FileRemovedInSourceAndChangedInTarget)).Should().Be(
             "This file has been changed in target");
     }
+
+    [Test]
+    public async Task BackflowToArcadeSdkOnlyUpdate()
+    {
+        await EnsureTestRepoIsInitialized();
+
+        var arcadeRepoPath = CurrentTestDirectory / "arcade";
+        CopyDirectory(ProductRepoPath, arcadeRepoPath);
+        await GitOperations.InitialCommit(arcadeRepoPath);
+
+        await InitializeRepoAtLastCommit("arcade", arcadeRepoPath);
+
+        // vmrs root global json should flow back to arcade, so we should have updates
+        var result = await CallBackflow("arcade", arcadeRepoPath, "backflow");
+        result.ShouldHaveUpdates();
+    }
 }

@@ -118,7 +118,8 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 excludedAssets,
                 KeepConflicts: true,
                 forceUpdate,
-                unsafeFlow),
+                unsafeFlow,
+                UseRecreationFallback: true),
             targetRepo,
             lastFlows,
             headBranchExisted,
@@ -223,34 +224,32 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
                 codeflowOptions.HeadBranch);
         }
 
-        CodeFlowResult result = await ApplyChangesWithRecreationFallbackAsync(
-            codeflowOptions,
-            lastFlows,
-            targetRepo,
-            headBranchExisted,
-            workBranch,
-            async keepConflicts =>
-            {
-                var conflicts = await _vmrPatchHandler.ApplyPatches(
+        CodeFlowResult result;
+        if (codeflowOptions.UseRecreationFallback)
+        {
+            result = await ApplyChangesWithRecreationFallbackAsync(
+                codeflowOptions,
+                lastFlows,
+                targetRepo,
+                headBranchExisted,
+                workBranch,
+                async keepConflicts => await ApplyPatchesAndCommitAsync(
                     patches,
-                    targetRepo.Path,
-                    removePatchAfter: true,
-                    keepConflicts: keepConflicts,
-                    cancellationToken: cancellationToken);
-
-                // We need to commit because we are on the working branch
-                if (conflicts.Count == 0)
-                {
-                    await CommitBackflow(
-                        codeflowOptions.CurrentFlow,
-                        targetRepo,
-                        codeflowOptions.Build,
-                        cancellationToken);
-                }
-
-                return new CodeFlowResult(true, conflicts, targetRepo.Path, []);
-            },
-            cancellationToken);
+                    targetRepo,
+                    codeflowOptions,
+                    keepConflicts,
+                    cancellationToken),
+                cancellationToken);
+        }
+        else
+        {
+            result = await ApplyPatchesAndCommitAsync(
+                patches,
+                targetRepo,
+                codeflowOptions,
+                codeflowOptions.KeepConflicts,
+                cancellationToken);
+        }
 
         if (workBranch != null)
         {
@@ -269,6 +268,33 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
         }
 
         return result;
+    }
+
+    private async Task<CodeFlowResult> ApplyPatchesAndCommitAsync(
+        List<VmrIngestionPatch> patches,
+        ILocalGitRepo targetRepo,
+        CodeflowOptions codeflowOptions,
+        bool keepConflicts,
+        CancellationToken cancellationToken)
+    {
+        var conflicts = await _vmrPatchHandler.ApplyPatches(
+            patches,
+            targetRepo.Path,
+            removePatchAfter: true,
+            keepConflicts: keepConflicts,
+            cancellationToken: cancellationToken);
+
+        // We need to commit because we are on the working branch
+        if (conflicts.Count == 0)
+        {
+            await CommitBackflow(
+                codeflowOptions.CurrentFlow,
+                targetRepo,
+                codeflowOptions.Build,
+                cancellationToken);
+        }
+
+        return new CodeFlowResult(true, conflicts, targetRepo.Path, []);
     }
 
     protected override async Task<CodeFlowResult> OppositeDirectionFlowAsync(
@@ -501,12 +527,6 @@ public class VmrBackFlower : VmrCodeFlower, IVmrBackFlower
             ?? throw new DarcException("No more backflows found to recreate");
 
         await targetRepo.ForceCheckoutAsync(previousFlow.RepoSha);
-        await _vmrCloneManager.PrepareVmrAsync(
-            [_vmrInfo.VmrUri],
-            [previousFlow.VmrSha],
-            previousFlow.VmrSha,
-            resetToRemote: false,
-            cancellationToken);
 
         var previousFlowSha = await _localGitClient.BlameLineAsync(
             targetRepo.Path / VersionFiles.VersionDetailsXml,
