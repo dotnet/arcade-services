@@ -442,9 +442,6 @@ public abstract class CodeFlowConflictResolver
 
         foreach (var revertedFile in revertedFiles)
         {
-            _logger.LogInformation("Suspecting a revert in {file}. Trying to fix it using a crossing flow...",
-                revertedFile);
-
             if (!await CheckIfRealRevertAsync(
                 revertedFile,
                 codeflowOptions,
@@ -456,6 +453,8 @@ public abstract class CodeFlowConflictResolver
                 continue;
             }
 
+            _logger.LogInformation("Suspecting a revert in {file}. Trying to fix it using a crossing flow...",
+                revertedFile);
             string contentBefore = await _fileSystem.ReadAllTextAsync(targetRepo.Path / revertedFile);
 
             var result = await targetRepo.ExecuteGitCommand(["checkout", codeflowOptions.TargetBranch, revertedFile], cancellationToken);
@@ -505,7 +504,6 @@ public abstract class CodeFlowConflictResolver
         {
             targetRepo = vmr;
             stripPatchFromSha = lastFLows.LastFlow.VmrSha;
-            stripPatchWorkingDir = vmrRepoSourcesPath;
             reverseApplyFromSha = crossingFlow.RepoSha;
             reverseApplyToSha = codeflowOptions.CurrentFlow.RepoSha;
             reverseApplyWorkingDir = productRepo.Path;
@@ -516,7 +514,6 @@ public abstract class CodeFlowConflictResolver
         {
             targetRepo = productRepo;
             stripPatchFromSha = lastFLows.LastFlow.RepoSha;
-            stripPatchWorkingDir = productRepo.Path;
             reverseApplyFromSha = crossingFlow.VmrSha;
             reverseApplyToSha = codeflowOptions.CurrentFlow.VmrSha;
             reverseApplyWorkingDir = vmrRepoSourcesPath;
@@ -526,7 +523,7 @@ public abstract class CodeFlowConflictResolver
         string contentBefore = await _fileSystem.ReadAllTextAsync(targetRepo.Path / filePath);
 
         // strip the changes in the target repo that might be causing a false positive
-        var result = await targetRepo.ExecuteGitCommand(["checkout", stripPatchFromSha, "--", filePath], cancellationToken);
+        await targetRepo.ExecuteGitCommand(["checkout", stripPatchFromSha, "--", filePath], cancellationToken);
 
         // now reverse apply the current flow's changes. If it fails, it was a real revert; otherwise a false positive
         List<VmrIngestionPatch> reverseApplyPatch = await _patchHandler.CreatePatches(
