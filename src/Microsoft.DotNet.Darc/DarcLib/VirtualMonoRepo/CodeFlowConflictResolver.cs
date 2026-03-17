@@ -424,7 +424,7 @@ public abstract class CodeFlowConflictResolver
                 codeflowOptions,
                 vmr,
                 productRepo,
-                lastFlows.CrossingFlow,
+                lastFlows,
                 revertedFiles,
                 cancellationToken);
         }
@@ -434,7 +434,7 @@ public abstract class CodeFlowConflictResolver
         CodeflowOptions codeflowOptions,
         ILocalGitRepo vmr,
         ILocalGitRepo productRepo,
-        Codeflow crossingFlow,
+        LastFlows lastFlows,
         IEnumerable<UnixPath> revertedFiles,
         CancellationToken cancellationToken)
     {
@@ -448,7 +448,8 @@ public abstract class CodeFlowConflictResolver
             if (!await CheckIfRealRevertAsync(
                 revertedFile,
                 codeflowOptions,
-                crossingFlow, vmr,
+                lastFlows,
+                vmr,
                 productRepo,
                 cancellationToken))
             {
@@ -469,7 +470,7 @@ public abstract class CodeFlowConflictResolver
                 vmr,
                 productRepo,
                 revertedFile,
-                crossingFlow,
+                lastFlows.CrossingFlow!,
                 cancellationToken))
             {
                 _logger.LogInformation("Failed to auto-resolve a conflict in {file} while fixing a partial revert",
@@ -485,12 +486,13 @@ public abstract class CodeFlowConflictResolver
     private async Task<bool> CheckIfRealRevertAsync(
         UnixPath filePath,
         CodeflowOptions codeflowOptions,
-        Codeflow crossingFlow,
+        LastFlows lastFLows,
         ILocalGitRepo vmr,
         ILocalGitRepo productRepo,
         CancellationToken cancellationToken)
     {
         var vmrRepoSourcesPath = _vmrInfo.GetRepoSourcesPath(codeflowOptions.Mapping);
+        var crossingFlow = lastFLows.CrossingFlow!;
 
         ILocalGitRepo targetRepo;
         string stripPatchFromSha;
@@ -502,7 +504,7 @@ public abstract class CodeFlowConflictResolver
         if (codeflowOptions.CurrentFlow.IsForwardFlow)
         {
             targetRepo = vmr;
-            stripPatchFromSha = crossingFlow.VmrSha;
+            stripPatchFromSha = lastFLows.LastFlow.VmrSha;
             stripPatchWorkingDir = vmrRepoSourcesPath;
             reverseApplyFromSha = crossingFlow.RepoSha;
             reverseApplyToSha = codeflowOptions.CurrentFlow.RepoSha;
@@ -513,7 +515,7 @@ public abstract class CodeFlowConflictResolver
         else
         {
             targetRepo = productRepo;
-            stripPatchFromSha = crossingFlow.RepoSha;
+            stripPatchFromSha = lastFLows.LastFlow.RepoSha;
             stripPatchWorkingDir = productRepo.Path;
             reverseApplyFromSha = crossingFlow.VmrSha;
             reverseApplyToSha = codeflowOptions.CurrentFlow.VmrSha;
@@ -524,25 +526,7 @@ public abstract class CodeFlowConflictResolver
         string contentBefore = await _fileSystem.ReadAllTextAsync(targetRepo.Path / filePath);
 
         // strip the changes in the target repo that might be causing a false positive
-        var stripCrossingFlowChangesPatch = await _patchHandler.CreatePatches(
-            _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch",
-            stripPatchFromSha,
-            Constants.HEAD,
-            path: relativeFilePath,
-            filters: [],
-            relativePaths: true,
-            workingDir: stripPatchWorkingDir,
-            applicationPath: applicationPath,
-            ignoreLineEndings: true,
-            cancellationToken);
-        await _patchHandler.ApplyPatches(
-            stripCrossingFlowChangesPatch,
-            targetRepo.Path,
-            removePatchAfter: true,
-            keepConflicts: false,
-            reverseApply: true,
-            applyToIndex: true,
-            cancellationToken);
+        var result = await targetRepo.ExecuteGitCommand(["checkout", stripPatchFromSha, "--", filePath], cancellationToken);
 
         // now reverse apply the current flow's changes. If it fails, it was a real revert; otherwise a false positive
         List<VmrIngestionPatch> reverseApplyPatch = await _patchHandler.CreatePatches(
