@@ -165,7 +165,7 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
         // Known conflict in source-manifest.json
         if (string.Equals(conflictedFile, VmrInfo.DefaultRelativeSourceManifestPath, StringComparison.OrdinalIgnoreCase))
         {
-            await TryResolvingSourceManifestConflict(vmr, codeflowOptions.Mapping.Name!, cancellationToken);
+            await TryResolvingSourceManifestConflict(vmr, codeflowOptions, cancellationToken);
             return true;
         }
 
@@ -196,34 +196,34 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
 
     private async Task TryResolvingSourceManifestConflict(
         ILocalGitRepo vmr,
-        string mappingName,
+        CodeflowOptions codeflowOptions,
         CancellationToken cancellationToken)
     {
+        var mappingName = codeflowOptions.Mapping.Name!;
         _logger.LogDebug("Auto-resolving conflict in {file}", VmrInfo.DefaultRelativeSourceManifestPath);
 
         // We load the source manifest from the target branch and replace the
         // current mapping (and its submodules) with our branches' information
         var result = await vmr.RunGitCommandAsync(
-            // During merge: :2: is ours (current branch), :3: is theirs (branch being merged)
-            ["show", ":3:" + VmrInfo.DefaultRelativeSourceManifestPath],
+            ["show", $"{codeflowOptions.TargetBranch}:{VmrInfo.DefaultRelativeSourceManifestPath}"],
             cancellationToken);
 
-        var theirSourceManifest = SourceManifest.FromJson(result.StandardOutput);
+        var targetBranchSourceManifest = SourceManifest.FromJson(result.StandardOutput);
         var ourSourceManifest = _sourceManifest;
         var updatedMapping = ourSourceManifest.Repositories.First(r => r.Path == mappingName);
 
-        theirSourceManifest.UpdateVersion(
+        targetBranchSourceManifest.UpdateVersion(
             mappingName,
             updatedMapping.RemoteUri,
             updatedMapping.CommitSha,
             updatedMapping.BarId);
 
-        var theirAffectedSubmodules = theirSourceManifest.Submodules
+        var theirAffectedSubmodules = targetBranchSourceManifest.Submodules
             .Where(s => s.Path.StartsWith(mappingName + '/'))
             .ToList();
         foreach (var submodule in theirAffectedSubmodules)
         {
-            theirSourceManifest.RemoveSubmodule(submodule);
+            targetBranchSourceManifest.RemoveSubmodule(submodule);
         }
 
         var ourAffectedSubmodules = ourSourceManifest.Submodules
@@ -231,10 +231,10 @@ public class ForwardFlowConflictResolver : CodeFlowConflictResolver, IForwardFlo
             .ToList();
         foreach (var submodule in ourAffectedSubmodules)
         {
-            theirSourceManifest.UpdateSubmodule(submodule);
+            targetBranchSourceManifest.UpdateSubmodule(submodule);
         }
 
-        _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, theirSourceManifest.ToJson());
+        _fileSystem.WriteToFile(_vmrInfo.SourceManifestPath, targetBranchSourceManifest.ToJson());
         _sourceManifest.Refresh(_vmrInfo.SourceManifestPath);
         await vmr.StageAsync([_vmrInfo.SourceManifestPath], cancellationToken);
     }
