@@ -6,9 +6,9 @@ using BuildInsights.BuildAnalysis.WorkItems.Models;
 using BuildInsights.Data.Models;
 using BuildInsights.GitHub;
 using BuildInsights.KnownIssues;
-using HandlebarsDotNet;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ProductConstructionService.WorkItems;
 
 namespace BuildInsights.BuildAnalysis.WorkItems.Processors;
@@ -27,14 +27,14 @@ public class CheckRunConclusionUpdateProcessor : WorkItemProcessor<CheckRunConcl
         IMarkdownGenerator markdownGenerator,
         IBuildProcessingStatusService processingStatusService,
         IGitHubIssuesService gitHubIssuesService,
-        GitHubTokenProviderOptions gitHubTokenProviderOptions,
+        IOptions<GitHubTokenProviderOptions> gitHubTokenProviderOptions,
         ILogger<CheckRunConclusionUpdateProcessor> logger)
     {
         _gitHubChecksService = gitHubChecksService;
         _markdownGenerator = markdownGenerator;
         _processingStatusService = processingStatusService;
         _gitHubIssuesService = gitHubIssuesService;
-        _gitHubTokenProviderOptions = gitHubTokenProviderOptions;
+        _gitHubTokenProviderOptions = gitHubTokenProviderOptions.Value;
         _logger = logger;
     }
 

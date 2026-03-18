@@ -4,18 +4,17 @@
 using System.Reflection;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace BuildInsights.ServiceDefaults.Configuration;
 
 internal static class GitHubClientFactoryConfiguration
 {
     public static void AddGitHubClientFactory(
-        this IHostApplicationBuilder builder,
+        this IServiceCollection services,
         int? appId,
         string? appSecret)
     {
-        builder.Services.Configure<GitHubClientOptions>(o =>
+        services.Configure<GitHubClientOptions>(o =>
         {
             o.ProductHeader = new Octokit.ProductHeaderValue(
                 "BuildInsights",
@@ -24,8 +23,8 @@ internal static class GitHubClientFactoryConfiguration
                     ?.InformationalVersion);
         });
 
-        builder.Services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
-        builder.Services.Configure<GitHubTokenProviderOptions>(o =>
+        services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
+        services.Configure<GitHubTokenProviderOptions>(o =>
         {
             o.GitHubAppId = appId ?? 0;
             o.PrivateKey = appSecret;

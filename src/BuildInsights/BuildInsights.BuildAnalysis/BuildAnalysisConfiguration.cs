@@ -22,6 +22,7 @@ public static class BuildAnalysisConfiguration
 {
     public static IServiceCollection AddBuildAnalysis(
         this IServiceCollection services,
+        IConfigurationSection knownIssuesConfig,
         IConfigurationSection knownIssuesCreationConfig,
         IConfigurationSection knownIssuesAnalysisLimitsConfig,
         IConfigurationSection kustoConfig,
@@ -41,28 +42,31 @@ public static class BuildAnalysisConfiguration
         services.AddQueueInsights(queueInsightsBetaConfig, matrixOfTruthConfig);
         services.AddKustoClientProvider(kustoConfig.Key);
 
-        services.TryAddScoped<IGitHubChecksService, GitHubChecksProvider>();
-        services.TryAddScoped<IRelatedBuildService, RelatedBuildProvider>();
-        services.TryAddScoped<IGitHubRepositoryService, GithubRepositoryProvider>();
-        services.TryAddScoped<IAzDoToGitHubRepositoryService, AzDoToGitHubRepositoryProvider>();
-        services.TryAddScoped<IBuildDataService, BuildDataProvider>();
-        services.TryAddScoped<IBuildAnalysisHistoryService, BuildAnalysisHistoryProvider>();
-        services.TryAddScoped<IBuildAnalysisRepositoryConfigurationService, BuildAnalysisRepositoryConfigurationProvider>();
         services.TryAddScoped<IBuildAnalysisService, BuildAnalysisProvider>();
         services.TryAddScoped<IBuildCacheService, BuildCacheProvider>();
-        services.TryAddScoped<IBuildOperationsService, BuildOperationsProvider>();
-        services.TryAddScoped<IBuildProcessingStatusService, BuildProcessingStatusStatusProvider>();
-        services.TryAddScoped<IBuildRetryService, BuildRetryProvider>();
-        services.TryAddScoped<ICheckResultService, CheckResultProvider>();
-        services.TryAddScoped<IHelixDataService, HelixDataProvider>();
-        services.TryAddScoped<IKnownIssueValidationService, KnownIssueValidationProvider>();
         services.TryAddScoped<IKustoClientProvider, KustoClientProvider>();
         services.TryAddScoped<IKustoIngestClientFactory, KustoIngestClientFactory>();
-        services.TryAddScoped<IMergedBuildAnalysisService, MergedBuildAnalysisProvider>();
-        services.TryAddScoped<IPipelineRequestedService, PipelineRequestedProvider>();
-        services.TryAddScoped<IPreviousBuildAnalysisService, PreviousBuildAnalysisProvider>();
-        services.TryAddScoped<ITestResultService, TestResultProvider>();
 
+        services.TryAddTransient<IAzDoToGitHubRepositoryService, AzDoToGitHubRepositoryProvider>();
+        services.TryAddTransient<IBuildAnalysisHistoryService, BuildAnalysisHistoryProvider>();
+        services.TryAddTransient<IBuildAnalysisRepositoryConfigurationService, BuildAnalysisRepositoryConfigurationProvider>();
+        services.TryAddTransient<IBuildAnalyzer, BuildAnalyzer>();
+        services.TryAddTransient<IBuildDataService, BuildDataProvider>();
+        services.TryAddTransient<IBuildOperationsService, BuildOperationsProvider>();
+        services.TryAddTransient<IBuildProcessingStatusService, BuildProcessingStatusStatusProvider>();
+        services.TryAddTransient<IBuildRetryService, BuildRetryProvider>();
+        services.TryAddTransient<ICheckResultService, CheckResultProvider>();
+        services.TryAddTransient<IGitHubChecksService, GitHubChecksProvider>();
+        services.TryAddTransient<IGitHubRepositoryService, GithubRepositoryProvider>();
+        services.TryAddTransient<IHelixDataService, HelixDataProvider>();
+        services.TryAddTransient<IKnownIssueValidationService, KnownIssueValidationProvider>();
+        services.TryAddTransient<IMergedBuildAnalysisService, MergedBuildAnalysisProvider>();
+        services.TryAddTransient<IPipelineRequestedService, PipelineRequestedProvider>();
+        services.TryAddTransient<IPreviousBuildAnalysisService, PreviousBuildAnalysisProvider>();
+        services.TryAddTransient<IRelatedBuildService, RelatedBuildProvider>();
+        services.TryAddTransient<ITestResultService, TestResultProvider>();
+
+        services.Configure<KnownIssuesProcessorOptions>(knownIssuesConfig);
         services.Configure<InternalProjectSettings>(internalProjectConfig);
         services.Configure<BuildConfigurationFileSettings>(buildConfigurationFileConfig);
         services.Configure<RelatedBuildProviderSettings>(relatedBuildsConfig);

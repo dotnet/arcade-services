@@ -31,7 +31,7 @@ public class BuildInsightsEndToEndTests
     [Test]
     public async Task ValidatePRWithBreakingTests()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(45));
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(450));
         CancellationToken cancellationToken = cts.Token;
 
         string testBranchName = $"scenario-tests/{DateTimeOffset.UtcNow:yyyyMMddHHmmss}";

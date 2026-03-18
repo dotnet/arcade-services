@@ -20,6 +20,7 @@ internal static class BuildInsightsStartup
 
         // Configuration from appsettings.json
         public const string EntraAuthentication = "EntraAuthentication";
+        public const string KnownIssues = "KnownIssues";
         public const string KnownIssuesProject = "KnownIssuesProject";
         public const string KnownIssuesCreation = "KnownIssuesCreation";
         public const string KnownIssuesAnalysisLimits = "KnownIssuesAnalysisLimits";
@@ -64,6 +65,7 @@ internal static class BuildInsightsStartup
         builder.Services.AddApplicationInsightsTelemetryProcessor<RemoveDefaultPropertiesTelemetryProcessor>();
 
         builder.Services.AddBuildAnalysis(
+            builder.Configuration.GetRequiredSection(ConfigurationKeys.KnownIssues),
             builder.Configuration.GetRequiredSection(ConfigurationKeys.KnownIssuesCreation),
             builder.Configuration.GetRequiredSection(ConfigurationKeys.KnownIssuesAnalysisLimits),
             builder.Configuration.GetRequiredSection(ConfigurationKeys.Kusto),

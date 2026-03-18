@@ -7,8 +7,6 @@ namespace BuildInsights.BuildAnalysis.Models;
 public class KnownIssuesProcessorOptions
 {
     public List<AzureDevOpsProject> AzureDevOpsProjects { get; set; }
-    public string BuildAnalysisQueueEndpoint { get; set; }
-    public string BuildAnalysisQueueName { get; set; }
     public string KnownIssuesRepo { get; set; }
     public bool RepositoryIssuesOnly { get; set; }
 }

@@ -111,7 +111,7 @@ public static class BuildInsightsCommonConfiguration
 
         // Set up GitHub and Azure DevOps auth
         builder.Services.AddVssConnection();
-        builder.AddGitHubClientFactory(
+        builder.Services.AddGitHubClientFactory(
             gitHubAppSettings.AppId,
             builder.Configuration[ConfigurationKeys.GitHubAppPrivateKey]);
         builder.Services.AddGitHubTokenProvider();

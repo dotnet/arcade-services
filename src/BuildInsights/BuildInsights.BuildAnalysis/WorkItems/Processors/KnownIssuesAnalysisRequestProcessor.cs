@@ -14,7 +14,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ProductConstructionService.WorkItems;
 
-#nullable enable
 namespace BuildInsights.BuildAnalysis.WorkItems.Processors;
 
 public class KnownIssuesAnalysisRequestProcessor : WorkItemProcessor<KnownIssueAnalysisRequest>
@@ -82,7 +81,9 @@ public class KnownIssuesAnalysisRequestProcessor : WorkItemProcessor<KnownIssueA
             // In staging, RepositoryIssuesOnly will be true and the scope of infrastructure issues will be limited to the test repo
             string? repositoryFilter = null;
             if (!issue.RepositoryWithOwner.Equals(_options.CurrentValue.KnownIssuesRepo) || _options.CurrentValue.RepositoryIssuesOnly)
+            {
                 repositoryFilter = issue.RepositoryWithOwner;
+            }
 
             _logger.LogInformation("Reprocessing {issueType} issue {issueRepo}#{issueNumber}",
                 repositoryFilter == null ? "infrastructure" : "repository", issue.RepositoryWithOwner, issue.Id);

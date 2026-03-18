@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using AwesomeAssertions;
+using BuildInsights.ServiceDefaults.Configuration;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -16,7 +17,9 @@ public class DependencyRegistrationTests
     public async Task AreDependenciesRegistered()
     {
         var builder = ApiTestConfiguration.CreateTestHostBuilder();
-        await builder.ConfigureBuildInsights(addKeyVault: false);
+        await builder
+            .ConfigureBuildInsights(addKeyVault: false);
+        builder.Services.AddGitHubClientFactory(null, null);
 
         DependencyInjectionValidation.IsDependencyResolutionCoherent(
             s =>
