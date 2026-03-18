@@ -68,6 +68,12 @@ internal class ResolveConflictOperation(
     {
         var subscription = await FetchCodeflowSubscriptionAsync(_options.SubscriptionId);
 
+        if (string.IsNullOrEmpty(_options.ExcludedAssets) && subscription.ExcludedAssets?.Count > 0)
+        {
+            _options.ExcludedAssets = string.Join(";", subscription.ExcludedAssets);
+            _logger.LogInformation("Using excluded assets from subscription: {excludedAssets}", _options.ExcludedAssets);
+        }
+
         var pr = await FetchTrackedPrAsync(subscription.Id);
 
         var build = await FetchPrLastAppliedBuildAsync(pr);
