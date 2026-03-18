@@ -4,10 +4,8 @@ variables:
   value: dev
 - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
   - template: /eng/pipelines/templates/variables/prod.yml@self
-  - template: /eng/pipelines/templates/variables/build-insights.prod.yml@self
 - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:
   - template: /eng/pipelines/templates/variables/int.yml@self
-  - template: /eng/pipelines/templates/variables/build-insights.int.yml@self
 
 trigger:
   batch: true
@@ -31,6 +29,6 @@ extends:
       image: 1es-windows-2022
       os: windows
     stages:
-    - template: /eng/pipelines/templates/stages/pipeline.yml@self
+    - template: /eng/pipelines/templates/stages/build.yml@self
       parameters:
         isProdPipeline: true

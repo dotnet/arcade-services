@@ -1,25 +1,6 @@
-parameters:
-- name: deployPCS
-  displayName: Deploy Product Construction Service
-  type: boolean
-  default: false
-- name: deployBI
-  displayName: Deploy Build Insights
-  type: boolean
-  default: false
-- name: skipMigrationsPCS
-  displayName: Skip PCS DB migrations
-  type: boolean
-  default: true
-- name: skipMigrationsBI
-  displayName: Skip BI DB migrations
-  type: boolean
-  default: true
-
 variables:
 - template: /eng/pipelines/templates/variables/shared-variables.yml@self
 - template: /eng/pipelines/templates/variables/int.yml@self
-- template: /eng/pipelines/templates/variables/build-insights.int.yml@self
 - name: devBranchSuffix
   value: '-dev'
 
@@ -40,10 +21,6 @@ extends:
       image: 1es-windows-2022
       os: windows
     stages:
-    - template: /eng/pipelines/templates/stages/pipeline.yml@self
+    - template: /eng/pipelines/templates/stages/build.yml@self
       parameters:
         isProdPipeline: false
-        deployPCS: ${{ parameters.deployPCS }}
-        deployBI: ${{ parameters.deployBI }}
-        skipMigrationsPCS: ${{ parameters.skipMigrationsPCS }}
-        skipMigrationsBI: ${{ parameters.skipMigrationsBI }}

@@ -2,18 +2,6 @@ parameters:
 - name: isProdPipeline
   displayName: Indicates whether this template should be configured for a production or non-production pipeline.
   type: boolean
-- name: deployPCS
-  type: boolean
-  default: true
-- name: deployBI
-  type: boolean
-  default: true
-- name: skipMigrationsPCS
-  type: boolean
-  default: false
-- name: skipMigrationsBI
-  type: boolean
-  default: false
 
 stages:
 - stage: Build
@@ -76,29 +64,19 @@ stages:
             path: $(Build.SourcesDirectory)\artifacts\bin\ProductConstructionService.Cli\$(_BuildConfig)\net10.0
             artifact: ProductConstructionService.Cli
             displayName: Publish PCS CLI
-          - output: pipelineArtifact
-            path: $(Build.SourcesDirectory)\artifacts\bin\BuildInsightsCli\$(_BuildConfig)\net10.0
-            artifact: BuildInsightsCli
-            displayName: Publish BuildInsights CLI
-
       - job: BuildAndPublishDocker
-        displayName: Build/publish docker images
+        displayName: Build/publish docker image
         pool:
           name: NetCore1ESPool-Internal
           demands: ImageOverride -equals build.ubuntu.2204.amd64
           os: linux
         steps:
-
         - checkout: self
-
         - template: /eng/pipelines/templates/steps/docker-build.yml@self
           parameters:
             devBranchSuffix: $(devBranchSuffix)
-            pcsDockerImageName: $(dockerRegistryUrl)/$(containerName)
-            biDockerImageName: $(buildInsightsDockerRegistryUrl)/$(buildInsightsImageName)
-
+            dockerImageName: $(dockerRegistryUrl)/$(containerName)
         - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
-
           - task: AzureCLI@2
             inputs:
               azureSubscription: $(pcsDeploymentServiceConnection)
@@ -107,26 +85,6 @@ stages:
               inlineScript: |
                 az acr login --name $(containerRegistryName)
                 docker push "$(dockerRegistryUrl)/$(containerName):$(DockerTag.newDockerImageTag)"
-            displayName: Push PCS docker image
+            displayName: Push docker image
 
-          - task: AzureCLI@2
-            condition: and(succeeded(), eq(variables['buildInsightsPushImage'], 'true'))
-            inputs:
-              azureSubscription: $(buildInsightsDeploymentServiceConnection)
-              scriptType: pscore
-              scriptLocation: inlineScript
-              inlineScript: |
-                az acr login --name $(buildInsightsContainerRegistryName)
-                docker push "$(buildInsightsDockerRegistryUrl)/$(buildInsightsImageName):$(DockerTag.newDockerImageTag)"
-            displayName: Push BuildInsights docker image
-
-- ${{ if eq(parameters.deployPCS, true) }}:
-  - template: /eng/pipelines/templates/stages/deploy-pcs.yaml@self
-    parameters:
-      skipMigrations: ${{ parameters.skipMigrationsPCS }}
-
-# Do this for the non production pipeline yet
-- ${{ if and(eq(parameters.deployBI, true), ne(variables['Build.SourceBranch'], 'refs/heads/production')) }}:
-  - template: /eng/pipelines/templates/stages/deploy-build-insights.yaml@self
-    parameters:
-      skipMigrations: ${{ parameters.skipMigrationsBI }}
+- template: /eng/pipelines/templates/stages/deploy.yaml@self

@@ -97,4 +97,3 @@ stages:
         - template: /eng/pipelines/templates/steps/docker-build.yml
           parameters:
             dockerImageName: test
-            buildInsightsDockerImageName: test-buildinsights
