@@ -23,8 +23,6 @@ namespace BuildInsights.Api.Controllers;
 [Route("github/webhooks")]
 public class GitHubWebhooksController : ControllerBase
 {
-    private const string GitHubAppName = "Build Insights";
-
     private readonly IGitHubChecksService _checks;
     private readonly IGitHubGraphQLClient _graphQLClient;
     private readonly OperationManager _operations;

@@ -53,7 +53,8 @@ internal static class BuildInsightsStartup
 
         await builder.ConfigureBuildInsightsDependencies(addKeyVault);
 
-        builder.Services.AddControllers();
+        builder.Services.AddControllers()
+            .AddGitHubWebHooks();
         builder.Services
             .AddRazorComponents()
             .AddInteractiveServerComponents();
