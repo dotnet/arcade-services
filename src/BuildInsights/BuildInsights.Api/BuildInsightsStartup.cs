@@ -83,7 +83,7 @@ internal static class BuildInsightsStartup
         }
 
         /*
-        // Configure API
+        // Configure auth
         builder.Services.ConfigureAuthServices(builder.Configuration.GetSection(ConfigurationKeys.EntraAuthenticationKey));
 
         builder.Services.AddRazorPages(
@@ -92,8 +92,6 @@ internal static class BuildInsightsStartup
                 options.Conventions.AuthorizeFolder("/", AuthenticationConfiguration.WebAuthorizationPolicyName);
                 options.Conventions.AllowAnonymousToPage("/Error");
             })
-            .AddGitHubWebHooks()
-            .AddApiPagination()
             .AddCookieTempDataProvider(
                 options =>
                 {
@@ -101,8 +99,6 @@ internal static class BuildInsightsStartup
                     // The application will not function without this cookie.
                     options.Cookie.IsEssential = true;
                 });
-
-        builder.Services.AddTransient<WebhookEventProcessor, GitHubWebhookEventProcessor>();
         */
     }
 

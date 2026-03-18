@@ -4,6 +4,8 @@
 using BuildInsights.AzureStorage.Cache;
 using BuildInsights.BuildAnalysis.HandleBar;
 using BuildInsights.BuildAnalysis.Models;
+using BuildInsights.BuildAnalysis.WorkItems.Models;
+using BuildInsights.BuildAnalysis.WorkItems.Processors;
 using BuildInsights.GitHub;
 using BuildInsights.KnownIssues;
 using BuildInsights.KnownIssues.Models;
@@ -12,6 +14,7 @@ using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using ProductConstructionService.WorkItems;
 
 namespace BuildInsights.BuildAnalysis;
 
@@ -64,6 +67,13 @@ public static class BuildAnalysisConfiguration
         services.Configure<BuildConfigurationFileSettings>(buildConfigurationFileConfig);
         services.Configure<RelatedBuildProviderSettings>(relatedBuildsConfig);
         services.Configure<BuildAnalysisFileSettings>(buildAnalysisFileConfig);
+
+        services.AddWorkItemProcessor<BuildAnalysisRequestWorkItem, BuildAnalysisProcessor>();
+        services.AddWorkItemProcessor<CheckRunConclusionUpdateEvent, CheckRunConclusionUpdateProcessor>();
+        services.AddWorkItemProcessor<CheckRunRerunGitHubEvent, CheckRunRerunEventProcessor>();
+        services.AddWorkItemProcessor<KnownIssueAnalysisRequest, KnownIssuesAnalysisRequestProcessor>();
+        services.AddWorkItemProcessor<KnownIssueValidationRequest, KnownIssueValidationProcessor>();
+        services.AddWorkItemProcessor<PullRequestGitHubEventWorkItem, PullRequestEventProcessor>();
 
         return services;
     }
