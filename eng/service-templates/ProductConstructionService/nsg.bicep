@@ -12,7 +12,7 @@ resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-11-0
               priority: 100
               protocol: '*'
               sourcePortRange: '*'
-              sourceAddressPrefix: 'ServiceTag'
+              sourceAddressPrefix: 'VirtualNetwork'
               destinationPortRange: '443'
               destinationAddressPrefix: '*'
               access: 'Allow'
@@ -198,7 +198,7 @@ resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-11-0
               priority: 129
               protocol: 'Tcp'
               sourcePortRange: '*'
-              sourceAddressPrefix: 'Any'
+              sourceAddressPrefix: '*'
               destinationPortRange: '443'
               destinationAddressPrefix: '*'
               access: 'Allow'
