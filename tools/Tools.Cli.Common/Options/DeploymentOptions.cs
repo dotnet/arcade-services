@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Azure.Core;
@@ -9,15 +9,17 @@ using CommandLine;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using ProductConstructionService.Cli.Operations;
+using Tools.Cli.Core;
+using Tools.Cli.Common.Operations;
 using ProductConstructionService.WorkItems;
 using StackExchange.Redis;
 using Maestro.Common.Cache;
 
-namespace ProductConstructionService.Cli.Options;
+namespace Tools.Cli.Common.Options;
 
 [Verb("deploy", HelpText = "Deploy PCS with the specified options")]
-internal class DeploymentOptions : Options
+[Operation<DeploymentOperation>]
+public class DeploymentOptions : Tools.Cli.Core.Options
 {
     [Option("subscriptionId", Required = true, HelpText = "Azure subscription ID")]
     public required string SubscriptionId { get; init; }
@@ -52,8 +54,6 @@ internal class DeploymentOptions : Options
     [Option("redisConnectionString", Required = true, HelpText = "Redis Cache connection string")]
     public required string RedisConnectionString { get; init; }
 
-    public override IOperation GetOperation(IServiceProvider sp) => ActivatorUtilities.CreateInstance<DeploymentOperation>(sp, this);
-
     public override async Task<IServiceCollection> RegisterServices(IServiceCollection services)
     {
         services.AddTransient<IProcessManager>(sp => new ProcessManager(sp.GetRequiredService<ILogger<ProcessManager>>(), "git"));
@@ -62,13 +62,13 @@ internal class DeploymentOptions : Options
         services.AddSingleton(credential);
         services.AddTransient<ArmClient>(_ => new(credential));
         services.AddTransient<ResourceGroupResource>(sp =>
-        {
-            return new ArmClient(credential)
-                .GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{SubscriptionId}"))
-                .GetResourceGroups().Get(ResourceGroupName);
-        });
+            sp.GetRequiredService<ArmClient>()
+            .GetSubscriptionResource(new ResourceIdentifier($"/subscriptions/{SubscriptionId}"))
+            .GetResourceGroups().Get(ResourceGroupName)
+        );
         services.AddTransient(sp =>
-            sp.GetRequiredService<ResourceGroupResource>().GetContainerApp(ContainerAppName).Value);
+            sp.GetRequiredService<ResourceGroupResource>().GetContainerApp(ContainerAppName).Value
+        );
         services.AddTransient<IReplicaWorkItemProcessorStateCacheFactory, ReplicaWorkItemProcessorStateCache>();
 
         var redisConfig = ConfigurationOptions.Parse(RedisConnectionString);

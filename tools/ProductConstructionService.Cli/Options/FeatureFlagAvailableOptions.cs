@@ -4,6 +4,7 @@
 using CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using ProductConstructionService.Cli.Operations;
+using Tools.Cli.Core;
 
 namespace ProductConstructionService.Cli.Options;
 

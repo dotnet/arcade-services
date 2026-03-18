@@ -10,7 +10,7 @@ param pcsIdentityId string
 param containerEnvironmentId string
 param contributorRoleId string
 param deploymentIdentityPrincipalId string
-param replicaNumber int
+param replicaCount int
 
 // common environment variables used by the app
 var containerAppEnv = [
@@ -80,8 +80,8 @@ resource containerApp 'Microsoft.App/containerApps@2023-04-01-preview' = {
       }
       template: {
           scale: {
-              minReplicas: replicaNumber
-              maxReplicas: replicaNumber
+              minReplicas: replicaCount
+              maxReplicas: replicaCount
           }
           serviceBinds: []
           containers: [ 

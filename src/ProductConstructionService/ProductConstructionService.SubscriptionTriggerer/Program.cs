@@ -4,7 +4,6 @@
 using Maestro.Common;
 using Maestro.Data.Models;
 using Microsoft.ApplicationInsights.Channel;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ProductConstructionService.SubscriptionTriggerer;
@@ -38,7 +37,6 @@ try
 
     if (builder.Environment.IsDevelopment())
     {
-        var config = applicationScope.ServiceProvider.GetRequiredService<IConfiguration>();
         await applicationScope.ServiceProvider.UseLocalWorkItemQueues(
         [
             builder.Configuration.GetRequiredValue("DefaultWorkItemQueueName"),

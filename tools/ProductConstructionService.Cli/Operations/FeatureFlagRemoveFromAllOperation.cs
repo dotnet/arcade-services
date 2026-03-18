@@ -4,6 +4,7 @@
 using Microsoft.DotNet.ProductConstructionService.Client;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.Cli.Options;
+using Tools.Cli.Core;
 
 namespace ProductConstructionService.Cli.Operations;
 
@@ -28,10 +29,10 @@ internal class FeatureFlagRemoveFromAllOperation : IOperation
         try
         {
             _logger.LogInformation("Removing feature flag '{FlagName}' from all subscriptions...", _options.FlagName);
-            
+
             // First, let's see how many subscriptions have this flag
             var listResponse = await _client.FeatureFlags.GetSubscriptionsWithFlagAsync(_options.FlagName);
-            
+
             if (listResponse.Flags?.Count == 0 || listResponse.Flags == null)
             {
                 _logger.LogInformation("No subscriptions found with feature flag '{FlagName}'", _options.FlagName);
@@ -39,11 +40,11 @@ internal class FeatureFlagRemoveFromAllOperation : IOperation
             }
 
             _logger.LogInformation("Found {Total} subscription(s) with this flag. Proceeding with removal...", listResponse.Total);
-            
+
             var response = await _client.FeatureFlags.RemoveFlagFromAllSubscriptionsAsync(_options.FlagName);
 
             _logger.LogInformation("✓ {Message}", response.Message);
-            
+
             if (response.RemovedCount > 0)
             {
                 _logger.LogInformation("Successfully removed feature flag '{FlagName}' from {RemovedCount} subscription(s)", _options.FlagName, response.RemovedCount);

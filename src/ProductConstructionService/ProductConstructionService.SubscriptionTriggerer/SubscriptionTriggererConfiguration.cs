@@ -34,6 +34,7 @@ public static class SubscriptionTriggererConfiguration
         builder.AddSqlDatabase<BuildAssetRegistryContext>(databaseConnectionString, managedIdentityClientId);
 
         builder.AddWorkItemProducerFactory(
+            "queues",
             credential,
             builder.Configuration.GetRequiredValue("DefaultWorkItemQueueName"),
             builder.Configuration.GetRequiredValue("CodeflowWorkItemQueueName"));
