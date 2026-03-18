@@ -117,7 +117,6 @@ public class BuildInsightsEndToEndTests
                 ValidateSnapshotData(data);
             }
 
-            buildInsightsCheck.Conclusion.Should().Be(CheckConclusion.Failure);
             buildInsightsCheck.Conclusion.Should().Be(GitHub.Models.CheckConclusion.Failure, "there are test failures");
             buildInsightsCheck.Output.Text.Should().Contain("Test Failures (2 tests failed)")
                 .And.Contain("build-insights-test-1")
