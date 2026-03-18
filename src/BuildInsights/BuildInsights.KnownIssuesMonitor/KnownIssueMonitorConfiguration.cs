@@ -25,7 +25,7 @@ public static class KnownIssueMonitorConfiguration
         public const string SsaCriteriaSettings = "SsaCriteriaSettings";
     }
 
-    public static async Task<IServiceCollection> ConfigureKnownIssueMonitor(this IHostApplicationBuilder builder)
+    public static async Task<IHostApplicationBuilder> ConfigureKnownIssueMonitor(this IHostApplicationBuilder builder)
     {
         var knownIssuesCreationConfig = builder.Configuration.GetRequiredSection(ConfigurationKeys.KnownIssuesCreation);
         var knownIssuesAnalysisLimitsConfig = builder.Configuration.GetRequiredSection(ConfigurationKeys.KnownIssuesAnalysisLimits);
@@ -46,6 +46,6 @@ public static class KnownIssueMonitorConfiguration
         builder.Services.TryAddTransient<KnownIssuesReportHelper>();
         builder.Services.TryAddTransient<KnownIssueMonitor>();
 
-        return builder.Services;
+        return builder;
     }
 }
