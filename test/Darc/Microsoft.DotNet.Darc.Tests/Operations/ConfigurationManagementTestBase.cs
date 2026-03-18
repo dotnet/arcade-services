@@ -19,7 +19,6 @@ using NUnit.Framework;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using Microsoft.DotNet.MaestroConfiguration.Client;
-
 using GitRepoFactory = Microsoft.DotNet.DarcLib.GitRepoFactory;
 using IGitRepoFactory = Microsoft.DotNet.DarcLib.IGitRepoFactory;
 
