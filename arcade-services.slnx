@@ -16,25 +16,6 @@
     <File Path="global.json" />
   </Folder>
   <Folder Name="/src/" />
-  <Folder Name="/src/BuildInsights/">
-    <File Path="src/BuildInsights/appsettings.Shared.Development.json" />
-    <File Path="src/BuildInsights/appsettings.Shared.Int.json" />
-    <File Path="src/BuildInsights/appsettings.Shared.json" />
-    <File Path="src/BuildInsights/appsettings.Shared.Production.json" />
-    <Project Path="src/BuildInsights/BuildInsights.Api/BuildInsights.Api.csproj" />
-    <Project Path="src/BuildInsights/BuildInsights.AppHost/BuildInsights.AppHost.csproj" />
-    <Project Path="src/BuildInsights/BuildInsights.AzureStorage.Cache/BuildInsights.AzureStorage.Cache.csproj" />
-    <Project Path="src/BuildInsights/BuildInsights.BuildAnalysis/BuildInsights.BuildAnalysis.csproj" />
-    <Project Path="src/BuildInsights/BuildInsights.Data/BuildInsights.Data.csproj" />
-    <Project Path="src/BuildInsights/BuildInsights.GitHub/BuildInsights.GitHub.csproj" />
-    <Project Path="src/BuildInsights/BuildInsights.GitHubGraphQL/BuildInsights.GitHubGraphQL.csproj" />
-    <Project Path="src/BuildInsights/BuildInsights.KnownIssues/BuildInsights.KnownIssues.csproj" />
-    <Project Path="src/BuildInsights/BuildInsights.KnownIssuesMonitor/BuildInsights.KnownIssuesMonitor.csproj" />
-    <Project Path="src/BuildInsights/BuildInsights.QueueInsights/BuildInsights.QueueInsights.csproj" />
-    <Project Path="src/BuildInsights/BuildInsights.ServiceDefaults/BuildInsights.ServiceDefaults.csproj" />
-    <Project Path="src/BuildInsights/BuildInsights.Utilities.AzureDevOps/BuildInsights.Utilities.AzureDevOps.csproj" />
-    <Project Path="src/BuildInsights/BuildInsights.DummyApp/BuildInsights.DummyApp.csproj" />
-  </Folder>
   <Folder Name="/src/Darc/">
     <Project Path="src/Microsoft.DotNet.Darc/Darc/Microsoft.DotNet.Darc.csproj" />
     <Project Path="src/Microsoft.DotNet.Darc/DarcLib/Microsoft.DotNet.DarcLib.csproj" />
@@ -71,15 +52,6 @@
     <Project Path="test/Darc/Microsoft.DotNet.DarcLib.Codeflow.Tests/Microsoft.DotNet.DarcLib.Codeflow.Tests.csproj" />
     <Project Path="test/Darc/Microsoft.DotNet.DarcLib.Tests/Microsoft.DotNet.DarcLib.Tests.csproj" />
   </Folder>
-  <Folder Name="/test/BuildInsights/">
-    <Project Path="test/BuildInsights/BuildInsights.Api.Tests/BuildInsights.Api.Tests.csproj" />
-    <Project Path="test/BuildInsights/BuildInsights.AzureStorage.Cache.Tests/BuildInsights.AzureStorage.Cache.Tests.csproj" />
-    <Project Path="test/BuildInsights/BuildInsights.BuildAnalysis.Tests/BuildInsights.BuildAnalysis.Tests.csproj" />
-    <Project Path="test/BuildInsights/BuildInsights.GitHub.Tests/BuildInsights.GitHub.Tests.csproj" />
-    <Project Path="test/BuildInsights/BuildInsights.KnownIssues.Tests/BuildInsights.KnownIssues.Tests.csproj" />
-    <Project Path="test/BuildInsights/BuildInsights.KnownIssuesMonitor.Tests/BuildInsights.KnownIssuesMonitor.Tests.csproj" />
-    <Project Path="test/BuildInsights/BuildInsights.ScenarioTests/BuildInsights.ScenarioTests.csproj" />
-  </Folder>
   <Folder Name="/test/ProductConstructionService/">
     <Project Path="test/ProductConstructionService/ProductConstructionService.Api.Tests/ProductConstructionService.Api.Tests.csproj" />
     <Project Path="test/ProductConstructionService/ProductConstructionService.BarViz.Tests/ProductConstructionService.BarViz.Tests.csproj" />
@@ -92,11 +64,8 @@
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/BackflowStatusTool/BackflowStatusTool.csproj" />
-    <Project Path="tools/BuildInsightsCli/BuildInsightsCli.csproj" />
     <Project Path="tools/ProductConstructionService.Cli/ProductConstructionService.Cli.csproj" />
     <Project Path="tools/ProductConstructionService.ReproTool/ProductConstructionService.ReproTool.csproj" />
-    <Project Path="tools/Tools.Cli.Core/Tools.Cli.Core.csproj" />
-    <Project Path="tools/Tools.Cli.Common/Tools.Cli.Common.csproj" />
     <Project Path="tools/Tools.Common/Tools.Common.csproj" />
     <Project Path="tools/VersionPropsFormatter/VersionDetailsPropsFormatter.csproj" />
   </Folder>
