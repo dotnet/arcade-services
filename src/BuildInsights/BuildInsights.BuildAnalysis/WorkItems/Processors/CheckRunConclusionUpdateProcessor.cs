@@ -6,6 +6,7 @@ using BuildInsights.BuildAnalysis.WorkItems.Models;
 using BuildInsights.Data.Models;
 using BuildInsights.GitHub;
 using BuildInsights.KnownIssues;
+using HandlebarsDotNet;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Logging;
 using ProductConstructionService.WorkItems;
@@ -45,7 +46,7 @@ public class CheckRunConclusionUpdateProcessor : WorkItemProcessor<CheckRunConcl
             workItem.Repository,
             workItem.HeadSha,
             _gitHubTokenProviderOptions.GitHubAppId,
-            "Build Insights"); // TODO - Constant
+            BuildAnalysisConstants.GitHubCheckName);
 
         if (buildAnalysisCheckRun == null)
         {

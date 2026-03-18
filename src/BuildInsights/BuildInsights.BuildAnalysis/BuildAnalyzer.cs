@@ -37,8 +37,6 @@ public interface IBuildAnalyzer
 
 public class BuildAnalyzer : IBuildAnalyzer
 {
-    private const string CheckRunName = "Build Analysis";
-    private const string CheckRunOutputName = ".NET Result Analysis";
     private const int ErrorMessageLimitLength = 1000;
     private const int TestKnownIssueDisplayLimit = 50;
 
@@ -250,8 +248,8 @@ public class BuildAnalyzer : IBuildAnalyzer
         try
         {
             checkRunId = await _gitHubChecksService.PostChecksResultAsync(
-                CheckRunName,
-                CheckRunOutputName,
+                BuildAnalysisConstants.GitHubCheckName,
+                BuildAnalysisConstants.GitHubCheckOutputName,
                 markdown,
                 buildReference.RepositoryId,
                 buildReference.SourceSha,
@@ -285,8 +283,8 @@ public class BuildAnalyzer : IBuildAnalyzer
             }
 
             checkRunId = await _gitHubChecksService.PostChecksResultAsync(
-                CheckRunName,
-                CheckRunOutputName,
+                BuildAnalysisConstants.GitHubCheckName,
+                BuildAnalysisConstants.GitHubCheckOutputName,
                 markdown,
                 buildReference.RepositoryId,
                 buildReference.SourceSha,
