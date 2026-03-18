@@ -442,9 +442,6 @@ public abstract class CodeFlowConflictResolver
 
         foreach (var revertedFile in revertedFiles)
         {
-            _logger.LogInformation("Suspecting a revert in {file}. Trying to fix it using a crossing flow...",
-                revertedFile);
-
             if (!await CheckIfRealRevertAsync(
                 revertedFile,
                 codeflowOptions,
@@ -455,6 +452,8 @@ public abstract class CodeFlowConflictResolver
             {
                 continue;
             }
+            _logger.LogInformation("Suspecting a revert in {file}. Trying to fix it using a crossing flow...",
+                revertedFile);
 
             string contentBefore = await _fileSystem.ReadAllTextAsync(targetRepo.Path / revertedFile);
 
