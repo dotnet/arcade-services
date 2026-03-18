@@ -486,13 +486,13 @@ public abstract class CodeFlowConflictResolver
     private async Task<bool> CheckIfRealRevertAsync(
         UnixPath filePath,
         CodeflowOptions codeflowOptions,
-        LastFlows lastFLows,
+        LastFlows lastFlows,
         ILocalGitRepo vmr,
         ILocalGitRepo productRepo,
         CancellationToken cancellationToken)
     {
         var vmrRepoSourcesPath = _vmrInfo.GetRepoSourcesPath(codeflowOptions.Mapping);
-        var crossingFlow = lastFLows.CrossingFlow!;
+        var crossingFlow = lastFlows.CrossingFlow!;
 
         ILocalGitRepo targetRepo;
         string stripPatchFromSha;
@@ -504,7 +504,9 @@ public abstract class CodeFlowConflictResolver
         if (codeflowOptions.CurrentFlow.IsForwardFlow)
         {
             targetRepo = vmr;
-            stripPatchFromSha = lastFLows.LastFlow.VmrSha;
+            stripPatchFromSha = await vmr.IsAncestorCommit(lastFlows.LastFlow.VmrSha, crossingFlow.VmrSha)
+                ? lastFlows.LastFlow.VmrSha
+                : crossingFlow.VmrSha;
             stripPatchWorkingDir = vmrRepoSourcesPath;
             reverseApplyFromSha = crossingFlow.RepoSha;
             reverseApplyToSha = codeflowOptions.CurrentFlow.RepoSha;
@@ -515,7 +517,9 @@ public abstract class CodeFlowConflictResolver
         else
         {
             targetRepo = productRepo;
-            stripPatchFromSha = lastFLows.LastFlow.RepoSha;
+            stripPatchFromSha = await productRepo.IsAncestorCommit(lastFlows.LastFlow.RepoSha, crossingFlow.RepoSha)
+                ? lastFlows.LastFlow.RepoSha
+                : crossingFlow.RepoSha;
             stripPatchWorkingDir = productRepo.Path;
             reverseApplyFromSha = crossingFlow.VmrSha;
             reverseApplyToSha = codeflowOptions.CurrentFlow.VmrSha;
@@ -526,7 +530,25 @@ public abstract class CodeFlowConflictResolver
         string contentBefore = await _fileSystem.ReadAllTextAsync(targetRepo.Path / filePath);
 
         // strip the changes in the target repo that might be causing a false positive
-        var result = await targetRepo.ExecuteGitCommand(["checkout", stripPatchFromSha, "--", filePath], cancellationToken);
+        var stripCrossingFlowChangesPatch = await _patchHandler.CreatePatches(
+            _vmrInfo.TmpPath / $"{codeflowOptions.Mapping.Name}-{Guid.NewGuid()}.patch",
+            stripPatchFromSha,
+            Constants.HEAD,
+            path: relativeFilePath,
+            filters: [],
+            relativePaths: true,
+            workingDir: stripPatchWorkingDir,
+            applicationPath: applicationPath,
+            ignoreLineEndings: true,
+            cancellationToken);
+        await _patchHandler.ApplyPatches(
+            stripCrossingFlowChangesPatch,
+            targetRepo.Path,
+            removePatchAfter: true,
+            keepConflicts: false,
+            reverseApply: true,
+            applyToIndex: true,
+            cancellationToken);
 
         // now reverse apply the current flow's changes. If it fails, it was a real revert; otherwise a false positive
         List<VmrIngestionPatch> reverseApplyPatch = await _patchHandler.CreatePatches(
