@@ -1243,10 +1243,10 @@ internal class TwoWayCodeflowTests : CodeFlowTests
     }
 
     [Test]
-    public async Task BackflowOppositeDirectionFlowRevertsTest()
+    public async Task BackflowOppositeDirectionFlowRevertsFalsePositiveTest()
     {
-        const string ffBranchName = nameof(BackflowOppositeDirectionFlowRevertsTest);
-        const string bfBranchName = nameof(BackflowOppositeDirectionFlowRevertsTest) + "bf";
+        const string ffBranchName = nameof(BackflowOppositeDirectionFlowRevertsFalsePositiveTest);
+        const string bfBranchName = nameof(BackflowOppositeDirectionFlowRevertsFalsePositiveTest) + "bf";
 
         var problematicFilePath = "badFile.txt";
 
@@ -1307,5 +1307,71 @@ internal class TwoWayCodeflowTests : CodeFlowTests
 
         // file should still say 1
         File.ReadAllText(ProductRepoPath / problematicFilePath).Should().Be("1");
+    }
+
+    [Test]
+    public async Task BackflowOppositeDirectionFlowRevertsTest()
+    {
+        const string ffBranchName = nameof(BackflowOppositeDirectionFlowRevertsFalsePositiveTest);
+        const string bfBranchName = nameof(BackflowOppositeDirectionFlowRevertsFalsePositiveTest) + "bf";
+
+        var problematicFilePath = "badFile.txt";
+
+        await EnsureTestRepoIsInitialized();
+
+        // Add the file that will have the problem later
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / problematicFilePath, "1");
+        await GitOperations.CommitAll(ProductRepoPath, "adding the file");
+        var result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // do some flows now
+        result = await ChangeRepoFileAndFlowIt("1", ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        result = await ChangeVmrFileAndFlowIt("2", bfBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeBackFlow(bfBranchName);
+
+        // now change the problematic file, open the ff, but don't merge yet
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / problematicFilePath, "2");
+        await GitOperations.CommitAll(ProductRepoPath, "change to the file");
+        result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
+        result.ShouldHaveUpdates();
+        await GitOperations.CommitAll(VmrPath, "Commit flown changes to ff branch");
+
+        // open a backflow with some random file change, don't close yet
+        await GitOperations.Checkout(VmrPath, "main");
+        await File.WriteAllTextAsync(_productRepoVmrPath / "random_file.txt", "not important");
+        await GitOperations.CommitAll(VmrPath, "random change in the VMR");
+        result = await CallBackflow(Constants.ProductRepoName, ProductRepoPath, bfBranchName);
+        result.ShouldHaveUpdates();
+        await GitOperations.CommitAll(ProductRepoPath, "Commit flown changes to bf branch");
+
+        // merge the previously opened ff, backflow is still open
+        await GitOperations.MergePrBranch(VmrPath, ffBranchName);
+
+        // do a ff just for fluff
+        result = await ChangeRepoFileAndFlowIt("4", ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // close the backflow
+        await GitOperations.MergePrBranch(ProductRepoPath, bfBranchName);
+
+        // revert the problematic file back to the original state, forward flow
+        await GitOperations.Checkout(ProductRepoPath, "main");
+        await File.WriteAllTextAsync(ProductRepoPath / problematicFilePath, "1");
+        await GitOperations.CommitAll(ProductRepoPath, "revert the problematic file");
+        result = await CallForwardflow(Constants.ProductRepoName, ProductRepoPath, ffBranchName);
+        result.ShouldHaveUpdates();
+        await FinalizeForwardFlow(ffBranchName);
+
+        // file should still say 1
+        File.ReadAllText(_productRepoVmrPath / problematicFilePath).Should().Be("1");
     }
 }
