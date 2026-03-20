@@ -420,6 +420,24 @@ public abstract class CodeFlowConflictResolver
                 return;
             }
 
+            // Filter out false positives: when the source content for a file at the current flow
+            // matches the content at the last opposite-direction flow, the source's change was
+            // already propagated by that opposite flow. In this case, the mismatch on the target
+            // is due to an intentional revert on the target side, not a missing propagation.
+            revertedFiles = await FilterAlreadyPropagatedFilesAsync(
+                codeflowOptions,
+                vmr,
+                productRepo,
+                vmrSourcesPath,
+                lastFlows,
+                revertedFiles,
+                cancellationToken);
+
+            if (!revertedFiles.Any())
+            {
+                return;
+            }
+
             await FixRevertedFiles(
                 codeflowOptions,
                 vmr,
@@ -428,6 +446,80 @@ public abstract class CodeFlowConflictResolver
                 revertedFiles,
                 cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// Filters out files whose source-side content at the current flow matches the content
+    /// at the last opposite-direction flow. When content matches, the source change was already
+    /// propagated by the opposite flow, so the detected "revert" is actually an intentional
+    /// change on the target side that should be preserved.
+    /// </summary>
+    private async Task<IEnumerable<UnixPath>> FilterAlreadyPropagatedFilesAsync(
+        CodeflowOptions codeflowOptions,
+        ILocalGitRepo vmr,
+        ILocalGitRepo productRepo,
+        UnixPath vmrSourcesPath,
+        LastFlows lastFlows,
+        IEnumerable<UnixPath> revertedFiles,
+        CancellationToken cancellationToken)
+    {
+        // Determine the source repo and the two SHAs to compare
+        ILocalGitRepo sourceRepo;
+        string currentSourceSha;
+        string? oppositeFlowSha;
+
+        if (codeflowOptions.CurrentFlow.IsForwardFlow)
+        {
+            sourceRepo = productRepo;
+            currentSourceSha = codeflowOptions.CurrentFlow.RepoSha;
+            oppositeFlowSha = lastFlows.LastBackFlow?.RepoSha;
+        }
+        else
+        {
+            sourceRepo = vmr;
+            currentSourceSha = codeflowOptions.CurrentFlow.VmrSha;
+            oppositeFlowSha = lastFlows.LastForwardFlow.VmrSha;
+        }
+
+        if (oppositeFlowSha == null)
+        {
+            return revertedFiles;
+        }
+
+        var result = new List<UnixPath>();
+
+        foreach (var file in revertedFiles)
+        {
+            // Convert from target-side path to source-side path
+            UnixPath sourceFilePath = codeflowOptions.CurrentFlow.IsForwardFlow
+                ? new UnixPath(file.Path.Substring(vmrSourcesPath.Length + 1))
+                : vmrSourcesPath / file;
+
+            try
+            {
+                var currentContent = await sourceRepo.ExecuteGitCommand(
+                    ["show", $"{currentSourceSha}:{sourceFilePath}"], cancellationToken);
+                var oppositeContent = await sourceRepo.ExecuteGitCommand(
+                    ["show", $"{oppositeFlowSha}:{sourceFilePath}"], cancellationToken);
+
+                if (currentContent.Succeeded && oppositeContent.Succeeded
+                    && currentContent.StandardOutput == oppositeContent.StandardOutput)
+                {
+                    _logger.LogInformation(
+                        "Skipping suspected revert in {file}: source content unchanged since the last opposite-direction flow",
+                        file);
+                    continue;
+                }
+            }
+            catch
+            {
+                // If we can't compare, proceed with the existing revert detection logic
+            }
+
+            result.Add(file);
+        }
+
+        return result;
     }
 
     private async Task FixRevertedFiles(
