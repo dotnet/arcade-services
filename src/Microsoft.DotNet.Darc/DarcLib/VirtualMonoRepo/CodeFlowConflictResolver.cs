@@ -429,7 +429,7 @@ public abstract class CodeFlowConflictResolver
                 vmr,
                 productRepo,
                 vmrSourcesPath,
-                lastFlows,
+                lastFlows.CrossingFlow,
                 revertedFiles,
                 cancellationToken);
 
@@ -459,26 +459,24 @@ public abstract class CodeFlowConflictResolver
         ILocalGitRepo vmr,
         ILocalGitRepo productRepo,
         UnixPath vmrSourcesPath,
-        LastFlows lastFlows,
+        Codeflow crossingFlow,
         IEnumerable<UnixPath> revertedFiles,
         CancellationToken cancellationToken)
     {
-        // Determine the source repo and the two SHAs to compare
         ILocalGitRepo sourceRepo;
-        string currentSourceSha;
-        string? oppositeFlowSha;
+        string currentSourceSha, oppositeFlowSha;
 
         if (codeflowOptions.CurrentFlow.IsForwardFlow)
         {
             sourceRepo = productRepo;
             currentSourceSha = codeflowOptions.CurrentFlow.RepoSha;
-            oppositeFlowSha = lastFlows.LastBackFlow?.RepoSha;
+            oppositeFlowSha = crossingFlow.RepoSha;
         }
         else
         {
             sourceRepo = vmr;
             currentSourceSha = codeflowOptions.CurrentFlow.VmrSha;
-            oppositeFlowSha = lastFlows.LastForwardFlow.VmrSha;
+            oppositeFlowSha = crossingFlow.VmrSha;
         }
 
         if (oppositeFlowSha == null)
@@ -486,8 +484,7 @@ public abstract class CodeFlowConflictResolver
             return revertedFiles;
         }
 
-        var result = new List<UnixPath>();
-
+        List<UnixPath> result = [];
         foreach (var file in revertedFiles)
         {
             // Convert from target-side path to source-side path
@@ -497,13 +494,10 @@ public abstract class CodeFlowConflictResolver
 
             try
             {
-                var currentContent = await sourceRepo.ExecuteGitCommand(
-                    ["show", $"{currentSourceSha}:{sourceFilePath}"], cancellationToken);
-                var oppositeContent = await sourceRepo.ExecuteGitCommand(
-                    ["show", $"{oppositeFlowSha}:{sourceFilePath}"], cancellationToken);
+                var currentContent = await sourceRepo.GetFileFromGitAsync(sourceFilePath, currentSourceSha);
+                var oppositeContent = await sourceRepo.GetFileFromGitAsync(sourceFilePath, oppositeFlowSha);
 
-                if (currentContent.Succeeded && oppositeContent.Succeeded
-                    && currentContent.StandardOutput == oppositeContent.StandardOutput)
+                if (currentContent == oppositeContent)
                 {
                     _logger.LogInformation(
                         "Skipping suspected revert in {file}: source content unchanged since the last opposite-direction flow",
