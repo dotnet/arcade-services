@@ -122,7 +122,7 @@ public static class BuildInsightsCommonConfiguration
         builder.Services.AddGitHubTokenProvider();
         builder.Services.AddGitHub();
         builder.Services.AddGitHubGraphQL(builder.Configuration.GetSection(ConfigurationKeys.GitHubGraphQLOptions));
-        builder.Services.TryAddTransient<IInstallationLookup, GitHubInstallationIdResolver>();
+        builder.Services.TryAddTransient<IInstallationLookup, InMemoryCacheInstallationLookup>();
         builder.Services.TryAddScoped<IRemoteTokenProvider>(sp =>
         {
             var azdoTokenProvider = sp.GetRequiredService<IAzureDevOpsTokenProvider>();
