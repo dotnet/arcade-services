@@ -28,7 +28,7 @@ public sealed class BuildOperationsProvider : IBuildOperationsService
 
     public async Task<bool> RetryBuild(string orgId, string projectId, int buildId, CancellationToken cancellationToken)
     {
-        using var connection = _connection.GetConnection(orgId);
+        var connection = _connection.GetConnection(orgId);
         BuildHttpClient buildClient = connection.GetClient<BuildHttpClient>();
         Build build = await buildClient.GetBuildAsync(
             projectId,

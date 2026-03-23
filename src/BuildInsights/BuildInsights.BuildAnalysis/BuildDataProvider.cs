@@ -80,7 +80,7 @@ public sealed class BuildDataProvider : IBuildDataService
     {
         _logger.LogInformation($"Fetching build information from Azure DevOps for build '{buildId}' in project '{projectId}' and org '{orgId}'.");
 
-        using var connection = _connections.GetConnection(orgId);
+        var connection = _connections.GetConnection(orgId);
         BuildHttpClient buildClient = connection.GetClient<BuildHttpClient>();
 
         Build azdoBuild;
@@ -108,7 +108,7 @@ public sealed class BuildDataProvider : IBuildDataService
         Models.Build build,
         CancellationToken cancellationToken)
     {
-        using var connection = _connections.GetConnection(build.OrganizationName);
+        var connection = _connections.GetConnection(build.OrganizationName);
         TestManagementHttpClient testClient = connection.GetClient<TestManagementHttpClient>();
         var builder = ImmutableList.CreateBuilder<Models.TestRunDetails>();
         IEnumerable<TestRun> runs = await GetCurrentTestRunsForBuild(build, cancellationToken);
@@ -274,7 +274,7 @@ public sealed class BuildDataProvider : IBuildDataService
 
     private async Task<List<TestRun>> GetTestRuns(Models.Build build, CancellationToken cancellationToken)
     {
-        using var connection = _connections.GetConnection(build.OrganizationName);
+        var connection = _connections.GetConnection(build.OrganizationName);
         TestManagementHttpClient testClient = connection.GetClient<TestManagementHttpClient>();
 
         List<TestRun> testRuns = [];
@@ -300,7 +300,7 @@ public sealed class BuildDataProvider : IBuildDataService
 
     public async Task<string> GetProjectName(string orgId, string projectId)
     {
-        using var connection = _connections.GetConnection(orgId);
+        var connection = _connections.GetConnection(orgId);
         ProjectHttpClient projectClient = connection.GetClient<ProjectHttpClient>();
 
         TeamProject teamProject = await projectClient.GetProject(id: projectId);
@@ -313,7 +313,7 @@ public sealed class BuildDataProvider : IBuildDataService
         string projectId,
         CancellationToken cancellationToken)
     {
-        using var connection = _connections.GetConnection(orgId);
+        var connection = _connections.GetConnection(orgId);
         TestManagementHttpClient testClient = connection.GetClient<TestManagementHttpClient>();
         var testCaseResultsByTestRun = new List<Models.TestRunDetails>();
 
@@ -356,7 +356,7 @@ public sealed class BuildDataProvider : IBuildDataService
         IEnumerable<TestCaseResult> results,
         CancellationToken cancellationToken)
     {
-        using var connection = _connections.GetConnection(orgId);
+        var connection = _connections.GetConnection(orgId);
         TestManagementHttpClient testClient = connection.GetClient<TestManagementHttpClient>();
 
         var dict = new ConcurrentDictionary<int, TestCaseResult>(results.ToDictionary(r => r.Id));
@@ -392,7 +392,7 @@ public sealed class BuildDataProvider : IBuildDataService
         DateTimeOffset maxCompleted,
         CancellationToken cancellationToken)
     {
-        using var connection = _connections.GetConnection(orgId);
+        var connection = _connections.GetConnection(orgId);
         TestManagementHttpClient testClient = connection.GetClient<TestManagementHttpClient>();
         var allHistory = new Dictionary<string, List<TestCaseResult>>();
         var displayNames = new Dictionary<string, string>();
@@ -448,7 +448,7 @@ public sealed class BuildDataProvider : IBuildDataService
         Models.ResultDetails resultDetails = Models.ResultDetails.None)
     {
         _logger.LogInformation($"Fetching test result information from Azure DevOps for test run '{testRunId}' and test case '{testCaseId}' in project '{projectId}'  and org '{orgId}'.");
-        using var connection = _connections.GetConnection(orgId);
+        var connection = _connections.GetConnection(orgId);
         TestManagementHttpClient testClient = connection.GetClient<TestManagementHttpClient>();
         TestCaseResult testResult =
             await testClient.GetTestResultByIdAsync(projectId, testRunId, testCaseId, detailsToInclude: MapModel(resultDetails), cancellationToken: cancellationToken);
@@ -464,7 +464,7 @@ public sealed class BuildDataProvider : IBuildDataService
         DateTimeOffset latestDate,
         CancellationToken cancellationToken)
     {
-        using var connection = _connections.GetConnection(orgId);
+        var connection = _connections.GetConnection(orgId);
         _logger.LogInformation($"Fetching latest builds from Azure DevOps for project '{projectId}'  and org '{orgId}' and branch '{targetBranch}'.");
         BuildHttpClient buildClient = connection.GetClient<BuildHttpClient>();
         IEnumerable<Build> latestCompletedBuildsForBranch = await buildClient.GetBuildsAsync(
@@ -487,7 +487,7 @@ public sealed class BuildDataProvider : IBuildDataService
         int buildId,
         CancellationToken cancellationToken)
     {
-        using var connection = _connections.GetConnection(orgId);
+        var connection = _connections.GetConnection(orgId);
         BuildHttpClient buildClient = connection.GetClient<BuildHttpClient>();
         Microsoft.TeamFoundation.Build.WebApi.Timeline timeline = await buildClient.GetBuildTimelineAsync(
             projectId,
@@ -506,14 +506,13 @@ public sealed class BuildDataProvider : IBuildDataService
         CancellationToken cancellationToken)
     {
         _logger.LogInformation($"Fetching build timeline information from Azure DevOps for build '{buildId}' in project '{projectId}' and org '{orgId}'.");
-        using var connection = _connections.GetConnection(orgId);
+        var connection = _connections.GetConnection(orgId);
         BuildHttpClient buildClient = connection.GetClient<BuildHttpClient>();
         Microsoft.TeamFoundation.Build.WebApi.Timeline timeline = await buildClient.GetBuildTimelineAsync(
             projectId,
             buildId,
             timelineId,
-            cancellationToken: cancellationToken
-        );
+            cancellationToken: cancellationToken);
 
         return timeline?.Records.Select(MapModel).ToImmutableList() ?? [];
     }
@@ -552,7 +551,7 @@ public sealed class BuildDataProvider : IBuildDataService
         string fileName,
         CancellationToken cancellationToken)
     {
-        using var connection = _connections.GetConnection(orgId);
+        var connection = _connections.GetConnection(orgId);
         BuildHttpClient buildClient = connection.GetClient<BuildHttpClient>();
         try
         {
@@ -593,11 +592,11 @@ public sealed class BuildDataProvider : IBuildDataService
         string fileId,
         CancellationToken cancellationToken)
     {
-        using var connection = _connections.GetConnection(orgId);
+        var connection = _connections.GetConnection(orgId);
         BuildHttpClient buildClient = connection.GetClient<BuildHttpClient>();
         Stream streamFile = await buildClient.GetFileAsync(projectId, buildId, artifactName, fileId, "", cancellationToken: cancellationToken);
         using var fileReader = new StreamReader(streamFile);
-        return await fileReader.ReadToEndAsync();
+        return await fileReader.ReadToEndAsync(cancellationToken);
     }
 
     public static Models.Branch GetTargetBranch(Build build)
@@ -975,14 +974,14 @@ public sealed class BuildDataProvider : IBuildDataService
 
     public async Task<Stream> GetLogContent(string orgId, string project, int buildId, int logId)
     {
-        using var connection = _connections.GetConnection(orgId);
+        var connection = _connections.GetConnection(orgId);
         BuildHttpClient buildClient = connection.GetClient<BuildHttpClient>();
         return await buildClient.GetBuildLogAsync(project, buildId, logId);
     }
 
     public async Task<IReadOnlyList<Models.Build>> GetFailedBuildsAsync(string orgId, string projectId, string repository, CancellationToken cancellationToken)
     {
-        using var connection = _connections.GetConnection(orgId);
+        var connection = _connections.GetConnection(orgId);
         BuildHttpClient buildClient = connection.GetClient<BuildHttpClient>();
         var buildList = await buildClient.GetBuildsAsync(project: projectId, repositoryId: repository, resultFilter: BuildResult.Failed, repositoryType: "Github", minFinishTime: DateTime.Now.AddDays(-1));
 
